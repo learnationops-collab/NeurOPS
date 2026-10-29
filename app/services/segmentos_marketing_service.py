@@ -251,7 +251,7 @@ def acotar_fuentes(resumen, desde, hasta, segmento):
     fuentes = []
     for f in resumen['fuentes']:
         t = por_fuente[f['key']]
-        base = {k: v for k, v in f.items() if k not in _PISADAS}
+        base = {k: v for k, v in f.items() if k not in _PISADAS and k != 'cash_anterior'}  # no se parte por segmento
         fuentes.append({**fuentes_service.metricas_de_fuente({
             **base, **{k: t[k] for k in _PISADAS}, 'gasto': 0.0, 'agendas_alta': t['agendas'], 'agendas_dias': {},
             'clientes': 0, 'clientes_upsell': 0, 'cuotas': 0, 'cuotas_monto': 0.0, 'upsells': 0, 'upsells_monto': 0.0}),

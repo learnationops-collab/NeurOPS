@@ -127,9 +127,9 @@ def _cobros(fuente, metrica, desde, hasta):
     destino = None if fuente == 'otras' else fuente  # Otras: los cobros que no son de Setting ni de Workshop
     pares = [(c, f) for c, f in zip(cobros, de_cobro)
              if fuentes_service.fuente_de_cobro(f['por_clave'], f['balde']) == destino]
-    # Clientes que compraron algo nuevo en el período: sus cuotas y upsells son «de esta venta». Las otras
-    # son cobros de ventas de antes (lo que separa el ROAS Total del ROAS New Cash).
-    nuevos = {f['cliente'] for _, f in pares if f['es_venta']}
+    # Las cuotas y upsells de quien compró algo nuevo son «de esta venta»; las otras, de ventas de antes (lo que
+    # separa el ROAS Total del ROAS New Cash). La misma regla que `cash_anterior` de la tarjeta.
+    nuevos = fuentes_service.clientes_nuevos(f for _, f in pares)
     filas, suma = [], 0.0
     for cobro, f in pares:
         if metrica in ('ventas', 'new_cash') and not f['es_venta']:

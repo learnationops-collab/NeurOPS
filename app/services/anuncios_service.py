@@ -20,8 +20,9 @@ Marketing es una tabla al estilo del Administrador de anuncios de Meta, una fila
   · **Ventas**: los pagos completos y split pay completados del período (la misma regla del dashboard
     comercial), atribuidos igual, con la última interacción de antes del pago. **Cobrado** es todo lo
     cobrado de esas personas (también cuotas y señas). Lo cobrado que no llega a ninguna palabra clave
-    (workshop, VSL, renovaciones, setting sin conversación) se reparte por procedencia en
-    `cobrado_fuera` (Kerwin, 17/10/2026: «$5.138 me parece poco»; el período tenía $17.059).
+    (workshop, VSL, renovaciones, setting sin conversación) se ve en «De dónde vino lo cobrado», que sale de las
+    mismas fuentes que las tarjetas (`fuentes`: Setting, Workshop y Otras; Kerwin, 17/10/2026: «$5.138 me parece
+    poco»; el período tenía $17.059). Desde el 29/10 lo reparte el ORIGEN del cliente, como el Cash total.
   · **Gasto**: lo que Meta Ads gastó por día en los anuncios de Meta asociados a la palabra clave
     (`meta_ads_service`), más lo que se cargó a mano en el sistema viejo (`AdPeriodSpend`) los días
     en que Meta no tiene nada para esa palabra clave.
@@ -210,7 +211,7 @@ def claves_de_cobros(cobros, clave_de_anuncio=None, cliente_de=None):
 def _ventas(desde_dt, hasta_dt, clave_de_anuncio):
     """({clave: {'ventas', 'cobrado'}}, sin_atribuir, cobros, sin_clave, claves): ventas nuevas (completo o
     split) y todo lo cobrado (también cuotas y señas) de las personas que llegaron por esa palabra
-    clave; además todos los cobros del período, los que no llegaron a ninguna (para `cobrado_fuera`) y
+    clave; además todos los cobros del período, los que no llegaron a ninguna y
     la palabra clave de cada cobro (para `fuentes_service`)."""
     cobros = [v for v in FinancialSale.query.filter(FinancialSale.date >= desde_dt,
                                                     FinancialSale.date <= hasta_dt).all()
@@ -229,26 +230,6 @@ def _ventas(desde_dt, hasta_dt, clave_de_anuncio):
         if es_venta:
             por_clave[clave]['ventas'] += 1
     return por_clave, sin_atribuir, cobros, sin_clave, claves
-
-
-def _cobrado_fuera(cobros, sin_clave):
-    """Lo cobrado del período que no llegó a ninguna palabra clave, por procedencia (la de Finanzas y
-    de «Ingresos por fuente», en bruto como el Cobrado de la tabla): [{key, label, monto, cantidad}],
-    solo las que tienen algo. La atribución se calcula sobre TODOS los cobros del período, como allá.
-
-    `monto_total` es lo de esa procedencia contando también lo que sí llegó por palabra clave: es lo que
-    muestra Revisar › Ventas con esa Fuente, adonde lleva la fila (17/10/2026), y la pantalla dice la
-    diferencia en vez de dejar que no cierre."""
-    if not sin_clave:
-        return []
-    from app.services.procedencia_ingresos_service import agendas_para_atribuir, procedencia_de_ventas
-    agendas = agendas_para_atribuir()
-    reparto = procedencia_de_ventas(sin_clave, contexto=cobros, base='bruto', agendas=agendas)
-    total = {p['key']: p['monto'] for p in procedencia_de_ventas(cobros, base='bruto', agendas=agendas)['procedencias']}
-    return [{'key': p['key'], 'label': p['label'], 'monto': p['monto'], 'cantidad': p['cantidad'],
-             'monto_total': total.get(p['key'], p['monto']),
-             'detalle': [{'label': d['label'], 'monto': d['monto']} for d in p['detalle']]}
-            for p in reparto['procedencias'] if p['cantidad']]
 
 
 def _gasto(desde, hasta, clave_de_anuncio):
@@ -351,7 +332,7 @@ def tablero(desde, hasta, base=None, segmento=None):
 
     entrantes = _entrantes(desde_dt, hasta_dt, clave_de_anuncio)
     agendas, agendas_sin_atribuir = _agendas(desde_dt, hasta_dt, clave_de_anuncio)
-    ventas, ventas_sin_atribuir, cobros, cobros_sin_clave, claves_de_cobro = _ventas(
+    ventas, ventas_sin_atribuir, cobros, _sin_clave, claves_de_cobro = _ventas(
         desde_dt, hasta_dt, clave_de_anuncio)
     gasto, gasto_sin_clave, moneda = _gasto(desde, hasta, clave_de_anuncio)
 
@@ -428,10 +409,8 @@ def tablero(desde, hasta, base=None, segmento=None):
             'ventas': ventas_sin_atribuir,
             'gasto_meta': round(gasto_sin_clave, 2),
         },
-        # Todo lo cobrado del período (el Cash collected del dashboard comercial) y lo que no llegó a
-        # ninguna palabra clave, por procedencia: la pantalla muestra dónde está el resto (17/10/2026).
+        # Todo lo cobrado del período (el Cash collected del dashboard comercial): lo que suman Setting, Workshop y Otras.
         'cobrado_periodo': round(sum(float(c.monto or 0) for c in cobros), 2),
-        'cobrado_fuera': _cobrado_fuera(cobros, cobros_sin_clave),
         'agrupaciones': _opciones_de_agrupacion(filas, conjuntos),
         # El gasto de Meta por embudo (setting, workshop…): el selector de Rendimiento (15/10/2026).
         'embudos': embudos,

@@ -30,6 +30,9 @@ show up, ventas, cuotas cobradas, cash y los costos.
   · `cash_total`: TODO lo cobrado del período de los clientes que trajo la fuente: venta nueva, cuotas,
     señas, upsells y renovaciones, aunque la venta sea de meses anteriores.
   Siempre `cash_total >= new_cash`. Sin gasto no hay ROAS (None, «—»): un 0 diría que no rindió.
+  · `cash_anterior`: la parte del `cash_total` que viene de ventas de períodos anteriores (cuotas, upsells y
+    renovaciones de clientes que no compraron nada nuevo en el período). Es lo que separa el ROAS Total del ROAS
+    New Cash: se muestra para que el 6x de un mes no se lea como si fuera todo de ese mes (Leadership 850).
 
 **Upsells** (Kerwin, 23/10/2026: «quién upsellea más»): un cobro cuyo tipo de pago es `upsell`
 (`SheetsService.parse_tipo_pago`), por origen del cliente igual que el resto. Se muestran la cantidad y el
@@ -47,6 +50,7 @@ from app import db
 from app.services import conteo_agendas_service
 from app.services.fuente_service import FUENTE_SETTING, es_workshop_landing, es_workshop_vivo, normalizar
 from app.services.procedencia_ingresos_service import (
+    PROCEDENCIAS,
     agendas_para_atribuir,
     procedencia_por_venta,
 )
@@ -72,11 +76,14 @@ def metricas_de_fuente(base):
     gasto = round(base.get('gasto', 0.0), 2)
     con_gasto = gasto > 0
     new_cash, cash_total = round(base.get('new_cash', 0.0), 2), round(base.get('cash_total', 0.0), 2)
+    # None cuando no se sabe (un segmento elegido: ahí la cifra sale de otra cuenta).
+    anterior = base.get('cash_anterior')
     return {
         **base,
         'gasto': gasto,
         'new_cash': new_cash,
         'cash_total': cash_total,
+        'cash_anterior': None if anterior is None else round(anterior, 2),
         # Igual que Workshop: asistieron ÷ citas con resultado (asistieron + no show), no ÷ todas las agendas.
         'pct_show_up': dividir(base.get('show_up', 0) * 100, base.get('reportadas', base.get('agendas', 0)), 1),
         'pct_upsell': dividir(base.get('clientes_upsell', 0) * 100, base.get('clientes', 0), 1),
@@ -98,24 +105,36 @@ def fuente_de_cobro(por_clave, balde):
     return 'workshop' if balde == 'workshop' else None
 
 
+def clientes_nuevos(filas):
+    """Los clientes que compraron algo nuevo en el período: sus cuotas y upsells son «de esta venta». Las de los
+    demás son cobros de ventas de antes. Una sola regla para la cifra (`cash_anterior`) y para su lista."""
+    return {f['cliente'] for f in filas if f['es_venta']}
+
+
 def sumar_cobros(cobros):
-    """{fuente: {new_cash, cash_total, ventas, cuotas, cuotas_monto, upsells, upsells_monto, clientes,
-    clientes_upsell}} y el resto en `otras` (cash_total).
+    """{fuente: {new_cash, cash_total, cash_anterior, ventas, cuotas, cuotas_monto, upsells, upsells_monto,
+    clientes, clientes_upsell}} y el resto en `otras` (cash_total, cobros y su `detalle` por procedencia).
 
     `cobros`: dicts `{monto, es_venta, es_cuota, es_upsell, cliente, por_clave, balde}`. Un reembolso (monto
     negativo) resta, como en el Cash collected."""
-    fuentes = {f['key']: {'new_cash': 0.0, 'cash_total': 0.0, 'ventas': 0, 'cuotas': 0, 'cuotas_monto': 0.0,
-                          'upsells': 0, 'upsells_monto': 0.0}
+    fuentes = {f['key']: {'new_cash': 0.0, 'cash_total': 0.0, 'cash_anterior': 0.0, 'ventas': 0, 'cuotas': 0,
+                          'cuotas_monto': 0.0, 'upsells': 0, 'upsells_monto': 0.0}
                for f in FUENTES}
     clientes = {f['key']: set() for f in FUENTES}
     compran_upsell = {f['key']: set() for f in FUENTES}
     otras = {'cash_total': 0.0, 'cobros': 0, 'new_cash': 0.0, 'ventas': 0}
+    por_procedencia = {}
+    # Lo cobrado sin venta nueva, por cliente: es «anterior» si el cliente no compró nada en el período.
+    sin_venta = {f['key']: {} for f in FUENTES}
     for c in cobros:
         monto = float(c['monto'] or 0)
         destino = fuente_de_cobro(c['por_clave'], c['balde'])
         if destino is None:
             otras['cash_total'] += monto
             otras['cobros'] += 1
+            parcial = por_procedencia.setdefault(c['balde'], {'cobros': 0, 'monto': 0.0})
+            parcial['cobros'] += 1
+            parcial['monto'] += monto
             if c['es_venta']:
                 otras['new_cash'] += monto
                 otras['ventas'] += 1
@@ -130,11 +149,18 @@ def sumar_cobros(cobros):
         if c['es_venta']:
             fila['new_cash'] += monto
             fila['ventas'] += 1
-        elif c['es_cuota']:
-            fila['cuotas'] += 1
-            fila['cuotas_monto'] += monto
+        else:
+            sin_venta[destino][c['cliente']] = sin_venta[destino].get(c['cliente'], 0.0) + monto
+            if c['es_cuota']:
+                fila['cuotas'] += 1
+                fila['cuotas_monto'] += monto
     for k, fila in fuentes.items():
         fila['clientes'], fila['clientes_upsell'] = len(clientes[k]), len(compran_upsell[k])
+        nuevos = clientes_nuevos(c for c in cobros if fuente_de_cobro(c['por_clave'], c['balde']) == k)
+        fila['cash_anterior'] = sum(m for cliente, m in sin_venta[k].items() if cliente not in nuevos)
+    etiquetas = {p['key']: p['label'] for p in PROCEDENCIAS}
+    otras['detalle'] = [{'key': b, 'label': etiquetas.get(b, b), 'cobros': v['cobros'], 'monto': round(v['monto'], 2)}
+                        for b, v in sorted(por_procedencia.items(), key=lambda x: -x[1]['monto'])]
     return fuentes, otras
 
 
@@ -234,7 +260,7 @@ def resumen(desde, hasta, filas, cobros, claves, embudos, base=conteo_agendas_se
                                     'pct_agendas': dividir(v['agendas'] * 100, otras_agendas['agendas'], 1)}
                                    for o, v in sorted(otras_agendas['origenes'].items(), key=lambda x: (-x[1]['agendas'], x[0]))],
                       'cash_total': round(otras['cash_total'], 2), 'new_cash': round(otras['new_cash'], 2),
-                      'ventas': otras['ventas'], 'cobros': otras['cobros']},
+                      'ventas': otras['ventas'], 'cobros': otras['cobros'], 'detalle': otras['detalle']},
             # Lo que suman las tres, en la base elegida: es el total de Closing, Analizar y Revisar en reunión.
             'agendas_total': sum(a['agendas'] for a in agendas.values()),
             'sin_campana': sin_campana(filas, (gasto_de.get('setting') or {}).get('gasto', 0.0))}
