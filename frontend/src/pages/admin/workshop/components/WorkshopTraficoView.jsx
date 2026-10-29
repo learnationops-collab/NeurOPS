@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
-import { CalendarDays, MessageCircle, RefreshCw } from 'lucide-react';
+import { CalendarDays, Eye, MessageCircle, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../../../services/api';
 import { useDatosCacheados } from '../../../../services/cacheDeVistas';
@@ -9,15 +9,18 @@ import Cifra from '../../../comercial/components/Cifra';
 import { PanelCab, PillMenu, Segmented, Tip } from '../../../comercial/components/Shared';
 import RangoFechas, { esFecha, textoRango } from '../../../comercial/components/RangoFechas';
 import ListaConfigurable from '../../../../components/listas/ListaConfigurable';
+import { CifraConCuenta, useVerRegistros } from '../../../../components/standard';
 import EsqueletoLista from '../../../../components/listas/EsqueletoLista';
 import { ErrorDeCarga, EsqueletoKpis, HuesosSerie } from '../../marketing/esqueletos';
 import SerieVisitas from '../trafico/SerieVisitas';
 import { EnCabecera } from './CabeceraWorkshop';
 import DetalleVisitas from '../trafico/DetalleVisitas';
+import ContenidoTrafico from '../trafico/ContenidoTrafico';
 import { AGRUPACIONES, FACETAS_RANKING, buscarRanking, claveRanking, columnasRanking, filasRanking } from '../trafico/columnas';
 import { PERIODOS, PERIODO_POR_DEFECTO, fechaHora, num, pct, rangoDePeriodo } from '../trafico/trafico';
 import '../../../../components/dashboard/pareja.css';
 import '../trafico/trafico.css';
+import '../../marketing/anuncios/anuncios.css';
 
 /*
  * Tráfico de las landings de institute-site: el único lugar con este dato desde el 16/10/2026 (antes
@@ -46,8 +49,10 @@ const AYUDA = {
     ranking: 'Qué trae el tráfico: cada landing, cada fuente (utm_source) o cada campaña (utm_campaign), con su parte del total y su tasa al grupo.',
 };
 
-const Kpi = ({ titulo, valor, sub, tip, i }) => {
+// `lista` (visitas · clics · landings): el ojo abre las filas que suman la cifra; `cuenta`: la tasa dice su «N de M».
+const Kpi = ({ titulo, valor, sub, tip, i, lista = null, cuenta = null, onVer = null }) => {
     const reducir = useReducedMotion();
+    const cifra = <Cifra valor={valor} className="kpi-n" desdeAnterior />;
     return (
         <motion.section className="kpi wf-kpi"
             initial={reducir ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
@@ -55,9 +60,15 @@ const Kpi = ({ titulo, valor, sub, tip, i }) => {
             <div className="kpi-cab">
                 <p className="t-eyebrow">{titulo}</p>
                 <Tip texto={tip} titulo={titulo} />
+                {onVer && lista && (
+                    <button type="button" className="mk-kpi-ver" onClick={() => onVer(lista, titulo)}
+                        aria-label={`Ver los registros de ${titulo}`} data-tip="Ver las filas que suman esta cifra">
+                        <Eye size={15} aria-hidden="true" />
+                    </button>
+                )}
             </div>
             <div className="kpi-cifra">
-                <Cifra valor={valor} className="kpi-n" desdeAnterior />
+                {cuenta ? <CifraConCuenta cuenta={cuenta} onVer={onVer}>{cifra}</CifraConCuenta> : cifra}
                 <p className="kpi-sub">{sub}</p>
             </div>
         </motion.section>
@@ -120,18 +131,28 @@ const WorkshopTraficoView = () => {
 
     const recargar = useCallback(() => setVersion((v) => v + 1), []);
 
+    const registros = useVerRegistros();
+    const ver = useCallback((lista, titulo) => registros.abrir({
+        titulo, subtitulo: textoRango(rango),
+        contenido: <ContenidoTrafico tipo={lista} desde={rango.desde} hasta={rango.hasta} datos={datos} medido={Boolean(datos?.whatsapp_medido_desde)} />,
+    }), [registros.abrir, rango, datos]);
+
     const t = datos?.totales || {};
     // Sin resumen todavía se da por medido: así no aparece y desaparece el aviso de abajo.
     const medido = !datos || Boolean(datos.whatsapp_medido_desde);
     const diasDelRango = datos?.por_dia?.length || 0;
     const kpis = !datos ? [] : [
-        { titulo: KPIS[0], valor: num(t.visitas ?? 0), tip: AYUDA.visitas,
+        { titulo: KPIS[0], valor: num(t.visitas ?? 0), tip: AYUDA.visitas, lista: 'visitas',
             sub: diasDelRango ? `${num(Math.round((t.visitas || 0) / diasDelRango))} por día` : '—' },
-        { titulo: KPIS[1], valor: num(t.landings ?? 0), tip: AYUDA.landings,
+        { titulo: KPIS[1], valor: num(t.landings ?? 0), tip: AYUDA.landings, lista: 'landings',
             sub: `${num(t.visitas_landings_whatsapp ?? 0)} con botón al grupo` },
-        { titulo: KPIS[2], valor: medido ? num(t.clics_whatsapp ?? 0) : '—', tip: AYUDA.clics,
+        { titulo: KPIS[2], valor: medido ? num(t.clics_whatsapp ?? 0) : '—', tip: AYUDA.clics, lista: medido ? 'clics' : null,
             sub: medido ? `medidos desde el ${fechaHora(datos.whatsapp_medido_desde)}` : 'sin medir todavía' },
         { titulo: KPIS[3], valor: pct(t.tasa_whatsapp), tip: AYUDA.tasa,
+            cuenta: t.tasa_whatsapp == null ? null : {
+                a: { t: `${num(t.clics_whatsapp)} clics`, m: 'clics', titulo: KPIS[2] },
+                b: { t: `${num(t.visitas_medidas)} visitas con botón al grupo`, m: null },
+            },
             sub: 'de las visitas con botón al grupo' },
     ];
 
@@ -179,7 +200,7 @@ const WorkshopTraficoView = () => {
                             label="Cargando el tráfico de las landings…" />
                     ) : (
                         <div className="pareja wf-kpis" style={{ '--min': '230px', '--g': 'var(--s4)' }}>
-                            {kpis.map((k, i) => <Kpi key={k.titulo} {...k} i={i} />)}
+                            {kpis.map((k, i) => <Kpi key={k.titulo} {...k} i={i} onVer={ver} />)}
                         </div>
                     )}
 
@@ -190,6 +211,7 @@ const WorkshopTraficoView = () => {
 
                     <Ranking datos={datos} medido={medido} />
 
+                    {registros.panel}
                     <DetalleVisitas desde={rango.desde} hasta={rango.hasta} version={version} onBorrada={recargar} />
                 </motion.div>
             )}
