@@ -6,9 +6,11 @@ const cambia = (r) => { olvidarCache('mk:'); return r.data; };
 
 /** La API de la tabla de anuncios (ver `app/api/marketing_anuncios.py`). */
 
-/** `config.base`: por qué fecha se cuentan las agendas (`alta` | `reunion`, ver `baseDeConteo`). */
-export const pedirTablero = (desde, hasta, { base, ...config } = {}) =>
-    api.get('/marketing/anuncios', { params: { desde, hasta, ...(base ? { base } : {}) }, ...config }).then((r) => r.data);
+/** `config.base`: por qué fecha se cuentan las agendas (`alta` | `reunion`, ver `baseDeConteo`). `config.segmento` (A, B, C, D,
+ *  sin; coma): las cifras de las fuentes acotadas a esos segmentos, siempre por fecha de alta. */
+export const pedirTablero = (desde, hasta, { base, segmento, ...config } = {}) =>
+    api.get('/marketing/anuncios', { params: { desde, hasta, ...(base ? { base } : {}), ...(segmento ? { segmento } : {}) }, ...config })
+        .then((r) => r.data);
 
 export const pedirAnunciosDeMeta = (desde, hasta, config = {}) =>
     api.get('/marketing/anuncios/meta', { params: { desde, hasta }, ...config }).then((r) => r.data);

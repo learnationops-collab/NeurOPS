@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { useParamsGuardados } from '../../../hooks/useParamsGuardados';
 import { motion, useReducedMotion } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -189,6 +189,13 @@ const AdminMarketingHubPage = () => {
                         transition={{ duration: 0.28, ease: [0.22, 0.7, 0.2, 1] }}>
                         {pestana === 'anuncios' && (
                             <div className={cargando && datos ? 'mk-recargando' : undefined} aria-busy={cargando}>
+                                {/* La tabla es por palabra clave y su gasto no conoce al lead: no se parte por segmento. */}
+                                <p className="t-cap mut">
+                                    No se parte por segmento: el gasto de Meta no conoce al lead.{' '}
+                                    <Link className="link-btn" to={`/admin/todos?vista=segmentos&periodo=${periodo}&desde=${rango.desde}&hasta=${rango.hasta}`}>
+                                        Ver por segmento
+                                    </Link>
+                                </p>
                                 {error && !datos ? (
                                     <ErrorDeCarga titulo={error} onReintentar={recargar} />
                                 ) : !datos ? <EsqueletoTablaAnuncios bajoKpis={resumenSetting} /> : (

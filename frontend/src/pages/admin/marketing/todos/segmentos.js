@@ -57,6 +57,12 @@ export const pctDe = (columna, fila) => {
 /** Para la diferencia de un % (se compara en puntos) y la del resto. */
 export const tipoDeDiferencia = (columna) => (columna.dinero ? 'money' : 'num');
 
+/** Los grupos de segmento, para los filtros que no los reciben del backend (Marketing fuera de Segmentos). */
+export const SEGMENTOS = [
+    { key: 'A', label: 'A' }, { key: 'B', label: 'B' }, { key: 'C', label: 'C' }, { key: 'D', label: 'D' },
+    { key: 'sin', label: 'Sin segmento' },
+];
+
 /** Los segmentos de la URL (`?segmento=A,B`): solo los que existen. */
 export const segmentosDeUrl = (texto, segmentos) => {
     const validos = new Set(segmentos.map((s) => s.key));
