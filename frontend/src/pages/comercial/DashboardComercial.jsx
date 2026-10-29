@@ -28,6 +28,8 @@ import FichaLeadModal from '../../components/ficha/FichaLeadModal';
 import Reportar from './components/Reportar';
 import RangoFechas, { mesEnCurso, rangoAnterior, rangoDe, textoRango } from './components/RangoFechas';
 import SegmentosPanel from './components/SegmentosPanel';
+import BarraSegmento, { segmentoDeLaVista } from './components/BarraSegmento';
+import useEstadoGuardado from '../../hooks/useEstadoGuardado';
 import { corregirAgenda, eliminarAgenda as eliminarAgendaApi, getComparativas, getContexto, getResumen, getTabla, getVariabilidad, marcarAgendaDuplicada } from './comercialApi';
 import { getNoCerradas, sincronizarAcademia as sincronizarAcademiaApi } from './comercialApi';
 import Finanzas, { TABS_FINANZAS } from './components/finanzas/Finanzas';
@@ -301,6 +303,21 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
         setParams(siguiente, { replace: true });
         return siguiente;
     }, [params, setParams]);
+
+    // El filtro de segmento se recuerda por usuario: sin `seg` en el link, en Analizar y Revisar se vuelve al de la última vez.
+    const [segGuardado, guardarSeg] = useEstadoGuardado('cm_segmento', { seg: '' });
+    const segRestaurado = useRef(false);
+    useEffect(() => {
+        if (!segRestaurado.current) {
+            segRestaurado.current = true;
+            if (!segmento && segGuardado.seg && ['analizar', 'revisar'].includes(seccion)) {
+                set({ seg: segGuardado.seg });
+                return;
+            }
+        }
+        guardarSeg({ seg: segmento });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [segmento]);
 
     // Cada bloque espera solo SU pedido y, si falla, ofrece reintentar (ver `usePedidos`).
     const { pedir, fallas } = usePedidos();
@@ -784,6 +801,10 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                 {/* `.vista` es lo que separa las filas de paneles: sin el, cada seccion
                     renderiza sus filas como hermanas sueltas y quedan pegadas (medido: 0px
                     entre todas). Ademas trae la animacion de entrada de la referencia. */}
+                {!esperaFechas && (
+                    <BarraSegmento vista={segmentoDeLaVista({ seccion, tab, rol, tabla: tablaActual })} elegidos={elegidosSeg}
+                        onElegir={(lista) => set({ seg: lista.join(',') })} />
+                )}
                 <div className="vista">
                     {/* Sin las dos fechas no se pide nada: se piden acá, en vez de mostrar los
                         datos de otro rango bajo la etiqueta "Personalizado". */}
