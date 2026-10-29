@@ -4,6 +4,7 @@ import { Eye } from 'lucide-react';
 import { Humo, Tip } from '../../../comercial/components/Shared';
 import Cifra from '../../../comercial/components/Cifra';
 import { ticketPromedio } from '../funnelMath';
+import { roasRotulo } from '../talleres/formato';
 import { parteDe, parteSuelta } from '../registros/cuentas';
 import { CifraConCuenta, SkeletonBlock, SkeletonText } from '../../../../components/standard';
 import '../../marketing/anuncios/anuncios.css';
@@ -102,11 +103,11 @@ const valores = (t, n, anterior) => {
             sub: { rotulo: `Neto ${dinero(neto)} ·`, valor: `${margen}%`, cuenta: { a: parteSuelta(`${dinero(neto)} neto`), b: parteDe(`${dinero(t.cash)} cobrados`, 'cash_total') } },
         },
         roas_nc: {
-            valor: veces(t.roas_nc), color: roasTono(t.roas_nc), sub: 'venta nueva ÷ inversión', cuenta: { a: parteDe(dinero(t.cash_ventas), 'new_cash'), b: inv },
+            valor: veces(t.roas_nc), color: roasTono(t.roas_nc), sub: { texto: roasRotulo(t.roas_nc), color: roasTono(t.roas_nc) }, cuenta: { a: parteDe(dinero(t.cash_ventas), 'new_cash'), b: inv },
             titulo: anterior ? `${veces(t.roas_nc)} vs ${veces(anterior.totales.roas_nc)}` : undefined,
         },
         roas: {
-            valor: veces(t.roas), color: roasTono(t.roas), sub: 'todo lo cobrado ÷ inversión', cuenta: { a: parteDe(dinero(t.cash), 'cash_total'), b: inv },
+            valor: veces(t.roas), color: roasTono(t.roas), sub: { texto: roasRotulo(t.roas), color: roasTono(t.roas) }, cuenta: { a: parteDe(dinero(t.cash), 'cash_total'), b: inv },
             titulo: anterior ? `${veces(t.roas)} vs ${veces(anterior.totales.roas)}` : undefined,
         },
     };
@@ -115,6 +116,8 @@ const valores = (t, n, anterior) => {
 /** El renglón de abajo: un texto, o «CPL $1.38» con su cuenta en un tooltip. */
 const Pie = ({ sub, onVer }) => {
     if (typeof sub === 'string') return <span className="num trunc">{sub}</span>;
+    // Un veredicto en el color del número («Rentable»): lo que antes decía la fórmula escrita.
+    if (sub.texto) return <span className="num trunc" style={{ color: `var(--${sub.color})`, fontWeight: 800 }}>{sub.texto}</span>;
     return (
         <span className="num">
             {sub.rotulo} <CifraConCuenta cuenta={sub.cuenta} onVer={onVer}>{sub.valor}</CifraConCuenta>
