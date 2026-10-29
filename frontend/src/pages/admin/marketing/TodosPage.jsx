@@ -15,6 +15,7 @@ import ResumenTodos, { EsqueletoResumen } from './todos/ResumenTodos';
 import MetricaPorMetrica from './todos/MetricaPorMetrica';
 import { SETTING, WORKSHOP, gruposDe } from './todos/comparacion';
 import { useRegistrosMarketing } from './anuncios/useRegistrosMarketing';
+import { SelectorBase, useBaseDeConteo } from './anuncios/baseDeConteo';
 import { useDatosCacheados } from '../../../services/cacheDeVistas';
 import '../../comercial/comercial.css';
 import '../../../components/dashboard/pareja.css';
@@ -44,16 +45,17 @@ const TodosPage = () => {
     const { periodo, rango, cambiar, elegir, textoPeriodo, params } = usePeriodoDeUrl('mk_todos_url', ['vista']);
     const vista = VISTAS.some((v) => v.key === params.get('vista')) ? params.get('vista') : 'resumen';
     const [version, setVersion] = useState(0);
+    const { base, elegirBase } = useBaseDeConteo();
     const recargar = useCallback(() => setVersion((v) => v + 1), []);
 
-    const { datos, error: fallo, cargando } = useDatosCacheados(`mk:tablero:${rango.desde}:${rango.hasta}`,
-        (signal) => pedirTablero(rango.desde, rango.hasta, { signal }),
+    const { datos, error: fallo, cargando } = useDatosCacheados(`mk:tablero:${base}:${rango.desde}:${rango.hasta}`,
+        (signal) => pedirTablero(rango.desde, rango.hasta, { signal, base }),
         { version, onError: (e) => toast.error(mensajeDeError(e, 'No se pudo cargar la comparación.')) });
     const error = fallo ? mensajeDeError(fallo, 'No se pudo cargar la comparación.') : null;
 
     const setting = datos?.fuentes?.fuentes?.find((f) => f.key === SETTING.key);
     const workshop = datos?.fuentes?.fuentes?.find((f) => f.key === WORKSHOP.key);
-    const registros = useRegistrosMarketing(rango.desde, rango.hasta, datos?.moneda);
+    const registros = useRegistrosMarketing(rango.desde, rango.hasta, datos?.moneda, base);
     const grupos = useMemo(() => (setting && workshop ? gruposDe(setting, workshop, datos?.moneda) : null), [setting, workshop, datos?.moneda]);
     const sinFuentes = datos && !grupos;
 
@@ -116,6 +118,7 @@ const TodosPage = () => {
                                             if (esFecha(desde) && esFecha(hasta)) cambiar({ periodo: 'personalizado', desde, hasta });
                                         }} />
                                 )} />
+                            <SelectorBase base={base} onChange={elegirBase} />
                             <button type="button" className="ibtn" onClick={recargar} disabled={cargando}
                                 title="Volver a cargar" aria-label="Volver a cargar">
                                 <RefreshCw className={cargando ? 'mk-gira' : ''} aria-hidden="true" />

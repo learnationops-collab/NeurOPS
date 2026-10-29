@@ -45,8 +45,8 @@ const Celdas = ({ fila, moneda, landings }) => (
 const KPIS = ['Clics', 'Visitas a la landing'];
 const TITULO = 'Campañas, conjuntos y anuncios de Workshop';
 
-const RendimientoWorkshop = ({ desde, hasta, moneda, embudos, fuente, cuentas, version = 0, irAMeta }) => {
-    const registros = useRegistrosMarketing(desde, hasta, moneda);
+const RendimientoWorkshop = ({ desde, hasta, moneda, embudos, fuente, cuentas, version = 0, irAMeta, base }) => {
+    const registros = useRegistrosMarketing(desde, hasta, moneda, base);
     const [abiertasDe, setAbiertasDe] = useState({ de: null, mapa: {} });
     const [intento, setIntento] = useState(0);
 

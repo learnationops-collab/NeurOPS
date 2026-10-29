@@ -12,6 +12,9 @@ import { CardHead, Tip, useMontado } from './Shared';
  *
  * - `paso` es el nombre y `n` el conteo; el array va en orden, de arriba hacia abajo.
  * - `ayuda` es el texto del tooltip de esa fila. Opcional: sin él la fila no muestra el ícono.
+ * - `tasa` reemplaza el porcentaje contra el paso anterior cuando la tasa del paso se mide con otra base
+ *   (el show up de Asistieron es de la tarjeta de arriba: leads con resultado, no agendas); `subTasa` dice
+ *   su numerador y denominador, para que el número se pueda leer.
  * - `sub` es una línea bajo la banda con la cuenta que la compone («150 vigentes + 73 descartadas»);
  *   con `irSub` es un botón. Opcional.
  * - `ir` es el drill-down de esa fila. Opcional: sin él el nombre no es clicable. Es por fila y no
@@ -97,8 +100,8 @@ const Embudo = ({ pasos, sinCuello = false, sinFinal = false }) => {
                                     <div className="dc-funnel-bar dc-funnel-bar--cero">0</div>
                                 )}
                             </div>
-                            <span className="dc-funnel-pct" style={estiloCuello}>
-                                {pct === null ? '' : `${pct}%`}
+                            <span className="dc-funnel-pct" style={estiloCuello} title={p.subTasa}>
+                                {p.tasa ? p.tasa : pct === null ? '' : `${pct}%`}
                             </span>
                         </div>
                         {p.sub && (

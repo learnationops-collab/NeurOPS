@@ -92,7 +92,8 @@ export const EsqueletoTablaAnuncios = ({ bajoKpis = null }) => (
 );
 
 // `bajoKpis`: lo que va entre los KPIs y el resto (el gasto por embudo, en «Todo»).
-const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta, estadoMeta = null, bajoKpis = null }) => {
+// `agendasDeFuente`: con «Contar por: fecha de reunión» la tarjeta Agendas es la de Setting en esa base (la de Closing).
+const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta, estadoMeta = null, bajoKpis = null, agendasDeFuente = null, onVerAgendas = null }) => {
     // Los filtros se recuerdan por usuario (`useFiltrosTabla`, norma del 28/10/2026). «Solo con gasto» y «solo
     // activas» (Kerwin, 23/10/2026): lo que no gastó y lo que no está activo en Meta estorban al mirar costos.
     const {
@@ -241,6 +242,17 @@ const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta, estadoMeta = nul
           sub: conGasto ? `${formatear(totales.costo_venta, 'money', moneda)} por venta · ${formatear(totales.cobrado, 'money', moneda)} cobrado` : `${formatear(totales.cobrado, 'money', moneda)} cobrado`,
           tip: 'Pago completo o split. El ROAS está en las tarjetas de abajo.' },
     ];
+
+    if (agendasDeFuente) {
+        kpis[2] = {
+            titulo: KPIS[2], valor: formatear(agendasDeFuente.agendas, 'num'),
+            onVer: onVerAgendas ? () => onVerAgendas('agendas', KPIS[2]) : undefined,
+            sub: agendasDeFuente.costo_agenda != null
+                ? `${formatear(agendasDeFuente.costo_agenda, 'money', moneda)} por agenda (de ${formatear(agendasDeFuente.agendas_alta, 'num')} por fecha de alta)`
+                : 'por fecha de reunión · costo por agenda: —',
+            tip: 'Agendas de Setting cuya reunión cae en el período (las de Closing). El costo por agenda cuenta siempre por fecha de alta.',
+        };
+    }
 
     return (
         <div className="vista mk-vista">

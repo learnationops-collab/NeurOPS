@@ -48,13 +48,14 @@ export const TarjetasFuente = ({ fuente, moneda, sinRepetidos = false, onVer = n
         { titulo: TITULOS[2], valor: formatear(fuente.agendas, 'num'),
           sub: (
               <>
-                  {dinero(fuente.costo_agenda)} por agenda · show up{' '}
+                  <CifraConCuenta cuenta={cuentaDe('costo_agenda', fuente, dinero)} onVer={onVer}>{dinero(fuente.costo_agenda)}</CifraConCuenta>
+                  {' '}por agenda · show up{' '}
                   <CifraConCuenta cuenta={cuentaDe('agenda_show', fuente, dinero)} onVer={onVer}>
                       {fuente.pct_show_up === null ? '—' : `${fuente.pct_show_up}%`}
                   </CifraConCuenta>
               </>
           ),
-          tip: 'Personas con agenda creada en el período. Show up: asistieron ÷ citas con resultado.' },
+          tip: 'Agendas del período, por la fecha elegida en «Contar por». Show up: asistieron ÷ citas con resultado. El costo cuenta siempre por fecha de alta.' },
         { titulo: TITULOS[3], valor: formatear(fuente.ventas, 'num'), sub: `${dinero(fuente.costo_venta)} por venta`,
           tip: 'Pagos de venta nueva (completo o split) del período.' },
         { titulo: TITULOS[4], valor: dinero(fuente.new_cash), sub: 'venta nueva del período',

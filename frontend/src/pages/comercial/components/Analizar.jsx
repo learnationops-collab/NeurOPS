@@ -824,8 +824,13 @@ const pasosDe = (funnel, vocabulario, irA) => funnel.map(p => {
         ayuda: def.ayuda,
         ir: abrir(irA, def.destino),
         // Agendas: cuántas son vigentes y cuántas descartadas; la segunda cifra abre las descartadas.
-        sub: p.descartadas != null ? `${p.vigentes} vigentes + ${p.descartadas} descartadas` : undefined,
+        sub: p.descartadas != null ? `${p.vigentes} vigentes + ${p.descartadas} descartadas`
+            : p.show_up != null ? `show up: ${p.leads_asistieron} de ${p.leads_realizadas} leads con resultado`
+                : p.presentaciones != null ? `${p.n} de ${p.presentaciones} presentaciones` : undefined,
         irSub: p.descartadas ? abrir(irA, def.destinoDescartadas) : undefined,
+        // El show up del paso es el de la tarjeta de arriba (leads con resultado), no asistieron ÷ agendas.
+        tasa: p.show_up != null ? `${p.show_up}%` : undefined,
+        subTasa: p.show_up != null ? `Show up: ${p.leads_asistieron} de ${p.leads_realizadas} leads con resultado` : undefined,
     };
 });
 

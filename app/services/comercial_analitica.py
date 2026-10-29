@@ -463,9 +463,12 @@ def bloque_closers(start, end, closer_id=None, closer_nombre=None, con_reales=Tr
             # lista «Vigentes» de Revisar: el embudo cuenta todas y dice cuántas de cada una (28/10/2026).
             {'paso': 'Agendas', 'n': tot_a['agendas'], 'vigentes': tot_a['agendas'] - descartadas,
              'descartadas': descartadas},
-            {'paso': 'Asistieron', 'n': tot_a['asistieron']},
+            # Asistieron y Ventas dicen con qué cuenta se calcula su tasa (28/10/2026): el show up es el de la
+            # tarjeta (leads con resultado, no las agendas) y las ventas se miden sobre las presentaciones.
+            {'paso': 'Asistieron', 'n': tot_a['asistieron'], 'show_up': pct(len(leads_asistieron), len(leads_realizadas)),
+             'leads_asistieron': len(leads_asistieron), 'leads_realizadas': len(leads_realizadas)},
             {'paso': 'Presentaciones', 'n': presentaciones},
-            {'paso': 'Ventas', 'n': tot_a['ventas']},
+            {'paso': 'Ventas', 'n': tot_a['ventas'], 'presentaciones': presentaciones},
         ],
         'senas': senas_de(ventas),
     }

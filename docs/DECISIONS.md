@@ -164,3 +164,10 @@
   3. Las pantallas nuevas lo usan en vez de `useState` para filtros y vistas.
 - **Qué se pierde (nombrado):** lo que ya estaba guardado por navegador (`mk_rendimiento_columnas`) se hereda una sola vez; `useModoVista` y `useColumnasVisibles` siguen por navegador hasta migrarlos. Un link sin parámetros ya no abre «lo de siempre», sino lo último que esa persona usó.
 - **Consecuencias:** quedan por migrar las demás pantallas (una tarea por pantalla, tarea 845 de Leadership). En simulación cada identidad simulada tiene sus propias preferencias.
+
+## ADR-W019: Las agendas de Marketing se cuentan por fecha de alta o de reunión, con una sola cuenta (`conteo_agendas_service`)
+- **Fecha:** 2026-10-28 · **Subsistema:** Marketing y Analizar · **Estado:** implementado
+- **Contexto:** octubre 01–28 daba 148 + 61 agendas en Marketing (fecha de alta), 223 en Closing/Analizar (fecha de reunión) y 150 en Revisar «Vigentes». Además Analizar mostraba dos show up distintos (63,9% en la tarjeta, 35,4% en el embudo).
+- **Decisión:** selector «Contar por: fecha de alta / fecha de reunión» en las pantallas de Marketing que cuentan agendas, recordado. Una sola función en backend (`conteo_agendas_service`): alta = libro de agendas, una por persona; reunión = las filas de Closing (`ComercialService.agendas`, con descartadas), show up por lead. Cada agenda es de Setting, Workshop u Otras (pestaña nueva), así que las tres suman el total. Costos y ROAS usan siempre fecha de alta (lo que Meta gastó genera agendas al darse de alta) y lo dicen en el tooltip. El embudo de Analizar muestra el show up de la tarjeta con su cuenta.
+- **Qué se pierde (nombrado):** con reunión, la tarjeta de agendas y el costo por agenda ya no comparten base (el tooltip lo dice); la tabla de palabras clave sigue contando por alta. Revisar sigue calculando el show up por llamada (79 de 123), no por lead (78 de 122).
+- **Consecuencias:** la cifra y su lista salen de las mismas filas (`/registros?base=`); hay una cuarta lista (`agendas_alta`) para el denominador de los costos.

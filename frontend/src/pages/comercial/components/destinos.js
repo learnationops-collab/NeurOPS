@@ -203,7 +203,8 @@ export const PASOS_CLOSER = {
     // Sin «Confirmadas»: el usuario la sacó del embudo (09/10/2026). La confirmación se sigue
     // viendo en el pre call de cada agenda y se filtra con la faceta «Confirmada» de Revisar.
     Asistieron: {
-        ayuda: 'La llamada ocurrió y el lead estaba del otro lado.',
+        ayuda: 'La llamada ocurrió y el lead estaba del otro lado. El % es el show up de la tarjeta de arriba: leads que '
+            + 'se presentaron ÷ leads con resultado (las agendas sin reportar no entran).',
         destino: { tabla: 'agendas', filtro: { asistio: 'Sí' }, de: 'Embudo · Asistieron' },
     },
     Presentaciones: {
@@ -212,7 +213,8 @@ export const PASOS_CLOSER = {
     },
     Ventas: {
         ayuda: 'Cierres del período: pago completo o split pay. Una seña no es un cierre. Cuenta '
-            + 'agendas y no cobros: dos cuotas del mismo lead salen de una sola llamada.',
+            + 'agendas y no cobros: dos cuotas del mismo lead salen de una sola llamada. El % es sobre las '
+            + 'presentaciones; el close rate real de la tarjeta de arriba es por cobro y otra base.',
         destino: { tabla: 'agendas', filtro: { post_call: 'Venta' }, de: 'Embudo · Ventas' },
     },
 };

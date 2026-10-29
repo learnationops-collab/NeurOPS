@@ -13,9 +13,9 @@ show up, ventas, cuotas cobradas, cash y los costos.
     pago (workshop vivo o grabación → Workshop; un setter → Setting). Lo demás (VSL, Fulfillment,
     sin procedencia) no es de ninguna de las dos y queda en `otras`.
   · **Base**: cash BRUTO, como el «Cash collected» del dashboard comercial y la tabla de Marketing.
-  · **Agendas y show up**: las `FinancialAgenda` (el libro de agendas) creadas en el período, una por
-    persona, con la fuente que dice su `nombre`. Show up: la persona asistió a alguna de sus agendas;
-    su % es asistieron ÷ citas con resultado (asistieron + no show), igual que Workshop.
+  · **Agendas y show up**: por fecha de ALTA o de REUNIÓN, a elección (`conteo_agendas_service`: ahí está
+    la definición de cada una y de las tres fuentes, Setting, Workshop y Otras). Show up: asistieron ÷ citas
+    con resultado (asistieron + no show), igual que Workshop. Los costos van siempre por fecha de alta.
   · **Leads entrantes**: Setting, las personas que escribieron una palabra clave (la tabla de abajo);
     Workshop, los clics al grupo de WhatsApp desde las landings de sus anuncios.
   · **Importe gastado**: el gasto de Meta de los anuncios del embudo (`meta_ads_service.gasto_por_embudo`).
@@ -43,19 +43,12 @@ Costos: costo por lead, por agenda y por venta = importe gastado ÷ (leads | age
 denominador o sin gasto, None. «Ventas» cuenta pagos de venta nueva (como el close rate), no el ticket
 agrupado de `ticket_service`.
 """
-from collections import Counter
-from datetime import datetime, time
-
-from sqlalchemy.orm import joinedload
-
 from app import db
-from app.models import FinancialAgenda
+from app.services import conteo_agendas_service
 from app.services.fuente_service import FUENTE_SETTING, es_workshop_landing, es_workshop_vivo, normalizar
-from app.services.workshop_estados import bucket_estado
 from app.services.procedencia_ingresos_service import (
     agendas_para_atribuir,
     procedencia_por_venta,
-    setters_conocidos,
 )
 
 FUENTES = (
@@ -88,7 +81,9 @@ def metricas_de_fuente(base):
         'pct_show_up': dividir(base.get('show_up', 0) * 100, base.get('reportadas', base.get('agendas', 0)), 1),
         'pct_upsell': dividir(base.get('clientes_upsell', 0) * 100, base.get('clientes', 0), 1),
         'cpl': dividir(gasto, base.get('leads', 0)) if con_gasto else None,
-        'costo_agenda': dividir(gasto, base.get('agendas', 0)) if con_gasto else None,
+        # SIEMPRE por las agendas de fecha de alta (`conteo_agendas_service`), aunque las tarjetas cuenten por
+        # reunión: lo que Meta gastó genera agendas al darse de alta (Kerwin, 28/10/2026).
+        'costo_agenda': dividir(gasto, base.get('agendas_alta', base.get('agendas', 0))) if con_gasto else None,
         'costo_venta': dividir(gasto, base.get('ventas', 0)) if con_gasto else None,
         'roas_new_cash': dividir(new_cash, gasto) if con_gasto else None,
         'roas_total': dividir(cash_total, gasto) if con_gasto else None,
@@ -114,13 +109,16 @@ def sumar_cobros(cobros):
                for f in FUENTES}
     clientes = {f['key']: set() for f in FUENTES}
     compran_upsell = {f['key']: set() for f in FUENTES}
-    otras = {'cash_total': 0.0, 'cobros': 0}
+    otras = {'cash_total': 0.0, 'cobros': 0, 'new_cash': 0.0, 'ventas': 0}
     for c in cobros:
         monto = float(c['monto'] or 0)
         destino = fuente_de_cobro(c['por_clave'], c['balde'])
         if destino is None:
             otras['cash_total'] += monto
             otras['cobros'] += 1
+            if c['es_venta']:
+                otras['new_cash'] += monto
+                otras['ventas'] += 1
             continue
         fila = fuentes[destino]
         fila['cash_total'] += monto
@@ -166,55 +164,6 @@ def fuente_de_agenda(nombre, setters):
     return 'setting' if normal in setters or normal == FUENTE_SETTING else None
 
 
-def personas_por_fuente(desde, hasta):
-    """Una fila por persona con agenda creada en el período y fuente conocida: de acá salen las cuentas de
-    `agendas_por_fuente` y la lista que se abre al tocar la cifra (`fuentes_registros_service`), así que
-    no pueden diferir. Las repetidas de una reprogramación no suman. `asistio` si fue a alguna; `ultima` es
-    el `bucket_estado` de su última cita (criterio de `workshop_estados.desglose_de_personas`)."""
-    inicio, fin = datetime.combine(desde, time.min), datetime.combine(hasta, time.max)
-    setters = setters_conocidos()
-    filas = FinancialAgenda.query.options(joinedload(FinancialAgenda.person)).filter(
-        FinancialAgenda.created_at >= inicio, FinancialAgenda.created_at <= fin,
-        FinancialAgenda.duplicada_de_id.is_(None), FinancialAgenda.descartada_at.is_(None)) \
-        .order_by(FinancialAgenda.created_at, FinancialAgenda.id).all()
-
-    por_persona = {}
-    for f in filas:
-        fuente = fuente_de_agenda(f.nombre, setters)
-        if not fuente:
-            continue
-        persona = por_persona.setdefault((fuente, f.person_uuid or f'agenda-{f.id}'), {
-            'fuente': fuente, 'dia': f.created_at.date().isoformat(), 'asistio': False, 'ultima': None,
-            'persona': f.nombre_persona, 'origen': f.nombre, 'closer': f.closer, 'cita': f.date, 'estado': f.estado,
-            'agenda_id': f.id})
-        bucket = bucket_estado(f.estado)
-        if bucket == 'Show Up' or not persona['asistio']:
-            persona['estado'] = f.estado
-        persona['asistio'] = persona['asistio'] or bucket == 'Show Up'
-        persona['ultima'] = bucket
-        persona['closer'] = f.closer or persona['closer']
-        persona['cita'] = f.date or persona['cita']
-    return list(por_persona.values())
-
-
-def con_resultado(p):
-    """¿La cita de esta persona tiene resultado? Asistió o, si no, su última cita fue un no show."""
-    return bool(p['asistio'] or p['ultima'] == 'No Show')
-
-
-def agendas_por_fuente(desde, hasta):
-    """{fuente: {agendas, show_up, reportadas, dias: {fecha: agendas}}}: las agendas creadas en el período,
-    una por persona y show up si asistió a alguna. `reportadas` = con resultado (`con_resultado`)."""
-    salida = {f['key']: {'agendas': 0, 'show_up': 0, 'reportadas': 0, 'dias': Counter()} for f in FUENTES}
-    for p in personas_por_fuente(desde, hasta):
-        fila = salida[p['fuente']]
-        fila['agendas'] += 1
-        fila['show_up'] += 1 if p['asistio'] else 0
-        fila['reportadas'] += 1 if con_resultado(p) else 0
-        fila['dias'][p['dia']] += 1
-    return salida
-
-
 def _leads_de_workshop(desde, hasta):
     """Clics al grupo de WhatsApp desde las landings de los anuncios de Workshop (cómo entra un lead)."""
     from app.services import workshop_meta_service
@@ -246,13 +195,16 @@ def sin_campana(filas, gasto_setting):
     return {'palabras': palabras, 'gasto': gasto, 'pct_gasto': dividir(gasto * 100, gasto_setting, 1)}
 
 
-def resumen(desde, hasta, filas, cobros, claves, embudos):
+def resumen(desde, hasta, filas, cobros, claves, embudos, base=conteo_agendas_service.BASE_POR_DEFECTO):
     """Las dos fuentes con todas sus cifras, para el hub de Marketing.
 
     `filas` son las del tablero (leads de Setting), `cobros` y `claves` los del período con su palabra
-    clave (`anuncios_service.claves_de_cobros`) y `embudos` el gasto de Meta por embudo."""
+    clave (`anuncios_service.claves_de_cobros`) y `embudos` el gasto de Meta por embudo. `base`: por qué
+    fecha se cuentan las agendas (`conteo_agendas_service`); los costos van siempre por fecha de alta."""
+    base = conteo_agendas_service.base_de(base)
     cobros_fuente, otras = sumar_cobros(_cobros_para_sumar(cobros, claves))
-    agendas = agendas_por_fuente(desde, hasta)
+    agendas = conteo_agendas_service.por_fuente(desde, hasta, base)
+    agendas_alta = agendas if base == 'alta' else conteo_agendas_service.por_fuente(desde, hasta, 'alta')
     gasto_de = {e['embudo']: e for e in embudos}
     leads = {
         'setting': sum(f['entrantes'] for f in filas if not f['archivado']),
@@ -266,8 +218,17 @@ def resumen(desde, hasta, filas, cobros, claves, embudos):
             **f, **cobros_fuente[k],
             'leads': leads[k], 'gasto': meta['gasto'], 'anuncios': meta['anuncios'],
             'agendas': agendas[k]['agendas'], 'show_up': agendas[k]['show_up'],
-            'reportadas': agendas[k]['reportadas'],
-            'agendas_dias': dict(sorted(agendas[k]['dias'].items())),
+            'reportadas': agendas[k]['reportadas'], 'agendas_alta': agendas_alta[k]['agendas'],
+            'agendas_dias': agendas[k]['dias'],
         }))
-    return {'fuentes': salida, 'otras': {'cash_total': round(otras['cash_total'], 2), 'cobros': otras['cobros']},
+    otras_agendas = agendas['otras']
+    return {'base': base, 'fuentes': salida,
+            'otras': {'agendas': otras_agendas['agendas'], 'show_up': otras_agendas['show_up'],
+                      'reportadas': otras_agendas['reportadas'], 'agendas_dias': otras_agendas['dias'],
+                      'agendas_alta': agendas_alta['otras']['agendas'],
+                      'pct_show_up': dividir(otras_agendas['show_up'] * 100, otras_agendas['reportadas'], 1),
+                      'cash_total': round(otras['cash_total'], 2), 'new_cash': round(otras['new_cash'], 2),
+                      'ventas': otras['ventas'], 'cobros': otras['cobros']},
+            # Lo que suman las tres, en la base elegida: es el total de Closing, Analizar y Revisar en reunión.
+            'agendas_total': sum(a['agendas'] for a in agendas.values()),
             'sin_campana': sin_campana(filas, (gasto_de.get('setting') or {}).get('gasto', 0.0))}

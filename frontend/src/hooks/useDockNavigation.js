@@ -17,6 +17,7 @@ import {
     CalendarCheck,
     Link2Off,
     Layers,
+    MoreHorizontal,
     DollarSign,
     UserCheck,
     GraduationCap
@@ -101,7 +102,8 @@ const useDockNavigation = () => {
             return [
                 { id: 'todos', icon: Layers, label: 'Todos', path: '/admin/todos' },
                 { id: 'workshops', icon: BarChart3, label: 'Workshops', path: '/admin/workshops' },
-                { id: 'marketing', icon: Activity, label: 'Setting', path: '/admin/marketing' }
+                { id: 'marketing', icon: Activity, label: 'Setting', path: '/admin/marketing' },
+                { id: 'otras', icon: MoreHorizontal, label: 'Otras', path: '/admin/otras' }
             ];
         } else if (user?.role === 'hiring') {
             // Rol de una sola pantalla: el panel de contratación para el puesto
