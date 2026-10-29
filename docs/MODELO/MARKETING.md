@@ -1,6 +1,6 @@
 # Marketing y segmentos — modelo vigente
 
-Cómo se cuenta hoy cada cifra de Marketing (Setting, Workshop, Todos) y cómo se parte por segmento A/B/C/D. Las decisiones que llevaron a esto, en [DECISIONS.md](../DECISIONS.md) (ADR-W015, ADR-W019 y ADR-W020). Código principal: `app/services/anuncios_service.py`, `fuentes_service.py`, `fuentes_registros_service.py`, `segmentos_*.py`; pantallas en `frontend/src/pages/admin/marketing/`.
+Cómo se cuenta hoy cada cifra de Marketing (Setting, Workshop, Todos) y cómo se parte por segmento A/B/C/D. Las decisiones que llevaron a esto, en [DECISIONS.md](../DECISIONS.md) (ADR-W015, ADR-W019, ADR-W020 y ADR-W021). Código principal: `app/services/anuncios_service.py`, `fuentes_service.py`, `fuentes_registros_service.py`, `segmentos_*.py`; pantallas en `frontend/src/pages/admin/marketing/`.
 
 ## Las dos fuentes
 
@@ -29,21 +29,29 @@ El segmento de un lead lo calcula y guarda Thalamus (`segmento_service`, columna
 
 ### Marketing › Todos › Segmentos
 
-`segmentos_marketing_service.por_segmento` devuelve, por fuente y por grupo: leads, agendas, citas con resultado, show up, ventas, New Cash y Cash total, con sus tasas (show up, cierre, ticket, % del cash). Sale en `GET /api/marketing/anuncios?segmentos=1` (`por_segmento`; cuesta ~3 s, por eso solo lo pide su vista). Las personas, los cobros y los leads son **los mismos** de las cifras de la fuente, repartidos por segmento, así que la suma de los grupos es la cifra de la fuente.
+`segmentos_marketing_service.hechos` arma, para un período, los **hechos** de la vista: cada agenda (base alta, `conteo_agendas_service.personas`), cada cobro (`fuentes_service._cobros_para_sumar`) y cada lead de Setting (`anuncios_service.entradas_del_periodo`), con su segmento, su fuente, su origen y su closer. Todo lo demás son cuentas sobre esos hechos con `PERTENECE` (una sola definición de qué suma cada cifra): la celda, la comparación y la lista que se abre al tocarla, así que la lista suma exacto la celda (comprobado: 112 celdas de los cuatro cortes contra su lista, 0 diferencias). Se recuerdan 45 s por período.
 
-- **Leads de Workshop no se parten:** son clics anónimos, sin formulario. Su total va entero y por segmento queda en `None` («—»).
-- **Costo por lead por segmento: no se calcula.** Meta no conoce el segmento. Decisión de negocio abierta (Leadership 839; ver [pendientes_santi.md](../pendientes_santi.md)).
-- Las listas (`GET /api/marketing/anuncios/registros?...&segmento=A,B`) son las de siempre con una columna de segmento y solo ese grupo.
-- Pantalla: vista «Segmentos» de Todos (`todos/SegmentosVista.jsx`); filtro de segmentos en la URL (`segmento=A,B`).
+- **Endpoint:** `GET /api/marketing/anuncios/segmentos?desde&hasta&corte&fuentes&segmento&comparar[&comparar_desde&comparar_hasta]` → `{corte, cortes, fuentes, segmentos, cuentas, grupos: [{key, label, filas (una por segmento), total}], comparacion}`. Ya no viaja en el tablero (`?segmentos=1` se quitó).
+- **Corte («Agrupar por»):** `fuente` (Setting, Workshop y **Otras**), `origen`, `closer` o `ninguno` (todo junto). Origen = el setter (Setting), VSL / Momentum / Referido… (Otras) o «Workshop» (uno solo, en vivo y grabación juntos: `conteo_agendas_service.origen_de_agenda`). El origen de un cobro es el detalle de su procedencia. Los grupos de un corte suman el total; los segmentos de cada grupo, también.
+- **Leads:** solo Setting. Un lead no tiene closer: en el corte por closer no hay leads (`None`, «—»). Si un grupo mezcla fuentes, tampoco. Workshop va con sus clics en el total y `None` por segmento.
+- **Comparación (VS):** mismo cálculo sobre otro período (`prev`, `month`, `year` o fechas libres, con `ComercialService.rango_comparado`, las del VS de Analizar). Cada fila y total trae `previo` y `delta {abs, pct}` (`segmentos_cortes`), también las tasas (en puntos). Un grupo que solo existe en uno de los dos períodos sale igual.
+- **Filtro de segmento:** lo aplica el backend (también el total y los `delta`); `cuentas` trae las agendas de todos los segmentos para los botones.
+- **Listas:** `GET /api/marketing/anuncios/registros?segmento=…&metrica=&corte=&grupo=&fuentes=` (o `fuente=` / `origen=` de las vistas de siempre), con columnas de segmento y fuente, y closer en los cobros.
+- **Leads de Workshop no se parten** y **costo por lead por segmento: no se calcula** (Leadership 839; ver [pendientes_santi.md](../pendientes_santi.md)).
+- Pantalla: vista «Segmentos» de Todos (`todos/SegmentosVista.jsx`): pestañas de fuente (Todos, Setting, Workshop, Otras), «Agrupar por», «Ver como» (una tabla por grupo o el **cruce** grupo × segmento de una cifra, ordenable), VS, filtro de segmento y columnas. Todo se recuerda por usuario (`mk_segmentos_fuente`; el filtro y el VS en la URL: `segmento`, `vs`, `vd`, `vh`).
+
+### El filtro de segmento en el resto de Marketing
+
+`GET /api/marketing/anuncios?segmento=A,B` acota las cifras de las fuentes con `segmentos_marketing_service.acotar_fuentes` (la misma matriz, siempre por fecha de alta): Setting, Workshop y Otras (con sus orígenes). **Sin gasto por segmento**: el gasto, los costos y el ROAS quedan en `None` («—»), los leads de Workshop (clics) también, y la serie por día queda vacía. Lo usan Todos › Resumen y Métrica por métrica y Otras, con su filtro en la URL (`segmento=`, recordado con el período). **No admiten el filtro** y lo dicen en pantalla: Todos › Gasto en Meta (el gasto no conoce al lead) y la tabla de palabras clave de Setting (con un enlace a Segmentos). Workshop por taller no se filtra: sus leads son clics anónimos.
 
 ### Dashboard comercial (setters y closers)
 
 `segmentos_comercial.py` reparte las MISMAS filas del dashboard (`ComercialService.agendas` para el closer, `generadas` para el setter):
 
-- `GET /api/comercial/segmentos`: por grupo, agendas, con resultado, asistieron (show up), ventas (cierre) y sin reporte. Closer: show up y cierre; setter: las agendas del mes que generó. Mismo alcance que el resto (`alcance_de`).
-- `GET /api/comercial/segmentos/registros?metrica=&segmento=`: la lista de cada cifra.
-- Filtro `segmento` (`A,B,sin`): `/resumen` (KPIs del closer sobre esos leads; el reporte diario del setter viene de ManyChat y no tiene segmento), `/tabla` (Agendas, Agendas generadas y Ventas, con su faceta «Segmento» en Revisar) y `/segmentos`.
-- Pantalla: panel «Segmentos» de Analizar (`comercial/components/SegmentosPanel.jsx`); filtro en la URL (`seg=A,B`).
+- `GET /api/comercial/segmentos?corte=`: por grupo y segmento, agendas, con resultado, asistieron (show up), ventas (cierre) y sin reporte, con `previo` y `delta` si el VS del header compara (`compare`). `corte`: `closer`, `setter`, `fuente` (Setting, Workshop, Otras), `origen` o sin corte. Closer: show up y cierre; setter: las agendas del mes que generó. Mismo alcance que el resto (`alcance_de`). La clave de cada grupo (`_clave_de`) es la misma para el panel y para sus listas.
+- `GET /api/comercial/segmentos/registros?metrica=&segmento=&corte=&grupo=[&previo=1]`: la lista de cada cifra (con `previo=1`, la del período comparado).
+- Filtro `segmento` (`A,B,sin`): `/resumen` (KPIs del closer sobre esos leads; el reporte diario del setter viene de ManyChat y no tiene segmento), `/tabla` (Agendas, Agendas generadas y Ventas, con su faceta «Segmento» en Revisar) y `/segmentos` (también su total y sus diferencias).
+- Pantalla: panel «Segmentos» de Analizar (`comercial/components/SegmentosPanel.jsx`, `SegmentosGrupo.jsx`; reutiliza `CruceSegmentos`, `Diferencia` y los controles de Marketing). El % de show up y de cierre dice su «N de M» en un tooltip. El filtro vive arriba de Analizar y Revisar (`BarraSegmento.jsx`; URL `seg=A,B`, recordado por usuario en `cm_segmento`) y cada pantalla dice qué filtra: KPIs del closer, listas y Segmentos sí; deuda por cobrar, fuentes, reporte del setter, Comparativas y Variabilidad no.
 
 ## Límites y pendientes
 

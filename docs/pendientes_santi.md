@@ -23,6 +23,7 @@ Matriz A/B/C/D en Todos › Segmentos y panel de segmentos de setters y closers 
 - [ ] **Costo por lead por segmento (Leadership 839, decisión de Kerwin):** Meta no conoce el segmento. Dos opciones: (a) prorratear el gasto de la fuente por la mezcla de segmentos de sus leads (cada segmento carga con la parte del gasto que le toca por su peso en los leads); (b) gasto de la fuente ÷ leads del segmento (cada segmento se divide por el gasto entero, y los costos no suman al total). Hasta que se decida, la matriz no muestra el costo.
 - [ ] Backfill del segmento de las ~120 agendas viejas (Leadership 840): `scripts/backfill_segmentos.py` en simulación contra la copia local del 28/10 no escribe nada nuevo (990 clientes y 924 agendas ya tenían segmento; 6 clientes del formulario viejo no se pueden segmentar). Confirmar con Kerwin y correr con `--apply` en el servidor.
 - [ ] Leads de Workshop por segmento: los clics al grupo no traen formulario; si se quiere, medir los leads de Workshop como personas con agenda.
+- [ ] Segmentos cortados (28/10, ADR-W021): el filtro de segmento aún no llega al reporte diario del setter (ManyChat), a Comparativas, a Variabilidad ni a la tabla de palabras clave; y el origen de un cobro (procedencia) no siempre coincide con el de la agenda del mismo cliente. Decidir si vale la pena partir esos tableros.
 - [ ] Países en Marketing (pedido de Gabriela, 28/10): no entró en esta entrega.
 
 ## Agendas y reparto
