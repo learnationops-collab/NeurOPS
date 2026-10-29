@@ -130,6 +130,11 @@ def al_ubicar_pago(session, sale, fila, pago, abre, abierta):
     if not slug or not fila.client_id:
         return None
     dia = _dia(fila.date)
+    # La venta que abre la suscripción puede empezar otro día (lo elige el closer): el vencimiento
+    # se cuenta desde ahí. Solo hacia adelante, así nunca le quita días.
+    inicio = getattr(fila, 'inicio_acceso', None)
+    if abre and inicio and inicio > dia:
+        dia = inicio
     comun = {'programa': pago.programa, 'desde': dia, 'sale': sale, 'payment': fila}
     if abre and sale.kind == 'renewal':
         # Lo que eligió el closer viaja en el pago (`SheetsService.post_to_sheets`).

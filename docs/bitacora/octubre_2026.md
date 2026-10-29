@@ -1229,3 +1229,7 @@
 - **28 de Octubre de 2026 (el aviso de agenda en Discord dice el segmento, no el «Grupo»)** *([avisos_discord.py](../../app/agendas_v2/avisos_discord.py))*:
   - El aviso de cada agenda mostraba el nombre de la prioridad de closers («Grupo 4»), que es la configuración vieja. Ahora dice «Segmento B» con el segmento A/B/C/D que la agenda guardó del lead (`segmento_lead`); el nombre de la prioridad queda solo si el formulario no segmenta.
   - Revisión de los descalificados a Jean Carlo (últimos 10 días): Brenda (B) y Victoria (D) son del 26 y 27/10, antes de que la inversión pesara el doble y los C/D fueran al triage; desde entonces le llegan solo B.
+- **28 de Octubre de 2026 (la venta elige desde cuándo inicia la suscripción)** *([arbolResultado.preguntas.js](../../frontend/src/components/ficha/arbolResultado.preguntas.js), [sheets_service.py](../../app/services/sheets_service.py), [subscription_service.py](../../app/services/subscription_service.py))*:
+  - En «Confirmá sus datos» de una venta nueva, el closer elige **Inicia el** (vacío: el día de la venta). La suscripción de Work arranca ese día y el vencimiento se cuenta desde ahí (seña 7 días, venta 120 días o los meses del programa). Se ve en la revisión y en Fulfillment («Desde el …»).
+  - Solo hacia adelante: un inicio anterior a la venta no le quita días. La Academia le da el acceso igual al registrar la venta; un inicio posterior solo le suma días.
+  - `inicio_acceso` viaja como `meses_renovacion`: no es columna de la venta, lo lee `al_ubicar_pago`.
