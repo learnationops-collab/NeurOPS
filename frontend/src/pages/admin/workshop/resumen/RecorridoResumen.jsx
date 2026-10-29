@@ -6,7 +6,7 @@ import { Bars, Skeleton, SkeletonBlock } from '../../../../components/standard';
 import { aggregateTotals } from '../funnelMath';
 import { LISTA_DE_PASO } from '../registros/cuentaDeTaller';
 import { TITULOS } from '../registros/cuentas';
-import { dinero, numero, pasosEmbudo, veces } from '../talleres/formato';
+import { dinero, numero, ORIGEN, origenDePaso, pasosEmbudo, veces } from '../talleres/formato';
 
 /**
  * «Del anuncio al cobro» (Kerwin, 29/10/2026): el recorrido de las personas de los talleres elegidos en un
@@ -21,16 +21,6 @@ import { dinero, numero, pasosEmbudo, veces } from '../talleres/formato';
  * El color dice el origen del número: Meta, lo que carga o sincroniza el taller, y las personas del libro
  * de agendas. Mismos tonos que las agendas de un taller (success / error / warning).
  */
-
-const ORIGEN = {
-    meta: { label: 'Meta', color: 'var(--info)' },
-    taller: { label: 'Taller', color: 'var(--brand-secondary)' },
-    personas: { label: 'Personas', color: 'var(--success)' },
-};
-const ORIGEN_DE_PASO = {
-    leads: 'meta', whatsapp: 'taller', show_up: 'taller', pitch: 'taller', pitch_final: 'taller', aplicaciones: 'taller',
-    agendas: 'personas', asistieron: 'personas', ventas: 'personas',
-};
 
 /** Las agendas partidas por lo que pasó con cada una; el resto son las que se cayeron o todavía no ocurren. */
 export const partesDeAgendas = (t) => {
@@ -106,7 +96,7 @@ const RecorridoResumen = ({ talleres, plata, onVer = null }) => {
     const reducir = useReducedMotion();
     const totales = useMemo(() => aggregateTotals(talleres), [talleres]);
     const etapas = useMemo(() => pasosEmbudo(totales).map((p) => {
-        const origen = ORIGEN[ORIGEN_DE_PASO[p.key]];
+        const origen = origenDePaso(p.key);
         const lista = LISTA_DE_PASO[p.key];
         return {
             key: p.key, label: p.label, n: p.n, ayuda: p.ayuda, base: p.base, color: origen.color,

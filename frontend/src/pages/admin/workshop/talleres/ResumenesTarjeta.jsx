@@ -9,7 +9,7 @@ import { LISTA_DE_PASO } from '../registros/cuentaDeTaller';
 import { TITULOS } from '../registros/cuentas';
 import { useAnunciosTaller, useLandingTaller, usePublicacion, ventanaGrabacion } from './datosTaller';
 import {
-    dinero, diaMes, ESTADOS_GRABACION, estadoGrabacion, estaPublicada, numero, pasosEmbudo, porcentaje,
+    dinero, diaMes, ESTADOS_GRABACION, estadoGrabacion, estaPublicada, numero, origenDePaso, pasosEmbudo, porcentaje,
     restante, tasaPaso,
 } from './formato';
 
@@ -33,11 +33,6 @@ export const BarraCrece = ({ pct, color, i = 0 }) => {
     );
 };
 
-const colorPaso = (i, total) => {
-    const mezcla = total > 1 ? Math.round((i / (total - 1)) * 100) : 100;
-    return `color-mix(in oklch, var(--brand-secondary) ${mezcla}%, var(--info))`;
-};
-
 // --- Embudo -------------------------------------------------------------------------------------
 
 export const ResumenEmbudo = ({ evento, onVer = null }) => {
@@ -45,7 +40,7 @@ export const ResumenEmbudo = ({ evento, onVer = null }) => {
     // La barra en raíz: de 600 leads a 3 ventas, las últimas serían una raya.
     return (
         <Bars variant="rows" scale="sqrt" label="Embudo del taller" onSelect={onVer ? (key) => onVer(LISTA_DE_PASO[key], TITULOS[LISTA_DE_PASO[key]] || key) : undefined} items={pasos.map((p, i) => ({
-            key: p.key, label: p.label, value: p.n, display: numero(p.n), color: colorPaso(i, pasos.length),
+            key: p.key, label: p.label, value: p.n, display: numero(p.n), color: origenDePaso(p.key).color,
             detail: i === 0 ? '' : porcentaje(tasaPaso(p.n, (p.base || pasos[i - 1]).n)),
             tip: i === 0 ? undefined : `${numero(p.n)} de ${numero((p.base || pasos[i - 1]).n)} ${(p.base || pasos[i - 1]).label.toLowerCase()}`,
         }))} />

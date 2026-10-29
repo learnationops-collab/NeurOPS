@@ -77,10 +77,13 @@ const TarjetaTaller = ({
                     <dd className="num">{ver('ventas', e.sales)}<small className="mut40"> · {ver('close_rate', porcentaje(e.pct_close_rate))}</small></dd>
                 </div>
             </dl>
-            <p className="wt-tarjeta-sub t-cap mut40 num">
-                CPL {ver('cpl', dinero(e.cpl))} · <AgendasDelTaller evento={e} formatDate={formatDate}>{e.agendas_exitosas ?? 0} agendas</AgendasDelTaller>
-                {' '}· costo por agenda {ver('costo_agenda', dinero(e.costo_por_agenda))} · CAC {ver('cac', dinero(cac(e)))}
-            </p>
+            <dl className="pareja wt-tarjeta-cifras" style={{ '--min': '78px', '--g': 'var(--s2)' }}>
+                <div><dt>CPL</dt><dd className="num">{ver('cpl', dinero(e.cpl))}</dd></div>
+                <div><dt>Agendas</dt><dd className="num"><AgendasDelTaller evento={e} formatDate={formatDate} /></dd></div>
+                <div><dt>CPA</dt><dd className="num">{ver('costo_agenda', dinero(e.costo_por_agenda))}</dd></div>
+                <div><dt>CAC</dt><dd className="num">{ver('cac', dinero(cac(e)))}</dd></div>
+            </dl>
+
 
             <Segmented chico opciones={VISTAS_TALLER} valor={vista} onChange={setVista}
                 ariaLabel={`Qué ver de ${e.name}`} />
