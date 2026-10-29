@@ -1336,3 +1336,7 @@
 - **29 de Octubre de 2026 (El humo seguía parpadeando: faltaba el de las tarjetas estándar)** *([efectos.css](../../frontend/src/efectos/efectos.css), ADR-W024)*
   - El primer arreglo solo cubría `.humo`; en la configuración de un evento de Tálamus el humo es `.ui-aura` (20 nubes con blur de 56 px y mezcla de capas, animadas), y su regla de «menos movimiento» nunca se aplicaba (le ganaban las reglas por `:nth-child`). Ahora las dos formas pasan por `efectos.css` y el «menos movimiento» las detiene de verdad.
   - La medición ahora corre a los 1,5, 8 y 20 s de cargar, con umbral más sensible (menos de ~40 cuadros por segundo), para pillar la pantalla ya llena de tarjetas. Verificado en local: 24 nubes sin blur ni mezcla, con degradé; en modo bajo, las 24 ocultas.
+- **29 de Octubre de 2026 (las capacitaciones no bloquean horarios de agenda)** *([google_service.py](../../app/services/google_service.py))*:
+  - La ocupación de Google de cada closer se lee evento por evento (antes con freebusy, sin títulos) y saltea las capacitaciones internas («Training Session», «Trainning», «Capacitación»). Un calendario que solo deja ver libre/ocupado se sigue leyendo con freebusy.
+  - Caso: a Jean Carlo una «Trainning Session» del viernes 30 (18 a 19) le tapaba horarios para los leads del workshop.
+  - Configuración en producción: el margen de Jean Carlo en las Sesiones de Aceleración (workshop y setting) pasa de 15 a 0 minutos, para que entren sesiones en los huecos de una hora.
