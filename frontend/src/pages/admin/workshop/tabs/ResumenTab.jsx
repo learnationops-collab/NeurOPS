@@ -10,6 +10,7 @@ import {
 import useRegistrosWorkshop from '../registros/useRegistrosWorkshop';
 import { EsqueletoFiltros } from '../resumen/EsqueletosResumen';
 import { EnCabecera } from '../components/CabeceraWorkshop';
+import RecorridoResumen, { EsqueletoRecorrido } from '../resumen/RecorridoResumen';
 import '../resumen/resumen.css';
 
 const SIN_TALLERES = [];
@@ -85,6 +86,9 @@ const ResumenTab = ({ realizados, goals, actions, onEditGoals, onGoToSimulador }
                     <>
                         <WorkshopKpiCards totalStats={cargando ? null : totales} eventsCount={analizados.length}
                             cambios={cambios} anterior={anterior} onVer={registros.abrir} />
+                        {cargando ? <EsqueletoRecorrido /> : (
+                            <RecorridoResumen talleres={analizados} plata={totales} onVer={registros.abrir} />
+                        )}
                         <WorkshopDiagnostico
                             events={cargando ? null : analizados}
                             comparados={comparado?.talleres || null}

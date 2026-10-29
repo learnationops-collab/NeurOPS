@@ -189,3 +189,31 @@
 .dc-shell .wr-meta-campo input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .dc-shell .wr-meta-campo small { font-size: 11px; font-weight: 800; color: var(--text-muted-40); }
 .dc-shell .wr-metas-pie { display: flex; justify-content: flex-end; gap: var(--s2); }
+
+/* ---- Del anuncio al cobro (29/10/2026) ------------------------------------- */
+.dc-shell .wr-recorrido { display: grid; gap: var(--s3); align-content: start; }
+.dc-shell .wr-recorrido .panel-cab { margin-bottom: 0; }
+.dc-shell .wr-leyenda-origen { margin-top: 0; gap: var(--s3); }
+.dc-shell .wr-recorrido-pie { display: grid; gap: var(--s3); grid-template-columns: minmax(0, 1fr); }
+@container (min-width: 720px) { .dc-shell .wr-recorrido-pie { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.dc-shell .wr-subpanel {
+    display: grid; gap: var(--s2); align-content: start; min-width: 0; padding: var(--s3) var(--s4);
+    border-radius: var(--radius-control, 12px); background: var(--hundido); border: 1px solid var(--border-subtle);
+}
+.dc-shell .wr-apilada { display: flex; gap: 2px; height: 14px; border-radius: 999px; overflow: hidden; }
+.dc-shell .wr-apilada > button { min-width: 6px; padding: 0; border: 0; background: var(--c); cursor: pointer; transition: filter .15s ease; }
+.dc-shell .wr-apilada > button:hover { filter: brightness(1.18); }
+.dc-shell .wr-apilada > button:focus-visible { outline: 2px solid var(--focus-blue); outline-offset: -2px; }
+.dc-shell .wr-agendas { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: var(--s2); margin: 0; }
+.dc-shell .wr-agendas > div { min-width: 0; padding-left: 8px; border-left: 3px solid var(--c); }
+.dc-shell .wr-agendas dt {
+    font-size: 10px; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; color: var(--text-muted);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.dc-shell .wr-agendas dd { margin: 0; font-size: 20px; font-weight: 900; letter-spacing: -.02em; color: var(--c); white-space: nowrap; }
+.dc-shell .wr-agendas dd small { margin-left: 6px; font-size: 11px; font-weight: 700; letter-spacing: 0; color: var(--text-muted-40); }
+
+/* Las filas de «Invertido y cobrado»: la base de Bars deja 46 px al número y no entra un «$12,650». */
+.dc-shell .wr-cobros .ui-bars__row.ui-bars__row.ui-bars__row { grid-template-columns: 84px minmax(0, 1fr) 72px 52px; }
+.dc-shell .wr-cobros .ui-bars__row.ui-bars__row > small { color: var(--text-muted); }
+.dc-shell .wr-cobros .ui-bars__row.ui-bars__row.ui-bars__row > span:last-child { font-size: 12px; font-weight: 900; color: var(--text-on-surface); }
