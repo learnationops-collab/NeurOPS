@@ -17,6 +17,12 @@ Cada fuente (Setting, Workshop) trae las mismas cifras para poder compararlas (`
 
 Cada cifra abre la lista de lo que la suma (`fuentes_registros_service.registros`, `VerRegistros`): la lista sale del mismo código que la cifra.
 
+**ROAS Total y ventas anteriores.** `cash_total` incluye cobros de ventas de períodos anteriores (cuotas, señas, upsells y renovaciones de clientes que no compraron nada nuevo en el período); esa parte es `cash_anterior` (`fuentes_service.clientes_nuevos` decide quién cuenta como «nuevo»; la lista dice «de una venta anterior» con la misma regla). Las tarjetas Cash total y ROAS Total lo muestran. Ejemplo, Workshop 01–28/10: $4.143 de Cash total = $1.500 del período + $2.643 de ventas anteriores, y por eso ROAS Total 6,05x contra ROAS New Cash 1,02x. Con un segmento elegido no se parte (`None`).
+
+**«De dónde vino lo cobrado»** (Rendimiento › Setting) sale de estas mismas fuentes: Setting + Workshop + Otras suman el total cobrado del período, y cada fila abre su lista de «Cash total». No usa la procedencia por tipo de pago de Finanzas (ahí los upsells y renovaciones van a «Fulfillment»), que sigue siendo la de Revisar › Ventas (faceta «Fuente») y la de Finanzas: ahí Workshop no coincide con el Cash total de Marketing por esa razón.
+
+**Dos «ROAS Total» de Workshop.** Marketing (período de cobro, todo lo cobrado de los clientes de Workshop ÷ gasto de Meta del período) y Workshop › Resumen (por taller: ventas y señas de la cohorte del taller, sin cuotas ÷ su inversión). Son cuentas distintas con el mismo nombre; ver ADR-W025.
+
 ## Segmentos A/B/C/D
 
 El segmento de un lead lo calcula y guarda Thalamus (`segmento_service`, columnas `segmento*` de `clients` y `appointments`; plan en [plan_segmentos_triage.md](../plan_segmentos_triage.md)). Los tableros solo lo **leen**, con una regla única (`segmentos_lectura.py`):

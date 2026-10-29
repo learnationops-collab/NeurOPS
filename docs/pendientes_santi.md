@@ -134,3 +134,6 @@ Falta la fórmula de backend; la presentación ya tiene su rótulo.
 - [ ] Revisar (dashboard comercial) y Setters usan la misma `.sg-barra` que ya se midió en Analizar, pero no se miraron a ojo.
 - [ ] En 390 px las tarjetas KPI de Otras parten el rótulo («SHOW / UP», «NEW / CASH»): caben dos íconos y el rótulo con tracking en media tarjeta. Cosmético, no se tocó.
 - [ ] `TodosPage.test.jsx` (ajustado a mano: «Gana Setting» ahora es `aria-label`) y los tests de Todos que busquen «Setting»/«Workshop» junto a las cifras no se corrieron.
+## ROAS de Workshop (Leadership 850, 29/10/2026)
+- [x] Qué ROAS manda (Kerwin, 29/10): «deja los 2». Se quedan ROAS New Cash y ROAS Total con el mismo peso, sin titular; el Total ya muestra su parte de ventas anteriores.
+- [ ] **Decisión de Kerwin:** Workshop › Resumen y Marketing muestran «ROAS Total» y «Cash total» con cuentas distintas (cohorte del taller sin cuotas contra período de cobro con cuotas): octubre da 0,9x en el Resumen y 6,05x en Marketing. Opciones: renombrar los del Resumen («ROAS del taller») o llevarlos a la definición de Marketing. Es del rediseño de Workshop (otra sesión).

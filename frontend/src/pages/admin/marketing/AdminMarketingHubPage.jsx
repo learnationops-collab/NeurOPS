@@ -203,7 +203,8 @@ const AdminMarketingHubPage = () => {
                                         <TablaAnuncios datos={datos} onArchivar={archivar} onAgrupar={agrupar} estadoMeta={estadoMeta}
                                             irAMeta={() => cambiar({ tab: 'meta' })} bajoKpis={resumenSetting}
                                             agendasDeFuente={base === 'reunion' ? fuenteDe('setting') : null}
-                                            onVerAgendas={(metrica, titulo) => registros.abrir('setting', metrica, titulo)} />
+                                            onVerAgendas={(metrica, titulo) => registros.abrir('setting', metrica, titulo)}
+                                            onVerCobrado={(fuente, metrica, titulo) => registros.abrir(fuente, metrica, titulo)} />
                                         {registros.panel}
                                     </>
                                 )}
