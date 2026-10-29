@@ -406,17 +406,18 @@ const DashboardSetters = ({ bloque, deltas = {}, deltasCanales = {}, comision = 
                     help="Leads cualificados sobre entrantes; antes del 15/10, entrantes sin no leads ni in-abribles."
                     delta={dr.cualificacion}
                     humo={[v('success'), v('info'), v('brand-primary'), v('success')]}
-                    sub={`${fmt.num(r.cualificados)} de ${fmt.num(r.entrantes)}`} baja="p-cualificacion" />
+                    cuenta={{ a: fmt.num(r.cualificados), b: `${fmt.num(r.entrantes)} entrantes` }} baja="p-cualificacion" />
                 <Tile label="Apertura" valor={fmt.pct(r.apertura)} color={v('warning')}
                     help="Aperturas en entrantes y en dolor, sobre los entrantes." delta={dr.apertura}
                     humo={[v('warning'), v('brand-primary'), v('warning'), v('brand-navy')]}
-                    sub={`${fmt.num(r.aperturas)} de ${fmt.num(r.entrantes)}`} baja="p-canales" />
+                    cuenta={{ a: fmt.num(r.aperturas), b: `${fmt.num(r.entrantes)} entrantes` }} baja="p-canales" />
                 <Tile label="Respuesta" valor={fmt.pct(r.respuesta_aperturas)} color={v('cat-3')}
                     help="De las aperturas, cuántas respondieron, en los reportes que cargan las respuestas."
                     delta={dr.respuesta_aperturas}
                     humo={[v('cat-3'), v('brand-primary'), v('cat-3'), v('brand-navy')]}
-                    sub={r.ap_respondidas === null || r.ap_respondidas === undefined ? 'sin respuestas cargadas'
-                        : `${fmt.num(r.ap_respondidas)} de ${fmt.num(r.ap_con_respuesta)} aperturas`}
+                    sub={r.ap_respondidas === null || r.ap_respondidas === undefined ? 'sin respuestas cargadas' : undefined}
+                    cuenta={r.ap_respondidas === null || r.ap_respondidas === undefined ? null
+                        : { a: fmt.num(r.ap_respondidas), b: `${fmt.num(r.ap_con_respuesta)} aperturas` }}
                     baja="p-canales" />
                 <Tile label="Agendas" valor={fmt.num(r.agendas)} color={v('brand-secondary')}
                     help="Agendas reportadas en el período." delta={dr.agendas}
@@ -426,7 +427,7 @@ const DashboardSetters = ({ bloque, deltas = {}, deltasCanales = {}, comision = 
                     help={enCanalNo('Bienvenidas respondidas sobre las hechas.', enCanal)}
                     delta={deltas.bienvenidas_respuesta}
                     humo={['var(--ch-bnv)', v('brand-primary'), 'var(--ch-bnv)', v('brand-navy')]}
-                    sub={`${fmt.num(bnv.respondidas)} de ${fmt.num(bnv.hechas)}`} baja="p-canales" />
+                    cuenta={{ a: fmt.num(bnv.respondidas), b: `${fmt.num(bnv.hechas)} hechas` }} baja="p-canales" />
             </div></div>
 
             <div className="grid-2">

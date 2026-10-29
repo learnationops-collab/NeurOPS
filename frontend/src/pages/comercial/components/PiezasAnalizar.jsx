@@ -2,6 +2,7 @@ import React from 'react';
 import { ArrowRight, ChevronsDown, Eye } from 'lucide-react';
 import { Humo, Tip, useMontado } from './Shared';
 import Cifra from './Cifra';
+import { CifraConCuenta } from '../../../components/standard';
 import MetricaClicable, { abrir } from '../../../components/dashboard/MetricaClicable';
 
 /**
@@ -96,7 +97,11 @@ export const bajarA = (id) => {
  * El ojo dice "Ver los registros", sin nombrar la sección: la lista es Revisar para la dirección y
  * para el setter (desde el 10/10/2026; antes, Reporte · Registros) y "Mi cartera" para el closer.
  */
-export const Tile = ({ label, help, valor, color, sub, delta, humo, ver, baja }) => (
+/**
+ * `cuenta` {a, b}: la tasa va sola y su «N de M» en un tooltip (Kerwin, 28/10/2026). El numerador abre la lista del
+ * tile (`ver`) si la tiene; el denominador no tiene lista propia todavía y solo se lee.
+ */
+export const Tile = ({ label, help, valor, color, sub, delta, humo, ver, baja, cuenta = null }) => (
     <section className="kpi caja">
         <Humo colores={humo} />
         <div className="kpi-cab">
@@ -105,8 +110,15 @@ export const Tile = ({ label, help, valor, color, sub, delta, humo, ver, baja })
             {delta && <span style={{ marginLeft: 'auto' }}><Delta delta={delta} actual={valor} /></span>}
         </div>
         <div className="kpi-cifra">
-            <Cifra tag="p" className="kpi-n" valor={valor}
-                style={{ color: color || v('text-on-surface') }} />
+            {cuenta ? (
+                <CifraConCuenta onVer={ver ? () => ver() : null}
+                    cuenta={{ a: { t: cuenta.a, m: ver ? 'a' : null, titulo: label }, b: { t: cuenta.b, m: null } }}>
+                    <Cifra className="kpi-n" valor={valor} style={{ color: color || v('text-on-surface') }} />
+                </CifraConCuenta>
+            ) : (
+                <Cifra tag="p" className="kpi-n" valor={valor}
+                    style={{ color: color || v('text-on-surface') }} />
+            )}
             {sub && <p className="kpi-sub num">{sub}</p>}
         </div>
         {(ver || baja) && (

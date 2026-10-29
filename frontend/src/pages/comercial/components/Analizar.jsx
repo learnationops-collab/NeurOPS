@@ -829,14 +829,6 @@ const pasosDe = (funnel, vocabulario, irA) => funnel.map(p => {
     };
 });
 
-/** "9 de 13 · 5 de llamadas anteriores": los cierres, su base y cuántos venían de antes. */
-const subCierreReal = (r) => {
-    if (!r) return '';
-    const base = `${r.cierres} de ${r.base}`;
-    return r.anteriores ? `${base} · ${fmt.plural(r.anteriores, 'de llamada anterior', 'de llamadas anteriores')}`
-        : `${base} ${r.base === 1 ? 'oportunidad' : 'oportunidades'}`;
-};
-
 const DashboardClosers = ({ bloque, deltas, porCobrar, fuentes, irA, cargarNoCerradas, onAbrirFila }) => (
     <>
         <div className="grid grid--4">
@@ -846,9 +838,9 @@ const DashboardClosers = ({ bloque, deltas, porCobrar, fuentes, irA, cargarNoCer
                     + 'previa, no el cierre. Las canceladas y las reagendadas no entran: esa llamada no ocurrió.'}
                 delta={deltas.show_up}
                 humo={[v('success'), v('info'), v('brand-primary'), v('success')]}
-                sub={bloque.leads_realizadas !== undefined
-                    ? `${bloque.leads_asistieron} de ${fmt.plural(bloque.leads_realizadas, 'lead', 'leads')}`
-                    : `${bloque.asistieron} de ${fmt.plural(bloque.realizadas, 'realizada', 'realizadas')}`}
+                cuenta={bloque.leads_realizadas !== undefined
+                    ? { a: String(bloque.leads_asistieron), b: fmt.plural(bloque.leads_realizadas, 'lead', 'leads') }
+                    : { a: String(bloque.asistieron), b: fmt.plural(bloque.realizadas, 'realizada', 'realizadas') }}
                 ver={abrir(irA, D.show_up)} baja="p-estados" />
             {/* Los dos tiles de tasa llevan al NUMERADOR de su tasa, que es lo que se viene a
                 buscar. La contradiccion que esto genera —arriba la tasa del tile, abajo la misma
@@ -863,7 +855,8 @@ const DashboardClosers = ({ bloque, deltas, porCobrar, fuentes, irA, cargarNoCer
                     + 'llamadas de este período, está en el panel Cierre.'}
                 delta={deltas.close_rate_real}
                 humo={[v('error'), v('warning'), v('brand-primary'), v('error')]}
-                sub={subCierreReal(bloque.cierres?.reales)}
+                cuenta={bloque.cierres?.reales ? { a: String(bloque.cierres.reales.cierres), b: `${bloque.cierres.reales.base} oportunidades` } : null}
+                sub={bloque.cierres?.reales?.anteriores ? `${fmt.plural(bloque.cierres.reales.anteriores, 'de llamada anterior', 'de llamadas anteriores')}` : undefined}
                 ver={abrir(irA, D.close_rate_real)} baja="p-cierre" />
             <Tile label="Cash collected · neto" valor={fmt.money(bloque.cash_neto)}
                 help={'Dinero que entró en el período, descontadas las fees de la pasarela: pagos '
