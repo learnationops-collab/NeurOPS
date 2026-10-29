@@ -8,7 +8,6 @@ import { Isotipo, PillMenu, Segmented } from '../../comercial/components/Shared'
 import RangoFechas, { esFecha, textoRango } from '../../comercial/components/RangoFechas';
 import UTMGenerator from '../../../components/operations/UTMGenerator';
 import EntrantesVista from './entrantes/EntrantesVista';
-import ConversacionesVista from './conversaciones/ConversacionesVista';
 import TablaAnuncios, { EsqueletoTablaAnuncios } from './anuncios/TablaAnuncios';
 import { ErrorDeCarga } from './esqueletos';
 import ConexionMeta from './anuncios/ConexionMeta';
@@ -44,8 +43,8 @@ import './anuncios/anuncios.css';
  * volver (`useEstadoDeMeta`), en cualquier pestaña, y recarga lo que se esté mirando.
  *
  * Carga (17/10/2026): la cabecera y las pestañas se ven al instante; cada bloque
- * muestra su esqueleto hasta que llega SU dato (el tablero, o el pedido propio de Workshop, Entrantes,
- * Conversaciones y Meta Ads, que salen en paralelo). Recargar deja lo que se ve, atenuado.
+ * muestra su esqueleto hasta que llega SU dato (el tablero, o el pedido propio de Workshop, Entrantes
+ * y Meta Ads, que salen en paralelo). Recargar deja lo que se ve, atenuado.
  *
  * La pestaña y el período viven en la URL (`tab`, `periodo`, `desde`, `hasta`), así
  * un link lleva a lo mismo que se estaba mirando.
@@ -55,13 +54,13 @@ const PESTANAS = [
     // «Rendimiento» también era una pestaña de Workshop (28/10/2026): cada nombre dice qué mide.
     { key: 'anuncios', label: 'Palabras clave' },
     { key: 'entrantes', label: 'Entrantes' },
-    { key: 'conversaciones', label: 'Conversaciones' },
+    // «Conversaciones» (mensajes del flujo) se quitó el 28/10/2026: ahora se maneja desde el Inbox. Un link viejo cae en Palabras clave.
     { key: 'meta', label: 'Meta Ads' },
     { key: 'utms', label: 'Generador UTM' },
 ];
 // «Webhooks» pasó a ser «Entrantes» (16/10/2026): un link viejo abre la nueva.
 const PESTANA_VIEJA = { webhooks: 'entrantes' };
-const CON_PERIODO = ['anuncios', 'entrantes', 'conversaciones', 'meta'];
+const CON_PERIODO = ['anuncios', 'entrantes', 'meta'];
 const AdminMarketingHubPage = () => {
     // La pestaña y el período se recuerdan por usuario: sin parámetros en el link, se abre donde se dejó.
     const [params, setParams] = useParamsGuardados('mk_setting_url', ['tab', 'periodo', 'desde', 'hasta']);
@@ -205,9 +204,6 @@ const AdminMarketingHubPage = () => {
                         )}
                         {pestana === 'entrantes' && (
                             <EntrantesVista desde={rango.desde} hasta={rango.hasta} version={version} />
-                        )}
-                        {pestana === 'conversaciones' && (
-                            <ConversacionesVista desde={rango.desde} hasta={rango.hasta} version={version} />
                         )}
                         {pestana === 'meta' && (
                             <ConexionMeta desde={rango.desde} hasta={rango.hasta} filasTablero={datos?.filas}

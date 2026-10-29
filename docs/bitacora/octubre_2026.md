@@ -1277,3 +1277,7 @@
   - El costo por lead por segmento NO está: depende de una decisión de negocio (Leadership 839). Queda anotada en `pendientes_santi.md` con sus dos opciones. Leads de Workshop (clics anónimos) no se parten por segmento.
   - Verificado en local (copia de producción del 28/10): 1/10–28/10, Setting 148 agendas = 16 A + 24 B + 28 C + 70 D + 10 sin segmento; Workshop 61 = 7 + 12 + 16 + 20 + 6; las 65 listas por celda tienen tantas filas como la cifra. Dashboard del closer 223 agendas = 22 + 42 + 51 + 90 + 18; del setter 143 = 14 + 23 + 28 + 69 + 9.
 
+
+- **28 de Octubre de 2026 (Marketing: se quita la pestaña «Conversaciones»)** *([AdminMarketingHubPage.jsx](../../frontend/src/pages/admin/marketing/AdminMarketingHubPage.jsx))*
+  - Los mensajes del flujo se manejan ahora directo desde el Inbox, así que Setting queda con Palabras clave, Entrantes, Meta Ads y Generador UTM. Se borraron `ConversacionesVista`, su CSS y su test; un link viejo (`?tab=conversaciones`, o la pestaña recordada) abre Palabras clave.
+  - Los endpoints `/conversational/messages` y `stats/conversational` quedan en el backend: los siguen usando el dashboard del setter y las estadísticas conversacionales.
