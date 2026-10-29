@@ -49,7 +49,9 @@ export const mensajeDeError = (error, porDefecto) =>
     error?.response?.data?.error || error?.response?.data?.message || porDefecto;
 
 /** La lista que suma una cifra de una fuente (`fuente`: setting | workshop | otras; `metrica`: ver
- *  fuentes_registros_service; `config.base`: la fecha por la que se cuentan las agendas). */
-export const pedirRegistros = (fuente, metrica, desde, hasta, { base, ...config } = {}) =>
-    api.get('/marketing/anuncios/registros', { params: { fuente, metrica, desde, hasta, ...(base ? { base } : {}) }, ...config })
-        .then((r) => r.data);
+ *  fuentes_registros_service; `config.base`: la fecha por la que se cuentan las agendas). Con `segmento`
+ *  (A, B, C, D, sin; '' = todos) la lista trae la columna de segmento y solo ese grupo. */
+export const pedirRegistros = (fuente, metrica, desde, hasta, { base, ...config } = {}, segmento = undefined) =>
+    api.get('/marketing/anuncios/registros', {
+        params: { fuente, metrica, desde, hasta, segmento, ...(base ? { base } : {}) }, ...config,
+    }).then((r) => r.data);

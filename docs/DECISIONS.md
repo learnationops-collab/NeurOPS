@@ -171,3 +171,18 @@
 - **Decisión:** selector «Contar por: fecha de alta / fecha de reunión» en las pantallas de Marketing que cuentan agendas, recordado. Una sola función en backend (`conteo_agendas_service`): alta = libro de agendas, una por persona; reunión = las filas de Closing (`ComercialService.agendas`, con descartadas), show up por lead. Cada agenda es de Setting, Workshop u Otras (pestaña nueva), así que las tres suman el total. Costos y ROAS usan siempre fecha de alta (lo que Meta gastó genera agendas al darse de alta) y lo dicen en el tooltip. El embudo de Analizar muestra el show up de la tarjeta con su cuenta.
 - **Qué se pierde (nombrado):** con reunión, la tarjeta de agendas y el costo por agenda ya no comparten base (el tooltip lo dice); la tabla de palabras clave sigue contando por alta. Revisar sigue calculando el show up por llamada (79 de 123), no por lead (78 de 122).
 - **Consecuencias:** la cifra y su lista salen de las mismas filas (`/registros?base=`); hay una cuarta lista (`agendas_alta`) para el denominador de los costos.
+
+## ADR-W020: Segmentos A/B/C/D en Marketing y en los dashboards de setters y closers
+- **Fecha:** 2026-10-28 · **Subsistema:** Marketing, dashboard comercial · **Estado:** implementado (sin costo por lead por segmento)
+- **Contexto:** Thalamus ya calcula y guarda el segmento del lead ([plan_segmentos_triage.md](plan_segmentos_triage.md)), pero ningún tablero lo mostraba. Pedido de Gabriela (28/10): leads A por funnel, costo por lead A/B/C/D y países en Marketing; agendas del mes por segmento (setting) y show up y cierre por segmento (closing), con filtro. Las ~120 agendas de octubre del flujo viejo (Calendly/n8n) no tienen segmento.
+- **Decisión:**
+  1. **Una sola regla de lectura** (`segmentos_lectura.py`): segmento de la agenda más reciente de la persona; si no, el de su cliente; si no, «sin segmento». «Sin segmento» es un grupo más, así los cinco suman el total.
+  2. **Reparto de las cifras que ya existían, no cuentas nuevas:** la matriz de Marketing (`segmentos_marketing_service`) parte las mismas personas, cobros y leads que `fuentes_service`; el panel del dashboard (`segmentos_comercial`) parte las mismas filas de `ComercialService`. Cada cifra abre su lista (`VerRegistros`, ADR-W015) con una columna de segmento.
+  3. **Dónde vive:** vista «Segmentos» de Todos (la comparación Setting vs Workshop), panel «Segmentos» en Analizar de setters y closers, y faceta «Segmento» en Revisar. El filtro (`segmento=A,B` en la API, `seg=` en la URL del dashboard) acota los KPIs del closer, las listas y el panel.
+  4. **La matriz se pide aparte** (`?segmentos=1` del tablero): suma ~3 s y solo la usa su vista.
+- **Qué se pierde (nombrado):**
+  - **Costo por lead por segmento:** no se calcula. Meta no conoce el segmento y repartir el gasto es una decisión de negocio abierta (Leadership 839): prorratear el gasto por la mezcla de segmentos, o gasto de la fuente ÷ leads del segmento.
+  - **Leads de Workshop por segmento:** son clics anónimos al grupo de WhatsApp, no hay formulario; solo se ve el total.
+  - **Países:** el pedido de Gabriela los nombra; no están en esta entrega.
+  - El filtro de segmento no acota lo que sale del reporte diario del setter (viene de ManyChat, sin segmento) ni las deudas por cobrar.
+- **Consecuencias:** las agendas viejas siguen en «sin segmento» hasta que Kerwin confirme el backfill (`scripts/backfill_segmentos.py`, Leadership 840). Los leads de Setting de la matriz son los de la tabla de Marketing (personas que escribieron una palabra clave); quien nunca llenó el formulario es «sin segmento», por eso ese grupo concentra casi todos esos leads.

@@ -12,7 +12,9 @@ from flask_login import current_user
 
 from app.decorators import _acceso_denegado, require_cron_secret
 from app.models.user import ROLE_ADMIN, ROLE_DIRECTOR_MARKETING
-from app.services import anuncios_service, fuentes_registros_service, meta_ads_service, workshop_meta_service
+from app.services import (
+    anuncios_service, fuentes_registros_service, meta_ads_service, segmentos_marketing_service, workshop_meta_service,
+)
 
 bp = Blueprint('marketing_anuncios', __name__)
 
@@ -59,7 +61,9 @@ def tablero():
         desde, hasta = _periodo()
     except ValueError as error:
         return jsonify({'error': str(error)}), 400
-    return jsonify({**anuncios_service.tablero(desde, hasta, request.args.get('base')), 'meta': _estado_de_meta()}), 200
+    con_segmentos = request.args.get('segmentos') in ('1', 'true')
+    return jsonify({**anuncios_service.tablero(desde, hasta, request.args.get('base'), con_segmentos=con_segmentos),
+                    'meta': _estado_de_meta()}), 200
 
 
 @bp.route('/registros', methods=['GET'])
@@ -68,8 +72,13 @@ def registros():
     show_up|ventas|new_cash|cash_total&base=alta|reunion` (ver `fuentes_registros_service`)."""
     try:
         desde, hasta = _periodo()
-        datos = fuentes_registros_service.registros(request.args.get('fuente', ''), request.args.get('metrica', ''),
-                                                    desde, hasta, request.args.get('base'))
+        if 'segmento' in request.args:
+            # Con `segmento` (A, B, C, D, sin; vacío = todos) la lista trae la columna de segmento y solo ese grupo.
+            datos = segmentos_marketing_service.registros(request.args.get('fuente', ''), request.args.get('metrica', ''),
+                                                          request.args.get('segmento', ''), desde, hasta)
+        else:
+            datos = fuentes_registros_service.registros(request.args.get('fuente', ''), request.args.get('metrica', ''),
+                                                        desde, hasta, request.args.get('base'))
     except ValueError as error:
         return jsonify({'error': str(error)}), 400
     return jsonify(datos), 200

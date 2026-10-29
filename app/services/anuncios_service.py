@@ -334,7 +334,7 @@ def metricas(base):
 SUMABLES = ('entrantes', 'calificados', 'descalificados', 'en_conversacion', 'agendas', 'ventas', 'gasto', 'cobrado')
 
 
-def tablero(desde, hasta, base=None):
+def tablero(desde, hasta, base=None, con_segmentos=False):
     """La tabla de Marketing para el período [desde, hasta] (fechas, ambos incluidos).
 
     Devuelve una fila por palabra clave con movimiento en el período (entrantes, agendas, ventas o
@@ -343,6 +343,7 @@ def tablero(desde, hasta, base=None):
 
     `base` (`conteo_agendas_service`): por qué fecha cuentan las agendas de las tarjetas de fuente (Setting,
     Workshop y Otras). La tabla de palabras clave cuenta siempre por fecha de alta: es la de los costos.
+    `con_segmentos` suma `por_segmento` (la matriz A/B/C/D): cuesta ~3 s más, así que solo la pide su pestaña.
     """
     desde_dt, hasta_dt = _limites(desde, hasta)
     clave_de_anuncio = _clave_de_cada_anuncio()
@@ -411,6 +412,8 @@ def tablero(desde, hasta, base=None):
 
     totales = metricas({k: sum(f[k] for f in filas) for k in SUMABLES})
     embudos = _meta_ads().gasto_por_embudo(desde, hasta)
+    from app.services import segmentos_marketing_service  # se importan entre los dos
+    fuentes = fuentes_service.resumen(desde, hasta, filas, cobros, claves_de_cobro, embudos, base)
     return {
         'desde': desde.isoformat(),
         'hasta': hasta.isoformat(),
@@ -430,5 +433,8 @@ def tablero(desde, hasta, base=None):
         # El gasto de Meta por embudo (setting, workshop…): el selector de Rendimiento (15/10/2026).
         'embudos': embudos,
         # Setting vs Workshop con ROAS New Cash y Total (23/10/2026): ver `fuentes_service`.
-        'fuentes': fuentes_service.resumen(desde, hasta, filas, cobros, claves_de_cobro, embudos, base),
+        'fuentes': fuentes,
+        # La matriz A/B/C/D × Setting/Workshop (28/10/2026): ver `segmentos_marketing_service`.
+        **({'por_segmento': segmentos_marketing_service.por_segmento(desde, hasta, cobros, claves_de_cobro, fuentes['fuentes'])}
+           if con_segmentos else {}),
     }

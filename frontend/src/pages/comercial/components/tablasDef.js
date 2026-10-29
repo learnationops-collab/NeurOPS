@@ -263,6 +263,10 @@ const COL_VER = { key: 'ver', header: '', width: '0.4fr', min: 32 };
 // que hace falta para no malinterpretar la lista. Antes explicaba la decisión entera y el de
 // `clientes` eran seis renglones que nadie termina de leer. El porqué largo no se perdió: vive en
 // el comentario que hay arriba de cada `ayuda`, donde le sirve a quien toque este archivo.
+/** El segmento A/B/C/D del lead (lo pone el backend en cada fila: `segmentos_comercial.con_segmento`). */
+export const segmentoDe = (fila) => (fila.segmento === 'sin' ? 'Sin segmento' : fila.segmento || null);
+const FACETA_SEGMENTO = { key: 'segmento', label: 'Segmento', de: segmentoDe, ayuda: () => 'A, B, C o D según el formulario; «Sin segmento» son las agendas de antes del triage.' };
+
 export const TABLAS = {
     agendas: {
         label: 'Agendas',
@@ -284,6 +288,7 @@ export const TABLAS = {
             { key: 'post_call', label: 'Post call', de: (f) => f.post_call.label, ayuda: ayudaDelEstado },
             { key: 'closer', label: 'Closer', de: (f) => f.closer },
             { key: 'fuente', label: 'Fuente', de: (f) => f.fuente },
+            FACETA_SEGMENTO,
             { key: 'confirmada', label: 'Confirmada', de: fueConfirmada },
             { key: 'asistio', label: 'Asistió', de: asistio },
             { key: 'presento', label: 'Presentó', de: presento },
@@ -343,6 +348,7 @@ export const TABLAS = {
             // a dónde llevar.
             { key: 'fuente', label: 'Fuente', de: fuenteDe },
             { key: 'fuente_detalle', label: 'Detalle de la fuente', de: detalleFuenteDe, oculta: true },
+            FACETA_SEGMENTO,
             // El estado de la seña lo agrega el backend a la fila (`sena_estado`): en qué terminó
             // esa reserva, con la MISMA derivación con la que el panel Señas la cuenta. Viene la
             // clave (`pago_completo`…) y acá se traduce a la etiqueta, que es contra lo que se
@@ -483,6 +489,7 @@ export const TABLAS = {
             { key: 'pre_call', label: 'Pre call', de: (f) => f.pre_call.label },
             { key: 'post_call', label: 'Post call', de: (f) => f.post_call.label, ayuda: ayudaDelEstado },
             { key: 'closer', label: 'Closer', de: (f) => f.closer },
+            FACETA_SEGMENTO,
             { key: 'confirmada', label: 'Confirmada', de: fueConfirmada },
             { key: 'asistio', label: 'Asistió', de: asistio },
             { key: 'presento', label: 'Presentó', de: presento },

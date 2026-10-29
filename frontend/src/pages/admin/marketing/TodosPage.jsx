@@ -13,6 +13,7 @@ import { mensajeDeError, pedirTablero } from './anuncios/marketingApi';
 import { usePeriodoDeUrl } from './anuncios/usePeriodoDeUrl';
 import ResumenTodos, { EsqueletoResumen } from './todos/ResumenTodos';
 import MetricaPorMetrica from './todos/MetricaPorMetrica';
+import SegmentosVista from './todos/SegmentosVista';
 import { SETTING, WORKSHOP, gruposDe } from './todos/comparacion';
 import { useRegistrosMarketing } from './anuncios/useRegistrosMarketing';
 import { SelectorBase, useBaseDeConteo } from './anuncios/baseDeConteo';
@@ -27,6 +28,7 @@ import './todos/todos.css';
  *
  *  - Resumen: las cuatro cifras que más separan a las dos fuentes y el embudo normalizado a 1.000 leads.
  *  - Métrica por métrica: cada cifra de las dos fuentes lado a lado, con quién gana (y por cuánto).
+ *  - Segmentos: la matriz A/B/C/D × Setting/Workshop, con su filtro (28/10/2026).
  *  - Gasto en Meta: cuánto se gastó en cada embudo y día por día.
  *
  * Es lo que era «General» en el Rendimiento de Marketing; se separó para que Setting y Workshop muestren
@@ -36,6 +38,7 @@ import './todos/todos.css';
 const VISTAS = [
     { key: 'resumen', label: 'Resumen' },
     { key: 'detalle', label: 'Métrica por métrica' },
+    { key: 'segmentos', label: 'Segmentos' },
     { key: 'meta', label: 'Gasto en Meta' },
 ];
 
@@ -74,6 +77,14 @@ const TodosPage = () => {
                 <EmbudosResumen embudos={datos ? datos.embudos || [] : null} desde={rango.desde} hasta={rango.hasta}
                     moneda={datos?.moneda} onElegir={irAEmbudo}
                     cuentas={datos?.meta?.cuentas || []} irAMeta={() => navigate('/admin/marketing?tab=meta')} />
+            );
+        }
+        if (vista === 'segmentos') {
+            return (
+                <>
+                    <SegmentosVista rango={rango} version={version} params={params} cambiar={cambiar} abrirRegistros={registros.abrir} />
+                    {registros.panel}
+                </>
             );
         }
         if (!datos) return <EsqueletoResumen />;

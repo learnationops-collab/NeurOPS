@@ -7,7 +7,8 @@ import { formatear } from './metricas';
 /**
  * Lo que se abre al tocar una cifra de Setting o de Workshop (`useRegistrosMarketing`): la lista de lo que
  * la suma, que arma el backend con el mismo código que la cifra (`fuentes_registros_service.py`). Arriba,
- * su cuenta en una línea: la suma de la lista es la cifra que se tocó.
+ * su cuenta en una línea: la suma de la lista es la cifra que se tocó. `cargar({ signal })` reemplaza el pedido de
+ * Marketing por otro que devuelva la misma forma `{ columnas, filas, resumen }` (el dashboard comercial por segmento).
  */
 export const fecha = (v) => {
     if (!v) return '—';
@@ -29,15 +30,15 @@ export const columnaDe = (c, moneda) => ({
     },
 });
 
-const ContenidoRegistros = ({ fuente, metrica, desde, hasta, moneda, base }) => {
+const ContenidoRegistros = ({ fuente, metrica, desde, hasta, moneda, base, segmento = undefined, cargar = null }) => {
     const [estado, setEstado] = useState({ datos: null, error: null });
     useEffect(() => {
         const control = new AbortController();
-        pedirRegistros(fuente, metrica, desde, hasta, { signal: control.signal, base })
+        (cargar ? cargar({ signal: control.signal }) : pedirRegistros(fuente, metrica, desde, hasta, { signal: control.signal, base }, segmento))
             .then((datos) => setEstado({ datos, error: null }))
             .catch((e) => { if (!control.signal.aborted) setEstado({ datos: null, error: mensajeDeError(e, 'No se pudo traer la lista.') }); });
         return () => control.abort();
-    }, [fuente, metrica, desde, hasta, base]);
+    }, [fuente, metrica, desde, hasta, base, segmento, cargar]);
 
     const { datos, error } = estado;
     const columnas = useMemo(() => (datos ? datos.columnas.map((c) => columnaDe(c, moneda)) : []), [datos, moneda]);
@@ -54,7 +55,7 @@ const ContenidoRegistros = ({ fuente, metrica, desde, hasta, moneda, base }) => 
         <>
             <p className="t-body td-fuerte" style={{ margin: '0 0 var(--s3)' }}>{datos.resumen}</p>
             <ListaConfigurable columnas={columnas} filas={datos.filas} clave={(f) => f.id}
-                claveGuardado={`mk_registros_${fuente}_${metrica}${base === 'reunion' ? '_reunion' : ''}`}
+                claveGuardado={`mk_registros_${fuente}_${metrica}${base === 'reunion' ? '_reunion' : ''}${segmento === undefined ? '' : '_seg'}`}
                 buscar={(f) => Object.values(f).join(' ')} buscarPlaceholder="Buscar en la lista"
                 vacio="Ninguna fila suma a esta cifra en el período." />
         </>

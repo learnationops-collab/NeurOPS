@@ -17,6 +17,14 @@ Pasar al lead del triage al closing.
 - [ ] Low ticket (`LT`, 100 USD por mes, Academia `low-ticket`): definir comisiones del triage y de Fulfillment (`comision_tasas_service.PROGRAMAS` no tiene LT) y cómo se cobra cada mes (hoy: un «LT - Renovacion» de 1 mes por la ficha).
 - [ ] Tests de suscripción que ya fallaban antes del low ticket (27/10): `test_la_sena_da_7_dias_y_el_saldo_la_pasa_a_completo`, `test_la_venta_da_4_meses_y_las_cuotas_no_mueven_la_fecha`, `test_encendido_manda_la_suscripcion_con_su_ultimo_cambio`, `test_el_aviso_del_pago_lleva_el_vencimiento_de_la_suscripcion` (vencimientos corridos 2 días).
 
+## Segmentos en Marketing y dashboards
+Matriz A/B/C/D en Todos › Segmentos y panel de segmentos de setters y closers (28/10/2026, [MARKETING.md](MODELO/MARKETING.md)).
+
+- [ ] **Costo por lead por segmento (Leadership 839, decisión de Kerwin):** Meta no conoce el segmento. Dos opciones: (a) prorratear el gasto de la fuente por la mezcla de segmentos de sus leads (cada segmento carga con la parte del gasto que le toca por su peso en los leads); (b) gasto de la fuente ÷ leads del segmento (cada segmento se divide por el gasto entero, y los costos no suman al total). Hasta que se decida, la matriz no muestra el costo.
+- [ ] Backfill del segmento de las ~120 agendas viejas (Leadership 840): `scripts/backfill_segmentos.py` en simulación contra la copia local del 28/10 no escribe nada nuevo (990 clientes y 924 agendas ya tenían segmento; 6 clientes del formulario viejo no se pueden segmentar). Confirmar con Kerwin y correr con `--apply` en el servidor.
+- [ ] Leads de Workshop por segmento: los clics al grupo no traen formulario; si se quiere, medir los leads de Workshop como personas con agenda.
+- [ ] Países en Marketing (pedido de Gabriela, 28/10): no entró en esta entrega.
+
 ## Agendas y reparto
 Cómo se reparten las agendas entre closers.
 

@@ -17,3 +17,4 @@ La diferencia entre las dos del pasado: la bitácora dice **qué se subió**; `D
 
 - **[TABLAS.md](TABLAS.md)**: el motor de tablas (plan por claves, sin IA) y el diccionario de datos: significados, calculados `d.`, conceptos del equipo y el buscador `buscar_datos`.
 - **[LEARNITO.md](LEARNITO.md)**: Learnito en Work, el copiloto con IA de closers y dirección: pantalla, herramientas por rol, motor de tablas, habilidades, agentes pares con la Academia, costo y tope. Incluye la tabla de paridad con el Learnito de la Academia y los pendientes.
+- **[MARKETING.md](MARKETING.md)**: Marketing por fuente (Setting y Workshop) y por segmento A/B/C/D: de dónde sale cada cifra, la matriz de Todos › Segmentos, el panel de segmentos del dashboard de setters y closers, y lo que falta (costo por lead por segmento).

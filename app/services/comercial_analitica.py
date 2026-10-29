@@ -318,14 +318,20 @@ def _cash_por_dia(filas_ventas, start, end):
     return dias, (mejor if mejor and mejor['cash'] > 0 else None)
 
 
-def bloque_closers(start, end, closer_id=None, closer_nombre=None, con_reales=True):
+def bloque_closers(start, end, closer_id=None, closer_nombre=None, con_reales=True, segmento=None):
     """Todos los números de Analizar para closers, de un período. Se llama dos veces (período y
     período comparado) para sacar los deltas sin duplicar ninguna fórmula.
 
     `con_reales=False` salta el close rate real (`cierres_reales`): el ranking y el mapa del equipo
-    corren este bloque por persona y por período y no lo muestran."""
+    corren este bloque por persona y por período y no lo muestran.
+
+    `segmento`: un conjunto de segmentos (A, B, C, D, sin): el bloque se calcula solo con las agendas y los cobros de
+    esos leads (`segmentos_comercial`). Lo que no es de un lead (las deudas por cobrar, las fuentes) no se filtra."""
     agendas = ComercialService.agendas(start, end, closer_id=closer_id)
     ventas = ComercialService.ventas(start, end, closer_nombre=closer_nombre)
+    if segmento:
+        from app.services.segmentos_comercial import filtrar
+        agendas, ventas = filtrar(agendas, segmento), filtrar(ventas, segmento)
     tot_a = ComercialService.totales_agendas(agendas)
     tot_v = ComercialService.totales_ventas(ventas)
     estados = estados_de(agendas)
@@ -755,12 +761,15 @@ def _deltas(actual, previo, modos):
     return salida
 
 
-def resumen(rol, start, end, prev_start=None, prev_end=None, miembro_id=None):
+def resumen(rol, start, end, prev_start=None, prev_end=None, miembro_id=None, segmento=None):
     """Todo lo que muestra la pestaña Analizar → Dashboard, con sus deltas."""
     miembro = User.query.get(miembro_id) if miembro_id else None
     nombre = miembro.username if miembro else None
     bloque = _bloque_de(rol)
     kwargs = _kwargs_de(rol, miembro_id, nombre)
+    # El reporte diario del setter (ManyChat) no tiene segmento: el filtro es del closer.
+    if segmento and rol == ROL_CLOSERS:
+        kwargs['segmento'] = segmento
 
     actual = bloque(start, end, **kwargs)
     previo = bloque(prev_start, prev_end, **kwargs) if prev_start else None

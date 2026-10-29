@@ -9,8 +9,9 @@ import api from '../../services/api';
  */
 
 /** Parámetros del header que comparten casi todos los endpoints. */
-export const filtrosQuery = ({ period, compare, miembroId, rol, desde, hasta, vsDesde, vsHasta }) => {
+export const filtrosQuery = ({ period, compare, miembroId, rol, desde, hasta, vsDesde, vsHasta, segmento }) => {
     const params = { period, compare, rol };
+    if (segmento) params.segmento = segmento;
     if (miembroId) params.miembro_id = miembroId;
     if (period === 'custom') {
         params.start_date = desde;
@@ -89,3 +90,12 @@ export const getReportes = (miembroId) =>
 export const getConstancia = (dias, fecha) =>
     api.get('/comercial/reporte/constancia', { params: { dias, ...(fecha ? { fecha } : {}) } })
         .then(r => r.data);
+
+/** Agendas del período por segmento A/B/C/D (el closer, show up y cierre; el setter, sus agendas). Siempre trae
+ *  todos los grupos: el filtro de segmento no va, se aplica en la pantalla. */
+export const getSegmentos = (filtros, config = {}) =>
+    api.get('/comercial/segmentos', { params: filtrosQuery({ ...filtros, segmento: null }), ...config }).then(r => r.data);
+
+/** La lista detrás de una cifra de `getSegmentos`: `metrica` agendas · realizadas · asistieron · ventas · sin_reporte. */
+export const getSegmentosRegistros = (filtros, metrica, segmento, config = {}) =>
+    api.get('/comercial/segmentos/registros', { params: { ...filtrosQuery({ ...filtros, segmento: null }), metrica, segmento }, ...config }).then(r => r.data);
