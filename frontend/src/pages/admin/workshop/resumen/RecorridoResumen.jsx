@@ -50,7 +50,7 @@ const Agendas = ({ totales, onVer }) => {
                                 onClick={() => onVer?.(p.lista, TITULOS[p.lista])} aria-label={`${p.label}: ${p.n}. Ver la lista`} />
                         ))}
                     </div>
-                    <dl className="wr-agendas">
+                    <dl className={`wr-agendas${partes.length === 4 ? ' wr-agendas--4' : ''}`}>
                         {partes.map((p) => (
                             <div key={p.key} style={{ '--c': p.color }}>
                                 <dt>{p.label}</dt>
