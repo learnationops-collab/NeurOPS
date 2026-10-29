@@ -119,6 +119,12 @@ def categoria_de_origen(origen):
     return 'VSL' if texto.lower() == 'vsl' else texto
 
 
+def origen_de_agenda(fuente, nombre):
+    """El origen de una agenda en Segmentos: el de `categoria_de_origen`, salvo Workshop, que es uno solo (en vivo y
+    grabación se cuentan juntos)."""
+    return 'Workshop' if fuente == 'workshop' else categoria_de_origen(nombre)
+
+
 def por_fuente(desde, hasta, base=BASE_POR_DEFECTO):
     """{fuente: {agendas, show_up, reportadas, dias: {fecha: agendas}, origenes}} para setting, workshop y otras.
 

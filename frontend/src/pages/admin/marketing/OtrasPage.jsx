@@ -10,6 +10,7 @@ import { Kpi } from './anuncios/TablaAnuncios';
 import { PERIODOS, formatear } from './anuncios/metricas';
 import { mensajeDeError, pedirTablero } from './anuncios/marketingApi';
 import { usePeriodoDeUrl } from './anuncios/usePeriodoDeUrl';
+import FiltroSegmentoMarketing, { segmentoDeUrl } from './todos/FiltroSegmentoMarketing';
 import { SelectorBase, useBaseDeConteo, BASES } from './anuncios/baseDeConteo';
 import { useRegistrosMarketing } from './anuncios/useRegistrosMarketing';
 import { useDatosCacheados } from '../../../services/cacheDeVistas';
@@ -25,16 +26,20 @@ import './anuncios/anuncios.css';
  */
 const OtrasPage = () => {
     const reducir = useReducedMotion();
-    const { periodo, rango, cambiar, elegir, textoPeriodo } = usePeriodoDeUrl();
+    const { periodo, rango, cambiar, elegir, textoPeriodo, params } = usePeriodoDeUrl('mk_otras_url', ['segmento']);
     const { base, elegirBase } = useBaseDeConteo();
     const [version, setVersion] = useState(0);
     const recargar = useCallback(() => setVersion((v) => v + 1), []);
 
-    const { datos, error: fallo, cargando } = useDatosCacheados(`mk:tablero:${base}:${rango.desde}:${rango.hasta}`,
-        (signal) => pedirTablero(rango.desde, rango.hasta, { signal, base }),
+    const segmento = segmentoDeUrl(params).join(',');
+    const { datos, error: fallo, cargando } = useDatosCacheados(`mk:tablero:${base}:${rango.desde}:${rango.hasta}:${segmento}`,
+        (signal) => pedirTablero(rango.desde, rango.hasta, { signal, base, segmento }),
         { version, onError: (e) => toast.error(mensajeDeError(e, 'No se pudo cargar Otras.')) });
     const error = fallo ? mensajeDeError(fallo, 'No se pudo cargar Otras.') : null;
+    // Con un segmento elegido las listas son las del segmento (`segmento` vacío = todos los segmentos).
     const registros = useRegistrosMarketing(rango.desde, rango.hasta, datos?.moneda, base);
+    const abrirLista = (fuente, metrica, titulo, origen) => registros.abrir(fuente, metrica, titulo, segmento ? segmento : undefined,
+        segmento ? segmentoDeUrl(params).join(' + ') : '', origen);
 
     const otras = datos?.fuentes?.otras;
     const fuentes = datos?.fuentes?.fuentes || [];
@@ -89,6 +94,7 @@ const OtrasPage = () => {
                         </div>
                     </header>
 
+                    <FiltroSegmentoMarketing params={params} cambiar={cambiar} rotulo="Por fecha de alta, sin gasto: Otras no viene de anuncios." />
                     <motion.div className={cargando && datos ? 'mk-recargando' : undefined} aria-busy={cargando}
                         initial={reducir ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.28, ease: [0.22, 0.7, 0.2, 1] }}>
@@ -105,7 +111,7 @@ const OtrasPage = () => {
                                 <div className="pareja mk-fuente-kpis mk-fuente-kpis--cinco" style={{ '--min': '170px', '--g': 'var(--s4)' }}>
                                     {kpis.map((k, i) => (
                                         <Kpi key={k.titulo} titulo={k.titulo} valor={k.valor} sub={k.sub} tip={k.tip} i={i}
-                                            onVer={() => registros.abrir('otras', k.metrica, k.titulo)} />
+                                            onVer={() => abrirLista('otras', k.metrica, k.titulo)} />
                                     ))}
                                 </div>
                                 <section className="panel" aria-label="Cómo suman las agendas">
@@ -119,8 +125,8 @@ const OtrasPage = () => {
                                             : 'Por fecha de alta: personas con agenda creada en el período, sin las repetidas de una reprogramación.'}
                                     </p>
                                 </section>
-                                <OrigenDeOtras otras={otras} desde={rango.desde} hasta={rango.hasta} moneda={datos.moneda} base={base}
-                                    abrir={(metrica, titulo, origen) => registros.abrir('otras', metrica, titulo, undefined, '', origen)} />
+                                <OrigenDeOtras otras={otras} desde={rango.desde} hasta={rango.hasta} moneda={datos.moneda} base={base} segmento={segmento || undefined}
+                                    abrir={(metrica, titulo, origen) => abrirLista('otras', metrica, titulo, origen)} />
                                 {registros.panel}
                             </div>
                         )}

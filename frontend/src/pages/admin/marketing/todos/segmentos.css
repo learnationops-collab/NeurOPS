@@ -27,3 +27,19 @@
 /* La fuente y el filtro de segmento en UNA fila (compacto; en angosto el filtro baja). */
 .dc-shell .sg-barra{display:flex;align-items:center;gap:var(--s4);flex-wrap:wrap}
 .dc-shell .sg-barra > *{flex:none;width:auto;max-width:100%;margin:0}
+/* Agrupar por / Ver como: rótulo + pestañas chicas en una misma pieza. */
+.dc-shell .sg-control{display:inline-flex;align-items:center;gap:var(--s2)}
+/* Diferencia contra el período comparado. */
+.dc-shell .sg-delta{display:inline-flex;align-items:baseline;flex-wrap:wrap;gap:4px;font-size:11.5px;line-height:1.3;color:var(--text-muted)}
+.dc-shell .sg-delta b{font-weight:700}
+.dc-shell .sg-delta small{font-size:inherit}
+.dc-shell .sg-delta--sube b{color:var(--success)}
+.dc-shell .sg-delta--baja b{color:var(--error)}
+.dc-shell .sg-antes{background:none;border:0;padding:0;font:inherit;color:var(--text-muted)}
+.dc-shell button.sg-antes{cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px}
+.dc-shell button.sg-antes:hover{color:var(--text-primary)}
+/* Encabezado de columna que ordena el cruce. */
+.dc-shell .sg-plano{display:flex;flex-direction:column;gap:var(--s4)}
+.dc-shell .sg-grupo{display:flex;flex-direction:column;gap:var(--s2)}
+.dc-shell .sg-orden{display:inline-flex;align-items:center;gap:6px;background:none;border:0;padding:0;cursor:pointer;text-align:left}
+.dc-shell .sg-orden:hover{color:var(--text-primary)}

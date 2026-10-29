@@ -36,7 +36,7 @@ const Fila = ({ fila, abrir, total = false }) => {
     );
 };
 
-const OrigenDeOtras = ({ otras, abrir, desde, hasta, moneda, base }) => {
+const OrigenDeOtras = ({ otras, abrir, desde, hasta, moneda, base, segmento = undefined }) => {
     const origenes = otras.origenes || [];
     const total = { agendas: otras.agendas, show_up: otras.show_up, reportadas: otras.reportadas, pct_show_up: otras.pct_show_up };
     return (
@@ -72,7 +72,7 @@ const OrigenDeOtras = ({ otras, abrir, desde, hasta, moneda, base }) => {
                         <h2 className="t-h3">Todas las agendas de Otras</h2>
                     </div>
                 </div>
-                <ContenidoRegistros fuente="otras" metrica="agendas" desde={desde} hasta={hasta} moneda={moneda} base={base} />
+                <ContenidoRegistros fuente="otras" metrica="agendas" desde={desde} hasta={hasta} moneda={moneda} base={base} segmento={segmento} />
             </section>
         </>
     );

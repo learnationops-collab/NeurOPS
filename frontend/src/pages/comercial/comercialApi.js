@@ -91,11 +91,17 @@ export const getConstancia = (dias, fecha) =>
     api.get('/comercial/reporte/constancia', { params: { dias, ...(fecha ? { fecha } : {}) } })
         .then(r => r.data);
 
-/** Agendas del período por segmento A/B/C/D (el closer, show up y cierre; el setter, sus agendas). Siempre trae
- *  todos los grupos: el filtro de segmento no va, se aplica en la pantalla. */
-export const getSegmentos = (filtros, config = {}) =>
-    api.get('/comercial/segmentos', { params: filtrosQuery({ ...filtros, segmento: null }), ...config }).then(r => r.data);
+/** Agendas del período por segmento A/B/C/D (el closer, show up y cierre; el setter, sus agendas), cortadas por `corte`
+ *  (closer · setter · fuente · origen; sin él, todo junto) y con el VS del header como período comparado. El filtro de
+ *  segmento (`filtros.segmento`) lo aplica el backend, también al total. */
+export const getSegmentos = (filtros, config = {}, corte = 'ninguno') =>
+    api.get('/comercial/segmentos', { params: { ...filtrosQuery(filtros), corte }, ...config }).then(r => r.data);
 
-/** La lista detrás de una cifra de `getSegmentos`: `metrica` agendas · realizadas · asistieron · ventas · sin_reporte. */
-export const getSegmentosRegistros = (filtros, metrica, segmento, config = {}) =>
-    api.get('/comercial/segmentos/registros', { params: { ...filtrosQuery({ ...filtros, segmento: null }), metrica, segmento }, ...config }).then(r => r.data);
+/** La lista detrás de una cifra de `getSegmentos`: `metrica` agendas · realizadas · asistieron · ventas · sin_reporte.
+ *  `extra`: { corte, grupo } (la celda de un grupo) y `previo` (la del período comparado). */
+export const getSegmentosRegistros = (filtros, metrica, segmento, config = {}, { corte, grupo, previo } = {}) =>
+    api.get('/comercial/segmentos/registros', {
+        params: { ...filtrosQuery({ ...filtros, segmento: null }), metrica, segmento, ...(corte ? { corte } : {}),
+            ...(grupo !== undefined && grupo !== null ? { grupo } : {}), ...(previo ? { previo: 1 } : {}) },
+        ...config,
+    }).then(r => r.data);

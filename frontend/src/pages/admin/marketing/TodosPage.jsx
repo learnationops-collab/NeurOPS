@@ -14,6 +14,7 @@ import { usePeriodoDeUrl } from './anuncios/usePeriodoDeUrl';
 import ResumenTodos, { EsqueletoResumen } from './todos/ResumenTodos';
 import MetricaPorMetrica from './todos/MetricaPorMetrica';
 import SegmentosVista from './todos/SegmentosVista';
+import FiltroSegmentoMarketing, { segmentoDeUrl } from './todos/FiltroSegmentoMarketing';
 import { SETTING, WORKSHOP, gruposDe } from './todos/comparacion';
 import { useRegistrosMarketing } from './anuncios/useRegistrosMarketing';
 import { SelectorBase, useBaseDeConteo } from './anuncios/baseDeConteo';
@@ -45,14 +46,16 @@ const VISTAS = [
 const TodosPage = () => {
     const navigate = useNavigate();
     const reducir = useReducedMotion();
-    const { periodo, rango, cambiar, elegir, textoPeriodo, params } = usePeriodoDeUrl('mk_todos_url', ['vista']);
+    const { periodo, rango, cambiar, elegir, textoPeriodo, params } = usePeriodoDeUrl('mk_todos_url', ['vista', 'segmento', 'vs', 'vd', 'vh']);
     const vista = VISTAS.some((v) => v.key === params.get('vista')) ? params.get('vista') : 'resumen';
     const [version, setVersion] = useState(0);
     const { base, elegirBase } = useBaseDeConteo();
     const recargar = useCallback(() => setVersion((v) => v + 1), []);
 
-    const { datos, error: fallo, cargando } = useDatosCacheados(`mk:tablero:${base}:${rango.desde}:${rango.hasta}`,
-        (signal) => pedirTablero(rango.desde, rango.hasta, { signal, base }),
+    // El filtro de segmento acota las cifras de Resumen y Métrica por métrica; el gasto de Meta no se parte (ver `FiltroSegmentoMarketing`).
+    const segmento = ['resumen', 'detalle'].includes(vista) ? segmentoDeUrl(params).join(',') : '';
+    const { datos, error: fallo, cargando } = useDatosCacheados(`mk:tablero:${base}:${rango.desde}:${rango.hasta}:${segmento}`,
+        (signal) => pedirTablero(rango.desde, rango.hasta, { signal, base, segmento }),
         { version, onError: (e) => toast.error(mensajeDeError(e, 'No se pudo cargar la comparación.')) });
     const error = fallo ? mensajeDeError(fallo, 'No se pudo cargar la comparación.') : null;
 
@@ -80,12 +83,7 @@ const TodosPage = () => {
             );
         }
         if (vista === 'segmentos') {
-            return (
-                <>
-                    <SegmentosVista rango={rango} version={version} params={params} cambiar={cambiar} abrirRegistros={registros.abrir} />
-                    {registros.panel}
-                </>
-            );
+            return <SegmentosVista rango={rango} version={version} params={params} cambiar={cambiar} />;
         }
         if (!datos) return <EsqueletoResumen />;
         if (sinFuentes) {
@@ -148,6 +146,10 @@ const TodosPage = () => {
                     <div className="barra">
                         <Segmented opciones={VISTAS} valor={vista} ariaLabel="Vistas de Todos" onChange={elegirVista} />
                     </div>
+                    {['resumen', 'detalle', 'meta'].includes(vista) && (
+                        <FiltroSegmentoMarketing params={params} cambiar={cambiar}
+                            rotulo={vista === 'meta' ? 'El gasto de Meta no se parte por segmento: esta vista no se filtra.' : null} />
+                    )}
 
                     <motion.div key={vista} className={cargando && datos ? 'mk-recargando' : undefined} aria-busy={cargando}
                         initial={reducir ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}

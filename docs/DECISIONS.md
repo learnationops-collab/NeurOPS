@@ -186,3 +186,20 @@
   - **Países:** el pedido de Gabriela los nombra; no están en esta entrega.
   - El filtro de segmento no acota lo que sale del reporte diario del setter (viene de ManyChat, sin segmento) ni las deudas por cobrar.
 - **Consecuencias:** las agendas viejas siguen en «sin segmento» hasta que Kerwin confirme el backfill (`scripts/backfill_segmentos.py`, Leadership 840). Los leads de Setting de la matriz son los de la tabla de Marketing (personas que escribieron una palabra clave); quien nunca llenó el formulario es «sin segmento», por eso ese grupo concentra casi todos esos leads.
+
+## ADR-W021: Segmentos cortados por closer, fuente u origen, con período de comparación y filtro de segmento en las demás vistas
+- **Fecha:** 2026-10-28 · **Subsistema:** Marketing, dashboard comercial · **Estado:** implementado
+- **Contexto:** Kerwin (28/10): en Segmentos, en Marketing y en Closing, faltaba agrupar por closer y por fuente, comparar con otro período y personalizar la vista; y poder filtrar por segmento en las demás vistas para decidir qué grupos entran en el análisis. La matriz de ADR-W020 solo partía por fuente (Setting y Workshop) y el filtro solo vivía en Analizar.
+- **Decisión:**
+  1. **Hechos y una sola cuenta.** `segmentos_marketing_service` arma los hechos del período (agendas, cobros, leads, cada uno con segmento, fuente, origen y closer) y la celda, la comparación y la lista salen de `PERTENECE`: la lista suma exacto la celda. En Closing, `_clave_de(corte)` hace lo mismo con las filas de `ComercialService`. El corte y la comparación comparten `segmentos_cortes`.
+  2. **Cortes:** Marketing por fuente (con Otras), origen (setter, VSL, Momentum, Referido…), closer o ninguno; Closing por closer, setter, fuente u origen. Origen de Workshop = uno solo. Se ven como una tabla por grupo o como cruce grupo × segmento de una cifra.
+  3. **Comparación:** las mismas opciones del VS de Analizar (`rango_comparado`): en Closing es el VS del header; en Marketing un selector propio (`vs`, `vd`, `vh`). La diferencia (absoluta y %, en puntos para las tasas) la calcula el backend y cada «antes N» abre la lista del período comparado.
+  4. **Filtro de segmento:** lo aplica siempre el backend, también al total y a las diferencias (antes lo rehacía la pantalla). Disponible en Todos (Resumen, Métrica por métrica), Otras, Analizar y Revisar, recordado por usuario con el período (`mk_todos_url`, `mk_otras_url`, `cm_segmento`). Con un segmento elegido, el tablero de Marketing cuenta por fecha de alta y pone el gasto, los costos y el ROAS en «—» (`acotar_fuentes`).
+  5. **Personalización barata:** columnas visibles, cifra y orden del cruce, pestaña de fuente y corte, todo en `useEstadoGuardado` (ADR-W018).
+  6. La matriz sale de su propio endpoint (`/marketing/anuncios/segmentos`) y los hechos se recuerdan 45 s: cambiar de corte o de filtro no rehace la cuenta de ~3 s. `?segmentos=1` del tablero se quitó.
+- **Qué se pierde (nombrado):**
+  - **No admiten el filtro y lo dicen en pantalla:** Gasto en Meta y la tabla de palabras clave de Setting (el gasto no conoce al lead), Workshop por taller (leads = clics anónimos), el reporte diario del setter (ManyChat), Comparativas y Variabilidad.
+  - **Leads en el corte por closer:** un lead todavía no tiene closer, así que quedan en «—».
+  - **Origen de un cobro:** es el detalle de su procedencia (el setter, En vivo/Grabación → Workshop, VSL…); no siempre coincide con el nombre libre de la fuente de la agenda del mismo cliente.
+  - La matriz sigue contando solo por fecha de alta (pendiente de ADR-W020 sin decidir).
+- **Consecuencias:** Marketing y Closing leen la misma forma de respuesta (`grupos`, `cuentas`, `previo`/`delta`); un corte nuevo se agrega en un solo lugar de cada servicio. Costo por lead por segmento sigue pendiente (Leadership 839).
