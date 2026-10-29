@@ -73,11 +73,19 @@ export function normalSegmento(s) {
     if (s.modo === 'suma') {
         const a = entero(s.a, -50, 50, 3);
         const b = Math.min(a, entero(s.b, -50, 50, 1));
-        return { activo: true, modo: 'suma', a, b, c: Math.min(b, entero(s.c, -50, 50, -1)), sigma: entero(s.sigma, 1, 5, 1), version: String(s.version || '').slice(0, 20) };
+        return { activo: true, modo: 'suma', a, b, c: Math.min(b, entero(s.c, -50, 50, -1)), sigma: entero(s.sigma, 1, 5, 1), version: String(s.version || '').slice(0, 20), ...normalDinero(s.dinero) };
     }
     const a = entero(s.a, 0, 100, 69);
     const b = Math.min(a, entero(s.b, 0, 100, 54));
-    return { activo: true, a, b, c: Math.min(b, entero(s.c, 0, 100, 31)), sigma: entero(s.sigma, 1, 50, 12), version: String(s.version || '').slice(0, 20) };
+    return { activo: true, a, b, c: Math.min(b, entero(s.c, 0, 100, 31)), sigma: entero(s.sigma, 1, 50, 12), version: String(s.version || '').slice(0, 20), ...normalDinero(s.dinero) };
+}
+
+// { dinero: { q, ops } } (la pregunta de inversión y las opciones que pueden invertir) o {} si no está.
+function normalDinero(d) {
+    d = d && typeof d === 'object' ? d : {};
+    const ops = (Array.isArray(d.ops) ? d.ops : []).slice(0, 20).map(o => String(o || '').slice(0, 40)).filter(Boolean);
+    const q = String(d.q || '').slice(0, 40);
+    return q && ops.length ? { dinero: { q, ops } } : {};
 }
 
 export function normalReglas(reglas) {

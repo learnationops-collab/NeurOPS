@@ -1344,3 +1344,5 @@
   - El formulario `dg6gukz9emx` (Workshop, Setting) rutea solo por la inversión: $200 o más → «Segmentos A y B» (closers); «podría conseguir ayuda» o «no estoy dispuesto» → Triage con la Sesión diagnóstica. `mk-academy` sigue primera. Reemplaza las reglas `seg-a`…`seg-d`.
   - «Segmentos A y B» (antes Grupo 5): Jean Carlo y Marlon, máxima disponibilidad (Jean Carlo desempata). Mario sale de A/B. El Grupo 4 queda sin uso.
   - La Sesión de Aceleración del Workshop ofrece hoy, mañana y pasado (2 días corridos después de hoy, antes 3). Con eso, a un lead con dinero se le ofrecen 11 horarios del 29 al 31/10 y al triage 21.
+- **29 de Octubre de 2026 (el dinero decide el par de segmentos)** *([segmento.py](../../app/agendas_v2/nucleo/segmento.py), [segmento.js](../../frontend/src/pages/agendas_v2/core/segmento.js))*:
+  - Con `segmento.dinero` en el formulario, el lead que puede invertir ($200 o más) queda A o B y el que no, C o D. Las demás preguntas solo eligen la letra dentro del par (ADR-W025). Así el segmento de la ficha y de Discord coincide con el ruteo: A/B a closers y C/D al triage.

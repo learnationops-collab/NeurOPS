@@ -5,6 +5,8 @@ Dos modos, según `form.segmento.modo`:
     lo que resta compra menos). El puntaje es la suma de lo respondido; una respuesta que falta suma 0 (el
     promedio). Cortes en puntos: A ≥ a, B ≥ b, C ≥ c.
   - proporción (el de antes): puntos obtenidos ÷ máximo posible de lo respondido, cortes en %.
+Con `segmento.dinero` ({q, ops}: la pregunta de inversión y las opciones que pueden invertir), el dinero decide
+el par (A/B o C/D) y los puntos solo eligen dentro: A ≥ a, si no B; C ≥ c, si no D.
 La confianza es la probabilidad de caer en ese segmento si los puntos tienen un error normal de `sigma`.
 """
 
@@ -90,6 +92,13 @@ def _proporcion(form, resp, cfg):
     return obtenido / maximo, respondidas, (cfg['a'] / 100, cfg['b'] / 100, cfg['c'] / 100), cfg['sigma'] / 100
 
 
+def _con_dinero(cfg, resp):
+    """True si el lead puede invertir, False si no, None si el formulario no separa por dinero o no respondió."""
+    d = cfg.get('dinero') or {}
+    v = resp.get(d['q']) if d.get('q') else None
+    return None if not v else v in (d.get('ops') or [])
+
+
 def segmentar(form, resp):
     """{segmento, puntos, preguntas, confianza, version} o None si el formulario no segmenta o falta
     una respuesta clave. `resp`: {pregunta_id: opcion_id}."""
@@ -100,6 +109,11 @@ def segmentar(form, resp):
     if r is None:
         return None
     puntos, respondidas, cortes, sigma = r
+    dinero = _con_dinero(cfg, resp or {})
+    if dinero is not None:
+        # El dinero decide el par: con dinero A o B, sin dinero C o D; los puntos eligen dentro (Santi, 29/10/2026).
+        a, _, c = cortes
+        cortes = (a, -math.inf, c) if dinero else (math.inf, math.inf, c)
     seg = next(s for s in SEGMENTOS if puntos >= _banda(s, *cortes)[0])
     desde, hasta = _banda(seg, *cortes)
     confianza = _fi((hasta - puntos) / sigma) - _fi((desde - puntos) / sigma)

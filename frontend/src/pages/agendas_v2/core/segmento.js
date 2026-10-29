@@ -2,6 +2,8 @@
 // Modo 'suma' (desde 2026-12): cada opción tiene `puntosSeg` (-5 a +5, de los datos; 0 = el lead promedio) y el
 // puntaje es la suma de lo respondido (lo que falta suma 0). Cortes en puntos: A ≥ a, B ≥ b, C ≥ c.
 // Modo proporción (el de antes): puntos obtenidos ÷ máximo de lo respondido, cortes en %.
+// Con `segmento.dinero` ({ q, ops }: la pregunta de inversión y las opciones que pueden invertir), el dinero decide el
+// par (A/B o C/D) y los puntos solo eligen dentro: A ≥ a, si no B; C ≥ c, si no D.
 // La confianza es la probabilidad de caer en ese segmento si los puntos tienen un error de `sigma`.
 
 import { conOpciones } from './catalogos';
@@ -70,13 +72,24 @@ function proporcion(form, resp, cfg) {
     return [obtenido / maximo, respondidas, [cfg.a / 100, cfg.b / 100, cfg.c / 100], cfg.sigma / 100];
 }
 
+// true si el lead puede invertir, false si no, null si el formulario no separa por dinero o no respondió.
+function conDinero(cfg, resp) {
+    const d = cfg.dinero || {};
+    const v = d.q ? resp[d.q] : null;
+    return v ? (d.ops || []).includes(v) : null;
+}
+
 // {segmento, puntos, preguntas, confianza, version} o null si el formulario no segmenta o falta una respuesta clave.
 export function segmentar(form, resp) {
     const cfg = (form && form.segmento) || {};
     if (!cfg.activo) return null;
     const r = (cfg.modo === 'suma' ? suma : proporcion)(form, resp || {}, cfg);
     if (!r) return null;
-    const [puntos, respondidas, cortes, sigma] = r;
+    const [puntos, respondidas, , sigma] = r;
+    let cortes = r[2];
+    const dinero = conDinero(cfg, resp || {});
+    // El dinero decide el par: con dinero A o B, sin dinero C o D; los puntos eligen dentro (Santi, 29/10/2026).
+    if (dinero !== null) cortes = dinero ? [cortes[0], -Infinity, cortes[2]] : [Infinity, Infinity, cortes[2]];
     const seg = SEGMENTOS.find(s => puntos >= banda(s, ...cortes)[0]);
     const [desde, hasta] = banda(seg, ...cortes);
     const confianza = fi((hasta - puntos) / sigma) - fi((desde - puntos) / sigma);
