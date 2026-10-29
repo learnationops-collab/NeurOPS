@@ -22,6 +22,7 @@ from app.models.user import ROLE_ADMIN, ROLE_CLOSER, ROLE_DIRECTOR_COMERCIAL, RO
 from app.services import comercial_analitica as analitica
 from app.services import comercial_no_cerradas
 from app.services import comercial_reporte as reporte
+from app.services import segmentos_comercial, segmentos_lectura
 from app.services import comercial_simulador as simulador
 from app.services.booking_service import BookingService
 from app.services.comercial_service import (
@@ -142,8 +143,34 @@ def resumen():
     """Analizar → Dashboard."""
     rol, miembro_id, _ = _alcance()
     start, end, prev_start, prev_end = _rangos()
-    datos = analitica.resumen(rol, start, end, prev_start, prev_end, miembro_id)
+    # `segmento` (A, B, C, D, sin; varios por coma): el Analizar del closer sobre esos leads solamente.
+    datos = analitica.resumen(rol, start, end, prev_start, prev_end, miembro_id,
+                              segmento=segmentos_lectura.parsear(request.args.get('segmento')))
     return jsonify({**datos, 'dates': _fechas(start, end, prev_start, prev_end)}), 200
+
+
+@bp.route('/segmentos', methods=['GET'])
+def segmentos():
+    """Analizar › Segmentos: las agendas del período por segmento A/B/C/D (+ «sin segmento»). El closer ve show up
+    y cierre; el setter, las agendas que generó. Mismo alcance que el resumen (`alcance_de`); `?segmento=A,B`
+    deja solo esos grupos. Las listas detrás de cada cifra: `/segmentos/registros`."""
+    rol, miembro_id, _ = _alcance()
+    start, end, _prev_start, _prev_end = _rangos()
+    datos = segmentos_comercial.panel(rol, start, end, miembro_id, segmentos_lectura.parsear(request.args.get('segmento')))
+    return jsonify({**datos, 'dates': _fechas(start, end, None, None)}), 200
+
+
+@bp.route('/segmentos/registros', methods=['GET'])
+def segmentos_registros():
+    """La lista de una cifra de `/segmentos`: `?metrica=agendas|realizadas|asistieron|ventas|sin_reporte&segmento=A`."""
+    rol, miembro_id, _ = _alcance()
+    start, end, _prev_start, _prev_end = _rangos()
+    try:
+        datos = segmentos_comercial.registros(rol, start, end, miembro_id, request.args.get('metrica', ''),
+                                              request.args.get('segmento', ''))
+    except ValueError as error:
+        return jsonify({'error': str(error)}), 400
+    return jsonify(datos), 200
 
 
 @bp.route('/comparativas', methods=['GET'])
@@ -279,6 +306,13 @@ def tabla():
         filas = ComercialService.agendas(start, end, closer_id=closer_id, setter_id=setter_id, basis=basis)
         totales = ComercialService.totales_agendas(filas)
 
+    # Agendas, generadas y ventas llevan el `segmento` de cada fila y se pueden filtrar (`?segmento=A,B`): los
+    # totales se rehacen sobre lo que queda, como con cualquier filtro de Revisar.
+    if cual in ('agendas', 'generadas', 'ventas'):
+        elegidos = segmentos_lectura.parsear(request.args.get('segmento'))
+        filas = segmentos_comercial.filtrar(filas, elegidos)
+        if elegidos:
+            totales = ComercialService.totales_ventas(filas) if cual == 'ventas' else ComercialService.totales_agendas(filas)
     return jsonify({'tabla': cual, 'rol': rol, 'filas': filas, 'totales': totales,
                     'dates': _fechas(start, end, None, None)}), 200
 
