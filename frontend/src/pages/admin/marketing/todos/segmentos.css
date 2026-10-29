@@ -25,8 +25,14 @@
 .dc-shell .sp-fila{grid-template-columns:minmax(130px,1.2fr) repeat(4,minmax(96px,1fr));min-width:560px}
 .dc-shell .sg-filtro{margin-bottom:var(--s3)}
 /* La fuente y el filtro de segmento en UNA fila (compacto; en angosto el filtro baja). */
-.dc-shell .sg-barra{display:flex;align-items:center;gap:var(--s4);flex-wrap:wrap}
+/* Filtro arriba, lo filtrado debajo: la barra deja aire (--s5, el mismo de `.mk-vista`) antes de las tarjetas. Dentro de un
+   contenedor que ya separa con `gap` no suma otro margen. */
+.dc-shell .sg-barra{display:flex;align-items:center;gap:var(--s3) var(--s4);flex-wrap:wrap;margin-bottom:var(--s5);min-width:0}
 .dc-shell .sg-barra > *{flex:none;width:auto;max-width:100%;margin:0}
+.dc-shell .vista > .sg-barra,.dc-shell .sg-panel > .sg-barra{margin-bottom:0}
+/* Varias barras seguidas (agrupar, filtro, columnas) forman un solo bloque: entre ellas, aire corto; vacía, no ocupa. */
+.dc-shell .sg-barra:has(+ .sg-barra){margin-bottom:var(--s3)}
+.dc-shell .sg-barra:empty{display:none}
 /* Agrupar por / Ver como: rótulo + pestañas chicas en una misma pieza. */
 .dc-shell .sg-control{display:inline-flex;align-items:center;gap:var(--s2)}
 /* Diferencia contra el período comparado. */

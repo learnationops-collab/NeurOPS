@@ -190,7 +190,7 @@ const AdminMarketingHubPage = () => {
                         {pestana === 'anuncios' && (
                             <div className={cargando && datos ? 'mk-recargando' : undefined} aria-busy={cargando}>
                                 {/* La tabla es por palabra clave y su gasto no conoce al lead: no se parte por segmento. */}
-                                <p className="t-cap mut">
+                                <p className="t-cap mut mk-nota">
                                     No se parte por segmento: el gasto de Meta no conoce al lead.{' '}
                                     <Link className="link-btn" to={`/admin/todos?vista=segmentos&periodo=${periodo}&desde=${rango.desde}&hasta=${rango.hasta}`}>
                                         Ver por segmento

@@ -30,7 +30,7 @@ export const segmentoDeLaVista = ({ seccion, tab, rol, tabla }) => {
 const BarraSegmento = ({ vista, elegidos, onElegir }) => {
     if (!vista) return null;
     return (
-        <div className="sg-barra" style={{ marginBottom: 'var(--s3)' }}>
+        <div className="sg-barra">
             {vista.chips && <FiltroSegmentos segmentos={SEGMENTOS} elegidos={elegidos} onCambiar={onElegir} />}
             {(!vista.chips || elegidos.length > 0) && <span className="t-cap mut">{vista.texto}</span>}
         </div>
