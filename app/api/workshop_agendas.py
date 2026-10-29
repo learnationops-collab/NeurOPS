@@ -11,6 +11,7 @@ from flask_login import current_user
 from app.api.workshop import bp
 from app.decorators import workshop_required
 from app.services import workshop_agendas_service as servicio
+from app.services import workshop_registros_service as registros_servicio
 
 logger = logging.getLogger(__name__)
 
@@ -41,3 +42,25 @@ def agendas_de_talleres():
     except Exception as e:
         logger.exception('No se pudieron armar las agendas de los talleres %s', ids)
         return jsonify({'error': f'No se pudieron cargar las agendas: {e}'}), 500
+
+
+@bp.route('/registros', methods=['GET'])
+@workshop_required
+def registros_de_talleres():
+    """`?ids=3,5&metrica=show_up|reportadas|ventas|new_cash|cash_total`: la lista que suma esa cifra del Resumen."""
+    ids = _ids_pedidos()
+    if not ids:
+        return jsonify({'error': 'ids es obligatorio: los talleres separados por coma'}), 400
+    if len(ids) > servicio.MAX_TALLERES:
+        return jsonify({'error': f'Máximo {servicio.MAX_TALLERES} talleres por pedido'}), 400
+    talleres = servicio.talleres_por_ids(ids)
+    if not talleres:
+        return jsonify({'error': 'Taller no encontrado'}), 404
+    tz = getattr(current_user, 'timezone', None) or 'America/La_Paz'
+    try:
+        return jsonify(registros_servicio.registros(talleres, request.args.get('metrica', ''), tz)), 200
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    except Exception as e:
+        logger.exception('No se pudo armar la lista %s de los talleres %s', request.args.get('metrica'), ids)
+        return jsonify({'error': f'No se pudo cargar la lista: {e}'}), 500

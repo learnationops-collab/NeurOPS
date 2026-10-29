@@ -42,6 +42,18 @@ def bucket_estado(estado):
     return "Otros"
 
 
+def bucket_de_persona(agendas, estado_de, ahora):
+    """(columna del desglose, ¿sin reportar?) de UNA persona (su grupo de `_agrupar_por_persona`)."""
+    estados = [(a.date, estado_de(a)) for a in agendas]
+    buckets = [(f, bucket_estado(e)) for f, e in estados]
+    if any(b == "Show Up" for _, b in buckets):
+        return "Show Up", False
+    i = max(range(len(buckets)), key=lambda k: (buckets[k][0] is not None, buckets[k][0]))
+    fecha, bucket = buckets[i]
+    vencida = fecha is not None and fecha < ahora
+    return bucket, (bucket == "Pendiente" and vencida) or normalizar(estados[i][1]) == ARCHIVADA
+
+
 def desglose_de_personas(personas, estado_de, ahora=None):
     """Cuenta PERSONAS, no filas: recibe los grupos de `_agrupar_por_persona`.
 
@@ -57,17 +69,9 @@ def desglose_de_personas(personas, estado_de, ahora=None):
     desglose = {"Show Up": 0, "No Show": 0, "Cancelada": 0, "Reagendada": 0, "Pendiente": 0, "Otros": 0}
     sin_reportar = 0
     for agendas in personas:
-        estados = [(a.date, estado_de(a)) for a in agendas]
-        buckets = [(f, bucket_estado(e)) for f, e in estados]
-        if any(b == "Show Up" for _, b in buckets):
-            desglose["Show Up"] += 1
-            continue
-        i = max(range(len(buckets)), key=lambda k: (buckets[k][0] is not None, buckets[k][0]))
-        fecha, bucket = buckets[i]
+        bucket, sin = bucket_de_persona(agendas, estado_de, ahora)
         desglose[bucket] += 1
-        vencida = fecha is not None and fecha < ahora
-        if (bucket == "Pendiente" and vencida) or normalizar(estados[i][1]) == ARCHIVADA:
-            sin_reportar += 1
+        sin_reportar += 1 if sin else 0
     reportadas = desglose["Show Up"] + desglose["No Show"]
     return {"show_up": desglose["Show Up"], "desglose": desglose, "reportadas": reportadas,
             "sin_reportar": sin_reportar}

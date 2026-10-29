@@ -25,7 +25,7 @@ export const TITULO_DE = {
  * La cuenta detrás de un porcentaje, un costo o un ROAS (Kerwin, 28/10/2026): `{ a, b }` con el numerador y el
  * denominador, cada uno `{ t: texto, m: lista que lo suma }`. Se muestra en un tooltip y cada parte abre su lista.
  */
-const parte = (t, m, unidad) => ({ t: unidad ? `${t} ${unidad}` : String(t), m });
+const parte = (t, m, unidad) => ({ t: unidad ? `${t} ${unidad}` : String(t), m, titulo: TITULO_DE[m] });
 export const cuentaDe = (id, f, d) => {
     const reportadas = f.reportadas ?? f.agendas;
     switch (id) {

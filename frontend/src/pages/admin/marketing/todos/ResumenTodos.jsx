@@ -1,6 +1,5 @@
-import { Skeleton, SkeletonBlock } from '../../../../components/standard';
-import { SETTING, WORKSHOP, embudoNormalizado, tarjetasDe } from './comparacion';
-import CifraConCuenta from './CifraConCuenta';
+import { CifraConCuenta, Skeleton, SkeletonBlock } from '../../../../components/standard';
+import { SETTING, WORKSHOP, TITULO_DE, embudoNormalizado, tarjetasDe } from './comparacion';
 
 /**
  * «Resumen» de Todos: las cuatro cifras que más separan a Setting de Workshop (quién gana y por cuánto)
@@ -25,7 +24,7 @@ const Tasas = ({ paso, lado, onVer }) => {
     const segunda = paso[`${lado}r2`];
     return (
         <span className="td-tasas">
-            <CifraConCuenta cuenta={principal.cuenta} metrica={paso.metrica} onVer={onVer}>{principal.pct}</CifraConCuenta>
+            <CifraConCuenta cuenta={principal.cuenta} metrica={paso.metrica} titulo={TITULO_DE[paso.metrica]} onVer={onVer}>{principal.pct}</CifraConCuenta>
             {segunda && (
                 <span className="td-tasa2">
                     <CifraConCuenta cuenta={segunda.cuenta} onVer={onVer}>{segunda.pct}</CifraConCuenta> {segunda.rotulo}
@@ -50,8 +49,8 @@ const ResumenTodos = ({ grupos, setting, workshop, moneda, onVer }) => {
                             <span className="td-ganador"><i style={{ background: k.color }} aria-hidden="true" />{k.winner}</span>
                         </div>
                         <div className="td-tarjeta-pie t-cap mut">
-                            <span>Setting <CifraConCuenta cuenta={k.sd} metrica={k.metrica} onVer={ver('setting')}>{k.s}</CifraConCuenta></span>
-                            <span>Workshop <CifraConCuenta cuenta={k.wd} metrica={k.metrica} onVer={ver('workshop')}>{k.w}</CifraConCuenta></span>
+                            <span>Setting <CifraConCuenta cuenta={k.sd} metrica={k.metrica} titulo={TITULO_DE[k.metrica]} onVer={ver('setting')}>{k.s}</CifraConCuenta></span>
+                            <span>Workshop <CifraConCuenta cuenta={k.wd} metrica={k.metrica} titulo={TITULO_DE[k.metrica]} onVer={ver('workshop')}>{k.w}</CifraConCuenta></span>
                         </div>
                     </div>
                 ))}

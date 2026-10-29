@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Segmented, Tip } from '../../../comercial/components/Shared';
-import { SETTING, WORKSHOP, anchosDe, diferenciaDe, formatos, ganadorDe } from './comparacion';
-import CifraConCuenta from './CifraConCuenta';
+import { SETTING, WORKSHOP, TITULO_DE, anchosDe, diferenciaDe, formatos, ganadorDe } from './comparacion';
+import { CifraConCuenta } from '../../../../components/standard';
 
 /**
  * «Métrica por métrica» de Todos: cada cifra con la de Setting y la de Workshop lado a lado (con su barra,
@@ -17,7 +17,7 @@ const FILTROS = [
 
 const Valor = ({ texto, cuenta, metrica, onVer, ancho, color, gana }) => (
     <div className="td-valor">
-        <CifraConCuenta cuenta={cuenta} metrica={metrica} onVer={onVer} className={`t-body num${gana ? ' td-fuerte' : ''}`}>
+        <CifraConCuenta cuenta={cuenta} metrica={metrica} titulo={TITULO_DE[metrica]} onVer={onVer} className={`t-body num${gana ? ' td-fuerte' : ''}`}>
             {texto}
         </CifraConCuenta>
         <div className="td-pista"><i style={{ width: ancho, background: color }} /></div>

@@ -94,6 +94,7 @@ def _sumar_primera_cuota(grupos, lista):
         if siguiente is not None and es_primera_cuota(grupo[1], cuotas[siguiente][0]):
             usadas.add(siguiente)
             grupo[0] += cuotas[siguiente][1]
+    return [(cuotas[i][0], cuotas[i][1]) for i in sorted(usadas)]
 
 
 def agrupar_ventas(pagos):
@@ -151,6 +152,24 @@ def primeras_cuotas(pagos):
         if claves.intersection(cs):
             cuotas.append((cs, s.date, s.monto, CUOTA))
     return cuotas
+
+
+def cuotas_que_suman(pagos):
+    """Las primeras cuotas (los pagos de `primeras_cuotas`) que `ticket_de` le suma a las ventas de `pagos`:
+    lo que hay que listar para que la suma de la lista sea el cash de las ventas nuevas."""
+    pagos = sin_cuotas(pagos)
+    todo = [p for p in pagos + primeras_cuotas(pagos) if _entra(p[3])]
+    clientes = _unir_clientes([tuple(p[0] or ()) for p in todo])
+    por_cliente = {}
+    for cliente, pago in zip(clientes, todo):
+        if cliente is not None:
+            por_cliente.setdefault(cliente, []).append((pago, (_dia(pago[1]), float(pago[2] or 0.0), pago[3])))
+    usadas = []
+    for lista in por_cliente.values():
+        crudos = [t for _, t in lista]
+        for dia, monto in _sumar_primera_cuota(_grupos_del_cliente(crudos), crudos):
+            usadas.append(next(p for p, t in lista if t == (dia, monto, CUOTA)))
+    return usadas
 
 
 def sin_cuotas(pagos):

@@ -259,6 +259,7 @@ def trafico_landings():
             'visitas': visitas,
             'landings': len(landings),
             'visitas_landings_whatsapp': visitas_wa,
+            'visitas_medidas': visitas_wa_medidas,
             'clics_whatsapp': clics,
             'tasa_whatsapp': _tasa(clics, visitas_wa_medidas),
         },

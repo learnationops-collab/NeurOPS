@@ -13,6 +13,7 @@ import DetalleTaller from './DetalleTaller';
 import Hoja from './Hoja';
 import { EsqueletoTabla, EsqueletoTarjetas } from './EsqueletoTalleres';
 import { SkeletonBlock } from '../../../../components/standard';
+import useRegistrosWorkshop from '../registros/useRegistrosWorkshop';
 import useAhora from './useAhora';
 import './talleres.css';
 
@@ -44,6 +45,7 @@ const TalleresVista = ({ events: eventos, realizados: llegados, onEdit, onRefres
     const [landingAbierta, setLandingAbierta] = useState(false);
     const [comparar, setComparar] = useState([]);
     const [comparando, setComparando] = useState(false);
+    const registros = useRegistrosWorkshop(realizados, formatDate);
     const ahora = useAhora(30000);
     const quieto = useReducedMotion();
 
@@ -125,7 +127,7 @@ const TalleresVista = ({ events: eventos, realizados: llegados, onEdit, onRefres
                 </section>
             ) : modo === 'lista' ? (
                 <TablaTalleres talleres={realizados} formatDate={formatDate} elegidos={comparar}
-                    onComparar={alternarComparar} onAbrir={abrir} extra={controles} />
+                    onComparar={alternarComparar} onAbrir={abrir} extra={controles} onVer={registros.abrir} />
             ) : (
                 <>
                     <div className="fila barra-tabla wt-barra">
@@ -140,7 +142,7 @@ const TalleresVista = ({ events: eventos, realizados: llegados, onEdit, onRefres
                         {realizados.map((e, i) => (
                             <TarjetaTaller key={e.id} evento={e} i={i} ahora={ahora} formatDate={formatDate}
                                 elegido={comparar.includes(e.id)} onComparar={alternarComparar} onAbrir={abrir}
-                                onEditar={editar} onEliminar={eliminar} onGuardado={refrescar} />
+                                onEditar={editar} onEliminar={eliminar} onGuardado={refrescar} onVer={registros.abrir} />
                         ))}
                     </div>
                 </>
@@ -167,6 +169,8 @@ const TalleresVista = ({ events: eventos, realizados: llegados, onEdit, onRefres
                     onEliminar={(e) => { setAbierto(null); return eliminar(e); }}
                     onRefresh={onRefresh} formatDate={formatDate} />
             )}
+
+            {registros.panel}
 
             {landingAbierta && (
                 <Hoja titulo="Landing de la grabación" onCerrar={() => setLandingAbierta(false)}

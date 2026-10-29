@@ -9,7 +9,7 @@ import '../agendas_v2/thalamus.css';
 import '../comercial/comercial.css';
 import './catalogo.css';
 import {
-    Avatar, Bars, BRAND_AURA, Button, Calendar, CalendarEvent, calendarY, Card, Chip, Status, ModalHeader, TextArea, toast, Toaster, Tooltip, ConfirmDelete, EmptyState, FieldError, Grid, IconButton, Input, InputGroup, Kpi, LinkButton, Modal, PageHeader, Panel, Segmented, Select,
+    Avatar, Bars, BRAND_AURA, CifraConCuenta, Button, Calendar, CalendarEvent, calendarY, Card, Chip, Status, ModalHeader, TextArea, toast, Toaster, Tooltip, ConfirmDelete, EmptyState, FieldError, Grid, IconButton, Input, InputGroup, Kpi, LinkButton, Modal, PageHeader, Panel, Segmented, Select,
     useVerRegistros, Stepper, Switch, Reveal, Skeleton, SkeletonBlock, SkeletonChart, SkeletonCircle, SkeletonKpi, SkeletonPanel, SkeletonRow, SkeletonText,
 } from '../../components/standard';
 
@@ -295,6 +295,16 @@ const SECCIONES = [
         para: 'La lista que compone una cifra, en un panel lateral o en una ventana central (la persona alterna y se recuerda). Un Kpi con onSelect lo abre; la pantalla pasa el contenido.',
         props: 'useVerRegistros() → { abrir({ titulo, subtitulo, contenido, acciones }), panel, cerrar } — VerRegistros: titulo · subtitulo · modo: lateral · central · onModo · onClose',
         demo: () => <DemoRegistros />,
+    },
+    {
+        nombre: 'CifraConCuenta',
+        para: 'Un porcentaje, un ROAS o un costo que se ve SOLO; al pasar el mouse dice su cuenta («163 de 2.448 leads») y cada parte abre la lista que la suma.',
+        props: 'cuenta { a, b } con { t, m, titulo } · metrica · titulo · onVer(metrica, titulo) · lado: izq · der — children: la cifra',
+        demo: () => (
+            <p style={{ fontSize: 28, fontWeight: 900 }}>
+                <CifraConCuenta onVer={nada} cuenta={{ a: { t: '163', m: 'agendas', titulo: 'Agendas' }, b: { t: '2.448 leads', m: 'leads', titulo: 'Leads' } }}>6,7%</CifraConCuenta>
+            </p>
+        ),
     },
     {
         nombre: 'Bars',

@@ -4,6 +4,9 @@ import { ArrowRight, Check, Edit2 } from 'lucide-react';
 import { Segmented } from '../../../comercial/components/Shared';
 import InlineConfirm from '../../../../components/ui/InlineConfirm';
 import AgendasDelTaller from '../agendas/AgendasDelTaller';
+import { CifraConCuenta } from '../../../../components/standard';
+import { cuentaDeTaller } from '../registros/cuentaDeTaller';
+import { TITULOS } from '../registros/cuentas';
 import { ResumenAnuncios, ResumenEmbudo, ResumenGrabacion } from './ResumenesTarjeta';
 import { cac, dinero, porcentaje, roasRotulo, roasTono, veces } from './formato';
 
@@ -20,12 +23,21 @@ export const VISTAS_TALLER = [
 ];
 
 const TarjetaTaller = ({
-    evento, i = 0, ahora, formatDate, elegido, onComparar, onAbrir, onEditar, onEliminar, onGuardado,
+    evento, i = 0, ahora, formatDate, elegido, onComparar, onAbrir, onEditar, onEliminar, onGuardado, onVer = null,
 }) => {
     const [vista, setVista] = useState('embudo');
     const quieto = useReducedMotion();
     const e = evento;
     const tono = roasTono(e.roas);
+    // Cada cifra de la tarjeta abre su lista (o dice su cuenta): ver `cuentaDeTaller`.
+    const ver = (clave, texto) => {
+        const c = onVer ? cuentaDeTaller(clave, e) : null;
+        return c ? (
+            <CifraConCuenta cuenta={c.cuenta} metrica={c.metrica} titulo={TITULOS[c.metrica]} onVer={(m, t) => onVer(m, t, [e])}>
+                {texto}
+            </CifraConCuenta>
+        ) : texto;
+    };
 
     return (
         <motion.article className={`wt-tarjeta${elegido ? ' wt-tarjeta--elegida' : ''}`}
@@ -54,20 +66,20 @@ const TarjetaTaller = ({
             <h3 className="wt-tarjeta-nom" title={e.name}>{e.name}</h3>
 
             <dl className="pareja wt-tarjeta-cifras" style={{ '--min': '78px', '--g': 'var(--s2)' }}>
-                <div><dt>Inversión</dt><dd className="num">{dinero(e.inversion)}</dd></div>
-                <div><dt>Cash</dt><dd className="num">{dinero(e.cash_collected)}</dd></div>
+                <div><dt>Inversión</dt><dd className="num">{ver('inversion', dinero(e.inversion))}</dd></div>
+                <div><dt>Cash</dt><dd className="num">{ver('cash', dinero(e.cash_collected))}</dd></div>
                 <div>
                     <dt>ROAS total</dt>
-                    <dd className="num" style={{ color: `var(--${tono})` }} title={roasRotulo(e.roas)}>{veces(e.roas)}</dd>
+                    <dd className="num" style={{ color: `var(--${tono})` }} title={roasRotulo(e.roas)}>{ver('roas', veces(e.roas))}</dd>
                 </div>
                 <div>
                     <dt>Ventas</dt>
-                    <dd className="num">{e.sales}<small className="mut40"> · {porcentaje(e.pct_close_rate)}</small></dd>
+                    <dd className="num">{ver('ventas', e.sales)}<small className="mut40"> · {ver('close_rate', porcentaje(e.pct_close_rate))}</small></dd>
                 </div>
             </dl>
             <p className="wt-tarjeta-sub t-cap mut40 num">
-                CPL {dinero(e.cpl)} · <AgendasDelTaller evento={e} formatDate={formatDate}>{e.agendas_exitosas ?? 0} agendas</AgendasDelTaller>
-                {' '}· costo por agenda {dinero(e.costo_por_agenda)} · CAC {dinero(cac(e))}
+                CPL {ver('cpl', dinero(e.cpl))} · <AgendasDelTaller evento={e} formatDate={formatDate}>{e.agendas_exitosas ?? 0} agendas</AgendasDelTaller>
+                {' '}· costo por agenda {ver('costo_agenda', dinero(e.costo_por_agenda))} · CAC {ver('cac', dinero(cac(e)))}
             </p>
 
             <Segmented chico opciones={VISTAS_TALLER} valor={vista} onChange={setVista}
@@ -76,7 +88,7 @@ const TarjetaTaller = ({
             <motion.div key={vista} className="wt-tarjeta-cuerpo" role="tabpanel"
                 initial={quieto ? false : { opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
                 transition={quieto ? { duration: 0 } : { duration: 0.22, ease: 'easeOut' }}>
-                {vista === 'embudo' && <ResumenEmbudo evento={e} />}
+                {vista === 'embudo' && <ResumenEmbudo evento={e} onVer={onVer ? (m, t) => onVer(m, t, [e]) : null} />}
                 {vista === 'anuncios' && <ResumenAnuncios evento={e} />}
                 {vista === 'grabacion' && <ResumenGrabacion evento={e} ahora={ahora} onGuardado={onGuardado} />}
             </motion.div>

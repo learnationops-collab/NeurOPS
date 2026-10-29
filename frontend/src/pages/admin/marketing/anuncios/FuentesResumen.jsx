@@ -1,9 +1,8 @@
-import { Skeleton, SkeletonText } from '../../../../components/standard';
+import { CifraConCuenta, Skeleton, SkeletonText } from '../../../../components/standard';
 import { Kpi } from './TablaAnuncios';
 import { GRUPOS_COMPARACION } from './fuentes';
 import { formatear } from './metricas';
 import { cuentaDe } from '../todos/comparacion';
-import CifraConCuenta from '../todos/CifraConCuenta';
 import './fuentes.css';
 
 /**

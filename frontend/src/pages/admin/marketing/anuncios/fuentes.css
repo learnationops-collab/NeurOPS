@@ -12,3 +12,4 @@
 /* Series de una fuente: tres gráficos en fila cuando entran, uno debajo del otro si no (nunca 2 + 1). */
 .dc-shell .mk-series3{display:grid;grid-template-columns:1fr;gap:var(--s4)}
 @media (min-width:980px){.dc-shell .mk-series3{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
