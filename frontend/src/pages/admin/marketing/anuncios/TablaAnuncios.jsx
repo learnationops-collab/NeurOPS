@@ -23,8 +23,6 @@ import TarjetasAnuncios, { SelectorModo } from './TarjetasAnuncios';
 import { useModoVista } from '../../../../components/listas/useModoVista';
 import { useVerRegistros } from '../../../../components/standard';
 import { contenidoDeKpi } from './registrosDeKpi';
-import { useAuth } from '../../../../contexts/AuthContext';
-import { hayListaComercial, useDrillDown } from '../../../closer/dashboard/useDrillDown';
 import { EsqueletoKpis, EsqueletoPanelTabla } from '../esqueletos';
 import {
     NIVELES, SIN_CAMPANA, agruparFilas, claveDeAnuncio, claveDeCampana, claveDeConjunto, formatear,
@@ -93,7 +91,7 @@ export const EsqueletoTablaAnuncios = ({ bajoKpis = null }) => (
 
 // `bajoKpis`: lo que va entre los KPIs y el resto (el gasto por embudo, en «Todo»).
 // `agendasDeFuente`: con «Contar por: fecha de reunión» la tarjeta Agendas es la de Setting en esa base (la de Closing).
-const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta, estadoMeta = null, bajoKpis = null, agendasDeFuente = null, onVerAgendas = null }) => {
+const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta, estadoMeta = null, bajoKpis = null, agendasDeFuente = null, onVerAgendas = null, onVerCobrado = null }) => {
     // Los filtros se recuerdan por usuario (`useFiltrosTabla`, norma del 28/10/2026). «Solo con gasto» y «solo
     // activas» (Kerwin, 23/10/2026): lo que no gastó y lo que no está activo en Meta estorban al mirar costos.
     const {
@@ -107,11 +105,6 @@ const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta, estadoMeta = nul
     const vista = useVistaDeColumnas();
     const { modo, setModo } = useModoVista('mk_rendimiento_modo');
     const registros = useVerRegistros();
-    // De «De dónde vino lo cobrado» a la lista de esas ventas: Revisar › Ventas con las fechas de acá,
-    // solo para quien puede abrir el dashboard comercial (admin o dirección comercial).
-    const { user } = useAuth();
-    const irAComercial = useDrillDown({ period: 'custom', closerId: null, fechas: { start: datos.desde, end: datos.hasta } });
-    const irAVentas = hayListaComercial(user?.role) && user?.role !== 'closer' ? irAComercial : null;
     const panelTabla = useRef(null);
     const irATabla = () => {
         setOrden({ clave: 'cobrado', dir: 'desc' });
@@ -402,8 +395,8 @@ const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta, estadoMeta = nul
                 )}
             </section>
 
-            <CobradoDelPeriodo enTabla={datos.totales?.cobrado || 0} total={datos.cobrado_periodo}
-                fuera={datos.cobrado_fuera || []} moneda={moneda} irAVentas={irAVentas} irATabla={irATabla} />
+            <CobradoDelPeriodo fuentes={datos.fuentes} enTabla={datos.totales?.cobrado || 0} moneda={moneda}
+                onVer={onVerCobrado} irATabla={irATabla} />
 
             <SerieDiaria serie={serie} moneda={moneda} alcance={alcance} metaConectado={datos.meta?.conectado} />
 
