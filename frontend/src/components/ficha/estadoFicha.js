@@ -66,7 +66,7 @@ export const pestanaPorDefecto = (ficha) => {
     return visibles.some(p => p.id === pedida) ? pedida : visibles[0].id;
 };
 
-const PERMISOS = ['confirmar', 'reportar', 'cobrar', 'reasignar', 'comentar', 'eliminar', 'editar_datos', 'triar', 'pasar_triage'];
+const PERMISOS = ['confirmar', 'reportar', 'cobrar', 'reasignar', 'comentar', 'eliminar', 'eliminar_lead', 'editar_datos', 'triar', 'pasar_triage'];
 
 /** Si el rol no puede tocar nada, el panel se muestra en solo lectura. */
 export const puedeEditarFicha = (ficha) => {

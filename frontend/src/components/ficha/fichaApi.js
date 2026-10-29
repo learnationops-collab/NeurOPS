@@ -81,6 +81,8 @@ const RUTAS = {
     // La misma puerta que `eliminar`, apuntada a una agenda del historial y no al lead entero:
     // la ficha sigue abierta en la agenda que le quede al cliente (ver FichaLeadModal).
     eliminar_agenda: (appt) => api.delete(`/ficha/${appt}`),
+    // El lead entero (cliente, todas sus agendas y lo que cuelga de él): los de prueba. Solo la dirección y sin pagos.
+    eliminar_lead: (appt) => api.delete(`/ficha/${appt}/lead`),
     reasignar_closer: (appt, p) => api.patch(`/ficha/${appt}/closer`, p),
     // A la del triage libre a esa hora; el evento de Google pasa a su calendario.
     pasar_a_triage: (appt) => api.post(`/ficha/${appt}/pasar-a-triage`),

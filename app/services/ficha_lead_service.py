@@ -413,6 +413,8 @@ def permisos_de(usuario, appt=None):
         'reportar': direccion or rol == 'closer',
         'cobrar': direccion or rol == 'closer',
         'eliminar': direccion or rol == 'closer',
+        # El lead entero con todas sus agendas (los de prueba): solo la dirección y solo sin plata ni suscripción.
+        'eliminar_lead': direccion,
         'editar_datos': direccion or rol == 'closer',
         'reasignar': direccion or rol == 'closer',
         'comentar': True,

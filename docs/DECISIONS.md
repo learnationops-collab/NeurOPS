@@ -218,3 +218,12 @@
   - «Corregir la fecha» y «Agendar la renovación» del mockup no están: la fecha la mueven la venta y la prórroga, y la renovación se agenda como siempre.
   - Las métricas del resumen (pomodoros, racha, aprobación…) dejan de estar a la vista: van cerradas al final.
 - **Consecuencias:** Comunicación sigue mezclando los comentarios de la Academia con las notas (`useComentariosAcademia`). Se borraron `TabFulfillment.test.jsx` y `SuscripcionWork.test.jsx`, que probaban la estructura anterior.
+
+
+## ADR-W023: Eliminar un lead de prueba entero desde la ficha, solo sin plata ni suscripción
+
+- **Estado:** implementada (28/10/2026).
+- **Contexto:** la ficha solo borraba UNA agenda (Historial › Agendas, o «Eliminar lead» de Confirmación, que también es la agenda). Los leads y agendas de prueba seguían existiendo: el cliente, su persona, su fila del libro de agendas y su conversación siguen contando en Marketing, Revisar y los embudos. Kerwin: «no puedo eliminar leads y agendas de testeo».
+- **Decisión:** una papelera en la cabecera de la ficha (`BorrarLead`, permiso `eliminar_lead`, solo la dirección) que llama a `DELETE /api/ficha/<agenda>/lead` (`lead_prueba_service.eliminar`). Borra todas las agendas del cliente (con su evento de Google y su registro de eventos), sus respuestas, su fila del libro (`financial_agendas`), su registro de eventos por persona, avisos, registros públicos, conversaciones de Instagram y registros de taller, el cliente y, si ningún otro cliente es suyo, la persona. Se niega, con el motivo, si el lead tiene pagos, ventas, plan de cuotas o suscripción.
+- **Qué se pierde:** no hay deshacer. No hay una marca de «prueba»: la regla es «sin plata ni suscripción», así que un lead real sin cobros también se puede borrar (solo la dirección, con confirmación que dice qué se lleva). Borrar solo una agenda sigue en el Historial.
+- **Consecuencias:** `permisos.eliminar_lead` entra en la lista de la ficha (`estadoFicha.PERMISOS`) para que el modo solo lectura también lo apague. Si una agenda falla a mitad, lo ya borrado de sus agendas no se deshace (cada una confirma por su cuenta); el resto se revierte.

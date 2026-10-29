@@ -54,7 +54,7 @@ const TabAcciones = lazyDe('TabAcciones');
 // veces, y encima el de arriba suele quedar fuera de la vista con el historial scrolleado.
 // El reporte y la venta de «Resultado» también: la pestaña pinta el error sobre su revisión.
 const ERRORES_EN_LINEA = new Set(['editar_agenda', 'corregir_seguimiento', 'agendar_seguimiento',
-    'corregir_pago', 'borrar_pago', 'agregar_pago', 'eliminar_agenda', 'borrar_seguimiento',
+    'corregir_pago', 'borrar_pago', 'agregar_pago', 'eliminar_agenda', 'eliminar_lead', 'borrar_seguimiento',
     'borrar_plan', 'borrar_evento', 'crear_evento', 'reportar_resultado', 'registrar_venta',
     'mail_academia', 'quitar_acceso_academia', 'prorrogar_acceso_academia', 'guardar_fathom', 'guardar_objecion',
     'pasar_a_recuperacion', 'reportar_triage']);
@@ -299,7 +299,7 @@ const FichaLeadModal = ({
             if (nombre === 'registrar_venta') setVenderAlAbrir(false);
             if (nombre === 'registrar_venta' || nombre === 'reportar_resultado') setSeguimientoPedido(null);
             // Un lead eliminado no tiene ficha que recargar: se cierra y listo.
-            if (nombre === 'eliminar') {
+            if (nombre === 'eliminar' || nombre === 'eliminar_lead') {
                 onCerrar?.();
                 return resultado;
             }

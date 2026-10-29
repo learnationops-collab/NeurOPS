@@ -6,6 +6,7 @@ import IdentidadesPersona from './piezas/IdentidadesPersona';
 import useMovimiento from './piezas/useMovimiento';
 import usePopover from './piezas/usePopover';
 import FranjaBaja from './piezas/FranjaBaja';
+import BorrarLead from './piezas/BorrarLead';
 import { instanteLegible, soloDia } from './piezas/fecha';
 import { parseUtcIso } from '../../utils/datetime';
 import { opciones } from './estadoFicha';
@@ -387,6 +388,7 @@ const FichaHeader = ({ ficha, onAccion, onCerrar, puedeEditar = true }) => {
                                     <Pencil size={16} />
                                 </button>
                             )}
+                            <BorrarLead ficha={ficha} puedeEditar={puedeEditar} onAccion={onAccion} />
                         </>
                     )}
                     <button type="button" className="ibtn" aria-label="Cerrar" onClick={onCerrar}>

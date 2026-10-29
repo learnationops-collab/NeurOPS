@@ -435,6 +435,19 @@ def eliminar(appt_id):
         return jsonify({'message': str(e)}), 400
 
 
+@bp.route('/<int:appt_id>/lead', methods=['DELETE'])
+def eliminar_lead(appt_id):
+    """Elimina el lead entero (cliente, agendas y lo que cuelga de él): para los de prueba, solo sin plata."""
+    from app.services import lead_prueba_service
+    appt, error = _agenda_y_permiso(appt_id, 'eliminar_lead')
+    if error:
+        return error
+    try:
+        return jsonify(lead_prueba_service.eliminar(appt, current_user)), 200
+    except lead_prueba_service.ErrorDeLead as e:
+        return jsonify({'message': str(e)}), 400
+
+
 @bp.route('/vocabulario/<grupo>/opciones', methods=['POST'])
 def agregar_opcion(grupo):
     """Crea una opcion nueva en el grupo "Otros" de un vocabulario abierto.
