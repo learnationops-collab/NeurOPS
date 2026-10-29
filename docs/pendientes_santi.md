@@ -92,3 +92,9 @@ Gestiones y decisiones.
 - [ ] Cancelar las suscripciones de lo que ya se reemplazó; n8n solo queda por el mailing de ingreso de venta nueva.
 - [ ] Documentos del papá de Mario el viernes 30/10.
 - [ ] Atribución venta → agenda → conversación (`appointments.conversation_id`), con Agendas 2.0.
+
+## Cifras con N de M y listas (28/10, rama mk-tooltips)
+- [ ] Decidir si las cuotas suman al cash de un taller: hoy New Cash (con primera cuota) puede superar a Cash total (ADR-W016).
+- [ ] Analizar: destinos de Revisar para el denominador de cada tasa (con resultado, entrantes, aperturas) para que ambas partes abran lista.
+- [ ] `TablaAnuncios.jsx`: importar `CifraConCuenta` de `components/standard` y borrar el re-export `marketing/todos/CifraConCuenta.jsx`.
+- [ ] Tests de vitest que leen el texto «N de M» de los tiles de Analizar y las 6 tarjetas de `WorkshopKpiCards` quedaron sin actualizar (no se corrieron).
