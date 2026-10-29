@@ -242,3 +242,11 @@
 - **Decisión:** `segmento.dinero` (`{q, ops}`: la pregunta de inversión y las opciones de $200 o más) en el formulario `dg6gukz9emx`. Con dinero el segmento es A (puntos ≥ a) o B; sin dinero, C (puntos ≥ c) o D. Sin respuesta de inversión se usan los cortes de siempre. El ruteo pasa a dos reglas por la inversión: `con-dinero` → «Segmentos A y B» (Jean Carlo y Marlon, máxima disponibilidad) y `sin-dinero` → Triage con la Sesión diagnóstica. Versión `2026-12.2`.
 - **Qué se pierde:** el corte B/C por puntos deja de existir: un inversor con todo lo demás en contra queda B, y un no inversor con todo a favor queda C. Los A/B históricos (versiones anteriores) no se recalculan solos.
 - **Consecuencias:** el segmento que se ve en la ficha y en Discord coincide con a dónde fue el lead. Python (`nucleo/segmento.py`, `normalizar.py`) y JS (`core/segmento.js`, `core/normalizar.js`) quedan iguales.
+
+## ADR-W026: Aviso a Discord del lead que no terminó de agendar, a los 5 minutos
+
+- **Estado:** implementada (29/10/2026).
+- **Contexto:** los leads que dejan sus datos en un link de Tálamus y no agendan quedaban en `sched_intentos` (Stats) sin que nadie se enterara a tiempo. Santi pidió que a los 5 minutos llegue a Discord y etiquete al setter, para que lo rescate.
+- **Decisión:** un job del scheduler (`abandonos.avisar_abandonos`, cada minuto, solo el líder) busca intentos `incompleta` sin moverse hace 5 minutos (y no más de 2 horas) y sin `avisado_en`. Manda la tarjeta de siempre con el tipo «No terminó de agendar»: nombre, WhatsApp, respuestas, segmento y hasta dónde llegó, y etiqueta al setter del link. Sin setter no etiqueta a nadie, y con un setter sin ID de Discord va @everyone, como el resto de los avisos. Un solo aviso por intento. Webhook `DISCORD_ABANDONOS_WEBHOOK`; sin esa variable, el de agendas. `sched_intentos` suma `pais` (para el WhatsApp con su prefijo) y `avisado_en`.
+- **Qué se pierde:** si el lead vuelve y abandona de nuevo, no hay segundo aviso. Si Discord falla, ese aviso no se reintenta (se marca antes de mandar, para no repetirlo cada minuto). Los intentos anteriores al deploy no tienen país: el WhatsApp sale con el prefijo de Bolivia.
+- **Consecuencias:** los avisos salen aunque el lead agende a los 6 minutos. Para ese entonces el setter ya lo vio, y la agenda nueva llega con su propio aviso.

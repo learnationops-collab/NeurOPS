@@ -116,12 +116,26 @@ def start_scheduler(app):
             except Exception as e:
                 logger.error(f"[ReminderScheduler] Error siguiendo las agendas movidas en Google: {e}")
 
+    def _abandonos():
+        with app.app_context():
+            from app.agendas_v2.abandonos import avisar_abandonos
+            try:
+                if not soy_lider(CLAVE_DEL_SCHEDULER):
+                    return
+                n = avisar_abandonos()
+                if n:
+                    logger.info(f"[ReminderScheduler] Leads que no terminaron de agendar avisados en Discord: {n}")
+            except Exception as e:
+                logger.error(f"[ReminderScheduler] Error avisando leads que no terminaron de agendar: {e}")
+
     from datetime import datetime, timedelta
 
     from app.agendas_v2.movidas import MINUTOS as MOVIDAS_MINUTOS
     _scheduler = BackgroundScheduler(daemon=True)
     _scheduler.add_job(_movidas, 'interval', minutes=MOVIDAS_MINUTOS,
                        id='agendas_movidas_en_google', next_run_time=datetime.now() + timedelta(minutes=4))
+    _scheduler.add_job(_abandonos, 'interval', minutes=1,
+                       id='agendas_abandonos', next_run_time=datetime.now() + timedelta(minutes=2))
     _scheduler.add_job(_senas, 'interval', minutes=AVANCE_INTERVAL_MINUTES,
                        id='senas_sin_seguir', next_run_time=datetime.now() + timedelta(minutes=3))
     if con_avisos:

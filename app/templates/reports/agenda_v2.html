@@ -147,6 +147,7 @@
         .nueva { --acento: var(--rosa); }
         .reprogramada { --acento: var(--amarillo); }
         .no_califica { --acento: var(--gris); }
+        .abandono { --acento: var(--amarillo); }
         .bien { --c: var(--verde); }
         .medio { --c: var(--amarillo); }
         .mal { --c: var(--rojo); }
@@ -202,8 +203,8 @@
         </div>
 
         <div class="boxes">
-            {% if tipo == 'no_califica' %}
-            <div class="box mal" style="--c: var(--rojo)"><span>{{ icono('x') }}</span><div><small>Motivo</small><div>{{ motivo }}</div></div></div>
+            {% if tipo in ('no_califica', 'abandono') %}
+            <div class="box mal" style="--c: var(--rojo)"><span>{{ icono('x') }}</span><div><small>{{ 'Llegó hasta' if tipo == 'abandono' else 'Motivo' }}</small><div>{{ motivo }}</div></div></div>
             {% else %}
             <div class="box" style="--c: #1f3fd6"><span>{{ icono('check') }}</span><div><small>Closer</small><div>{{ closer }}</div></div></div>
             {% endif %}

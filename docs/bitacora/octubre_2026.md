@@ -1346,3 +1346,6 @@
   - La Sesión de Aceleración del Workshop ofrece hoy, mañana y pasado (2 días corridos después de hoy, antes 3). Con eso, a un lead con dinero se le ofrecen 11 horarios del 29 al 31/10 y al triage 21.
 - **29 de Octubre de 2026 (el dinero decide el par de segmentos)** *([segmento.py](../../app/agendas_v2/nucleo/segmento.py), [segmento.js](../../frontend/src/pages/agendas_v2/core/segmento.js))*:
   - Con `segmento.dinero` en el formulario, el lead que puede invertir ($200 o más) queda A o B y el que no, C o D. Las demás preguntas solo eligen la letra dentro del par (ADR-W025). Así el segmento de la ficha y de Discord coincide con el ruteo: A/B a closers y C/D al triage.
+- **29 de Octubre de 2026 (aviso del lead que no terminó de agendar)** *([abandonos.py](../../app/agendas_v2/abandonos.py), [avisos_discord.py](../../app/agendas_v2/avisos_discord.py), [reminder_scheduler.py](../../app/services/reminder_scheduler.py))*:
+  - A los 5 minutos de que un lead deje sus datos en un link y no siga, llega a Discord «⏳ No terminó de agendar», etiquetando a su setter, con sus respuestas y hasta dónde llegó (ADR-W026). Un aviso por lead y evento.
+  - Migración `b4d6f8a0c2e3`: `sched_intentos.pais` y `sched_intentos.avisado_en`.
