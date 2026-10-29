@@ -11,7 +11,8 @@ import { COLOR_SEGMENTO } from './segmentos';
  * `campo`: `{ key, label, lista, dinero }`, la cifra que se cruza; las cuentas ya vienen hechas del backend
  * (`fila[campo.key]`). Un clic en el encabezado ordena las filas (y otra vez, las invierte).
  *
- * `onVer({ grupo, campo, segmento, nombre, previo })`: el segmento '' es el total del grupo.
+ * `onVer({ grupo, campo, segmento, nombre, previo })`: el segmento '' es el total del grupo. `plano`: sin su propia tarjeta
+ * (dentro de otro panel, el de Analizar).
  */
 const tipoDe = (campo) => (campo.dinero ? 'money' : 'num');
 
@@ -35,7 +36,7 @@ const Celda = ({ fila, campo, grupo, moneda, onVer, segmento }) => {
     );
 };
 
-const CruceSegmentos = ({ grupos, campo, campos, onCampo, moneda, color, onVer, orden, onOrden }) => {
+const CruceSegmentos = ({ grupos, campo, campos, onCampo, moneda, color, onVer, orden, onOrden, plano = false }) => {
     if (!grupos.length) return null;
     const segmentos = grupos[0].filas.map((f) => ({ key: f.segmento, label: f.label }));
     const valorDe = (g, col) => (col === 'nombre' ? g.label.toLowerCase()
@@ -55,14 +56,17 @@ const CruceSegmentos = ({ grupos, campo, campos, onCampo, moneda, color, onVer, 
     );
     const plantilla = { gridTemplateColumns: `minmax(150px,1.2fr) repeat(${segmentos.length + 1},minmax(92px,1fr))`,
         minWidth: `${150 + (segmentos.length + 1) * 96}px` };
+    const Envoltorio = plano ? 'div' : 'section';
     return (
-        <section className="panel sg-panel" aria-label={`${campo.label} por grupo y segmento`}>
-            <div className="panel-cab">
-                <div className="mk-cab-txt">
-                    <p className="t-eyebrow mut"><i className="td-punto" style={{ background: color }} aria-hidden="true" />Cruce</p>
-                    <h2 className="t-h3">{campo.label} por grupo y segmento</h2>
+        <Envoltorio className={plano ? 'sg-plano' : 'panel sg-panel'} aria-label={`${campo.label} por grupo y segmento`}>
+            {!plano && (
+                <div className="panel-cab">
+                    <div className="mk-cab-txt">
+                        <p className="t-eyebrow mut"><i className="td-punto" style={{ background: color }} aria-hidden="true" />Cruce</p>
+                        <h2 className="t-h3">{campo.label} por grupo y segmento</h2>
+                    </div>
                 </div>
-            </div>
+            )}
             <div className="sg-filtro" role="group" aria-label="Cifra del cruce">
                 <span className="t-eyebrow mut">Cifra</span>
                 {campos.map((c) => (
@@ -86,7 +90,7 @@ const CruceSegmentos = ({ grupos, campo, campos, onCampo, moneda, color, onVer, 
                     </div>
                 ))}
             </div>
-        </section>
+        </Envoltorio>
     );
 };
 

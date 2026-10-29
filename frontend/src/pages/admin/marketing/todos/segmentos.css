@@ -39,5 +39,7 @@
 .dc-shell button.sg-antes{cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px}
 .dc-shell button.sg-antes:hover{color:var(--text-primary)}
 /* Encabezado de columna que ordena el cruce. */
+.dc-shell .sg-plano{display:flex;flex-direction:column;gap:var(--s4)}
+.dc-shell .sg-grupo{display:flex;flex-direction:column;gap:var(--s2)}
 .dc-shell .sg-orden{display:inline-flex;align-items:center;gap:6px;background:none;border:0;padding:0;cursor:pointer;text-align:left}
 .dc-shell .sg-orden:hover{color:var(--text-primary)}
