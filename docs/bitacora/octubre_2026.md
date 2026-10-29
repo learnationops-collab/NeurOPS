@@ -1226,3 +1226,6 @@
   - Disponibilidad → Horarios suma «Ver horarios libres»: una ventana con los inicios libres desde ahora (hasta 7 días con lugar, dentro de 10), por día y en la hora de quien mira, con quién está libre en cada uno.
   - Usa la configuración que se está editando, aunque no esté publicada, y descuenta agendas, Google Calendar y el tope de llamadas por semana de cada closer. Muestra todos los closers del evento (o la persona fija): la segmentación se prueba con «Probar segmento».
   - Corrección: la ventana se abre fuera del bloque (el panel con aura la encerraba y «Página de reserva» la tapaba), con fondo sólido, aura suave y el próximo horario libre resaltado con aura.
+- **28 de Octubre de 2026 (el aviso de agenda en Discord dice el segmento, no el «Grupo»)** *([avisos_discord.py](../../app/agendas_v2/avisos_discord.py))*:
+  - El aviso de cada agenda mostraba el nombre de la prioridad de closers («Grupo 4»), que es la configuración vieja. Ahora dice «Segmento B» con el segmento A/B/C/D que la agenda guardó del lead (`segmento_lead`); el nombre de la prioridad queda solo si el formulario no segmenta.
+  - Revisión de los descalificados a Jean Carlo (últimos 10 días): Brenda (B) y Victoria (D) son del 26 y 27/10, antes de que la inversión pesara el doble y los C/D fueran al triage; desde entonces le llegan solo B.
