@@ -174,7 +174,7 @@ El catálogo de piezas chicas (botón, chip, campo) ya está completo. **De acá
 - **Switch decorativo:** un `Switch` sin `onChange` se dibuja como indicador (un `span` sin foco ni rol de botón), para filas que ya son botón como la del modal de importar preguntas. No es una variante nueva: es el mismo componente sin acción.
 - **Barras:** el gasto por embudo de Marketing se queda con sus tarjetas (Kerwin, 19/10: las filas de `Bars` se veían grandes y amontonadas). La lista de campañas de Workshop (`BarraCrece`) es única de esa pantalla y queda ahí.
 - **Segmento del lead (27/10):** en la tarjeta del mazo es una etiqueta más (`ktag-v6`) con el color del segmento (A verde, B info, C warning, D magenta) y sus puntos («A · +4 pts»); en la ficha es un `Dato` «Segmento» de la cabecera, después de Fuente. Una C/D desplazada lleva la etiqueta «Reagendar: horario tomado», primera y en warning.
-- **Fulfillment para el closer (27/10):** el orden es lo que pagó → suscripción y ventas de Work → desempeño → comentarios de la Academia → cuenta y otros accesos. Lo que el closer usa para cobrar y renovar va arriba.
+- **Fulfillment para el closer (28/10, ADR-W016):** cuatro bloques: 1. la suscripción (con su historial y sus acciones) → 2. avance y 3. seguimiento del equipo, lado a lado → 4. uso; después la venta, y al final, cerradas, las métricas de la Academia, la cuenta y los otros accesos. Lo que el closer usa para cobrar y renovar va arriba.
 
 ## Pendientes conocidos
 

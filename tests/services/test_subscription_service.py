@@ -64,6 +64,26 @@ def test_la_venta_da_4_meses_y_las_cuotas_no_mueven_la_fecha(db, ana):
     assert [e.kind for e in sub.events] == ['alta']
 
 
+def test_la_venta_empieza_el_dia_que_eligio_el_closer(db, ana):
+    v = FinancialSale(client_id=ana.id, mail_cliente=ana.email, nombre_cliente=ana.full_name,
+                      tipo_pago='AL - Parcial', monto=500.0, date=datetime(2026, 10, 20), estado='Completada')
+    v.inicio_acceso = date(2026, 11, 2)
+    db.session.add(v)
+    db.session.commit()
+    sub = suscripcion(ana)
+    assert (sub.starts_at, sub.expires_at) == (date(2026, 11, 2), date(2027, 3, 2))
+
+
+def test_un_inicio_anterior_a_la_venta_no_le_quita_dias(db, ana):
+    v = FinancialSale(client_id=ana.id, mail_cliente=ana.email, nombre_cliente=ana.full_name,
+                      tipo_pago='AL - Parcial', monto=500.0, date=datetime(2026, 10, 20), estado='Completada')
+    v.inicio_acceso = date(2026, 10, 1)
+    db.session.add(v)
+    db.session.commit()
+    sub = suscripcion(ana)
+    assert (sub.starts_at, sub.expires_at) == (date(2026, 10, 20), date(2027, 2, 17))
+
+
 def test_sin_producto_vinculado_no_hay_suscripcion(db, ana):
     cobro(db, ana, 'SI - Completo', datetime(2026, 10, 1))
     assert Subscription.query.count() == 0

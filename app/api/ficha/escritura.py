@@ -412,6 +412,13 @@ def quitar_acceso_academia(appt_id):
     return _ejecutar(appt_id, 'cobrar', ficha_academia.quitar)
 
 
+@bp.route('/<int:appt_id>/academia/reenviar', methods=['POST'])
+def reenviar_academia(appt_id):
+    """Le asigna en la Academia el producto con la fecha de la suscripción de Work, cuando allá no la tiene igual."""
+    from app.services import ficha_academia
+    return _ejecutar(appt_id, 'cobrar', ficha_academia.reenviar)
+
+
 @bp.route('/<int:appt_id>/nota', methods=['POST'])
 def nota(appt_id):
     return _ejecutar(appt_id, 'comentar', acciones.nota, exito=201)

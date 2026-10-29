@@ -187,3 +187,31 @@ def corregir_mail(appt, datos, usuario):
     db.session.commit()
     return {'accion': 'mail', 'email': email, 'vence': sub.expires_at.isoformat() if vigente and nuevo else None,
             'programa': nombre, 'creada': creada}
+
+
+def reenviar(appt, datos, usuario):
+    """La Academia no tiene la suscripción como Work: se le asigna el producto con la fecha de Work. No cambia
+    la suscripción (ADR-W016)."""
+    from datetime import datetime
+
+    from app.services import subscription_service
+
+    client = _cliente(appt)
+    _codigo, nombre, slug = _producto(client)
+    sub = subscription_service._de(db.session, client.id, slug)
+    if sub is None or sub.status != 'active':
+        raise ErrorDeAccion(f'Work no tiene una suscripción activa a {nombre}: no hay nada que reenviar.')
+    alumno_id = _alumno(client)
+    if not alumno_id:
+        raise ErrorDeAccion('No tiene cuenta en la Academia: dale el acceso.')
+
+    _asignar(alumno_id, slug, sub.expires_at, AcademyAccessService.closer_de(client, usuario))
+    # Sin tocar `updated_at`, como `subscription_sync._avisar`: si no, quedaría pendiente de reenviar otra vez.
+    from sqlalchemy import update
+    from app.models import Subscription
+    db.session.execute(update(Subscription).where(Subscription.id == sub.id)
+                       .values(academy_synced_at=datetime.utcnow(), updated_at=Subscription.updated_at))
+    _constancia(appt, usuario, f'{usuario.username} reenvió a la Academia la suscripción a {nombre}: '
+                               f'hasta el {_fecha_legible(sub.expires_at)}.')
+    db.session.commit()
+    return {'accion': 'reenviado', 'vence': sub.expires_at.isoformat(), 'programa': nombre}

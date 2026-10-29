@@ -286,10 +286,14 @@ const HERRAMIENTAS = [
     { campo: 'automatizaciones', etiqueta: 'Zapier', icono: <Logo src={logoZapier} />, escala: 'automatizaciones' },
 ];
 
+// Lo que la cabecera muestra tal cual: nunca es una tarjeta.
+const EN_CABECERA = ['pais', 'nombre', 'email', 'whatsapp', 'edad', 'remuneracion', 'video', 'video_verificado', 'cv'];
+
 // Todo lo que ya tiene lugar propio arriba (cabecera, rieles, herramientas):
-// lo que queda del formulario son las "Respuestas".
+// lo que queda del formulario son las "Respuestas". Con «Abrir todas las
+// respuestas» salen también las de los rieles, con la respuesta entera.
 const YA_MOSTRADAS = new Set([
-    'pais', 'nombre', 'email', 'whatsapp', 'edad', 'remuneracion', 'video', 'video_verificado', 'cv',
+    ...EN_CABECERA,
     ...REQUISITOS.map(([campo]) => campo),
     ...EXPERIENCIA,
     'area',
@@ -582,27 +586,32 @@ const HiringCandidateModal = ({ applicationId, ids, onClose, onNavigate, onDecid
     // Lo que el formulario preguntó y no tiene lugar propio arriba, en el orden
     // en que lo contestó la candidata y partido en dos: opción y escritas. Solo
     // lo respondido — un campo vacío (o una pregunta condicional que no le
-    // tocó) no es una tarjeta más que revisar.
-    const opcion = [];
-    const escritas = [];
-    (d.bloques || []).forEach((bloque) => bloque.campos.forEach((campo) => {
-        if (YA_MOSTRADAS.has(campo) || d[campo] == null || d[campo] === '') return;
-        (CAMPOS_ESCRITOS.has(campo) ? escritas : opcion).push(campo);
-    }));
-
+    // tocó) no es una tarjeta más que revisar. Con todas abiertas entran
+    // también las resumidas en los rieles.
+    //
     // Las preguntas que se agregaron desde el editor de Forms no tienen columna: llegan en
-    // `respuestas_extra`, con su enunciado en `preguntas_extra`. Van al final, como escritas si
-    // la respuesta es larga. Los `<id>_pts` son el puntaje de una de varias opciones, no una respuesta.
+    // `respuestas_extra`, con su enunciado en `preguntas_extra`; sin lugar en `bloques`, van
+    // al final, como escritas si la respuesta es larga. Los `<id>_pts` son el puntaje de una
+    // de varias opciones, no una respuesta.
     const extras = d.respuestas_extra || {};
     const dResp = {
         ...extras,
         ...d,
         __etiquetas: Object.fromEntries((d.preguntas_extra || []).map((q) => [q.id, q.t])),
     };
-    Object.entries(extras).forEach(([campo, valor]) => {
-        if (campo.endsWith('_pts') || valor == null || valor === '' || d[campo] != null) return;
-        (String(valor).length > 60 ? escritas : opcion).push(campo);
-    });
+    const ocultas = todasAbiertas ? new Set(EN_CABECERA) : YA_MOSTRADAS;
+    const opcion = [];
+    const escritas = [];
+    const puestas = new Set();
+    const sumar = (campo) => {
+        const valor = dResp[campo];
+        if (puestas.has(campo) || ocultas.has(campo) || campo.endsWith('_pts') || valor == null || valor === '') return;
+        puestas.add(campo);
+        const escrita = CAMPOS_ESCRITOS.has(campo) || (!PREGUNTA_CORTA[campo] && String(valor).length > 60);
+        (escrita ? escritas : opcion).push(campo);
+    };
+    (d.bloques || []).forEach((bloque) => bloque.campos.forEach(sumar));
+    Object.keys(extras).forEach(sumar);
 
     const botones = botonesDe(d);
     const estadoTexto = [
@@ -837,7 +846,7 @@ const HiringCandidateModal = ({ applicationId, ids, onClose, onNavigate, onDecid
                                                 onClick={() => { setTodasAbiertas((v) => !v); setAbiertas(new Set()); }}
                                                 className="inline-flex h-8 items-center gap-2 rounded-xl border border-white/[.32] bg-white/[.04] px-4 text-[13px] font-bold transition-all hover:bg-[#5B7CFF]/20"
                                             >
-                                                {todasAbiertas ? 'Cerrar las respuestas largas' : 'Abrir todas las respuestas'}
+                                                {todasAbiertas ? 'Cerrar las respuestas' : 'Abrir todas las respuestas'}
                                                 <ChevronDown size={15} className="transition-transform duration-200" style={{ transform: todasAbiertas ? 'rotate(180deg)' : 'none' }} />
                                             </button>
                                         </div>

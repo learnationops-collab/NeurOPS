@@ -1,4 +1,4 @@
-﻿# Avisos de Windows 30 y 5 minutos antes de cada tarea de taller de Leadership (ADR-W016).
+﻿# Avisos de Windows 30 y 5 minutos antes de cada tarea de taller de Leadership (ADR-W022).
 #
 # Lee de Leadership las tareas abiertas de hoy y mañana que creó Work (descripción que empieza
 # con [work-ws:<id>:<clave>]) y lanza una notificación de Windows cuando faltan 30 y 5 minutos

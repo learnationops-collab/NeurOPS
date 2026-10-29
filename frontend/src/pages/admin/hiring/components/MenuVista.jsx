@@ -4,7 +4,8 @@ import {
     Filter, Columns, ArrowDownWideNarrow, Rows, SlidersHorizontal, RotateCcw, ChevronRight, ChevronLeft, X, Check,
 } from 'lucide-react';
 import {
-    COLS, ESENCIALES, ORDENES, AGRUPAR, PAISES, PIDE_TOPE, colsVisibles, esVistaDefault, filtrosActivos, vistaDefault,
+    COLS, ESENCIALES, ORDENES, AGRUPAR, PAISES, PIDE_TOPE, colsVisibles, esVistaDefault, filtrosActivos, opcionCorta,
+    preguntaCorta, vistaDefault,
 } from '../lib/vista';
 import { Bandera } from './Piezas';
 import { subirACapa } from '../../../../components/standard/capa';
@@ -49,7 +50,7 @@ const Radio = ({ on, label, onClick }) => (
 
 const pideTxt = (v) => (v ? `Hasta ${v} USD` : 'Sin límite');
 
-const MenuVista = ({ ancla, cfg, onCambiar, onCerrar, onCriterios }) => {
+const MenuVista = ({ ancla, cfg, preguntas = [], onCambiar, onCerrar, onCriterios }) => {
     const [pagina, setPagina] = useState('main');
     const menu = useRef(null);
     const [pos, setPos] = useState({ top: 0, left: 0 });
@@ -92,9 +93,36 @@ const MenuVista = ({ ancla, cfg, onCambiar, onCerrar, onCriterios }) => {
     const nf = filtrosActivos(cfg);
     const ord = ORDENES.find((o) => o.id === cfg.orden.campo) || ORDENES[0];
     const anchosPropios = Object.keys(cfg.anchos || {}).length > 0;
+    const resp = f.resp || {};
+    const setResp = (id, ops) => {
+        const resto = { ...resp };
+        delete resto[id];
+        setFiltros({ resp: ops.length ? { ...resto, [id]: ops } : resto });
+    };
+    const pregunta = pagina.startsWith('resp:') ? preguntas.find((q) => q.id === pagina.slice(5)) : null;
 
     let cuerpo;
-    if (pagina === 'filtrar') {
+    if (pregunta) {
+        const elegidas = resp[pregunta.id] || [];
+        cuerpo = (
+            <>
+                <Cab titulo={preguntaCorta(pregunta)} volver onVolver={() => setPagina('filtrar')} onCerrar={onCerrar} />
+                <p className="tl-mnota">{pregunta.t}</p>
+                {pregunta.o.map((o) => (
+                    <Check1 key={o} label={opcionCorta(pregunta.id, o)} on={elegidas.includes(o)}
+                        onClick={() => setResp(pregunta.id, elegidas.includes(o) ? elegidas.filter((x) => x !== o) : [...elegidas, o])} />
+                ))}
+                <p className="tl-mnota">
+                    {pregunta.tipo === 'check' ? 'Quedan las que marcaron alguna de estas.' : 'Quedan las que respondieron alguna de estas.'}
+                </p>
+                <div className="tl-mpie">
+                    <button type="button" className="btn btn--sm btn--linea" disabled={!elegidas.length} onClick={() => setResp(pregunta.id, [])}>
+                        <X /> Quitar este filtro
+                    </button>
+                </div>
+            </>
+        );
+    } else if (pagina === 'filtrar') {
         cuerpo = (
             <>
                 <Cab titulo="Filtrar" volver onVolver={volver} onCerrar={onCerrar} />
@@ -116,6 +144,22 @@ const MenuVista = ({ ancla, cfg, onCambiar, onCerrar, onCriterios }) => {
                     <input className="slider" id="tl-f-pide" type="range" min="200" max={PIDE_TOPE} step="10" value={f.pideMax || PIDE_TOPE}
                         onChange={(e) => { const v = Number(e.target.value); setFiltros({ pideMax: v >= PIDE_TOPE ? 0 : v }); }} />
                 </div>
+                {preguntas.length > 0 && (
+                    <>
+                        <div className="tl-msep" />
+                        <p className="tl-msub">Respuestas del formulario</p>
+                        {preguntas.map((q) => {
+                            const n = (resp[q.id] || []).length;
+                            return (
+                                <button key={q.id} type="button" className="tl-mitem tl-mitem--sm" onClick={() => setPagina(`resp:${q.id}`)}>
+                                    <span className="lbl">{preguntaCorta(q)}</span>
+                                    <span className="val">{n ? `${n} de ${q.o.length}` : 'Todas'}</span>
+                                    <ChevronRight size={16} />
+                                </button>
+                            );
+                        })}
+                    </>
+                )}
                 <div className="tl-mpie">
                     <button type="button" className="btn btn--sm btn--linea" disabled={!nf}
                         onClick={() => onCambiar({ ...cfg, filtros: vistaDefault().filtros })}>

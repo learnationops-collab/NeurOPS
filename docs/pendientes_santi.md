@@ -94,7 +94,7 @@ Lo que quedó de la auditoría.
 - [ ] Ver si hace falta el proxy TCP público de Railway hacia el Postgres de producción.
 
 ## Rituales del workshop en Leadership
-Ver ADR-W016. Hecho y probado en local; para que funcione en producción falta:
+Ver ADR-W022. Hecho y probado en local; para que funcione en producción falta:
 
 - [ ] Cargar en Railway (producción) `LEADERSHIP_URL=https://leadership.thelearnation.com`, `LEADERSHIP_TOKEN` (el token personal de Kerwin, Setting › Conexiones) y `LEADERSHIP_SYNC=1`; opcional `LEADERSHIP_TZ` (por defecto America/Caracas). Sin esas tres variables no se hace nada.
 - [ ] Programar el cron diario `GET /api/workshop/cron/leadership` con `CRON_SECRET` (como el de Meta): cada día entra un taller más al horizonte de 10 días.

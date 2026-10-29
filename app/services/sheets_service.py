@@ -1,6 +1,6 @@
 import math
 import requests
-from datetime import datetime
+from datetime import date, datetime
 from dateutil import parser
 from app import db
 from app.models.financial import FinancialAgenda, FinancialSale
@@ -119,6 +119,11 @@ class SheetsService:
             meses_renovacion = int(payload.pop('meses_renovacion', None) or 0) or None
         except (TypeError, ValueError):
             meses_renovacion = None
+        # Desde cuándo corre la suscripción (el closer lo elige; vacío = el día de la venta): tampoco viaja.
+        try:
+            inicio_acceso = date.fromisoformat(str(payload.pop('inicio_acceso', None) or '')[:10])
+        except ValueError:
+            inicio_acceso = None
         # Quién compra y quién pagó (docs/plan_personas.md): también de NeurOPS, no viajan.
         comprador_uuid = payload.pop('person_uuid', None)
         pagador = payload.pop('pagador', None)
@@ -229,6 +234,7 @@ class SheetsService:
                     date=sale_date
                 )
                 sale.meses_renovacion = meses_renovacion  # no es columna: lo lee `subscription_service.al_ubicar_pago`
+                sale.inicio_acceso = inicio_acceso  # tampoco: desde cuándo corre la suscripción que abre
                 db.session.add(sale)
                 db.session.commit()
                 logger.info("[SHEETS POST] Venta registrada exitosamente en base de datos local.")

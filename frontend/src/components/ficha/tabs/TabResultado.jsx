@@ -1125,6 +1125,9 @@ function CifrasVenta({ numeros, respuestas, pago, reducido }) {
             {respuestas.acceso_hasta ? ` hasta el ${fechaCorta(respuestas.acceso_hasta)}` : ''}
           </small>
         )}
+        {!pago && respuestas.inicio_acceso && (
+          <small className="ln-t-body-sm fi-rev-acceso">{`Inicia el ${fechaCorta(respuestas.inicio_acceso)}`}</small>
+        )}
       </div>
       <div className="fi-rev-cifras">
         <div className="fi-rev-cifra">

@@ -1,7 +1,7 @@
 """Los rituales de cada taller en Learnation Leadership, calculados desde su fecha y hora reales.
 
 Cada vez que se crea, mueve o borra un `WorkshopEvent` (Workshops › Próximos) las tareas de ese
-taller en Leadership se ajustan solas (ADR-W016):
+taller en Leadership se ajustan solas (ADR-W022):
 
   · 2 días antes:  mensaje al grupo de WhatsApp
   · 1 día antes:   otro mensaje al grupo y el broadcast

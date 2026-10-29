@@ -279,6 +279,9 @@ export const PREGUNTAS = [
         campo: 'mail_cliente', label: 'Correo del acceso', tipo: 'email', requerido: true, precargado: true,
         destacado: 'Con este correo se crea o renueva su suscripción en la Academia. Revisalo letra por letra.',
       },
+      // Desde cuándo corre la suscripción en Work (el vencimiento se cuenta desde ahí). La Academia
+      // le da el acceso igual al registrar la venta: un inicio posterior solo le suma días.
+      { campo: 'inicio_acceso', label: 'Inicia el (vacío: el día de la venta)', tipo: 'fecha' },
       { campo: 'dar_acceso_academia', label: 'Darle acceso a la Academia al registrar la venta', tipo: 'booleano', etiquetas: { true: 'Sí', false: 'No por ahora' } },
       ...(r.dar_acceso_academia ? [{
         campo: 'acceso_hasta', label: 'Acceso hasta (vacío: 7 días si es seña, 4 meses si no)', tipo: 'fecha',

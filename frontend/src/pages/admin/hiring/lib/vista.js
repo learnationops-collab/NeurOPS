@@ -5,7 +5,7 @@
 // El listado se pide entero una sola vez (`filtro=todas`) y todo lo demás se hace
 // acá: cambiar de pestaña, buscar o reordenar no vuelve a pegarle al backend.
 
-import { escalaDe, nivelDe, techoIA } from './escalas';
+import { AREA_CORTO, PREGUNTA_CORTA, VAL_CORTO, escalaDe, nivelCorto, nivelDe, techoIA } from './escalas';
 
 // --- Secciones del dock y sus pestañas ---
 
@@ -190,13 +190,34 @@ export const vistaDefault = () => ({
     anchos: {},
     orden: { campo: 'score', dir: 'desc' },
     agrupar: 'none',
-    filtros: { paises: [], soloVideo: false, scoreMin: 0, pideMax: 0 },
+    // `resp`: {pregunta: [opciones]}, de las preguntas de opción del formulario.
+    filtros: { paises: [], soloVideo: false, scoreMin: 0, pideMax: 0, resp: {} },
 });
 
 export const filtrosActivos = (cfg) => {
     const f = cfg.filtros;
-    return (f.paises.length ? 1 : 0) + (f.soloVideo ? 1 : 0) + (f.scoreMin > 0 ? 1 : 0) + (f.pideMax > 0 ? 1 : 0);
+    const resp = Object.values(f.resp || {}).filter((o) => o.length).length;
+    return (f.paises.length ? 1 : 0) + (f.soloVideo ? 1 : 0) + (f.scoreMin > 0 ? 1 : 0) + (f.pideMax > 0 ? 1 : 0) + resp;
 };
+
+// --- Filtros por respuesta (preguntas de opción del formulario activo) ---
+
+/** Rótulo corto de una pregunta para el menú. */
+export const preguntaCorta = (q) => PREGUNTA_CORTA[q.id] || q.t;
+
+/** Rótulo corto de una opción: el de su escala si lo hay, si no el texto tal cual. */
+export const opcionCorta = (id, texto) => {
+    const e = escalaDe(id, texto);
+    if (e.ok) return e.label;
+    if (id === 'ia_avanzado') { const t = techoIA(texto); if (t.ok) return t.label; }
+    if (VAL_CORTO[texto]) return VAL_CORTO[texto];
+    if (AREA_CORTO[texto]) return AREA_CORTO[texto];
+    const n = nivelCorto(texto);
+    return n === texto ? texto : n;
+};
+
+/** Las opciones que marcó (una sola en las de radio; varias, unidas por « | », en las de check). */
+const marcadas = (p, id) => String(p.resp?.[id] ?? p[id] ?? '').split(' | ').map((x) => x.trim()).filter(Boolean);
 
 export const esVistaDefault = (cfg) => JSON.stringify(cfg) === JSON.stringify(vistaDefault());
 
@@ -288,7 +309,9 @@ export const pasaFiltros = (p, filtros) => {
     if (filtros.soloVideo && !p.video_ok) return false;
     if (filtros.scoreMin && (p.score ?? 0) < filtros.scoreMin) return false;
     if (filtros.pideMax && (!pideNum(p) || pideNum(p) > filtros.pideMax)) return false;
-    return true;
+    // Dentro de una pregunta alcanza con una de las opciones elegidas; entre preguntas, todas.
+    return Object.entries(filtros.resp || {}).every(([id, ops]) =>
+        !ops.length || marcadas(p, id).some((m) => ops.includes(m)));
 };
 
 export const grupoDe = (p, agrupar, ahora = hoy()) => {

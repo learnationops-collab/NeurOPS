@@ -38,6 +38,12 @@ export const obtenerComentariosAcademia = ({ appointmentId = null, clientId = nu
     return api.get('/ficha/comentarios-academia', { params, signal, timeout: 60000 }).then(r => r.data);
 };
 
+/** Avance, seguimiento del equipo y uso del alumno (`GET /ficha/seguimiento-academia`), para Fulfillment. */
+export const obtenerSeguimientoAcademia = ({ appointmentId = null, clientId = null, signal } = {}) => {
+    const params = appointmentId != null ? { appointment_id: appointmentId } : { client_id: clientId };
+    return api.get('/ficha/seguimiento-academia', { params, signal, timeout: 60000 }).then(r => r.data);
+};
+
 /**
  * Mapa acción → petición. La clave es el nombre que usan las pestañas; el valor
  * recibe `(appt, payload)`.
@@ -125,6 +131,7 @@ const RUTAS = {
     quitar_acceso_academia: (appt, p) => api.post(`/ficha/${appt}/academia/quitar`, p),
     // Prórroga sin pago: `tipo` (sena, cortesia) y `motivo`; la fecha la calcula Work.
     prorrogar_acceso_academia: (appt, p) => api.post(`/ficha/${appt}/academia/prorroga`, p),
+    reenviar_academia: (appt, p) => api.post(`/ficha/${appt}/academia/reenviar`, p),
     // Las ventas (`Sale`) del bloque Ventas de Fulfillment: el id de la venta va en la URL. Cancelar
     // pide `{motivo}`; ninguna de las dos toca los pagos ni la suscripción.
     cancelar_venta: (appt, p) => api.post(`/ficha/ventas/${p.sale_id}/cancelar`, { motivo: p.motivo }),

@@ -102,6 +102,12 @@ def _antes(iso, lead):
     return _hora(dt if dt.tzinfo else dt.replace(tzinfo=ZoneInfo('UTC')), zona_del_lead(lead)[0])[1]
 
 
+def _segmento(payload):
+    """«Segmento B» si la agenda guardó el segmento del lead (segmento_lead); None si no."""
+    seg = (payload.get('segmento_lead') or {}).get('segmento')
+    return f'Segmento {seg}' if seg else None
+
+
 def _id_discord(usuario):
     """Su ID de Discord; '' si la persona existe pero no lo tiene cargado; None si no hay persona."""
     return None if usuario is None else (usuario.discord_id or '')
@@ -139,7 +145,8 @@ def datos_de_agenda(appt):
         **_base('reprogramada' if reprogramada else 'nueva', payload, setter, payload.get('evento_nombre')),
         'closer': closer.username if closer else '-',
         'closer_discord': _id_discord(closer),
-        'prioridad': payload.get('prioridad_nombre') or '-',
+        # El segmento A/B/C/D del lead; el nombre de la prioridad («Grupo 4») solo si el formulario no segmenta.
+        'prioridad': _segmento(payload) or payload.get('prioridad_nombre') or '-',
         'horario': _horario(appt.start_time, lead),
         'antes': _antes(payload.get('reprogramada_desde'), lead) if reprogramada else None,
         'meet': payload.get('meet') or '',
@@ -182,7 +189,7 @@ def embed_de_texto(d):
         hora = f"{h['lead']} {h['bandera']} {h['pais']}" + (f" ({h['equipo']} Bolivia)" if h['equipo'] else '')
         campos[:0] = [{'name': 'Closer', 'value': d['closer'], 'inline': True},
                       {'name': 'Horario del lead', 'value': hora, 'inline': True}]
-        campos.append({'name': 'Prioridad', 'value': d['prioridad'], 'inline': True})
+        campos.append({'name': 'Segmento', 'value': d['prioridad'], 'inline': True})
         if d.get('antes'):
             campos.append({'name': 'Antes', 'value': d['antes'], 'inline': True})
     if d['filas']:

@@ -615,6 +615,16 @@
 .thalamus .ev-o > svg:last-child{color:var(--text-muted-40)}
 .thalamus .ev-o:hover{border-color:var(--brand-secondary-border)}
 .thalamus .ev-o:hover > svg:last-child{color:var(--brand-secondary)}
+.thalamus :is(.modal,.ui-modal).modal--hl{width:min(660px,100%)!important;background:var(--bg-flotante)}
+.hl-nota{margin:0 0 18px;padding:10px 12px;border-radius:12px;background:var(--hundido);border:1px solid var(--border-subtle);color:var(--text-muted)}
+.hl-dias{display:flex;flex-direction:column;gap:18px;max-height:min(60vh,520px);overflow:auto;padding:2px 4px 2px 0}
+.hl-dia-tit{display:flex;align-items:center;gap:8px;margin:0 0 10px;font-size:12px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--text-on-surface)}
+.hl-punto{width:7px;height:7px;border-radius:50%;background:var(--brand-secondary);box-shadow:0 0 10px var(--brand-secondary)}
+.hl-horas{display:flex;flex-wrap:wrap;gap:8px}
+.hl-hora{position:relative;isolation:isolate;overflow:hidden;display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:999px;background:var(--hundido);border:1px solid var(--border-main);font-size:13px;color:var(--text-on-surface)}
+.hl-hora--prox{border-color:var(--brand-secondary-border);box-shadow:0 0 0 1px var(--brand-secondary-border),0 0 18px -4px var(--brand-secondary)}
+.hl-hora--prox .humo{z-index:-1}
+.hl-ps{display:inline-flex;align-items:center;gap:2px;font-size:11px}
 .thalamus .ffila--top > span{padding-top:12px}
 .thalamus .combo{display:inline-flex;align-items:center;gap:8px;flex-wrap:nowrap;flex-shrink:0}
 .thalamus .combo-t{font-size:13px;font-weight:600;color:var(--text-muted)}

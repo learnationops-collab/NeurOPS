@@ -17,6 +17,7 @@ import { ModalNoCalifica } from '../forms/Modales';
 import { CampoMinutos, SesionesDelEvento } from '../team/Sesiones';
 import TablaTurnos from '../team/Turnos.jsx';
 import { abrirGracias } from '../forms/ListaGracias';
+import HorariosLibres from './HorariosLibres';
 import { InputVivo, LinksSetters, slugOrigen, urlPublica, useBorrador } from './comun';
 import { Button, ConfirmDelete, Input, InputGroup, LinkButton, Panel } from '../../../../components/standard';
 
@@ -128,7 +129,7 @@ function General({ d, e, f, cm }) {
     );
 }
 
-function Disponibilidad({ e }) {
+function Disponibilidad({ e, onVer }) {
     const r = e.reservas;
     const rangoMal = !!(r.desde && r.hasta && r.hasta < r.desde);
     const modo = (v) => {
@@ -168,6 +169,7 @@ function Disponibilidad({ e }) {
             </Fila>
             <Fila l="Horarios">
                 <span className="t-sm mut">Uno tras otro, con la sesión y el margen de cada closer: así le entran la mayor cantidad de agendas.</span>
+                <Button icon={<Icono n="calendar" />} data-nav="" onClick={onVer}>Ver horarios libres</Button>
             </Fila>
         </>
     );
@@ -229,6 +231,7 @@ export default function ConfigEvento({ e }) {
     const { d } = useDatos();
     const { modoCloser: cm } = usePermisos();
     const [borrar, setBorrar] = useState(false);
+    const [libres, setLibres] = useState(false);
     const f = buscar(d, 'funnels', e.funnel);
     // Si es el único agendamiento del funnel, el funnel quedaría sin generar agendas: se ofrece borrarlo
     // también (el closer no maneja funnels).
@@ -257,7 +260,7 @@ export default function ConfigEvento({ e }) {
                     )}
                 </div>
                 <div className="ev-col">
-                    <Bloque tit="Disponibilidad" icono="calendar" i={1}><Disponibilidad e={e} /></Bloque>
+                    <Bloque tit="Disponibilidad" icono="calendar" i={1}><Disponibilidad e={e} onVer={() => setLibres(true)} /></Bloque>
                     {!e.persona && !cm && (
                         <Bloque tit="Sesiones de cada closer" icono="clock" i={0}>
                             <p className="t-sm mut">Lo que cada uno ajustó sobre la propuesta. Lo podés personalizar acá.</p>
@@ -279,6 +282,8 @@ export default function ConfigEvento({ e }) {
             <Bloque tit="Turnos de la semana" icono="users" i={1}>
                 <TablaTurnos evento={e} personas={personas} />
             </Bloque>
+            {/* Fuera de los bloques: un Panel con aura aísla lo de adentro y el bloque de abajo lo tapaba. */}
+            {libres && <HorariosLibres e={e} personas={personas} onCerrar={() => setLibres(false)} />}
         </div>
     );
 }

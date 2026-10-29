@@ -14,24 +14,32 @@
 // —el curso de bienvenida que regala a todo alumno nuevo, accesos dados a mano— va a una sección
 // aparte y cerrada: antes salía mezclado y se leía como lo comprado.
 //
+// Desde el ADR-W016 se lee en cuatro bloques: 1. la suscripción (la entidad de Work que da el acceso, con su venta,
+// su historial y si la Academia la tiene igual); 2. el avance en el recorrido de sesiones; 3. el seguimiento del
+// equipo (objetivos, protocolos, acciones con respuesta); 4. el uso (Pulso, días activos y bitácora). 2 a 4 salen
+// del expediente de la Academia en un pedido aparte (`useSeguimientoAcademia`).
+//
 // Cada número lleva su «i» con qué mide, en qué unidad y quién lo calcula (`fulfillment.js`).
 // Se reusa el `Tip` del tablero comercial: la ficha ya vive dentro de `.dc-shell`, que es donde
 // ese tooltip tiene sus estilos, y ya resuelve portal, bordes de la ventana, teclado y toque.
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { AlertTriangle, ArrowRight, GraduationCap, RefreshCw } from 'lucide-react';
 import { Hueso } from '../../huesos/Huesos';
 import Tip from '../../../pages/comercial/components/Tip';
 import { SeccionColapsable, diaLegible, instanteLegible, useMovimiento } from '../piezas';
 import { pestanasVisibles } from '../estadoFicha';
-import useComentariosAcademia from '../useComentariosAcademia';
+import useSeguimientoAcademia from '../useSeguimientoAcademia';
 import {
   AYUDA_ACCESO, SECCIONES, diasRestantes, estadoAcceso, nombreProducto,
 } from '../fulfillment';
 import AccesoAcademia from './AccesoAcademia';
-import SuscripcionWork from './SuscripcionWork';
 import VentasWork from './VentasWork';
+import BloqueSuscripcion from './fulfillment/BloqueSuscripcion';
+import BloqueAvance from './fulfillment/BloqueAvance';
+import BloqueSeguimiento from './fulfillment/BloqueSeguimiento';
+import BloqueUso from './fulfillment/BloqueUso';
 import '../../dashboard/pareja.css';
 import './fulfillment.css';
 
@@ -232,44 +240,61 @@ function OtrosAccesos({ datos }) {
   );
 }
 
-const COMENTARIOS_A_LA_VISTA = 5;
-
-/**
- * Lo que anotó el equipo de la Academia (Fulfillment, consultores, CES): observaciones, objetivos y acciones, lo
- * más nuevo primero (reunión del 26/10). Pide lo suyo aparte: espera el expediente de la Academia.
- */
-function ComentariosAcademia({ ficha }) {
-  const { datos, error } = useComentariosAcademia(ficha);
-  const [todos, setTodos] = useState(false);
-
-  const lista = datos?.comentarios || [];
-  const visibles = todos ? lista : lista.slice(0, COMENTARIOS_A_LA_VISTA);
+/** 2, 3 y 4: avance, seguimiento del equipo y uso. Esperan el expediente de la Academia (pedido aparte). */
+function BloquesAcademia({ ficha, desempeno, vuelta }) {
+  const { datos, error, recargar } = useSeguimientoAcademia(ficha);
+  // Solo las vueltas posteriores al montaje: la primera ya la pide el hook.
+  const vista = useRef(vuelta);
+  useEffect(() => {
+    if (vuelta !== vista.current) { vista.current = vuelta; recargar(); }
+  }, [vuelta, recargar]);
+  if (!datos && !error) {
+    return (
+      <div className="ful-dos">
+        <div className="ln-panel ln-panel--sm"><Hueso alto={180} /></div>
+        <div className="ln-panel ln-panel--sm"><Hueso alto={180} paso={1} /></div>
+      </div>
+    );
+  }
+  if (error || datos?.aviso) {
+    return (
+      <div className="ln-alert ln-alert--warning" role="status">
+        <span className="ln-alert-ico"><AlertTriangle /></span>
+        <span className="ln-alert-body">
+          <span className="ln-alert-title">{error || datos.aviso}</span>
+          <span className="ln-alert-desc">Avance, seguimiento del equipo y uso salen del expediente de la Academia.</span>
+        </span>
+        <button type="button" className="btn btn--linea btn--sm" onClick={recargar}><RefreshCw />Reintentar</button>
+      </div>
+    );
+  }
   return (
-    <section className="ln-panel ln-panel--sm ful-seccion" aria-labelledby="ful-comentarios">
-      <small id="ful-comentarios" className="ln-t-eyebrow ln-muted">
-        {`Comentarios del equipo de la Academia${lista.length ? ` · ${lista.length}` : ''}`}
-      </small>
-      {!datos && !error && <Hueso alto={44} />}
-      {(error || datos?.aviso) && <p className="t-sm mut" style={{ margin: 0 }}>{error || datos.aviso}</p>}
-      {datos && !datos.aviso && !lista.length && (
-        <p className="t-sm mut" style={{ margin: 0 }}>Nadie del equipo de la Academia anotó nada sobre este alumno todavía.</p>
-      )}
-      {visibles.map((c) => (
-        <div key={c.id} className="ful-comentario">
-          <small className="ln-t-caption ln-muted">
-            {[instanteLegible(c.fecha), c.por, c.grupo === 'Seguimiento' ? null : c.grupo].filter(Boolean).join(' · ')}
-          </small>
-          <p className="ln-t-body-sm" style={{ margin: 0, whiteSpace: 'pre-line' }}>
-            {c.que}{c.detalle && c.grupo === 'Seguimiento' ? ` — ${c.detalle}` : ''}
-          </p>
-        </div>
-      ))}
-      {lista.length > COMENTARIOS_A_LA_VISTA && (
-        <button type="button" className="btn btn--linea btn--sm" onClick={() => setTodos(!todos)}>
-          {todos ? 'Ver menos' : `Ver los ${lista.length}`}
-        </button>
-      )}
-    </section>
+    <>
+      <div className="ful-dos">
+        <BloqueAvance recorrido={datos.recorrido} />
+        <BloqueSeguimiento seguimiento={datos.seguimiento} registros={datos.registros || []} />
+      </div>
+      <BloqueUso uso={datos.uso} bitacora={datos.bitacora || []} desempeno={desempeno} />
+    </>
+  );
+}
+
+/** Las métricas del resumen de la Academia (`/users/{id}/summary`), cerradas: el detalle detrás del Uso. */
+function Metricas({ desempeno }) {
+  if (!desempeno) return null;
+  return (
+    <SeccionColapsable titulo="Métricas de la Academia" resumen="Actividad, avance, ejecuciones y soporte">
+      <div className="ful-secciones pareja">
+        {SECCIONES.map((s) => (
+          <section key={s.id} className="ful-seccion" aria-labelledby={`ful-${s.id}`}>
+            <Rotulo id={`ful-${s.id}`} eyebrow texto={s.titulo} ayuda={s.ayuda} />
+            <div className="ful-metricas pareja">
+              {s.metricas.map((m) => <Metrica key={m.clave} m={m} desempeno={desempeno} />)}
+            </div>
+          </section>
+        ))}
+      </div>
+    </SeccionColapsable>
   );
 }
 
@@ -287,6 +312,8 @@ export default function TabFulfillment({ ficha, onConsultar, onAccion, irA }) {
   const [fallo, setFallo] = useState(null);
   // Si el backend no manda `consultado_en`, la hora en que llegó la respuesta dice lo mismo.
   const [traidoEn, setTraidoEn] = useState(null);
+  // «Actualizar» también vuelve a pedir el expediente de los bloques 2 a 4.
+  const [vuelta, setVuelta] = useState(0);
 
   const pedir = useCallback(async () => {
     setCargando(true);
@@ -294,6 +321,7 @@ export default function TabFulfillment({ ficha, onConsultar, onAccion, irA }) {
     try {
       setDatos(await onConsultar?.('fulfillment'));
       setTraidoEn(new Date().toISOString());
+      setVuelta((v) => v + 1);
     } catch (e) {
       // Esto es que NeurOPS no contestó. Que la Academia no conteste viaja DENTRO de la
       // respuesta, en `error`: son dos fallas distintas y se cuentan distinto.
@@ -313,23 +341,14 @@ export default function TabFulfillment({ ficha, onConsultar, onAccion, irA }) {
   const probados = datos?.emails_probados || [];
   const programa = datos?.programa;
   const consultado = datos?.consultado_en || traidoEn;
+  const programas = ficha?.vocabulario?.programas || [];
+  const subs = datos?.suscripciones || [];
+  // La suscripción del programa que pagó; si no se sabe cuál, la que vence más tarde (vienen así ordenadas).
+  const sub = subs.find((x) => x.product_slug === programa?.product_slug) || subs[0] || null;
+  const vinculado = !!(datos?.vinculado && alumno);
   // Las piezas entran de a una, en el orden en que se leen.
   let orden = 0;
   const entrar = () => mov.campo(orden++);
-  // Lo que registra Work (suscripción y ventas): se ve aunque la Academia no conteste o todavía no sea alumno.
-  // Las ventas piden lo suyo aparte.
-  const deWork = () => (
-    <>
-      {datos?.suscripciones?.length > 0 && (
-        <motion.div {...entrar()}>
-          <SuscripcionWork suscripciones={datos.suscripciones} programas={ficha?.vocabulario?.programas || []} />
-        </motion.div>
-      )}
-      <motion.div {...entrar()}>
-        <VentasWork onConsultar={onConsultar} onAccion={onAccion} programas={ficha?.vocabulario?.programas || []} />
-      </motion.div>
-    </>
-  );
 
   return (
     <div className="ful">
@@ -361,7 +380,30 @@ export default function TabFulfillment({ ficha, onConsultar, onAccion, irA }) {
         </div>
       )}
 
-      {!error && !datos?.vinculado && (
+      {/* 1. La suscripción es de Work: se ve aunque la Academia no conteste o todavía no tenga cuenta. */}
+      {sub && (
+        <motion.div {...entrar()} style={{ display: 'grid', gap: 'var(--space-3)' }}>
+          <BloqueSuscripcion s={sub} datos={datos} ficha={ficha} programas={programas}
+            onAccion={onAccion} onHecho={pedir} />
+          {datos?.aviso_producto && datos.aviso_producto.codigo !== 'sin_producto' && (
+            <AvisoProducto aviso={datos.aviso_producto} ficha={ficha} irA={irA} />
+          )}
+          {vinculado && alumno.producto_activo?.slug && datos.producto_pagado
+            && alumno.producto_activo.slug !== datos.producto_pagado.product_slug && (
+            <small className="ln-t-caption" style={{ color: 'var(--warning)' }}>
+              {`En la Academia entra a «${alumno.producto_activo.name || alumno.producto_activo.slug}» como producto activo, no al que pagó.`}
+            </small>
+          )}
+        </motion.div>
+      )}
+
+      {!sub && vinculado && (
+        <motion.div {...entrar()}>
+          <AccesoPagado datos={datos} ficha={ficha} irA={irA} onAccion={onAccion} onHecho={pedir} />
+        </motion.div>
+      )}
+
+      {!sub && !error && !datos?.vinculado && (
         <div className="vacio-grande">
           <span className="vacio-icono"><GraduationCap /></span>
           <p className="t-h3">Este cliente todavía no es alumno en la Academia</p>
@@ -378,39 +420,21 @@ export default function TabFulfillment({ ficha, onConsultar, onAccion, irA }) {
         </div>
       )}
 
-      {datos?.vinculado && alumno && (
+      {/* 2, 3 y 4: solo con cuenta en la Academia. */}
+      {vinculado && <motion.div {...entrar()}><BloquesAcademia ficha={ficha} desempeno={desempeno} vuelta={vuelta} /></motion.div>}
+
+      {/* La venta, al costado de la suscripción: qué pagó y qué debe. Pide lo suyo aparte. */}
+      <motion.div {...entrar()}>
+        <VentasWork onConsultar={onConsultar} onAccion={onAccion} programas={programas} />
+      </motion.div>
+
+      {vinculado && (
         <>
-          <motion.div {...entrar()}>
-            <AccesoPagado datos={datos} ficha={ficha} irA={irA} onAccion={onAccion} onHecho={pedir} />
-          </motion.div>
-
-          {/* Para el closer, después de lo que pagó: hasta cuándo tiene acceso y qué debe (27/10/2026). */}
-          {deWork()}
-
-          {desempeno ? (
-            <div className="ful-secciones pareja">
-              {SECCIONES.map((s) => (
-                <motion.section key={s.id} {...entrar()} className="ln-panel ln-panel--sm ful-seccion"
-                  aria-labelledby={`ful-${s.id}`}>
-                  <Rotulo id={`ful-${s.id}`} eyebrow texto={s.titulo} ayuda={s.ayuda} />
-                  <div className="ful-metricas pareja">
-                    {s.metricas.map((m) => <Metrica key={m.clave} m={m} desempeno={desempeno} />)}
-                  </div>
-                </motion.section>
-              ))}
-            </div>
-          ) : (
-            <p className="t-sm mut">La Academia no mandó métricas de desempeño para este alumno.</p>
-          )}
-
-          <motion.div {...entrar()}><ComentariosAcademia ficha={ficha} /></motion.div>
-
+          <motion.div {...entrar()}><Metricas desempeno={desempeno} /></motion.div>
           <motion.div {...entrar()}><Cuenta datos={datos} ficha={ficha} /></motion.div>
           <motion.div {...entrar()}><OtrosAccesos datos={datos} /></motion.div>
         </>
       )}
-
-      {!(datos?.vinculado && alumno) && deWork()}
     </div>
   );
 }

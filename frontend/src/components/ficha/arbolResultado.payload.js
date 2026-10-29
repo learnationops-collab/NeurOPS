@@ -274,6 +274,7 @@ function bloqueVenta(r, contexto) {
     sold_in_call: r.sold_in_call !== false,
     ...(r.tipo_pago_simple === 'Renovacion' && [1, 4].includes(r.meses_renovacion)
       ? { meses_renovacion: r.meses_renovacion } : {}),
+    ...(esNueva(r) && r.inicio_acceso ? { inicio_acceso: r.inicio_acceso } : {}),
   };
 }
 
