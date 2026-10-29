@@ -378,6 +378,8 @@
 .ui-tip.ui-tip{position:fixed;z-index:200;pointer-events:none;padding:8px 12px;border-radius:12px;background:var(--ui-popover-bg);border:1px solid var(--ui-border-main);
   box-shadow:var(--ui-shadow);font-size:12.5px;font-weight:700;color:var(--ui-text);white-space:nowrap;max-width:280px}
 .ui-tip.ui-tip span{display:block;font-size:11px;font-weight:600;color:var(--ui-muted);white-space:pre-line}
+/* Con un <Tooltip /> montado, el data-tip de CSS (que se corta dentro de un scroll) no se dibuja: lo hace el fijo. */
+body:has(.ui-tip) [data-tip]:hover::after,body:has(.ui-tip) [data-tip]:focus-visible::after{content:none}
 
 /* --- TextArea ---------------------------------------------------------------------------------- */
 .ui-textarea.ui-textarea{width:100%;min-height:48px;padding:12px 14px;border-radius:14px;border:1px solid var(--ui-border-main);background:var(--ui-input-bg);color:var(--ui-text);

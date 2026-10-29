@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Button, EmptyState, Segmented, Select, Skeleton, SkeletonBlock } from '../../../../components/standard';
+import { Button, EmptyState, Segmented, Select, Skeleton, SkeletonBlock, Tooltip } from '../../../../components/standard';
 import { Tip } from '../../../comercial/components/Shared';
 import { EnCabecera } from '../components/CabeceraWorkshop';
 import MapaCalor from './MapaCalor';
@@ -148,6 +148,8 @@ const CorrelacionesTab = () => {
                     </div>
                 )}
             </div>
+            {/* El detalle de cada celda («título|detalle») sale en un tooltip fijo que no recorta el scroll del mapa. */}
+            <Tooltip />
         </div>
     );
 };
