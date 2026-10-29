@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import { CalendarDays, RefreshCw } from 'lucide-react';
 import { Isotipo, PillMenu } from '../../comercial/components/Shared';
 import RangoFechas, { esFecha, textoRango } from '../../comercial/components/RangoFechas';
-import { ErrorDeCarga } from './esqueletos';
+import { ErrorDeCarga, EsqueletoKpis } from './esqueletos';
 import OrigenDeOtras from './OrigenDeOtras';
 import { Kpi } from './anuncios/TablaAnuncios';
 import { PERIODOS, formatear } from './anuncios/metricas';
@@ -92,7 +92,10 @@ const OtrasPage = () => {
                     <motion.div className={cargando && datos ? 'mk-recargando' : undefined} aria-busy={cargando}
                         initial={reducir ? false : { opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.28, ease: [0.22, 0.7, 0.2, 1] }}>
-                        {error && !datos ? <ErrorDeCarga titulo={error} onReintentar={recargar} /> : !datos ? null : !otras ? (
+                        {error && !datos ? <ErrorDeCarga titulo={error} onReintentar={recargar} /> : !datos ? (
+                            <EsqueletoKpis titulos={['Agendas', 'Show up', 'Ventas', 'New Cash', 'Cash total']} lineas={2}
+                                label="Cargando las agendas de Otras…" />
+                        ) : !otras ? (
                             <section className="panel" role="status">
                                 <p className="t-h3">Todavía no hay datos de Otras</p>
                                 <p className="t-sm mut">Probá con otro período.</p>
