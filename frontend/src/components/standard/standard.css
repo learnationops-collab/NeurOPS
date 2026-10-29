@@ -130,7 +130,7 @@
 @keyframes ui-aura1{0%,100%{transform:translate(0,0) scale(1);opacity:.5}33%{transform:translate(90%,28%) scale(1.3);opacity:.8}66%{transform:translate(38%,-24%) scale(.85);opacity:.4}}
 @keyframes ui-aura2{0%,100%{transform:translate(0,0) scale(1.1);opacity:.45}40%{transform:translate(-70%,24%) scale(.82);opacity:.75}75%{transform:translate(52%,-18%) scale(1.28);opacity:.55}}
 @keyframes ui-aura3{0%,100%{transform:translate(0,0) scale(.9);opacity:.4}30%{transform:translate(-44%,32%) scale(1.22);opacity:.7}70%{transform:translate(-92%,-14%) scale(1);opacity:.45}}
-@media (prefers-reduced-motion:reduce){.ui-aura.ui-aura i{animation:none}}
+@media (prefers-reduced-motion:reduce){.ui-aura.ui-aura i{animation:none!important}}
 
 /* --- EmptyState -------------------------------------------------------------------------------- */
 .ui-empty.ui-empty{display:grid;gap:var(--ui-s3);justify-items:center;text-align:center;min-width:0;

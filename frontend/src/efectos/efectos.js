@@ -4,15 +4,17 @@
 //   · la persona lo eligió (`?efectos=bajo` en la URL; `?efectos=normal` lo vuelve a la medición), o
 //   · pide menos movimiento (`prefers-reduced-motion`), o
 //   · la compu es chica (2 núcleos o menos, 2 GB o menos de memoria), o
-//   · una medición de ~1,5 s de cuadros (con el humo andando) da menos de ~30 por segundo.
+//   · una medición de ~1,2 s de cuadros (con el humo andando) da menos de ~40 por segundo; se mide a los 1,5, 8 y 20 s de
+//     cargar, para pillar también la pantalla ya llena de tarjetas.
 // Lo medido se recuerda 14 días: no se vuelve a probar en cada carga, y no oscila de una visita a otra.
 
 const CLAVE = 'neurops:efectos';
 const DIAS = 14;
 const MUESTRAS = 70;      // cuadros que se miden (~1,2 s a 60 fps)
 const DESCARTADOS = 8;    // los primeros cuadros, mientras la página termina de pintarse
-const MAX_MEDIANA_MS = 34; // por encima: menos de ~30 cuadros por segundo
-const MAX_LENTOS = 0.3;   // o más de un 30% de cuadros que tardan más de 50 ms
+const MAX_MEDIANA_MS = 26; // por encima: menos de ~40 cuadros por segundo (ya se nota a saltos)
+const MAX_LENTOS = 0.2;   // o más de un 20% de cuadros que tardan más de 40 ms
+const MOMENTOS_MS = [1500, 8000, 20000]; // la compu se mide también cuando ya pintó las tarjetas de la pantalla
 
 const leer = () => {
     try {
@@ -35,7 +37,7 @@ export const noDa = (cuadros) => {
     if (cuadros.length < 20) return false;
     const orden = [...cuadros].sort((a, b) => a - b);
     const mediana = orden[Math.floor(orden.length / 2)];
-    const lentos = cuadros.filter((c) => c > 50).length / cuadros.length;
+    const lentos = cuadros.filter((c) => c > 40).length / cuadros.length;
     return mediana > MAX_MEDIANA_MS || lentos > MAX_LENTOS;
 };
 
@@ -54,14 +56,15 @@ const medir = () => new Promise((resolver) => {
 
 const probarCuandoSePueda = () => {
     const correr = async () => {
+        if (document.documentElement.dataset.efectos === 'bajo') return;
         const cuadros = await medir();
-        if (cuadros === null) return; // se mide en otra visita
+        if (cuadros === null) return; // con la pestaña oculta, se mide en el próximo momento u otra visita
         if (noDa(cuadros)) {
             poner('bajo');
             guardar({ modo: 'bajo', manual: false, hasta: Date.now() + DIAS * 86400000 });
         }
     };
-    const arrancar = () => window.setTimeout(correr, 1500);
+    const arrancar = () => MOMENTOS_MS.forEach((ms) => window.setTimeout(correr, ms));
     if (document.readyState === 'complete') arrancar();
     else window.addEventListener('load', arrancar, { once: true });
 };

@@ -1,29 +1,31 @@
 /* El humo sin parpadeo (Kerwin, 29/10/2026).
    En una compu que no da, el humo viejo (círculos con `filter:blur` de 30–90 px y `mix-blend-mode`, movidos sin parar) se
    repintaba a saltos y se veía como un parpadeo: agobia la vista y puede dañar a quien tiene epilepsia fotosensible.
+   Hay DOS humos con la misma forma (un contenedor con cuatro <i>): `.humo` (tablero, Tálamus, Talent) y `.ui-aura` (las
+   tarjetas y paneles de los componentes estándar, que son casi todos los de Tálamus). Los dos pasan por acá.
    1. SIEMPRE: cada nube es un degradé radial ya difuso, sin blur ni mezcla de capas, y solo mueve `transform` y `opacity`
       (lo hace la GPU sin repintar). Es el mismo humo barato de la reserva pública (`thalamus.css` › `.reserva`).
-   2. `html[data-efectos="bajo"]` (lo pone `efectos.js` solo, si la compu no llega a ~30 cuadros por segundo, si pide menos
+   2. `html[data-efectos="bajo"]` (lo pone `efectos.js` solo, si la compu no llega a ~40 cuadros por segundo, si pide menos
       movimiento o si lo elige la persona): sin nubes que se muevan, solo un fondo suave y quieto. */
 
-:is(.dc-shell, .thalamus, .talent) .humo i {
+:is(.humo, .ui-aura) i {
     filter: none !important;
     mix-blend-mode: normal !important;
-    will-change: transform, opacity;
 }
-:is(.dc-shell, .thalamus, .talent) .humo i:nth-child(1) { background: radial-gradient(closest-side, var(--h1, var(--brand-secondary)), transparent) !important; }
-:is(.dc-shell, .thalamus, .talent) .humo i:nth-child(2) { background: radial-gradient(closest-side, var(--h2, var(--brand-primary)), transparent) !important; }
-:is(.dc-shell, .thalamus, .talent) .humo i:nth-child(3) { background: radial-gradient(closest-side, var(--h3, var(--brand-secondary-light)), transparent) !important; }
-:is(.dc-shell, .thalamus, .talent) .humo i:nth-child(4) { background: radial-gradient(closest-side, var(--h4, var(--brand-navy)), transparent) !important; }
+:is(.humo, .ui-aura) i:nth-child(1) { background: radial-gradient(closest-side, var(--h1, var(--brand-secondary, var(--ui-brand))), transparent) !important; }
+:is(.humo, .ui-aura) i:nth-child(2) { background: radial-gradient(closest-side, var(--h2, var(--brand-primary, var(--ui-brand-2))), transparent) !important; }
+:is(.humo, .ui-aura) i:nth-child(3) { background: radial-gradient(closest-side, var(--h3, var(--brand-secondary-light, var(--ui-brand-accent))), transparent) !important; }
+:is(.humo, .ui-aura) i:nth-child(4) { background: radial-gradient(closest-side, var(--h4, var(--brand-navy, var(--ui-navy))), transparent) !important; }
 
-html[data-efectos="bajo"] :is(.dc-shell, .thalamus, .talent) .humo i { display: none !important; }
-html[data-efectos="bajo"] :is(.dc-shell, .thalamus, .talent) .humo {
+html[data-efectos="bajo"] :is(.humo, .ui-aura) i { display: none !important; }
+html[data-efectos="bajo"] :is(.humo, .ui-aura) {
     background:
-        radial-gradient(60% 70% at 12% 0%, color-mix(in srgb, var(--h1, var(--brand-secondary)) 45%, transparent), transparent 70%),
-        radial-gradient(55% 65% at 90% 100%, color-mix(in srgb, var(--h2, var(--brand-primary)) 40%, transparent), transparent 70%) !important;
+        radial-gradient(60% 70% at 12% 0%, color-mix(in srgb, var(--h1, var(--brand-secondary, var(--ui-brand))) 45%, transparent), transparent 70%),
+        radial-gradient(55% 65% at 90% 100%, color-mix(in srgb, var(--h2, var(--brand-primary, var(--ui-brand-2))) 40%, transparent), transparent 70%) !important;
 }
 
-/* Quien pide menos movimiento no ve nubes moverse en ningún caso. */
+/* Quien pide menos movimiento no ve nubes moverse en ningún caso. (Las reglas de `.ui-aura` por `:nth-child` le ganaban a
+   su propio «reduced-motion»: por eso el !important.) */
 @media (prefers-reduced-motion: reduce) {
-    :is(.dc-shell, .thalamus, .talent) .humo i { animation: none !important; }
+    :is(.humo, .ui-aura) i { animation: none !important; }
 }
