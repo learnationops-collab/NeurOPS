@@ -557,9 +557,10 @@ _A_LA_CLASE = re.compile(r'\bclase\b', re.I)
 _CAMPANA_WORKSHOP = re.compile(r'^(WS|WB|LP FUNNEL|WORKSHOP)\b|\bLAUNCH\b', re.I)
 _CAMPANA_SETTING = re.compile(r'^(DM|DMV|LM)\b|DM FUNNEL|HAND RAISER|LM FUNNEL', re.I)
 # Adónde lleva (`MetaAnuncio.destino`): Instagram (el DM, donde contesta ManyChat) o las landings de la
-# clase en vivo de institute.thelearnation.com (/live-class-t3/, /live/, /acceso/…).
+# clase en vivo de institute.thelearnation.com (/live-class-t3/, /clase-hero/, /acceso/…).
 _DESTINO_DM = re.compile(r'instagram\.com|ig\.me|m\.me/|^cta:(INSTAGRAM_MESSAGE|MESSAGE_PAGE|WHATSAPP_MESSAGE)', re.I)
-_DESTINO_CLASE = re.compile(r'thelearnation\.com/(live|acceso|crear-evento|replay)', re.I)
+# /clase-hero/ faltaba (29/10/2026): «TC5 | Clase 26» quedó con la palabra clave CLASE 26 y en Setting.
+_DESTINO_CLASE = re.compile(r'thelearnation\.com/(live|clase|acceso|crear-evento|replay)', re.I)
 
 
 def tipo_de_destino(destino):
