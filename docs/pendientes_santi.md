@@ -137,3 +137,11 @@ Falta la fórmula de backend; la presentación ya tiene su rótulo.
 ## ROAS de Workshop (Leadership 850, 29/10/2026)
 - [x] Qué ROAS manda (Kerwin, 29/10): «deja los 2». Se quedan ROAS New Cash y ROAS Total con el mismo peso, sin titular; el Total ya muestra su parte de ventas anteriores.
 - [ ] **Decisión de Kerwin:** Workshop › Resumen y Marketing muestran «ROAS Total» y «Cash total» con cuentas distintas (cohorte del taller sin cuotas contra período de cobro con cuotas): octubre da 0,9x en el Resumen y 6,05x en Marketing. Opciones: renombrar los del Resumen («ROAS del taller») o llevarlos a la definición de Marketing. Es del rediseño de Workshop (otra sesión).
+## Segmentos: backfill de las agendas del flujo viejo (tarea 840 de Leadership)
+- [x] Backfill probado en staging (dry-run y `--apply`, 29/10/2026): no escribe nada nuevo (931 clientes y 844 agendas ya tenían segmento; 6 clientes con formulario viejo incompleto). Ahora informa al final las agendas sin segmento por motivo y mes (`--desde=AAAA-MM-DD`, `--ids`).
+- [x] Corrido en prod (29/10/2026, aprobado por Kerwin): ensayo y `--apply` escribieron 1 agenda (copia del segmento D de su cliente); 961 agendas y 1.021 clientes ya tenían; 36 de 285 agendas desde el 01/10 siguen sin segmento (32 clientes sin formulario, 4 formularios que no segmentan).
+- [ ] Las ~31 agendas de octubre del flujo viejo (17 son del 01/10) sin segmento tienen un cliente sin ningún formulario: no se pueden segmentar. Decidir si quedan sin segmento en los cortes o van a una fila «Sin dato».
+
+## Marketing: «CLASE 26» no es una palabra clave de DM (tarea 852 de Leadership)
+- [x] Causa: el anuncio «TC5 | Clase 26» (campaña Meta «WORKSHOP FUNNEL | Testing Creativos | PE + CO», lleva a /clase-hero/) tomó la clave CLASE 26 del nombre de su conjunto y cayó en Setting porque `/clase-hero/` no estaba entre los destinos de clase. Nunca hubo un DM con esa palabra (0 ejecuciones del Inbox). `meta_ads_service._DESTINO_CLASE` ahora reconoce `/clase*`.
+- [ ] Tras el deploy, la próxima sincronización de Meta lo pasa solo a Workshop y quita la clave (mapeo auto): el aviso «sin campaña» y los ~$20 de Setting desaparecen. Si no se mueve, Sincronizar a mano en Marketing › Anuncios.
