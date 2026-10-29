@@ -3,7 +3,11 @@ import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import { ThemeProvider } from './context/ThemeContext'
 import './index.css'
+import './efectos/efectos.css'
+import { iniciarEfectos } from './efectos/efectos'
 
+// El humo baja solo en las compus que no dan (ver efectos/efectos.js): antes parpadeaba.
+iniciarEfectos();
 
 console.log('Frontend Version: 2024-02-04 JWT Patch v2');
 
