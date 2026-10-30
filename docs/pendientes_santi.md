@@ -15,7 +15,8 @@ Pasar al lead del triage al closing.
 
 - [x] Confirmar A/B al pasar a closing (plan §8.5, [plan_segmentos_triage.md](plan_segmentos_triage.md)).
 
-- [ ] Triage (Leadership 1018): los leads sin formulario van primero con el triage según Kerwin (30/10), pero el ruteo de `agendas_v2` solo manda C y D al grupo Triage; ver qué pasa hoy con una agenda sin segmento (`nucleo/formulario.py` `grupo_por_reglas`, evento «Sin formulario») y ajustar la regla.
+- [ ] Triage (Leadership 1018, 30/10): los abandonos del formulario pasan al triage (aviso de Discord etiqueta a las triage y lista «Abandonos» en su espacio, `abandonos.py` + `api/triage_abandonos.py`). Falta cargar el `discord_id` de Dari y Juliana (Leadership 1005): sin él el aviso sale con `@everyone`. Al desplegar corre la migración `a6c8e0b2d4f6` (columnas de contacto en `sched_intentos`).
+- [ ] Discord (Leadership 982/983): el diseño de las tarjetas es `Agenda Segmentos.dc.html` de Claude Design (proyecto 085f329e-6ba8-4cdc-86f2-9a338e27b5b1). DesignSync pide `/design-login` desde una sesión interactiva; hasta entonces hay que pasar el archivo al repo o autorizar.
 - [ ] Triage (Leadership 1019): métricas día por día (agendas, confirmaciones, asistencias) en `TriageMetricas.jsx` y en la sección de Dirección; hoy `triage_service.metricas` solo da el total del período.
 - [ ] Triage (Leadership 1014 y 1015): chat del lead con @persona (selector) y «Compartidos conmigo» en el dashboard de quien es mencionado; revisar si la ficha usa `ClientComment`/`CommentNotification` o `Comment`.
 - [ ] Low ticket (`LT`, 100 USD por mes, Academia `low-ticket`): definir comisiones del triage y de Fulfillment (`comision_tasas_service.PROGRAMAS` no tiene LT) y cómo se cobra cada mes (hoy: un «LT - Renovacion» de 1 mes por la ficha).
