@@ -154,11 +154,14 @@ def primeras_cuotas(pagos):
     return cuotas
 
 
-def cuotas_que_suman(pagos):
+def cuotas_que_suman(pagos, candidatas=None):
     """Las primeras cuotas (los pagos de `primeras_cuotas`) que `ticket_de` le suma a las ventas de `pagos`:
-    lo que hay que listar para que la suma de la lista sea el cash de las ventas nuevas."""
+    lo que hay que listar para que la suma de la lista sea el cash de las ventas nuevas. `candidatas`:
+    las de `primeras_cuotas(pagos)` si ya se buscaron (evita repetir la consulta)."""
     pagos = sin_cuotas(pagos)
-    todo = [p for p in pagos + primeras_cuotas(pagos) if _entra(p[3])]
+    if candidatas is None:
+        candidatas = primeras_cuotas(pagos)
+    todo = [p for p in pagos + candidatas if _entra(p[3])]
     clientes = _unir_clientes([tuple(p[0] or ()) for p in todo])
     por_cliente = {}
     for cliente, pago in zip(clientes, todo):
@@ -182,6 +185,13 @@ def ticket_de(pagos):
     en la base (`primeras_cuotas`)."""
     pagos = sin_cuotas(pagos)
     return ticket_promedio(pagos + primeras_cuotas(pagos))
+
+
+def ticket_y_cuotas(pagos):
+    """`ticket_de` más las cuotas que le sumó, con una sola búsqueda: ((cash, cuántas, ticket), cuotas)."""
+    pagos = sin_cuotas(pagos)
+    candidatas = primeras_cuotas(pagos)
+    return ticket_promedio(pagos + candidatas), cuotas_que_suman(pagos, candidatas)
 
 
 def _limpio(valor):

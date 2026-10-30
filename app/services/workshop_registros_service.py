@@ -8,9 +8,10 @@ cuando éste está al día; si el taller guarda otro (se calculó antes), la pan
   · ventas                 las personas compradoras (pago completo o split pay; la seña no).
   · new_cash               los pagos de venta nueva (completo o split pay) más la primera cuota de cada venta si llega
     a menos de un mes (la base del ticket, `cash_ventas`, 19/10/2026): su suma es el New Cash.
-  · cash_total             los pagos de venta nueva más las señas: su suma es el Cash collected (`cash_collected`),
-    la base del ROAS Total. Las cuotas, renovaciones y upsells NO suman acá (`_es_venta_valida`), así que New Cash
-    puede superar a Cash total; el Cash total de Marketing, que sí las cuenta, está en Marketing › Rendimiento.
+  · cash_total             los pagos de venta nueva, las señas y las primeras cuotas que suman a esas ventas: su suma
+    es el Cash collected (`cash_collected`), la base del ROAS Total, y siempre contiene al New Cash (ADR-W027). Las
+    demás cuotas, renovaciones y upsells NO suman acá (`_es_venta_valida`); el Cash total de Marketing, que sí las
+    cuenta, está en Marketing › Rendimiento.
 
 Las agendas se abren con `workshop_agendas_service` (la lista de Revisar), que ya existía.
 """
@@ -90,7 +91,7 @@ def _personas(talleres, metrica, tz_nombre):
 
 def _cobros(talleres, metrica, tz_nombre):
     """new_cash: las ventas nuevas y las primeras cuotas que suman al ticket (`cash_ventas`);
-    cash_total: las ventas nuevas y las señas (`cash_collected`). Por embudo, como las suma `_resumen`."""
+    cash_total: las ventas nuevas, las señas y esas cuotas (`cash_collected`). Por embudo, como las suma `_resumen`."""
     filas, suma = [], 0.0
 
     def agregar(taller, embudo, venta, monto, fecha, cliente, tipo, medio):
@@ -110,11 +111,11 @@ def _cobros(talleres, metrica, tz_nombre):
                     continue
                 agregar(taller, embudo, venta, venta.monto, venta.date, venta.nombre_cliente,
                         'Venta nueva' if nueva else 'Seña', venta.metodo_pago)
-            if metrica == 'new_cash':
-                for claves, fecha, monto, _clase in cuotas_que_suman(pagos):
-                    dueno = next((v for v, p in zip(ventas, pagos) if set(p[0]) & set(claves or ())), None)
-                    agregar(taller, embudo, None, monto, fecha, dueno.nombre_cliente if dueno else None,
-                            'Primera cuota', None)
+            # Las primeras cuotas suman a New Cash y a Cash total
+            for claves, fecha, monto, _clase in cuotas_que_suman(pagos):
+                dueno = next((v for v, p in zip(ventas, pagos) if set(p[0]) & set(claves or ())), None)
+                agregar(taller, embudo, None, monto, fecha, dueno.nombre_cliente if dueno else None,
+                        'Primera cuota', None)
     filas.sort(key=lambda f: f['fecha'], reverse=True)
     senas = round(sum(f['monto'] for f in filas if f['tipo'] == 'Seña'), 2)
     cuotas = round(sum(f['monto'] for f in filas if f['tipo'] == 'Primera cuota'), 2)
