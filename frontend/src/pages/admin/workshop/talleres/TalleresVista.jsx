@@ -109,7 +109,7 @@ const TalleresVista = ({ events: eventos, realizados: llegados, onEdit, onRefres
     );
 
     return (
-        <div className="vista wt-talleres">
+        <div className={`vista wt-talleres${modo === 'lista' && (cargando || realizados.length > 0) ? ' wt-talleres--ancha' : ''}`}>
             {cargando ? (
                 <>
                     <div className="fila barra-tabla wt-barra">
