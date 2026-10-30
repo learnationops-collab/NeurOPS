@@ -2,10 +2,13 @@
 Orden: respuestas → regla → prioridad → estrategia de la prioridad → closer por horario.
 """
 
+from collections import Counter
+
 from app.agendas_v2.nucleo.datos import buscar, closers, es_closer, es_triage, horas_semana, ordenados, sesion_de
 from app.agendas_v2.nucleo.catalogos import TZ_DEF
 from app.agendas_v2.nucleo.disponibilidad import GENERICA, agenda_opt, ahora_ms, slots_persona
 from app.agendas_v2.nucleo.formulario import calificar, grupo_por_reglas
+from app.agendas_v2.nucleo.tiempo import clave_dia
 from app.agendas_v2.nucleo.util import js_truthy
 
 DIA = 86400000
@@ -15,6 +18,8 @@ VENTANA_LLENAR_DIAS = 7
 # Si en los días del evento no queda ningún horario, se suma un día por vez hasta encontrar uno: el lead
 # nunca se queda sin agendar porque la ventana se llenó. Tope de días agregados.
 DIAS_EXTRA_MAX = 14
+# Un día con menos horarios que esto está virtualmente lleno: no cuenta como día de la ventana (Santi, 29/10/2026).
+MIN_HORARIOS_DIA = 3
 
 
 def miembros_validos(d, g):
@@ -94,27 +99,54 @@ def _por_estrategia(estrategia, miembros, slots_de, ahora, carga_de, g=None):
     return {'slots': slots, 'regla': regla}
 
 
+def dias_con_lugar(slots):
+    """Cuántos días (en la zona del equipo) tienen MIN_HORARIOS_DIA horarios o más."""
+    por_dia = Counter(clave_dia(s['t'], TZ_DEF) for s in slots)
+    return sum(1 for n in por_dia.values() if n >= MIN_HORARIOS_DIA)
+
+
 def asignacion(ctx, d, opts=None):
-    """Como _asignacion, pero si el evento ofrece «N días» y no queda ningún horario en esos días, abre
-    un día más (y otro, hasta DIAS_EXTRA_MAX) hasta que aparezca alguno. `dias_extra` dice cuántos se
-    abrieron. La reserva recalcula con lo mismo, así que puede tomar un horario de un día abierto así."""
-    r = _asignacion(ctx, d, opts)
+    """Como _asignacion, con la ventana «N días» contada en días con lugar (dias_con_lugar): si el grupo del
+    lead tiene menos de N, se abre un día más (y otro, hasta DIAS_EXTRA_MAX). Se abren días antes de pasar a
+    otro grupo: recién si el grupo no tiene ningún horario en todos esos días, desborda como siempre (y si
+    tampoco hay nadie, sigue abriendo días). `dias_extra` dice cuántos se abrieron. La reserva recalcula con
+    lo mismo, así que puede tomar un horario de un día abierto así."""
+    opts = opts or {}
     ag = ctx.get('ag')
-    if r['slots'] or r.get('url') or not ag or (ag.get('reservas') or {}).get('modo') != 'dias':
-        return r
+    if not ag or (ag.get('reservas') or {}).get('modo') != 'dias':
+        return _asignacion(ctx, d, opts)
     n = ag['reservas'].get('n') or 0
-    for extra in range(1, DIAS_EXTRA_MAX + 1):
-        r2 = _asignacion({**ctx, 'ag': {**ag, 'reservas': {**ag['reservas'], 'n': n + extra}}}, d, opts)
-        if r2['slots']:
-            return {**r2, 'dias_extra': extra}
-    return r
+
+    def con(extra, **mas):
+        c = {**ctx, 'ag': {**ag, 'reservas': {**ag['reservas'], 'n': n + extra}}} if extra else ctx
+        r = _asignacion(c, d, {**opts, **mas})
+        return {**r, 'dias_extra': extra} if extra else r
+
+    propio = None
+    for extra in range(DIAS_EXTRA_MAX + 1):
+        r = con(extra, sin_desborde=True)
+        if r.get('url') or r.get('no'):
+            return r
+        if r['slots']:
+            propio = r
+            if dias_con_lugar(r['slots']) >= max(n, 1):
+                break
+    if propio:
+        return propio
+    primero = None
+    for extra in range(DIAS_EXTRA_MAX + 1):
+        r = con(extra)
+        if r['slots']:
+            return r
+        primero = primero or r
+    return primero
 
 
 def _asignacion(ctx, d, opts=None):
     """ctx: {preguntas, resp, dur, margen, evento_id, ag, reglas, resto, segmento, persona}. dur y margen son la
     propuesta del evento; cada closer usa lo suyo si lo ajustó (sesion_de).
     opts: {ahora, ocupado(persona_id, t, dur), carga_de(persona_id) → agendas futuras,
-           en_semana(persona_id, t, tz) → agendas en la semana de t, prueba}
+           en_semana(persona_id, t, tz) → agendas en la semana de t, prueba, sin_desborde (solo su grupo)}
     Devuelve {nota, grupo, grupo_regla, regla_idx, desborde, slots: [{t, p}], regla, aviso}."""
     opts = opts or {}
     ahora = ahora_ms() if opts.get('ahora') is None else opts['ahora']
@@ -163,7 +195,7 @@ def _asignacion(ctx, d, opts=None):
         # Desborde: si la prioridad elegida no tiene closers con lugar, pasa a las siguientes en orden.
         grupos = ordenados(d, 'grupos')
         desde = next(i for i, g in enumerate(grupos) if g['id'] == g0['id'])
-        for g in grupos[desde:]:
+        for g in grupos[desde : desde + 1] if opts.get('sin_desborde') else grupos[desde:]:
             miembros = miembros_validos(d, g)
             if not miembros:
                 continue
@@ -177,6 +209,9 @@ def _asignacion(ctx, d, opts=None):
                     'slots': x['slots'],
                     'regla': (g0['nombre'] + ' sin lugar → ' if otro else '') + x['regla'],
                 }
+
+        if opts.get('sin_desborde'):
+            return {**res, 'slots': [], 'regla': 'Sin horarios'}
 
     todos = [p for p in closers(d) if horas_semana(p) > 0 and not es_triage(d, p)]
     if todos:

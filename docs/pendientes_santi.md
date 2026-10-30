@@ -124,7 +124,7 @@ Falta la fórmula de backend; la presentación ya tiene su rótulo.
 - [ ] Mientras tanto, quien abre cada vista ve de qué habla: «Habla de:» bajo la cabecera de Workshop y en Todos (28/10/2026).
 
 
-## Workshop: Meta por hora (29/10, worktree meta-ventana-horaria, [ADR-W027](DECISIONS.md))
+## Workshop: Meta por hora (29/10, worktree meta-ventana-horaria, [ADR-W028](DECISIONS.md))
 Leads e inversión de cada taller entre el fin del anterior y el suyo (inicio + 2 h), con el desglose por hora de Meta.
 
 - [ ] Probar en el servidor de prueba: migración `f2a6c8e0b4d1`, «Sincronizar 180 días» (tramos de 30) y que el pedido por hora y `timezone_name` respondan (nunca corrió contra la cuenta real). Un fallo solo deja el log `Gasto por hora de la cuenta…` y los talleres siguen por día.
