@@ -25,6 +25,13 @@ def cuenta():
     return jsonify({'sin_leer': len(avisos_service.sin_leer(current_user))})
 
 
+@bp.route('/compartidos', methods=['GET'])
+@login_required
+def compartidos():
+    """Los leads en los que alguien me nombró con «@»: la sección «Compartidos conmigo»."""
+    return jsonify({'compartidos': avisos_service.compartidos(current_user)})
+
+
 @bp.route('/<int:aviso_id>/leido', methods=['POST'])
 @login_required
 def leido(aviso_id):

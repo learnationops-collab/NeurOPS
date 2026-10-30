@@ -147,6 +147,34 @@ def clientes_con_notas_sin_leer(usuario):
     return {c.id for c in Client.query.filter(Client.person_uuid.in_(personas)).with_entities(Client.id)}
 
 
+def compartidos(usuario):
+    """Los leads sobre los que alguien nombró a este usuario con «@» en una nota (un aviso `nota` a un grupo),
+    una fila por lead, del más nuevo al más viejo. Sean o no suyos: el lead se comparte para que conteste."""
+    from app.models import Client, LeadEventLog
+
+    avisos = [a for a in de(usuario, 'nota') if a.target_type == 'grupo' and a.person_uuid]
+    por_lead = {}
+    for a in avisos:
+        fila = por_lead.setdefault(a.person_uuid, {'aviso': a, 'sin_leer': False})
+        fila['sin_leer'] = fila['sin_leer'] or not leido(a, usuario)
+    if not por_lead:
+        return []
+    entradas = {e.id: e for e in LeadEventLog.query.filter(
+        LeadEventLog.id.in_([f['aviso'].origen_id for f in por_lead.values() if f['aviso'].origen == 'log'] or [0]))}
+    clientes = {c.person_uuid: c for c in Client.query.filter(Client.person_uuid.in_(list(por_lead)))}
+    salida = []
+    for uuid, f in por_lead.items():
+        a = f['aviso']
+        entrada = entradas.get(a.origen_id) if a.origen == 'log' else None
+        cliente = clientes.get(uuid)
+        salida.append({'person_uuid': uuid, 'client_id': cliente.id if cliente else None,
+                       'nombre': cliente.full_name if cliente else None,
+                       'de': entrada.user.username if entrada and entrada.user else None,
+                       'texto': (entrada.description if entrada else a.descripcion or '')[:200],
+                       'cuando': a.created_at.isoformat() + 'Z' if a.created_at else None, 'sin_leer': f['sin_leer']})
+    return salida
+
+
 def destinatarios_de_log(log_ids):
     """{id de la entrada del log: [nombres de a quién se le avisó]}, para el «notificados» del hilo."""
     from app.models import User
