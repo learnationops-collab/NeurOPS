@@ -374,3 +374,19 @@
 - **Decisión:** la respuesta suma `por_dia`: un renglón por día y por persona con las mismas cuentas de `_sumar`. El día se corta con la zona de quien mira (`zona_del_usuario`), no la del servidor. La pantalla (`diasDe`, `PorDia` en `TriageMetricas.jsx`) suma los renglones de todas o se queda con una persona, y solo se muestra con más de un día.
 - **Qué se pierde:** los días sin agendas no salen como fila. Cada día cuenta las llamadas que caen en él por su hora, no las que se agendaron ese día.
 - **Consecuencias:** `por_dia` y `por_persona` suman lo mismo que `total`; si `_sumar` cambia, cambian los tres.
+
+## ADR-W045: El chat de la ficha avisa escribiendo «@» y eligiendo a la persona
+
+- **Fecha:** 2026-10-30 · **Subsistema:** Ficha del lead (Comunicación) · **Estado:** implementada en local, sin desplegar. Leadership 1014.
+- **Contexto:** para avisar a alguien de una nota había una fila de botones con todo el equipo («Notificar a»), lejos de lo que se escribe. Kerwin pidió mencionar con `@` y elegir a la persona, para que el chat por lead sirva para compartir leads.
+- **Decisión:** `CampoConMenciones.jsx`: al escribir `@` se abre la lista del equipo (la de `comunicacion.equipo`), se filtra con lo que sigue y se elige con ↑ ↓ Enter/Tab o con el mouse; queda «@Nombre» en el texto. Al enviar, `notificar` lleva a quienes sigan nombrados. La lista va en el flujo, no flotando, porque el cuerpo de la ficha recorta lo que sobresale. Las menciones se resaltan en el hilo con los «notificados» que ya devolvía el backend. Reusa `disparador`/`insertar`/`plano` del `@` de Learnito (`pages/copiloto/menciones.js`).
+- **Qué se pierde:** la fila «Notificar a»: ya no se avisa a alguien sin nombrarlo en el texto. Un nombre repetido o con la misma raíz se elige de la lista.
+- **Consecuencias:** sin cambios en el backend (`notificar` ya existía). Base de «Compartidos conmigo» (Leadership 1015).
+
+## ADR-W046: Reprogramar elige a la persona y solo ofrece horarios libres, en la hora de quien reprograma y la del lead
+
+- **Fecha:** 2026-10-30 · **Subsistema:** Agendas 2.0 / Ficha (Confirmación › Reprogramar) · **Estado:** implementada en local, sin desplegar. Leadership 986 a 989.
+- **Contexto:** `SubReprogramar` pedía una fecha y una hora de una lista fija, sin mirar la disponibilidad, y no dejaba pasar la llamada a otra persona (de triage a closer o entre closers). El lead se veía solo en la zona de quien reprograma. Los choques se descubrían al guardar. Kerwin pidió ver el calendario de la persona, las dos zonas y poder cambiar de persona.
+- **Decisión:** `GET /ficha/<id>/reprogramar/opciones?persona_id=` devuelve las personas que atienden (closers y triage con horario en Team), sus horarios libres de 14 días (`a_triage.horarios_de`: horario de Team, agendas y Google; la duración es la sesión de su rol: diagnóstica o de closing), la zona del lead (por su teléfono) y las zonas a elegir. `POST /ficha/<id>/reprogramar` con `inicio` (ISO con zona), `persona_id` y `motivo` obligatorio sigue el camino de «Reagendado» (`process_agenda`): la vieja queda cerrada con quien la tenía y la nueva nace con quien la recibe, con su duración y su margen (`closer_destino_id`), y el horario se vuelve a comprobar al guardar. La pantalla muestra los horarios en la zona de quien reprograma y, al elegir, también en la del lead (editable). Sin `inicio` sigue el camino viejo (`fecha`).
+- **Qué se pierde:** ya no se escribe una hora a mano: solo se ofrecen horarios libres. Si no hay horarios en 14 días hay que elegir a otra persona.
+- **Consecuencias:** la agenda nueva cuenta para quien la recibe (embudo, `reagenda_de`), no para quien la tenía. El evento de Google se mueve por el camino de siempre (se borra el viejo y se crea el nuevo): falta probarlo en staging.
