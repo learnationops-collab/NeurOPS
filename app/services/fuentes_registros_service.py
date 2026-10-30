@@ -11,6 +11,7 @@ reunión (`base`); Otras es lo que no es de Setting ni de Workshop (solo agendas
   · show_up   las que asistieron.
   · ventas / new_cash   los pagos de venta nueva del período (su suma es el New Cash).
   · cash_total   todos los cobros de la fuente, y de cuáles son de una venta anterior.
+  · cash_anterior   solo esos cobros de ventas anteriores: lo que separa el ROAS Total del New Cash.
   · leads   Setting: las personas que entraron por una palabra clave (con su calificación); Workshop: los clics al
     grupo de WhatsApp, por campaña.
   · gasto   el gasto de Meta de los anuncios del embudo de la fuente, anuncio por anuncio.
@@ -22,7 +23,8 @@ from app.models import Ad, Conversation, MetaAnuncio, MetaGastoDiario
 from app.services import anuncios_service, conteo_agendas_service, fuentes_service, workshop_meta_service
 from app.services.comercial_service import ComercialService
 
-METRICAS = ('agendas', 'agendas_alta', 'reportadas', 'show_up', 'ventas', 'new_cash', 'cash_total', 'leads', 'gasto')
+METRICAS = ('agendas', 'agendas_alta', 'reportadas', 'show_up', 'ventas', 'new_cash', 'cash_total', 'cash_anterior',
+            'leads', 'gasto')
 
 TIPOS = {'cuota': 'Cuota', 'sena': 'Seña', 'seña': 'Seña', 'renovacion': 'Renovación', 'upsell': 'Upsell'}
 
@@ -141,6 +143,8 @@ def _cobros(fuente, metrica, desde, hasta):
             origen = f"{TIPOS.get(tipo, 'Cobro')} de una venta nueva de este período"
         else:
             origen = f"{TIPOS.get(tipo, 'Cobro')} de una venta anterior"
+        if metrica == 'cash_anterior' and 'anterior' not in origen:
+            continue
         monto = round(float(cobro.monto or 0), 2)
         suma += monto
         filas.append({
