@@ -1,4 +1,4 @@
-import { CalendarRange, Presentation } from 'lucide-react';
+import { CalendarRange, Megaphone, MessageCircle, MousePointerClick, Presentation } from 'lucide-react';
 import { Chip } from '../../../../components/standard';
 import './marcaDeBase.css';
 
@@ -9,11 +9,19 @@ import './marcaDeBase.css';
  *  · `periodo`: todo lo cobrado en el período de los clientes de la fuente ÷ el gasto de Meta del período (Marketing).
  *  · `taller`: lo que trajo la cohorte de los talleres elegidos ÷ lo invertido en ellos (Workshop).
  *
+ * Lo mismo para el «lead» (868 y 831, 29/10/2026): Setting y Workshop llaman lead a cosas distintas, y cada cifra de lead o de
+ * costo por lead lleva el ícono de la suya.
+ *  · `entradas`: personas que escribieron una palabra clave (Setting). · `clics`: clics al grupo de WhatsApp (Workshop).
+ *  · `meta`: la columna «Leads» de Meta (las inscripciones de la landing).
+ *
  * `color`: el de la fuente (Setting rosa, Workshop azul). `detalle`: «$4.143 de $685», sin repetir el título. Una sola línea: el tooltip del DS (`[data-tip]`) no parte textos.
  */
 const BASES = {
     periodo: { Icono: CalendarRange, titulo: 'Cobrado del período' },
     taller: { Icono: Presentation, titulo: 'Cohorte de los talleres' },
+    entradas: { Icono: MessageCircle, titulo: 'Lead = entrada por palabra clave' },
+    clics: { Icono: MousePointerClick, titulo: 'Lead = clic al grupo de WhatsApp' },
+    meta: { Icono: Megaphone, titulo: 'Lead = Leads de Meta' },
 };
 
 const MarcaDeBase = ({ base, color = 'var(--info)', titulo = null, detalle = '' }) => {

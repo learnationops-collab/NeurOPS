@@ -123,7 +123,12 @@ Gestiones y decisiones.
 ## Marketing: una sola definición de lead y de gasto (tarea 868 de Leadership)
 Falta la fórmula de backend; la presentación ya tiene su rótulo.
 
-- [ ] Definir cuál es «lead» (hoy: 2.448 en Palabras clave = persona × palabra clave, 2.397 en Entrantes = personas, 2.647 en Conversaciones = mensajes de apertura enviados) y cuál es «gasto» ($3.366 en la tabla, $3.342 en la tarjeta de Setting, $4.279 en Meta Ads, $4.270 en Todos › Gasto en Meta). Cada pestaña tiene que mostrar ese número o decir, con su lista, cuánto aporta cada parte. El cálculo vive en `anuncios_service.py` / `fuentes_service.py` y no se tocó.
+- [x] Definido y aplicado (29/10, ADR-W029, `docs/MODELO/MARKETING.md`): lead de Setting = entrada por palabra clave (2.453 en 29/09–28/10: Palabras clave, Todos y Entrantes; Entrantes además cuenta 2.402 personas); gasto = Meta del embudo (tabla = tarjeta Setting = $3.352; Meta Ads y Gasto en Meta = $4.284 con Workshop y Contratación). Conversaciones ya no es una pestaña.
+- [ ] **Decisión de Kerwin (lead de Workshop):** Todos usa clics al grupo de WhatsApp (325) y Workshop › Resumen los Leads de Meta (607). Cada cifra lleva su ícono; ¿cuál es «el» lead de Workshop para comparar con Setting?
+- [ ] **Decisión de Kerwin (CAC):** costo por venta = gasto ÷ pagos de venta nueva; CAC = gasto ÷ personas que compraron (hoy iguales: 13 y 5). ¿Está bien separarlos o CAC = costo por venta?
+- [ ] La inversión de los 3 talleres del período ($796) no es el gasto de Workshop del período ($821): la ventana del taller no cubre los días sueltos. Dos cuentas con ícono, no se unificaron.
+- [ ] El «Cobrado» de la tabla de palabras clave ($9.718) y el Cash total de la tarjeta de Setting ($10.418) son distintos (atribución por palabra clave contra origen del cliente).
+- [ ] `TablaAnuncios.test.jsx` y los tests de `FuentesResumen`/Entrantes no se corrieron: la tabla ahora llama `usarFormulas(datos.formulas)` y los totales dependen de `formulas` (si el fixture no las trae, los costos salen vacíos). `metricas.test.js` ya las carga.
 - [ ] Mientras tanto, quien abre cada vista ve de qué habla: «Habla de:» bajo la cabecera de Workshop y en Todos (28/10/2026).
 
 

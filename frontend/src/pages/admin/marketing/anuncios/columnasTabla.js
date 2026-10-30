@@ -14,7 +14,7 @@ export const PCT_CALIFICACION = {
     key: 'pct_calificados', label: '% de calificación', formato: 'pct',
     ayuda: 'Calificados ÷ leads entrantes.',
 };
-export const OCULTAS_INICIALES = [PCT_CALIFICACION.key];
+export const OCULTAS_INICIALES = [PCT_CALIFICACION.key, 'clientes_nuevos'];
 
 /** Todas las columnas que se pueden elegir, en el orden de siempre (el % va después del costo por calificado). */
 export const COLUMNAS_TABLA = (() => {
@@ -26,15 +26,16 @@ export const COLUMNAS_TABLA = (() => {
 /** Las columnas semejantes, que se pueden juntar en una sola. `corto` es el rótulo dentro de la celda. */
 export const GRUPOS = [
     { key: 'leads', label: 'Leads', cols: ['entrantes', 'calificados', 'descalificados', 'en_conversacion', 'sin_respuesta'] },
-    { key: 'costos', label: 'Inversión y costos', cols: ['gasto', 'cpl', 'cpl_calificado', 'costo_agenda', 'costo_venta'] },
-    { key: 'resultados', label: 'Resultados', cols: ['agendas', 'ventas', 'cobrado', 'roas'] },
+    { key: 'costos', label: 'Inversión y costos', cols: ['gasto', 'cpl', 'cpl_calificado', 'costo_agenda', 'costo_venta', 'cac'] },
+    { key: 'resultados', label: 'Resultados', cols: ['agendas', 'ventas', 'clientes_nuevos', 'ingreso_venta', 'cobrado', 'roas'] },
 ];
 
 export const CORTO = {
     entrantes: 'Entrantes', calificados: 'Calificados', descalificados: 'Descalif.', en_conversacion: 'En conv.',
     sin_respuesta: 'Sin resp.', gasto: 'Gastado', cpl: 'Por lead', cpl_calificado: 'Por calif.',
     costo_agenda: 'Por agenda', costo_venta: 'Por venta', agendas: 'Agendas', ventas: 'Ventas',
-    cobrado: 'Cobrado', roas: 'ROAS Total', pct_calificados: '% calif.',
+    cobrado: 'Cobrado', roas: 'ROAS Total', pct_calificados: '% calif.', clientes_nuevos: 'Compradores',
+    cac: 'CAC', ingreso_venta: 'Por venta',
 };
 
 const grupoDe = Object.fromEntries(GRUPOS.flatMap((g) => g.cols.map((k) => [k, g])));

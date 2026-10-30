@@ -48,6 +48,7 @@ agrupado de `ticket_service`.
 """
 from app import db
 from app.services import conteo_agendas_service
+from app.services.marketing_formulas import aplicar, dividir  # noqa: F401  (`dividir` lo importan otros módulos desde acá)
 from app.services.fuente_service import FUENTE_SETTING, es_workshop_landing, es_workshop_vivo, normalizar
 from app.services.procedencia_ingresos_service import (
     PROCEDENCIAS,
@@ -65,36 +66,20 @@ _NO_ES_FUENTE = ('s/f', 'n/a', '')
 _NO_ES_FUENTE_SI_CONTIENE = ('entrevista', 'diagnostica', 'diagnóstica')
 
 
-def dividir(numerador, denominador, decimales=2):
-    """Cociente redondeado, o None si no hay denominador (nunca un 0 que parezca dato)."""
-    return round(numerador / denominador, decimales) if denominador else None
-
-
 def metricas_de_fuente(base):
-    """Completa las cifras de una fuente con los costos y el ROAS doble. Sin gasto, los costos y los
-    dos ROAS son None; sin denominador, el costo correspondiente."""
-    gasto = round(base.get('gasto', 0.0), 2)
-    con_gasto = gasto > 0
-    new_cash, cash_total = round(base.get('new_cash', 0.0), 2), round(base.get('cash_total', 0.0), 2)
+    """Completa las cifras de una fuente con los costos, el ticket y el ROAS doble (`marketing_formulas`): las
+    mismas cuentas que las filas de palabras clave. Sin gasto, los costos y los dos ROAS son None; sin
+    denominador, el costo correspondiente."""
     # None cuando no se sabe (un segmento elegido: ahí la cifra sale de otra cuenta).
     anterior = base.get('cash_anterior')
-    return {
+    redondeada = {
         **base,
-        'gasto': gasto,
-        'new_cash': new_cash,
-        'cash_total': cash_total,
+        'gasto': round(base.get('gasto', 0.0), 2),
+        'new_cash': round(base.get('new_cash', 0.0), 2),
+        'cash_total': round(base.get('cash_total', 0.0), 2),
         'cash_anterior': None if anterior is None else round(anterior, 2),
-        # Igual que Workshop: asistieron ÷ citas con resultado (asistieron + no show), no ÷ todas las agendas.
-        'pct_show_up': dividir(base.get('show_up', 0) * 100, base.get('reportadas', base.get('agendas', 0)), 1),
-        'pct_upsell': dividir(base.get('clientes_upsell', 0) * 100, base.get('clientes', 0), 1),
-        'cpl': dividir(gasto, base.get('leads', 0)) if con_gasto else None,
-        # SIEMPRE por las agendas de fecha de alta (`conteo_agendas_service`), aunque las tarjetas cuenten por
-        # reunión: lo que Meta gastó genera agendas al darse de alta (Kerwin, 28/10/2026).
-        'costo_agenda': dividir(gasto, base.get('agendas_alta', base.get('agendas', 0))) if con_gasto else None,
-        'costo_venta': dividir(gasto, base.get('ventas', 0)) if con_gasto else None,
-        'roas_new_cash': dividir(new_cash, gasto) if con_gasto else None,
-        'roas_total': dividir(cash_total, gasto) if con_gasto else None,
     }
+    return {**redondeada, **aplicar(redondeada)}
 
 
 def fuente_de_cobro(por_clave, balde):
@@ -112,7 +97,7 @@ def clientes_nuevos(filas):
 
 
 def sumar_cobros(cobros):
-    """{fuente: {new_cash, cash_total, cash_anterior, ventas, cuotas, cuotas_monto, upsells, upsells_monto,
+    """{fuente: {new_cash, cash_total, cash_anterior, ventas, clientes_nuevos (personas), cuotas, cuotas_monto, upsells, upsells_monto,
     clientes, clientes_upsell}} y el resto en `otras` (cash_total, cobros y su `detalle` por procedencia).
 
     `cobros`: dicts `{monto, es_venta, es_cuota, es_upsell, cliente, por_clave, balde}`. Un reembolso (monto
@@ -157,6 +142,7 @@ def sumar_cobros(cobros):
     for k, fila in fuentes.items():
         fila['clientes'], fila['clientes_upsell'] = len(clientes[k]), len(compran_upsell[k])
         nuevos = clientes_nuevos(c for c in cobros if fuente_de_cobro(c['por_clave'], c['balde']) == k)
+        fila['clientes_nuevos'] = len(nuevos)
         fila['cash_anterior'] = sum(m for cliente, m in sin_venta[k].items() if cliente not in nuevos)
     etiquetas = {p['key']: p['label'] for p in PROCEDENCIAS}
     otras['detalle'] = [{'key': b, 'label': etiquetas.get(b, b), 'cobros': v['cobros'], 'monto': round(v['monto'], 2)}
@@ -244,7 +230,7 @@ def resumen(desde, hasta, filas, cobros, claves, embudos, base=conteo_agendas_se
         meta = gasto_de.get(k) or {'gasto': 0.0, 'anuncios': 0}
         salida.append(metricas_de_fuente({
             **f, **cobros_fuente[k],
-            'leads': leads[k], 'gasto': meta['gasto'], 'anuncios': meta['anuncios'],
+            'leads': leads[k], 'leads_meta': meta.get('leads', 0), 'gasto': meta['gasto'], 'anuncios': meta['anuncios'],
             'agendas': agendas[k]['agendas'], 'show_up': agendas[k]['show_up'],
             'reportadas': agendas[k]['reportadas'], 'agendas_alta': agendas_alta[k]['agendas'],
             'agendas_dias': agendas[k]['dias'],

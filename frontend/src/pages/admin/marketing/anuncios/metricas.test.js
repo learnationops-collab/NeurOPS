@@ -1,5 +1,17 @@
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { usarFormulas } from './formulas';
 import { agruparFilas, completar, dinero, formatear, ordenar, rangoDePeriodo, serieDe, textoMeta, totalesDe } from './metricas';
+
+// Las cuentas las manda el backend (`marketing_formulas.FORMULAS`); acá, las que usan estos tests.
+beforeAll(() => usarFormulas([
+    { key: 'pct_calificados', num: 'calificados', den: ['entrantes'], por: 100, dec: 1 },
+    { key: 'pct_no_calificados', num: 'no_calificados', den: ['entrantes'], por: 100, dec: 1 },
+    { key: 'cpl', num: 'gasto', den: ['leads'], dec: 2, con_gasto: true },
+    { key: 'cpl_calificado', num: 'gasto', den: ['calificados'], dec: 2, con_gasto: true },
+    { key: 'costo_agenda', num: 'gasto', den: ['agendas_alta', 'agendas'], dec: 2, con_gasto: true },
+    { key: 'costo_venta', num: 'gasto', den: ['ventas'], dec: 2, con_gasto: true },
+    { key: 'roas', num: 'cobrado', den: ['gasto'], dec: 2, con_gasto: true },
+]));
 
 const fila = (extra) => ({ entrantes: 0, calificados: 0, descalificados: 0, agendas: 0, ventas: 0, gasto: 0, cobrado: 0, ...extra });
 

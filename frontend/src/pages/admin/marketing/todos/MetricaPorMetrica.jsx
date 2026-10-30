@@ -2,6 +2,7 @@ import { Tip } from '../../../comercial/components/Shared';
 import useEstadoGuardado from '../../../../hooks/useEstadoGuardado';
 import { SETTING, WORKSHOP, TITULO_DE, anchosDe, diferenciaDe, formatos, ganadorDe } from './comparacion';
 import { Accordion, CifraConCuenta } from '../../../../components/standard';
+import MarcaDeBase from '../anuncios/MarcaDeBase';
 
 /**
  * «Métrica por métrica» de Todos: cada cifra con la de Setting y la de Workshop lado a lado (con su barra,
@@ -33,6 +34,12 @@ const Fila = ({ fila, f, onVer }) => {
             <div className="td-fila-nombre" data-tip={fila.hint || undefined}>
                 <span className="t-body td-fuerte">{fila.label}</span>
                 {fila.hint && <span className="t-cap mut">{fila.hint}</span>}
+                {fila.marca && (
+                    <span className="td-marcas">
+                        <MarcaDeBase base={fila.marca[0]} color={SETTING.color} />
+                        <MarcaDeBase base={fila.marca[1]} color={WORKSHOP.color} />
+                    </span>
+                )}
             </div>
             <Valor texto={f[fila.fmt](fila.s)} cuenta={fila.ds} metrica={fila.metrica} ancho={s} fuente={SETTING} gana={gana === SETTING.key}
                 onVer={onVer ? (m, t) => onVer('setting', m, t) : null} />

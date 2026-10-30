@@ -12,7 +12,6 @@ import { formatear } from '../anuncios/metricas';
 export const SETTING = { key: 'setting', label: 'Setting', color: 'var(--brand-secondary)' };
 export const WORKSHOP = { key: 'workshop', label: 'Workshop', color: 'var(--info)' };
 
-const razon = (a, b) => (b ? a / b : null);
 const porCien = (v) => (v === null || v === undefined ? null : v / 100);
 const num = (v) => formatear(v, 'num');
 /** El título de cada lista que se puede abrir (`fuentes_registros_service.METRICAS`). */
@@ -32,10 +31,11 @@ export const cuentaDe = (id, f, d) => {
         case 'lead_agenda': return { a: parte(num(f.agendas), 'agendas'), b: parte(num(f.leads), 'leads', 'leads') };
         case 'agenda_show': return { a: parte(num(f.show_up), 'show_up'), b: parte(num(reportadas), 'reportadas', 'con resultado') };
         case 'show_venta': return { a: parte(num(f.ventas), 'ventas'), b: parte(num(f.show_up), 'show_up', 'que asistieron') };
-        case 'ticket': return { a: parte(d(f.new_cash), 'new_cash'), b: parte(num(f.ventas), 'ventas', 'ventas') };
         case 'roas_new_cash': return { a: parte(d(f.new_cash), 'new_cash'), b: parte(d(f.gasto), 'gasto', 'gastados') };
         case 'roas_total': return { a: parte(d(f.cash_total), 'cash_total'), b: parte(d(f.gasto), 'gasto', 'gastados') };
-        case 'costo_venta': return { a: parte(d(f.gasto), 'gasto', 'gastados'), b: parte(num(f.ventas), 'ventas', 'ventas') };
+        case 'costo_venta': return { a: parte(d(f.gasto), 'gasto', 'gastados'), b: parte(num(f.ventas), 'ventas', 'pagos de venta') };
+        case 'cac': return { a: parte(d(f.gasto), 'gasto', 'gastados'), b: parte(num(f.clientes_nuevos), 'ventas', 'compradores') };
+        case 'ingreso_venta': return { a: parte(d(f.new_cash), 'new_cash'), b: parte(num(f.ventas), 'ventas', 'pagos de venta') };
         case 'cpl': return { a: parte(d(f.gasto), 'gasto', 'gastados'), b: parte(num(f.leads), 'leads', 'leads') };
         // Siempre las agendas por fecha de alta, aunque se cuente por reunión: lo que Meta gastó genera agendas al
         // darse de alta (28/10/2026). El backend manda esas en `agendas_alta`.
@@ -57,26 +57,25 @@ export const formatos = (moneda) => ({
 const METRICA_DE = {
     lead_agenda: 'agendas', agendas: 'agendas', agenda_show: 'reportadas', show_up: 'show_up', ventas: 'ventas',
     show_venta: 'ventas', cuotas: 'cash_total', upsells: 'cash_total', new_cash: 'new_cash', cash_total: 'cash_total',
-    ticket: 'ventas', roas_new_cash: 'new_cash', roas_total: 'cash_total', costo_show: 'show_up', costo_venta: 'ventas',
+    ingreso_venta: 'ventas', cac: 'ventas', roas_new_cash: 'new_cash', roas_total: 'cash_total', costo_show: 'show_up', costo_venta: 'ventas',
     leads: 'leads', gasto: 'gasto', cpl: 'leads', costo_agenda: 'agendas_alta',
 };
 
 export const gruposDe = (s, w, moneda = 'USD') => {
     const d = (v) => formatear(v, 'money', moneda);
-    const reportadas = (f) => f.reportadas ?? f.agendas;
     const grupos = [
     { id: 'embudo', titulo: 'Embudo', filas: [
-        { id: 'leads', label: 'Leads entrantes', tipo: 'vol', fmt: 'n', s: s.leads, w: w.leads,
-            hint: 'Setting: palabras clave · Workshop: clics al grupo' },
+        // Miden cosas distintas: la marca de cada fuente dice cuál (entradas por palabra clave / clics al grupo).
+        { id: 'leads', label: 'Leads entrantes', tipo: 'vol', fmt: 'n', s: s.leads, w: w.leads, marca: ['entradas', 'clics'] },
         { id: 'agendas', label: 'Agendas', tipo: 'vol', fmt: 'n', s: s.agendas, w: w.agendas },
-        { id: 'lead_agenda', label: 'Lead → agenda', hint: 'agendas ÷ leads', tipo: 'up', fmt: 'p', pp: true,
-            s: razon(s.agendas, s.leads), w: razon(w.agendas, w.leads) },
+        { id: 'lead_agenda', label: 'Lead → agenda', tipo: 'up', fmt: 'p', pp: true,
+            s: porCien(s.pct_lead_agenda), w: porCien(w.pct_lead_agenda), marca: ['entradas', 'clics'] },
         { id: 'show_up', label: 'Show up', tipo: 'vol', fmt: 'n', s: s.show_up, w: w.show_up },
-        { id: 'agenda_show', label: 'Agenda → show', hint: 'asistieron ÷ citas con resultado', tipo: 'up', fmt: 'p', pp: true,
-            s: razon(s.show_up, reportadas(s)), w: razon(w.show_up, reportadas(w)) },
+        { id: 'agenda_show', label: 'Agenda → show', tipo: 'up', fmt: 'p', pp: true,
+            s: porCien(s.pct_show_up), w: porCien(w.pct_show_up) },
         { id: 'ventas', label: 'Ventas', tipo: 'vol', fmt: 'n', s: s.ventas, w: w.ventas },
-        { id: 'show_venta', label: 'Show → venta', hint: 'ventas ÷ asistieron', tipo: 'up', fmt: 'p', pp: true,
-            s: razon(s.ventas, s.show_up), w: razon(w.ventas, w.show_up) },
+        { id: 'show_venta', label: 'Show → venta', tipo: 'up', fmt: 'p', pp: true,
+            s: porCien(s.pct_show_venta), w: porCien(w.pct_show_venta) },
         { id: 'cuotas', label: 'Cuotas cobradas', hint: `${s.cuotas} · ${w.cuotas} cuotas`, tipo: 'vol', fmt: 'd',
             s: s.cuotas_monto, w: w.cuotas_monto },
         { id: 'upsells', label: 'Upsells', hint: `${s.upsells} · ${w.upsells} upsells`, tipo: 'vol', fmt: 'd',
@@ -88,17 +87,17 @@ export const gruposDe = (s, w, moneda = 'USD') => {
         { id: 'gasto', label: 'Importe gastado', tipo: 'vol', fmt: 'd', s: s.gasto, w: w.gasto },
         { id: 'new_cash', label: 'New Cash', tipo: 'vol', fmt: 'd', s: s.new_cash, w: w.new_cash },
         { id: 'cash_total', label: 'Cash total', tipo: 'vol', fmt: 'd', s: s.cash_total, w: w.cash_total },
-        { id: 'ticket', label: 'Ticket por venta', hint: 'New Cash ÷ ventas', tipo: 'up', fmt: 'd',
-            s: razon(s.new_cash, s.ventas), w: razon(w.new_cash, w.ventas) },
-        { id: 'roas_new_cash', label: 'ROAS New Cash', hint: 'New Cash ÷ gastado', tipo: 'up', fmt: 'x', s: s.roas_new_cash, w: w.roas_new_cash },
-        { id: 'roas_total', label: 'ROAS Total', hint: 'Cash total ÷ gastado', tipo: 'up', fmt: 'x', s: s.roas_total, w: w.roas_total },
+        { id: 'ingreso_venta', label: 'Ingreso por venta', tipo: 'up', fmt: 'd', s: s.ingreso_venta, w: w.ingreso_venta },
+        { id: 'roas_new_cash', label: 'ROAS New Cash', tipo: 'up', fmt: 'x', s: s.roas_new_cash, w: w.roas_new_cash },
+        { id: 'roas_total', label: 'ROAS Total', tipo: 'up', fmt: 'x', s: s.roas_total, w: w.roas_total },
     ] },
     { id: 'costos', titulo: 'Costos', filas: [
-        { id: 'cpl', label: 'Costo por lead', tipo: 'down', fmt: 'd', s: s.cpl, w: w.cpl },
-        { id: 'costo_agenda', label: 'Costo por agenda', hint: 'gastado ÷ agendas por fecha de alta', tipo: 'down', fmt: 'd', s: s.costo_agenda, w: w.costo_agenda },
+        { id: 'cpl', label: 'Costo por lead', tipo: 'down', fmt: 'd', s: s.cpl, w: w.cpl, marca: ['entradas', 'clics'] },
+        { id: 'costo_agenda', label: 'Costo por agenda', tipo: 'down', fmt: 'd', s: s.costo_agenda, w: w.costo_agenda },
         { id: 'costo_show', label: 'Costo por show', tipo: 'down', fmt: 'd',
-            s: razon(s.gasto, s.show_up), w: razon(w.gasto, w.show_up) },
-        { id: 'costo_venta', label: 'Costo por venta', hint: 'CAC', tipo: 'down', fmt: 'd', s: s.costo_venta, w: w.costo_venta },
+            s: s.costo_show, w: w.costo_show },
+        { id: 'costo_venta', label: 'Costo por venta', tipo: 'down', fmt: 'd', s: s.costo_venta, w: w.costo_venta },
+        { id: 'cac', label: 'CAC', tipo: 'down', fmt: 'd', s: s.cac, w: w.cac },
     ] },
     ];
     return grupos.map((g) => ({

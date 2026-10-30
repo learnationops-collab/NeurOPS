@@ -637,19 +637,22 @@ def mapear_automatico():
 
 
 def gasto_por_embudo(desde, hasta):
-    """El gasto de Meta en [desde, hasta] por embudo, para Rendimiento: `[{embudo, gasto, anuncios,
-    dias: {fecha: gasto}}]` en el orden de `EMBUDOS`, más el de los sin clasificar (`embudo: None`)
+    """El gasto de Meta en [desde, hasta] por embudo, para Rendimiento: `[{embudo, gasto, leads (la columna
+    Leads de Meta), anuncios, dias: {fecha: gasto}}]` en el orden de `EMBUDOS`, más el de los sin clasificar (`embudo: None`)
     si gastaron."""
-    por = {e: {'embudo': e, 'gasto': 0.0, 'anuncios': set(), 'dias': defaultdict(float)} for e in (*EMBUDOS, None)}
-    for embudo, meta_ad_id, fecha, gasto in db.session.query(
-            MetaAnuncio.embudo, MetaGastoDiario.meta_ad_id, MetaGastoDiario.fecha, MetaGastoDiario.gasto) \
+    por = {e: {'embudo': e, 'gasto': 0.0, 'leads': 0, 'anuncios': set(), 'dias': defaultdict(float)}
+           for e in (*EMBUDOS, None)}
+    for embudo, meta_ad_id, fecha, gasto, leads in db.session.query(
+            MetaAnuncio.embudo, MetaGastoDiario.meta_ad_id, MetaGastoDiario.fecha, MetaGastoDiario.gasto,
+            MetaGastoDiario.leads) \
             .join(MetaAnuncio, MetaAnuncio.meta_ad_id == MetaGastoDiario.meta_ad_id) \
             .filter(MetaGastoDiario.fecha >= desde, MetaGastoDiario.fecha <= hasta, MetaGastoDiario.gasto > 0):
         fila = por.get(embudo, por[None])
         fila['gasto'] += gasto
+        fila['leads'] += leads or 0
         fila['anuncios'].add(meta_ad_id)
         fila['dias'][fecha.isoformat()] += gasto
-    return [{'embudo': f['embudo'], 'gasto': round(f['gasto'], 2), 'anuncios': len(f['anuncios']),
+    return [{'embudo': f['embudo'], 'gasto': round(f['gasto'], 2), 'leads': f['leads'], 'anuncios': len(f['anuncios']),
              'dias': {d: round(g, 2) for d, g in sorted(f['dias'].items())}}
             for f in por.values() if f['embudo'] in EMBUDOS or f['gasto']]
 

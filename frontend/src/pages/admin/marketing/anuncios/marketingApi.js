@@ -1,5 +1,6 @@
 import api from '../../../../services/api';
 import { olvidarCache } from '../../../../services/cacheDeVistas';
+import { usarFormulas } from './formulas';
 
 // Lo que cambia anuncios o claves deja viejo lo recordado de todas las pestañas de Marketing.
 const cambia = (r) => { olvidarCache('mk:'); return r.data; };
@@ -10,7 +11,7 @@ const cambia = (r) => { olvidarCache('mk:'); return r.data; };
  *  sin; coma): las cifras de las fuentes acotadas a esos segmentos, siempre por fecha de alta. */
 export const pedirTablero = (desde, hasta, { base, segmento, ...config } = {}) =>
     api.get('/marketing/anuncios', { params: { desde, hasta, ...(base ? { base } : {}), ...(segmento ? { segmento } : {}) }, ...config })
-        .then((r) => r.data);
+        .then((r) => { usarFormulas(r.data?.formulas); return r.data; });
 
 export const pedirAnunciosDeMeta = (desde, hasta, config = {}) =>
     api.get('/marketing/anuncios/meta', { params: { desde, hasta }, ...config }).then((r) => r.data);

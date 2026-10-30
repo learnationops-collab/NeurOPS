@@ -88,3 +88,6 @@
 @media (prefers-reduced-motion:reduce){
     .dc-shell .td-barra-embudo,.dc-shell .td-pista i{transition:none}
 }
+
+/* Las marcas de qué es un «lead» (entradas / clics) junto al nombre de la fila. */
+.dc-shell .td-marcas{display:inline-flex;align-items:center;gap:var(--s1,4px);margin-left:var(--s2)}

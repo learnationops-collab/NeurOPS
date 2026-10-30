@@ -155,6 +155,8 @@ const WorkshopKpiCards = ({ totalStats, eventsCount, cambios, anterior, onVer = 
                         <div className="kpi-cab">
                             <p className="t-eyebrow trunc">{k.label}</p>
                             <Tip texto={k.ayuda} titulo={k.label} />
+                            {/* El lead de un taller es el de Meta (inscripción a la landing); en Todos es el clic al grupo de WhatsApp. */}
+                            {k.key === 'leads' && <MarcaDeBase base="meta" color="var(--info)" />}
                             {k.base && nTalleres > 0 && datos && (
                                 <MarcaDeBase base="taller" titulo={`Cohorte de ${rotuloBase}`}
                                     detalle={`${dinero(k.key === 'roas' ? totalStats.cash : totalStats.cash_ventas)} de ${dinero(totalStats.inversion)}${fechasBase ? ` · ${fechasBase}` : ''}`} />

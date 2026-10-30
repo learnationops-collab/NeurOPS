@@ -69,6 +69,7 @@ def get_entrantes():
     mandó (`id_option_send`) y el último que contestó (`id_option`), con su nombre del catálogo de
     mensajes. Cada setter ve solo los suyos, como en el monitor.
     """
+    from collections import Counter
     from datetime import date, datetime, time, timedelta
     from app.models import ConversationalMessage, LeadAnswer, Conversation, MetaAnuncio
     from app.services import anuncios_service as servicio, calificacion_service
@@ -118,6 +119,9 @@ def get_entrantes():
     leads = {l.id: l for tanda in servicio._en_tandas(grupo_de)
              for l in Conversation.query.filter(Conversation.id.in_(tanda))}
     descalificados = calificacion_service.descalificados()
+    # Las entradas que cuentan como «lead» en Marketing (persona × palabra clave, la de su primera interacción dentro del
+    # período): la misma cuenta de Palabras clave y de Todos, así cada persona dice cuánto aporta (868).
+    entradas = Counter(e['lead_id'] for e in servicio.entradas_del_periodo(desde_dt, hasta_dt, clave_de_anuncio))
     filas = []
     for clave_persona, grupo in personas.items():
         historia = grupo['filas']
@@ -151,10 +155,12 @@ def get_entrantes():
             'ultimo_enviado': mensaje(paso.get('enviado')),
             'ultimo_respondido': mensaje(paso.get('respondido')),
             'interacciones': len(historia),
+            'entradas': entradas.get(lead.id, 0),
             'primera_at': historia[0][0].isoformat() + 'Z',
             'ultima_at': historia[-1][0].isoformat() + 'Z',
         })
     filas.sort(key=lambda f: f['ultima_at'], reverse=True)
     return jsonify({'desde': desde.isoformat(), 'hasta': hasta.isoformat(), 'filas': filas,
+                    'totales': {'personas': len(filas), 'leads': sum(f['entradas'] for f in filas)},
                     # El catálogo, para nombrar cada paso del historial de una persona.
                     'mensajes': {mid: {'titulo': t, 'categoria': c} for mid, (t, c) in mensajes.items()}}), 200

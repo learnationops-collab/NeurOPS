@@ -1,6 +1,23 @@
 # Marketing y segmentos — modelo vigente
 
-Cómo se cuenta hoy cada cifra de Marketing (Setting, Workshop, Todos) y cómo se parte por segmento A/B/C/D. Las decisiones que llevaron a esto, en [DECISIONS.md](../DECISIONS.md) (ADR-W015, ADR-W019, ADR-W020, ADR-W021 y ADR-W027). Código principal: `app/services/anuncios_service.py`, `fuentes_service.py`, `fuentes_registros_service.py`, `segmentos_*.py`; pantallas en `frontend/src/pages/admin/marketing/`.
+Cómo se cuenta hoy cada cifra de Marketing (Setting, Workshop, Todos) y cómo se parte por segmento A/B/C/D. Las decisiones que llevaron a esto, en [DECISIONS.md](../DECISIONS.md) (ADR-W015, ADR-W019, ADR-W020, ADR-W021, ADR-W027 y ADR-W029). Código principal: `app/services/anuncios_service.py`, `fuentes_service.py`, `fuentes_registros_service.py`, `segmentos_*.py`; pantallas en `frontend/src/pages/admin/marketing/`.
+
+## Lead, gasto y venta: una sola definición (ADR-W029)
+
+Las cuentas viven en `app/services/marketing_formulas.py` (`FORMULAS`); `anuncios_service.metricas`, `fuentes_service.metricas_de_fuente` y la pantalla (`anuncios/formulas.js`, que lee `tablero.formulas`) usan la misma. Cada pestaña dice con un ícono (`MarcaDeBase`) qué cuenta:
+
+| Cifra | Qué es | Dónde se ve |
+|---|---|---|
+| **Lead de Setting** | entrada de una persona por una palabra clave, una vez por palabra, con su primera interacción en el período (`entradas_del_periodo`). 2.453 en 29/09–28/10 | Palabras clave, Todos, Entrantes (KPI «Entrantes»; la columna «Leads» dice cuánto aporta cada persona y las personas con actividad son 2.402) |
+| **Lead de Workshop** | clic al grupo de WhatsApp desde las landings (325 en el mismo período) | Todos, Workshop › Anuncios de Meta |
+| **Leads de Meta** | columna «Leads» de Meta (607 de Workshop): inscripciones a la landing. Es el lead de Workshop › Resumen y de cada taller; `leads_meta` y `cpl_meta` en la fuente | Workshop › Resumen y talleres |
+| **Gasto** | gasto de Meta de los anuncios del embudo (`MetaAnuncio.embudo`): Setting $3.352, Workshop $821, Contratación $110 = Meta Ads $4.284 | Todos › Gasto en Meta y Meta Ads (total), tarjeta y tabla de Setting (embudo `setting`: la tabla ya no suma anuncios de otro embudo que lleven una palabra clave en el nombre) |
+| **Inversión de un taller** | gasto de los anuncios de Workshop del día siguiente al taller anterior hasta el taller (`workshop_meta_service.ventanas`); 3 talleres del período = $796 contra los $821 del embudo en el período | Workshop › Resumen y talleres |
+| **Venta** | pago de venta nueva (completo o split): una persona con dos pagos suma dos | Costo por venta, Ventas, ticket |
+| **Compradores** (`clientes_nuevos`) | personas distintas con una venta nueva | CAC = gasto ÷ compradores |
+| **Ingreso por venta** | New Cash ÷ pagos de venta nueva (el `ticket` de Segmentos) | tarjeta New Cash, Todos, tabla (columna) |
+
+Con esto: ROAS New Cash = ingreso por venta ÷ costo por venta. Lo que sigue midiendo cosas distintas y lo dice un ícono: lead de Setting (entradas) contra lead de Workshop (clics) contra Leads de Meta; y la inversión por taller contra el gasto del período (ver «Dos ROAS Total»).
 
 ## Las dos fuentes
 
@@ -15,6 +32,7 @@ Cada fuente (Setting, Workshop) trae las mismas cifras para poder compararlas (`
 | Cash total | todo lo cobrado del período de los clientes de la fuente (cuotas, upsells, renovaciones) | igual |
 | Cobrado de ventas anteriores | la parte del Cash total de clientes que no compraron nada nuevo en el período (`cash_anterior`, lista propia) | igual |
 | Gasto | Meta Ads de los anuncios del embudo | igual |
+| Compradores / CAC / Ingreso por venta | personas con venta nueva; gasto ÷ compradores; New Cash ÷ pagos | igual |
 
 Cada cifra abre la lista de lo que la suma (`fuentes_registros_service.registros`, `VerRegistros`): la lista sale del mismo código que la cifra.
 
