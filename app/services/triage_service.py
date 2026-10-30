@@ -272,11 +272,18 @@ def _vacias():
                            'no_cerrado', 'seguimiento', 'descartado', 'pasadas_asistieron')}
 
 
+def _confirmada(a):
+    """Confirmó la llamada, o ya asistió (que la confirmó de hecho)."""
+    resultado = (a.closer_result or '').strip().lower()
+    previo = (a.result or '').strip().lower()
+    return previo == 'confirmado' or a.confirmation_stage == 'confirmado' or resultado == 'show up'
+
+
 def _sumar(m, a, closing_show):
     m['agendas'] += 1
     resultado = (a.closer_result or '').strip().lower()
     previo = (a.result or '').strip().lower()
-    if previo == 'confirmado' or a.confirmation_stage == 'confirmado' or resultado == 'show up':
+    if _confirmada(a):
         m['confirmadas'] += 1
     if resultado == 'show up':
         m['asistencias'] += 1
@@ -344,7 +351,8 @@ def _leads(agendas):
     return [{
         'id': a.id, 'cliente': a.client.full_name if a.client else None, 'client_id': a.client_id,
         'hora': _iso(a.start_time), 'triage': a.closer.username if a.closer else None,
-        'asistencia': a.closer_result, 'calificacion': a.triage_calificacion, 'low_ticket': a.triage_low_ticket,
+        'confirmada': _confirmada(a), 'asistencia': a.closer_result,
+        'calificacion': a.triage_calificacion, 'low_ticket': a.triage_low_ticket,
         'fecha_seguimiento': a.fecha_seguimiento,
         'nota': notas.get((a.id, 'nota_llamada')), 'nota_para_closer': notas.get((a.id, 'nota_para_closer')),
     } for a in sorted(agendas, key=lambda a: a.start_time)]
