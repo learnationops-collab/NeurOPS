@@ -9,7 +9,7 @@ import {
     Save, ArrowLeft, ArrowRight, CheckCircle2, User, PenTool, Pencil,
     DollarSign, UserPlus,
     CalendarCheck, PhoneCall, MessageCircle, ClipboardList, BarChart3, Briefcase, FileSearch,
-    CalendarPlus, Gift, Hourglass, Ghost, Filter
+    CalendarPlus, Gift, Hourglass, Ghost, Filter, UserX
 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -32,6 +32,7 @@ import '../../components/dashboard/pareja.css';
 import './clarity-v6.css';
 import ComisionMesCard from './components/ComisionMesCard';
 import TriageMetricas from '../triage/components/TriageMetricas';
+import TriageAbandonos from '../triage/components/TriageAbandonos';
 import ProcrastinarModal from './components/ProcrastinarModal';
 import YaTieneAgenda from './components/YaTieneAgenda';
 import { localInputsToUtcIso, parseUtcIso, splitLocalDateTime, localToday, localDateFromNow, formatCountdown, formatAgendaDateTime, viewerTimezoneLabel } from '../../utils/datetime';
@@ -1674,6 +1675,7 @@ const CloserWorkflowPage = () => {
         // El triage tiene sus métricas (el embudo de la llamada de filtro) y, como el closer, sus datos y
         // su cartera: el dashboard comercial acotado a sus agendas (`alcance_de`, app/api/comercial.py).
         ...(esTriage ? [
+            { id: 'abandonos', label: 'Abandonos', Icono: UserX },
             { id: 'metricas', label: 'Métricas', Icono: Filter },
             { id: 'dashboard', label: 'Mis datos', Icono: BarChart3 },
             { id: 'cartera', label: 'Mi cartera', Icono: Briefcase },
@@ -2651,6 +2653,8 @@ const CloserWorkflowPage = () => {
                         </div>
                     )}
                 </div>
+                ) : activeView === 'abandonos' ? (
+                    <TriageAbandonos />
                 ) : activeView === 'metricas' ? (
                     <TriageMetricas />
                 ) : activeView === 'auditoria' ? (

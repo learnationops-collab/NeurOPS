@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from 'react';
 import api from '../../../services/api';
 import { Bars, Button, EmptyState, FieldError, Grid, Kpi, Panel, Segmented, Skeleton, SkeletonKpi, SkeletonPanel } from '../../../components/standard';
 import { localDateFromNow, localToday } from '../../../utils/datetime';
-import { embudo, lowTicket, pct, Reporte } from '../../triage/components/TriageMetricas';
+import { AbandonosPanel, embudo, lowTicket, pct, Reporte } from '../../triage/components/TriageMetricas';
 import { FILTROS, filtrar } from '../../triage/components/triageFiltros';
 
 const PERIODOS = [
@@ -105,6 +105,7 @@ export default function TriageDireccion({ onAbrirFila }) {
                         <h3 className="t-sm">Descalificados: low ticket de 100 USD</h3>
                         <Bars variant="rows" items={lowTicket(m)} label="Low ticket" onSelect={elegir} />
                     </Panel>
+                    <AbandonosPanel abandonos={datos.abandonos} />
                     {!elegida && personas.length > 1 && <PorPersona personas={personas} onElegir={setPersona} />}
                     {ver && (
                         <div>

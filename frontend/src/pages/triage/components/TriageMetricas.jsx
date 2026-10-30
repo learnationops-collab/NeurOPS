@@ -32,6 +32,19 @@ export const lowTicket = (m) => [
     { key: 'descartado', label: 'Perdido', value: m.descartado, detail: pct(m.descartado, m.pitch_low_ticket), color: 'var(--idle)' },
 ];
 
+/** Los abandonos del formulario del período que siguen sin agendar y qué se hizo con ellos. */
+export const AbandonosPanel = ({ abandonos: a }) => (a && a.total > 0 ? (
+    <Panel>
+        <h3 className="t-sm">Abandonos del formulario</h3>
+        <Bars variant="rows" label="Abandonos" items={[
+            { key: 'total', label: 'Sin agendar', value: a.total },
+            { key: 'contactados', label: 'Contactados', value: a.contactados, detail: pct(a.contactados, a.total), color: 'var(--success)' },
+            { key: 'no_contesta', label: 'No contestan', value: a.no_contesta, detail: pct(a.no_contesta, a.total), color: 'var(--warning)' },
+            { key: 'sin_tocar', label: 'Sin tocar', value: a.total - a.contactados - a.no_contesta, detail: pct(a.total - a.contactados - a.no_contesta, a.total), color: 'var(--idle)' },
+        ]} />
+    </Panel>
+) : null);
+
 const RESULTADO = {
     calificado: ['Califica', 'var(--success)'],
     descalificado: ['No califica', 'var(--warning)'],
@@ -133,6 +146,7 @@ export default function TriageMetricas() {
                             <h3 className="t-sm">Descalificados: low ticket de 100 USD</h3>
                             <Bars variant="rows" items={lowTicket(m)} label="Low ticket" />
                         </Panel>
+                        <AbandonosPanel abandonos={datos.abandonos} />
                         {datos.leads?.length > 0 && <Reporte leads={datos.leads} />}
                     </>
                 )}
