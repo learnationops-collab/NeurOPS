@@ -759,3 +759,12 @@
   .clarity-v6 .kc-nuevo { animation: none; }
   .clarity-v6 .kc-banda-riel { transition: none; }
 }
+
+/* Eliminar un lead que no era una llamada: la papelera aparece con el hover, como copiar; la
+   confirmación baja a su propia línea, a lo ancho de la tarjeta. */
+.clarity-v6 .kc-top { flex-wrap: wrap; }
+.clarity-v6 .kc-eliminar { flex: 0 0 auto; align-self: flex-start; opacity: 0; transition: opacity .16s ease; }
+.clarity-v6 .kcard-v6:hover .kc-eliminar,
+.clarity-v6 .kc-eliminar:focus-within { opacity: 1; }
+.clarity-v6 .kc-eliminar-confirma { flex: 1 0 100%; cursor: default; }
+@media (hover: none) { .clarity-v6 .kc-eliminar { opacity: .7; } }

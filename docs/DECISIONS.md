@@ -148,7 +148,7 @@
 - **Consecuencias:** mover un taller cambia las tareas en segundos; el token de Leadership pasa a ser un secreto de producción de Work.
 
 
-## ADR-W017: La cifra sola y su cuenta en un tooltip (`CifraConCuenta`), y las listas de Workshop
+## ADR-W050: La cifra sola y su cuenta en un tooltip (`CifraConCuenta`), y las listas de Workshop
 - **Fecha:** 2026-10-28 · **Subsistema:** Componentes estándar, Workshop y Analizar · **Estado:** implementado
 - **Contexto:** Kerwin pidió que todo porcentaje, costo y ROAS diga «N de M» como Closing, sin texto explicativo, y que cada parte abra su lista (ADR-W015). En Marketing ya existía `CifraConCuenta` dentro de una carpeta de pantalla.
 - **Decisión:** `CifraConCuenta` es un componente estándar. Muestra solo la cifra; el «N de M» sale en un tooltip que se dibuja en el `.dc-shell` con `position:fixed`, y cada parte abre la lista que la suma (`onVer(metrica, titulo)`). Workshop gana `GET /workshop/registros` (mismo código que `calcular_prefill`) y el Resumen pasa a ocho tarjetas con New Cash y Cash total y sus dos ROAS del mismo peso. Los números que se cargan por taller abren una lista taller por taller.
@@ -414,3 +414,9 @@
 - **Decisión:** `agenda_v2.html` rehecha: el color de toda la tarjeta (fondo, borde y barra de arriba) es el del segmento (A verde, B azul, C amarillo, D rojo; gris sin segmento); aro con los puntos y la confianza; chips de teléfono, día y hora con la de Bolivia; cajas de Closer (o del motivo) y Origen; y hasta 7 fichas de respuestas con ícono, el examen, la inversión, la etapa, el trabajo y quién decide primero (`_tiles`). Una respuesta con versión corta usa la corta de título y la larga de detalle; una larga sin corta pasa a detalle y el título es la pregunta. `_segmento_visual` arma el aro. El alto de la imagen se calcula con las fichas, dos por fila.
 - **Qué se pierde:** desaparece la «Nota /10» de la cabecera y los colores por respuesta (verde/amarillo/rojo según sus puntos): el color ahora es solo el del segmento.
 - **Consecuencias:** sin cambios en los datos que guarda la agenda (`segmento_lead` y `respuestas` ya estaban). Si el formulario no segmenta, la tarjeta sale gris sin aro. Falta verla pasar por el servicio real de imágenes en staging.
+## ADR-W051: El closer borra desde su tablero la agenda de quien agendó por otra cosa
+- **Fecha:** 2026-10-30 · **Subsistema:** Closer Workspace (tablero de Reportar) · **Estado:** implementado
+- **Contexto:** hay personas que agendan por otra cosa (no es una llamada de venta) y cuentan en la asistencia, la comisión y las métricas del closer. El backend ya tenía el borrado del mazo (`DELETE /closer/deck/<id>`), pero ninguna pantalla lo usaba.
+- **Decisión:** papelera en cada tarjeta del tablero (`EliminarLead`), con `ConfirmDelete` dentro de la tarjeta, que llama a ese endpoint. Se borra (no se marca «No Lead»): «No Lead» cuenta como descalificada en los números de dirección, y esto no tiene que contar en ninguno.
+- **Qué se pierde (nombrado):** el borrado no se deshace, y `eliminar_agenda` borra también el evento de Google Calendar del closer. Si la reunión por la otra cosa igual ocurre, desaparece del calendario.
+- **Consecuencias:** la regla de qué se conserva (respuestas del formulario, plan de cuotas) sigue siendo la de `BookingService.eliminar_agenda`, compartida con la dirección comercial.
