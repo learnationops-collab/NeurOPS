@@ -15,6 +15,9 @@ Pasar al lead del triage al closing.
 
 - [x] Confirmar A/B al pasar a closing (plan §8.5, [plan_segmentos_triage.md](plan_segmentos_triage.md)).
 
+- [ ] Triage (Leadership 1018): los leads sin formulario van primero con el triage según Kerwin (30/10), pero el ruteo de `agendas_v2` solo manda C y D al grupo Triage; ver qué pasa hoy con una agenda sin segmento (`nucleo/formulario.py` `grupo_por_reglas`, evento «Sin formulario») y ajustar la regla.
+- [ ] Triage (Leadership 1019): métricas día por día (agendas, confirmaciones, asistencias) en `TriageMetricas.jsx` y en la sección de Dirección; hoy `triage_service.metricas` solo da el total del período.
+- [ ] Triage (Leadership 1014 y 1015): chat del lead con @persona (selector) y «Compartidos conmigo» en el dashboard de quien es mencionado; revisar si la ficha usa `ClientComment`/`CommentNotification` o `Comment`.
 - [ ] Low ticket (`LT`, 100 USD por mes, Academia `low-ticket`): definir comisiones del triage y de Fulfillment (`comision_tasas_service.PROGRAMAS` no tiene LT) y cómo se cobra cada mes (hoy: un «LT - Renovacion» de 1 mes por la ficha).
 - [ ] Tests de suscripción que ya fallaban antes del low ticket (27/10): `test_la_sena_da_7_dias_y_el_saldo_la_pasa_a_completo`, `test_la_venta_da_4_meses_y_las_cuotas_no_mueven_la_fecha`, `test_encendido_manda_la_suscripcion_con_su_ultimo_cambio`, `test_el_aviso_del_pago_lleva_el_vencimiento_de_la_suscripcion` (vencimientos corridos 2 días).
 
