@@ -124,6 +124,16 @@ Falta la fórmula de backend; la presentación ya tiene su rótulo.
 - [ ] Mientras tanto, quien abre cada vista ve de qué habla: «Habla de:» bajo la cabecera de Workshop y en Todos (28/10/2026).
 
 
+## Workshop: Meta por hora (29/10, worktree meta-ventana-horaria, [ADR-W027](DECISIONS.md))
+Leads e inversión de cada taller entre el fin del anterior y el suyo (inicio + 2 h), con el desglose por hora de Meta.
+
+- [ ] Probar en el servidor de prueba: migración `f2a6c8e0b4d1`, «Sincronizar 180 días» (tramos de 30) y que el pedido por hora y `timezone_name` respondan (nunca corrió contra la cuenta real). Un fallo solo deja el log `Gasto por hora de la cuenta…` y los talleres siguen por día.
+- [ ] Comprobar en un taller que la suma por hora de un día entero da el gasto diario, y que `meta_leads` del taller de hoy sube hacia los clics al grupo.
+- [ ] Cargar `inicio_at` en los talleres anteriores al 15/10 si se quieren por hora; sin hora siguen por día.
+- [ ] Confirmar con Kerwin el corte: la franja termina a inicio + 2 h (propuesta de este cambio) y no al inicio, para que las 2 horas del vivo no queden sin taller.
+- [ ] Si la zona horaria de la cuenta de Meta no se puede leer, se usa `America/La_Paz`: confirmar la real.
+- [ ] Tests de la franja por hora (`franjas`, `cubre`, `desglose`): sin escribir, a proponer cuando no queden pendientes.
+
 ## Integración de las ramas de Marketing (28/10, avance-local)
 - [ ] La matriz de segmentos (Todos › Segmentos) cuenta siempre por fecha de alta; con «Contar por: fecha de reunión» sus totales no cambian y no suman las 223 de Closing. Decidir si se parte también por reunión (y sumar «Otras»).
 - [ ] Analizar › Segmentos da show up 64,2% (79 de las llamadas) y la tarjeta de arriba 63,9% (78 de 122 leads): cuenta llamadas contra leads. Unificar el denominador (tarea 853).
