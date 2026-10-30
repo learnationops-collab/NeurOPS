@@ -8,7 +8,7 @@ from app.api.auth import login_required
 from app.api.triage import bp
 from app.decorators import triage_metricas_required
 from app.services import triage_service
-from app.services.user_time_service import limites_rango_utc
+from app.services.user_time_service import limites_rango_utc, zona_del_usuario
 
 
 def _dia(clave, defecto):
@@ -31,4 +31,4 @@ def metricas():
         return jsonify({'message': '«Desde» es posterior a «hasta».'}), 400
     inicio, fin = limites_rango_utc(current_user, desde, hasta)
     solo = current_user.id if current_user.role == 'triage' else request.args.get('triage_id', type=int)
-    return jsonify(triage_service.metricas(inicio, fin, solo=solo)), 200
+    return jsonify(triage_service.metricas(inicio, fin, solo=solo, zona=zona_del_usuario(current_user))), 200

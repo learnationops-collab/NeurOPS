@@ -15,8 +15,11 @@ Una agenda es de triage cuando su `closer_id` es una cuenta con el rol `triage`.
 """
 from datetime import date, datetime
 
+import pytz
+
 from app import db
 from app.models import Appointment, User
+from app.services.user_time_service import zona_del_negocio
 
 CALIFICACIONES = ('calificado', 'descalificado')
 PROGRAMA_LOW_TICKET = 'LT'
@@ -312,10 +315,17 @@ def triages(solo=None):
     return q.order_by(User.username).all()
 
 
-def metricas(desde, hasta, solo=None):
+def _dia(a, zona):
+    """El día calendario de la llamada en la zona de quien mira (la hora de la base es UTC naive)."""
+    return pytz.UTC.localize(a.start_time).astimezone(zona).date().isoformat()
+
+
+def metricas(desde, hasta, solo=None, zona=None):
     """El embudo del triage entre `desde` y `hasta` (datetimes UTC naive, por la hora de la llamada):
     agendas → confirmadas → asistencias → calificados / descalificados → pitch del low ticket → cómo
-    quedó. `solo`: el id de una triage (la que mira lo suyo); si no, todas y el detalle por persona."""
+    quedó. `solo`: el id de una triage (la que mira lo suyo); si no, todas y el detalle por persona.
+    `zona`: la de quien mira, para cortar `por_dia` (por defecto la del negocio)."""
+    zona = zona or zona_del_negocio()
     personas = triages(solo)
     ids = [p.id for p in personas]
     agendas = Appointment.query.filter(
@@ -326,14 +336,17 @@ def metricas(desde, hasta, solo=None):
         Appointment.agenda_triage_id.in_([a.id for a in agendas] or [0])).all()
     closing_show = {c.agenda_triage_id for c in pasadas if (c.closer_result or '').lower() == 'show up'}
 
-    total, por_id = _vacias(), {p.id: _vacias() for p in personas}
+    total, por_id, por_dia = _vacias(), {p.id: _vacias() for p in personas}, {}
     for a in agendas:
         _sumar(total, a, closing_show)
         _sumar(por_id[a.closer_id], a, closing_show)
+        _sumar(por_dia.setdefault((_dia(a, zona), a.closer_id), _vacias()), a, closing_show)
     from app.agendas_v2 import abandonos
 
     return {
         'desde': desde.isoformat(), 'hasta': hasta.isoformat(), 'total': total,
+        # Un renglón por día y por persona: la pantalla los suma para «todas» o se queda con una.
+        'por_dia': [{'dia': dia, 'id': persona, **por_dia[(dia, persona)]} for dia, persona in sorted(por_dia)],
         'abandonos': abandonos.resumen(desde, hasta),
         'por_persona': [{'id': p.id, 'nombre': p.username, **por_id[p.id]} for p in personas],
         'leads': _leads(agendas),
