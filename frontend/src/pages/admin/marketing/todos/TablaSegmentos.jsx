@@ -10,6 +10,8 @@ import { COLOR_SEGMENTO, pctDe, tipoDeDiferencia, tonoDeTasa, valorDe } from './
  * (`onVer(metrica, titulo, segmento, nombre, previo)`); el % de show up y de cierre dice su cuenta en un tooltip. Con un
  * período comparado, cada cifra trae su diferencia y un «antes N» que abre la lista del período comparado.
  *
+ * `plano`: sin su propia tarjeta (dentro de un desplegable, el de Segmentos de Todos).
+ *
  * Una cifra sin dato (los leads de Workshop por segmento: son clics anónimos; los de un closer: un lead no tiene closer)
  * se ve «—» y no abre nada.
  */
@@ -64,17 +66,20 @@ const Fila = ({ fila, columnas, plantilla, color, referencia, moneda, onVer, tot
     );
 };
 
-const TablaSegmentos = ({ grupo, color, columnas, moneda, onVer, nota = null }) => {
+const TablaSegmentos = ({ grupo, color, columnas, moneda, onVer, nota = null, plano = false }) => {
     const plantilla = { gridTemplateColumns: `minmax(130px,1.1fr) repeat(${columnas.length},minmax(96px,1fr))`,
         minWidth: `${130 + columnas.length * 100}px` };
+    const Envoltorio = plano ? 'div' : 'section';
     return (
-        <section className="panel sg-panel" aria-label={`${grupo.label} por segmento`}>
-            <div className="panel-cab">
-                <div className="mk-cab-txt">
-                    <p className="t-eyebrow mut"><i className="td-punto" style={{ background: color }} aria-hidden="true" />{grupo.label}</p>
-                    <h2 className="t-h3">{grupo.label} por segmento</h2>
+        <Envoltorio className={plano ? 'sg-plano' : 'panel sg-panel'} aria-label={`${grupo.label} por segmento`}>
+            {!plano && (
+                <div className="panel-cab">
+                    <div className="mk-cab-txt">
+                        <p className="t-eyebrow mut"><i className="td-punto" style={{ background: color }} aria-hidden="true" />{grupo.label}</p>
+                        <h2 className="t-h3">{grupo.label} por segmento</h2>
+                    </div>
                 </div>
-            </div>
+            )}
             <div className="sg-tabla" role="table" aria-label={`${grupo.label}: cifras por segmento`}>
                 <div className="sg-fila sg-fila--cab t-eyebrow mut" style={plantilla} role="row">
                     <span role="columnheader">Segmento</span>
@@ -89,7 +94,7 @@ const TablaSegmentos = ({ grupo, color, columnas, moneda, onVer, nota = null }) 
                 <Fila fila={grupo.total} columnas={columnas} plantilla={plantilla} referencia={null} moneda={moneda} onVer={onVer} total />
             </div>
             {nota && <p className="t-cap mut">{nota}</p>}
-        </section>
+        </Envoltorio>
     );
 };
 

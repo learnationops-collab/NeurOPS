@@ -3,19 +3,16 @@ import toast from 'react-hot-toast';
 import useEstadoGuardado from '../../../../hooks/useEstadoGuardado';
 import { Segmented } from '../../../comercial/components/Shared';
 import { ErrorDeCarga } from '../esqueletos';
-import { Skeleton, SkeletonBlock, useVerRegistros } from '../../../../components/standard';
+import { Accordion, Select, Skeleton, SkeletonBlock, useVerRegistros } from '../../../../components/standard';
 import { mensajeDeError } from '../anuncios/marketingApi';
 import { pedirRegistrosSegmentos, pedirSegmentos } from '../anuncios/segmentosApi';
 import ContenidoRegistros from '../anuncios/ContenidoRegistros';
 import { useDatosCacheados } from '../../../../services/cacheDeVistas';
 import ComparaCon, { comparacionDeUrl } from './ComparaCon';
-import {
-    AgruparPor, Columnas, Grupos, VerComo, conQuitados, disposicionDe, gruposVisibles, normalizarQuitados, quitadosDe,
-} from './ControlesSegmentos';
-import CruceSegmentos from './CruceSegmentos';
+import { conQuitados, gruposVisibles, normalizarQuitados, quitadosDe } from './ControlesSegmentos';
 import FiltroSegmentos from './FiltroSegmentos';
-import TablaSegmentos from './TablaSegmentos';
-import { SETTING, TITULO_DE, WORKSHOP } from './comparacion';
+import { abiertosDe, itemsDe } from './bloquesSegmentos';
+import { TITULO_DE } from './comparacion';
 import { COLUMNAS_SEGMENTO, segmentosDeUrl } from './segmentos';
 import './segmentos.css';
 
@@ -36,7 +33,6 @@ export const EsqueletoSegmentos = () => (
     </Skeleton>
 );
 
-const COLOR = { setting: SETTING.color, workshop: WORKSHOP.color, otras: 'var(--warning)' };
 // Las fuentes que entran en las cifras (el backend las filtra); «Todos» son las tres.
 const PESTANAS = [
     { key: 'todos', label: 'Todos' },
@@ -46,7 +42,7 @@ const PESTANAS = [
 ];
 const CORTES_VALIDOS = ['fuente', 'origen', 'closer', 'ninguno'];
 const COLUMNAS_CRUCE = COLUMNAS_SEGMENTO.filter((c) => c.key !== 'ticket');
-const INICIAL = { fuente: 'todos', corte: 'fuente', disposicion: '', campo: 'agendas', ocultas: [], quitados: {}, orden: { col: 'total', dir: 'desc' } };
+const INICIAL = { fuente: 'todos', corte: 'fuente', campo: 'agendas', ocultas: [], quitados: {}, abiertos: null, orden: { col: 'total', dir: 'desc' } };
 const normalizar = (m) => ({
     ...m,
     quitados: normalizarQuitados(m.quitados),
@@ -55,6 +51,7 @@ const normalizar = (m) => ({
     campo: COLUMNAS_CRUCE.some((c) => c.key === m.campo) ? m.campo : INICIAL.campo,
     ocultas: Array.isArray(m.ocultas) ? m.ocultas.filter((k) => COLUMNAS_SEGMENTO.some((c) => c.key === k)) : [],
     orden: m.orden?.col ? m.orden : INICIAL.orden,
+    abiertos: Array.isArray(m.abiertos) ? m.abiertos : null,
 });
 
 const NOTA_POR_CORTE = {
@@ -109,42 +106,36 @@ const SegmentosVista = ({ rango, version, params, cambiar }) => {
     const quitados = quitadosDe(guardado, corte);
     const grupos = gruposVisibles(datos.grupos, quitados);
     const cambiarQuitados = (lista) => poner(conQuitados(guardado, corte, lista));
-    const disposicion = disposicionDe(guardado.disposicion, corte, datos.grupos.length);
     const campo = COLUMNAS_CRUCE.find((c) => c.key === campoKey) || COLUMNAS_CRUCE[1];
-    const color = (g) => COLOR[g.key] || 'var(--brand-secondary)';
     const ordenar = (col) => poner({ orden: { col, dir: orden.col === col && orden.dir === 'desc' ? 'asc' : 'desc' } });
+
+    // Los bloques son una lista (`bloquesSegmentos.jsx`); acá solo se les pasa lo calculado.
+    const items = itemsDe({
+        corte, grupos, todosLosGrupos: datos.grupos, quitados, onQuitados: cambiarQuitados, onQuitar: (key) => cambiarQuitados([...quitados, key]),
+        columnas, ocultas, onOcultas: (lista) => poner({ ocultas: lista }), moneda: datos.moneda,
+        campo, campos: COLUMNAS_CRUCE, onCampo: (key) => poner({ campo: key }), orden, onOrden: ordenar,
+        onVerTabla: verDeTabla, onVerCruce: verDeCruce,
+    });
 
     return (
         <div className={`vista mk-vista${cargando ? ' mk-recargando' : ''}`}>
             <div className="sg-barra">
                 <Segmented opciones={PESTANAS} valor={pestana} ariaLabel="Fuente de los segmentos" onChange={(key) => poner({ fuente: key })} />
-                <AgruparPor cortes={datos.cortes} valor={corte} onChange={(key) => poner({ corte: key })} />
-                <VerComo valor={disposicion} onChange={(key) => poner({ disposicion: key })} />
+                <div className="sg-control">
+                    <span className="t-eyebrow mut">Agrupar por</span>
+                    <Select size="sm" label="Agrupar por" value={corte} onChange={(key) => poner({ corte: key })}
+                        options={datos.cortes.map((c) => ({ value: c.key, label: c.label }))} />
+                </div>
                 <ComparaCon vs={comparacion.vs} rango={comparacion.rango} periodo={rango} comparado={datos.comparacion} onCambiar={cambiar} />
             </div>
             <div className="sg-barra">
                 <FiltroSegmentos segmentos={datos.segmentos} elegidos={elegidos} cuentas={datos.cuentas}
                     onCambiar={(lista) => cambiar({ segmento: lista.join(',') || null })} />
-                {disposicion === 'tablas' && <Columnas columnas={COLUMNAS_SEGMENTO} ocultas={ocultas} onChange={(lista) => poner({ ocultas: lista })} />}
-            </div>
-            <div className="sg-barra">
-                <Grupos grupos={datos.grupos} quitados={quitados} onChange={cambiarQuitados} />
             </div>
             {comparacion.vs === 'custom' && !comparacion.rango && <p className="t-cap mut">Elegí las dos fechas del período comparado.</p>}
-            {disposicion === 'cruce'
-                ? (
-                    <CruceSegmentos grupos={grupos} campo={campo} campos={COLUMNAS_CRUCE} onCampo={(key) => poner({ campo: key })}
-                        moneda={datos.moneda} color="var(--brand-secondary)" onVer={verDeCruce} orden={orden} onOrden={ordenar}
-                        onQuitar={(key) => cambiarQuitados([...quitados, key])} />
-                )
-                : grupos.map((g) => (
-                    <TablaSegmentos key={g.key} grupo={g} color={color(g)} columnas={columnas} moneda={datos.moneda} onVer={verDeTabla(g)}
-                        nota={corte === 'fuente' && g.key === 'workshop'
-                            ? 'Los leads de Workshop son clics al grupo de WhatsApp: no traen formulario, así que no se parten por segmento.' : null} />
-                ))}
-            {NOTA_POR_CORTE[corte] && <p className="t-cap mut">{NOTA_POR_CORTE[corte]}</p>}
+            <Accordion items={items} value={abiertosDe(items, guardado.abiertos)} onChange={(abiertos) => poner({ abiertos })} />
             <p className="t-cap mut">
-                Cuenta agendas por fecha de alta. Costo por lead por segmento: pendiente, Meta no conoce el segmento del lead.
+                {NOTA_POR_CORTE[corte] ? `${NOTA_POR_CORTE[corte]} ` : ''}Agendas por fecha de alta. Costo por lead por segmento: pendiente (Meta no conoce el segmento).
             </p>
             {registros.panel}
         </div>
