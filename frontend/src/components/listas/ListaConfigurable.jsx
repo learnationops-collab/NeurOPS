@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowDown, Check, ChevronDown, Columns, RotateCcw, Rows, Search, SlidersHorizontal, X } from 'lucide-react';
+import { ArrowDown, Check, ChevronDown, Columns, RotateCcw, Rows, Search, SlidersHorizontal, Table2, X } from 'lucide-react';
 import PanelConfigurar from '../../pages/comercial/components/PanelConfigurar';
-import { Segmented } from '../../pages/comercial/components/Shared';
 import Tip from '../../pages/comercial/components/Tip';
 import { useColumnasVisibles } from './useColumnasVisibles';
 import { anchoMinimo, izquierdaDePegadas } from './anchoColumnas';
@@ -64,9 +63,8 @@ export const pasaFacetas = (fila, facetas, elegidas, modo) => {
     return modo === 'alguna' ? activas.some(cumple) : activas.every(cumple);
 };
 
-const MenuColumnas = ({ columnas, visibles, alternar, restablecer, onCerrar }) => {
-    const caja = useRef(null);
-    const enPantalla = useEnPantalla(caja);
+/** Cierra un menú con Escape o un clic afuera de su caja. */
+const useCierre = (caja, onCerrar) => {
     useEffect(() => {
         const fuera = (e) => { if (!caja.current?.contains(e.target)) onCerrar(); };
         const escape = (e) => { if (e.key === 'Escape') onCerrar(); };
@@ -76,7 +74,13 @@ const MenuColumnas = ({ columnas, visibles, alternar, restablecer, onCerrar }) =
             document.removeEventListener('mousedown', fuera);
             document.removeEventListener('keydown', escape);
         };
-    }, [onCerrar]);
+    }, [caja, onCerrar]);
+};
+
+const MenuColumnas = ({ columnas, visibles, alternar, restablecer, onCerrar }) => {
+    const caja = useRef(null);
+    const enPantalla = useEnPantalla(caja);
+    useCierre(caja, onCerrar);
     const vistas = new Set(visibles.map((c) => c.key));
     return (
         <div className="menu lc-menu-columnas" role="menu" aria-label="Columnas" ref={enPantalla}>
@@ -100,16 +104,7 @@ const MenuColumnas = ({ columnas, visibles, alternar, restablecer, onCerrar }) =
 const MenuAgrupar = ({ agrupables, filas, valor, onElegir, onCerrar }) => {
     const caja = useRef(null);
     const enPantalla = useEnPantalla(caja);
-    useEffect(() => {
-        const fuera = (e) => { if (!caja.current?.contains(e.target)) onCerrar(); };
-        const escape = (e) => { if (e.key === 'Escape') onCerrar(); };
-        document.addEventListener('mousedown', fuera);
-        document.addEventListener('keydown', escape);
-        return () => {
-            document.removeEventListener('mousedown', fuera);
-            document.removeEventListener('keydown', escape);
-        };
-    }, [onCerrar]);
+    useCierre(caja, onCerrar);
     return (
         <div className="menu" role="menu" aria-label="Agrupar por" ref={enPantalla}>
             <button type="button" className="menu-item" role="menuitemradio" aria-checked={!valor}
@@ -121,6 +116,24 @@ const MenuAgrupar = ({ agrupables, filas, valor, onElegir, onCerrar }) => {
                     aria-checked={valor === d.key} onClick={() => onElegir(d.key)}>
                     <span className="trunc">{d.label}</span>
                     <span className="cuenta">{new Set(filas.map((f) => d.de(f) || '—')).size}</span>
+                </button>
+            ))}
+        </div>
+    );
+};
+
+/** «Vista de columnas»: una combinación de columnas lista (Embudo, Plata…), se elige con un toque. */
+const MenuVistas = ({ vistas, activa, onElegir, onCerrar }) => {
+    const caja = useRef(null);
+    const enPantalla = useEnPantalla(caja);
+    useCierre(caja, onCerrar);
+    return (
+        <div className="menu lc-menu-vistas" role="menu" aria-label="Vista de columnas" ref={enPantalla}>
+            {vistas.map((v) => (
+                <button key={v.key} type="button" className="menu-item" role="menuitemradio"
+                    aria-checked={activa === v.key} onClick={() => onElegir(v)}>
+                    <span className="menu-caja" aria-hidden="true">{activa === v.key ? <Check size={11} /> : ''}</span>
+                    <span className="trunc">{v.label}</span>
                 </button>
             ))}
         </div>
@@ -215,13 +228,6 @@ const ListaConfigurable = ({
 
     return (
         <div className="lista-configurable">
-            {vistas.length > 0 && (
-                <div className="lc-vistas">
-                    <span className="t-eyebrow mut">Vista de columnas</span>
-                    <Segmented opciones={vistas} valor={vistaActiva?.key ?? null} ariaLabel="Vista de columnas"
-                        onChange={(key) => fijarVisibles(vistas.find((v) => v.key === key).columnas)} />
-                </div>
-            )}
             <div className="fila barra-tabla">
                 {facetas.length > 0 && (
                     <div className="config-envoltura">
@@ -282,10 +288,29 @@ const ListaConfigurable = ({
                     </label>
                 )}
 
-                <span className="barra-cuenta">
-                    <span className="t-cap mut40 num">mostrando {mostradas.length} de {filas.length}</span>
-                    {ayuda && <Tip titulo="Qué estás mirando" texto={ayuda} />}
-                </span>
+                <div className="lc-derecha">
+                    {vistas.length > 0 && (
+                        <div className="lc-vista-envoltura">
+                            <button type="button" className={`pastilla${vistaActiva ? '' : ' pastilla--on'}`}
+                                aria-expanded={menu === 'vistas'} aria-haspopup="menu" aria-label="Vista de columnas" title="Vista de columnas"
+                                onClick={() => setMenu((m) => (m === 'vistas' ? null : 'vistas'))}>
+                                <Table2 size={15} />
+                                {vistaActiva?.label ?? 'A medida'}
+                                <ChevronDown size={14} />
+                            </button>
+                            {menu === 'vistas' && (
+                                <MenuVistas vistas={vistas} activa={vistaActiva?.key ?? null}
+                                    onElegir={(v) => { fijarVisibles(v.columnas); setMenu(null); }}
+                                    onCerrar={() => setMenu(null)} />
+                            )}
+                        </div>
+                    )}
+
+                    <span className="barra-cuenta">
+                        <span className="t-cap mut40 num">mostrando {mostradas.length} de {filas.length}</span>
+                        {ayuda && <Tip titulo="Qué estás mirando" texto={ayuda} />}
+                    </span>
+                </div>
             </div>
 
             {activas > 0 && (

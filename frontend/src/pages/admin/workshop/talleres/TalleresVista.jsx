@@ -15,6 +15,7 @@ import { EsqueletoTabla, EsqueletoTarjetas } from './EsqueletoTalleres';
 import { SkeletonBlock } from '../../../../components/standard';
 import useRegistrosWorkshop from '../registros/useRegistrosWorkshop';
 import useAhora from './useAhora';
+import { alcanceDeWorkshop } from '../alcanceWorkshop';
 import './talleres.css';
 
 /**
@@ -48,6 +49,8 @@ const TalleresVista = ({ events: eventos, realizados: llegados, onEdit, onRefres
     const registros = useRegistrosWorkshop(realizados, formatDate);
     const ahora = useAhora(30000);
     const quieto = useReducedMotion();
+    // Antes era un renglón bajo la cabecera; ahora vive en el tooltip de la barra (Kerwin, 29/10/2026).
+    const alcance = cargando ? null : alcanceDeWorkshop('talleres', realizados);
 
     const delAbierto = abierto && realizados.find((e) => e.id === abierto.id);
     useEffect(() => { if (abierto && !delAbierto) setAbierto(null); }, [abierto, delAbierto]);
@@ -127,7 +130,8 @@ const TalleresVista = ({ events: eventos, realizados: llegados, onEdit, onRefres
                 </section>
             ) : modo === 'lista' ? (
                 <TablaTalleres talleres={realizados} formatDate={formatDate} elegidos={comparar}
-                    onComparar={alternarComparar} onAbrir={abrir} extra={controles} onVer={registros.abrir} />
+                    onComparar={alternarComparar} onAbrir={abrir} extra={controles} onVer={registros.abrir}
+                    alcance={alcance} />
             ) : (
                 <>
                     <div className="fila barra-tabla wt-barra">
@@ -135,7 +139,7 @@ const TalleresVista = ({ events: eventos, realizados: llegados, onEdit, onRefres
                         <span className="barra-cuenta">
                             <span className="t-cap mut40 num">{realizados.length} {realizados.length === 1 ? 'taller' : 'talleres'}</span>
                             <Tip titulo="Qué estás mirando"
-                                texto="Para filtrar y elegir columnas, pasá a la tabla." />
+                                texto={`${alcance} Para filtrar y elegir columnas, pasá a la tabla.`} />
                         </span>
                     </div>
                     <div className="wt-tarjetas">
