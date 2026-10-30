@@ -18,6 +18,8 @@ import { useVistaDeColumnas } from './useVistaDeColumnas';
 import { useFiltrosTabla } from './useFiltrosTabla';
 import { clavesUnicas } from './clavesUnicas';
 import { referenciasDe } from './tonos';
+import { usarFormulas } from './formulas';
+import { cuentaDe } from '../todos/comparacion';
 import LeyendaTonos from './LeyendaTonos';
 import TarjetasAnuncios, { SelectorModo } from './TarjetasAnuncios';
 import { useModoVista } from '../../../../components/listas/useModoVista';
@@ -103,6 +105,7 @@ const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta, estadoMeta = nul
     const [editando, setEditando] = useState(null);
     const [guardando, setGuardando] = useState(false);
     const moneda = datos.moneda;
+    usarFormulas(datos.formulas); // las cuentas del backend, también si el tablero salió de lo recordado
     const vista = useVistaDeColumnas();
     const { modo, setModo } = useModoVista('mk_rendimiento_modo');
     const registros = useVerRegistros();
@@ -217,6 +220,7 @@ const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta, estadoMeta = nul
     };
 
     const conGasto = totales.gasto > 0;
+    const enDinero = (v) => formatear(v, 'money', moneda);
     // El ojo de cada KPI abre las filas que lo suman: las mismas que ve la tabla, con su aporte.
     const ver = (kpi, titulo, valor) => () => registros.abrir({
         titulo, subtitulo: `${valor} en el período · una fila por ${NOMBRE_DEL_NIVEL[nivel].toLowerCase()}`,
@@ -233,8 +237,14 @@ const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta, estadoMeta = nul
           sub: conGasto ? `${formatear(totales.costo_agenda, 'money', moneda)} por agenda` : 'Costo por agenda: —',
           tip: 'Con palabra clave de ManyChat; la tarjeta de Setting cuenta por setter.' },
         { titulo: KPIS[3], valor: formatear(totales.ventas, 'num'), onVer: ver('ventas', KPIS[3], formatear(totales.ventas, 'num')),
-          sub: conGasto ? `${formatear(totales.costo_venta, 'money', moneda)} por venta · ${formatear(totales.cobrado, 'money', moneda)} cobrado` : `${formatear(totales.cobrado, 'money', moneda)} cobrado`,
-          tip: 'Pago completo o split. El ROAS está en las tarjetas de abajo.' },
+          sub: (
+              <>
+                  <CifraConCuenta cuenta={cuentaDe('costo_venta', totales, enDinero)}>{formatear(totales.costo_venta, 'money', moneda)}</CifraConCuenta>
+                  {' '}por venta · CAC{' '}
+                  <CifraConCuenta cuenta={cuentaDe('cac', totales, enDinero)}>{formatear(totales.cac, 'money', moneda)}</CifraConCuenta>
+              </>
+          ),
+          tip: 'Pagos de venta nueva (completo o split). El CAC divide por personas que compraron.' },
     ];
 
     if (agendasDeFuente) {

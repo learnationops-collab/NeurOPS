@@ -10,6 +10,7 @@ import EsqueletoLista from '../../../../components/listas/EsqueletoLista';
 import Cifra from '../../../comercial/components/Cifra';
 import { EsqueletoFilas, PanelCab, Tip } from '../../../comercial/components/Shared';
 import { ErrorDeCarga, EsqueletoKpis } from '../esqueletos';
+import MarcaDeBase from '../anuncios/MarcaDeBase';
 import {
     AGRUPABLES, COLUMNAS, FACETAS, ORDEN_ESTADOS, Estado, buscarEnEntrante, fechaHora,
 } from './columnas';
@@ -29,7 +30,7 @@ import './entrantes.css';
 const num = (n) => (n ?? 0).toLocaleString('en-US');
 const pct = (n, total) => (total ? `${((n / total) * 100).toLocaleString('en-US', { maximumFractionDigits: 1 })}%` : '—');
 
-const Kpi = ({ titulo, valor, sub, tip, i }) => {
+const Kpi = ({ titulo, valor, sub, tip, i, marca = null }) => {
     const reducir = useReducedMotion();
     return (
         <motion.section className="kpi en-kpi"
@@ -38,6 +39,7 @@ const Kpi = ({ titulo, valor, sub, tip, i }) => {
             <div className="kpi-cab">
                 <p className="t-eyebrow">{titulo}</p>
                 <Tip texto={tip} titulo={titulo} />
+                {marca}
             </div>
             <div className="kpi-cifra">
                 <Cifra valor={valor} className="kpi-n" desdeAnterior />
@@ -175,17 +177,20 @@ const EntrantesVista = ({ desde, hasta, version = 0 }) => {
     }
 
     const total = filas.length;
+    // El lead de Marketing es la entrada por palabra clave (una persona suma una vez por palabra): puede ser más que las personas.
+    const leads = datos.totales?.leads ?? total;
     return (
         <div className="en-vista">
             <div className="pareja en-kpis" style={{ '--min': '180px', '--g': 'var(--s4)' }}>
-                <Kpi i={0} titulo={KPIS[0]} valor={num(total)} tip="Personas con algún webhook en el período."
-                    sub={`${num(seguidores)} ya seguían la cuenta`} />
-                <Kpi i={1} titulo={KPIS[1]} valor={pct(respondieron, total)} tip="Respondieron ÷ entrantes."
+                <Kpi i={0} titulo={KPIS[0]} valor={num(leads)} marca={<MarcaDeBase base="entradas" color="var(--brand-secondary)" />}
+                    tip="Entradas por palabra clave: el lead de Palabras clave y Todos."
+                    sub={`${num(total)} personas · ${num(seguidores)} ya seguían la cuenta`} />
+                <Kpi i={1} titulo={KPIS[1]} valor={pct(respondieron, total)} tip="Respondieron ÷ personas con actividad."
                     sub={`${num(respondieron)} de ${num(total)} respondieron`} />
                 <Kpi i={2} titulo={KPIS[2]} valor={num(cuenta.calificado)} tip="Calificó y nadie lo descalificó después."
-                    sub={`${pct(cuenta.calificado, total)} de los entrantes`} />
+                    sub={`${pct(cuenta.calificado, total)} de las personas`} />
                 <Kpi i={3} titulo={KPIS[3]} valor={num(cuenta.descalificado)} tip="No calificó o lo descalificaron después."
-                    sub={`${pct(cuenta.descalificado, total)} de los entrantes`} />
+                    sub={`${pct(cuenta.descalificado, total)} de las personas`} />
                 <Kpi i={4} titulo={KPIS[4]} valor={num(cuenta.en_conversacion + cuenta.sin_respuesta)}
                     tip="Todavía sin calificar."
                     sub={`${num(cuenta.en_conversacion)} en conversación · ${num(cuenta.sin_respuesta)} sin respuesta`} />

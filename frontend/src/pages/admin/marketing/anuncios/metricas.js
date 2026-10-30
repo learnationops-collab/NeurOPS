@@ -1,9 +1,11 @@
 /**
  * Las cuentas de la tabla de anuncios que hace la pantalla: los períodos, los totales de las filas que
  * se ven, el orden y la serie por día. Las de cada fila las hace el backend
- * (`app/services/anuncios_service.py`); acá se repiten las mismas fórmulas para los totales, porque
- * cambian con lo que se filtra (archivados, búsqueda) y con lo que se elige para el gráfico.
+ * (`app/services/anuncios_service.py`); los totales cambian con lo que se filtra (archivados, búsqueda) y con lo
+ * que se elige para el gráfico, y los hace la misma cuenta del backend (`formulas.js`, no una copia).
  */
+
+import { aplicarFormulas } from './formulas';
 
 const pad = (n) => String(n).padStart(2, '0');
 /** Día de calendario LOCAL (`toISOString` es UTC: en UTC−3 después de las 21 ya es mañana). */
@@ -48,40 +50,25 @@ export const rangoDePeriodo = (key, hoy = new Date()) => {
     }
 };
 
-export const SUMABLES = ['entrantes', 'calificados', 'descalificados', 'en_conversacion', 'agendas', 'ventas', 'gasto',
-    'cobrado'];
+export const SUMABLES = ['entrantes', 'calificados', 'descalificados', 'en_conversacion', 'agendas', 'ventas', 'clientes_nuevos',
+    'gasto', 'cobrado', 'new_cash'];
 
-const division = (num, den, decimales = 2) => (den ? Number((num / den).toFixed(decimales)) : null);
-
-/** Los porcentajes y los costos de una base con las sumas. Sin gasto, los costos son null («—»):
- *  un 0 diría que el lead salió gratis. */
+/** Completa una base con las sumas: las cuentas (porcentajes, costos, ROAS, ticket, CAC) vienen del backend
+ *  (`formulas.js`); acá solo se restan los grupos. Sin gasto, los costos son null («—»): un 0 diría que salió gratis. */
 export const completar = (base) => {
-    const { entrantes, calificados, agendas, ventas, cobrado } = base;
+    const { entrantes, calificados } = base;
     const descalificados = base.descalificados || 0;
     const enConversacion = base.en_conversacion || 0;
     const sinRespuesta = entrantes - calificados - descalificados - enConversacion;
-    const gasto = Number((base.gasto || 0).toFixed(2));
-    const conGasto = gasto > 0;
-    return {
-        ...base,
-        gasto,
-        no_calificados: entrantes - calificados,
-        pct_calificados: division(calificados * 100, entrantes, 1),
-        pct_no_calificados: division((entrantes - calificados) * 100, entrantes, 1),
+    const derivadas = {
+        gasto: Number((base.gasto || 0).toFixed(2)),
         descalificados,
         en_conversacion: enConversacion,
+        no_calificados: entrantes - calificados,
         sin_respuesta: sinRespuesta,
-        pct_descalificados: division(descalificados * 100, entrantes, 1),
-        pct_en_conversacion: division(enConversacion * 100, entrantes, 1),
-        pct_sin_respuesta: division(sinRespuesta * 100, entrantes, 1),
         pendientes: enConversacion + sinRespuesta,
-        pct_pendientes: division((enConversacion + sinRespuesta) * 100, entrantes, 1),
-        cpl: conGasto ? division(gasto, entrantes) : null,
-        cpl_calificado: conGasto ? division(gasto, calificados) : null,
-        costo_agenda: conGasto ? division(gasto, agendas) : null,
-        costo_venta: conGasto ? division(gasto, ventas) : null,
-        roas: conGasto ? division(cobrado, gasto) : null,
     };
+    return { ...base, ...derivadas, ...aplicarFormulas({ ...base, ...derivadas }) };
 };
 
 export const totalesDe = (filas) => completar(Object.fromEntries(
@@ -114,9 +101,15 @@ export const COLUMNAS = [
     { key: 'costo_agenda', label: 'Costo por agenda', formato: 'money', menor: true,
         ayuda: 'Importe gastado ÷ agendas.' },
     { key: 'ventas', label: 'Ventas', formato: 'num',
-        ayuda: 'Pago completo o split, de esta palabra clave.' },
+        ayuda: 'Pagos de venta nueva (completo o split).' },
     { key: 'costo_venta', label: 'Costo por venta', formato: 'money', menor: true,
-        ayuda: 'Importe gastado ÷ ventas.' },
+        ayuda: 'Importe gastado ÷ pagos de venta nueva.' },
+    { key: 'clientes_nuevos', label: 'Compradores', formato: 'num',
+        ayuda: 'Personas distintas con venta nueva.' },
+    { key: 'cac', label: 'CAC', formato: 'money', menor: true,
+        ayuda: 'Importe gastado ÷ compradores (personas).' },
+    { key: 'ingreso_venta', label: 'Ingreso por venta', formato: 'money',
+        ayuda: 'New Cash ÷ pagos de venta nueva.' },
     { key: 'cobrado', label: 'Cobrado', formato: 'money',
         ayuda: 'Todo lo cobrado: ventas, cuotas y señas.' },
     { key: 'roas', label: 'ROAS Total', formato: 'veces',
@@ -236,7 +229,7 @@ export const claveDeConjunto = (campana, conjunto) => `${campana ?? ''}${SEP}${c
 export const claveDeAnuncio = (fila) => fila.clave ?? '__sin';
 
 const SUMADAS_POR_GRUPO = ['entrantes', 'calificados', 'descalificados', 'en_conversacion', 'agendas', 'ventas',
-    'cobrado'];
+    'clientes_nuevos', 'cobrado', 'new_cash'];
 
 /** Las filas de campañas o de conjuntos a partir de las de palabras clave. */
 export const agruparFilas = (filas, nivel) => {

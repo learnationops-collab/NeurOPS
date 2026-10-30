@@ -18,7 +18,7 @@ const POR_KPI = {
     entrantes: ['entrantes', 'calificados', 'descalificados'],
     gasto: ['gasto', 'entrantes', 'cpl'],
     agendas: ['agendas', 'entrantes', 'costo_agenda'],
-    ventas: ['ventas', 'cobrado', 'costo_venta', 'roas'],
+    ventas: ['ventas', 'clientes_nuevos', 'new_cash', 'costo_venta', 'cac', 'roas'],
 };
 
 const COLUMNAS = (moneda) => ({
@@ -32,6 +32,9 @@ const COLUMNAS = (moneda) => ({
     ventas: columnaNumero('ventas', 'Ventas', 'num'),
     cobrado: columnaNumero('cobrado', 'Cobrado', 'money', moneda),
     costo_venta: columnaNumero('costo_venta', 'Costo por venta', 'money', moneda),
+    clientes_nuevos: columnaNumero('clientes_nuevos', 'Compradores', 'num'),
+    new_cash: columnaNumero('new_cash', 'New Cash', 'money', moneda),
+    cac: columnaNumero('cac', 'CAC', 'money', moneda),
     roas: columnaNumero('roas', 'ROAS Total', 'veces'),
 });
 

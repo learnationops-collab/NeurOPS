@@ -46,11 +46,14 @@ export const TarjetasFuente = ({ fuente, moneda, sinRepetidos = false, onVer = n
     // Setting rosa, Workshop azul: el nombre no se escribe, es el título del tooltip (norma del 29/10).
     const { color, label: rotulo } = fuente.key === 'setting' ? SETTING : WORKSHOP;
     const delPeriodo = (detalle) => <MarcaDeBase base="periodo" color={color} detalle={detalle} />;
+    // Qué es un lead en esta fuente: entradas por palabra clave (Setting) o clics al grupo (Workshop).
+    const deLead = <MarcaDeBase base={fuente.key === 'setting' ? 'entradas' : 'clics'} color={color} />;
     const cuentaAnterior = anterior ? {
         a: parte(dinero(fuente.cash_anterior), 'cash_anterior'), b: parte(dinero(fuente.cash_total), 'cash_total', 'cobrados'),
     } : null;
     const kpis = [
-        { titulo: TITULOS[0], valor: formatear(fuente.leads, 'num'), sub: `${dinero(fuente.cpl)} por lead`,
+        { titulo: TITULOS[0], valor: formatear(fuente.leads, 'num'), marca: deLead,
+          sub: <CifraConCuenta cuenta={cuentaDe('cpl', fuente, dinero)} onVer={onVer}>{dinero(fuente.cpl)} por lead</CifraConCuenta>,
           tip: GRUPOS_COMPARACION[0].filas[0].ayuda },
         { titulo: TITULOS[1], valor: dinero(fuente.gasto), sub: `${fuente.anuncios} ${fuente.anuncios === 1 ? 'anuncio' : 'anuncios'} en Meta`,
           tip: 'Gasto de Meta de los anuncios del embudo.' },
@@ -65,9 +68,17 @@ export const TarjetasFuente = ({ fuente, moneda, sinRepetidos = false, onVer = n
               </>
           ),
           tip: 'Agendas del período, por la fecha elegida en «Contar por». Show up: asistieron ÷ citas con resultado. El costo cuenta siempre por fecha de alta.' },
-        { titulo: TITULOS[3], valor: formatear(fuente.ventas, 'num'), sub: `${dinero(fuente.costo_venta)} por venta`,
-          tip: 'Pagos de venta nueva (completo o split) del período.' },
-        { titulo: TITULOS[4], valor: dinero(fuente.new_cash), sub: 'venta nueva del período',
+        { titulo: TITULOS[3], valor: formatear(fuente.ventas, 'num'),
+          sub: (
+              <>
+                  <CifraConCuenta cuenta={cuentaDe('costo_venta', fuente, dinero)} onVer={onVer}>{dinero(fuente.costo_venta)}</CifraConCuenta>
+                  {' '}por venta · CAC{' '}
+                  <CifraConCuenta cuenta={cuentaDe('cac', fuente, dinero)} onVer={onVer}>{dinero(fuente.cac)}</CifraConCuenta>
+              </>
+          ),
+          tip: 'Pagos de venta nueva (completo o split). El CAC divide por personas que compraron.' },
+        { titulo: TITULOS[4], valor: dinero(fuente.new_cash),
+          sub: <><CifraConCuenta cuenta={cuentaDe('ingreso_venta', fuente, dinero)} onVer={onVer}>{dinero(fuente.ingreso_venta)}</CifraConCuenta> por venta</>,
           tip: 'Lo cobrado en pagos de venta nueva (completo + split).' },
         { titulo: TITULOS[5], valor: dinero(fuente.cash_total),
           sub: anterior

@@ -413,7 +413,6 @@ def tablero(desde, hasta, base=None, segmento=None):
         'embudos': embudos,
         # Setting vs Workshop con ROAS New Cash y Total (23/10/2026): ver `fuentes_service`.
         'fuentes': fuentes,
-        # Las cuentas y qué es un lead, un gasto y una venta: las mismas del backend, para la pantalla (`marketing_formulas`).
+        # Las cuentas del backend, para que la pantalla sume con las mismas (`marketing_formulas`).
         'formulas': formulas.FORMULAS,
-        'definiciones': formulas.DEFINICIONES,
     }

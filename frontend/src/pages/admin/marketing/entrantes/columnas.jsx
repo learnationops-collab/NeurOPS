@@ -62,6 +62,8 @@ export const COLUMNAS = [
         render: (f) => <Texto v={f.setter} /> },
     { key: 'seguidor', header: 'Seguidor', width: 'minmax(80px,.6fr)', valor: (f) => (f.follower ? 1 : 0), oculta: true,
         render: (f) => (f.follower ? 'Sí' : 'No') },
+    { key: 'entradas', header: 'Leads', width: 'minmax(70px,.5fr)', alinear: 'der', valor: (f) => f.entradas ?? 0,
+        ayuda: 'Palabras clave con las que entró en el período: lo que suma al lead de Marketing.' },
     { key: 'interacciones', header: 'Webhooks', width: 'minmax(84px,.6fr)', alinear: 'der', valor: (f) => f.interacciones,
         ayuda: 'Cuántas veces escribió ManyChat por esta persona.', oculta: true },
     { key: 'entro', header: 'Entró', width: 'minmax(92px,.8fr)', valor: (f) => f.primera_at, oculta: true,

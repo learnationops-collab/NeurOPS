@@ -11,10 +11,12 @@ Cada renglón: `key` (la cifra que sale), `num` y `den` (el cociente), `por` (10
 lista: vale la primera cifra que traiga la base (las fuentes cuentan costos por agendas de fecha de alta).
 Un renglón cuyo `num` o `den` la base no trae se salta.
 
-Qué es cada cosa (las definiciones, en `DEFINICIONES`, viajan con la API y las leen las tooltips):
-  · lead = entrada de una persona por una palabra clave (Setting) o clic al grupo de WhatsApp (Workshop);
-  · gasto = lo que Meta Ads gastó en los anuncios del embudo de la fuente;
-  · venta = un pago de venta nueva (completo o split); cliente nuevo = una persona distinta con venta nueva.
+Qué es cada cosa (cada pestaña lo dice con un ícono de base, `MarcaDeBase`):
+  · lead = entrada de una persona por una palabra clave (Setting) o clic al grupo de WhatsApp (Workshop); Workshop
+    también trae `leads_meta`, la columna Leads de Meta (`cpl_meta`);
+  · gasto = lo que Meta Ads gastó en los anuncios del embudo de la fuente (`meta_ads_service.gasto_por_embudo`);
+  · venta = un pago de venta nueva (completo o split); `clientes_nuevos` = personas distintas con una venta nueva:
+    el costo por venta divide por pagos y el CAC por personas.
 """
 
 FORMULAS = (
@@ -28,6 +30,9 @@ FORMULAS = (
     # Asistieron ÷ citas con resultado, y quiénes compraron un upsell.
     {'key': 'pct_show_up', 'num': 'show_up', 'den': ['reportadas', 'agendas'], 'por': 100, 'dec': 1},
     {'key': 'pct_upsell', 'num': 'clientes_upsell', 'den': ['clientes'], 'por': 100, 'dec': 1},
+    # Los pasos del embudo (agendas ÷ leads, ventas ÷ asistieron).
+    {'key': 'pct_lead_agenda', 'num': 'agendas', 'den': ['leads'], 'por': 100, 'dec': 1},
+    {'key': 'pct_show_venta', 'num': 'ventas', 'den': ['show_up'], 'por': 100, 'dec': 1},
     # Costos: gasto ÷ lo que consiguió. Los de agenda van por las agendas de fecha de alta (lo que Meta gastó
     # genera agendas al darse de alta, Kerwin 28/10/2026).
     {'key': 'cpl', 'num': 'gasto', 'den': ['leads'], 'dec': 2, 'con_gasto': True},
@@ -37,28 +42,12 @@ FORMULAS = (
     {'key': 'costo_venta', 'num': 'gasto', 'den': ['ventas'], 'dec': 2, 'con_gasto': True},
     {'key': 'cac', 'num': 'gasto', 'den': ['clientes_nuevos'], 'dec': 2, 'con_gasto': True},
     # Cuánta plata trae cada venta nueva (ticket): New Cash ÷ pagos de venta nueva.
+    {'key': 'costo_show', 'num': 'gasto', 'den': ['show_up'], 'dec': 2, 'con_gasto': True},
     {'key': 'ingreso_venta', 'num': 'new_cash', 'den': ['ventas'], 'dec': 2},
     {'key': 'roas', 'num': 'cobrado', 'den': ['gasto'], 'dec': 2, 'con_gasto': True},
     {'key': 'roas_new_cash', 'num': 'new_cash', 'den': ['gasto'], 'dec': 2, 'con_gasto': True},
     {'key': 'roas_total', 'num': 'cash_total', 'den': ['gasto'], 'dec': 2, 'con_gasto': True},
 )
-
-# Qué cuenta cada «lead» y cada «gasto» (la pestaña dice cuál usa). Viaja en la API como `definiciones`.
-DEFINICIONES = {
-    'lead': {
-        'setting': {'clave': 'entradas', 'titulo': 'Entradas por palabra clave',
-                    'cuenta': 'Personas que escribieron una palabra clave, una vez por palabra'},
-        'workshop': {'clave': 'clics', 'titulo': 'Clics al grupo de WhatsApp',
-                     'cuenta': 'Clics al grupo de WhatsApp desde las landings del taller'},
-    },
-    'gasto': {'clave': 'meta_embudo', 'titulo': 'Gasto de Meta del embudo',
-              'cuenta': 'Lo gastado en Meta Ads por los anuncios del embudo'},
-    'venta': {'clave': 'pagos', 'titulo': 'Pagos de venta nueva',
-              'cuenta': 'Pagos de venta nueva (completo o split); una persona con dos pagos suma dos'},
-    'cliente_nuevo': {'clave': 'personas', 'titulo': 'Personas que compraron',
-                      'cuenta': 'Personas distintas con una venta nueva en el período'},
-}
-
 
 def dividir(numerador, denominador, decimales=2):
     """Cociente redondeado, o None si no hay denominador (nunca un 0 que parezca dato)."""
