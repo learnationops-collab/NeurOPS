@@ -50,7 +50,7 @@ Cada cifra abre la lista de lo que la suma (`fuentes_registros_service.registros
 
 **Cash total de un taller = New Cash + señas** (ADR-W027): `cash_collected` suma las ventas nuevas, las señas y las primeras cuotas que `ticket_service` le suma a cada venta (menos de un mes); `cash_ventas` (New Cash) son las ventas nuevas y esas mismas cuotas. Por eso el ROAS Total de un taller nunca es menor que su ROAS New Cash. Los talleres guardan las dos cifras como columnas (`workshop_events.cash_collected` / `cash_ventas`): al cambiar la cuenta se recalculan con `scripts/resync_workshop_events.py`.
 
-**Puente entre los dos ROAS** (`todos/PuenteRoas.jsx`, cuentas en `todos/calculoPuente.js`): una fila bajo las tarjetas de Todos › Resumen y de Workshop › Anuncios de Meta que va del ROAS de Todos al de los talleres del mismo período en tres pasos que suman exacto: menos lo cobrado de ventas anteriores (abre la lista `cash_anterior`), menos/más lo que trajeron solo los talleres contra el cobro del período, menos/más la inversión de los talleres contra el gasto del período. Ejemplo 01–29/10 (copia local del 28/10, con el Cash total recalculado): 6,05x → −3,86x ventas anteriores → −0,51x solo talleres → −0,46x más inversión → 1,21x. Con un segmento elegido no se parte y el puente no se dibuja.
+**Los dos ROAS** (Kerwin, 29/10/2026): el ROAS Total de Todos es la caja del mes (todo lo cobrado en el período de clientes de Workshop ÷ gasto de Meta del período, incluidos cobros de ventas anteriores); el ROAS de cada taller compara el gasto del taller con lo que cobraron sus propias agendas. Son cuentas distintas y no hay puente entre ellas: se probó (ADR-W030, W031) y se retiró (ADR-W032).
 
 ## Segmentos A/B/C/D
 

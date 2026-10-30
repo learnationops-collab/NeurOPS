@@ -27,7 +27,7 @@ const Leyenda = () => (
     </div>
 );
 
-const TablaTalleres = ({ talleres, formatDate, elegidos, onComparar, onAbrir, extra, onVer = null }) => {
+const TablaTalleres = ({ talleres, formatDate, elegidos, onComparar, onAbrir, extra, onVer = null, alcance = null }) => {
     const [comparar, setComparar] = useState(true);
     const columnas = useMemo(
         () => columnasDe({ formatDate, elegidos, onComparar, comparar, onVer }),
@@ -50,7 +50,7 @@ const TablaTalleres = ({ talleres, formatDate, elegidos, onComparar, onAbrir, ex
                 buscarPlaceholder="Buscar taller…" claveGuardado="workshop_talleres_columnas_v2"
                 vacio="Ningún taller cumple el filtro." extra={botones} ordenInicial={{ key: 'taller', dir: 'desc' }}
                 vistas={VISTAS_TALLERES} totales={{ etiqueta: 'Total del período', sub: subTotal }}
-                ayuda="La fila abre el detalle; la casilla suma a comparar." />
+                ayuda={alcance || 'La fila abre el detalle.'} />
             <Leyenda />
         </div>
     );

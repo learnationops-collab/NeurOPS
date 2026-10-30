@@ -281,3 +281,24 @@
   3. **Segmentos:** los bloques son una lista (`todos/bloquesSegmentos.jsx`, `BLOQUES`): sumar o sacar una función agrega o quita un desplegable. Hoy: Qué mostrar (columnas y grupos), Cruce y una tabla por grupo (con más de 4 grupos, juntas en «Tabla por grupo»). «Agrupar por» pasa de pestañas a `Select` y «Ver como» desaparece: cruce y tablas conviven. Las pestañas quedan para la fuente.
 - **Qué se pierde (nombrado):** la tabla de cada grupo ya no está a la vista al entrar (primero el cruce; un clic abre la tabla). El estado guardado `disposicion` deja de usarse. Los filtros «Todo/Embudo/Plata/Costos» no existen: se cierran los grupos que no interesan. «Volumen» ya no se escribe en las filas sin ganador.
 - **Consecuencias:** `TodosPage.test.jsx` («Métrica por métrica corona…») busca el texto «Volumen» y la pestaña «Costos»: hay que actualizarlo. Los desplegables de Segmentos de Analizar (Closing) no se tocaron.
+
+## ADR-W030: El puente entre los dos ROAS se lee sin tooltips y vive en un desplegable cerrado
+- **Fecha:** 2026-10-29 · **Subsistema:** Marketing › Todos y Workshop › Anuncios de Meta (`PuenteRoas`) · **Estado:** implementado en local. Leadership 942.
+- **Contexto:** Kerwin no entendió la franja «5,37x → −3,42x ventas anteriores → −0,84x solo talleres → −0,20x más inversión → 0,90x» ni leyendo los tooltips: los extremos no tenían nombre y cada paso era una etiqueta de dos palabras. Ocupaba el centro del Resumen y mezclaba una cuenta con dos significados de «ROAS».
+- **Decisión:** el puente pasa a un `Accordion` cerrado, «¿Por qué difieren los dos ROAS?», que cerrado deja ver sus dos cifras. Abierto, una cuenta de renglones (cifra · qué es · de cuánto): «Todos · cobrado del período ÷ gasto del período», «cuotas de meses anteriores», «cobrado fuera de estos talleres», «gasto de los talleres» y «= Workshop · N talleres». Restas en rojo con «−», sumas en verde con «+». Cada cifra mostrada es el ROAS redondeado de su tramo y cada resta es la diferencia de los redondeados, para que la suma se vea exacta.
+- **Qué se pierde:** una resta mostrada puede diferir en 0,01x de la exacta (−3,43x en vez de −3,42x). Se pierden las marcas de base de los extremos (los nombres ya están escritos) y el tooltip de cada paso (su cuenta está en el renglón).
+- **Consecuencias:** `calculoPuente.js` no cambia. Si en el futuro el puente sigue sin leerse en pocas palabras, se saca del Resumen y queda solo en el tooltip del ROAS Total.
+
+## ADR-W031: El puente entre los dos ROAS sale del Resumen de Todos y queda en el tooltip del ROAS Total
+- **Fecha:** 2026-10-29 · **Subsistema:** Marketing › Todos (`ResumenTodos`, `PuenteRoas`) y `CifraConCuenta` · **Estado:** implementado en local. Leadership 942 (seguimiento). Reemplaza el lugar de ADR-W030.
+- **Contexto:** con el puente ya legible en un desplegable, Kerwin pidió sacar la tarjeta del Resumen y mostrar la cuenta en el tooltip de la cifra.
+- **Decisión:** `CifraConCuenta` suma `detalle` (un nodo bajo la cuenta, separado por una línea). La cifra Workshop del ROAS Total lo usa con `CuentaDelPuente` en versión compacta. El rótulo del primer paso pasa de «cuotas de meses anteriores» a «cobros de ventas anteriores», porque `cash_anterior` incluye cuotas, upsells, renovaciones y señas de clientes sin venta nueva en el período. Workshop › Anuncios de Meta conserva el desplegable.
+- **Qué se pierde:** la cuenta ya no está a la vista: hay que pasar el mouse por el 5.37x. En pantallas táctiles el tooltip depende del foco.
+- **Consecuencias:** `usePuente` y `CuentaDelPuente` se exportan de `PuenteRoas.jsx`; el catálogo de `ui-builder` documenta `detalle`.
+
+## ADR-W032: Se retira el puente entre los dos ROAS
+- **Fecha:** 2026-10-29 · **Subsistema:** Marketing › Todos y Workshop › Anuncios de Meta · **Estado:** implementado en local. Leadership 942 (cierre). Reemplaza ADR-W030 y W031 en lo que dicen del puente.
+- **Contexto:** Kerwin no necesitaba el puente: le bastaba entender qué mide cada ROAS. El de Todos es lo cobrado del período ÷ el gasto del período (caja del mes, 64% de ventas anteriores en la copia local); el de cada taller, lo que cobraron sus agendas ÷ su gasto. Lo explicará él en la reunión.
+- **Decisión:** se borran `PuenteRoas.jsx`, `calculoPuente.js`, su CSS y la prop `detalle` de `CifraConCuenta` (sin otros usos). El rótulo de la marca de base y los tooltips de cada ROAS siguen diciendo sobre qué base se calculó.
+- **Qué se pierde:** la cuenta paso a paso entre 5.37x y 1.21x. Queda sin unificar la definición de New Cash (Todos: pago de la venta nueva; Workshop: venta + primera cuota a menos de un mes).
+- **Consecuencias:** el pendiente de unificar New Cash o de renombrar el ROAS de Todos como «caja del mes» queda como decisión de Kerwin.

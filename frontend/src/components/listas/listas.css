@@ -209,7 +209,10 @@
 .dc-shell .lc-asa:hover::after, .dc-shell .lc-asa:focus-visible::after, body.lc-redimensionando .lc-asa::after { background: var(--brand-secondary); }
 .dc-shell .lc-asa:focus-visible { outline: none; }
 body.lc-redimensionando { cursor: col-resize; user-select: none; }
-.dc-shell .lc-vistas { display: flex; align-items: center; gap: var(--s3); flex-wrap: wrap; margin-bottom: var(--s3); }
+/* «Vista de columnas»: un botón de la barra, a la derecha junto a «mostrando X de Y». */
+.dc-shell .lc-derecha { display: inline-flex; align-items: center; gap: var(--s3); margin-left: auto; }
+.dc-shell .lc-derecha .barra-cuenta { margin-left: 0; }
+.dc-shell .lc-vista-envoltura { position: relative; }
 .dc-shell .lc-caja .lc-pegada { position: sticky; z-index: 1; background: var(--lc-fondo); }
 .dc-shell .lc-caja .tabla-fila[data-abre]:hover .lc-pegada,
 .dc-shell .lc-caja .tabla-fila[aria-current="true"] .lc-pegada { background: var(--lc-fondo-hover); }

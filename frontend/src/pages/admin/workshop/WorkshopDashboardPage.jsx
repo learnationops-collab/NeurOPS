@@ -334,7 +334,7 @@ const WorkshopDashboardPage = () => {
             <CabeceraWorkshop pestanas={PESTANAS} activa={activeTab} onPestana={(key) => irA(key)}
                 eventos={events} onIrAProximos={() => irA('planificar', { vista: 'proximos' })}
                 recargando={recargando} onRecargar={activeTab === 'trafico' || activeTab === 'rendimiento' ? null : recargar}
-                onRegistrar={handleOpenCreateModal} alcance={alcanceDeWorkshop(activeTab, realizados, params)}>
+                onRegistrar={handleOpenCreateModal} alcance={activeTab === 'talleres' ? null : alcanceDeWorkshop(activeTab, realizados, params)}>
 
                 <div className="ws-contenido">
                         {/* Tráfico no depende de los talleres cargados: va fuera de los guards de abajo. */}

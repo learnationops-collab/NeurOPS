@@ -1,7 +1,6 @@
 import { CifraConCuenta, Skeleton, SkeletonBlock } from '../../../../components/standard';
 import { SETTING, WORKSHOP, TITULO_DE, embudoNormalizado, tarjetasDe } from './comparacion';
 import MarcaDeBase from '../anuncios/MarcaDeBase';
-import PuenteRoas from './PuenteRoas';
 
 /**
  * «Resumen» de Todos: las cuatro cifras que más separan a Setting de Workshop (quién gana y por cuánto)
@@ -59,8 +58,6 @@ const ResumenTodos = ({ grupos, setting, workshop, moneda, onVer, rango = null }
                     </div>
                 ))}
             </section>
-
-            {rango && workshop && <PuenteRoas fuente={workshop} rango={rango} moneda={moneda} onVer={ver('workshop')} />}
 
             <section className="panel td-embudo" aria-labelledby="td-embudo-titulo">
                 <div className="mk-cab-txt">

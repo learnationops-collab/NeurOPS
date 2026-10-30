@@ -33,6 +33,9 @@
 /* Varias barras seguidas (agrupar, filtro, columnas) forman un solo bloque: entre ellas, aire corto; vacía, no ocupa. */
 .dc-shell .sg-barra:has(+ .sg-barra){margin-bottom:var(--s3)}
 .dc-shell .sg-barra:empty{display:none}
+/* La leyenda de quién es quién va al borde derecho de la fila, alineada con la última tarjeta. */
+.dc-shell .sg-barra > .sg-derecha{margin-left:auto}
+.dc-shell .sg-derecha .td-leyenda{margin:0}
 /* Agrupar por / Ver como: rótulo + pestañas chicas en una misma pieza. */
 .dc-shell .sg-control{display:inline-flex;align-items:center;gap:var(--s2)}
 /* Diferencia contra el período comparado. */
