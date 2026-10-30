@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
+import { Tooltip } from '../../../components/standard';
 import { Link, Navigate } from 'react-router-dom';
 import { useParamsGuardados } from '../../../hooks/useParamsGuardados';
 import { motion, useReducedMotion } from 'framer-motion';
@@ -143,6 +144,7 @@ const AdminMarketingHubPage = () => {
 
     return (
         <div className="mk-espacio">
+            <Tooltip />
             <div className="dc-shell dc-shell--embebido mk-shell">
                 <div className="mk-wrap">
                     <header className="tope">

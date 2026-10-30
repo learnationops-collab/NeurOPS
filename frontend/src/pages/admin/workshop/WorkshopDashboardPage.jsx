@@ -3,7 +3,7 @@ import { useParamsGuardados } from '../../../hooks/useParamsGuardados';
 import { Plus } from 'lucide-react';
 import api from '../../../services/api';
 import toast from 'react-hot-toast';
-import { Button, EmptyState } from '../../../components/standard';
+import { Button, EmptyState, Tooltip } from '../../../components/standard';
 import CabeceraWorkshop from './components/CabeceraWorkshop';
 import useDatosWorkshop from './useDatosWorkshop';
 import '../../comercial/comercial.css';
@@ -329,6 +329,7 @@ const WorkshopDashboardPage = () => {
     return (
         // Solo la tabla de Talleres usa todo el ancho (Kerwin, 28/10/2026): lo decide ella (`.wt-talleres--ancha`), no la pestaña.
         <div className="ws-espacio">
+            <Tooltip />
             {/* Tráfico tiene su propio recargar junto al período: el de acá recarga talleres, metas y
                 acciones sin vaciar la pantalla (lo que se ve queda hasta que llega lo nuevo). */}
             <CabeceraWorkshop pestanas={PESTANAS} activa={activeTab} onPestana={(key) => irA(key)}

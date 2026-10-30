@@ -14,7 +14,7 @@ import './marcaDeBase.css';
  *  · `entradas`: personas que escribieron una palabra clave (Setting). · `clics`: clics al grupo de WhatsApp (Workshop).
  *  · `meta`: la columna «Leads» de Meta (las inscripciones de la landing).
  *
- * `color`: el de la fuente (Setting rosa, Workshop azul). `detalle`: «$4.143 de $685», sin repetir el título. Una sola línea: el tooltip del DS (`[data-tip]`) no parte textos.
+ * `color`: el de la fuente (Setting rosa, Workshop azul). `detalle`: «$4.143 de $685», sin repetir el título. El tooltip es el estándar (`<Tooltip />`, «título|detalle»), que sigue al mouse y nunca se sale de la pantalla.
  */
 const BASES = {
     periodo: { Icono: CalendarRange, titulo: 'Cobrado del período' },
@@ -27,9 +27,8 @@ const BASES = {
 const MarcaDeBase = ({ base, color = 'var(--info)', titulo = null, detalle = '' }) => {
     const { Icono, titulo: porDefecto } = BASES[base];
     const nombre = titulo || porDefecto;
-    // El tooltip (`[data-tip]::after`) va en un envoltorio: el Chip recorta lo que se sale de él.
     return (
-        <span className="mk-base" data-tip={detalle ? `${nombre}: ${detalle}` : nombre} tabIndex={0} role="img"
+        <span className="mk-base" data-tip={detalle ? `${nombre}|${detalle}` : nombre} tabIndex={0} role="img"
             aria-label={`${nombre}${detalle ? `: ${detalle}` : ''}`}>
             <Chip square subtle color={color} icon={<Icono aria-hidden="true" />} />
         </span>

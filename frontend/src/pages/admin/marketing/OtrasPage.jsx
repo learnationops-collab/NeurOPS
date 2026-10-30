@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { Tooltip } from '../../../components/standard';
 import { motion, useReducedMotion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { CalendarDays, RefreshCw } from 'lucide-react';
@@ -66,6 +67,7 @@ const OtrasPage = () => {
 
     return (
         <div className="mk-espacio">
+            <Tooltip />
             <div className="dc-shell dc-shell--embebido mk-shell">
                 <div className="mk-wrap">
                     <header className="tope">

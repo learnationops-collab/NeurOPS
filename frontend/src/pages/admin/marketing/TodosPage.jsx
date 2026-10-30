@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
+import { Tooltip } from '../../../components/standard';
 import { useNavigate } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -127,6 +128,7 @@ const TodosPage = () => {
 
     return (
         <div className="mk-espacio">
+            <Tooltip />
             <div className="dc-shell dc-shell--embebido mk-shell">
                 <div className="mk-wrap">
                     <header className="tope">
