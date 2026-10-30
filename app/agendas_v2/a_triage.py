@@ -20,12 +20,14 @@ from app.models.user import ROLE_TRIAGE
 from app.services import avisos_service, lead_log_service
 from app.agendas_v2 import operacion, servicio
 from app.agendas_v2.nucleo.catalogos import TZ_DEF, a_min
-from app.agendas_v2.nucleo.datos import buscar, es_triage, sesion_de
+from app.agendas_v2.nucleo.datos import buscar, es_closer, es_triage, horas_semana, sesion_de
 from app.agendas_v2.nucleo.disponibilidad import agenda_opt, slots_persona
 from app.agendas_v2.nucleo.normalizar import franjas
 
 # El evento de la llamada de closing: la Sesión de Aceleración.
 EVENTO_CLOSING = 'sesion-de-aceleracion'
+# El evento de la llamada de triage: la Sesión diagnóstica.
+EVENTO_TRIAGE = 'sesion-diagnostica'
 
 
 def _en_horario(p, t, dur):
@@ -57,11 +59,21 @@ def candidatas(appt, ahora=None):
     return sorted(filas, key=lambda f: (not f[1], _carga(f[0].id, ahora), f[0].username))
 
 
+def sesion_evento(d, p, evento_id):
+    """(duración, margen) de las sesiones de esa persona en ese evento: la que ajustó o la del evento."""
+    e = buscar(d, 'eventos', evento_id) or {}
+    return sesion_de(p, evento_id, e.get('duracion') or servicio.DURACION_AGENDA_OPERACION_MIN, e.get('margen') or 0)
+
+
 def sesion_closing(d, p):
     """(duración, margen) de la llamada de closing con ese closer: su Sesión de Aceleración (la del evento,
     o la que él ajustó), no la de la llamada de triage, que suele ser más corta."""
-    e = buscar(d, 'eventos', EVENTO_CLOSING) or {}
-    return sesion_de(p, EVENTO_CLOSING, e.get('duracion') or servicio.DURACION_AGENDA_OPERACION_MIN, e.get('margen') or 0)
+    return sesion_evento(d, p, EVENTO_CLOSING)
+
+
+def sesion_de_la_persona(d, p):
+    """La sesión que atiende esa persona: la diagnóstica si hace triage, la de closing si es closer."""
+    return sesion_evento(d, p, EVENTO_TRIAGE if es_triage(d, p) else EVENTO_CLOSING)
 
 
 def sesion_closing_de(user):
@@ -74,16 +86,37 @@ def sesion_closing_de(user):
     return {'duracion_min': int(dur), 'margen_min': int(margen or 0)}
 
 
+def personas_que_atienden():
+    """[{id, nombre, rol}] de las cuentas activas con horario en Team que toman llamadas (closers y triage):
+    a quién se le puede mover una agenda."""
+    d = servicio.colecciones()
+    usuarios = servicio._usuarios_de_personas(d)
+    users = {u.id: u for u in User.query.filter(User.id.in_(list(usuarios.values()) or [0])).all()}
+    filas = []
+    for p in d['personas']:
+        u = users.get(usuarios.get(p['id']))
+        triage = es_triage(d, p)
+        if u and (triage or es_closer(d, p)) and horas_semana(p) > 0:
+            filas.append({'id': u.id, 'nombre': u.username, 'rol': 'triage' if triage else 'closer'})
+    return sorted(filas, key=lambda f: f['nombre'].lower())
+
+
 def horarios_closer(closer_id, dias=7, ahora=None):
     """Inicios libres (ISO UTC) del closer en los próximos `dias` para la llamada de closing que le agenda
     el triage: su horario de Team, sus agendas y su Google, como la página pública. [] si no está en Team."""
+    return horarios_de(closer_id, dias, ahora, EVENTO_CLOSING)
+
+
+def horarios_de(persona_id, dias=14, ahora=None, evento_id=None):
+    """Inicios libres (ISO UTC) de esa persona (closer o triage) en los próximos `dias`, para la sesión que
+    atiende (`evento_id`, o la suya según su rol): su horario de Team, sus agendas y su Google."""
     ahora = ahora or datetime.utcnow()
-    user = db.session.get(User, int(closer_id)) if closer_id else None
+    user = db.session.get(User, int(persona_id)) if persona_id else None
     d = servicio.colecciones()
     p = servicio.persona_de_usuario(d, user) if user else None
     if not p:
         return []
-    dur, margen = sesion_closing(d, p)
+    dur, margen = sesion_evento(d, p, evento_id) if evento_id else sesion_de_la_persona(d, p)
     o = agenda_opt({'reservas': {'modo': 'dias', 'n': dias, 'tipo': 'corridos', 'desde': '', 'hasta': ''},
                     'antel': {'n': 1, 'u': 'h'}, 'paso': {'n': 15, 'u': 'min'}}, dur)
     ahora_ms = servicio.dt_a_ms(ahora)

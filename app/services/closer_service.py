@@ -822,16 +822,29 @@ class CloserService:
         # invitación al lead, payload y avisos. El horario se chequea ANTES de tocar nada: leer Google
         # puede hacer commit, y si choca no se tiene que haber movido ni borrado nada.
         nueva_agenda, payload_nueva = None, None
+        # «Reagendado» puede dejar la llamada a otra persona (`closer_destino_id`, desde la ficha): la vieja
+        # queda cerrada con quien la tenía y la nueva nace con la de destino.
+        destino = appt.closer
+        if new_status == 'Reagendado' and data.get('closer_destino_id') and appt.closer:
+            destino = User.query.get(int(data['closer_destino_id'])) or appt.closer
         if new_status in ('Reagendado', '2da call') and reschedule_date and appt.closer and appt.client:
             from app.agendas_v2 import manual
             if new_status == '2da call':
                 payload_nueva = {**manual.armar_payload(appt.client, appt.closer, user, '2da_call', anterior=appt),
                                  'llamada': 'segunda'}
             else:
-                payload_nueva = {**manual.payload_reprogramada(appt, appt.closer, user),
+                payload_nueva = {**manual.payload_reprogramada(appt, destino, user),
                                  'reprogramada_desde': appt.start_time.isoformat() + 'Z', 'reagenda_de': appt.id}
-            manual.verificar_horario(appt.closer_id, datetime.fromisoformat(reschedule_date.replace('Z', '')),
-                                     payload_nueva, propia=appt)
+                if destino.id != appt.closer_id:
+                    # Otra persona atiende otra sesión (diagnóstica o de closing): lleva su duración y su margen.
+                    from app.agendas_v2 import a_triage, servicio
+                    d = servicio.colecciones()
+                    persona = servicio.persona_de_usuario(d, destino)
+                    if persona:
+                        dur, margen = a_triage.sesion_de_la_persona(d, persona)
+                        payload_nueva.update({'duracion_min': int(dur), 'margen_min': int(margen or 0)})
+            manual.verificar_horario(destino.id, datetime.fromisoformat(reschedule_date.replace('Z', '')),
+                                     payload_nueva, propia=appt if destino.id == appt.closer_id else None)
 
         formatted_reschedule = reschedule_date
         if reschedule_date:
@@ -941,7 +954,7 @@ class CloserService:
 
                 # Create new appointment
                 new_dt = datetime.fromisoformat(reschedule_date.replace('Z', ''))
-                new_appt = BookingService.create_appointment(appt.client_id, appt.closer_id, new_dt, origin=appt.origin)
+                new_appt = BookingService.create_appointment(appt.client_id, destino.id if destino else appt.closer_id, new_dt, origin=appt.origin)
                 if new_appt:
                     new_appt.is_rescheduled = True
                     db.session.add(new_appt)

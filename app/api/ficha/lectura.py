@@ -176,6 +176,36 @@ def horarios_para_closing(appt_id):
     }), 200
 
 
+@bp.route('/<int:appt_id>/reprogramar/opciones', methods=['GET'])
+def opciones_de_reprogramacion(appt_id):
+    """Para reprogramar: a quién se le puede dejar la llamada, sus horarios libres (`?persona_id=`, por defecto
+    la dueña de la agenda), la zona del lead y las zonas a elegir. Los horarios ya descuentan sus agendas y su
+    Google: lo que se ofrece no choca."""
+    from app.agendas_v2 import a_triage
+    from app.agendas_v2.nucleo.catalogos import ZONAS
+    from app.agendas_v2.operacion import zona_del_lead
+
+    appt, _ = ficha_lead_service.resolver_lead(appointment_id=appt_id)
+    if not appt:
+        return jsonify({'message': 'Lead no encontrado'}), 404
+    if not ficha_lead_service.permisos_de(current_user, appt)['confirmar']:
+        return sin_permiso('confirmar')
+    persona_id = request.args.get('persona_id', type=int) or appt.closer_id
+    personas = a_triage.personas_que_atienden()
+    if persona_id not in {p['id'] for p in personas}:
+        persona_id = None
+    lead = (appt.agenda_payload or {}).get('lead') or {'telefono': appt.client.phone if appt.client else None}
+    zona, pais = zona_del_lead(lead)
+    return jsonify({
+        'personas': personas,
+        'actual_id': appt.closer_id,
+        'persona_id': persona_id,
+        'horarios': a_triage.horarios_de(persona_id) if persona_id else [],
+        'zona_lead': {'tz': zona.key, 'pais': pais['n']},
+        'zonas': [{'tz': z['tz'], 'nombre': z['n']} for z in ZONAS],
+    }), 200
+
+
 @bp.route('/<int:appt_id>/estado-venta', methods=['GET'])
 def estado_venta(appt_id):
     """Como viene pagando este cliente el programa que se le esta vendiendo (`?programa=RR`).

@@ -730,13 +730,41 @@ def _venta_del_arbol(appt, datos, usuario):
 # --- Reprogramar ------------------------------------------------------------------------------
 
 def reprogramar(appt, datos, usuario):
-    """Mueve la llamada. `segunda_llamada` crea una agenda nueva marcada como 2ª call."""
+    """Mueve la llamada. `segunda_llamada` crea una agenda nueva marcada como 2ª call.
+
+    Con `inicio` (ISO con zona, uno de los horarios libres que ofrece `reprogramar/opciones`) y `motivo`
+    obligatorio, la llamada queda a esa hora con `persona_id` (otro closer u otra triage) o con la misma
+    persona si no viene. El horario se vuelve a comprobar al guardar, con su agenda y su Google."""
+    if datos.get('inicio'):
+        return _reprogramar_a_un_horario(appt, datos, usuario)
     fecha = _texto(datos, 'fecha', obligatorio=True)
     status = '2da call' if datos.get('segunda_llamada') else 'Reagendado'
     _process_agenda(appt, usuario, {'status': status, 'reschedule_date': fecha,
                                     'note': datos.get('motivo')})
     db.session.commit()
     return {'id': appt.id, 'status': status, 'fecha': fecha}
+
+
+def _reprogramar_a_un_horario(appt, datos, usuario):
+    from app.agendas_v2 import a_triage
+    from app.services.ficha_agendas_service import _instante_utc
+
+    inicio = _instante_utc(datos.get('inicio'))
+    if inicio <= datetime.utcnow():
+        raise ErrorDeAccion('La fecha nueva tiene que ser futura.', 'inicio')
+    motivo = _texto(datos, 'motivo', obligatorio=True)
+    persona_id = datos.get('persona_id')
+    destino = db.session.get(User, int(persona_id)) if persona_id else appt.closer
+    if destino is None or destino.id not in {p['id'] for p in a_triage.personas_que_atienden()}:
+        raise ErrorDeAccion('Elegí a quién le queda la llamada.', 'persona_id')
+    # Un horario ocupado lo rechaza `process_agenda` (AgendaManualError) antes de tocar nada.
+    _process_agenda(appt, usuario, {'status': 'Reagendado', 'reschedule_date': inicio.isoformat(), 'note': motivo,
+                                    'closer_destino_id': destino.id})
+    if destino.id != appt.closer_id:
+        lead_log_service.nota(f'{usuario.username} pasó la llamada de {appt.closer.username if appt.closer else "nadie"} '
+                              f'a {destino.username}.', usuario, appt=appt)
+    db.session.commit()
+    return {'id': appt.id, 'status': 'Reagendado', 'fecha': inicio.isoformat() + 'Z', 'persona': destino.username}
 
 
 # --- Descartar --------------------------------------------------------------------------------
