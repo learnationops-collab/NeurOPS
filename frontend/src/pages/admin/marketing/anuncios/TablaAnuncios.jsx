@@ -41,7 +41,7 @@ import {
 
 // `onVer`: el ojo de la tarjeta abre las filas que suman su cifra (`useVerRegistros`), como en Closing.
 // `cuenta` ({ a, b } de `cuentaDe`): la cifra va sola y su «N de M» en un tooltip con cada parte clicable (`onCuenta`).
-export const Kpi = ({ titulo, valor, sub, tip, i, onVer, cuenta = null, onCuenta = null }) => {
+export const Kpi = ({ titulo, valor, sub, tip, i, onVer, cuenta = null, onCuenta = null, marca = null, color = null, rotulo = null }) => {
     const reducir = useReducedMotion();
     const cifra = <Cifra valor={valor} className="kpi-n" desdeAnterior />;
     return (
@@ -51,6 +51,7 @@ export const Kpi = ({ titulo, valor, sub, tip, i, onVer, cuenta = null, onCuenta
             <div className="kpi-cab">
                 <p className="t-eyebrow">{titulo}</p>
                 <Tip texto={tip} titulo={titulo} />
+                {marca}
                 {onVer && (
                     <button type="button" className="mk-kpi-ver" onClick={onVer} aria-label={`Ver los registros de ${titulo}`}
                         data-tip="Ver las filas que suman esta cifra">
@@ -59,7 +60,7 @@ export const Kpi = ({ titulo, valor, sub, tip, i, onVer, cuenta = null, onCuenta
                 )}
             </div>
             <div className="kpi-cifra">
-                {cuenta ? <CifraConCuenta cuenta={cuenta} onVer={onCuenta}>{cifra}</CifraConCuenta> : cifra}
+                {cuenta ? <CifraConCuenta cuenta={cuenta} onVer={onCuenta} color={color} rotulo={rotulo}>{cifra}</CifraConCuenta> : cifra}
                 {sub && <p className="kpi-sub">{sub}</p>}
             </div>
         </motion.section>

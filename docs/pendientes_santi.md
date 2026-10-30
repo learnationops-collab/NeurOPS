@@ -5,6 +5,7 @@ Objetivo del 27/10: bajar toda la lista. Lo hecho va a la bitácora ([octubre_20
 ## Hoy
 Lo que tiene fecha o gente esperando.
 
+- [ ] Recalcular el Cash total de los talleres en prod (Leadership 934, ADR-W027; lo aprueba Kerwin): ensayo `railway ssh --service "learnation work" -- python scripts/resync_workshop_events.py`, y si el ensayo muestra solo `cash_collected` cambiando en los talleres con cuotas (en la copia del 28/10: 5/9, 26/9 y 3/10, más el 29/8 que estaba desactualizado), `... resync_workshop_events.py --apply`. Después revisar Workshop › Resumen: ROAS Total ≥ ROAS New Cash en todos los talleres. No se pudo medir antes/después contra prod directo (el clasificador bloqueó la lectura); los números salen de la copia local.
 - [ ] Facu: cuando termine su última agenda (6956, hoy a las 21:30 AR), sacarle el acceso de closer y borrarlo de Personas de Thalamus.
 - [ ] QUIERO APLICAR del 27/10 sin respuesta: pasárselos a los setters (`ig_contactos` 1241, 1242, 1250, 1256; revisar el 1263 `rosmeryatao`).
 - [ ] Avisarle a Dari que cierre «Perdido: que retome la preparación» de la cuenta 522 de Mónica (falsa alarma, estudia en la 523).

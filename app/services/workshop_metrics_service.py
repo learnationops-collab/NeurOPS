@@ -32,7 +32,7 @@ from app.services import pagos_copia
 from app.services.workshop_estados import ESTADOS_DE_VENTA, bucket_estado as _bucket_estado, desglose_de_personas
 from app.services.workshop_intentos import contar_intentos
 from app.services.sales_consistency_service import filtro_de_pagos
-from app.services.ticket_service import SENA, VENTA, claves_de_venta, ticket_de
+from app.services.ticket_service import SENA, VENTA, claves_de_venta, ticket_y_cuotas
 
 # Handles que la gente escribe cuando no tiene Instagram: no identifican a nadie
 HANDLES_INVALIDOS = {'n/a', 'na', 'no tengo', 'notengo', 'ninguno', 'none', '', 'sin instagram', 'no'}
@@ -371,11 +371,15 @@ def _resumen(personas, agendas, compradores, ventas):
     sigue sumando las señas, que son plata que el taller trajo, pero el ticket es lo que
     vale una venta: con la seña adentro, y dividiendo por personas (`sales`, que cuenta
     tambien a quien la hoja da por cerrado sin la venta cargada), salia inflado.
+
+    `cash_collected` (la base del ROAS Total) = New Cash + señas: las ventas nuevas y las señas
+    mas las primeras cuotas que suman a esas ventas (29/10/2026). Antes se quedaba sin las cuotas
+    y el total salia menor que el New Cash (3/10: $200 contra $500). Ver ADR-W027.
     """
     estados = desglose_de_personas(personas, _estado_post_call)
     # Los pagos de la misma persona en el mismo mes son UNA venta, con su primera cuota si llega
     # antes del mes (`ticket_service`, 19/10/2026)
-    cash_ventas, ventas_cobradas, _ = ticket_de(
+    (cash_ventas, ventas_cobradas, _), cuotas = ticket_y_cuotas(
         [(claves_de_venta(s), s.date, s.monto, VENTA if _es_cierre(s) else SENA) for s in ventas])
     return {
         "agendas": len(personas),
@@ -386,7 +390,7 @@ def _resumen(personas, agendas, compradores, ventas):
         "citas_reportadas": estados["reportadas"],
         "citas_sin_reportar": estados["sin_reportar"],
         "sales": len(compradores),
-        "cash_collected": sum(s.monto or 0.0 for s in ventas),
+        "cash_collected": sum(s.monto or 0.0 for s in ventas) + sum(c[2] or 0.0 for c in cuotas),
         "cash_ventas": cash_ventas,
         "ventas_cobradas": ventas_cobradas,
         "breakdown": estados["desglose"],

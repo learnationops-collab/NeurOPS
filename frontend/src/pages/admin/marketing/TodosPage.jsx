@@ -118,7 +118,7 @@ const TodosPage = () => {
             <div className="vista mk-vista">
                 {vista === 'detalle'
                     ? <MetricaPorMetrica grupos={grupos} moneda={datos.moneda} onVer={registros.abrir} />
-                    : <ResumenTodos grupos={grupos} setting={setting} workshop={workshop} moneda={datos.moneda} onVer={registros.abrir} />}
+                    : <ResumenTodos grupos={grupos} setting={setting} workshop={workshop} moneda={datos.moneda} onVer={registros.abrir} rango={rango} />}
                 {registros.panel}
             </div>
         );

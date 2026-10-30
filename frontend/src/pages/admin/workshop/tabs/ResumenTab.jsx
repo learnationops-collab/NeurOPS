@@ -85,7 +85,7 @@ const ResumenTab = ({ realizados, goals, actions, onEditGoals, onGoToSimulador }
                 ) : (
                     <>
                         <WorkshopKpiCards totalStats={cargando ? null : totales} eventsCount={analizados.length}
-                            cambios={cambios} anterior={anterior} onVer={registros.abrir} />
+                            cambios={cambios} anterior={anterior} onVer={registros.abrir} talleres={analizados} />
                         {cargando ? <EsqueletoRecorrido /> : (
                             <RecorridoResumen talleres={analizados} plata={totales} onVer={registros.abrir} />
                         )}

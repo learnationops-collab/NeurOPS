@@ -7,6 +7,8 @@ import { ticketPromedio } from '../funnelMath';
 import { roasRotulo } from '../talleres/formato';
 import { parteDe, parteSuelta } from '../registros/cuentas';
 import { CifraConCuenta, SkeletonBlock, SkeletonText } from '../../../../components/standard';
+import MarcaDeBase from '../../marketing/anuncios/MarcaDeBase';
+import { diaMes } from '../talleres/formato';
 import '../../marketing/anuncios/anuncios.css';
 
 /**
@@ -65,9 +67,9 @@ const ROTULOS = [
     { key: 'agendas', label: 'Agendas', lista: 'agendas', ayuda: 'Personas con llamada agendada. CPA = inversión ÷ agendas.' },
     { key: 'sales', label: 'Ventas', lista: 'ventas', ayuda: 'Compradores (completo o split). CAC = inversión ÷ ventas.' },
     { key: 'new_cash', label: 'New Cash', lista: 'new_cash', ayuda: 'Ventas nuevas y su primera cuota: la base del ticket.' },
-    { key: 'cash', label: 'Cash total', lista: 'cash_total', ayuda: 'Ventas nuevas y señas cobradas. Sin cuotas.' },
-    { key: 'roas_nc', label: 'ROAS New Cash', lista: 'new_cash', ayuda: 'New Cash ÷ inversión.' },
-    { key: 'roas', label: 'ROAS Total', lista: 'cash_total', ayuda: 'Cash total ÷ inversión. Desde 1,5x es sano.' },
+    { key: 'cash', label: 'Cash total', lista: 'cash_total', ayuda: 'New Cash más las señas cobradas.' },
+    { key: 'roas_nc', label: 'ROAS New Cash', lista: 'new_cash', ayuda: 'New Cash ÷ inversión.', base: true },
+    { key: 'roas', label: 'ROAS Total', lista: 'cash_total', ayuda: 'Cash total ÷ inversión. Desde 1,5x es sano.', base: true },
 ];
 
 /** Cifra y detalle de cada tile: lo único que depende de los talleres. `cuenta` va solo donde la cifra es una razón. */
@@ -130,9 +132,13 @@ const Pie = ({ sub, onVer }) => {
  * y la cifra y el detalle son huesos del alto real (32 y 17 px): al llegar, el número entra y
  * cuenta hasta su valor sin mover nada.
  */
-const WorkshopKpiCards = ({ totalStats, eventsCount, cambios, anterior, onVer = null }) => {
+const WorkshopKpiCards = ({ totalStats, eventsCount, cambios, anterior, onVer = null, talleres = [] }) => {
     const reducir = useReducedMotion();
     const datos = totalStats ? valores(totalStats, eventsCount || 0, anterior) : null;
+    // La base de los dos ROAS: la cohorte de los talleres elegidos (no el período de cobro de Marketing, ADR-W027).
+    const nTalleres = talleres.length;
+    const rotuloBase = `${nTalleres} ${nTalleres === 1 ? 'taller' : 'talleres'}`;
+    const fechasBase = nTalleres <= 6 ? [...talleres].sort((a, b) => a.date.localeCompare(b.date)).map((e) => diaMes(e.date)).join(', ') : '';
 
     return (
         <section className="wr-kpis" aria-label="Indicadores principales" aria-busy={datos ? undefined : true}>
@@ -149,6 +155,10 @@ const WorkshopKpiCards = ({ totalStats, eventsCount, cambios, anterior, onVer = 
                         <div className="kpi-cab">
                             <p className="t-eyebrow trunc">{k.label}</p>
                             <Tip texto={k.ayuda} titulo={k.label} />
+                            {k.base && nTalleres > 0 && datos && (
+                                <MarcaDeBase base="taller" titulo={`Cohorte de ${rotuloBase}`}
+                                    detalle={`${dinero(k.key === 'roas' ? totalStats.cash : totalStats.cash_ventas)} de ${dinero(totalStats.inversion)}${fechasBase ? ` · ${fechasBase}` : ''}`} />
+                            )}
                             {onVer && v && (
                                 <button type="button" className="mk-kpi-ver" onClick={() => onVer(k.lista, k.label)}
                                     aria-label={`Ver los registros de ${k.label}`} data-tip="Ver las filas que suman esta cifra">
@@ -161,7 +171,7 @@ const WorkshopKpiCards = ({ totalStats, eventsCount, cambios, anterior, onVer = 
                                 {/* La variación va junto a la cifra: en su propio renglón sumaba una fila a cada tile. */}
                                 <div className="wr-kpi-fila ui-reveal">
                                     {v.cuenta ? (
-                                        <CifraConCuenta cuenta={v.cuenta} onVer={onVer} className="wr-kpi-n-caja">
+                                        <CifraConCuenta cuenta={v.cuenta} onVer={onVer} className="wr-kpi-n-caja" rotulo={k.base && nTalleres ? rotuloBase : null}>
                                             <Cifra className="kpi-n wr-kpi-n" valor={v.valor} desdeAnterior style={color} />
                                         </CifraConCuenta>
                                     ) : (

@@ -1,0 +1,9 @@
+/* La marca de base de un ROAS: un ícono chico junto al rótulo de la tarjeta, del color de la fuente.
+   Su tooltip se ancla a la tarjeta (no al ícono) y baja debajo del rótulo: la tarjeta recorta lo que se sale. */
+.dc-shell .mk-base{display:inline-flex;flex:none;border-radius:50%;position:static}
+.dc-shell .mk-base:focus-visible{outline:1px solid var(--info);outline-offset:2px}
+.dc-shell .mk-base .ui-chip.ui-chip--square{width:22px;height:22px}
+.dc-shell .mk-base .ui-chip svg{width:12px;height:12px}
+.dc-shell .mk-base[data-tip]:hover::after,.dc-shell .mk-base[data-tip]:focus-visible::after{top:46px;bottom:auto;left:var(--s4,16px);right:var(--s4,16px);
+  transform:none;white-space:normal;border-radius:12px;line-height:1.35}
+.dc-shell .td-rotulo{display:flex;align-items:center;gap:var(--s2)}

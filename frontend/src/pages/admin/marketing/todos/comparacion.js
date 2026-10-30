@@ -18,14 +18,14 @@ const num = (v) => formatear(v, 'num');
 /** El título de cada lista que se puede abrir (`fuentes_registros_service.METRICAS`). */
 export const TITULO_DE = {
     agendas: 'Agendas', agendas_alta: 'Agendas por fecha de alta', reportadas: 'Citas con resultado', show_up: 'Show up', ventas: 'Ventas', new_cash: 'New Cash',
-    cash_total: 'Cash total', leads: 'Leads entrantes', gasto: 'Importe gastado',
+    cash_total: 'Cash total', cash_anterior: 'Cobrado de ventas anteriores', leads: 'Leads entrantes', gasto: 'Importe gastado',
 };
 
 /**
  * La cuenta detrás de un porcentaje, un costo o un ROAS (Kerwin, 28/10/2026): `{ a, b }` con el numerador y el
  * denominador, cada uno `{ t: texto, m: lista que lo suma }`. Se muestra en un tooltip y cada parte abre su lista.
  */
-const parte = (t, m, unidad) => ({ t: unidad ? `${t} ${unidad}` : String(t), m, titulo: TITULO_DE[m] });
+export const parte = (t, m, unidad) => ({ t: unidad ? `${t} ${unidad}` : String(t), m, titulo: TITULO_DE[m] });
 export const cuentaDe = (id, f, d) => {
     const reportadas = f.reportadas ?? f.agendas;
     switch (id) {

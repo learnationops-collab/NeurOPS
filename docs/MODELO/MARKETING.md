@@ -1,6 +1,6 @@
 # Marketing y segmentos — modelo vigente
 
-Cómo se cuenta hoy cada cifra de Marketing (Setting, Workshop, Todos) y cómo se parte por segmento A/B/C/D. Las decisiones que llevaron a esto, en [DECISIONS.md](../DECISIONS.md) (ADR-W015, ADR-W019, ADR-W020 y ADR-W021). Código principal: `app/services/anuncios_service.py`, `fuentes_service.py`, `fuentes_registros_service.py`, `segmentos_*.py`; pantallas en `frontend/src/pages/admin/marketing/`.
+Cómo se cuenta hoy cada cifra de Marketing (Setting, Workshop, Todos) y cómo se parte por segmento A/B/C/D. Las decisiones que llevaron a esto, en [DECISIONS.md](../DECISIONS.md) (ADR-W015, ADR-W019, ADR-W020, ADR-W021 y ADR-W027). Código principal: `app/services/anuncios_service.py`, `fuentes_service.py`, `fuentes_registros_service.py`, `segmentos_*.py`; pantallas en `frontend/src/pages/admin/marketing/`.
 
 ## Las dos fuentes
 
@@ -13,6 +13,7 @@ Cada fuente (Setting, Workshop) trae las mismas cifras para poder compararlas (`
 | Show up | asistió a alguna de sus agendas; % = asistieron ÷ citas con resultado | igual |
 | Ventas / New Cash | pagos de venta nueva (completo o split) del período | igual |
 | Cash total | todo lo cobrado del período de los clientes de la fuente (cuotas, upsells, renovaciones) | igual |
+| Cobrado de ventas anteriores | la parte del Cash total de clientes que no compraron nada nuevo en el período (`cash_anterior`, lista propia) | igual |
 | Gasto | Meta Ads de los anuncios del embudo | igual |
 
 Cada cifra abre la lista de lo que la suma (`fuentes_registros_service.registros`, `VerRegistros`): la lista sale del mismo código que la cifra.
@@ -21,7 +22,17 @@ Cada cifra abre la lista de lo que la suma (`fuentes_registros_service.registros
 
 **«De dónde vino lo cobrado»** (Rendimiento › Setting) sale de estas mismas fuentes: Setting + Workshop + Otras suman el total cobrado del período, y cada fila abre su lista de «Cash total». No usa la procedencia por tipo de pago de Finanzas (ahí los upsells y renovaciones van a «Fulfillment»), que sigue siendo la de Revisar › Ventas (faceta «Fuente») y la de Finanzas: ahí Workshop no coincide con el Cash total de Marketing por esa razón.
 
-**Dos «ROAS Total» de Workshop.** Marketing (período de cobro, todo lo cobrado de los clientes de Workshop ÷ gasto de Meta del período) y Workshop › Resumen (por taller: ventas y señas de la cohorte del taller, sin cuotas ÷ su inversión). Son cuentas distintas con el mismo nombre; ver ADR-W025.
+**Dos «ROAS Total» de Workshop** (ADR-W025, ADR-W027). Son cuentas distintas y cada tarjeta lo dice con un ícono de base (`MarcaDeBase`):
+
+| | Todos / Marketing (ícono calendario) | Workshop › Resumen (ícono taller) |
+|---|---|---|
+| Numerador | todo lo cobrado en el período de los clientes de Workshop (`cash_total`, con cuotas, señas y upsells de ventas anteriores) | lo que trajo la cohorte de los talleres elegidos: sus ventas nuevas, señas y la primera cuota de cada venta (`cash_collected`) |
+| Denominador | gasto de Meta del período | inversión de esos talleres (ventana: desde el día siguiente al taller anterior) |
+| Lista | `cash_total` (y `cash_anterior` para la parte de ventas anteriores) | `cash_total` de `workshop_registros_service` |
+
+**Cash total de un taller = New Cash + señas** (ADR-W027): `cash_collected` suma las ventas nuevas, las señas y las primeras cuotas que `ticket_service` le suma a cada venta (menos de un mes); `cash_ventas` (New Cash) son las ventas nuevas y esas mismas cuotas. Por eso el ROAS Total de un taller nunca es menor que su ROAS New Cash. Los talleres guardan las dos cifras como columnas (`workshop_events.cash_collected` / `cash_ventas`): al cambiar la cuenta se recalculan con `scripts/resync_workshop_events.py`.
+
+**Puente entre los dos ROAS** (`todos/PuenteRoas.jsx`, cuentas en `todos/calculoPuente.js`): una fila bajo las tarjetas de Todos › Resumen y de Workshop › Anuncios de Meta que va del ROAS de Todos al de los talleres del mismo período en tres pasos que suman exacto: menos lo cobrado de ventas anteriores (abre la lista `cash_anterior`), menos/más lo que trajeron solo los talleres contra el cobro del período, menos/más la inversión de los talleres contra el gasto del período. Ejemplo 01–29/10 (copia local del 28/10, con el Cash total recalculado): 6,05x → −3,86x ventas anteriores → −0,51x solo talleres → −0,46x más inversión → 1,21x. Con un segmento elegido no se parte y el puente no se dibuja.
 
 ## Segmentos A/B/C/D
 
