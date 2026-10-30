@@ -288,3 +288,10 @@
 - **Decisión:** el puente pasa a un `Accordion` cerrado, «¿Por qué difieren los dos ROAS?», que cerrado deja ver sus dos cifras. Abierto, una cuenta de renglones (cifra · qué es · de cuánto): «Todos · cobrado del período ÷ gasto del período», «cuotas de meses anteriores», «cobrado fuera de estos talleres», «gasto de los talleres» y «= Workshop · N talleres». Restas en rojo con «−», sumas en verde con «+». Cada cifra mostrada es el ROAS redondeado de su tramo y cada resta es la diferencia de los redondeados, para que la suma se vea exacta.
 - **Qué se pierde:** una resta mostrada puede diferir en 0,01x de la exacta (−3,43x en vez de −3,42x). Se pierden las marcas de base de los extremos (los nombres ya están escritos) y el tooltip de cada paso (su cuenta está en el renglón).
 - **Consecuencias:** `calculoPuente.js` no cambia. Si en el futuro el puente sigue sin leerse en pocas palabras, se saca del Resumen y queda solo en el tooltip del ROAS Total.
+
+## ADR-W031: El puente entre los dos ROAS sale del Resumen de Todos y queda en el tooltip del ROAS Total
+- **Fecha:** 2026-10-29 · **Subsistema:** Marketing › Todos (`ResumenTodos`, `PuenteRoas`) y `CifraConCuenta` · **Estado:** implementado en local. Leadership 942 (seguimiento). Reemplaza el lugar de ADR-W030.
+- **Contexto:** con el puente ya legible en un desplegable, Kerwin pidió sacar la tarjeta del Resumen y mostrar la cuenta en el tooltip de la cifra.
+- **Decisión:** `CifraConCuenta` suma `detalle` (un nodo bajo la cuenta, separado por una línea). La cifra Workshop del ROAS Total lo usa con `CuentaDelPuente` en versión compacta. El rótulo del primer paso pasa de «cuotas de meses anteriores» a «cobros de ventas anteriores», porque `cash_anterior` incluye cuotas, upsells, renovaciones y señas de clientes sin venta nueva en el período. Workshop › Anuncios de Meta conserva el desplegable.
+- **Qué se pierde:** la cuenta ya no está a la vista: hay que pasar el mouse por el 5.37x. En pantallas táctiles el tooltip depende del foco.
+- **Consecuencias:** `usePuente` y `CuentaDelPuente` se exportan de `PuenteRoas.jsx`; el catálogo de `ui-builder` documenta `detalle`.

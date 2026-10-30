@@ -20,3 +20,11 @@
   .dc-shell .mk-puente-fila{grid-template-columns:5.5em minmax(0,1fr)}
   .dc-shell .mk-puente-cuenta{grid-column:2;text-align:left;white-space:normal}
 }
+/* Dentro del tooltip del ROAS Total: la misma cuenta, de a dos renglones por paso, sin la cifra grande. */
+.dc-shell .ui-cifra__detalle .mk-puente-titulo{margin:0 0 4px;font-size:12px;font-weight:800;color:var(--ui-muted)}
+.dc-shell .ui-cifra__detalle .mk-puente-caja{max-width:none;padding-top:0}
+.dc-shell .ui-cifra__detalle .mk-puente-fila{grid-template-columns:4.6em minmax(0,1fr);padding:3px 0;gap:0 var(--ui-s2,8px)}
+.dc-shell .ui-cifra__detalle .mk-puente-valor{font-size:14px}
+.dc-shell .ui-cifra__detalle .mk-puente-texto{font-size:12.5px}
+.dc-shell .ui-cifra__detalle .mk-puente-cuenta{grid-column:2;text-align:left;white-space:normal;font-size:11px}
+.dc-shell .ui-cifra__detalle .mk-puente-fila--total{margin-top:4px;padding-top:6px;border-radius:0}

@@ -1,7 +1,7 @@
 import { CifraConCuenta, Skeleton, SkeletonBlock } from '../../../../components/standard';
 import { SETTING, WORKSHOP, TITULO_DE, embudoNormalizado, tarjetasDe } from './comparacion';
 import MarcaDeBase from '../anuncios/MarcaDeBase';
-import PuenteRoas from './PuenteRoas';
+import { CuentaDelPuente, usePuente } from './PuenteRoas';
 
 /**
  * «Resumen» de Todos: las cuatro cifras que más separan a Setting de Workshop (quién gana y por cuánto)
@@ -39,6 +39,7 @@ const Tasas = ({ paso, lado, fuente, onVer }) => {
 const ResumenTodos = ({ grupos, setting, workshop, moneda, onVer, rango = null }) => {
     const tarjetas = tarjetasDe(grupos, moneda);
     const pasos = embudoNormalizado(setting, workshop);
+    const { puente, fechas } = usePuente(workshop, rango || { desde: '', hasta: '' });
     const ver = (fuente) => (onVer ? (metrica, titulo) => onVer(fuente, metrica, titulo) : null);
     return (
         <div className="vista mk-vista">
@@ -54,13 +55,12 @@ const ResumenTodos = ({ grupos, setting, workshop, moneda, onVer, rango = null }
                         </div>
                         <div className="td-tarjeta-pie">
                             <CifraConCuenta color={SETTING.color} rotulo={SETTING.label} cuenta={k.sd} metrica={k.metrica} titulo={TITULO_DE[k.metrica]} onVer={ver('setting')}>{k.s}</CifraConCuenta>
-                            <CifraConCuenta color={WORKSHOP.color} rotulo={WORKSHOP.label} cuenta={k.wd} metrica={k.metrica} titulo={TITULO_DE[k.metrica]} onVer={ver('workshop')}>{k.w}</CifraConCuenta>
+                            <CifraConCuenta color={WORKSHOP.color} rotulo={WORKSHOP.label} cuenta={k.wd} metrica={k.metrica} titulo={TITULO_DE[k.metrica]} onVer={ver('workshop')}
+                                detalle={k.id === 'roas_total' && puente && rango ? <CuentaDelPuente compacta puente={puente} fuente={workshop} rango={rango} moneda={moneda} onVer={ver('workshop')} fechas={fechas} /> : null}>{k.w}</CifraConCuenta>
                         </div>
                     </div>
                 ))}
             </section>
-
-            {rango && workshop && <PuenteRoas fuente={workshop} rango={rango} moneda={moneda} onVer={ver('workshop')} />}
 
             <section className="panel td-embudo" aria-labelledby="td-embudo-titulo">
                 <div className="mk-cab-txt">

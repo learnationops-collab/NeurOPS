@@ -14,6 +14,8 @@ import { createPortal } from 'react-dom';
  * `color` + `rotulo` (Kerwin, 29/10/2026): una cifra de una fuente con color propio (Setting rosa, Workshop azul) va en ese
  * color y NO escribe el nombre al lado; el nombre (`rotulo`) aparece solo como título del tooltip.
  *
+ * `detalle`: un nodo propio de la pantalla que va debajo de la cuenta, separado por una línea (la cuenta larga de una cifra, como el puente entre dos ROAS).
+ *
  * El tooltip se dibuja fuera de su lugar (en el `.dc-shell`, o en `body`) y `fixed`: una tabla que scrollea, una
  * tarjeta con `overflow:hidden` o con vidrio no lo recortan ni lo corren.
  */
@@ -23,7 +25,7 @@ const DEMORA_CIERRE = 140;
 
 const destino = () => document.querySelector('.dc-shell') || document.body;
 
-const CifraConCuenta = ({ children, cuenta = null, metrica = null, titulo = null, onVer = null, lado = 'izq', className = '', color = null, rotulo = null }) => {
+const CifraConCuenta = ({ children, cuenta = null, metrica = null, titulo = null, onVer = null, lado = 'izq', className = '', color = null, rotulo = null, detalle = null }) => {
     const id = useId();
     const raiz = useRef(null);
     const cierre = useRef(null);
@@ -57,7 +59,7 @@ const CifraConCuenta = ({ children, cuenta = null, metrica = null, titulo = null
 
     const tituloDe = (m, t) => t || (m === metrica && titulo) || m;
     const abrir = (m, t) => { setPos(null); if (onVer && m) onVer(m, tituloDe(m, t)); };
-    const hayTip = Boolean(cuenta || rotulo);
+    const hayTip = Boolean(cuenta || rotulo || detalle);
     const estilo = color ? { '--ui-cifra-c': color } : undefined;
     const clase = `ui-cifra${color ? ' ui-cifra--color' : ''} ${className}`;
     if (!lista && !hayTip) return <span className={`${clase} ui-cifra--quieta`} style={estilo}>{children}</span>;
@@ -84,6 +86,7 @@ const CifraConCuenta = ({ children, cuenta = null, metrica = null, titulo = null
                     {rotulo && <em className="ui-cifra__rotulo" style={color ? { '--ui-cifra-c': color } : undefined}>{rotulo}</em>}
                     {cuenta && <>{parte(cuenta.a)}<span> de </span>{parte(cuenta.b)}</>}
                     {lista && cuenta && <small>Tocá una cifra para ver su lista</small>}
+                    {detalle && <span className="ui-cifra__detalle">{detalle}</span>}
                 </span>,
                 destino(),
             )}

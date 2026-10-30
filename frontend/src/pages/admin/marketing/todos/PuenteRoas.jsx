@@ -16,7 +16,7 @@ import './puenteRoas.css';
  * Cada cifra mostrada es el ROAS redondeado de ese tramo y cada resta es la diferencia de los redondeados: lo que se ve suma exacto.
  */
 const PASOS = {
-    anterior: { texto: 'cuotas de meses anteriores', titulo: 'Cobrado de ventas anteriores' },
+    anterior: { texto: 'cobros de ventas anteriores', titulo: 'Cobrado de ventas anteriores' },
     cohorte: { texto: 'cobrado fuera de estos talleres', titulo: 'Cobrado del período fuera de los talleres' },
     gasto: { texto: 'gasto de los talleres', titulo: 'Gasto de los talleres' },
 };
@@ -40,7 +40,7 @@ const Fila = ({ valor, color, children, cuenta, onClick = null }) => {
         : <div className="mk-puente-fila">{cuerpo}</div>;
 };
 
-const Cuenta = ({ puente, fuente, rango, moneda, onVer, fechas }) => {
+export const CuentaDelPuente = ({ puente, fuente, rango, moneda, onVer, fechas, compacta = false }) => {
     const d = (v) => dinero(v, moneda);
     const [anterior, cohorte, gasto] = puente.pasos;
     // Lo que se muestra: el ROAS de cada tramo redondeado, y cada resta como diferencia de redondeados.
@@ -57,8 +57,9 @@ const Cuenta = ({ puente, fuente, rango, moneda, onVer, fechas }) => {
     const cantidad = `${puente.cantidad} ${puente.cantidad === 1 ? 'taller' : 'talleres'}`;
     const enWorkshop = `/admin/workshops?tab=resumen&rf=periodo&rd=${rango.desde}&rh=${rango.hasta}`;
     return (
-        <div className="mk-puente-caja">
-            <Fila color={WORKSHOP.color} cuenta={`${d(fuente.cash_total)} ÷ ${d(gasto.de)}`} valor={(
+        <div className={`mk-puente-caja${compacta ? ' mk-puente-caja--compacta' : ''}`}>
+            {compacta && <p className="mk-puente-titulo">¿Por qué difieren los dos ROAS?</p>}
+            <Fila color={WORKSHOP.color} cuenta={`${d(fuente.cash_total)} ÷ ${d(gasto.de)}`} valor={compacta ? veces(r0) : (
                 <CifraConCuenta color={WORKSHOP.color} rotulo="Todo lo cobrado del período"
                     cuenta={{ a: parte(d(fuente.cash_total), 'cash_total'), b: parte(`${d(gasto.de)} gastados`, 'gasto') }} onVer={onVer}>
                     {veces(r0)}
@@ -84,15 +85,20 @@ const Cuenta = ({ puente, fuente, rango, moneda, onVer, fechas }) => {
     );
 };
 
-const PuenteRoas = ({ fuente, rango, moneda, onVer = null }) => {
+/** Las cuentas del puente: los talleres del período y los tres pasos. `puente` es null si falta algo con qué dividir. */
+export const usePuente = (fuente, rango) => {
     const { datos: eventos } = useDatosCacheados('ws:events', (signal) => api.get('workshop/events', { signal }).then((r) => r.data));
     const talleres = useMemo(() => talleresDelPeriodo(Array.isArray(eventos) ? eventos : [], rango.desde, rango.hasta), [eventos, rango.desde, rango.hasta]);
     const puente = useMemo(
         () => (fuente ? puenteRoas({ cash: fuente.cash_total, anterior: fuente.cash_anterior, gasto: fuente.gasto }, talleres) : null),
         [fuente, talleres],
     );
+    return { puente, fechas: talleres.map((t) => dia(t.date)).join(', ') };
+};
+
+const PuenteRoas = ({ fuente, rango, moneda, onVer = null }) => {
+    const { puente, fechas } = usePuente(fuente, rango);
     if (!puente) return null;
-    const fechas = talleres.map((t) => dia(t.date)).join(', ');
     const meta = (
         <>
             <span>Todos <b className="num" style={{ color: WORKSHOP.color }}>{veces(redondo(puente.todos))}</b></span>
@@ -103,7 +109,7 @@ const PuenteRoas = ({ fuente, rango, moneda, onVer = null }) => {
         <section className="mk-puente" aria-label="Por qué difieren los dos ROAS">
             <Accordion items={[{
                 key: 'puente', title: '¿Por qué difieren los dos ROAS?', meta,
-                children: () => <Cuenta puente={puente} fuente={fuente} rango={rango} moneda={moneda} onVer={onVer} fechas={fechas} />,
+                children: () => <CuentaDelPuente puente={puente} fuente={fuente} rango={rango} moneda={moneda} onVer={onVer} fechas={fechas} />,
             }]} />
         </section>
     );
