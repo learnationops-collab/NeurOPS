@@ -32,7 +32,7 @@ TIPOS = {
 }
 # A quién le interesa cada aviso: el que no califica, al setter (lo sigue); la agenda nueva, a los dos;
 # la reprogramada, solo al closer (el setter ya la cerró).
-ETIQUETA = {'nueva': ('closer', 'setter'), 'reprogramada': ('closer',), 'no_califica': ('setter',), 'abandono': ('setter',)}
+ETIQUETA = {'nueva': ('closer', 'setter'), 'reprogramada': ('closer',), 'no_califica': ('setter',), 'abandono': ('triage',)}
 FUNNELS = {'setting': 'Setting', 'workshop': 'Workshop', 'otro': '', 'manual': ''}
 MOTIVOS = {
     'respuesta': 'Eligió una respuesta que descalifica',
@@ -166,9 +166,17 @@ def datos_de_no_califica(payload, setter, evento_nombre, motivo):
     }
 
 
+def _ids_triage():
+    """Los IDs de Discord de las triage activas (lista vacía si no hay ninguna)."""
+    from app.services import triage_service
+
+    return [t.discord_id or '' for t in triage_service.triages()]
+
+
 def datos_de_abandono(payload, setter, evento_nombre, hasta_donde):
     return {
         **_base('abandono', payload, setter, evento_nombre),
+        'triage_discord': _ids_triage(),
         'motivo': hasta_donde,
         'horario': None,
         'prioridad': _segmento(payload),
@@ -179,12 +187,19 @@ def datos_de_abandono(payload, setter, evento_nombre, hasta_donde):
 def mensaje(d):
     """El texto del mensaje: etiqueta a los que les toca (ETIQUETA), el nombre y el WhatsApp. Si a alguno
     le falta el ID de Discord, o no hay a quién etiquetar, va @everyone para que nadie se lo pierda. El
-    abandono sin setter (el lead vino sin link de setter) no etiqueta a nadie: no es de nadie en particular."""
+    abandono es del triage (todas las que haya): etiqueta a las que tienen ID, y solo si ninguna lo tiene
+    va @everyone; sin triage activas no etiqueta a nadie."""
     partes = [f"{d['emoji']} **{d['titulo']}**", d['lead']['nombre'], d['lead']['telefono']]
     texto = ' · '.join(p for p in partes if p)
-    presentes = [i for i in (d.get(q + '_discord') for q in ETIQUETA[d['tipo']]) if i is not None]
-    if d['tipo'] == 'abandono' and not presentes:
-        return {'content': texto, 'allowed_mentions': {'parse': []}}
+    presentes = []
+    for q in ETIQUETA[d['tipo']]:
+        valor = d.get(q + '_discord')
+        presentes += valor if isinstance(valor, list) else [] if valor is None else [valor]
+    if d['tipo'] == 'abandono':
+        if not presentes:
+            return {'content': texto, 'allowed_mentions': {'parse': []}}
+        con_id = [i for i in presentes if i]
+        presentes = con_id or ['']
     if not presentes or '' in presentes:
         return {'content': '@everyone ' + texto, 'allowed_mentions': {'parse': ['everyone']}}
     ids = list(dict.fromkeys(presentes))
