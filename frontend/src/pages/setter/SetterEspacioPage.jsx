@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { BarChart3, CalendarDays, CheckCircle2, ClipboardList, Ghost, Link2 } from 'lucide-react';
+import { BarChart3, CalendarDays, CheckCircle2, ClipboardList, Ghost, Link2, Share2 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePlaybook } from '../../contexts/PlaybookContext';
@@ -22,6 +22,7 @@ import MisLinks, { copiar } from './MisLinks';
 import { marcaDelDock } from './agendas/meses';
 import ReporteDiario from './reporte/ReporteDiario';
 import Historial from './reporte/Historial';
+import CompartidosConmigo from '../../components/compartidos/CompartidosConmigo';
 
 /**
  * El espacio del setter: todo su trabajo y sus datos en una sola pantalla, con un solo dock.
@@ -76,6 +77,8 @@ const SECCIONES = [
     // tablas de setters de la dirección, así que la `t` de la URL sola no la podía abrir.
     { id: 'revisar', label: 'Revisar', Icono: CheckCircle2, sub: 'Tus agendas, tus ventas y tus leads.',
         tabs: REVISAR_DEL_SETTER.map(({ key, label }) => ({ key, label })) },
+    // Los leads en los que alguien lo nombró con «@» en el chat (ADR-W047): contesta sin tocar la agenda.
+    { id: 'compartidos', label: 'Compartidos', Icono: Share2, sub: 'Leads donde te nombraron.' },
 ];
 
 /** "01", "02"...: el número de la sección en el dock, como lo escribe el encabezado. */
@@ -280,6 +283,7 @@ const SetterEspacioPage = () => {
                         Comparativas de solo lectura (10/10/2026: vuelve a ser este y no una vista
                         propia). Un número del sistema lleva a Revisar, a la pestaña de su tabla y con
                         el filtro de ese número, partiendo de la URL que el dashboard acaba de escribir. */}
+                    {seccion === 'compartidos' && <CompartidosConmigo />}
                     {seccion === 'datos' && (
                         <DashboardComercial embebido seccionFija="analizar"
                             onIrASeccion={(_seccion, urlDelFiltro) => irA('revisar',

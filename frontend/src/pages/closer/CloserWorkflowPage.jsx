@@ -9,7 +9,7 @@ import {
     Save, ArrowLeft, ArrowRight, CheckCircle2, User, PenTool, Pencil,
     DollarSign, UserPlus,
     CalendarCheck, PhoneCall, MessageCircle, ClipboardList, BarChart3, Briefcase, FileSearch,
-    CalendarPlus, Gift, Hourglass, Ghost, Filter, UserX
+    CalendarPlus, Gift, Hourglass, Ghost, Filter, UserX, Share2
 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -33,6 +33,7 @@ import './clarity-v6.css';
 import ComisionMesCard from './components/ComisionMesCard';
 import TriageMetricas from '../triage/components/TriageMetricas';
 import TriageAbandonos from '../triage/components/TriageAbandonos';
+import CompartidosConmigo, { useCompartidos } from '../../components/compartidos/CompartidosConmigo';
 import ProcrastinarModal from './components/ProcrastinarModal';
 import YaTieneAgenda from './components/YaTieneAgenda';
 import { localInputsToUtcIso, parseUtcIso, splitLocalDateTime, localToday, localDateFromNow, formatCountdown, formatAgendaDateTime, viewerTimezoneLabel } from '../../utils/datetime';
@@ -221,6 +222,10 @@ const CloserWorkflowPage = () => {
 
     // Vista activa v6: 'inbox' (bandeja) o 'report' (reporte del día).
     const [activeView, setActiveView] = useState('inbox');
+    // Cuántos leads compartidos son nuevos (el punto del dock); se vuelve a contar al cambiar de sección.
+    const { lista: compartidos, cargar: contarCompartidos } = useCompartidos();
+    useEffect(() => { contarCompartidos(); }, [activeView, contarCompartidos]);
+    const compartidosSinLeer = (compartidos || []).filter((l) => l.sin_leer).length;
     // Configuración es la de todos (sesion/ConfiguracionContext.jsx): una hoja encima del mazo. Al
     // cerrarla se vuelve a mirar si faltan Calendar o WhatsApp.
     const { abierta: configAbierta, abrir: abrirConfiguracion } = useConfiguracion();
@@ -1672,6 +1677,10 @@ const CloserWorkflowPage = () => {
             marca: cuentaDelDock(llamadasHechas, llamadasHechas + counts.calls, counts.calls === 0, 'reportadas') },
         { id: 'seguimientos', label: 'Seguir', Icono: MessageCircle,
             marca: cuentaDelDock(seguimientosHechos, seguimientosHechos + counts.seguimientos, counts.seguimientos === 0, 'hechos hoy') },
+        // Los leads en los que alguien lo nombró con «@» en el chat (ADR-W047): el punto dice cuántos son nuevos.
+        { id: 'compartidos', label: 'Compartidos', Icono: Share2,
+            marcas: compartidosSinLeer > 0 ? [{ tipo: 'aviso', texto: String(compartidosSinLeer),
+                titulo: `${compartidosSinLeer} ${compartidosSinLeer === 1 ? 'lead compartido nuevo' : 'leads compartidos nuevos'}` }] : [] },
         // El triage tiene sus métricas (el embudo de la llamada de filtro) y, como el closer, sus datos y
         // su cartera: el dashboard comercial acotado a sus agendas (`alcance_de`, app/api/comercial.py).
         ...(esTriage ? [
@@ -2653,6 +2662,8 @@ const CloserWorkflowPage = () => {
                         </div>
                     )}
                 </div>
+                ) : activeView === 'compartidos' ? (
+                    <CompartidosConmigo />
                 ) : activeView === 'abandonos' ? (
                     <TriageAbandonos />
                 ) : activeView === 'metricas' ? (
