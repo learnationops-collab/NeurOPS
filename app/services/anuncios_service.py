@@ -39,7 +39,7 @@ from app.models import Ad, AdPeriodSpend, AdSet, Appointment, Client, FinancialS
 from app.models import MetaAnuncio, MetaGastoDiario
 from app.models.marketing import clave_de_palabra as clave_de  # noqa: F401  (lo importa meta_ads_service)
 from app.services.comercial_service import ComercialService, clientes_de_ventas, no_es_marcador, venta_completada
-from app.services import calificacion_service, fuentes_service
+from app.services import calificacion_service, fuentes_service, marketing_formulas as formulas
 from app.services.cruce_conversaciones import Cruce
 from app.services.identity_service import normalize_ig
 # Partido en módulos (regla de las 500 líneas): se re-exporta todo para que `anuncios_service.X` siga igual.
@@ -209,15 +209,16 @@ def claves_de_cobros(cobros, clave_de_anuncio=None, cliente_de=None):
 
 
 def _ventas(desde_dt, hasta_dt, clave_de_anuncio):
-    """({clave: {'ventas', 'cobrado'}}, sin_atribuir, cobros, sin_clave, claves): ventas nuevas (completo o
+    """({clave: {'ventas', 'cobrado', 'new_cash', 'personas'}}, sin_atribuir, cobros, sin_clave, claves): ventas nuevas (completo o
     split) y todo lo cobrado (también cuotas y señas) de las personas que llegaron por esa palabra
     clave; además todos los cobros del período, los que no llegaron a ninguna y
     la palabra clave de cada cobro (para `fuentes_service`)."""
     cobros = [v for v in FinancialSale.query.filter(FinancialSale.date >= desde_dt,
                                                     FinancialSale.date <= hasta_dt).all()
               if venta_completada(v)]
-    claves = claves_de_cobros(cobros, clave_de_anuncio)
-    por_clave = defaultdict(lambda: {'ventas': 0, 'cobrado': 0.0})
+    cliente_de = clientes_de_ventas(cobros)
+    claves = claves_de_cobros(cobros, clave_de_anuncio, cliente_de)
+    por_clave = defaultdict(lambda: {'ventas': 0, 'cobrado': 0.0, 'new_cash': 0.0, 'personas': set()})
     sin_atribuir, sin_clave = 0, []
     for cobro in cobros:
         es_venta = ComercialService.clasificar_venta(cobro)[2]
@@ -229,19 +230,25 @@ def _ventas(desde_dt, hasta_dt, clave_de_anuncio):
         por_clave[clave]['cobrado'] += float(cobro.monto or 0)
         if es_venta:
             por_clave[clave]['ventas'] += 1
+            por_clave[clave]['new_cash'] += float(cobro.monto or 0)
+            por_clave[clave]['personas'].add(cliente_de.get(cobro.id) or f'cobro-{cobro.id}')
     return por_clave, sin_atribuir, cobros, sin_clave, claves
 
 
 def _gasto(desde, hasta, clave_de_anuncio):
-    """({clave: {fecha: gasto}}, gasto de Meta sin palabra clave, moneda)."""
+    """({clave: {fecha: gasto}}, gasto de Meta que no es de una palabra clave de Setting, moneda).
+
+    Solo cuenta lo gastado en anuncios del embudo Setting: es el mismo gasto de la tarjeta de Setting y de Todos
+    (`meta_ads_service.gasto_por_embudo`). Un anuncio de otro embudo (Workshop, Contratación) que lleve una palabra clave
+    en el nombre va a `sin_clave`, no a la fila de esa palabra (868: eran $23,69 de más en la tabla)."""
     por_clave = defaultdict(lambda: defaultdict(float))
     sin_clave, monedas = 0.0, Counter()
-    for gasto, fecha, moneda, clave in db.session.query(
-            MetaGastoDiario.gasto, MetaGastoDiario.fecha, MetaGastoDiario.moneda, MetaAnuncio.clave) \
+    for gasto, fecha, moneda, clave, embudo in db.session.query(
+            MetaGastoDiario.gasto, MetaGastoDiario.fecha, MetaGastoDiario.moneda, MetaAnuncio.clave, MetaAnuncio.embudo) \
             .outerjoin(MetaAnuncio, MetaAnuncio.meta_ad_id == MetaGastoDiario.meta_ad_id) \
             .filter(MetaGastoDiario.fecha >= desde, MetaGastoDiario.fecha <= hasta):
         monedas[moneda] += 1
-        if clave:
+        if clave and embudo == 'setting':
             por_clave[clave][fecha.isoformat()] += float(gasto or 0)
         else:
             sin_clave += float(gasto or 0)
@@ -281,38 +288,26 @@ def _gasto(desde, hasta, clave_de_anuncio):
     return por_clave, sin_clave, moneda
 
 
-def _division(numerador, denominador, decimales=2):
-    return round(numerador / denominador, decimales) if denominador else None
-
-
 def metricas(base):
-    """Completa una fila (o los totales) con los porcentajes y los costos. Un costo sin denominador
-    (o sin gasto) es None: la pantalla muestra «—», no un 0 que parezca gratis."""
+    """Completa una fila (o los totales) con los porcentajes, los costos, el ticket y el ROAS: las cuentas son
+    las de `marketing_formulas` (las mismas de las fuentes y de la pantalla). Un costo sin denominador (o sin
+    gasto) es None: la pantalla muestra «—», no un 0 que parezca gratis."""
     entrantes, calificados = base['entrantes'], base['calificados']
     descalificados, en_conversacion = base.get('descalificados', 0), base.get('en_conversacion', 0)
     sin_respuesta = entrantes - calificados - descalificados - en_conversacion
-    gasto = round(base['gasto'], 2)
-    con_gasto = gasto > 0
-    return {
-        **base,
-        'gasto': gasto,
+    derivadas = {
+        'gasto': round(base['gasto'], 2),
         'cobrado': round(base['cobrado'], 2),
+        'new_cash': round(base.get('new_cash', 0.0), 2),
         'no_calificados': entrantes - calificados,
-        'pct_calificados': _division(calificados * 100, entrantes, 1),
-        'pct_no_calificados': _division((entrantes - calificados) * 100, entrantes, 1),
         'sin_respuesta': sin_respuesta,
-        'pct_descalificados': _division(descalificados * 100, entrantes, 1),
-        'pct_en_conversacion': _division(en_conversacion * 100, entrantes, 1),
-        'pct_sin_respuesta': _division(sin_respuesta * 100, entrantes, 1),
-        'cpl': _division(gasto, entrantes) if con_gasto else None,
-        'cpl_calificado': _division(gasto, calificados) if con_gasto else None,
-        'costo_agenda': _division(gasto, base['agendas']) if con_gasto else None,
-        'costo_venta': _division(gasto, base['ventas']) if con_gasto else None,
-        'roas': _division(base['cobrado'], gasto) if con_gasto else None,
+        'pendientes': en_conversacion + sin_respuesta,
     }
+    return {**base, **derivadas, **formulas.aplicar({**base, **derivadas})}
 
 
-SUMABLES = ('entrantes', 'calificados', 'descalificados', 'en_conversacion', 'agendas', 'ventas', 'gasto', 'cobrado')
+SUMABLES = ('entrantes', 'calificados', 'descalificados', 'en_conversacion', 'agendas', 'ventas', 'clientes_nuevos', 'gasto',
+            'cobrado', 'new_cash')
 
 
 def tablero(desde, hasta, base=None, segmento=None):
@@ -382,6 +377,8 @@ def tablero(desde, hasta, base=None, segmento=None):
             'en_conversacion': e['en_conversacion'] if e else 0,
             'agendas': a['agendas'] if a else 0,
             'ventas': v['ventas'] if v else 0,
+            'clientes_nuevos': len(v['personas']) if v else 0,
+            'new_cash': v['new_cash'] if v else 0.0,
             'cobrado': v['cobrado'] if v else 0.0,
             'gasto': gasto_total,
             'campana': campana,
@@ -416,4 +413,7 @@ def tablero(desde, hasta, base=None, segmento=None):
         'embudos': embudos,
         # Setting vs Workshop con ROAS New Cash y Total (23/10/2026): ver `fuentes_service`.
         'fuentes': fuentes,
+        # Las cuentas y qué es un lead, un gasto y una venta: las mismas del backend, para la pantalla (`marketing_formulas`).
+        'formulas': formulas.FORMULAS,
+        'definiciones': formulas.DEFINICIONES,
     }
