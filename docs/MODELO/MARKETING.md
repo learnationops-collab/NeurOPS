@@ -1,8 +1,8 @@
 # Marketing y segmentos — modelo vigente
 
-Cómo se cuenta hoy cada cifra de Marketing (Setting, Workshop, Todos) y cómo se parte por segmento A/B/C/D. Las decisiones que llevaron a esto, en [DECISIONS.md](../DECISIONS.md) (ADR-W015, ADR-W019, ADR-W020, ADR-W021, ADR-W027 y ADR-W029). Código principal: `app/services/anuncios_service.py`, `fuentes_service.py`, `fuentes_registros_service.py`, `segmentos_*.py`; pantallas en `frontend/src/pages/admin/marketing/`.
+Cómo se cuenta hoy cada cifra de Marketing (Setting, Workshop, Todos) y cómo se parte por segmento A/B/C/D. Las decisiones que llevaron a esto, en [DECISIONS.md](../DECISIONS.md) (ADR-W015, ADR-W019, ADR-W020, ADR-W021, ADR-W035 y ADR-W037). Código principal: `app/services/anuncios_service.py`, `fuentes_service.py`, `fuentes_registros_service.py`, `segmentos_*.py`; pantallas en `frontend/src/pages/admin/marketing/`.
 
-## Lead, gasto y venta: una sola definición (ADR-W029)
+## Lead, gasto y venta: una sola definición (ADR-W037)
 
 Las cuentas viven en `app/services/marketing_formulas.py` (`FORMULAS`); `anuncios_service.metricas`, `fuentes_service.metricas_de_fuente` y la pantalla (`anuncios/formulas.js`, que lee `tablero.formulas`) usan la misma. Cada pestaña dice con un ícono (`MarcaDeBase`) qué cuenta:
 
@@ -40,7 +40,7 @@ Cada cifra abre la lista de lo que la suma (`fuentes_registros_service.registros
 
 **«De dónde vino lo cobrado»** (Rendimiento › Setting) sale de estas mismas fuentes: Setting + Workshop + Otras suman el total cobrado del período, y cada fila abre su lista de «Cash total». No usa la procedencia por tipo de pago de Finanzas (ahí los upsells y renovaciones van a «Fulfillment»), que sigue siendo la de Revisar › Ventas (faceta «Fuente») y la de Finanzas: ahí Workshop no coincide con el Cash total de Marketing por esa razón.
 
-**Dos «ROAS Total» de Workshop** (ADR-W025, ADR-W027). Son cuentas distintas y cada tarjeta lo dice con un ícono de base (`MarcaDeBase`):
+**Dos «ROAS Total» de Workshop** (ADR-W033, ADR-W035). Son cuentas distintas y cada tarjeta lo dice con un ícono de base (`MarcaDeBase`):
 
 | | Todos / Marketing (ícono calendario) | Workshop › Resumen (ícono taller) |
 |---|---|---|
@@ -48,9 +48,9 @@ Cada cifra abre la lista de lo que la suma (`fuentes_registros_service.registros
 | Denominador | gasto de Meta del período | inversión de esos talleres (ventana: desde el día siguiente al taller anterior) |
 | Lista | `cash_total` (y `cash_anterior` para la parte de ventas anteriores) | `cash_total` de `workshop_registros_service` |
 
-**Cash total de un taller = New Cash + señas** (ADR-W027): `cash_collected` suma las ventas nuevas, las señas y las primeras cuotas que `ticket_service` le suma a cada venta (menos de un mes); `cash_ventas` (New Cash) son las ventas nuevas y esas mismas cuotas. Por eso el ROAS Total de un taller nunca es menor que su ROAS New Cash. Los talleres guardan las dos cifras como columnas (`workshop_events.cash_collected` / `cash_ventas`): al cambiar la cuenta se recalculan con `scripts/resync_workshop_events.py`.
+**Cash total de un taller = New Cash + señas** (ADR-W035): `cash_collected` suma las ventas nuevas, las señas y las primeras cuotas que `ticket_service` le suma a cada venta (menos de un mes); `cash_ventas` (New Cash) son las ventas nuevas y esas mismas cuotas. Por eso el ROAS Total de un taller nunca es menor que su ROAS New Cash. Los talleres guardan las dos cifras como columnas (`workshop_events.cash_collected` / `cash_ventas`): al cambiar la cuenta se recalculan con `scripts/resync_workshop_events.py`.
 
-**Los dos ROAS** (Kerwin, 29/10/2026): el ROAS Total de Todos es la caja del mes (todo lo cobrado en el período de clientes de Workshop ÷ gasto de Meta del período, incluidos cobros de ventas anteriores); el ROAS de cada taller compara el gasto del taller con lo que cobraron sus propias agendas. Son cuentas distintas y no hay puente entre ellas: se probó (ADR-W030, W031) y se retiró (ADR-W032).
+**Los dos ROAS** (Kerwin, 29/10/2026): el ROAS Total de Todos es la caja del mes (todo lo cobrado en el período de clientes de Workshop ÷ gasto de Meta del período, incluidos cobros de ventas anteriores); el ROAS de cada taller compara el gasto del taller con lo que cobraron sus propias agendas. Son cuentas distintas y no hay puente entre ellas: se probó (ADR-W038, W031) y se retiró (ADR-W040).
 
 ## Segmentos A/B/C/D
 

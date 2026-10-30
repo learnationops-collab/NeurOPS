@@ -9,7 +9,7 @@ cuando éste está al día; si el taller guarda otro (se calculó antes), la pan
   · new_cash               los pagos de venta nueva (completo o split pay) más la primera cuota de cada venta si llega
     a menos de un mes (la base del ticket, `cash_ventas`, 19/10/2026): su suma es el New Cash.
   · cash_total             los pagos de venta nueva, las señas y las primeras cuotas que suman a esas ventas: su suma
-    es el Cash collected (`cash_collected`), la base del ROAS Total, y siempre contiene al New Cash (ADR-W027). Las
+    es el Cash collected (`cash_collected`), la base del ROAS Total, y siempre contiene al New Cash (ADR-W035). Las
     demás cuotas, renovaciones y upsells NO suman acá (`_es_venta_valida`); el Cash total de Marketing, que sí las
     cuenta, está en Marketing › Rendimiento.
 

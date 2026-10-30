@@ -1,11 +1,12 @@
-"""Aviso de Agendas 2.0 al canal de ventas de Discord: cada agenda (nueva o reprogramada) y cada lead que
-no calificó.
+"""Aviso de Agendas 2.0 al canal de ventas de Discord: cada agenda (nueva o reprogramada), cada lead que
+no calificó y cada lead que dejó sus datos y no terminó de agendar (abandonos.py).
 
 El texto lleva solo lo que se busca después en Discord (nombre y WhatsApp del lead) y etiqueta al setter
 con su ID (`<@id>`: escribir «@nombre» no notifica a nadie). Todo lo demás va en una imagen
 (app/templates/reports/agenda_v2.html). Si la imagen falla, sale un embed de texto.
 
-Webhooks: DISCORD_AGENDAS_WEBHOOK; los que no califican, DISCORD_NO_CALIFICA_WEBHOOK (sin esa, el mismo).
+Webhooks: DISCORD_AGENDAS_WEBHOOK; los que no califican, DISCORD_NO_CALIFICA_WEBHOOK, y los que no terminan,
+DISCORD_ABANDONOS_WEBHOOK (sin esas, el de agendas).
 Los datos se arman en la request y el envío va en un hilo: Chromium tarda segundos y el lead no los
 espera. Si falta el webhook o Discord falla, queda en el log: nunca frena la agenda.
 """
@@ -27,10 +28,11 @@ TIPOS = {
     'nueva': {'titulo': 'Nueva agenda', 'emoji': '📅', 'color': 0x2ECC71},
     'reprogramada': {'titulo': 'Agenda reprogramada', 'emoji': '🔁', 'color': 0xF1C40F},
     'no_califica': {'titulo': 'No calificó', 'emoji': '🚫', 'color': 0x95A5A6},
+    'abandono': {'titulo': 'No terminó de agendar', 'emoji': '⏳', 'color': 0xE67E22},
 }
 # A quién le interesa cada aviso: el que no califica, al setter (lo sigue); la agenda nueva, a los dos;
 # la reprogramada, solo al closer (el setter ya la cerró).
-ETIQUETA = {'nueva': ('closer', 'setter'), 'reprogramada': ('closer',), 'no_califica': ('setter',)}
+ETIQUETA = {'nueva': ('closer', 'setter'), 'reprogramada': ('closer',), 'no_califica': ('setter',), 'abandono': ('setter',)}
 FUNNELS = {'setting': 'Setting', 'workshop': 'Workshop', 'otro': '', 'manual': ''}
 MOTIVOS = {
     'respuesta': 'Eligió una respuesta que descalifica',
@@ -164,12 +166,25 @@ def datos_de_no_califica(payload, setter, evento_nombre, motivo):
     }
 
 
+def datos_de_abandono(payload, setter, evento_nombre, hasta_donde):
+    return {
+        **_base('abandono', payload, setter, evento_nombre),
+        'motivo': hasta_donde,
+        'horario': None,
+        'prioridad': _segmento(payload),
+        'pie': 'Agendas 2.0 · no terminó',
+    }
+
+
 def mensaje(d):
     """El texto del mensaje: etiqueta a los que les toca (ETIQUETA), el nombre y el WhatsApp. Si a alguno
-    le falta el ID de Discord, o no hay a quién etiquetar, va @everyone para que nadie se lo pierda."""
+    le falta el ID de Discord, o no hay a quién etiquetar, va @everyone para que nadie se lo pierda. El
+    abandono sin setter (el lead vino sin link de setter) no etiqueta a nadie: no es de nadie en particular."""
     partes = [f"{d['emoji']} **{d['titulo']}**", d['lead']['nombre'], d['lead']['telefono']]
     texto = ' · '.join(p for p in partes if p)
     presentes = [i for i in (d.get(q + '_discord') for q in ETIQUETA[d['tipo']]) if i is not None]
+    if d['tipo'] == 'abandono' and not presentes:
+        return {'content': texto, 'allowed_mentions': {'parse': []}}
     if not presentes or '' in presentes:
         return {'content': '@everyone ' + texto, 'allowed_mentions': {'parse': ['everyone']}}
     ids = list(dict.fromkeys(presentes))
@@ -182,7 +197,7 @@ def embed_de_texto(d):
         {'name': 'Setter / origen', 'value': d['setter'], 'inline': True},
         {'name': 'Nota', 'value': d['nota'] or '-', 'inline': True},
     ]
-    if d['tipo'] == 'no_califica':
+    if d['tipo'] in ('no_califica', 'abandono'):
         campos.append({'name': 'Motivo', 'value': d['motivo'], 'inline': False})
     else:
         h = d['horario']
@@ -262,4 +277,17 @@ def avisar_no_califica(payload, setter, evento_nombre, motivo):
         return _despachar(url, datos_de_no_califica(payload, setter, evento_nombre, motivo))
     except Exception as e:  # noqa: BLE001
         current_app.logger.error(f'[AGENDAS 2.0] No se pudo armar el aviso de un lead que no calificó: {e}')
+        return False
+
+
+def avisar_abandono(payload, setter, evento_nombre, hasta_donde):
+    """Avisa un lead que dejó sus datos y no terminó de agendar. Corre en el scheduler: manda sin hilo.
+    True si Discord lo aceptó. Nunca lanza."""
+    url = os.environ.get('DISCORD_ABANDONOS_WEBHOOK') or os.environ.get('DISCORD_AGENDAS_WEBHOOK')
+    if not url:
+        return False
+    try:
+        return _enviar(url, datos_de_abandono(payload, setter, evento_nombre, hasta_donde))
+    except Exception as e:  # noqa: BLE001
+        current_app.logger.error(f'[AGENDAS 2.0] No se pudo avisar un lead que no terminó: {e}')
         return False

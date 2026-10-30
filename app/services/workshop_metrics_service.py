@@ -374,7 +374,7 @@ def _resumen(personas, agendas, compradores, ventas):
 
     `cash_collected` (la base del ROAS Total) = New Cash + señas: las ventas nuevas y las señas
     mas las primeras cuotas que suman a esas ventas (29/10/2026). Antes se quedaba sin las cuotas
-    y el total salia menor que el New Cash (3/10: $200 contra $500). Ver ADR-W027.
+    y el total salia menor que el New Cash (3/10: $200 contra $500). Ver ADR-W035.
     """
     estados = desglose_de_personas(personas, _estado_post_call)
     # Los pagos de la misma persona en el mismo mes son UNA venta, con su primera cuota si llega

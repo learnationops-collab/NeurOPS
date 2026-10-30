@@ -3,7 +3,7 @@ import { Chip } from '../../../../components/standard';
 import './marcaDeBase.css';
 
 /**
- * La marca de base de un ROAS (Kerwin, 29/10/2026, ADR-W027): dos cuentas se llaman igual y no son la misma, así que cada
+ * La marca de base de un ROAS (Kerwin, 29/10/2026, ADR-W035): dos cuentas se llaman igual y no son la misma, así que cada
  * tarjeta lleva un ícono que dice sobre qué base se calculó y, al pasarle el mouse, la cuenta en una línea.
  *
  *  · `periodo`: todo lo cobrado en el período de los clientes de la fuente ÷ el gasto de Meta del período (Marketing).

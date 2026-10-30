@@ -165,6 +165,7 @@ def normal_segmento(s):
             'c': min(b, entero(s.get('c'), -50, 50, -1)),
             'sigma': entero(s.get('sigma'), 1, 5, 1),
             'version': cortar(txt(s.get('version')), 20),
+            **_dinero(s.get('dinero')),
         }
     a = entero(s.get('a'), 0, 100, 69)
     b = min(a, entero(s.get('b'), 0, 100, 54))
@@ -175,7 +176,15 @@ def normal_segmento(s):
         'c': min(b, entero(s.get('c'), 0, 100, 31)),
         'sigma': entero(s.get('sigma'), 1, 50, 12),
         'version': cortar(txt(s.get('version')), 20),
+        **_dinero(s.get('dinero')),
     }
+
+
+def _dinero(d):
+    """{'dinero': {q, ops}} (la pregunta de inversión y las opciones que pueden invertir) o {} si no está."""
+    d = obj(d)
+    ops = [cortar(txt(o), 40) for o in (d.get('ops') if isinstance(d.get('ops'), list) else [])[:20] if txt(o)]
+    return {'dinero': {'q': cortar(txt(d.get('q')), 40), 'ops': ops}} if txt(d.get('q')) and ops else {}
 
 
 def normal_reglas(reglas):

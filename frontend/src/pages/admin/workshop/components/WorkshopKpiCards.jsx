@@ -135,7 +135,7 @@ const Pie = ({ sub, onVer }) => {
 const WorkshopKpiCards = ({ totalStats, eventsCount, cambios, anterior, onVer = null, talleres = [] }) => {
     const reducir = useReducedMotion();
     const datos = totalStats ? valores(totalStats, eventsCount || 0, anterior) : null;
-    // La base de los dos ROAS: la cohorte de los talleres elegidos (no el período de cobro de Marketing, ADR-W027).
+    // La base de los dos ROAS: la cohorte de los talleres elegidos (no el período de cobro de Marketing, ADR-W035).
     const nTalleres = talleres.length;
     const rotuloBase = `${nTalleres} ${nTalleres === 1 ? 'taller' : 'talleres'}`;
     const fechasBase = nTalleres <= 6 ? [...talleres].sort((a, b) => a.date.localeCompare(b.date)).map((e) => diaMes(e.date)).join(', ') : '';

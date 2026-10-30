@@ -1325,6 +1325,8 @@ def registrar_avance(d, evento, form, funnel, cuerpo):
     else:
         intento.paso = max(intento.paso or 0, paso)
         intento.resp = {**(intento.resp or {}), **resp}
+    if any(p['c'] == cuerpo.get('pais') for p in [*PAISES, PAIS_OTRO]):
+        intento.pais = cuerpo['pais']
     db.session.commit()
     return True
 

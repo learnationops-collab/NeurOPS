@@ -5,7 +5,7 @@ Objetivo del 27/10: bajar toda la lista. Lo hecho va a la bitácora ([octubre_20
 ## Hoy
 Lo que tiene fecha o gente esperando.
 
-- [ ] Recalcular el Cash total de los talleres en prod (Leadership 934, ADR-W027; lo aprueba Kerwin): ensayo `railway ssh --service "learnation work" -- python scripts/resync_workshop_events.py`, y si el ensayo muestra solo `cash_collected` cambiando en los talleres con cuotas (en la copia del 28/10: 5/9, 26/9 y 3/10, más el 29/8 que estaba desactualizado), `... resync_workshop_events.py --apply`. Después revisar Workshop › Resumen: ROAS Total ≥ ROAS New Cash en todos los talleres. No se pudo medir antes/después contra prod directo (el clasificador bloqueó la lectura); los números salen de la copia local. En la copia local de grupo-l (29/10, ensayo + `--apply`) solo cambió `cash_collected` de 4 talleres: 29/8 100→150, 5/9 583→1750, 26/9 800→1300, 3/10 200→500; el ROAS de los 4 talleres del período pasó de 0,90x a 1,21x.
+- [ ] Recalcular el Cash total de los talleres en prod (Leadership 934, ADR-W035; lo aprueba Kerwin): ensayo `railway ssh --service "learnation work" -- python scripts/resync_workshop_events.py`, y si el ensayo muestra solo `cash_collected` cambiando en los talleres con cuotas (en la copia del 28/10: 5/9, 26/9 y 3/10, más el 29/8 que estaba desactualizado), `... resync_workshop_events.py --apply`. Después revisar Workshop › Resumen: ROAS Total ≥ ROAS New Cash en todos los talleres. No se pudo medir antes/después contra prod directo (el clasificador bloqueó la lectura); los números salen de la copia local. En la copia local de grupo-l (29/10, ensayo + `--apply`) solo cambió `cash_collected` de 4 talleres: 29/8 100→150, 5/9 583→1750, 26/9 800→1300, 3/10 200→500; el ROAS de los 4 talleres del período pasó de 0,90x a 1,21x.
 - [ ] Facu: cuando termine su última agenda (6956, hoy a las 21:30 AR), sacarle el acceso de closer y borrarlo de Personas de Thalamus.
 - [ ] QUIERO APLICAR del 27/10 sin respuesta: pasárselos a los setters (`ig_contactos` 1241, 1242, 1250, 1256; revisar el 1263 `rosmeryatao`).
 - [ ] Avisarle a Dari que cierre «Perdido: que retome la preparación» de la cuenta 522 de Mónica (falsa alarma, estudia en la 523).
@@ -24,7 +24,7 @@ Matriz A/B/C/D en Todos › Segmentos y panel de segmentos de setters y closers 
 - [ ] **Costo por lead por segmento (Leadership 839, decisión de Kerwin):** Meta no conoce el segmento. Dos opciones: (a) prorratear el gasto de la fuente por la mezcla de segmentos de sus leads (cada segmento carga con la parte del gasto que le toca por su peso en los leads); (b) gasto de la fuente ÷ leads del segmento (cada segmento se divide por el gasto entero, y los costos no suman al total). Hasta que se decida, la matriz no muestra el costo.
 - [ ] Backfill del segmento de las ~120 agendas viejas (Leadership 840): `scripts/backfill_segmentos.py` en simulación contra la copia local del 28/10 no escribe nada nuevo (990 clientes y 924 agendas ya tenían segmento; 6 clientes del formulario viejo no se pueden segmentar). Confirmar con Kerwin y correr con `--apply` en el servidor.
 - [ ] Leads de Workshop por segmento: los clics al grupo no traen formulario; si se quiere, medir los leads de Workshop como personas con agenda.
-- [ ] Actualizar `TodosPage.test.jsx` («Métrica por métrica corona…»): ya no hay texto «Volumen» ni pestaña «Costos» (ahora son desplegables: `Embudo`/`Plata`/`Costos`, ADR-W028). Sin escribir tests nuevos hasta que Kerwin lo pida.
+- [ ] Actualizar `TodosPage.test.jsx` («Métrica por métrica corona…»): ya no hay texto «Volumen» ni pestaña «Costos» (ahora son desplegables: `Embudo`/`Plata`/`Costos`, ADR-W036). Sin escribir tests nuevos hasta que Kerwin lo pida.
 - [ ] Segmentos de Todos (29/10): mirar con Kerwin si prefiere la tabla del primer grupo abierta al entrar (hoy abre el Cruce y las tablas cerradas con su resumen); es cambiar un `open` en `bloquesSegmentos.jsx`.
 - [ ] Segmentos cortados (28/10, ADR-W021): el filtro de segmento aún no llega al reporte diario del setter (ManyChat), a Comparativas, a Variabilidad ni a la tabla de palabras clave; y el origen de un cobro (procedencia) no siempre coincide con el de la agenda del mismo cliente. Decidir si vale la pena partir esos tableros.
 - [ ] Países en Marketing (pedido de Gabriela, 28/10): no entró en esta entrega.
@@ -123,7 +123,7 @@ Gestiones y decisiones.
 ## Marketing: una sola definición de lead y de gasto (tarea 868 de Leadership)
 Falta la fórmula de backend; la presentación ya tiene su rótulo.
 
-- [x] Definido y aplicado (29/10, ADR-W029, `docs/MODELO/MARKETING.md`): lead de Setting = entrada por palabra clave (2.453 en 29/09–28/10: Palabras clave, Todos y Entrantes; Entrantes además cuenta 2.402 personas); gasto = Meta del embudo (tabla = tarjeta Setting = $3.352; Meta Ads y Gasto en Meta = $4.284 con Workshop y Contratación). Conversaciones ya no es una pestaña.
+- [x] Definido y aplicado (29/10, ADR-W037, `docs/MODELO/MARKETING.md`): lead de Setting = entrada por palabra clave (2.453 en 29/09–28/10: Palabras clave, Todos y Entrantes; Entrantes además cuenta 2.402 personas); gasto = Meta del embudo (tabla = tarjeta Setting = $3.352; Meta Ads y Gasto en Meta = $4.284 con Workshop y Contratación). Conversaciones ya no es una pestaña.
 - [ ] **Decisión de Kerwin (lead de Workshop):** Todos usa clics al grupo de WhatsApp (325) y Workshop › Resumen los Leads de Meta (607). Cada cifra lleva su ícono; ¿cuál es «el» lead de Workshop para comparar con Setting?
 - [ ] **Decisión de Kerwin (CAC):** costo por venta = gasto ÷ pagos de venta nueva; CAC = gasto ÷ personas que compraron (hoy iguales: 13 y 5). ¿Está bien separarlos o CAC = costo por venta?
 - [ ] La inversión de los 3 talleres del período ($796) no es el gasto de Workshop del período ($821): la ventana del taller no cubre los días sueltos. Dos cuentas con ícono, no se unificaron.
@@ -131,6 +131,16 @@ Falta la fórmula de backend; la presentación ya tiene su rótulo.
 - [ ] `TablaAnuncios.test.jsx` y los tests de `FuentesResumen`/Entrantes no se corrieron: la tabla ahora llama `usarFormulas(datos.formulas)` y los totales dependen de `formulas` (si el fixture no las trae, los costos salen vacíos). `metricas.test.js` ya las carga.
 - [ ] Mientras tanto, quien abre cada vista ve de qué habla: «Habla de:» bajo la cabecera de Workshop y en Todos (28/10/2026).
 
+
+## Workshop: Meta por hora (29/10, worktree meta-ventana-horaria, [ADR-W028](DECISIONS.md))
+Leads e inversión de cada taller entre el fin del anterior y el suyo (inicio + 2 h), con el desglose por hora de Meta.
+
+- [ ] Probar en el servidor de prueba: migración `f2a6c8e0b4d1`, «Sincronizar 180 días» (tramos de 30) y que el pedido por hora y `timezone_name` respondan (nunca corrió contra la cuenta real). Un fallo solo deja el log `Gasto por hora de la cuenta…` y los talleres siguen por día.
+- [ ] Comprobar en un taller que la suma por hora de un día entero da el gasto diario, y que `meta_leads` del taller de hoy sube hacia los clics al grupo.
+- [ ] Cargar `inicio_at` en los talleres anteriores al 15/10 si se quieren por hora; sin hora siguen por día.
+- [ ] Confirmar con Kerwin el corte: la franja termina a inicio + 2 h (propuesta de este cambio) y no al inicio, para que las 2 horas del vivo no queden sin taller.
+- [ ] Si la zona horaria de la cuenta de Meta no se puede leer, se usa `America/La_Paz`: confirmar la real.
+- [ ] Tests de la franja por hora (`franjas`, `cubre`, `desglose`): sin escribir, a proponer cuando no queden pendientes.
 
 ## Integración de las ramas de Marketing (28/10, avance-local)
 - [ ] La matriz de segmentos (Todos › Segmentos) cuenta siempre por fecha de alta; con «Contar por: fecha de reunión» sus totales no cambian y no suman las 223 de Closing. Decidir si se parte también por reunión (y sumar «Otras»).

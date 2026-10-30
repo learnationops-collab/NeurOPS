@@ -164,6 +164,26 @@ class MetaGastoDiario(db.Model):
     actualizado_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
+class MetaGastoHorario(db.Model):
+    """Lo mismo que `MetaGastoDiario`, por hora (29/10/2026), solo de las campañas de workshop: el
+    link del grupo de WhatsApp cambia al terminar cada taller, así que los leads de un taller son los que
+    llegan entre el fin del anterior y el fin de este, no días enteros (`workshop_meta_service`).
+    `desde_utc` es el inicio de la hora, en UTC naive; `fecha` es el día de la cuenta, para cruzar con
+    el gasto diario."""
+    __tablename__ = 'meta_gastos_horarios'
+    __table_args__ = (db.UniqueConstraint('meta_ad_id', 'desde_utc', name='uq_meta_gasto_hora_anuncio'),)
+    id = db.Column(db.Integer, primary_key=True)
+    meta_ad_id = db.Column(db.String(40), nullable=False, index=True)
+    fecha = db.Column(db.Date, nullable=False, index=True)
+    desde_utc = db.Column(db.DateTime, nullable=False, index=True)
+    gasto = db.Column(db.Float, nullable=False, default=0.0)
+    impresiones = db.Column(db.Integer, nullable=False, default=0)
+    clics = db.Column(db.Integer, nullable=False, default=0)
+    clics_enlace = db.Column(db.Integer, nullable=False, default=0)
+    leads = db.Column(db.Integer, nullable=False, default=0)
+    actualizado_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 class LeadAnswer(db.Model):
     """Una interacción de la conversación con el bot: la entrada por una palabra clave (con su anuncio), un
     mensaje enviado (`id_option_send`) o respondido (`id_option`), y la calificación."""

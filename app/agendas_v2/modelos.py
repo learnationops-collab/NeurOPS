@@ -119,3 +119,6 @@ class SchedIntento(db.Model):
     setter_user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
     creado_en = db.Column(db.DateTime, nullable=False, default=_ahora, index=True)
     actualizado_en = db.Column(db.DateTime, nullable=False, default=_ahora, onupdate=_ahora)
+    # País del teléfono que eligió (para el WhatsApp del aviso) y cuándo se avisó a Discord que no terminó (abandonos.py).
+    pais = db.Column(db.String(4), nullable=True)
+    avisado_en = db.Column(db.DateTime, nullable=True)

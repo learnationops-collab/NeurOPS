@@ -13,6 +13,7 @@ Un token que Google rechaza (revocado, vencido o emitido por otro cliente) se ma
 import datetime
 import json
 import os
+import re
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import google.oauth2.credentials
@@ -29,6 +30,14 @@ SCOPES = ['https://www.googleapis.com/auth/calendar', 'https://www.googleapis.co
 # Errores de Google que significan «este token ya no sirve, hay que reconectar». Otros (red,
 # cliente mal configurado) no marcan el token: reconectar no los arreglaría.
 ERRORES_DE_TOKEN = ('invalid_grant', 'unauthorized_client')
+
+# Las capacitaciones internas («Training Session», «Trainning», «Capacitación») no bloquean horarios
+# de agenda (Santi, 29/10/2026).
+_CAPACITACION = re.compile(r'\btrai+n+i+n+g|capacitaci[oó]n', re.I)
+
+
+def es_capacitacion(titulo):
+    return bool(_CAPACITACION.search(titulo or ''))
 
 
 def _iso_utc(dt):
@@ -281,49 +290,18 @@ class GoogleService:
     @staticmethod
     def franjas_ocupadas(user_id, desde, hasta):
         """[(inicio, fin)] en ms de lo que el usuario tiene ocupado en sus calendarios de conflicto
-        entre `desde` y `hasta` (datetime UTC sin zona). Los eventos marcados como «Disponible» y los
-        cancelados no cuentan (así responde freebusy). None si no se pudo saber: quien llama sigue
-        como si no hubiera nada (se prefiere ofrecer de más a perder agendas)."""
-        token = GoogleService.token_vigente(user_id)
-        calendarios = GoogleService.calendarios_de_conflicto(token)
-        if not calendarios:
-            return []
-        try:
-            service = GoogleService.get_service(user_id)
-        except Exception as e:  # noqa: BLE001  (un token que no se puede leer no frena a nadie)
-            current_app.logger.warning(f'[GOOGLE] Sin servicio para leer la ocupación del usuario #{user_id}: {e}')
-            return None
-        if not service:
-            return None
-
-        def iso(dt):
-            return dt.replace(microsecond=0).isoformat() + 'Z'
-
-        def ms(texto):
-            return int(datetime.datetime.fromisoformat(texto.replace('Z', '+00:00')).timestamp() * 1000)
-
-        try:
-            r = service.freebusy().query(body={
-                'timeMin': iso(desde), 'timeMax': iso(hasta), 'items': [{'id': c} for c in calendarios],
-            }).execute()
-        except Exception as e:  # noqa: BLE001
-            current_app.logger.warning(f'[GOOGLE] No se pudo leer la ocupación del usuario #{user_id}: {e}')
-            return None
-        franjas = []
-        for cal in (r.get('calendars') or {}).values():
-            # Un calendario que ya no existe o no se puede leer viene con `errors`: se ignora.
-            for b in cal.get('busy') or []:
-                try:
-                    franjas.append((ms(b['start']), ms(b['end'])))
-                except (KeyError, ValueError):
-                    continue
-        return sorted(franjas)
+        entre `desde` y `hasta` (datetime UTC sin zona). Cuenta lo mismo que eventos_ocupados: no los
+        cancelados, los «Disponible», los que rechazó ni las capacitaciones internas. None si no se pudo
+        saber: quien llama sigue como si no hubiera nada (se prefiere ofrecer de más a perder agendas)."""
+        eventos = GoogleService.eventos_ocupados(user_id, desde, hasta)
+        return None if eventos is None else sorted((e['inicio'], e['fin']) for e in eventos)
 
     @staticmethod
     def eventos_ocupados(user_id, desde, hasta):
         """[{inicio, fin, titulo, calendario}] (ms) de los eventos que ocupan al usuario en sus calendarios de
-        conflicto entre `desde` y `hasta` (datetime UTC sin zona), para Available. Cuenta lo mismo que
-        freebusy: no los cancelados, los marcados «Disponible» ni los que rechazó. Solo los del calendario
+        conflicto entre `desde` y `hasta` (datetime UTC sin zona), para Available y la disponibilidad. Cuenta
+        lo mismo que freebusy (no los cancelados, los marcados «Disponible» ni los que rechazó) y además
+        saltea las capacitaciones internas (es_capacitacion). Solo los del calendario
         de agendamiento (donde caen sus agendas) llevan título, y no si son privados o confidenciales: lo
         de sus otros calendarios es suyo y va sin título (None), igual que lo de un calendario del que
         solo se ve libre/ocupado (se lee con freebusy). Los que van sin título dicen de qué calendario son
@@ -375,8 +353,8 @@ class GoogleService:
 
     @staticmethod
     def _eventos_de(service, calendario, desde, hasta, con_titulo=True):
-        """Los eventos que ocupan en un calendario (los recurrentes, cada uno por separado). Sin
-        `con_titulo`, ninguno lleva título."""
+        """Los eventos que ocupan en un calendario (los recurrentes, cada uno por separado), sin las
+        capacitaciones internas. Sin `con_titulo`, ninguno lleva título."""
         out, pagina = [], None
         while True:
             r = service.events().list(
@@ -394,8 +372,11 @@ class GoogleService:
                 inicio, fin = _ms_punto(e.get('start'), zona), _ms_punto(e.get('end'), zona)
                 if inicio is None or fin is None or fin <= inicio:
                     continue
+                resumen = (e.get('summary') or '').strip()
+                if es_capacitacion(resumen):
+                    continue
                 privado = e.get('visibility') in ('private', 'confidential')
-                titulo = (e.get('summary') or '').strip() or None if con_titulo and not privado else None
+                titulo = resumen or None if con_titulo and not privado else None
                 out.append({'inicio': inicio, 'fin': fin, 'titulo': titulo, 'calendario': None if titulo else nombre})
             pagina = r.get('nextPageToken')
             if not pagina:

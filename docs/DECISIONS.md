@@ -237,7 +237,7 @@
 - **Consecuencias:** un `.humo` nuevo debe tener el contenedor `.humo` y los cuatro `<i>`; el modo bajo solo cubre `.dc-shell`, `.thalamus` y `.talent` (otras animaciones infinitas, como el fondo del ingreso, no se tocaron).
 
 
-## ADR-W025: «De dónde vino lo cobrado» sale de las fuentes y el Cash total dice cuánto es de ventas anteriores
+## ADR-W033: «De dónde vino lo cobrado» sale de las fuentes y el Cash total dice cuánto es de ventas anteriores
 
 - **Estado:** implementada (29/10/2026). Leadership 850 y 869.
 - **Contexto:** «De dónde vino lo cobrado» repartía el cobro por tipo de pago (procedencia de Finanzas: upsells y renovaciones a «Fulfillment») y las tarjetas por origen del cliente (`fuentes_service`). Para el mismo Workshop daba $6.164 contra $6.693 de Cash total (últimos 30 días): los $529 eran una renovación que el panel mandaba a Fulfillment. Aparte, el ROAS Total de Workshop cambiaba según el período (6,09x en octubre, 8,2x en los últimos 30 días, sin error: el período cambia qué cuotas entran) y no se veía qué parte era de ventas del período: en octubre, $2.643 de los $4.143 son de ventas anteriores, y el ROAS New Cash es 1,02x.
@@ -245,7 +245,7 @@
 - **Qué se pierde:** el panel ya no abre Revisar › Ventas ni separa «Setting sin palabra clave», VSL y Fulfillment como filas (las de Otras van en el detalle). Revisar › Ventas conserva la procedencia por tipo de pago, así que su Workshop no coincide con el Cash total de Marketing. Con un segmento elegido no hay `cash_anterior`. Una seña de alguien sin venta nueva cuenta como «anterior».
 - **Consecuencias:** `cobrado_fuera` salió del tablero. Kerwin decidió (29/10) dejar los dos ROAS sin titular. Queda abierto que Workshop › Resumen usa otro «ROAS Total» (cohorte del taller): ver `pendientes_santi.md`.
 
-## ADR-W026: Workshop se entiende en un dibujo: «Del anuncio al cobro», color por origen y listas en el detalle
+## ADR-W034: Workshop se entiende en un dibujo: «Del anuncio al cobro», color por origen y listas en el detalle
 - **Fecha:** 2026-10-29 · **Subsistema:** Workshop (Resumen, Talleres) y `VerRegistros` · **Estado:** implementado en local
 - **Contexto:** tarea 851 de Leadership (pedido de Kerwin: que la vista de Workshop se entienda gráficamente, sin leer, con la lista detrás de cada dato). El Resumen tenía ocho tarjetas y una tabla de porcentajes contra la meta, pero ningún dibujo que uniera 4.279 leads, 286 agendas y 18 ventas; el detalle de un taller dibujaba el embudo sin abrir ninguna lista; la tarjeta de un taller decía CPL, agendas, costo por agenda y CAC en una frase, y los ROAS explicaban su fórmula con texto.
 - **Decisión:**
@@ -256,15 +256,15 @@
 - **Qué se pierde (nombrado):** el Resumen pasa de entrar en una pantalla a dos (el recorrido suma ~350 px antes de la salud del embudo). Los tramos «No asistieron», «Sin reporte» y «Otras» de las agendas abren una lista más ancha que su número (Citas con resultado o todas las agendas): no hay una lista por estado en `GET /workshop/registros`. «Ganancia» del detalle no tiene lista (es una resta).
 - **Consecuencias:** un paso nuevo del embudo necesita su entrada en `ORIGEN_DE_PASO` (si no, cae en «Taller»). En el Resumen, la píldora de «Asistieron» (62%) es sobre las citas con resultado y el tramo de agendas (43%) sobre todas las agendas: dos bases distintas, cada una con su tooltip.
 
-## ADR-W027: El Cash total de un taller contiene a su New Cash, y cada ROAS dice sobre qué base se calculó
+## ADR-W035: El Cash total de un taller contiene a su New Cash, y cada ROAS dice sobre qué base se calculó
 
 - **Estado:** implementada (29/10/2026). Leadership 934 y 935.
-- **Contexto:** Workshop › Resumen con los 4 talleres de octubre daba ROAS Total 0,9x contra ROAS New Cash 1,06x, imposible porque el total contiene a la venta nueva. Causa: `cash_collected` sumaba los pagos de la cohorte (ventas nuevas y señas) y `cash_ventas` (New Cash, base del ticket) además la primera cuota de cada venta, que `ticket_service` busca en la base y `_es_venta_valida` deja fuera. Con más cuotas que señas el New Cash superaba al total (3/10: $200 contra $500; 26/9: $800 contra $1.250; 5/9: $583 contra $1.650). Aparte, «ROAS Total» de Todos (6,05x: $4.143 cobrados ÷ $685 gastados) y el de Workshop (0,9x) son cuentas distintas con el mismo nombre (ADR-W025).
+- **Contexto:** Workshop › Resumen con los 4 talleres de octubre daba ROAS Total 0,9x contra ROAS New Cash 1,06x, imposible porque el total contiene a la venta nueva. Causa: `cash_collected` sumaba los pagos de la cohorte (ventas nuevas y señas) y `cash_ventas` (New Cash, base del ticket) además la primera cuota de cada venta, que `ticket_service` busca en la base y `_es_venta_valida` deja fuera. Con más cuotas que señas el New Cash superaba al total (3/10: $200 contra $500; 26/9: $800 contra $1.250; 5/9: $583 contra $1.650). Aparte, «ROAS Total» de Todos (6,05x: $4.143 cobrados ÷ $685 gastados) y el de Workshop (0,9x) son cuentas distintas con el mismo nombre (ADR-W033).
 - **Decisión:** (1) `cash_collected` = ventas nuevas + señas + primeras cuotas que suman a las ventas (`ticket_service.ticket_y_cuotas`, una sola búsqueda de cuotas): el Cash total es el New Cash más las señas, y su lista (`cash_total`) incluye esas cuotas; (2) las dos tarjetas de ROAS llevan un ícono de base (calendario = cobrado del período, taller = cohorte de los talleres) con su cuenta en un tooltip de una línea y la cifra abre la lista del numerador; (3) Marketing dice cuánto del cobrado es de ventas anteriores con su propia lista (`cash_anterior`); (4) un puente numérico entre los dos ROAS de Workshop (tres pasos que suman exacto) en Todos › Resumen y en Workshop › Anuncios de Meta.
 - **Qué se pierde:** el «Cash total» del taller ya no es «solo lo cobrado por pagos de venta nueva y señas»: ahora trae cuotas de las ventas del taller aunque se cobren después. Los talleres ya guardados conservan la cuenta vieja hasta el recálculo (`scripts/resync_workshop_events.py`). El puente solo se arma con el período de Marketing y los talleres que caen en él (sin segmento elegido).
 - **Consecuencias:** `cash_collected` cambia en todo lo que lo usa (ROAS, ganancia, Neto, correlaciones, comparativas de talleres). Las dos cuentas siguen siendo distintas (período de cobro contra cohorte): lo que se garantiza es que cada una lleva su base visible y que, dentro de cada una, Total ≥ New Cash.
 
-## ADR-W029: Una sola definición de lead y de gasto en Marketing, con las cuentas escritas una vez
+## ADR-W037: Una sola definición de lead y de gasto en Marketing, con las cuentas escritas una vez
 
 - **Estado:** implementada en local (29/10/2026). Leadership 868, 831, 832, 866 y 834.
 - **Contexto:** el mismo período de 30 días daba 2.448 / 2.397 / 2.647 leads según la pestaña y $3.366 / $3.342 / $4.279 / $4.270 de gasto; en Workshop «lead» es un clic al grupo de WhatsApp (Todos) o la columna Leads de Meta (Resumen), en Setting una entrada por palabra clave. Además las cuentas estaban escritas tres veces (`anuncios_service.metricas`, `fuentes_service.metricas_de_fuente`, `metricas.js` y las razones de `comparacion.js`).
@@ -272,7 +272,7 @@
 - **Qué se pierde:** el Ventas de Palabras clave ya no muestra «cobrado» debajo (sigue en la columna y en el ROAS); un anuncio de Contratación con una palabra clave en el nombre ($23,69 en el período) deja de sumarse a esa palabra. El CAC por personas todavía no coincide con el «CAC» de Workshop › Resumen cuando una persona paga dos veces el mismo mes (ahí las ventas ya son personas).
 - **Consecuencias:** `metricas.test.js` carga sus cuentas con `usarFormulas`; cualquier lugar nuevo que calcule un costo debe agregar un renglón a `FORMULAS` en vez de dividir. Quedan distintas, y rotuladas: lead (3 cosas), inversión por taller contra gasto del período, y el cobrado de la tabla de palabras clave contra el Cash total de la tarjeta.
 
-## ADR-W028: Todos › Métrica por métrica y Segmentos: desplegables para el detalle, pestañas solo para cambiar de tema
+## ADR-W036: Todos › Métrica por métrica y Segmentos: desplegables para el detalle, pestañas solo para cambiar de tema
 - **Fecha:** 2026-10-29 · **Subsistema:** Marketing › Todos (`MetricaPorMetrica`, `SegmentosVista`) y componentes estándar · **Estado:** implementado en local. Leadership 936 y 937.
 - **Contexto:** Kerwin probó la versión integrada: los cuadritos rosa y azul sueltos en la cabecera de «Métrica por métrica» no decían nada (ahí van los nombres), el color estaba en filas, cifras y barras, y las dos vistas pedían mucho scroll (la primera con una pestaña por grupo; Segmentos con cuatro grupos de pestañas, dos filas de chips y una tabla de 560 px por grupo).
 - **Decisión:**
@@ -282,23 +282,55 @@
 - **Qué se pierde (nombrado):** la tabla de cada grupo ya no está a la vista al entrar (primero el cruce; un clic abre la tabla). El estado guardado `disposicion` deja de usarse. Los filtros «Todo/Embudo/Plata/Costos» no existen: se cierran los grupos que no interesan. «Volumen» ya no se escribe en las filas sin ganador.
 - **Consecuencias:** `TodosPage.test.jsx` («Métrica por métrica corona…») busca el texto «Volumen» y la pestaña «Costos»: hay que actualizarlo. Los desplegables de Segmentos de Analizar (Closing) no se tocaron.
 
-## ADR-W030: El puente entre los dos ROAS se lee sin tooltips y vive en un desplegable cerrado
+## ADR-W038: El puente entre los dos ROAS se lee sin tooltips y vive en un desplegable cerrado
 - **Fecha:** 2026-10-29 · **Subsistema:** Marketing › Todos y Workshop › Anuncios de Meta (`PuenteRoas`) · **Estado:** implementado en local. Leadership 942.
 - **Contexto:** Kerwin no entendió la franja «5,37x → −3,42x ventas anteriores → −0,84x solo talleres → −0,20x más inversión → 0,90x» ni leyendo los tooltips: los extremos no tenían nombre y cada paso era una etiqueta de dos palabras. Ocupaba el centro del Resumen y mezclaba una cuenta con dos significados de «ROAS».
 - **Decisión:** el puente pasa a un `Accordion` cerrado, «¿Por qué difieren los dos ROAS?», que cerrado deja ver sus dos cifras. Abierto, una cuenta de renglones (cifra · qué es · de cuánto): «Todos · cobrado del período ÷ gasto del período», «cuotas de meses anteriores», «cobrado fuera de estos talleres», «gasto de los talleres» y «= Workshop · N talleres». Restas en rojo con «−», sumas en verde con «+». Cada cifra mostrada es el ROAS redondeado de su tramo y cada resta es la diferencia de los redondeados, para que la suma se vea exacta.
 - **Qué se pierde:** una resta mostrada puede diferir en 0,01x de la exacta (−3,43x en vez de −3,42x). Se pierden las marcas de base de los extremos (los nombres ya están escritos) y el tooltip de cada paso (su cuenta está en el renglón).
 - **Consecuencias:** `calculoPuente.js` no cambia. Si en el futuro el puente sigue sin leerse en pocas palabras, se saca del Resumen y queda solo en el tooltip del ROAS Total.
 
-## ADR-W031: El puente entre los dos ROAS sale del Resumen de Todos y queda en el tooltip del ROAS Total
-- **Fecha:** 2026-10-29 · **Subsistema:** Marketing › Todos (`ResumenTodos`, `PuenteRoas`) y `CifraConCuenta` · **Estado:** implementado en local. Leadership 942 (seguimiento). Reemplaza el lugar de ADR-W030.
+## ADR-W039: El puente entre los dos ROAS sale del Resumen de Todos y queda en el tooltip del ROAS Total
+- **Fecha:** 2026-10-29 · **Subsistema:** Marketing › Todos (`ResumenTodos`, `PuenteRoas`) y `CifraConCuenta` · **Estado:** implementado en local. Leadership 942 (seguimiento). Reemplaza el lugar de ADR-W038.
 - **Contexto:** con el puente ya legible en un desplegable, Kerwin pidió sacar la tarjeta del Resumen y mostrar la cuenta en el tooltip de la cifra.
 - **Decisión:** `CifraConCuenta` suma `detalle` (un nodo bajo la cuenta, separado por una línea). La cifra Workshop del ROAS Total lo usa con `CuentaDelPuente` en versión compacta. El rótulo del primer paso pasa de «cuotas de meses anteriores» a «cobros de ventas anteriores», porque `cash_anterior` incluye cuotas, upsells, renovaciones y señas de clientes sin venta nueva en el período. Workshop › Anuncios de Meta conserva el desplegable.
 - **Qué se pierde:** la cuenta ya no está a la vista: hay que pasar el mouse por el 5.37x. En pantallas táctiles el tooltip depende del foco.
 - **Consecuencias:** `usePuente` y `CuentaDelPuente` se exportan de `PuenteRoas.jsx`; el catálogo de `ui-builder` documenta `detalle`.
 
-## ADR-W032: Se retira el puente entre los dos ROAS
-- **Fecha:** 2026-10-29 · **Subsistema:** Marketing › Todos y Workshop › Anuncios de Meta · **Estado:** implementado en local. Leadership 942 (cierre). Reemplaza ADR-W030 y W031 en lo que dicen del puente.
+## ADR-W040: Se retira el puente entre los dos ROAS
+- **Fecha:** 2026-10-29 · **Subsistema:** Marketing › Todos y Workshop › Anuncios de Meta · **Estado:** implementado en local. Leadership 942 (cierre). Reemplaza ADR-W038 y W031 en lo que dicen del puente.
 - **Contexto:** Kerwin no necesitaba el puente: le bastaba entender qué mide cada ROAS. El de Todos es lo cobrado del período ÷ el gasto del período (caja del mes, 64% de ventas anteriores en la copia local); el de cada taller, lo que cobraron sus agendas ÷ su gasto. Lo explicará él en la reunión.
 - **Decisión:** se borran `PuenteRoas.jsx`, `calculoPuente.js`, su CSS y la prop `detalle` de `CifraConCuenta` (sin otros usos). El rótulo de la marca de base y los tooltips de cada ROAS siguen diciendo sobre qué base se calculó.
 - **Qué se pierde:** la cuenta paso a paso entre 5.37x y 1.21x. Queda sin unificar la definición de New Cash (Todos: pago de la venta nueva; Workshop: venta + primera cuota a menos de un mes).
 - **Consecuencias:** el pendiente de unificar New Cash o de renombrar el ROAS de Todos como «caja del mes» queda como decisión de Kerwin.
+
+## ADR-W025: El dinero decide el par de segmentos (A/B o C/D) y el ruteo es solo por dinero
+
+- **Estado:** implementada (29/10/2026).
+- **Contexto:** con los puntos de §8.10 (`plan_segmentos_triage.md`), quien no invierte llegaba como mucho a C, pero quien invierte podía caer en C o D por el resto de las respuestas (residente, ENARM, necesita apoyo). Para el workshop del 29/10, Santi simplificó el embudo: el que tiene dinero va a closers y el que no, al triage. No se descarta a nadie salvo el estudiante que no invierte (`mk-academy`, página de gracias).
+- **Decisión:** `segmento.dinero` (`{q, ops}`: la pregunta de inversión y las opciones de $200 o más) en el formulario `dg6gukz9emx`. Con dinero el segmento es A (puntos ≥ a) o B; sin dinero, C (puntos ≥ c) o D. Sin respuesta de inversión se usan los cortes de siempre. El ruteo pasa a dos reglas por la inversión: `con-dinero` → «Segmentos A y B» (Jean Carlo y Marlon, máxima disponibilidad) y `sin-dinero` → Triage con la Sesión diagnóstica. Versión `2026-12.2`.
+- **Qué se pierde:** el corte B/C por puntos deja de existir: un inversor con todo lo demás en contra queda B, y un no inversor con todo a favor queda C. Los A/B históricos (versiones anteriores) no se recalculan solos.
+- **Consecuencias:** el segmento que se ve en la ficha y en Discord coincide con a dónde fue el lead. Python (`nucleo/segmento.py`, `normalizar.py`) y JS (`core/segmento.js`, `core/normalizar.js`) quedan iguales.
+
+## ADR-W026: Aviso a Discord del lead que no terminó de agendar, a los 5 minutos
+
+- **Estado:** implementada (29/10/2026).
+- **Contexto:** los leads que dejan sus datos en un link de Tálamus y no agendan quedaban en `sched_intentos` (Stats) sin que nadie se enterara a tiempo. Santi pidió que a los 5 minutos llegue a Discord y etiquete al setter, para que lo rescate.
+- **Decisión:** un job del scheduler (`abandonos.avisar_abandonos`, cada minuto, solo el líder) busca intentos `incompleta` sin moverse hace 5 minutos (y no más de 2 horas) y sin `avisado_en`. Manda la tarjeta de siempre con el tipo «No terminó de agendar»: nombre, WhatsApp, respuestas, segmento y hasta dónde llegó, y etiqueta al setter del link. Sin setter no etiqueta a nadie, y con un setter sin ID de Discord va @everyone, como el resto de los avisos. Un solo aviso por intento. Webhook `DISCORD_ABANDONOS_WEBHOOK`; sin esa variable, el de agendas. `sched_intentos` suma `pais` (para el WhatsApp con su prefijo) y `avisado_en`.
+- **Qué se pierde:** si el lead vuelve y abandona de nuevo, no hay segundo aviso. Si Discord falla, ese aviso no se reintenta (se marca antes de mandar, para no repetirlo cada minuto). Los intentos anteriores al deploy no tienen país: el WhatsApp sale con el prefijo de Bolivia.
+- **Consecuencias:** los avisos salen aunque el lead agende a los 6 minutos. Para ese entonces el setter ya lo vio, y la agenda nueva llega con su propio aviso.
+
+## ADR-W028: Los leads y la inversión de Meta de cada taller, por hora (del fin del anterior al fin de este)
+
+- **Estado:** implementada (29/10/2026), sin probar contra la cuenta real de Meta.
+- **Contexto:** el taller de hoy mostraba «181 de 111 leads» (WhatsApp sobre Leads de Meta). La ventana era por día (del día siguiente al taller anterior hasta el día de este, completos), pero el link del grupo de WhatsApp cambia al terminar cada taller: lo que llega esa noche ya es del siguiente, y lo que llega después de este taller también. La ventana por día perdía la noche del anterior y contaba de más la de este.
+- **Decisión:** `MetaGastoHorario` (`meta_gastos_horarios`) guarda el gasto, impresiones, clics y leads por anuncio y hora (UTC), solo de las campañas con anuncios de embudo `workshop`, con el desglose `hourly_stats_aggregated_by_advertiser_time_zone` (`meta_ads_horas`, después de cada sincronización diaria). `workshop_meta_service.franjas` da a cada taller `[fin del anterior, su fin)` con fin = inicio + `DURACION_HORAS` (2), a la hora más cercana. Aplica a leads, inversión, CPM y CPC (`meta_*` del evento) y al desglose de anuncios. Solo si el taller y el anterior tienen `inicio_at` y todo el gasto diario de los anuncios de workshop de esa franja tiene sus horas (`meta_ads_horas.cubre`); si no, sigue la ventana por día.
+- **Qué se pierde:** el corte es de 2 h fijas, no la hora real en que se cambió el link. La franja termina 2 h después de empezar este taller (y no al empezar) para que las 2 horas del vivo no queden sin taller; Kerwin había hablado de cortar al inicio. Los talleres sin hora cargada o sin horas traídas siguen por día, así que el historial mezcla los dos criterios, y la inversión de cada taller cambia respecto de lo cargado a mano. Falta traer las horas de los talleres viejos (Sincronizar 180 días).
+- **Consecuencias:** cambiar la hora de un taller recalcula la inversión de Meta de él y de sus vecinos. Un fallo del pedido por hora se registra y no tumba la sincronización diaria. No cierra la diferencia con el grupo: orgánico, DMs, anuncios de otro embudo y personas sin píxel siguen fuera de «Leads de Meta».
+
+## ADR-W027: La ventana «N días» cuenta solo días con lugar, y se abren días antes de desbordar a otro grupo
+
+- **Estado:** implementada (29/10/2026).
+- **Contexto:** con la agendada masiva del workshop, Jean Carlo y Marlon se llenaron hasta el sábado. Un evento de «4 días» terminaba ofreciendo solo los 6 horarios del lunes, o directamente desbordaba al Grupo 4 (Mario), que Santi no quería para A/B. Santi: «un día lleno no debería contar para el límite de días, y uno con 1 o 2 espacios está virtualmente lleno».
+- **Decisión:** `asignacion` (Python y JS) cuenta la ventana en días con `MIN_HORARIOS_DIA` (3) o más horarios del grupo del lead, en la zona del equipo. Si tiene menos de N, abre un día más por vez (hasta `DIAS_EXTRA_MAX`, 14) **sin desbordar** (`sin_desborde`). Recién si el grupo no tiene ningún horario en todos esos días, desborda como antes y, si tampoco hay nadie, sigue abriendo días. Los días con 1 o 2 horarios se siguen ofreciendo, solo que no cuentan.
+- **Qué se pierde:** el lead puede ver horarios más lejos en lugar de uno más cercano con un closer de otro grupo. En Setting, un A/B que antes caía en Mario el viernes ahora ve a Jean Carlo desde el lunes. Cada asignación calcula hasta 15 veces más (sin consultas nuevas a Google).
+- **Consecuencias:** el desborde a otro grupo queda como último recurso. Los eventos en modo «rango» o «siempre» no cambian.

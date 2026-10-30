@@ -1336,3 +1336,24 @@
 - **29 de Octubre de 2026 (El humo seguía parpadeando: faltaba el de las tarjetas estándar)** *([efectos.css](../../frontend/src/efectos/efectos.css), ADR-W024)*
   - El primer arreglo solo cubría `.humo`; en la configuración de un evento de Tálamus el humo es `.ui-aura` (20 nubes con blur de 56 px y mezcla de capas, animadas), y su regla de «menos movimiento» nunca se aplicaba (le ganaban las reglas por `:nth-child`). Ahora las dos formas pasan por `efectos.css` y el «menos movimiento» las detiene de verdad.
   - La medición ahora corre a los 1,5, 8 y 20 s de cargar, con umbral más sensible (menos de ~40 cuadros por segundo), para pillar la pantalla ya llena de tarjetas. Verificado en local: 24 nubes sin blur ni mezcla, con degradé; en modo bajo, las 24 ocultas.
+- **29 de Octubre de 2026 (las capacitaciones no bloquean horarios de agenda)** *([google_service.py](../../app/services/google_service.py))*:
+  - La ocupación de Google de cada closer se lee evento por evento (antes con freebusy, sin títulos) y saltea las capacitaciones internas («Training Session», «Trainning», «Capacitación»). Un calendario que solo deja ver libre/ocupado se sigue leyendo con freebusy.
+  - Caso: a Jean Carlo una «Trainning Session» del viernes 30 (18 a 19) le tapaba horarios para los leads del workshop.
+  - Configuración en producción: el margen de Jean Carlo en las Sesiones de Aceleración (workshop y setting) pasa de 15 a 0 minutos, para que entren sesiones en los huecos de una hora.
+- **29 de Octubre de 2026 (Workshop: ruteo solo por dinero y agenda de 3 días)** *(configuración de Tálamus en producción, sin código)*:
+  - El formulario `dg6gukz9emx` (Workshop, Setting) rutea solo por la inversión: $200 o más → «Segmentos A y B» (closers); «podría conseguir ayuda» o «no estoy dispuesto» → Triage con la Sesión diagnóstica. `mk-academy` sigue primera. Reemplaza las reglas `seg-a`…`seg-d`.
+  - «Segmentos A y B» (antes Grupo 5): Jean Carlo y Marlon, máxima disponibilidad (Jean Carlo desempata). Mario sale de A/B. El Grupo 4 queda sin uso.
+  - La Sesión de Aceleración del Workshop ofrece hoy, mañana y pasado (2 días corridos después de hoy, antes 3). Con eso, a un lead con dinero se le ofrecen 11 horarios del 29 al 31/10 y al triage 21.
+- **29 de Octubre de 2026 (el dinero decide el par de segmentos)** *([segmento.py](../../app/agendas_v2/nucleo/segmento.py), [segmento.js](../../frontend/src/pages/agendas_v2/core/segmento.js))*:
+  - Con `segmento.dinero` en el formulario, el lead que puede invertir ($200 o más) queda A o B y el que no, C o D. Las demás preguntas solo eligen la letra dentro del par (ADR-W025). Así el segmento de la ficha y de Discord coincide con el ruteo: A/B a closers y C/D al triage.
+- **29 de Octubre de 2026 (aviso del lead que no terminó de agendar)** *([abandonos.py](../../app/agendas_v2/abandonos.py), [avisos_discord.py](../../app/agendas_v2/avisos_discord.py), [reminder_scheduler.py](../../app/services/reminder_scheduler.py))*:
+  - A los 5 minutos de que un lead deje sus datos en un link y no siga, llega a Discord «⏳ No terminó de agendar», etiquetando a su setter, con sus respuestas y hasta dónde llegó (ADR-W026). Un aviso por lead y evento.
+  - Migración `b4d6f8a0c2e3`: `sched_intentos.pais` y `sched_intentos.avisado_en`.
+- **29 de Octubre de 2026 (Workshop: leads e inversión de Meta por hora)** *([workshop_meta_service.py](../../app/services/workshop_meta_service.py), [meta_ads_horas.py](../../app/services/meta_ads_horas.py))*:
+  - Los leads y la inversión de cada taller salen de lo que llega entre el fin del taller anterior y el fin de este (inicio + 2 h), porque el link del grupo de WhatsApp cambia al terminar cada taller (ADR-W028). Antes eran días completos y el taller de hoy mostraba 181 en WhatsApp contra 111 leads.
+  - La sincronización con Meta guarda el gasto por hora de las campañas de workshop. Solo aplica si el taller y el anterior tienen hora cargada y sus horas están traídas; si no, sigue por día. Cambiar la hora de un taller recalcula a sus vecinos.
+  - Migración `f2a6c8e0b4d1`: tabla `meta_gastos_horarios`.
+- **29 de Octubre de 2026 (margen de Jean Carlo de vuelta)** *(configuración de Tálamus en producción)*: terminada la agendada del workshop, el margen de Jean Carlo en las Sesiones de Aceleración (workshop y setting) vuelve de 0 a 15 minutos.
+- **29 de Octubre de 2026 (la ventana de días cuenta solo días con lugar)** *([asignacion.py](../../app/agendas_v2/nucleo/asignacion.py), [asignacion.js](../../frontend/src/pages/agendas_v2/core/asignacion.js))*:
+  - Un evento de «N días» ahora ofrece N días con al menos 3 horarios del grupo del lead: los días llenos o con 1 o 2 lugares no cuentan, y se abren días hasta completar N (tope 14). Los de 1 o 2 lugares se siguen mostrando.
+  - Antes de pasar a otro grupo (por ejemplo, de «Segmentos A y B» al Grupo 4 con Mario), primero se abren días con el propio grupo (ADR-W027).

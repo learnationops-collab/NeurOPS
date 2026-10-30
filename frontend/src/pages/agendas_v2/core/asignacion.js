@@ -5,6 +5,7 @@ import { TZ_DEF } from './catalogos';
 import { buscar, closers, esCloser, esTriage, horasSemana, ord, sesionDe } from './datos';
 import { GENERICA, agendaOpt, slotsPersona } from './disponibilidad';
 import { calificar, grupoPorReglas } from './formulario';
+import { claveDia } from './tiempo';
 
 const DIA = 86400000;
 // "Llenar en orden": un closer está lleno cuando no le queda ningún horario libre en esta ventana.
@@ -63,26 +64,52 @@ function porEstrategia(estrategia, miembros, slotsDe, { ahora, cargaDe }, g = nu
 // Si en los días del evento no queda ningún horario, se suma un día por vez hasta encontrar uno: el lead
 // nunca se queda sin agendar porque la ventana se llenó. Tope de días agregados.
 export const DIAS_EXTRA_MAX = 14;
+// Un día con menos horarios que esto está virtualmente lleno: no cuenta como día de la ventana (Santi, 29/10/2026).
+export const MIN_HORARIOS_DIA = 3;
 
-// Como asignar(), pero si el evento ofrece «N días» y no queda ningún horario en esos días, abre un día
-// más (y otro, hasta DIAS_EXTRA_MAX) hasta que aparezca alguno. `diasExtra` dice cuántos se abrieron.
+// Cuántos días (en la zona del equipo) tienen MIN_HORARIOS_DIA horarios o más.
+export function diasConLugar(slots) {
+    const porDia = new Map();
+    for (const s of slots) { const k = claveDia(s.t, TZ_DEF); porDia.set(k, (porDia.get(k) || 0) + 1); }
+    return [...porDia.values()].filter(n => n >= MIN_HORARIOS_DIA).length;
+}
+
+// Como asignar(), con la ventana «N días» contada en días con lugar (diasConLugar): si el grupo del lead tiene
+// menos de N, se abre un día más (y otro, hasta DIAS_EXTRA_MAX). Se abren días antes de pasar a otro grupo:
+// recién si el grupo no tiene ningún horario en todos esos días, desborda como siempre (y si tampoco hay
+// nadie, sigue abriendo días). `diasExtra` dice cuántos se abrieron.
 export function asignacion(ctx, d, opts = {}) {
-    const r = asignar(ctx, d, opts);
     const ag = ctx.ag;
-    if (r.slots.length || r.url || !ag || !ag.reservas || ag.reservas.modo !== 'dias') return r;
+    if (!ag || !ag.reservas || ag.reservas.modo !== 'dias') return asignar(ctx, d, opts);
     const n = ag.reservas.n || 0;
-    for (let extra = 1; extra <= DIAS_EXTRA_MAX; extra++) {
-        const r2 = asignar({ ...ctx, ag: { ...ag, reservas: { ...ag.reservas, n: n + extra } } }, d, opts);
-        if (r2.slots.length) return { ...r2, diasExtra: extra };
+    const con = (extra, mas = {}) => {
+        const r = asignar(extra ? { ...ctx, ag: { ...ag, reservas: { ...ag.reservas, n: n + extra } } } : ctx, d, { ...opts, ...mas });
+        return extra ? { ...r, diasExtra: extra } : r;
+    };
+    let propio = null;
+    for (let extra = 0; extra <= DIAS_EXTRA_MAX; extra++) {
+        const r = con(extra, { sinDesborde: true });
+        if (r.url || r.no) return r;
+        if (r.slots.length) {
+            propio = r;
+            if (diasConLugar(r.slots) >= Math.max(n, 1)) break;
+        }
     }
-    return r;
+    if (propio) return propio;
+    let primero = null;
+    for (let extra = 0; extra <= DIAS_EXTRA_MAX; extra++) {
+        const r = con(extra);
+        if (r.slots.length) return r;
+        primero = primero || r;
+    }
+    return primero;
 }
 
 /**
  * ctx: {preguntas, resp, dur, margen, eventoId, ag, reglas, resto, segmento, persona}. dur y margen son la propuesta
  * del evento; cada closer usa lo suyo si lo ajustó (sesionDe).
  * opts: {ahora, ocupado(personaId, t, dur), cargaDe(personaId) → agendas futuras,
- *        enSemana(personaId, t, tz) → agendas en la semana de t, prueba}
+ *        enSemana(personaId, t, tz) → agendas en la semana de t, prueba, sinDesborde (solo su grupo)}
  * Devuelve {nota, grupo, grupoRegla, reglaIdx, desborde, slots:[{t, p}], regla, aviso}.
  */
 function asignar(ctx, d, opts = {}) {
@@ -122,12 +149,13 @@ function asignar(ctx, d, opts = {}) {
         // Desborde: si la prioridad elegida no tiene closers con lugar, pasa a las siguientes en orden.
         const grupos = ord(d, 'grupos');
         const desde = grupos.findIndex(g => g.id === g0.id);
-        for (const g of grupos.slice(desde)) {
+        for (const g of opts.sinDesborde ? grupos.slice(desde, desde + 1) : grupos.slice(desde)) {
             const miembros = miembrosValidos(d, g);
             if (!miembros.length) continue;
             const x = porEstrategia(g.estrategia, miembros, slotsDe, { ahora, cargaDe }, g);
             if (x.slots.length) return { ...res, grupo: g, desborde: g.id !== g0.id, slots: x.slots, regla: (g.id !== g0.id ? g0.nombre + ' sin lugar → ' : '') + x.regla };
         }
+        if (opts.sinDesborde) return { ...res, slots: [], regla: 'Sin horarios' };
     }
 
     const todos = closers(d).filter(p => horasSemana(p) > 0 && !esTriage(d, p));

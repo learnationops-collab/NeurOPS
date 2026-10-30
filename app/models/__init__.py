@@ -4,7 +4,7 @@ from .client import Client
 from .funnel import Event, EventGroup, Program, event_closers
 from .booking import Appointment, Availability, WeeklyAvailability, SurveyQuestion, SurveyAnswer
 from .payment import PaymentMethod
-from .marketing import Campaign, AdSet, Ad, MarketingBudget, AdPeriodSpend, LeadAnswer, UTMLog, LandingTracking, ConversationalMessage, MetaAnuncio, MetaGastoDiario
+from .marketing import Campaign, AdSet, Ad, MarketingBudget, AdPeriodSpend, LeadAnswer, UTMLog, LandingTracking, ConversationalMessage, MetaAnuncio, MetaGastoDiario, MetaGastoHorario
 from .report import SetterDailyStats, CloserDailyStats, DailyReportQuestion, DailyReportAnswer, Expense, RecurringExpense
 from .closer_report import CloserDailyReport
 from .comercial_report import ReporteDirector, ReporteDirectorPersona
@@ -51,7 +51,7 @@ __all__ = [
     'Appointment', 'Availability', 'WeeklyAvailability', 'SurveyQuestion', 'SurveyAnswer',
     'PaymentMethod',
     'Campaign', 'AdSet', 'Ad', 'MarketingBudget', 'AdPeriodSpend', 'LeadAnswer', 'UTMLog', 'LandingTracking', 'ConversationalMessage',
-    'MetaAnuncio', 'MetaGastoDiario',
+    'MetaAnuncio', 'MetaGastoDiario', 'MetaGastoHorario',
     'SetterDailyStats', 'CloserDailyStats', 'CloserDailyReport', 'ReporteDirector', 'ReporteDirectorPersona', 'DailyReportQuestion', 'DailyReportAnswer', 'Expense', 'RecurringExpense',
     'Pipeline', 'PipelineStage', 'UserSetting', 'Notification', 'LeadEventLog', 'FeatureToggle',
     'Integration', 'PublicRegistration', 'FinancialSale', 'FinancialAgenda', 'ExcludedSale', 'TriageDailyReport', 'TriageTrackerReport',
