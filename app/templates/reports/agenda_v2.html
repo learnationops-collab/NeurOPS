@@ -11,17 +11,20 @@
             font-weight: 100 900;
         }
 
+        /* Diseño de Claude Design (Agenda Segmentos, 30/10/2026): la tarjeta lleva el color de su segmento
+           (A verde, B azul, C amarillo, D rojo); --rgb es el del segmento, o un gris sin segmento. */
         :root {
-            --fondo: #11152f;
-            --texto: #f4f5ff;
-            --suave: #a9adcf;
-            --borde: rgba(255, 255, 255, .12);
+            --ink: #020617;
+            --texto: #f8fafc;
+            --suave: rgba(255, 255, 255, .62);
+            --tenue: rgba(255, 255, 255, .4);
+            --borde: rgba(255, 255, 255, .15);
+            --sutil: rgba(255, 255, 255, .05);
+            --elemento: rgba(255, 255, 255, .08);
             --rosa: #ff3fa4;
-            --verde: #2ecf8f;
-            --azul: #4f8ff7;
-            --amarillo: #f5b83d;
-            --rojo: #ff5470;
-            --gris: #8b8fb0;
+            --azul: #1323c6;
+            --verde: #2fbf8f;
+            --rojo: #e85c4a;
         }
 
         * { box-sizing: border-box; }
@@ -30,7 +33,7 @@
             margin: 0;
             padding: 24px;
             width: 900px;
-            background: var(--fondo);
+            background: var(--ink);
             font-family: 'Montserrat', 'Liberation Sans', Arial, sans-serif;
             color: var(--texto);
         }
@@ -38,36 +41,60 @@
         .card {
             position: relative;
             overflow: hidden;
-            padding: 40px 44px 34px;
-            border-radius: 28px;
-            border: 1px solid rgba(255, 255, 255, .06);
+            padding: 44px;
+            border-radius: 32px;
             background:
-                radial-gradient(520px 320px at 85% 10%, rgba(91, 76, 255, .22), transparent 70%),
-                radial-gradient(480px 360px at 10% 95%, rgba(255, 63, 164, .10), transparent 70%),
-                linear-gradient(160deg, #1a1d42, #1c2050 60%, #181b3f);
+                linear-gradient(160deg, rgba(var(--rgb), .32) 0%, rgba(var(--rgb), .16) 45%, rgba(var(--rgb), .10) 100%),
+                var(--ink);
+            border: 1.5px solid rgba(var(--rgb), .7);
+            box-shadow: inset 0 4px 0 rgb(var(--rgb));
         }
+        .card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            background: radial-gradient(600px 320px at 100% 0%, rgba(var(--rgb), .22), transparent 70%);
+        }
+        .card > * { position: relative; }
+        .cuerpo { display: flex; flex-direction: column; gap: 24px; }
 
-        .cab { display: flex; justify-content: space-between; align-items: center; }
-        .marca { display: flex; align-items: center; gap: 16px; font-size: 20px; font-weight: 600; letter-spacing: .2em; }
-        .marca svg { width: 52px; height: 52px; }
-        .der { text-align: right; }
-        .pill {
-            display: inline-block;
-            padding: 9px 18px;
+        .cab { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; }
+        .evento { font-size: 12px; font-weight: 700; letter-spacing: .28em; text-transform: uppercase; color: var(--rosa); }
+        h1 { margin: 6px 0 0; font-size: 44px; font-weight: 900; line-height: 1.1; word-break: break-word; }
+
+        .seg {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex-shrink: 0;
+            padding: 6px 22px 6px 6px;
             border-radius: 999px;
-            font-size: 13px;
-            font-weight: 800;
-            color: var(--acento);
-            border: 1px solid var(--acento);
-            background: color-mix(in srgb, var(--acento) 14%, transparent);
+            background: rgba(var(--rgb), .14);
+            border: 1px solid rgba(var(--rgb), .6);
+            white-space: nowrap;
         }
-        .nota { margin-top: 8px; font-size: 13px; font-weight: 600; color: var(--suave); }
-        .nota b { color: var(--texto); font-weight: 800; }
+        .anillo {
+            width: 58px;
+            height: 58px;
+            border-radius: 50%;
+            background: conic-gradient(rgb(var(--rgb)) 0 var(--lleno), rgba(255, 255, 255, .12) var(--lleno) 100%);
+            display: grid;
+            place-items: center;
+        }
+        .anillo b {
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
+            background: var(--ink);
+            display: grid;
+            place-items: center;
+            font-size: 16px;
+            font-weight: 900;
+        }
+        .seg span { font-size: 17px; font-weight: 800; color: rgb(var(--rgb)); }
 
-        .evento { margin-top: 34px; font-size: 12px; font-weight: 800; letter-spacing: .32em; text-transform: uppercase; color: var(--rosa); }
-        h1 { margin: 10px 0 0; font-size: 44px; font-weight: 900; line-height: 1.08; letter-spacing: -.5px; word-break: break-word; }
-
-        .chips { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+        .chips { display: flex; flex-wrap: wrap; gap: 10px; }
         .chip {
             display: inline-flex;
             align-items: center;
@@ -75,9 +102,10 @@
             padding: 6px 20px 6px 6px;
             border-radius: 999px;
             border: 1px solid var(--borde);
-            background: rgba(255, 255, 255, .05);
+            background: var(--elemento);
             font-size: 17px;
             font-weight: 700;
+            white-space: nowrap;
         }
         .chip i {
             width: 34px;
@@ -86,146 +114,149 @@
             display: grid;
             place-items: center;
             background: var(--rosa);
-            color: #1a1d42;
+            color: var(--ink);
             font-style: normal;
             font-size: 10px;
             font-weight: 900;
         }
         .chip em { font-style: normal; font-weight: 500; color: var(--suave); }
-        svg.ic { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+        svg.ic { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
-        .boxes { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 24px; }
+        .boxes { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .box {
             display: flex;
             align-items: center;
             gap: 16px;
             padding: 16px 18px;
-            border-radius: 18px;
+            border-radius: 16px;
             border: 1px solid var(--borde);
-            background: rgba(255, 255, 255, .06);
+            background: var(--elemento);
         }
         .box > span {
             flex-shrink: 0;
             width: 40px;
             height: 40px;
-            border-radius: 12px;
+            border-radius: 10px;
             display: grid;
             place-items: center;
             background: var(--c);
             color: #fff;
         }
-        .box small { display: block; font-size: 12px; font-weight: 500; color: var(--suave); }
-        .box div div { margin-top: 2px; font-size: 18px; font-weight: 800; word-break: break-word; }
-        .box em { font-style: normal; font-weight: 500; font-size: 15px; color: var(--suave); }
-        .box.ancho { grid-column: 1 / -1; }
+        .box small { display: block; font-size: 13px; color: var(--suave); }
+        .box div div { margin-top: 2px; font-size: 18px; font-weight: 700; word-break: break-word; }
+        .box em { font-style: normal; font-weight: 400; font-size: 15px; color: var(--suave); }
 
-        .resp { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 24px; }
-        .r {
-            padding: 18px 18px 20px;
-            border-radius: 18px;
-            border: 1px solid color-mix(in srgb, var(--c) 22%, transparent);
-            background: color-mix(in srgb, var(--c) 7%, #1b1f3d);
+        .tiles {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            column-gap: 32px;
+            padding: 0 24px 4px;
+            border-radius: 16px;
+            overflow: hidden;
+            background: rgba(2, 6, 23, .35);
+            border: 1px solid var(--sutil);
         }
-        .r-cab { display: flex; align-items: center; gap: 12px; }
-        .r-cab span {
-            flex-shrink: 0;
-            width: 34px;
-            height: 34px;
-            border-radius: 50%;
+        .tile {
+            display: grid;
+            grid-template-columns: 32px minmax(0, 1fr);
+            align-items: center;
+            column-gap: 12px;
+            padding: 14px 0;
+            border-top: 1px solid var(--sutil);
+            margin-top: -1px;
+        }
+        .tile > span {
+            width: 32px;
+            height: 32px;
+            border-radius: 10px;
             display: grid;
             place-items: center;
-            background: var(--c);
-            color: #10132b;
+            color: var(--rosa);
+            background: rgba(255, 63, 164, .12);
+            border: 1px solid rgba(255, 63, 164, .35);
         }
-        .r-cab b { font-size: 11px; font-weight: 800; letter-spacing: .22em; text-transform: uppercase; color: var(--c); line-height: 1.35; }
-        .r-val { margin-top: 16px; font-size: 26px; font-weight: 900; line-height: 1.15; word-break: break-word; }
-        .r-val.largo { font-size: 17px; font-weight: 800; }
-        .r-det { margin-top: 8px; font-size: 14px; color: var(--suave); line-height: 1.45; word-break: break-word; }
+        .tile > span svg.ic { width: 16px; height: 16px; }
+        .tile b { display: block; font-size: 16px; font-weight: 700; line-height: 1.3; word-break: break-word; }
+        .tile small { display: block; margin-top: 2px; font-size: 13px; line-height: 1.35; color: var(--suave); word-break: break-word; }
 
-        .pie { margin-top: 22px; font-size: 12px; color: var(--gris); }
-
-        .nueva { --acento: var(--rosa); }
-        .reprogramada { --acento: var(--amarillo); }
-        .no_califica { --acento: var(--gris); }
-        .abandono { --acento: var(--amarillo); }
-        .bien { --c: var(--verde); }
-        .medio { --c: var(--amarillo); }
-        .mal { --c: var(--rojo); }
-        .neutro { --c: var(--azul); }
+        .pie { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 12px; color: var(--tenue); }
+        .pie svg { width: 28px; height: 28px; }
     </style>
 </head>
 
 <body>
     {% macro icono(n) -%}
     <svg class="ic" viewBox="0 0 24 24">
-        {%- if n == 'check' -%}<circle cx="12" cy="12" r="8.5" /><path d="M8.5 12.2l2.4 2.4 4.6-4.8" />
-        {%- elif n == 'x' -%}<circle cx="12" cy="12" r="8.5" /><path d="M9.2 9.2l5.6 5.6M14.8 9.2l-5.6 5.6" />
-        {%- elif n == 'meta' -%}<circle cx="12" cy="12" r="8.5" /><circle cx="12" cy="12" r="4.2" /><circle cx="12" cy="12" r="1" />
-        {%- elif n == 'medio' -%}<circle cx="12" cy="12" r="8.5" /><path d="M8.5 12h7" />
-        {%- elif n == 'cal' -%}<rect x="4" y="5.5" width="16" height="14" rx="3" /><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4" />
-        {%- elif n == 'reloj' -%}<circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" />
-        {%- elif n == 'bandeja' -%}<path d="M4 13l2.5-7h11L20 13v5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18z" /><path d="M4 13h4.5l1.2 2.2h4.6L15.5 13H20" />
+        {%- if n == 'check' -%}<path d="M12 3a9 9 0 100 18 9 9 0 000-18zM8 12l3 3 5-6" />
+        {%- elif n == 'x' -%}<path d="M12 3a9 9 0 100 18 9 9 0 000-18zM9 9l6 6M15 9l-6 6" />
+        {%- elif n == 'meta' -%}<path d="M12 3a9 9 0 100 18 9 9 0 000-18zM12 8a4 4 0 100 8 4 4 0 000-8zM12 11.5v1" />
+        {%- elif n == 'billetera' -%}<path d="M3 7h16a2 2 0 012 2v9a2 2 0 01-2 2H3zM3 7V5a1 1 0 011-1h12v3M16 13.5h2" />
+        {%- elif n == 'pin' -%}<path d="M12 21s-7-6.2-7-11.5a7 7 0 0114 0C19 14.8 12 21 12 21zM12 7.5a2 2 0 100 4 2 2 0 000-4z" />
+        {%- elif n == 'maletin' -%}<path d="M3 8h18v12H3zM8 8V5h8v3M3 13h18" />
+        {%- elif n == 'personas' -%}<path d="M9 11a3.5 3.5 0 100-7 3.5 3.5 0 000 7zM2.5 20a6.5 6.5 0 0113 0M16 4.3a3.5 3.5 0 010 6.4M18 14a6 6 0 013.5 6" />
+        {%- elif n == 'cal' -%}<rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" />
+        {%- elif n == 'reloj' -%}<circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" />
+        {%- elif n == 'bandeja' -%}<path d="M4 13l2-7h12l2 7v6H4zM4 13h5l1 2h4l1-2h5" />
         {%- elif n == 'antes' -%}<path d="M4.5 12a7.5 7.5 0 1 0 2.2-5.3" /><path d="M4.5 4.5v3.7h3.7" />
         {%- endif -%}
     </svg>
     {%- endmacro %}
 
-    <div class="card {{ tipo }}">
-        <div class="cab">
-            <div class="marca">
-                <svg viewBox="0 0 100 100">
-                    <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#FF3FA4" /><stop offset="100%" stop-color="#FF6AD5" /></linearGradient></defs>
-                    <rect width="100" height="100" rx="26" fill="url(#g)" />
-                    <g fill="#FFFFFF" stroke="#FFFFFF" stroke-width="5" stroke-linejoin="round"><path d="M49 18 L23 44 L23 83 L77 83 L77 61 L49 61 Z" /><path d="M23 18 L42 18 L23 37 Z" /></g>
-                </svg>
-                LEARNATION
-            </div>
-            <div class="der">
-                <span class="pill">{{ titulo }}</span>
-                {% if nota or (prioridad and prioridad != '-') %}
-                <div class="nota">
-                    {% if nota %}Nota <b>{{ nota }}</b>/10{% endif %}{% if nota and prioridad and prioridad != '-' %} · {% endif %}{% if prioridad and prioridad != '-' %}<b>{{ prioridad }}</b>{% endif %}
+    <div class="card" style="--rgb: {{ segmento.rgb if segmento else '127,140,168' }}{% if segmento %}; --lleno: {{ segmento.anillo }}%{% endif %}">
+        <div class="cuerpo">
+            <div class="cab">
+                <div>
+                    <div class="evento">{{ evento }} · {{ titulo }}</div>
+                    <h1>{{ lead.nombre }}</h1>
+                </div>
+                {% if segmento %}
+                <div class="seg">
+                    <div class="anillo"><b>{{ segmento.puntos if segmento.puntos is not none else segmento.letra }}</b></div>
+                    <span>Segmento {{ segmento.letra }}</span>
                 </div>
                 {% endif %}
             </div>
-        </div>
 
-        <div class="evento">{{ evento }}</div>
-        <h1>{{ lead.nombre }}</h1>
+            <div class="chips">
+                {% if lead.telefono %}<span class="chip"><i>TEL</i>{{ lead.telefono }}</span>{% endif %}
+                {% if horario %}
+                <span class="chip"><i>{{ icono('cal') }}</i>{{ horario.dia }}</span>
+                <span class="chip"><i>{{ icono('reloj') }}</i>{{ horario.hora }} · {{ horario.pais }}{% if horario.equipo %}<em>({{ horario.equipo }} Bolivia)</em>{% endif %}</span>
+                {% endif %}
+                {% if antes %}<span class="chip"><i>{{ icono('antes') }}</i><em>Antes:</em> {{ antes }}</span>{% endif %}
+            </div>
 
-        <div class="chips">
-            {% if lead.telefono %}<span class="chip"><i>TEL</i>{{ lead.telefono }}</span>{% endif %}
-            {% if horario %}
-            <span class="chip"><i>{{ icono('cal') }}</i>{{ horario.dia }}</span>
-            <span class="chip"><i>{{ icono('reloj') }}</i>{{ horario.hora }} · {{ horario.pais }}{% if horario.equipo %}&nbsp;<em>({{ horario.equipo }} Bolivia)</em>{% endif %}</span>
+            <div class="boxes">
+                {% if tipo in ('no_califica', 'abandono') %}
+                <div class="box" style="--c: var(--rojo)"><span>{{ icono('x') }}</span><div><small>{{ 'Llegó hasta' if tipo == 'abandono' else 'Motivo' }}</small><div>{{ motivo }}</div></div></div>
+                {% else %}
+                <div class="box" style="--c: var(--azul)"><span>{{ icono('check') }}</span><div><small>Closer</small><div>{{ closer }}</div></div></div>
+                {% endif %}
+                <div class="box" style="--c: var(--verde)"><span>{{ icono('bandeja') }}</span>
+                    <div><small>Origen</small><div>{{ setter }}{% if funnel %} <em>· {{ funnel }}</em>{% endif %}</div></div>
+                </div>
+            </div>
+
+            {% if tiles %}
+            <div class="tiles">
+                {% for t in tiles %}
+                <div class="tile">
+                    <span>{{ icono(t.icono) }}</span>
+                    <div><b>{{ t.titulo }}</b><small>{{ t.sub }}</small></div>
+                </div>
+                {% endfor %}
+            </div>
             {% endif %}
-            {% if antes %}<span class="chip"><i>{{ icono('antes') }}</i><em>Antes:</em> {{ antes }}</span>{% endif %}
-        </div>
 
-        <div class="boxes">
-            {% if tipo in ('no_califica', 'abandono') %}
-            <div class="box mal" style="--c: var(--rojo)"><span>{{ icono('x') }}</span><div><small>{{ 'Llegó hasta' if tipo == 'abandono' else 'Motivo' }}</small><div>{{ motivo }}</div></div></div>
-            {% else %}
-            <div class="box" style="--c: #1f3fd6"><span>{{ icono('check') }}</span><div><small>Closer</small><div>{{ closer }}</div></div></div>
-            {% endif %}
-            <div class="box" style="--c: var(--verde)"><span>{{ icono('bandeja') }}</span>
-                <div><small>Origen</small><div>{{ setter }}{% if funnel %} <em>· {{ funnel }}</em>{% endif %}</div></div>
+            <div class="pie">
+                <span>{{ pie }}</span>
+                <svg viewBox="0 0 100 100">
+                    <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#FF3FA4" /><stop offset="100%" stop-color="#FF6AD5" /></linearGradient></defs>
+                    <rect width="100" height="100" rx="26" fill="url(#g)" />
+                    <path d="M49 18 L23 44 L23 83 L77 83 L77 61 L49 61 Z" fill="#fff" />
+                </svg>
             </div>
         </div>
-
-        {% if filas %}
-        <div class="resp">
-            {% for f in filas %}
-            <div class="r {{ f.estado }}">
-                <div class="r-cab"><span>{{ icono({'bien': 'check', 'medio': 'medio', 'mal': 'x'}.get(f.estado, 'meta')) }}</span><b>{{ f.pregunta }}</b></div>
-                <div class="r-val {{ 'largo' if f.respuesta|length > 28 else '' }}">{{ f.respuesta }}</div>
-                {% if f.detalle %}<div class="r-det">{{ f.detalle }}</div>{% endif %}
-            </div>
-            {% endfor %}
-        </div>
-        {% endif %}
-
-        <div class="pie">{{ pie }}</div>
     </div>
 </body>
 

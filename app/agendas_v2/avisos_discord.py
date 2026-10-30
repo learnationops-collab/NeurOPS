@@ -110,6 +110,56 @@ def _segmento(payload):
     return f'Segmento {seg}' if seg else None
 
 
+# El color de cada segmento en la tarjeta (diseño «Agenda Segmentos», 30/10/2026): A verde, B azul, C amarillo, D rojo.
+RGB_SEGMENTO = {'A': '47,191,143', 'B': '78,139,216', 'C': '217,164,65', 'D': '232,92,74'}
+
+
+def _segmento_visual(payload):
+    """Lo que dibuja la tarjeta del segmento: la letra, su color, los puntos y cuánto del anillo se llena (la
+    confianza de que el lead esté de verdad ahí). None si la agenda no trae segmento."""
+    seg = payload.get('segmento_lead') or {}
+    letra = seg.get('segmento')
+    if letra not in RGB_SEGMENTO:
+        return None
+    puntos, confianza = seg.get('puntos'), seg.get('confianza')
+    return {'letra': letra, 'rgb': RGB_SEGMENTO[letra], 'puntos': f'{puntos:g}' if isinstance(puntos, (int, float)) else None,
+            'anillo': round(float(confianza) * 100) if isinstance(confianza, (int, float)) else 100}
+
+
+# Las respuestas que más importan, en este orden (por su nombre corto en el formulario), y su ícono.
+_CLAVES = (('examen', 'meta'), ('inversion', 'billetera'), ('etapa', 'pin'), ('trabaja', 'maletin'), ('decide', 'personas'))
+MAX_TILES = 7
+
+
+def _plano(texto):
+    import unicodedata
+
+    return ''.join(c for c in unicodedata.normalize('NFD', str(texto or '').lower()) if not unicodedata.combining(c))
+
+
+def _tiles(payload):
+    """Las respuestas del formulario como fichas (ícono, la respuesta corta y su detalle), las clave primero:
+    examen, inversión, etapa, trabaja y decide. Las demás, si caben."""
+    def orden(f):
+        pregunta = _plano(f['pregunta'])
+        return next((i for i, (clave, _) in enumerate(_CLAVES) if clave in pregunta), len(_CLAVES))
+
+    def icono(f):
+        pregunta = _plano(f['pregunta'])
+        return next((icono for clave, icono in _CLAVES if clave in pregunta), 'check')
+
+    def ficha(f):
+        # Respuesta corta (la del formulario) con su versión larga debajo; sin corta, una larga baja y arriba va la pregunta.
+        if f['detalle']:
+            return f['respuesta'], f['detalle']
+        if len(f['respuesta']) > 40:
+            return f['pregunta'], f['respuesta']
+        return f['respuesta'], f['pregunta']
+
+    filas = sorted(_filas(payload), key=orden)[:MAX_TILES]
+    return [{'icono': icono(f), 'titulo': ficha(f)[0], 'sub': ficha(f)[1]} for f in filas]
+
+
 def _id_discord(usuario):
     """Su ID de Discord; '' si la persona existe pero no lo tiene cargado; None si no hay persona."""
     return None if usuario is None else (usuario.discord_id or '')
@@ -133,6 +183,8 @@ def _base(tipo, payload, setter, evento_nombre):
         'funnel': FUNNELS.get(payload.get('funnel_tipo'), str(payload.get('funnel_tipo') or '').capitalize()),
         'nota': None if nota is None else f'{nota:g}',
         'filas': _filas(payload),
+        'segmento': _segmento_visual(payload),
+        'tiles': _tiles(payload),
     }
 
 

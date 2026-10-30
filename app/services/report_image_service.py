@@ -124,9 +124,9 @@ class ReportImageService:
 
     @staticmethod
     def generate_agenda_v2_card(data):
-        # Alto de sobra según las tarjetas de respuestas (tres por fila); después se recorta el fondo que sobra.
-        filas = -(-len(data.get('filas') or []) // 3)
-        alto = min(4000, 640 + 250 * filas)
+        # Alto de sobra según las fichas de respuestas (dos por fila); después se recorta el fondo que sobra.
+        filas = -(-len(data.get('tiles') or []) // 2)
+        alto = min(4000, 700 + 90 * filas)
         datos = {**data, 'fuente_b64': ReportImageService._montserrat_b64()}
         buf = ReportImageService._render_and_capture('templates/reports/agenda_v2.html', datos, (900, alto), 'agenda_v2')
         return ReportImageService._recortar_abajo(buf)
