@@ -1,11 +1,22 @@
 import React, { useState } from 'react';
 import { Send } from 'lucide-react';
 import { instanteLegible } from '../piezas/fecha';
+import CampoConMenciones from '../piezas/CampoConMenciones';
 import useComentariosAcademia, { comoNota } from '../useComentariosAcademia';
 
 // El color del avatar dice el rol sin leer nada: el hilo se escanea por bloques.
 const TONO_ROL = { Triage: 'info', Setter: 'success', Closer: 'brand-secondary', Dirección: 'warning', Academia: 'brand-primary' };
 const tonoDe = (rol) => TONO_ROL[rol] || 'idle';
+
+/** El texto de una nota con cada «@Nombre» de a quienes se avisó resaltado. */
+const conMencionesResaltadas = (texto, nombres = []) => {
+    const lista = [...nombres].filter(Boolean).sort((a, b) => b.length - a.length)
+        .map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    if (!lista.length) return texto;
+    return String(texto).split(new RegExp(`(@(?:${lista.join('|')}))`, 'u')).map((parte, i) => (
+        i % 2 ? <strong key={i} style={{ color: 'var(--brand-secondary)' }}>{parte}</strong> : parte
+    ));
+};
 
 /**
  * Hilo de notas del equipo sobre el lead.
@@ -24,7 +35,8 @@ const TabComunicacion = ({ ficha, onAccion, puedeEditar = true }) => {
         .sort((a, b) => String(a.fecha || '').localeCompare(String(b.fecha || '')));
     const equipo = com.equipo || [];
     const [texto, setTexto] = useState('');
-    const [notificar, setNotificar] = useState([]);
+    // Las personas elegidas con «@»: a las que sigan nombradas en el texto al enviar se les avisa.
+    const [nombrados, setNombrados] = useState([]);
     const [enviando, setEnviando] = useState(false);
     const bloqueado = !puedeEditar || ficha?.permisos?.comentar === false;
 
@@ -33,9 +45,10 @@ const TabComunicacion = ({ ficha, onAccion, puedeEditar = true }) => {
         if (!limpio || enviando || bloqueado) return;
         setEnviando(true);
         try {
+            const notificar = nombrados.filter(p => limpio.includes(`@${p.nombre}`)).map(p => p.id);
             await onAccion('enviar_nota', { texto: limpio, notificar });
             setTexto('');
-            setNotificar([]);
+            setNombrados([]);
         } catch {
             // El error lo muestra el cascarón; la nota se queda escrita en el campo para
             // que no haya que volver a tipearla.
@@ -44,9 +57,7 @@ const TabComunicacion = ({ ficha, onAccion, puedeEditar = true }) => {
         }
     };
 
-    const alternar = (id) => setNotificar(prev => (
-        prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
-    ));
+    const elegir = (persona) => setNombrados(prev => (prev.some(p => p.id === persona.id) ? prev : [...prev, persona]));
 
     return (
         <div className="fi-sec">
@@ -67,7 +78,7 @@ const TabComunicacion = ({ ficha, onAccion, puedeEditar = true }) => {
                                     «2026-10-09T21:19:05.691000», y en otro huso que el del servidor. */}
                                 <span className="t-cap mut">{[n.rol, instanteLegible(n.fecha)].filter(Boolean).join(' · ')}</span>
                             </div>
-                            <div className="t-sm fi-globo">{n.texto}</div>
+                            <div className="t-sm fi-globo">{conMencionesResaltadas(n.texto, n.notificados)}</div>
                             {n.notificados?.length > 0 && (
                                 <span className="t-cap mut">Notificó a {n.notificados.join(', ')}</span>
                             )}
@@ -78,33 +89,11 @@ const TabComunicacion = ({ ficha, onAccion, puedeEditar = true }) => {
 
             {!bloqueado && (
                 <>
-                    {equipo.length > 0 && (
-                        <div style={{ display: 'grid', gap: 'var(--s2)', padding: 'var(--s4) var(--s6)',
-                            borderTop: '1px solid var(--border-subtle)' }}>
-                            <small className="t-rotulo">Notificar a</small>
-                            <div className="fila" style={{ flexWrap: 'wrap', gap: 'var(--s2)' }}>
-                                {equipo.map(p => (
-                                    <button key={p.id} type="button" className="fi-pildora"
-                                        aria-pressed={notificar.includes(p.id)}
-                                        style={{ '--c': `var(--${tonoDe(p.rol)})` }}
-                                        onClick={() => alternar(p.id)}>
-                                        <span className="fi-punto" />
-                                        <span>{p.nombre}</span>
-                                        <span className="t-cap mut">{p.rol}</span>
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    <div className="fila" style={{ gap: 'var(--s3)', padding: 'var(--s4) var(--s6)',
+                    <div className="fila" style={{ gap: 'var(--s3)', padding: 'var(--s4) var(--s6)', alignItems: 'flex-end',
                         borderTop: '1px solid var(--border-subtle)' }}>
-                        <div className="entrada" style={{ flex: 1, height: 48 }}>
-                            <input value={texto} aria-label="Escribí una nota"
-                                placeholder="Escribí una nota…"
-                                onChange={(e) => setTexto(e.target.value)}
-                                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); enviar(); } }} />
-                        </div>
+                        <CampoConMenciones value={texto} onChange={setTexto} onEnviar={enviar} equipo={equipo}
+                            onElegir={elegir} ariaLabel="Escribí una nota"
+                            placeholder="Escribí una nota… con @ avisás a alguien" />
                         <button type="button" className="ibtn" aria-label="Enviar nota"
                             disabled={!texto.trim() || enviando}
                             style={{ background: 'var(--brand-secondary)', borderColor: 'var(--brand-secondary)',
