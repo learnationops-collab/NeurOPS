@@ -2,7 +2,8 @@ import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { CalendarDays, RefreshCw } from 'lucide-react';
+import { CalendarDays, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
+import UTMGenerator from '../../../components/operations/UTMGenerator';
 import { Isotipo, PillMenu, Segmented, Tip } from '../../comercial/components/Shared';
 import RangoFechas, { esFecha, textoRango } from '../../comercial/components/RangoFechas';
 import { ErrorDeCarga } from './esqueletos';
@@ -30,7 +31,8 @@ import './todos/todos.css';
  *  - Resumen: las cuatro cifras que más separan a las dos fuentes y el embudo normalizado a 1.000 leads.
  *  - Métrica por métrica: cada cifra de las dos fuentes lado a lado, con quién gana (y por cuánto).
  *  - Segmentos: la matriz A/B/C/D × Setting/Workshop, con su filtro (28/10/2026).
- *  - Gasto en Meta: cuánto se gastó en cada embudo y día por día.
+ *  - Gasto en Meta: cuánto se gastó en cada embudo y día por día; debajo, el desplegable «Generar UTMs»
+ *    (29/10/2026: las UTM son de las landings de Workshop y otras, no de Setting; se abre con `utm=1`).
  *
  * Es lo que era «General» en el Rendimiento de Marketing; se separó para que Setting y Workshop muestren
  * cada uno solo lo suyo. Usa el mismo tablero que Setting (misma clave de caché). El período y la vista
@@ -46,8 +48,9 @@ const VISTAS = [
 const TodosPage = () => {
     const navigate = useNavigate();
     const reducir = useReducedMotion();
-    const { periodo, rango, cambiar, elegir, textoPeriodo, params } = usePeriodoDeUrl('mk_todos_url', ['vista', 'segmento', 'vs', 'vd', 'vh']);
+    const { periodo, rango, cambiar, elegir, textoPeriodo, params } = usePeriodoDeUrl('mk_todos_url', ['vista', 'segmento', 'vs', 'vd', 'vh', 'utm']);
     const vista = VISTAS.some((v) => v.key === params.get('vista')) ? params.get('vista') : 'resumen';
+    const utmAbierto = params.get('utm') === '1';
     const [version, setVersion] = useState(0);
     const { base, elegirBase } = useBaseDeConteo();
     const recargar = useCallback(() => setVersion((v) => v + 1), []);
@@ -77,9 +80,26 @@ const TodosPage = () => {
         if (error && !datos) return <ErrorDeCarga titulo={error} onReintentar={recargar} />;
         if (vista === 'meta') {
             return (
-                <EmbudosResumen embudos={datos ? datos.embudos || [] : null} desde={rango.desde} hasta={rango.hasta}
-                    moneda={datos?.moneda} onElegir={irAEmbudo}
-                    cuentas={datos?.meta?.cuentas || []} irAMeta={() => navigate('/admin/marketing?tab=meta')} />
+                <div className="vista mk-vista">
+                    <EmbudosResumen embudos={datos ? datos.embudos || [] : null} desde={rango.desde} hasta={rango.hasta}
+                        moneda={datos?.moneda} onElegir={irAEmbudo}
+                        cuentas={datos?.meta?.cuentas || []} irAMeta={() => navigate('/admin/marketing?tab=meta')} />
+                    <section className="panel" aria-labelledby="mk-utm-titulo">
+                        <div className="panel-cab">
+                            <div className="mk-cab-txt">
+                                <p className="t-eyebrow">Landings</p>
+                                <h2 className="t-h3" id="mk-utm-titulo">Generar UTMs</h2>
+                            </div>
+                            <div className="panel-cab-der">
+                                <button type="button" className="btn btn--linea btn--sm" aria-expanded={utmAbierto}
+                                    aria-controls="mk-utm-generador" onClick={() => cambiar({ utm: utmAbierto ? null : '1' })}>
+                                    {utmAbierto ? <ChevronUp aria-hidden="true" /> : <ChevronDown aria-hidden="true" />}
+                                    {utmAbierto ? 'Cerrar' : 'Abrir'}
+                                </button>
+                            </div>
+                        </div>
+                    </section>
+                </div>
             );
         }
         if (vista === 'segmentos') {
@@ -157,6 +177,15 @@ const TodosPage = () => {
                     </motion.div>
                 </div>
             </div>
+
+            {/* El generador es Tailwind y va FUERA del `.dc-shell` (su reset de botones le borraría los estilos). */}
+            {vista === 'meta' && utmAbierto && (
+                <div className="mk-wrap mk-wrap--legado" id="mk-utm-generador">
+                    <div className="mk-legado">
+                        <UTMGenerator />
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

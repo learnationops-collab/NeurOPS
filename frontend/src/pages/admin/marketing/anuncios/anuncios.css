@@ -3,7 +3,7 @@
 
    La cabecera, las pestañas, la tabla de anuncios y la conexión con Meta viven dentro de un
    `.dc-shell.dc-shell--embebido` (ver comercial.css: tokens, `.panel`, `.kpi`, `.tabs`, `.btn`).
-   Las herramientas viejas (Webhooks, UTM, Tráfico) son Tailwind y van FUERA del shell, en
+   Las herramientas viejas (el Generador UTM de Todos) son Tailwind y van FUERA del shell, en
    `.mk-legado`: el reset de botones del shell les borraría los estilos.
    ============================================================================ */
 

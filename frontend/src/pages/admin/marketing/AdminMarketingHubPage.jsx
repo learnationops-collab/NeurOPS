@@ -6,7 +6,6 @@ import toast from 'react-hot-toast';
 import { CalendarDays, RefreshCw } from 'lucide-react';
 import { Isotipo, PillMenu, Segmented } from '../../comercial/components/Shared';
 import RangoFechas, { esFecha, textoRango } from '../../comercial/components/RangoFechas';
-import UTMGenerator from '../../../components/operations/UTMGenerator';
 import EntrantesVista from './entrantes/EntrantesVista';
 import TablaAnuncios, { EsqueletoTablaAnuncios } from './anuncios/TablaAnuncios';
 import { ErrorDeCarga } from './esqueletos';
@@ -30,7 +29,7 @@ import './anuncios/anuncios.css';
  * anuncios de Meta (14/10/2026). Reemplaza a la «Gestión de anuncios» vieja (Estructura de campañas ›
  * conjuntos › anuncios cargada a mano, Inversión por período y Rend. por anuncio): ahora el anuncio se
  * crea solo cuando ManyChat manda una palabra clave nueva y el gasto llega de Meta Ads («Meta Ads»).
- * «Webhooks» y «Generador UTM» siguen como estaban. «Tráfico landings» vive solo en Workshop desde el
+ * «Webhooks» sigue como estaba; el «Generador UTM» vive en Todos desde el 29/10/2026. «Tráfico landings» vive solo en Workshop desde el
  * 16/10/2026 (acá pedía un endpoint de admin y al director de marketing le daba error); el link viejo
  * lleva allá.
  *
@@ -56,7 +55,7 @@ const PESTANAS = [
     { key: 'entrantes', label: 'Entrantes' },
     // «Conversaciones» (mensajes del flujo) se quitó el 28/10/2026: ahora se maneja desde el Inbox. Un link viejo cae en Palabras clave.
     { key: 'meta', label: 'Meta Ads' },
-    { key: 'utms', label: 'Generador UTM' },
+    // «Generador UTM» pasó a Todos › Gasto en Meta (29/10/2026): un link viejo (`tab=utms`) cae en Palabras clave.
 ];
 // «Webhooks» pasó a ser «Entrantes» (16/10/2026): un link viejo abre la nueva.
 const PESTANA_VIEJA = { webhooks: 'entrantes' };
@@ -221,16 +220,6 @@ const AdminMarketingHubPage = () => {
                     </motion.div>
                 </div>
             </div>
-
-            {/* El generador de UTM es Tailwind y va FUERA del `.dc-shell` (su reset de botones le borraría los
-                estilos), sobre su propia superficie oscura. */}
-            {pestana === 'utms' && (
-                <div className="mk-wrap mk-wrap--legado">
-                    <div className="mk-legado">
-                        <UTMGenerator />
-                    </div>
-                </div>
-            )}
         </div>
     );
 };

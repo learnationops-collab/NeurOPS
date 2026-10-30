@@ -5,8 +5,6 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 vi.mock('../../../services/api', () => ({ default: { get: vi.fn(), post: vi.fn(), put: vi.fn() } }));
 vi.mock('react-hot-toast', () => ({ default: { success: vi.fn(), error: vi.fn() } }));
-// Las herramientas de siempre no son lo que se prueba acá.
-vi.mock('../../../components/operations/UTMGenerator', () => ({ default: () => <p>Generador UTM viejo</p> }));
 // El rol decide si «De dónde vino lo cobrado» lleva a Revisar (solo admin y dirección comercial).
 const sesion = vi.hoisted(() => ({ user: { role: 'admin' } }));
 vi.mock('../../../contexts/AuthContext', () => ({ useAuth: () => sesion }));
