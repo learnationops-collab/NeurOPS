@@ -1,3 +1,4 @@
+import { Accordion } from '../../../../components/standard';
 import { Columnas, Grupos } from './ControlesSegmentos';
 import CruceSegmentos from './CruceSegmentos';
 import TablaSegmentos from './TablaSegmentos';
@@ -49,14 +50,26 @@ const cruce = (ctx) => (ctx.grupos.length > 1 ? {
     ),
 } : null);
 
-const tablas = (ctx) => ctx.grupos.map((g, i) => ({
+// Con más grupos que esto (un corte por closer) cada tabla suma otra fila al desplegable de afuera: se juntan en uno.
+const MAX_SUELTAS = 4;
+
+const tablaDe = (ctx) => (g, i) => ({
     key: `tabla:${g.key}`, title: g.label, color: COLOR[g.key] || 'var(--brand-secondary)', open: ctx.grupos.length === 1 || (!cruce(ctx) && i === 0),
     meta: <Resumen grupo={g} columnas={ctx.columnas} moneda={ctx.moneda} />,
     children: () => (
         <TablaSegmentos plano grupo={g} columnas={ctx.columnas} moneda={ctx.moneda} onVer={ctx.onVerTabla(g)}
             nota={ctx.corte === 'fuente' && g.key === 'workshop' ? NOTA_WORKSHOP : null} />
     ),
-}));
+});
+
+const tablas = (ctx) => {
+    const items = ctx.grupos.map(tablaDe(ctx));
+    if (items.length <= MAX_SUELTAS) return items;
+    return {
+        key: 'tablas', title: 'Tabla por grupo', meta: <span className="sg-meta"><span><b className="num">{items.length}</b> grupos</span></span>,
+        children: () => <Accordion items={items.map((it) => ({ ...it, open: false }))} />,
+    };
+};
 
 export const BLOQUES = [ajustes, cruce, tablas];
 
