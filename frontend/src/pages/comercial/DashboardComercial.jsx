@@ -115,8 +115,6 @@ const SECCIONES = [
         { key: 'comparativas', label: 'Comparativas', permiso: 'puede_comparar' },
         { key: 'variabilidad', label: 'Variabilidad' }] },
     { id: 'revisar', label: 'Revisar', Icono: CheckCircle2, tabs: [] },
-    // Las métricas de las triage (23/10/2026: Darian y Julia): su propio período y su selector de persona.
-    { id: 'triage', label: 'Triage', Icono: Users, tabs: [], soloDireccion: true },
     // Proyectar y Simulador son uno solo desde el 24/10/2026: se parte de la proyección y se le
     // mueven palancas. Un link viejo a `?s=proyectar` abre el Simulador (ver `SECCION_ALIAS`).
     { id: 'simulador', label: 'Simulador', Icono: Target, soloDireccion: true,
@@ -131,7 +129,7 @@ const SECCIONES = [
 
 // Las secciones con su propio período: la píldora del tablero (Hoy, 7 días, Este mes…) no aplica.
 // El Simulador tiene su horizonte y su línea base.
-const CON_PERIODO_PROPIO = ['finanzas', 'payroll', 'simulador', 'triage'];
+const CON_PERIODO_PROPIO = ['finanzas', 'payroll', 'simulador'];
 
 /**
  * Espacios: este mismo tablero con solo algunas secciones en el dock. «finanzas» (08/10/2026) es
@@ -155,7 +153,8 @@ const espacioDe = (s) => Object.keys(ESPACIOS).find(e => ESPACIOS[e].includes(s)
  */
 const BASIS_INICIAL = { generadas: 'creacion' };
 
-const SECCION_ALIAS = { proyectar: 'simulador' };
+// `?s=triage` (el link de cuando era una sección) abre Analizar con el interruptor en Triage (ver `rolPedido`).
+const SECCION_ALIAS = { proyectar: 'simulador', triage: 'analizar' };
 
 /** En lugar de los datos, mientras a un rango personalizado le falta una fecha: con los campos
  *  ahí mismo, para no tener que ir a buscarlos a la píldora. */
@@ -209,7 +208,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     // período: un mes contra una semana es una lectura válida y el backend no la recorta.
     const rangoVs = compare === 'custom' ? rangoDe(params.get('vd'), params.get('vh')) : null;
     const faltaVs = compare === 'custom' && !rangoVs;
-    const rolPedido = params.get('rol');
+    const rolPedido = params.get('rol') || (params.get('s') === 'triage' ? 'triage' : null);
     const miembroPedido = params.get('m');
     const tabla = params.get('t') || null;
     // La pestaña General · Anuncios · Inbound del tablero de setters (10/10/2026). Solo elige qué
@@ -330,7 +329,10 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
 
     // El rol y la persona efectivos: para un closer o un setter los manda el backend y la query
     // string no puede cambiarlos (ver `alcance_de` en app/api/comercial.py).
-    const rol = contexto?.puede_elegir_equipo ? (rolPedido || 'closers') : contexto?.rol;
+    // «Triage» es el tercero del interruptor (30/10/2026) pero no un rol de datos: su tablero tiene su propio pedido
+    // (`TriageDireccion`) y todo lo demás sigue con los closers.
+    const vistaTriage = !!contexto?.puede_elegir_equipo && rolPedido === 'triage' && seccion === 'analizar';
+    const rol = contexto?.puede_elegir_equipo ? (rolPedido === 'triage' ? 'closers' : (rolPedido || 'closers')) : contexto?.rol;
     // Las personas del selector son las del rol elegido: con Setters, los setters. Un `m` de la
     // URL que no es de ese rol (un link viejo, o el closer que quedó elegido al cambiar el switch)
     // se ignora y se ve el equipo: acotar las agendas de setters por el id de un closer daba 0.
@@ -604,7 +606,8 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
         && (!s.permiso || contexto[s.permiso])
         && (delEspacio ? delEspacio.includes(s.id) : !espacioDe(s.id)));
     const sinPermiso = !!permisoPedido && !contexto[permisoPedido];
-    const titulo = contexto.puede_elegir_equipo || delEspacio ? seccionActual.label : `${seccionActual.label} · mis datos`;
+    const titulo = vistaTriage ? 'Triage'
+        : contexto.puede_elegir_equipo || delEspacio ? seccionActual.label : `${seccionActual.label} · mis datos`;
     // En un espacio la vuelta a otro lado es el menú del dock (ver `gruposDeSesion`).
     const salida = delEspacio ? null : SALIDA[contexto.yo.rol];
 
@@ -724,7 +727,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                 )}
 
                 <div className="barra">
-                    {tabsVisibles.length > 0 && !sinPermiso && (
+                    {tabsVisibles.length > 0 && !sinPermiso && !vistaTriage && (
                         <Segmented opciones={tabsVisibles} valor={tab} onChange={setTab}
                             ariaLabel={`Vistas de ${seccionActual.label}`} />
                     )}
@@ -741,7 +744,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                     )}
 
                     <div className="barra-der">
-                        {contexto.puede_elegir_equipo && seccion === 'analizar' && (
+                        {contexto.puede_elegir_equipo && seccion === 'analizar' && !vistaTriage && (
                             <PillMenu icono={<Users size={14} />}
                                 texto={miembroNombre || 'Todo el equipo'}
                                 valor={miembroId || 'all'}
@@ -776,7 +779,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                         )}
                         {seccion === 'payroll' && !sinPermiso && <MenuPeriodoPayroll rango={rangoNomina} onCambiar={setRangoNomina} />}
 
-                        {seccion !== 'reportar' && !CON_PERIODO_PROPIO.includes(seccion) && (
+                        {seccion !== 'reportar' && !CON_PERIODO_PROPIO.includes(seccion) && !vistaTriage && (
                             <PillMenu icono={<Calendar size={14} />} rotulo="período"
                                 texto={rango ? textoRango(rango) : etiquetaPeriodo}
                                 detalle={period !== 'custom' && resumen?.dates
@@ -788,7 +791,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                                 onChange={elegirPeriodo} />
                         )}
 
-                        {seccion === 'analizar' && (
+                        {seccion === 'analizar' && !vistaTriage && (
                             <PillMenu icono={<span className="ln-muted" style={{ fontSize: 10, fontWeight: 900, letterSpacing: '.14em' }}>VS</span>}
                                 rotulo="comparación"
                                 texto={rangoVs ? textoRango(rangoVs) : contexto.comparaciones.find(c => c.key === compare)?.label}
@@ -804,7 +807,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                 {/* `.vista` es lo que separa las filas de paneles: sin el, cada seccion
                     renderiza sus filas como hermanas sueltas y quedan pegadas (medido: 0px
                     entre todas). Ademas trae la animacion de entrada de la referencia. */}
-                {!esperaFechas && (
+                {!esperaFechas && !vistaTriage && (
                     <BarraSegmento vista={segmentoDeLaVista({ seccion, tab, rol, tabla: tablaActual })} elegidos={elegidosSeg}
                         onElegir={(lista) => set({ seg: lista.join(',') })} />
                 )}
@@ -817,23 +820,24 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                     {esperaFechas && !faltaPeriodo && (
                         <FaltaFecha texto="Elegí las dos fechas de la comparación.">{camposDeLaComparacion}</FaltaFecha>
                     )}
-                    {!esperaFechas && seccion === 'analizar' && tab === 'dashboard' && (
+                    {vistaTriage && <TriageDireccion onAbrirFila={abrirFila} />}
+                    {!esperaFechas && !vistaTriage && seccion === 'analizar' && tab === 'dashboard' && (
                         <Analizar datos={resumen} rol={rol} irA={irADetalle}
                             fallo={fallas.resumen} onReintentar={cargarAnalizar}
                             cargarNoCerradas={cargarNoCerradas} onAbrirFila={abrirFila}
                             canal={canal} onCanal={(c) => set({ canal: c })} />
                     )}
-                    {!esperaFechas && seccion === 'analizar' && tab === 'dashboard' && ['closers', 'setters'].includes(rol) && (
+                    {!esperaFechas && !vistaTriage && seccion === 'analizar' && tab === 'dashboard' && ['closers', 'setters'].includes(rol) && (
                         <SegmentosPanel filtros={filtros} rol={rol} elegidos={elegidosSeg}
                             onElegir={(lista) => set({ seg: lista.join(',') })} />
                     )}
-                    {!esperaFechas && seccion === 'analizar' && tab === 'comparativas' && contexto.puede_comparar && (
+                    {!esperaFechas && !vistaTriage && seccion === 'analizar' && tab === 'comparativas' && contexto.puede_comparar && (
                         // Un closer ve a sus compañeros pero no puede abrir sus listas (el backend
                         // lo acota a él): sin `irAPersona` las filas no son clickeables.
                         <Comparativas datos={comparativas} filtros={filtros} fallo={fallas.comparativas} onReintentar={cargarAnalizar}
                             irAPersona={contexto.puede_elegir_equipo ? irAPersona : null} />
                     )}
-                    {!esperaFechas && seccion === 'analizar' && tab === 'variabilidad' && (
+                    {!esperaFechas && !vistaTriage && seccion === 'analizar' && tab === 'variabilidad' && (
                         <Variabilidad datos={variabilidad} rol={rol} irA={irADetalle}
                             fallo={fallas.variabilidad} onReintentar={cargarAnalizar} />
                     )}
@@ -874,7 +878,6 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                             onCerrarTasas={() => setTasasAbiertas(false)}
                             excluirAbierto={excluirAbierto} onCerrarExcluir={() => setExcluirAbierto(false)} />
                     )}
-                    {seccion === 'triage' && contexto.puede_reportar && <TriageDireccion onAbrirFila={abrirFila} />}
                     {seccion === 'simulador' && (
                         <Simulador permitido={!!contexto.puede_reportar} tab={tab} onTab={setTab} />
                     )}
@@ -919,9 +922,9 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                         antes={contexto.puede_elegir_equipo && !delEspacio && (
                             <div className="dock-rol caja">
                                 <Humo colores={HUMO_DOCK} />
-                                {[['closers', 'Closers'], ['setters', 'Setters']].map(([k, label]) => (
-                                    <button key={k} type="button" aria-pressed={rol === k}
-                                        onClick={() => set({ rol: k, t: null, m: null })}>
+                                {[['closers', 'Closers'], ['setters', 'Setters'], ['triage', 'Triage']].map(([k, label]) => (
+                                    <button key={k} type="button" aria-pressed={(vistaTriage ? 'triage' : rol) === k}
+                                        onClick={() => set(k === 'triage' ? { rol: k, s: 'analizar', t: null, m: null } : { rol: k, t: null, m: null })}>
                                         <span className="punto" />
                                         <span>{label}</span>
                                     </button>

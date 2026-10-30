@@ -1,46 +1,36 @@
-// Sección «Triage» de Dirección Comercial: lo mismo que ve cada triage en su espacio (GET /api/triage/metricas),
-// de todas o de una persona. Cada tarjeta y cada barra abre la lista de leads que compone el número
-// (criterios en triage/components/triageFiltros.js) y cada lead abre su ficha.
+// «Triage» de Dirección Comercial, con el diseño de Claude Design (Triage Dashboard, 30/10/2026): tarjetas, estados,
+// embudo con su cuello de botella, low ticket, abandonos, por persona, día por día y el reporte lead por lead.
+// Los datos son los de `GET /api/triage/metricas`. Cada cifra abre la lista que la compone y cada llamada, su ficha.
+// Se elige en el interruptor del dock (Closers · Setters · Triage), no es una sección más.
 
 import { useEffect, useMemo, useState } from 'react';
 import api from '../../../services/api';
-import { Bars, Button, EmptyState, FieldError, Grid, Kpi, Panel, Segmented, Skeleton, SkeletonKpi, SkeletonPanel } from '../../../components/standard';
+import { EmptyState, FieldError, Skeleton, SkeletonKpi, SkeletonPanel } from '../../../components/standard';
 import { localDateFromNow, localToday } from '../../../utils/datetime';
-import { AbandonosPanel, diasDe, embudo, lowTicket, pct, PorDia, Reporte } from '../../triage/components/TriageMetricas';
-import { FILTROS, filtrar } from '../../triage/components/triageFiltros';
+import { diasDe } from '../../triage/components/TriageMetricas';
+import { FILTROS } from '../../triage/components/triageFiltros';
+import { Abandonos, Embudo, Estados, LowTicket, Tarjetas } from './triage/TriagePaneles';
+import { DiaPorDia, PorPersona } from './triage/TriagePersonasDias';
+import TriageReporte from './triage/TriageReporte';
 
-const PERIODOS = [
-    { value: '0', label: 'Hoy' },
-    { value: '6', label: '7 días' },
-    { value: '29', label: '30 días' },
-];
+const PERIODOS = [['0', 'Hoy'], ['6', '7 días'], ['29', '30 días']];
+const FILA = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,460px),1fr))', gap: 16 };
+
+const Pildoras = ({ opciones, valor, onChange, etiqueta }) => (
+    <div role="group" aria-label={etiqueta} style={{ display: 'flex', flexShrink: 0, gap: 2, padding: 4, borderRadius: 999, border: '1px solid var(--border-main)', background: 'var(--bg-element)' }}>
+        {opciones.map(([v, texto]) => (
+            <button key={v} type="button" aria-pressed={valor === v} onClick={() => onChange(v)}
+                style={{ whiteSpace: 'nowrap', padding: '7px 14px', border: 0, borderRadius: 999, cursor: 'pointer', fontSize: 12, fontWeight: 700,
+                    background: valor === v ? '#fff' : 'transparent', color: valor === v ? 'var(--ink)' : 'var(--text-muted)' }}>{texto}</button>
+        ))}
+    </div>
+);
 
 const Cargando = () => (
     <Skeleton label="Cargando las métricas del triage">
-        <Grid variant="kpis">{[0, 1, 2, 3].map((i) => <SkeletonKpi key={i} step={i} />)}</Grid>
+        <div style={FILA}>{[0, 1, 2, 3].map((i) => <SkeletonKpi key={i} step={i} />)}</div>
         <SkeletonPanel rows={5} />
     </Skeleton>
-);
-
-/** Una fila por persona: sirve para comparar y para quedarse con una. */
-const PorPersona = ({ personas, onElegir }) => (
-    <Panel>
-        <h3 className="t-sm">Por persona</h3>
-        <div style={{ display: 'grid' }}>
-            {personas.map((p) => (
-                <button key={p.id} type="button" onClick={() => onElegir(String(p.id))}
-                    style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--s3)', alignItems: 'baseline', padding: 'var(--s3) 0',
-                        borderTop: '1px solid var(--border-subtle)', textAlign: 'left', background: 'none', color: 'inherit', cursor: 'pointer' }}>
-                    <b className="t-sm" style={{ minWidth: 96 }}>{p.nombre}</b>
-                    <span className="t-cap">{`${p.agendas} agendas`}</span>
-                    <span className="t-cap">{`${p.confirmadas} confirmadas`}</span>
-                    <span className="t-cap">{`${p.asistencias} asistieron`}</span>
-                    <span className="t-cap">{`${p.calificados} calificados · ${p.descalificados} descalificados`}</span>
-                    <span className="t-cap">{`${p.cerrado} de ${p.pitch_low_ticket} low ticket`}</span>
-                </button>
-            ))}
-        </div>
-    </Panel>
 );
 
 export default function TriageDireccion({ onAbrirFila }) {
@@ -61,20 +51,21 @@ export default function TriageDireccion({ onAbrirFila }) {
     const personas = datos?.por_persona || [];
     const elegida = personas.find((p) => String(p.id) === persona);
     const m = elegida || datos?.total;
-    const leads = useMemo(() => {
-        const propios = (datos?.leads || []).filter((l) => !elegida || l.triage === elegida.nombre);
-        return filtrar(propios, ver);
-    }, [datos, elegida, ver]);
-
-    const elegir = (clave) => setVer((actual) => (actual === clave ? null : clave));
+    const leads = useMemo(() => (datos?.leads || []).filter((l) => !elegida || l.triage === elegida.nombre), [datos, elegida]);
+    const verLista = (clave) => {
+        setVer(clave);
+        document.getElementById('triage-reporte')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
     const abrir = (l) => onAbrirFila?.({ tipo: 'agenda', id: l.id, client_id: l.client_id });
-    const opcionesPersona = [{ value: 'todas', label: 'Todas' }, ...personas.map((p) => ({ value: String(p.id), label: p.nombre }))];
 
     return (
-        <div style={{ display: 'grid', gap: 'var(--s4)', paddingBottom: 120 }}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--s3)' }}>
-                <Segmented value={dias} onChange={(v) => { setDias(v); setVer(null); }} options={PERIODOS} label="Período" />
-                {personas.length > 1 && <Segmented value={persona} onChange={setPersona} options={opcionesPersona} label="Persona" />}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20, paddingBottom: 120 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                <Pildoras etiqueta="Período" opciones={PERIODOS} valor={dias} onChange={(v) => { setDias(v); setVer(null); }} />
+                {personas.length > 1 && (
+                    <Pildoras etiqueta="Persona" valor={persona} onChange={(v) => { setPersona(v); setVer(null); }}
+                        opciones={[['todas', 'Todas'], ...personas.map((p) => [String(p.id), p.nombre])]} />
+                )}
             </div>
             {error && <FieldError>{error}</FieldError>}
             {!m ? (!error && <Cargando />) : !m.agendas ? (
@@ -83,39 +74,15 @@ export default function TriageDireccion({ onAbrirFila }) {
                 </EmptyState>
             ) : (
                 <>
-                    <Grid variant="kpis">
-                        <Kpi label="Agendas" value={m.agendas} onSelect={() => elegir('agendas')}>
-                            <small>{`${m.sin_reporte} sin reportar`}</small>
-                        </Kpi>
-                        <Kpi label="Asistencia" value={pct(m.asistencias, m.asistencias + m.no_show)} onSelect={() => elegir('asistencias')}>
-                            <small>{`${m.asistencias} asistieron · ${m.no_show} no show · ${m.canceladas} cancelaron`}</small>
-                        </Kpi>
-                        <Kpi label="Calificados" value={pct(m.calificados, m.asistencias)} onSelect={() => elegir('calificados')}>
-                            <small>{`${m.calificados} pasados al closer · ${m.pasadas_asistieron} ya asistieron con él`}</small>
-                        </Kpi>
-                        <Kpi label="Cierres del low ticket" value={pct(m.cerrado, m.pitch_low_ticket)} onSelect={() => elegir('cerrado')}>
-                            <small>{`${m.cerrado} de ${m.pitch_low_ticket} presentaciones`}</small>
-                        </Kpi>
-                    </Grid>
-                    <Panel>
-                        <h3 className="t-sm">Embudo</h3>
-                        <Bars variant="rows" items={embudo(m)} label="Embudo del triage" onSelect={elegir} />
-                    </Panel>
-                    <Panel>
-                        <h3 className="t-sm">Descalificados: low ticket de 100 USD</h3>
-                        <Bars variant="rows" items={lowTicket(m)} label="Low ticket" onSelect={elegir} />
-                    </Panel>
-                    <PorDia dias={diasDe(datos.por_dia, elegida?.id)} />
-                    <AbandonosPanel abandonos={datos.abandonos} />
-                    {!elegida && personas.length > 1 && <PorPersona personas={personas} onElegir={setPersona} />}
-                    {ver && (
-                        <div>
-                            <Button onClick={() => setVer(null)}>{`Quitar filtro · ${FILTROS[ver].titulo}`}</Button>
-                        </div>
-                    )}
-                    {leads.length > 0
-                        ? <Reporte leads={leads} titulo={ver ? FILTROS[ver].titulo : 'Reporte'} onAbrir={abrir} />
-                        : <EmptyState title="Ningún lead en esta lista" />}
+                    <Tarjetas m={m} onVer={verLista} />
+                    <div style={FILA}><Estados m={m} onVer={verLista} /><Embudo m={m} onVer={verLista} /></div>
+                    <div style={FILA}><LowTicket m={m} onVer={verLista} /><Abandonos a={datos.abandonos} /></div>
+                    <div style={FILA}>
+                        {!elegida && <PorPersona personas={personas} onElegir={setPersona} />}
+                        <DiaPorDia dias={diasDe(datos.por_dia, elegida?.id)} />
+                    </div>
+                    <TriageReporte leads={leads} ver={ver} onVer={setVer} onAbrir={abrir}
+                        titulo={ver && FILTROS[ver] && ver !== 'agendas' ? FILTROS[ver].titulo : 'Reporte'} />
                 </>
             )}
         </div>
