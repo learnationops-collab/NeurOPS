@@ -54,7 +54,7 @@ const Embudo = ({ fila, totales, colores }) => {
                     <b className="num">{formatear(paso.valor, 'num')}</b>
                     <span className={`mk-embudo-conv num${colores && paso.tono ? ` mk-tono mk-tono--${paso.tono}` : ''}`}
                         title={paso.conversion !== null && paso.referencia
-                            ? `Del paso anterior: ${pct(paso.conversion)}. En toda la tabla: ${pct(paso.referencia)}.` : undefined}>
+                            ? `Del paso anterior: ${pct(paso.conversion)}. En toda la tabla: ${pct(paso.referencia)}.${paso.key === 'ventas' ? ' Ventas = pagos, no personas.' : ''}` : undefined}>
                         {paso.conversion === null ? '' : pct(paso.conversion)}
                     </span>
                 </li>
