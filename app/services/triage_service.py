@@ -330,8 +330,11 @@ def metricas(desde, hasta, solo=None):
     for a in agendas:
         _sumar(total, a, closing_show)
         _sumar(por_id[a.closer_id], a, closing_show)
+    from app.agendas_v2 import abandonos
+
     return {
         'desde': desde.isoformat(), 'hasta': hasta.isoformat(), 'total': total,
+        'abandonos': abandonos.resumen(desde, hasta),
         'por_persona': [{'id': p.id, 'nombre': p.username, **por_id[p.id]} for p in personas],
         'leads': _leads(agendas),
     }

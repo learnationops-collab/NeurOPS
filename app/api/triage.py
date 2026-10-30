@@ -556,4 +556,4 @@ def update_qualified_form(client_id):
 
 
 
-from app.api import triage_metricas  # noqa: E402,F401  (cuelga /metricas del blueprint)
+from app.api import triage_abandonos, triage_metricas  # noqa: E402,F401  (cuelgan /metricas y /abandonos del blueprint)

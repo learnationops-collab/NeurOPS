@@ -122,3 +122,7 @@ class SchedIntento(db.Model):
     # País del teléfono que eligió (para el WhatsApp del aviso) y cuándo se avisó a Discord que no terminó (abandonos.py).
     pais = db.Column(db.String(4), nullable=True)
     avisado_en = db.Column(db.DateTime, nullable=True)
+    # Lo que hizo el triage con este abandono (lista «Abandonos» de su espacio): 'contactado' | 'no_contesta'.
+    contacto_estado = db.Column(db.String(20), nullable=True)
+    contacto_por_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    contacto_en = db.Column(db.DateTime, nullable=True)
