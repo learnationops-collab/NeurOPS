@@ -2,7 +2,8 @@ import { CifraConCuenta, Skeleton, SkeletonText } from '../../../../components/s
 import { Kpi } from './TablaAnuncios';
 import { GRUPOS_COMPARACION } from './fuentes';
 import { formatear } from './metricas';
-import { cuentaDe } from '../todos/comparacion';
+import { SETTING, WORKSHOP, cuentaDe, parte } from '../todos/comparacion';
+import MarcaDeBase from './MarcaDeBase';
 import './fuentes.css';
 
 /**
@@ -42,6 +43,12 @@ export const TarjetasFuente = ({ fuente, moneda, sinRepetidos = false, onVer = n
     const veces = (v) => formatear(v, 'veces');
     // Cuánto del Cash total es de ventas de antes (null con un segmento elegido: ahí no se parte).
     const anterior = fuente.cash_anterior > 0 && fuente.cash_total > 0;
+    // Setting rosa, Workshop azul: el nombre no se escribe, es el título del tooltip (norma del 29/10).
+    const { color, label: rotulo } = fuente.key === 'setting' ? SETTING : WORKSHOP;
+    const delPeriodo = (detalle) => <MarcaDeBase base="periodo" color={color} detalle={detalle} />;
+    const cuentaAnterior = anterior ? {
+        a: parte(dinero(fuente.cash_anterior), 'cash_anterior'), b: parte(dinero(fuente.cash_total), 'cash_total', 'cobrados'),
+    } : null;
     const kpis = [
         { titulo: TITULOS[0], valor: formatear(fuente.leads, 'num'), sub: `${dinero(fuente.cpl)} por lead`,
           tip: GRUPOS_COMPARACION[0].filas[0].ayuda },
@@ -64,13 +71,17 @@ export const TarjetasFuente = ({ fuente, moneda, sinRepetidos = false, onVer = n
           tip: 'Lo cobrado en pagos de venta nueva (completo + split).' },
         { titulo: TITULOS[5], valor: dinero(fuente.cash_total),
           sub: anterior
-              ? `${dinero(fuente.cash_anterior)} de ventas anteriores`
+              ? <><CifraConCuenta cuenta={cuentaAnterior} onVer={onVer}>{dinero(fuente.cash_anterior)}</CifraConCuenta> de ventas anteriores</>
               : `con ${fuente.cuotas} ${fuente.cuotas === 1 ? 'cuota' : 'cuotas'} y upsells`,
           tip: 'Todo lo cobrado del período de los clientes que trajo la fuente, aunque la venta sea de antes. El resto es de clientes que no compraron nada nuevo en el período.' },
-        { titulo: TITULOS[6], valor: veces(fuente.roas_new_cash), cuenta: cuentaDe('roas_new_cash', fuente, dinero),
+        { titulo: TITULOS[6], valor: veces(fuente.roas_new_cash), cuenta: cuentaDe('roas_new_cash', fuente, dinero), color, rotulo,
+          marca: delPeriodo('solo venta nueva'),
           tip: 'Solo la venta nueva del período, sobre lo gastado. Sin gasto no hay ROAS.' },
-        { titulo: TITULOS[7], valor: veces(fuente.roas_total), cuenta: cuentaDe('roas_total', fuente, dinero),
-          sub: anterior ? `${Math.round((fuente.cash_anterior / fuente.cash_total) * 100)} % es de ventas anteriores` : undefined,
+        { titulo: TITULOS[7], valor: veces(fuente.roas_total), cuenta: cuentaDe('roas_total', fuente, dinero), color, rotulo,
+          marca: delPeriodo('incluye cuotas de antes'),
+          sub: anterior
+              ? <><CifraConCuenta cuenta={cuentaAnterior} onVer={onVer}>{Math.round((fuente.cash_anterior / fuente.cash_total) * 100)} %</CifraConCuenta> es de ventas anteriores</>
+              : undefined,
           tip: 'Todo lo cobrado de los clientes de la fuente, sobre lo gastado. Incluye cobros de ventas de períodos anteriores.' },
     ];
     const showUp = { titulo: 'Show up', valor: fuente.pct_show_up === null ? '—' : `${fuente.pct_show_up}%`,
