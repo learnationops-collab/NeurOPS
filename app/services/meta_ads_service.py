@@ -358,12 +358,19 @@ def _guardar_gastos(cuenta, insights, desde, hasta):
     return filas, total
 
 
-def _cerrar_sincronizacion():
+def _cerrar_sincronizacion(horas=None):
     db.session.flush()
     mapear_automatico()  # respeta lo elegido a mano (mapeo / embudo_mapeo = 'manual')
+    if horas:
+        horas()  # después del mapeo: las horas son solo de las campañas de workshop
     from app.services import workshop_meta_service
     workshop_meta_service.recalcular()  # la inversión de cada workshop sale de este gasto
     db.session.commit()
+
+
+def _horas(base, cuentas, token, desde, hasta):
+    from app.services import meta_ads_horas
+    meta_ads_horas.sincronizar_horas_de_cuentas(base, cuentas, token, desde, hasta)
 
 
 def sincronizar(desde=None, hasta=None):
@@ -387,7 +394,7 @@ def sincronizar(desde=None, hasta=None):
         filas_de_gasto += filas
         gasto_total += gasto
 
-    _cerrar_sincronizacion()
+    _cerrar_sincronizacion(lambda: _horas(base, cuentas, token, desde, hasta))
     return {'desde': desde.isoformat(), 'hasta': hasta.isoformat(), 'anuncios': anuncios,
             'filas_de_gasto': filas_de_gasto, 'gasto': round(gasto_total, 2)}
 
@@ -449,7 +456,7 @@ def sincronizar_estado(forzar=False, dias=DIAS_DE_ESTADO):
 
     cambios = sum(1 for k in tocados
                   if antes.get(k) != tuple(getattr(existentes[k], c) for c in _LO_QUE_CAMBIA))
-    _cerrar_sincronizacion()
+    _cerrar_sincronizacion(lambda: _horas(base, cuentas, token, desde, hasta))
     return {'omitido': False, 'desde': desde.isoformat(), 'hasta': hasta.isoformat(), 'anuncios': anuncios,
             'cambios': cambios, 'gasto': round(gasto_total, 2)}
 
