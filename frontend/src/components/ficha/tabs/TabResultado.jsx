@@ -27,6 +27,7 @@ import { moneda } from '../acciones/planCuotas';
 import GrabacionFathom from './GrabacionFathom';
 import PasarARecuperacion from './PasarARecuperacion';
 import PasoSeguimiento from './PasoSeguimiento';
+import ConfirmarDatos, { confirmables } from './ConfirmarDatos';
 import { useChequeoVenta } from './useChequeoVenta';
 import './resultado.css';
 import {
@@ -441,6 +442,8 @@ function Pregunta({
   pregunta, respuestas, precarga, contexto, pendientes, puede, onElegir, onCambiar, onAnterior, irA,
   reducido, onReiniciar = null,
 }) {
+  const [corrigiendo, setCorrigiendo] = useState(false);
+  useEffect(() => setCorrigiendo(false), [pregunta.clave]);
   if (pregunta.tipo !== 'formulario') {
     const columnas = pregunta.opciones.length > 2 ? 3 : 2;
     const conAviso = pregunta.opciones.some((o) => o.aviso);
@@ -506,6 +509,7 @@ function Pregunta({
     .map((c) => faltaDelCampo(c, respuestas)).filter(Boolean));
   const primeroDeTexto = pregunta.campos.find((c) => TIPOS_DE_TEXTO.has(c.tipo || 'texto'));
   const conPareja = pregunta.campos.some((c) => c.junto);
+  const enTarjeta = corrigiendo ? [] : confirmables(pregunta, respuestas, precarga);
 
   return (
     <>
@@ -522,8 +526,11 @@ function Pregunta({
           }),
         }}
       >
+        {enTarjeta.length > 0 && (
+          <ConfirmarDatos campos={enTarjeta} respuestas={respuestas} onCorregir={() => setCorrigiendo(true)} />
+        )}
         {pregunta.campos.map((campo) => {
-          if (campo.junto) return null; // lo pinta su pareja
+          if (campo.junto || enTarjeta.includes(campo)) return null; // lo pinta su pareja o la tarjeta
           if (campo.tipo === 'cronograma') {
             return <CronogramaVenta key={campo.campo} respuestas={respuestas} contexto={contexto} onCambiar={onCambiar} />;
           }

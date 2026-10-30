@@ -273,10 +273,11 @@ export const PREGUNTAS = [
   { // Lo que trae la agenda, de un vistazo. El correo va primero y destacado: con él se crea o
     // renueva la suscripción de la Academia. Sin documento ni examen (ADR-W013).
     clave: 'venta_datos', hito: 'cierre', tipo: 'formulario', enunciado: 'Confirmá sus datos',
-    ayuda: 'Vienen de la agenda. Corregí solo lo que esté mal.',
+    // Lo que ya tenemos (`confirmar`) se confirma de un vistazo en una tarjeta (ConfirmarDatos).
+    ayuda: 'Vienen de la agenda. Si algo está mal, tocá Corregir.',
     campos: (r, c) => [
       {
-        campo: 'mail_cliente', label: 'Correo del acceso', tipo: 'email', requerido: true, precargado: true,
+        campo: 'mail_cliente', label: 'Correo del acceso', tipo: 'email', requerido: true, precargado: true, confirmar: true,
         destacado: 'Con este correo se crea o renueva su suscripción en la Academia. Revisalo letra por letra.',
       },
       // Desde cuándo corre la suscripción en Work (el vencimiento se cuenta desde ahí). La Academia
@@ -287,9 +288,9 @@ export const PREGUNTAS = [
         campo: 'acceso_hasta', label: 'Acceso hasta (vacío: 7 días si es seña, 4 meses si no)', tipo: 'fecha',
         presets: [{ label: '4 meses', meses: 4 }, { label: '6 meses', meses: 6 }, { label: '1 año', meses: 12 }],
       }] : []),
-      texto('nombre_cliente', 'Nombre y apellido', { requerido: true, precargado: true }),
-      texto('instagram', 'Instagram', { prefijo: '@', precargado: true }),
-      texto('telefono', 'Teléfono (WhatsApp)', { tipo: 'tel', precargado: true }),
+      texto('nombre_cliente', 'Nombre y apellido', { requerido: true, precargado: true, confirmar: true }),
+      texto('instagram', 'Instagram', { prefijo: '@', precargado: true, confirmar: true }),
+      texto('telefono', 'Teléfono (WhatsApp)', { tipo: 'tel', precargado: true, confirmar: true }),
       // La comisión va a quien se elija; con un solo closer no hay nada que elegir.
       ...(closersDeLaVenta(c).length > 1 ? [{
         campo: 'vendedor_id', label: 'La comisión va a', tipo: 'opcion', requerido: true,

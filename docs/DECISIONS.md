@@ -334,3 +334,11 @@
 - **Decisión:** `asignacion` (Python y JS) cuenta la ventana en días con `MIN_HORARIOS_DIA` (3) o más horarios del grupo del lead, en la zona del equipo. Si tiene menos de N, abre un día más por vez (hasta `DIAS_EXTRA_MAX`, 14) **sin desbordar** (`sin_desborde`). Recién si el grupo no tiene ningún horario en todos esos días, desborda como antes y, si tampoco hay nadie, sigue abriendo días. Los días con 1 o 2 horarios se siguen ofreciendo, solo que no cuentan.
 - **Qué se pierde:** el lead puede ver horarios más lejos en lugar de uno más cercano con un closer de otro grupo. En Setting, un A/B que antes caía en Mario el viernes ahora ve a Jean Carlo desde el lunes. Cada asignación calcula hasta 15 veces más (sin consultas nuevas a Google).
 - **Consecuencias:** el desborde a otro grupo queda como último recurso. Los eventos en modo «rango» o «siempre» no cambian.
+
+## ADR-W029: En la venta nueva, los datos que ya tenemos se confirman de un vistazo
+
+- **Estado:** implementada (30/10/2026).
+- **Contexto:** muchos errores del reporte de venta venían de closers que volvían a cargar datos que ya teníamos (nombre, correo, Instagram, teléfono). Tarea de Santi en Leadership: «Confirmar en una sola pregunta los datos que ya tenemos».
+- **Decisión:** en «Confirmá sus datos» (`venta_datos`), los campos marcados `confirmar` que llegan precargados de la agenda y siguen igual se muestran en una tarjeta (`ConfirmarDatos.jsx`) con lo que trae la agenda y el aviso del correo del acceso. «Corregir» abre los campos. Si falta un dato, o el correo no es válido, ese campo se pide como antes. La fecha de inicio, el acceso a la Academia y la comisión siguen en la misma pantalla.
+- **Qué se pierde:** el closer ya no ve cada campo como input: para cambiar algo tiene que tocar «Corregir». Un dato precargado mal escrito puede pasar si no lo lee.
+- **Consecuencias:** sin cambios en el payload ni en el backend; la revisión final sigue mostrando todos los datos.
