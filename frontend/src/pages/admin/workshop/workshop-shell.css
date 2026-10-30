@@ -26,9 +26,9 @@
    Arriba el título compacto; abajo, en UNA línea, pestañas · filtros de la pestaña · acciones. Se
    mide el ancho de la cabecera (no la ventana). Cada salto es un renglón entero, nunca un elemento
    suelto abajo:
-     - angosto: título y acciones / pestañas / filtros
-     - desde 920 px: título y acciones / pestañas y filtros
-     - desde 1150 px: título / pestañas, filtros y acciones (a 1330 de ventana entra con aire)
+     - con filtros (Resumen, Anuncios de Meta, Tráfico): título y acciones / pestañas / filtros, a cualquier ancho.
+       Las pestañas miden ≈760 px y los filtros hasta ≈570: con las acciones no entran juntos ni a 1440 (el
+       «Registrar taller» se montaba sobre «Contar por», 29/10/2026).
    Sin filtros (Talleres, Planificar) la línea es pestañas y acciones desde 640 px. */
 .dc-shell .ws-cab {
     display: grid;
@@ -56,15 +56,6 @@
         grid-template-columns: auto minmax(0, 1fr) auto;
         grid-template-areas: "id id id" "tabs . acc";
     }
-}
-@container ws-cab (min-width: 920px) {
-    .dc-shell .ws-cab {
-        grid-template-columns: auto minmax(0, 1fr) auto;
-        grid-template-areas: "id id acc" "tabs filtros filtros";
-    }
-}
-@container ws-cab (min-width: 1150px) {
-    .dc-shell .ws-cab { grid-template-areas: "id id id" "tabs filtros acc"; }
 }
 /* Teléfono: «Registrar taller» queda en su ícono (el nombre sigue en aria-label y en el tip) y las
    pastillas de filtro ocupan el renglón entero, de a una o de a dos, sin cortes a medio texto. */
