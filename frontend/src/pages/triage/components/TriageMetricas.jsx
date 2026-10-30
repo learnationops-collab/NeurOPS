@@ -3,7 +3,7 @@
 // → presentaciones del low ticket → cómo quedó. Abajo, el reporte lead por lead con sus notas: es el
 // reporte diario que pidió Marlon (27/10), con «Hoy».
 
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import api from '../../../services/api';
 import { Bars, Chip, EmptyState, FieldError, Grid, Kpi, Panel, Segmented, SkeletonKpi, SkeletonPanel, Skeleton } from '../../../components/standard';
 import { formatAgendaDateTime, localDateFromNow, localToday } from '../../../utils/datetime';
@@ -31,6 +31,40 @@ export const lowTicket = (m) => [
     { key: 'seguimiento', label: 'Seguimiento', value: m.seguimiento, detail: pct(m.seguimiento, m.pitch_low_ticket), color: 'var(--info)' },
     { key: 'descartado', label: 'Perdido', value: m.descartado, detail: pct(m.descartado, m.pitch_low_ticket), color: 'var(--idle)' },
 ];
+
+/** `por_dia` (un renglón por día y persona) en un renglón por día: de una persona o de todas. */
+export const diasDe = (porDia = [], persona = null) => {
+    const dias = new Map();
+    porDia.filter((r) => persona == null || r.id === persona).forEach(({ dia, id, ...numeros }) => {
+        const suma = dias.get(dia) || { dia };
+        Object.entries(numeros).forEach(([k, v]) => { suma[k] = (suma[k] || 0) + v; });
+        dias.set(dia, suma);
+    });
+    return [...dias.values()];
+};
+
+const COLUMNAS_DIA = [
+    ['agendas', 'Agendas'], ['confirmadas', 'Confirmadas'], ['asistencias', 'Asistieron'],
+    ['calificados', 'Calificados'], ['descalificados', 'Descalif.'], ['cerrado', 'Cierres LT'],
+];
+const nombreDia = (dia) => new Date(`${dia}T12:00:00`).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
+
+/** Día por día: agendas, confirmaciones y asistencias de cada día del período (con más de un día). */
+export const PorDia = ({ dias }) => (dias.length > 1 ? (
+    <Panel>
+        <h3 className="t-sm">Día por día</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: `minmax(90px, 1.4fr) repeat(${COLUMNAS_DIA.length}, 1fr)`, gap: 'var(--s2) var(--s3)', alignItems: 'baseline' }}>
+            <span />
+            {COLUMNAS_DIA.map(([k, t]) => <small key={k} className="t-cap mut" style={{ textAlign: 'right' }}>{t}</small>)}
+            {dias.map((d) => (
+                <Fragment key={d.dia}>
+                    <span className="t-sm">{nombreDia(d.dia)}</span>
+                    {COLUMNAS_DIA.map(([k]) => <b key={k} className="t-sm" style={{ textAlign: 'right' }}>{d[k]}</b>)}
+                </Fragment>
+            ))}
+        </div>
+    </Panel>
+) : null);
 
 /** Los abandonos del formulario del período que siguen sin agendar y qué se hizo con ellos. */
 export const AbandonosPanel = ({ abandonos: a }) => (a && a.total > 0 ? (
@@ -146,6 +180,7 @@ export default function TriageMetricas() {
                             <h3 className="t-sm">Descalificados: low ticket de 100 USD</h3>
                             <Bars variant="rows" items={lowTicket(m)} label="Low ticket" />
                         </Panel>
+                        <PorDia dias={diasDe(datos.por_dia)} />
                         <AbandonosPanel abandonos={datos.abandonos} />
                         {datos.leads?.length > 0 && <Reporte leads={datos.leads} />}
                     </>
