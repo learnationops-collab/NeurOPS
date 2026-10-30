@@ -90,9 +90,10 @@
     min-height: 0;
 }
 
-/* Talleres: la tabla ocupa todo el ancho de la pantalla (cabecera y contenido sin tope de 1440 px). */
-.ws-espacio--ancho > .ws-cabeza,
-.ws-espacio--ancho .ws-contenido > .dc-shell { max-width: none; }
+/* Talleres en modo lista: solo la tabla sale del tope de 1440 px y ocupa todo el ancho de la pantalla.
+   La cabecera (título, pestañas, filtros) no cambia nunca de ancho; tarjetas y el resto de las
+   pestañas conservan el ancho de siempre. */
+.ws-espacio:has(.wt-talleres--ancha) .ws-contenido > .dc-shell { max-width: none; }
 
 @keyframes ws-gira { to { transform: rotate(360deg); } }
 .dc-shell .ws-gira { animation: ws-gira 1s linear infinite; }

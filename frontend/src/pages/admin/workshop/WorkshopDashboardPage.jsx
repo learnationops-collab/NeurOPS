@@ -327,8 +327,8 @@ const WorkshopDashboardPage = () => {
     if (restaurando) return null;
 
     return (
-        // Talleres es una tabla ancha: ocupa todo el ancho de la pantalla (Kerwin, 28/10/2026) para analizar sin scroll lateral.
-        <div className={`ws-espacio${activeTab === 'talleres' ? ' ws-espacio--ancho' : ''}`}>
+        // Solo la tabla de Talleres usa todo el ancho (Kerwin, 28/10/2026): lo decide ella (`.wt-talleres--ancha`), no la pestaña.
+        <div className="ws-espacio">
             {/* Tráfico tiene su propio recargar junto al período: el de acá recarga talleres, metas y
                 acciones sin vaciar la pantalla (lo que se ve queda hasta que llega lo nuevo). */}
             <CabeceraWorkshop pestanas={PESTANAS} activa={activeTab} onPestana={(key) => irA(key)}
