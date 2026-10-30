@@ -48,6 +48,12 @@ def academy_resolver_persona():
         (data.get('name') or '').strip() or None, email=email, phone=data.get('phone'),
         learnation_user_id=data.get('learnation_user_id'), crear=True, fuente='academia')
     db.session.commit()
+    # Lo que se le mandó antes de que tuviera cuenta dio 404: ahora que existe, le llega.
+    cliente = person_service.cliente_de(person, crear=False)
+    if cliente is not None:
+        from app.services import academy_payment_status, subscription_sync
+        subscription_sync.al_registrarse(cliente)
+        academy_payment_status.avisar([cliente.id])
     return jsonify({"success": True, "person": _persona_dict(person)}), 200
 
 

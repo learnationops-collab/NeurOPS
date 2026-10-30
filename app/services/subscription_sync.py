@@ -109,6 +109,25 @@ def reenviar_pendientes(limite=20):
     return {'pendientes': len(pendientes), 'enviadas': enviadas}
 
 
+def al_registrarse(client):
+    """El alumno se acaba de registrar en la Academia (`POST /people/resolve`): se le reenvían ya sus
+    suscripciones. Las que salieron antes de que tuviera cuenta dieron 404, se dieron por hechas y
+    nada las reenviaba (Luis Martínez Cabrera, 29/10/2026: compró Ace Learners y entró con el
+    gratuito). En un hilo, después del commit de quien la llama."""
+    from app.models import Subscription
+
+    if client is None or not activo():
+        return
+    filtro = Subscription.client_id == client.id
+    if client.person_uuid:
+        filtro = or_(filtro, Subscription.person_uuid == client.person_uuid)
+    subs = Subscription.query.filter(filtro).order_by(Subscription.updated_at).all()
+    if subs:
+        threading.Thread(target=_enviar, args=([(s.id, aviso(s)) for s in subs], datetime.utcnow(),
+                                               current_app._get_current_object()),
+                         daemon=False, name='academy-subs').start()
+
+
 def _al_vincular(session):
     """Un cliente al que se le vincula el alumno de la Academia o se le cambia el correo: sus
     suscripciones vuelven a quedar pendientes. El aviso que salió antes del vínculo dio 404 y se dio

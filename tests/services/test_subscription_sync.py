@@ -81,3 +81,25 @@ def test_el_aviso_del_pago_lleva_el_vencimiento_de_la_suscripcion(db, ana):
     cuota = cobro(db, ana, 'AL - Cuota', datetime(2026, 10, 1))
     # Antes la cuota compraba días (la próxima cuota + gracia o 4 meses desde ella): ahora manda la suscripción.
     assert build_payment_payload(cuota)['expires_at'] == date(2027, 1, 1).isoformat()
+
+
+def test_al_registrarse_reenvia_la_que_dio_404(db, monkeypatch):
+    """Luis Martínez Cabrera (29/10/2026): la venta salió antes de que tuviera cuenta, dio 404 y quedó
+    por hecha. Al registrarse en la Academia le llega."""
+    from app.models import Subscription
+
+    monkeypatch.setenv('ACADEMY_SUBSCRIPTIONS_PUSH', 'true')
+    luis = Client(full_name='Luis', email='luis@x.com')
+    db.session.add(luis)
+    db.session.commit()
+    with patch('app.services.learnation_service.LearnationService.report_subscription'):
+        cobro(db, luis, 'AL - Parcial', datetime(2026, 10, 1))
+    sub = Subscription.query.filter_by(client_id=luis.id).one()
+    sub.academy_synced_at = datetime(2026, 10, 20, 12, 0, 1)
+    db.session.commit()
+
+    with patch.object(subscription_sync.threading, 'Thread', HiloInmediato), \
+            patch('app.services.learnation_service.LearnationService.report_subscription') as enviar:
+        subscription_sync.al_registrarse(luis)
+    enviado = enviar.call_args.args[0]
+    assert (enviado['email'], enviado['product_slug']) == ('luis@x.com', 'ace-learners')
