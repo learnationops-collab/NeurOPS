@@ -49,32 +49,42 @@
 .dc-shell .td-barra-embudo{height:22px;min-width:4px;border-radius:6px;flex:0 1 auto;transition:width .4s cubic-bezier(.22,1,.36,1)}
 @media (max-width:640px){.dc-shell .td-paso{grid-template-columns:minmax(0,1fr)}}
 
-/* Métrica por métrica. */
-.dc-shell .td-detalle{display:flex;flex-direction:column;gap:var(--s4);padding:var(--s5)}
-.dc-shell .td-detalle .panel-cab{margin-bottom:0}
+/* Métrica por métrica: grupos en desplegables, filas de una línea, cifras neutras (solo la que gana toma el color de su fuente). */
+.dc-shell .td-detalle{display:flex;flex-direction:column;gap:var(--s3)}
 .dc-shell .td-grupo{display:flex;flex-direction:column;gap:2px}
-.dc-shell .td-grupo-titulo{padding:0 var(--s3) var(--s2);color:var(--brand-secondary)}
-.dc-shell .td-fila{display:grid;grid-template-columns:minmax(160px,1.3fr) minmax(0,1fr) minmax(0,1fr) minmax(120px,150px);
-  gap:var(--s4);align-items:center;padding:var(--s3);border-radius:var(--radius-control)}
+.dc-shell .td-fila{display:grid;grid-template-columns:minmax(150px,1.2fr) minmax(0,1fr) minmax(0,1fr) minmax(90px,120px);
+  gap:var(--s4);align-items:center;padding:5px var(--s3);min-height:34px;border-radius:var(--radius-control)}
 .dc-shell .td-fila--tasa{background:var(--bg-element)}
 .dc-shell .td-fila--tasa:hover{background:var(--bg-element-hover)}
-.dc-shell .td-fila--cab{padding-block:0}
-.dc-shell .td-fuente{display:inline-flex;align-items:center;cursor:help}
-.dc-shell .td-fuente i{width:12px;height:12px;border-radius:4px;background:var(--c)}
-.dc-shell .td-gana{font-size:15px;font-weight:800;cursor:help;outline:none}
-.dc-shell .td-fila-nombre{display:flex;flex-direction:column;min-width:0}
-.dc-shell .td-valor{display:flex;flex-direction:column;gap:6px;min-width:0}
-.dc-shell .td-pista{height:6px;border-radius:3px;background:var(--bg-element)}
-.dc-shell .td-fila--tasa .td-pista{background:var(--hueco)}
-.dc-shell .td-pista i{display:block;height:6px;border-radius:3px;transition:width .4s cubic-bezier(.22,1,.36,1)}
-.dc-shell .td-fila-gana{display:flex;flex-direction:column;align-items:flex-end;gap:2px;text-align:right}
+.dc-shell .td-fila--cab{padding-block:0 4px;min-height:0}
+.dc-shell .td-fila--cab span{font-weight:800}
+.dc-shell .td-gana{font-size:14px;font-weight:800;cursor:help;outline:none}
+.dc-shell .td-fila-nombre{display:flex;align-items:baseline;gap:var(--s2);min-width:0}
+.dc-shell .td-fila-nombre > span{white-space:nowrap}
+.dc-shell .td-fila-nombre > .t-cap{overflow:hidden;text-overflow:ellipsis;min-width:0}
+.dc-shell .td-valor{display:flex;align-items:center;gap:var(--s3);min-width:0}
+.dc-shell .td-valor > .ui-cifra{flex:none;min-width:5.4em}
+.dc-shell .td-valor--gana{--ui-cifra-c:var(--c)}
+.dc-shell .td-valor--gana .ui-cifra__valor{font-weight:800}
+.dc-shell .td-pista{flex:1 1 0;min-width:24px;height:4px;border-radius:2px;background:var(--hueco)}
+.dc-shell .td-fila--tasa .td-pista{background:var(--bg-element-hover)}
+.dc-shell .td-pista i{display:block;height:4px;border-radius:2px;background:var(--text-muted-40);transition:width .4s cubic-bezier(.22,1,.36,1)}
+.dc-shell .td-valor--gana .td-pista i{background:var(--c)}
+.dc-shell .td-fila-gana{display:flex;justify-content:flex-end;text-align:right}
+/* Lo que se lee con el grupo cerrado: cuántas filas gana cada fuente. */
+.dc-shell .td-ganadas{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.dc-shell .td-ganadas i{width:8px;height:8px;border-radius:3px;flex:none}
+.dc-shell .td-ganadas b{color:var(--text-on-surface);font-weight:800}
 @media (max-width:720px){
-    .dc-shell .td-fila,.dc-shell .td-fila--cab{grid-template-columns:repeat(2,minmax(0,1fr))}
-    .dc-shell .td-fila--cab{display:none}
-    .dc-shell .td-fila-nombre,.dc-shell .td-fila-gana{grid-column:1 / -1}
-    .dc-shell .td-fila-gana{flex-direction:row;align-items:center;justify-content:flex-start;gap:var(--s2)}
+    .dc-shell .td-fila,.dc-shell .td-fila--cab{grid-template-columns:repeat(2,minmax(0,1fr));gap:2px var(--s3);padding-block:var(--s2)}
+    /* En angosto la cabecera solo nombra las dos fuentes, sobre sus columnas; la métrica y el ganador ya van en cada fila. */
+    .dc-shell .td-fila--cab{padding-block:0 4px}
+    .dc-shell .td-fila--cab > :first-child,.dc-shell .td-fila--cab > :last-child{display:none}
+    .dc-shell .td-fila-nombre{grid-column:1;grid-row:1;flex-wrap:wrap;gap:0}
+    .dc-shell .td-fila-nombre > .t-cap{display:none}
+    .dc-shell .td-fila-gana{grid-column:2;grid-row:1}
+    .dc-shell .td-valor > .ui-cifra{min-width:4.2em}
 }
 @media (prefers-reduced-motion:reduce){
     .dc-shell .td-barra-embudo,.dc-shell .td-pista i{transition:none}
 }
-

@@ -17,7 +17,7 @@
    ============================================================================ */
 
 :where(.ui-btn,.ui-ibtn,.ui-link,.ui-chip,.ui-status,.ui-card,.ui-aura,.ui-empty,.ui-confirm,.ui-header,
-  .ui-seg,.ui-select,.ui-select__pop,.ui-switch,.ui-stepper,.ui-scrim,.ui-modal,.ui-avatar,.ui-input,.ui-entry,.ui-field-error,.ui-panel,.ui-kpi,.ui-grid,.ui-cal,.ui-cal-event,.ui-toast,.ui-tip,.ui-textarea,.ui-modal-head,.ui-bars,.ui-skel-bone,.ui-reg,.ui-cifra,.ui-cifra__cuenta){
+  .ui-seg,.ui-select,.ui-select__pop,.ui-switch,.ui-stepper,.ui-scrim,.ui-modal,.ui-avatar,.ui-input,.ui-entry,.ui-field-error,.ui-panel,.ui-kpi,.ui-grid,.ui-cal,.ui-cal-event,.ui-toast,.ui-tip,.ui-textarea,.ui-modal-head,.ui-bars,.ui-skel-bone,.ui-reg,.ui-cifra,.ui-cifra__cuenta,.ui-acc){
   --ui-brand:var(--ln-brand, var(--brand-secondary, #FF3FA4));
   --ui-brand-accent:var(--ln-brand-accent, var(--brand-secondary-light, #FF6AD5));
   --ui-brand-2:var(--ln-brand-2, var(--brand-primary, #1323C6));
@@ -431,6 +431,23 @@ button.ui-bars__row.ui-bars__row:focus-visible{outline:2px solid var(--ui-accent
 @keyframes ui-bars-crece{from{transform:scaleY(0)}}
 @keyframes ui-bars-crece-x{from{transform:scaleX(0)}}
 @media (prefers-reduced-motion:reduce){.ui-bars__col > i,.ui-bars__track > i{animation:none}}
+
+/* --- Accordion --------------------------------------------------------------------------------- */
+.ui-acc.ui-acc{display:flex;flex-direction:column;gap:var(--ui-s2);min-width:0}
+.ui-acc__item.ui-acc__item{border:1px solid var(--ui-border-subtle);border-radius:var(--ui-radius-control);background:var(--ui-panel-bg);overflow:clip;min-width:0}
+.ui-acc__btn.ui-acc__btn{display:flex;align-items:center;gap:var(--ui-s3);width:100%;min-height:44px;padding:6px var(--ui-s4);background:none;border:0;
+  color:var(--ui-text);font:inherit;text-align:left;cursor:pointer;transition:background-color .15s}
+.ui-acc__btn.ui-acc__btn:hover{background:var(--ui-card-bg)}
+.ui-acc__btn.ui-acc__btn:focus-visible{outline:2px solid var(--ui-focus);outline-offset:-2px}
+.ui-acc__chev{flex:none;color:var(--ui-muted);transition:transform .2s var(--ui-spring)}
+.ui-acc__item--open > .ui-acc__head .ui-acc__chev{transform:rotate(180deg)}
+.ui-acc__dot{flex:none;width:9px;height:9px;border-radius:3px}
+.ui-acc__title{flex:none;font-size:14px;font-weight:800}
+.ui-acc__meta{flex:1 1 0;min-width:0;display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:2px var(--ui-s4);
+  font-size:12.5px;font-weight:600;color:var(--ui-muted);font-variant-numeric:tabular-nums}
+.ui-acc__body{padding:0 var(--ui-s4) var(--ui-s4);min-width:0;animation:ui-acc-in .18s ease-out backwards}
+@keyframes ui-acc-in{from{opacity:0;transform:translateY(-4px)}}
+@media (prefers-reduced-motion:reduce){.ui-acc__body{animation:none}.ui-acc__chev{transition:none}}
 
 /* --- Capa de los flotantes (capa.js) ----------------------------------------------------------- */
 /* Un menú subido a la capa superior (`popover="manual"`) trae estilos de fábrica: centrado en la

@@ -9,7 +9,7 @@ import '../agendas_v2/thalamus.css';
 import '../comercial/comercial.css';
 import './catalogo.css';
 import {
-    Avatar, Bars, BRAND_AURA, CifraConCuenta, Button, Calendar, CalendarEvent, calendarY, Card, Chip, Status, ModalHeader, TextArea, toast, Toaster, Tooltip, ConfirmDelete, EmptyState, FieldError, Grid, IconButton, Input, InputGroup, Kpi, LinkButton, Modal, PageHeader, Panel, Segmented, Select,
+    Accordion, Avatar, Bars, BRAND_AURA, CifraConCuenta, Button, Calendar, CalendarEvent, calendarY, Card, Chip, Status, ModalHeader, TextArea, toast, Toaster, Tooltip, ConfirmDelete, EmptyState, FieldError, Grid, IconButton, Input, InputGroup, Kpi, LinkButton, Modal, PageHeader, Panel, Segmented, Select,
     useVerRegistros, Stepper, Switch, Reveal, Skeleton, SkeletonBlock, SkeletonChart, SkeletonCircle, SkeletonKpi, SkeletonPanel, SkeletonRow, SkeletonText,
 } from '../../components/standard';
 
@@ -308,6 +308,17 @@ const SECCIONES = [
                 {' '}
                 <CifraConCuenta onVer={nada} color="var(--ln-info, #4E8BD8)" rotulo="Workshop" cuenta={{ a: { t: '61', m: 'agendas', titulo: 'Agendas' }, b: { t: '325 leads', m: 'leads', titulo: 'Leads' } }}>18,8%</CifraConCuenta>
             </p>
+        ),
+    },
+    {
+        nombre: 'Accordion',
+        para: 'Desplegables apilados para el detalle (las pestañas cambian de tema). Los bloques son una lista: sumar o sacar un item agrega o quita un bloque.',
+        props: 'items[{ key, title, meta, color, children, open }] · value + onChange(keys, key) · multiple',
+        demo: () => (
+            <Accordion items={[
+                { key: 'a', title: 'Embudo', color: 'var(--ln-brand, #FF3FA4)', meta: <><b>9 filas</b><span>3 ganan</span></>, open: true, children: <p>El detalle del grupo.</p> },
+                { key: 'b', title: 'Plata', color: 'var(--ln-info, #4E8BD8)', meta: <b>6 filas</b>, children: () => <p>Solo se dibuja abierto.</p> },
+            ]} />
         ),
     },
     {

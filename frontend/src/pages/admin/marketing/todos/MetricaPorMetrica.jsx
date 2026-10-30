@@ -1,27 +1,25 @@
-import { useState } from 'react';
-import { Segmented, Tip } from '../../../comercial/components/Shared';
+import { Tip } from '../../../comercial/components/Shared';
+import useEstadoGuardado from '../../../../hooks/useEstadoGuardado';
 import { SETTING, WORKSHOP, TITULO_DE, anchosDe, diferenciaDe, formatos, ganadorDe } from './comparacion';
-import { CifraConCuenta } from '../../../../components/standard';
+import { Accordion, CifraConCuenta } from '../../../../components/standard';
 
 /**
  * «Métrica por métrica» de Todos: cada cifra con la de Setting y la de Workshop lado a lado (con su barra,
- * relativa a la mayor de las dos) y quién gana. Las filas resaltadas son tasas o costos, que comparan
- * eficiencia sin importar el tamaño de cada embudo; las de volumen no tienen ganador.
+ * relativa a la mayor de las dos) y quién gana. Los grupos (Embudo, Plata, Costos) son desplegables, no pestañas
+ * (Kerwin, 29/10/2026): cerrados dicen cuántas filas gana cada fuente, y lo que se dejó abierto se recuerda.
+ *
+ * El nombre de la fuente va en la cabecera de columna, en su color; las cifras van neutras y solo la que gana
+ * toma el color de su fuente. Las filas resaltadas son tasas o costos, que comparan eficiencia sin importar el
+ * tamaño de cada embudo; las de volumen no tienen ganador.
  */
-const FILTROS = [
-    { key: 'todo', label: 'Todo' },
-    { key: 'embudo', label: 'Embudo' },
-    { key: 'plata', label: 'Plata' },
-    { key: 'costos', label: 'Costos' },
-];
+const CLAVE_ABIERTOS = 'mk_todos_detalle_abiertos';
 
 const Valor = ({ texto, cuenta, metrica, onVer, ancho, fuente, gana }) => (
-    <div className="td-valor">
-        <CifraConCuenta color={fuente.color} rotulo={fuente.label} cuenta={cuenta} metrica={metrica} titulo={TITULO_DE[metrica]} onVer={onVer}
-            className={`t-body num${gana ? ' td-fuerte' : ''}`}>
+    <div className={`td-valor${gana ? ' td-valor--gana' : ''}`} data-fuente={fuente.label} style={{ '--c': fuente.color }}>
+        <CifraConCuenta cuenta={cuenta} metrica={metrica} titulo={TITULO_DE[metrica]} onVer={onVer} className="t-body num td-cifra-t">
             {texto}
         </CifraConCuenta>
-        <div className="td-pista"><i style={{ width: ancho, background: fuente.color }} /></div>
+        <div className="td-pista"><i style={{ width: ancho }} /></div>
     </div>
 );
 
@@ -32,7 +30,7 @@ const Fila = ({ fila, f, onVer }) => {
     const color = gana === SETTING.key ? SETTING.color : WORKSHOP.color;
     return (
         <div className={`td-fila${fila.tipo === 'vol' ? '' : ' td-fila--tasa'}`}>
-            <div className="td-fila-nombre">
+            <div className="td-fila-nombre" data-tip={fila.hint || undefined}>
                 <span className="t-body td-fuerte">{fila.label}</span>
                 {fila.hint && <span className="t-cap mut">{fila.hint}</span>}
             </div>
@@ -45,43 +43,56 @@ const Fila = ({ fila, f, onVer }) => {
                     <span className="td-gana num" style={{ color }} data-tip={`Gana ${nombre}`} tabIndex={0} aria-label={`Gana ${nombre}: ${diferenciaDe(fila)}`}>
                         {diferenciaDe(fila)}
                     </span>
-                ) : <span className="t-cap mut40">{fila.tipo === 'vol' ? 'Volumen' : 'Sin dato'}</span>}
+                ) : fila.tipo !== 'vol' && <span className="t-cap mut40">Sin dato</span>}
             </div>
         </div>
     );
 };
 
-const MetricaPorMetrica = ({ grupos, moneda, onVer }) => {
-    const [filtro, setFiltro] = useState('todo');
-    const f = formatos(moneda);
-    const vistos = grupos.filter((g) => filtro === 'todo' || g.id === filtro);
-    return (
-        <section className="panel td-detalle" aria-labelledby="td-detalle-titulo">
-            <div className="panel-cab">
-                <div className="mk-cab-txt">
-                    <p className="t-eyebrow mut">Detalle</p>
-                    <h2 className="t-h3" id="td-detalle-titulo">Métrica por métrica</h2>
-                </div>
-                <div className="panel-cab-der">
-                    <Segmented chico opciones={FILTROS} valor={filtro} onChange={setFiltro} ariaLabel="Qué métricas ver" />
-                </div>
-            </div>
+/** Las dos fuentes con su nombre en su color, una vez por grupo abierto (el nombre no se repite en cada cifra). */
+const Cabecera = () => (
+    <div className="td-fila td-fila--cab t-eyebrow" aria-hidden="true">
+        <span className="mut">Métrica</span>
+        <span style={{ color: SETTING.color }}>{SETTING.label}</span>
+        <span style={{ color: WORKSHOP.color }}>{WORKSHOP.label}</span>
+        <span className="td-der mut">Gana</span>
+    </div>
+);
 
-            <div className="td-fila td-fila--cab t-eyebrow mut" aria-hidden="true">
-                <span>Métrica</span>
-                <span className="td-fuente" style={{ '--c': SETTING.color }} data-tip={SETTING.label} aria-label={SETTING.label}><i /></span>
-                <span className="td-fuente" style={{ '--c': WORKSHOP.color }} data-tip={WORKSHOP.label} aria-label={WORKSHOP.label}><i /></span>
-                <span className="td-der">Gana</span>
-            </div>
-            {vistos.map((g) => (
-                <div key={g.id} className="td-grupo" role="group" aria-label={g.titulo}>
-                    <p className="t-eyebrow td-grupo-titulo">{g.titulo}</p>
-                    {g.filas.map((fila) => <Fila key={fila.id} fila={fila} f={f} onVer={onVer} />)}
-                </div>
+/** Cuántas filas gana cada fuente: lo que se lee con el grupo cerrado. */
+const Ganadas = ({ filas }) => {
+    const gana = (key) => filas.filter((x) => ganadorDe(x) === key).length;
+    return (
+        <>
+            {[SETTING, WORKSHOP].map((fuente) => (
+                <span key={fuente.key} className="td-ganadas" data-tip={`Filas que gana ${fuente.label}`}>
+                    <i style={{ background: fuente.color }} aria-hidden="true" />{fuente.label} <b className="num">{gana(fuente.key)}</b>
+                </span>
             ))}
+        </>
+    );
+};
+
+const MetricaPorMetrica = ({ grupos, moneda, onVer }) => {
+    const [guardado, poner] = useEstadoGuardado(CLAVE_ABIERTOS, { abiertos: grupos.map((g) => g.id) }, {
+        normalizar: (m, ini) => ({ ...m, abiertos: Array.isArray(m.abiertos) ? m.abiertos : ini.abiertos }),
+    });
+    const f = formatos(moneda);
+    const items = grupos.map((g) => ({
+        key: g.id, title: g.titulo, meta: <Ganadas filas={g.filas} />,
+        children: () => (
+            <div className="td-grupo" role="group" aria-label={g.titulo}>
+                <Cabecera />
+                {g.filas.map((fila) => <Fila key={fila.id} fila={fila} f={f} onVer={onVer} />)}
+            </div>
+        ),
+    }));
+    return (
+        <section className="td-detalle" aria-label="Métrica por métrica">
+            <Accordion items={items} value={guardado.abiertos} onChange={(abiertos) => poner({ abiertos })} />
             <p className="t-cap mut">
-                Las filas resaltadas son tasas o costos: comparan eficiencia sin importar el tamaño de cada embudo.
-                Las de volumen no tienen ganador. <Tip texto="Un costo sin ventas, agendas o shows en el período no tiene con qué dividirse: queda sin dato y no gana." titulo="Sin dato" />
+                Resaltadas: tasas y costos (comparan eficiencia). Las de volumen no tienen ganador.{' '}
+                <Tip texto="Un costo sin ventas, agendas o shows en el período no tiene con qué dividirse: queda sin dato y no gana." titulo="Sin dato" />
             </p>
         </section>
     );

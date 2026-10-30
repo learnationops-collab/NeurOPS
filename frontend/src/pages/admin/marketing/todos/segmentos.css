@@ -54,3 +54,12 @@
 .dc-shell .sg-grupo{display:flex;flex-direction:column;gap:var(--s2)}
 .dc-shell .sg-orden{display:inline-flex;align-items:center;gap:6px;background:none;border:0;padding:0;cursor:pointer;text-align:left}
 .dc-shell .sg-orden:hover{color:var(--text-primary)}
+/* Los bloques en desplegables (`bloquesSegmentos.jsx`): lo que se lee con el bloque cerrado, y las tablas y ajustes de adentro, más bajos. */
+.dc-shell .sg-meta{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:2px var(--s4)}
+.dc-shell .sg-meta > span{white-space:nowrap}
+.dc-shell .sg-meta b{color:var(--text-on-surface);font-weight:800}
+.dc-shell .sg-ajustes{display:flex;flex-direction:column;gap:var(--s2)}
+.dc-shell .sg-ajustes .sg-filtro{margin-bottom:0}
+.dc-shell .sg-plano .sg-fila{padding-block:var(--s2)}
+.dc-shell .sg-plano .sg-filtro{margin-bottom:0}
+@media (max-width:640px){.dc-shell .sg-meta > span:nth-child(n+3){display:none}}
