@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Chip, Input, Select } from '../../../standard';
+import { Input, Select } from '../../../standard';
 import api from '../../../../services/api';
 import { browserTimezone } from '../../../../utils/datetime';
 import { SubVista } from '../../piezas';
@@ -20,6 +20,7 @@ const SubReprogramar = ({ ficha, onVolver, onConfirmar, guardando = false }) => 
     const apptId = ficha?.identidad?.appointment_id;
     const [datos, setDatos] = useState(null);
     const [persona, setPersona] = useState(null);
+    const [dia, setDia] = useState('');
     const [cuando, setCuando] = useState(null);
     const [motivo, setMotivo] = useState('');
     const [tzLead, setTzLead] = useState(null);
@@ -28,6 +29,7 @@ const SubReprogramar = ({ ficha, onVolver, onConfirmar, guardando = false }) => 
     useEffect(() => {
         let vivo = true;
         setDatos(null);
+        setDia('');
         setCuando(null);
         api.get(`/ficha/${apptId}/reprogramar/opciones`, { params: persona ? { persona_id: persona } : {} })
             .then((res) => { if (vivo) { setDatos(res.data || {}); setTzLead((t) => t || res.data?.zona_lead?.tz || null); } })
@@ -78,19 +80,19 @@ const SubReprogramar = ({ ficha, onVolver, onConfirmar, guardando = false }) => 
                     {horarios.length === 0 ? (
                         <small className="t-cap mut">No tiene horarios libres en los próximos días: probá con otra persona.</small>
                     ) : (
-                        <div style={{ display: 'grid', gap: 'var(--s2)' }}>
-                            <small className="t-cap mut">{`Horas en tu zona (${miZona}). Tocá una.`}</small>
-                            {Object.entries(dias).map(([dia, lista]) => (
-                                <div key={dia} style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
-                                    <small className="t-rotulo" style={{ minWidth: 72 }}>{dia}</small>
-                                    {lista.map((iso) => (
-                                        <Chip key={iso} as="button" type="button" aria-pressed={cuando === iso}
-                                            subtle={cuando !== iso} onClick={() => setCuando(iso)}>
-                                            {enZona(iso, miZona, HORA)}
-                                        </Chip>
-                                    ))}
-                                </div>
-                            ))}
+                        <div className="grid-2">
+                            <div style={{ display: 'grid', gap: 'var(--s1)' }}>
+                                <small className="t-rotulo">Día</small>
+                                <Select size="sm" label="Día" value={dia} onChange={(v) => { setDia(v); setCuando(null); }}
+                                    options={[{ value: '', label: 'Elegí el día' },
+                                        ...Object.entries(dias).map(([d, lista]) => ({ value: d, label: `${d} · ${lista.length} ${lista.length === 1 ? 'horario' : 'horarios'}` }))]} />
+                            </div>
+                            <div style={{ display: 'grid', gap: 'var(--s1)' }}>
+                                <small className="t-rotulo">{`Hora en tu zona (${miZona})`}</small>
+                                <Select size="sm" label="Hora" value={cuando || ''} disabled={!dia} onChange={(v) => setCuando(v || null)}
+                                    options={[{ value: '', label: dia ? 'Elegí la hora' : 'Primero el día' },
+                                        ...(dias[dia] || []).map((iso) => ({ value: iso, label: `${enZona(iso, miZona, HORA)} · ${enZona(iso, lead, HORA)} para el lead` }))]} />
+                            </div>
                         </div>
                     )}
 
