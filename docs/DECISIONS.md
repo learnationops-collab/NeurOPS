@@ -366,3 +366,11 @@
 - **Decisión:** (1) el aviso de abandono etiqueta a las triage activas (`ETIQUETA['abandono'] = ('triage',)`); las que no tienen ID de Discord se saltean y solo si ninguna lo tiene va `@everyone`; el setter sigue en la tarjeta como origen. (2) Sección «Abandonos» en el dock del triage: los incompletos de las últimas 48 h con WhatsApp y los estados `contactado` / `no_contesta` (`sched_intentos.contacto_estado`, `contacto_por_id`, `contacto_en`; migración `a6c8e0b2d4f6`). Marcar un contacto no mueve `actualizado_en`. Cuando el lead agenda, su intento se borra y sale de la lista. (3) Un panel «Abandonos del formulario» en las métricas del triage y en la sección de Dirección, por fecha en que dejó sus datos.
 - **Qué se pierde:** el setter ya no recibe la etiqueta del abandono de su link. Los abandonos que agendan después desaparecen de las métricas (su intento se borra), así que el panel cuenta los que siguen sin agendar. No hay un lead en el mazo del triage: sin agenda no hay ficha.
 - **Consecuencias:** sin `discord_id` cargado en Dari y Juliana el aviso sale con `@everyone`. El ruteo C/D al triage no cambia (ADR-W025).
+
+## ADR-W044: Las métricas del triage se cortan día por día, en la zona de quien mira
+
+- **Fecha:** 2026-10-30 · **Subsistema:** Triage (métricas) · **Estado:** implementada en local, sin desplegar. Completa la ADR-W042 (Leadership 1019).
+- **Contexto:** `triage_service.metricas` solo daba el total del período y Kerwin pidió ver agendas y confirmaciones por día.
+- **Decisión:** la respuesta suma `por_dia`: un renglón por día y por persona con las mismas cuentas de `_sumar`. El día se corta con la zona de quien mira (`zona_del_usuario`), no la del servidor. La pantalla (`diasDe`, `PorDia` en `TriageMetricas.jsx`) suma los renglones de todas o se queda con una persona, y solo se muestra con más de un día.
+- **Qué se pierde:** los días sin agendas no salen como fila. Cada día cuenta las llamadas que caen en él por su hora, no las que se agendaron ese día.
+- **Consecuencias:** `por_dia` y `por_persona` suman lo mismo que `total`; si `_sumar` cambia, cambian los tres.
