@@ -28,6 +28,7 @@ import FichaLeadModal from '../../components/ficha/FichaLeadModal';
 import Reportar from './components/Reportar';
 import RangoFechas, { mesEnCurso, rangoAnterior, rangoDe, textoRango } from './components/RangoFechas';
 import SegmentosPanel from './components/SegmentosPanel';
+import TriageDireccion from './components/TriageDireccion';
 import BarraSegmento, { segmentoDeLaVista } from './components/BarraSegmento';
 import useEstadoGuardado from '../../hooks/useEstadoGuardado';
 import { corregirAgenda, eliminarAgenda as eliminarAgendaApi, getComparativas, getContexto, getResumen, getTabla, getVariabilidad, marcarAgendaDuplicada } from './comercialApi';
@@ -114,6 +115,8 @@ const SECCIONES = [
         { key: 'comparativas', label: 'Comparativas', permiso: 'puede_comparar' },
         { key: 'variabilidad', label: 'Variabilidad' }] },
     { id: 'revisar', label: 'Revisar', Icono: CheckCircle2, tabs: [] },
+    // Las métricas de las triage (23/10/2026: Darian y Julia): su propio período y su selector de persona.
+    { id: 'triage', label: 'Triage', Icono: Users, tabs: [], soloDireccion: true },
     // Proyectar y Simulador son uno solo desde el 24/10/2026: se parte de la proyección y se le
     // mueven palancas. Un link viejo a `?s=proyectar` abre el Simulador (ver `SECCION_ALIAS`).
     { id: 'simulador', label: 'Simulador', Icono: Target, soloDireccion: true,
@@ -128,7 +131,7 @@ const SECCIONES = [
 
 // Las secciones con su propio período: la píldora del tablero (Hoy, 7 días, Este mes…) no aplica.
 // El Simulador tiene su horizonte y su línea base.
-const CON_PERIODO_PROPIO = ['finanzas', 'payroll', 'simulador'];
+const CON_PERIODO_PROPIO = ['finanzas', 'payroll', 'simulador', 'triage'];
 
 /**
  * Espacios: este mismo tablero con solo algunas secciones en el dock. «finanzas» (08/10/2026) es
@@ -871,6 +874,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                             onCerrarTasas={() => setTasasAbiertas(false)}
                             excluirAbierto={excluirAbierto} onCerrarExcluir={() => setExcluirAbierto(false)} />
                     )}
+                    {seccion === 'triage' && contexto.puede_reportar && <TriageDireccion onAbrirFila={abrirFila} />}
                     {seccion === 'simulador' && (
                         <Simulador permitido={!!contexto.puede_reportar} tab={tab} onTab={setTab} />
                     )}

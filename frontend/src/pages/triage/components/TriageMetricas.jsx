@@ -14,9 +14,9 @@ const PERIODOS = [
     { value: '29', label: '30 días' },
 ];
 
-const pct = (a, b) => (b ? `${Math.round((a / b) * 100)}%` : '—');
+export const pct = (a, b) => (b ? `${Math.round((a / b) * 100)}%` : '—');
 
-const embudo = (m) => [
+export const embudo = (m) => [
     { key: 'agendas', label: 'Agendas', value: m.agendas },
     { key: 'confirmadas', label: 'Confirmadas', value: m.confirmadas, detail: pct(m.confirmadas, m.agendas) },
     { key: 'asistencias', label: 'Asistieron', value: m.asistencias, detail: pct(m.asistencias, m.agendas) },
@@ -24,7 +24,7 @@ const embudo = (m) => [
     { key: 'descalificados', label: 'Descalificados', value: m.descalificados, detail: pct(m.descalificados, m.asistencias), color: 'var(--warning)' },
 ];
 
-const lowTicket = (m) => [
+export const lowTicket = (m) => [
     { key: 'pitch', label: 'Presentaciones', value: m.pitch_low_ticket, detail: pct(m.pitch_low_ticket, m.descalificados) },
     { key: 'cerrado', label: 'Cierres', value: m.cerrado, detail: pct(m.cerrado, m.pitch_low_ticket), color: 'var(--success)' },
     { key: 'no_cerrado', label: 'No cierres', value: m.no_cerrado, detail: pct(m.no_cerrado, m.pitch_low_ticket), color: 'var(--error)' },
@@ -49,16 +49,19 @@ const asistenciaDe = (l) => {
     return ['Sin reportar', 'var(--idle)'];
 };
 
-/** El reporte lead por lead: cómo quedó cada llamada y las notas (para el closer o por qué no califica). */
-const Reporte = ({ leads }) => (
+/** El reporte lead por lead: cómo quedó cada llamada y las notas (para el closer o por qué no califica).
+ *  Con `onAbrir` cada llamada es un botón que abre la ficha del lead. */
+export const Reporte = ({ leads, titulo = 'Reporte', onAbrir }) => (
     <Panel>
-        <h3 className="t-sm">{`Reporte · ${leads.length} ${leads.length === 1 ? 'llamada' : 'llamadas'}`}</h3>
+        <h3 className="t-sm">{`${titulo} · ${leads.length} ${leads.length === 1 ? 'llamada' : 'llamadas'}`}</h3>
         <div style={{ display: 'grid' }}>
             {leads.map((l) => {
                 const asis = asistenciaDe(l);
                 const res = RESULTADO[l.calificacion];
                 return (
-                    <div key={l.id} style={{ display: 'grid', gap: 'var(--s1)', padding: 'var(--s3) 0', borderTop: '1px solid var(--border-subtle)' }}>
+                    <div key={l.id} {...(onAbrir ? { role: 'button', tabIndex: 0, onClick: () => onAbrir(l),
+                        onKeyDown: (e) => { if (e.key === 'Enter') onAbrir(l); } } : null)}
+                        style={{ display: 'grid', gap: 'var(--s1)', padding: 'var(--s3) 0', borderTop: '1px solid var(--border-subtle)', cursor: onAbrir ? 'pointer' : undefined }}>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--s2)', alignItems: 'center' }}>
                             <span className="t-sm" style={{ fontWeight: 700 }}>{l.cliente || `Agenda ${l.id}`}</span>
                             <span className="t-cap mut">{formatAgendaDateTime(l.hora)}{l.triage ? ` · ${l.triage}` : ''}</span>
