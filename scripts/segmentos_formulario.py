@@ -5,8 +5,10 @@ Cambios (todos idempotentes: correrlo dos veces deja lo mismo):
   - `puntosSeg` (-3 a +2) en Inversión, Etapa, Examen y Decide: 0 es el lead promedio, lo que resta compra
     menos. Salen de una logística penalizada sobre 736 leads (jun–sep 2026, 77 compras a 60 días), pasada a
     enteros. `puntos` (la nota de 0 a 10 del closer) no se toca.
-  - Cortes A ≥ 4 (con la inversión al doble, los mismos A de antes), B ≥ 1, C ≥ -1, D el resto. Quien no
-    invierte no llega a B (corte duro: el script frena si una opción lo rompe).
+  - Cortes A ≥ 3, B ≥ 1, C ≥ -1, D el resto (A ≥ 4 hasta 2026-12.2). Quien no invierte no llega a B
+    (corte duro: el script frena si una opción lo rompe).
+  - OJO: el ruteo de abajo (una regla por segmento) es el de antes de ADR-W025, que rutea por dinero. --apply
+    lo pisaría; para cambiar solo la segmentación, guardar `segmento` con guardar_doc(..., parcial=True).
   - Ruteo: las reglas con url (mk-academy: estudiante que no invierte, también «podría conseguir ayuda»)
     quedan primero; las mk-g* se reemplazan por una por segmento:
     A → Grupo 5 · B → Grupo 4 · C y D → Triage (lo crea), con el desborde de siempre. «Todo lo demás»
@@ -35,7 +37,9 @@ from app.agendas_v2.nucleo.segmento import SEG_Q  # noqa: E402
 
 FORM_ID = 'dg6gukz9emx'
 INVERSION, ETAPA, EXAMEN, DECIDE = 'qglxqqlsgya', 'qg8xclvqc4c', 'qg6raaks2pe', 'qgnajtuxkuz'
-SEGMENTO = {'activo': True, 'modo': 'suma', 'a': 4, 'b': 1, 'c': -1, 'sigma': 1, 'version': '2026-12.1'}
+# A ≥ 3 desde 2026-12.3 (ADR-W041); el dinero decide el par A/B o C/D (ADR-W025).
+SEGMENTO = {'activo': True, 'modo': 'suma', 'a': 3, 'b': 1, 'c': -1, 'sigma': 1, 'version': '2026-12.3',
+            'dinero': {'q': INVERSION, 'ops': ['ogmgmpvwtgt', 'oa9pmy94tfg', 'ogmdr0s275v', 'oglxqq0u44o']}}
 
 # Efecto de cada respuesta en la compra (log-odds centrado; un punto ≈ 0,23, unas 1,26 veces las chances).
 PUNTOS_SEG = {

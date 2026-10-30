@@ -1371,3 +1371,7 @@
   - Ahora, cuando la Academia registra un alumno (`POST /people/resolve`), Work le manda en el momento sus suscripciones y su estado de pago. Antes solo se reenviaban si cambiaba el vínculo del cliente con la Academia, y el registro guarda el id del alumno en la persona sin tocar al cliente.
 - **30 de Octubre de 2026 (venta nueva: los datos que ya tenemos se confirman de un vistazo)** *([ConfirmarDatos.jsx](../../frontend/src/components/ficha/tabs/ConfirmarDatos.jsx), [ADR-W029](../DECISIONS.md))*
   - En «Confirmá sus datos», el nombre, el correo, el Instagram y el teléfono que vienen de la agenda aparecen en una tarjeta con «Corregir», en vez de cuatro campos para revisar uno por uno. Lo que falta o está mal se pide como antes.
+- **30 de Octubre de 2026 (segmentos: A desde 3 puntos y todo recalculado)** *([segmentos_formulario.py](../../scripts/segmentos_formulario.py), [ADR-W041](../DECISIONS.md))*:
+  - Las agendas guardadas con la regla anterior al 29/10 se recalcularon con la vigente (el dinero decide A/B o C/D): 32 agendas de octubre cambiaron, casi todas de C a B.
+  - El corte de A bajó de 4 a 3 puntos (versión 2026-12.3) y se recalcularon todas las agendas y clientes. Con jun–oct, A compra 18,4% y B 9,3% (antes 20,4% y 11,5%). El reparto de closers no cambia.
+  - Hallazgo: el «cierre» de Marketing › Segmentos divide los pagos del período por las asistencias de las agendas del período, que no son las mismas personas (B daba 83%; con las mismas personas, 33%). Sin corregir todavía.

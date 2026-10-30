@@ -342,3 +342,11 @@
 - **Decisión:** en «Confirmá sus datos» (`venta_datos`), los campos marcados `confirmar` que llegan precargados de la agenda y siguen igual se muestran en una tarjeta (`ConfirmarDatos.jsx`) con lo que trae la agenda y el aviso del correo del acceso. «Corregir» abre los campos. Si falta un dato, o el correo no es válido, ese campo se pide como antes. La fecha de inicio, el acceso a la Academia y la comisión siguen en la misma pantalla.
 - **Qué se pierde:** el closer ya no ve cada campo como input: para cambiar algo tiene que tocar «Corregir». Un dato precargado mal escrito puede pasar si no lo lee.
 - **Consecuencias:** sin cambios en el payload ni en el backend; la revisión final sigue mostrando todos los datos.
+
+## ADR-W041: El corte de A baja a 3 puntos (segmentación 2026-12.3)
+
+- **Fecha:** 2026-10-30 · **Subsistema:** Segmentos A/B/C/D (formulario `dg6gukz9emx`) · **Estado:** implementado en producción.
+- **Contexto:** en Marketing › Segmentos de octubre, A no vendía y B parecía vender más. Con jun–oct (421 leads con dinero, 58 compras a 60 días, `scripts/ajuste_segmentos.py`), A compraba 20,4% y B 11,5%: A funcionaba, pero B mezclaba los de 2 y 3 puntos (compran ~16%, casi como A) con los de 1 o menos (6%).
+- **Decisión:** `segmento.a` de 4 a 3 en el formulario vivo (solo ese campo, con `guardar_doc(parcial=True)`), versión `2026-12.3`, y `backfill_segmentos.py --apply --force` sobre todas las agendas y clientes. Con los mismos datos: A 207 leads, 18,4% de compra, $169 por lead; B 214, 9,3%, $67 (antes 1,8 veces, ahora 2).
+- **Qué se pierde:** A deja de ser el ~25% de los que invierten y pasa a ser la mitad; cae un poco su tasa (20,4% → 18,4%). El ruteo no cambia: A y B van al mismo grupo desde ADR-W025.
+- **Consecuencias:** `scripts/segmentos_formulario.py` queda con el corte nuevo y avisa que su ruteo por segmento está viejo (no correrlo con --apply sin actualizarlo). En el Setting de octubre casi no se nota (A pasa de 16 a 17 agendas): sus compradores de B tienen pocos puntos. Pendiente aparte: el cierre de Segmentos divide pagos del período por asistencias de las agendas del período (poblaciones distintas).
