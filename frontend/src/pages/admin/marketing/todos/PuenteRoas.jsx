@@ -27,7 +27,7 @@ const signo = (v) => `${v < -0.005 ? '−' : '+'}${Math.abs(v).toFixed(2)}x`;
 const tono = (v) => (v < -0.005 ? 'var(--error)' : v > 0.005 ? 'var(--success)' : 'var(--text-muted)');
 const dia = (iso) => iso.slice(0, 10).split('-').reverse().slice(0, 2).join('/');
 
-const Fila = ({ valor, color, children, cuenta, onClick = null, titulo = undefined }) => {
+const Fila = ({ valor, color, children, cuenta, onClick = null }) => {
     const cuerpo = (
         <>
             <b className="num mk-puente-valor" style={{ color }}>{valor}</b>
@@ -36,7 +36,7 @@ const Fila = ({ valor, color, children, cuenta, onClick = null, titulo = undefin
         </>
     );
     return onClick
-        ? <button type="button" className="mk-puente-fila mk-puente-fila--abre" title={titulo} onClick={onClick}>{cuerpo}</button>
+        ? <button type="button" className="mk-puente-fila mk-puente-fila--abre" onClick={onClick}>{cuerpo}</button>
         : <div className="mk-puente-fila">{cuerpo}</div>;
 };
 
@@ -68,7 +68,7 @@ const Cuenta = ({ puente, fuente, rango, moneda, onVer, fechas }) => {
             </Fila>
             {puente.pasos.map((p) => (
                 <Fila key={p.id} valor={signo(restas[p.id])} color={tono(restas[p.id])} cuenta={cuentas[p.id]}
-                    onClick={onVer && p.lista ? () => onVer(p.lista, PASOS[p.id].titulo) : null} titulo={onVer && p.lista ? 'Ver la lista' : undefined}>
+                    onClick={onVer && p.lista ? () => onVer(p.lista, PASOS[p.id].titulo) : null}>
                     {PASOS[p.id].texto}
                 </Fila>
             ))}
