@@ -6,10 +6,17 @@
 eligió esto en vez de marcar campañas enteras: dentro de campañas «WS» hay anuncios de DM («Comenta
 DIAGNÓSTICO», las guías LPF) que no llenan la clase.
 
-**Qué días.** Del día siguiente al taller anterior al día del taller, incluido: lo que se gastó para
-llenar esa clase. Es el criterio con el que el equipo cargaba la inversión a mano (coincide en 13 de
-los 15 talleres de julio a octubre de 2026, ~3% menos porque se cargaba antes de que cerrara el día).
-El primer taller registrado no tiene anterior: se le cuentan los 7 días que terminan en él. OJO: las
+**Qué horas** (29/10/2026, pedido de Kerwin). Al terminar cada taller (inicio + `DURACION_HORAS`) se
+cambia el link del grupo de WhatsApp al del siguiente: lo de un taller es lo que llega entre el fin del
+anterior y el fin de este (`franjas`, con el desglose por hora de `meta_ads_horas`). Los leads de las
+2 horas del vivo siguen entrando a ese grupo, por eso la franja termina 2 h después de empezar y no al
+empezar: así ninguna hora queda sin taller. Vale si este taller y el anterior tienen hora cargada
+(`inicio_at`) y todo su gasto ya está traído por hora.
+
+**Qué días** (si no hay franja). Del día siguiente al taller anterior al día del taller, incluido: lo que
+se gastó para llenar esa clase. Es el criterio con el que el equipo cargaba la inversión a mano (coincide
+en 13 de los 15 talleres de julio a octubre de 2026, ~3% menos porque se cargaba antes de que cerrara el
+día). El primer taller registrado no tiene anterior: se le cuentan los 7 días que terminan en él. OJO: las
 agendas y ventas usan otra ventana, la que EMPIEZA en el taller (`workshop_metrics_service`).
 
 **Qué números** (comparados con lo cargado a mano el 15/10): inversión = gasto; clics = todos los
@@ -27,9 +34,10 @@ from datetime import datetime, timedelta
 import pytz
 
 from app import db
-from app.models import LandingTracking, MetaAnuncio, MetaGastoDiario, WorkshopEvent
+from app.models import LandingTracking, MetaAnuncio, MetaGastoDiario, MetaGastoHorario, WorkshopEvent
 
 DIAS_SIN_ANTERIOR = 7
+DURACION_HORAS = 2  # lo que dura un taller: al terminar, el link del grupo pasa al siguiente
 
 
 def ventanas(eventos=None):
@@ -45,6 +53,43 @@ def ventanas(eventos=None):
 
 def ventana_de(evento):
     return ventanas().get(evento.id)
+
+
+def _a_la_hora(instante):
+    """La hora de reloj más cercana: el desglose de Meta es por hora entera."""
+    return (instante + timedelta(minutes=30)).replace(minute=0, second=0, microsecond=0)
+
+
+def franjas(eventos=None, primer_dia=None):
+    """{evento.id: (inicio, fin)} en UTC naive de los talleres que se miden por hora (29/10/2026).
+
+    Cuando termina un taller el link del grupo de WhatsApp pasa al siguiente: lo de un taller es lo que
+    llega entre el fin del anterior y el fin de este (inicio + DURACION_HORAS). Así cada hora es de un
+    solo taller y ninguna se pierde. Solo entran los que tienen hora cargada (ellos y el anterior) y
+    todo el gasto de esa franja traído por hora (`meta_ads_horas.cubre`); el resto sigue por día."""
+    from app.services import meta_ads_horas
+
+    eventos = sorted(eventos if eventos is not None else WorkshopEvent.query.all(), key=lambda e: e.date)
+    if primer_dia is None:
+        primer_dia = db.session.query(db.func.min(MetaGastoDiario.fecha)).scalar()
+    resultado = {}
+    for anterior, evento in zip(eventos, eventos[1:]):
+        if primer_dia is None or not (anterior.inicio_at and evento.inicio_at):
+            continue
+        inicio = _a_la_hora(anterior.inicio_at + timedelta(hours=DURACION_HORAS))
+        fin = _a_la_hora(evento.inicio_at + timedelta(hours=DURACION_HORAS))
+        if inicio >= fin or inicio.date() - timedelta(days=1) < primer_dia:
+            continue
+        if meta_ads_horas.cubre(inicio, fin):
+            resultado[evento.id] = (inicio, fin)
+    return resultado
+
+
+def _de_workshop_horas():
+    """La consulta base por hora: lo que gastaron los anuncios de workshop."""
+    return (db.session.query(MetaGastoHorario)
+            .join(MetaAnuncio, MetaAnuncio.meta_ad_id == MetaGastoHorario.meta_ad_id)
+            .filter(MetaAnuncio.embudo == 'workshop'))
 
 
 def _de_workshop():
@@ -65,10 +110,14 @@ def recalcular():
     # Desde cuándo hay datos de Meta: antes de eso, cero gasto no es «no gastó», es «no se sabe».
     primer_dia = db.session.query(db.func.min(MetaGastoDiario.fecha)).scalar()
     dias = ventanas(eventos)
+    por_hora = franjas(eventos, primer_dia) if hay_de_workshop else {}
     for evento in eventos:
         desde, hasta = dias[evento.id]
         if not hay_de_workshop or primer_dia is None or desde < primer_dia:
             _sin_meta(evento)
+            continue
+        if evento.id in por_hora:
+            _guardar_por_hora(evento, *por_hora[evento.id])
             continue
         gasto, impresiones, clics, enlace, sin_conteos, leads, sin_leads = _de_workshop().filter(
             MetaGastoDiario.fecha >= desde, MetaGastoDiario.fecha <= hasta,
@@ -90,6 +139,22 @@ def recalcular():
         evento.meta_actualizado_at = datetime.utcnow()
 
 
+def _guardar_por_hora(evento, inicio, fin):
+    gasto, impresiones, clics, enlace, leads = _de_workshop_horas().filter(
+        MetaGastoHorario.desde_utc >= inicio, MetaGastoHorario.desde_utc < fin,
+    ).with_entities(
+        db.func.coalesce(db.func.sum(MetaGastoHorario.gasto), 0.0),
+        db.func.coalesce(db.func.sum(MetaGastoHorario.impresiones), 0),
+        db.func.coalesce(db.func.sum(MetaGastoHorario.clics), 0),
+        db.func.coalesce(db.func.sum(MetaGastoHorario.clics_enlace), 0),
+        db.func.coalesce(db.func.sum(MetaGastoHorario.leads), 0),
+    ).one()
+    evento.meta_inversion = round(float(gasto), 2)
+    evento.meta_impresiones, evento.meta_clics, evento.meta_clics_enlace = int(impresiones), int(clics), int(enlace)
+    evento.meta_leads = int(leads)
+    evento.meta_actualizado_at = datetime.utcnow()
+
+
 def _metricas(gasto, impresiones, clics, enlace):
     return {
         'gasto': round(gasto, 2), 'impresiones': impresiones, 'clics': clics, 'clics_enlace': enlace,
@@ -107,12 +172,15 @@ def _limites_utc(desde, hasta, zona):
 
 
 def _landings_por_campana(desde, hasta, zona):
-    """{campana_id: (visitas, clics_whatsapp)} de las landings del taller en esos días. Los anuncios
-    de Meta mandan el id de la campaña en `utm_campaign` (visto el 15/10/2026); la grabación
+    return _landings_entre(*_limites_utc(desde, hasta, zona))
+
+
+def _landings_entre(inicio, fin):
+    """{campana_id: (visitas, clics_whatsapp)} de las landings del taller en [inicio, fin) (UTC naive).
+    Los anuncios de Meta mandan el id de la campaña en `utm_campaign` (visto el 15/10/2026); la grabación
     (/replay/) es otro embudo y queda afuera."""
     from app.api.metrics import EVENTO_CLIC_WHATSAPP
 
-    inicio, fin = _limites_utc(desde, hasta, zona)
     filas = db.session.query(
         LandingTracking.utm_campaign,
         db.func.count(db.case((db.or_(LandingTracking.evento.is_(None),
@@ -130,8 +198,22 @@ def _landings_por_campana(desde, hasta, zona):
 
 
 def desglose(evento, zona=None):
-    """Los anuncios de workshop en los días del taller (del siguiente al anterior hasta el suyo)."""
-    return desglose_periodo(*ventana_de(evento), zona)
+    """Los anuncios de workshop del taller: en su franja por hora si la tiene (`franjas`); si no, en sus
+    días (del siguiente al anterior hasta el suyo)."""
+    zona = zona or pytz.timezone('America/La_Paz')
+    franja = franjas().get(evento.id)
+    if not franja:
+        return desglose_periodo(*ventana_de(evento), zona)
+    inicio, fin = franja
+    tabla = MetaGastoHorario
+    resultado = _armar_desglose(
+        _de_workshop_horas().filter(tabla.desde_utc >= inicio, tabla.desde_utc < fin),
+        tabla, _landings_entre(inicio, fin),
+    )
+    local = lambda instante: pytz.utc.localize(instante).astimezone(zona)  # noqa: E731
+    return {**resultado, 'por_hora': True, 'desde': local(inicio).date().isoformat(),
+            'hasta': local(fin - timedelta(hours=1)).date().isoformat(),
+            'desde_utc': inicio.isoformat(), 'hasta_utc': fin.isoformat()}
 
 
 def desglose_periodo(desde, hasta, zona=None):
@@ -139,17 +221,21 @@ def desglose_periodo(desde, hasta, zona=None):
     impresiones, clics, CPM, CPC y CTR, y por campaña las visitas a las landings y los clics al grupo
     de WhatsApp que trajo. Lo usan el embudo de cada taller y Rendimiento › Workshop."""
     zona = zona or pytz.timezone('America/La_Paz')
-    filas = _de_workshop().filter(
-        MetaGastoDiario.fecha >= desde, MetaGastoDiario.fecha <= hasta,
-    ).with_entities(
+    consulta = _de_workshop().filter(MetaGastoDiario.fecha >= desde, MetaGastoDiario.fecha <= hasta)
+    resultado = _armar_desglose(consulta, MetaGastoDiario, _landings_por_campana(desde, hasta, zona))
+    return {**resultado, 'desde': desde.isoformat(), 'hasta': hasta.isoformat()}
+
+
+def _armar_desglose(consulta, tabla, landings):
+    """El árbol campaña › conjunto › anuncio de `consulta` (gasto diario u horario, de `tabla`)."""
+    filas = consulta.with_entities(
         MetaAnuncio.campana_id, MetaAnuncio.campana, MetaAnuncio.conjunto_id, MetaAnuncio.conjunto,
         MetaAnuncio.meta_ad_id, MetaAnuncio.nombre, MetaAnuncio.estado,
-        db.func.sum(MetaGastoDiario.gasto), db.func.coalesce(db.func.sum(MetaGastoDiario.impresiones), 0),
-        db.func.coalesce(db.func.sum(MetaGastoDiario.clics), 0),
-        db.func.coalesce(db.func.sum(MetaGastoDiario.clics_enlace), 0),
+        db.func.sum(tabla.gasto), db.func.coalesce(db.func.sum(tabla.impresiones), 0),
+        db.func.coalesce(db.func.sum(tabla.clics), 0),
+        db.func.coalesce(db.func.sum(tabla.clics_enlace), 0),
     ).group_by(MetaAnuncio.campana_id, MetaAnuncio.campana, MetaAnuncio.conjunto_id, MetaAnuncio.conjunto,
                MetaAnuncio.meta_ad_id, MetaAnuncio.nombre, MetaAnuncio.estado).all()
-    landings = _landings_por_campana(desde, hasta, zona)
 
     campanas = {}
     for cid, campana, sid, conjunto, ad_id, nombre, estado, gasto, imp, clics, enlace in filas:
@@ -178,7 +264,6 @@ def desglose_periodo(desde, hasta, zona=None):
             ],
         })
     return {
-        'desde': desde.isoformat(), 'hasta': hasta.isoformat(),
         'anuncios_workshop': _anuncios_de_workshop(),
         'totales': {**_metricas(*total), 'visitas': total_visitas, 'clics_whatsapp': total_whatsapp,
                     'costo_whatsapp': round(total[0] / total_whatsapp, 2) if total_whatsapp else None},

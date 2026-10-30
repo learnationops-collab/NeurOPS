@@ -337,9 +337,9 @@ def update_workshop_event(event_id):
         event.synced_at = datetime.utcnow()
 
     try:
-        if movido:
+        if movido or antes[1] != event.inicio_at:
             db.session.flush()
-            # Cambió de qué días es la inversión de Meta de este taller y la de sus vecinos.
+            # Cambió de qué días u horas es la inversión de Meta de este taller y la de sus vecinos.
             workshop_meta_service.recalcular()
         db.session.commit()
         if antes != (event.date, event.inicio_at, event.meet_url, event.whatsapp_url):

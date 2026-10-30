@@ -135,7 +135,9 @@ const WorkshopAnunciosView = ({ evento, formatCurrency = dineroPorDefecto, anter
                 <>
                     <section className="panel wt-panel">
                         <PanelCab titulo="Lo que trajeron"
-                            tip="Desde el día después del taller anterior hasta este.">
+                            tip={datos.por_hora
+                                ? 'Desde que terminó el taller anterior hasta que termina este.'
+                                : 'Desde el día después del taller anterior hasta este.'}>
                             <span className="t-cap mut num">Meta Ads · del {diaMes(datos.desde)} al {diaMes(datos.hasta)}</span>
                             {anteriores.length > 0 && (
                                 <Segmented chico opciones={BASES.filter((b) => b.n <= anteriores.length)} valor={baseKey}
