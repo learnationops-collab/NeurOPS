@@ -7,11 +7,11 @@ import { SEGMENTOS, segmentosDeUrl } from './segmentos';
  * período (`usePeriodoDeUrl`). Las cuentas con segmento las hace el backend (`segmentos_marketing_service.acotar_fuentes`).
  *
  * Con un segmento elegido, el rótulo avisa lo que no se parte: el gasto de Meta no conoce al lead, así que el gasto, los costos
- * y el ROAS pasan a «—»; los leads de Workshop son clics anónimos. `rotulo`: el aviso de esta vista, si no es el de siempre.
+ * y el ROAS pasan a «—»; los leads de Workshop son clics anónimos. `rotulo`: el aviso de esta vista, si no es el de siempre. `derecha`: lo que va al borde derecho de la fila, alineado con las tarjetas (la leyenda Setting · Workshop).
  */
 export const segmentoDeUrl = (params) => segmentosDeUrl(params.get('segmento'), SEGMENTOS);
 
-const FiltroSegmentoMarketing = ({ params, cambiar, rotulo = null }) => {
+const FiltroSegmentoMarketing = ({ params, cambiar, rotulo = null, derecha = null }) => {
     const elegidos = segmentoDeUrl(params);
     return (
         <div className="sg-barra">
@@ -21,6 +21,7 @@ const FiltroSegmentoMarketing = ({ params, cambiar, rotulo = null }) => {
                     {rotulo || 'Por fecha de alta. Gasto, costos y ROAS no se parten por segmento: Meta no conoce al lead.'}
                 </span>
             )}
+            {derecha && <div className="sg-derecha">{derecha}</div>}
         </div>
     );
 };

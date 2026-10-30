@@ -4,7 +4,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { CalendarDays, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
 import UTMGenerator from '../../../components/operations/UTMGenerator';
-import { Isotipo, PillMenu, Segmented, Tip } from '../../comercial/components/Shared';
+import { Isotipo, PillMenu, Segmented } from '../../comercial/components/Shared';
 import RangoFechas, { esFecha, textoRango } from '../../comercial/components/RangoFechas';
 import { ErrorDeCarga } from './esqueletos';
 import EmbudosResumen from './anuncios/EmbudosResumen';
@@ -16,6 +16,7 @@ import ResumenTodos, { EsqueletoResumen } from './todos/ResumenTodos';
 import MetricaPorMetrica from './todos/MetricaPorMetrica';
 import SegmentosVista from './todos/SegmentosVista';
 import FiltroSegmentoMarketing, { segmentoDeUrl } from './todos/FiltroSegmentoMarketing';
+import LeyendaFuentes from './todos/LeyendaFuentes';
 import { SETTING, WORKSHOP, gruposDe } from './todos/comparacion';
 import { useRegistrosMarketing } from './anuncios/useRegistrosMarketing';
 import { SelectorBase, useBaseDeConteo } from './anuncios/baseDeConteo';
@@ -155,18 +156,12 @@ const TodosPage = () => {
                         </div>
                     </header>
 
-                    <div className="td-contexto">
-                        <div className="td-leyenda" aria-label="Quién es quién">
-                            <span><i style={{ background: SETTING.color }} />{SETTING.label}</span>
-                            <span><i style={{ background: WORKSHOP.color }} />{WORKSHOP.label}</span>
-                        </div>
-                        <Tip titulo="De qué habla" texto="Anuncios de Meta de Setting y Workshop. No es por taller." />
-                    </div>
+                    {vista === 'segmentos' && <div className="td-contexto"><LeyendaFuentes /></div>}
                     <div className="barra">
                         <Segmented opciones={VISTAS} valor={vista} ariaLabel="Vistas de Todos" onChange={elegirVista} />
                     </div>
                     {['resumen', 'detalle', 'meta'].includes(vista) && (
-                        <FiltroSegmentoMarketing params={params} cambiar={cambiar}
+                        <FiltroSegmentoMarketing params={params} cambiar={cambiar} derecha={<LeyendaFuentes />}
                             rotulo={vista === 'meta' ? 'El gasto de Meta no se parte por segmento: esta vista no se filtra.' : null} />
                     )}
 
