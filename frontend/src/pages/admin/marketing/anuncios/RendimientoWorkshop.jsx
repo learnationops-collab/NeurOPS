@@ -10,7 +10,6 @@ import { dinero, formatear } from './metricas';
 import { serieDeFuente } from './fuentes';
 import { EsqueletoTarjetasFuente, TarjetasFuente } from './FuentesResumen';
 import { useRegistrosMarketing } from './useRegistrosMarketing';
-import PuenteRoas from '../todos/PuenteRoas';
 import { mensajeDeError, pedirWorkshopDelPeriodo } from './marketingApi';
 import { useDatosCacheados } from '../../../../services/cacheDeVistas';
 
@@ -122,7 +121,6 @@ const RendimientoWorkshop = ({ desde, hasta, moneda, embudos, fuente, cuentas, v
             {embudos && !fuente ? null : (
                 <TarjetasFuente fuente={fuente} moneda={moneda} onVer={(metrica, titulo) => registros.abrir('workshop', metrica, titulo)} />
             )}
-            {fuente && <PuenteRoas fuente={fuente} rango={{ desde, hasta }} moneda={moneda} onVer={(metrica, titulo) => registros.abrir('workshop', metrica, titulo)} />}
             {registros.panel}
             <div className="pareja mk-kpis" style={{ '--min': '220px', '--g': 'var(--s4)' }}>
                 {kpis.map((k, i) => <Kpi key={k.titulo} {...k} i={i} />)}

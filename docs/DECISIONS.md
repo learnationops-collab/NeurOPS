@@ -295,3 +295,10 @@
 - **Decisión:** `CifraConCuenta` suma `detalle` (un nodo bajo la cuenta, separado por una línea). La cifra Workshop del ROAS Total lo usa con `CuentaDelPuente` en versión compacta. El rótulo del primer paso pasa de «cuotas de meses anteriores» a «cobros de ventas anteriores», porque `cash_anterior` incluye cuotas, upsells, renovaciones y señas de clientes sin venta nueva en el período. Workshop › Anuncios de Meta conserva el desplegable.
 - **Qué se pierde:** la cuenta ya no está a la vista: hay que pasar el mouse por el 5.37x. En pantallas táctiles el tooltip depende del foco.
 - **Consecuencias:** `usePuente` y `CuentaDelPuente` se exportan de `PuenteRoas.jsx`; el catálogo de `ui-builder` documenta `detalle`.
+
+## ADR-W032: Se retira el puente entre los dos ROAS
+- **Fecha:** 2026-10-29 · **Subsistema:** Marketing › Todos y Workshop › Anuncios de Meta · **Estado:** implementado en local. Leadership 942 (cierre). Reemplaza ADR-W030 y W031 en lo que dicen del puente.
+- **Contexto:** Kerwin no necesitaba el puente: le bastaba entender qué mide cada ROAS. El de Todos es lo cobrado del período ÷ el gasto del período (caja del mes, 64% de ventas anteriores en la copia local); el de cada taller, lo que cobraron sus agendas ÷ su gasto. Lo explicará él en la reunión.
+- **Decisión:** se borran `PuenteRoas.jsx`, `calculoPuente.js`, su CSS y la prop `detalle` de `CifraConCuenta` (sin otros usos). El rótulo de la marca de base y los tooltips de cada ROAS siguen diciendo sobre qué base se calculó.
+- **Qué se pierde:** la cuenta paso a paso entre 5.37x y 1.21x. Queda sin unificar la definición de New Cash (Todos: pago de la venta nueva; Workshop: venta + primera cuota a menos de un mes).
+- **Consecuencias:** el pendiente de unificar New Cash o de renombrar el ROAS de Todos como «caja del mes» queda como decisión de Kerwin.

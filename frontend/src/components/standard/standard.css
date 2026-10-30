@@ -335,7 +335,6 @@
 .ui-cifra--quieta{cursor:default}
 .ui-cifra__valor--quieta.ui-cifra__valor--quieta{cursor:help;outline:none}
 .ui-cifra__cuenta b{font-weight:800}
-.ui-cifra__detalle{flex-basis:100%;display:block;margin-top:4px;padding-top:6px;border-top:1px solid var(--ui-border-subtle)}
 .ui-cifra__rotulo{flex-basis:100%;display:flex;align-items:center;gap:6px;font-style:normal;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--ui-muted)}
 .ui-cifra__rotulo[style]::before{content:"";width:9px;height:9px;border-radius:3px;background:var(--ui-cifra-c);flex:none}
 
