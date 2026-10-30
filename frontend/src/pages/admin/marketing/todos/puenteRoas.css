@@ -1,18 +1,22 @@
-/* El puente entre los dos ROAS de Workshop: una fila de cifras con flechas, sin texto corrido. */
-.dc-shell .mk-puente{display:flex;align-items:center;flex-wrap:wrap;gap:var(--s3);padding:var(--s3) var(--s4)}
-.dc-shell .mk-puente-extremo{display:inline-flex;align-items:center;gap:var(--s2)}
-.dc-shell .mk-puente-cifra{font-size:26px;font-weight:800;line-height:1}
-.dc-shell .mk-puente-tramo{display:inline-flex;align-items:center;gap:var(--s2);color:var(--text-muted)}
-.dc-shell .mk-puente-flecha{color:var(--text-muted)}
-.dc-shell .mk-puente-paso{display:inline-flex;flex-direction:column;align-items:flex-start;gap:2px;padding:4px 10px;border-radius:12px;
-  border:1px solid var(--border-subtle,rgba(255,255,255,.12));background:transparent;font:inherit;color:inherit;cursor:default}
-.dc-shell button.mk-puente-paso{cursor:pointer}
-.dc-shell .mk-puente-paso b{font-size:16px;font-weight:800;line-height:1.1}
-.dc-shell .mk-puente-paso small{font-size:11px;color:var(--text-muted)}
-.dc-shell .mk-puente-paso:hover,.dc-shell .mk-puente-paso:focus-visible{border-color:var(--brand-secondary);outline:none}
-.dc-shell .mk-puente-enlace{text-decoration:none;border-radius:8px}
-.dc-shell .mk-puente-enlace:hover,.dc-shell .mk-puente-enlace:focus-visible{outline:1px solid var(--info);outline-offset:3px}
-/* En el puente el ícono no está en una tarjeta: su tooltip sube desde él, en una línea. */
-.dc-shell .mk-puente .mk-base{position:relative}
-.dc-shell .mk-puente .mk-base[data-tip]:hover::after,.dc-shell .mk-puente .mk-base[data-tip]:focus-visible::after{top:auto;bottom:calc(100% + 8px);
-  left:0;right:auto;white-space:nowrap}
+/* Por qué difieren los dos ROAS de Workshop: un desplegable cerrado y, abierto, una cuenta de renglones (valor · qué es · de cuánto). */
+.dc-shell .mk-puente{min-width:0}
+.dc-shell .mk-puente .ui-acc__meta b{font-size:15px;font-weight:800;margin-left:4px}
+.dc-shell .mk-puente-caja{display:flex;flex-direction:column;gap:2px;padding-top:var(--s2);max-width:860px}
+.dc-shell .mk-puente-fila{display:grid;grid-template-columns:6.5em minmax(0,1fr) auto;align-items:baseline;gap:4px var(--s4);
+  padding:8px var(--s3);border-radius:var(--radius-control);border:0;background:none;font:inherit;color:inherit;text-align:left;width:100%}
+.dc-shell .mk-puente-fila--abre{cursor:pointer}
+.dc-shell .mk-puente-fila--abre:hover,.dc-shell .mk-puente-fila--abre:focus-visible{background:var(--bg-element-hover);outline:none}
+.dc-shell .mk-puente-valor{font-size:20px;font-weight:800;line-height:1.1;text-align:right;white-space:nowrap}
+.dc-shell .mk-puente-texto{font-size:14px;min-width:0}
+.dc-shell .mk-puente-texto b{font-weight:800;color:var(--text-on-surface)}
+.dc-shell .mk-puente-cuenta{font-size:12px;color:var(--text-muted);white-space:nowrap;text-align:right}
+/* La suma: una línea sobre el resultado, como en una cuenta de papel. */
+.dc-shell .mk-puente-fila--total{margin-top:var(--s2);padding-top:var(--s3);border-radius:0 0 var(--radius-control) var(--radius-control);
+  border-top:1px solid var(--border-subtle,rgba(255,255,255,.12))}
+.dc-shell .mk-puente-igual{margin-right:6px;color:var(--text-muted);font-weight:600}
+.dc-shell .mk-puente-enlace{color:inherit;text-decoration:none;border-radius:6px}
+.dc-shell .mk-puente-enlace:hover,.dc-shell .mk-puente-enlace:focus-visible{text-decoration:underline;outline:none}
+@media (max-width:640px){
+  .dc-shell .mk-puente-fila{grid-template-columns:5.5em minmax(0,1fr)}
+  .dc-shell .mk-puente-cuenta{grid-column:2;text-align:left;white-space:normal}
+}
