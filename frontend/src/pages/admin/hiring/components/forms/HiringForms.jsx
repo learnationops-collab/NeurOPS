@@ -8,9 +8,11 @@ import { Humo } from '../../../../comercial/components/Shared';
 import { Chip } from '../Piezas';
 import { URL_FORMULARIO, resumen } from '../../lib/formularios';
 import EditorPreguntas from './EditorPreguntas';
+import LinkFormulario from './LinkFormulario';
 
-// Forms: los formularios de postulación. Uno solo está activo —es el que publica
-// la página de la vacante—; los demás son borradores o versiones guardadas. Cada
+// Forms: los formularios de postulación. Cada uno tiene su link público
+// (/vacante/<slug>/) y puede haber varios activos a la vez; los inactivos son
+// borradores o versiones guardadas. Cada
 // uno se edita (preguntas, opciones, excluyentes) y se prueba tal como lo ve la
 // postulante, con el formulario real en un marco.
 
@@ -28,7 +30,7 @@ const Switch = ({ on, onClick, etiqueta, ok = false, disabled }) => (
         className={`tl-switch${ok ? ' tl-switch--ok' : ''}`} onClick={onClick} disabled={disabled} />
 );
 
-const Tarjeta = ({ f, onActivar, onDuplicar, onBorrar, onAbrir, borrando, onPedirBorrar, onCancelarBorrar }) => {
+const Tarjeta = ({ f, onSlug, onActivar, onDuplicar, onBorrar, onAbrir, borrando, onPedirBorrar, onCancelarBorrar }) => {
     const r = f.resumen || {};
     return (
         <article className={`tl-fcard${f.activo ? ' tl-fcard--on caja' : ''}`}>
@@ -46,6 +48,7 @@ const Tarjeta = ({ f, onActivar, onDuplicar, onBorrar, onAbrir, borrando, onPedi
                 <div className="tl-dato tl-dato--ko"><b>{r.excluyentes ?? '—'}</b><span>Excluyentes</span></div>
                 <div className="tl-dato"><b>{r.respuestas ?? 0}</b><span>Respuestas</span></div>
             </div>
+            <LinkFormulario form={f} onCambio={(slug) => onSlug(f.id, slug)} />
             {borrando ? (
                 <div className="tl-fcard-aviso">
                     <span>¿Eliminar <b>{f.nombre}</b>? No se puede recuperar.</span>
@@ -66,7 +69,7 @@ const Tarjeta = ({ f, onActivar, onDuplicar, onBorrar, onAbrir, borrando, onPedi
                         <button type="button" className="ibtn ibtn--sm" onClick={() => onDuplicar(f.id)} title="Duplicar" aria-label={`Duplicar ${f.nombre}`}><Copy /></button>
                         <button type="button" className="ibtn ibtn--sm ibtn--peligro" onClick={() => onPedirBorrar(f.id)}
                             disabled={f.activo || (r.respuestas || 0) > 0}
-                            title={f.activo ? 'El activo no se borra: primero activá otro' : (r.respuestas || 0) > 0 ? 'Tiene respuestas: desactivalo en vez de borrarlo' : 'Eliminar'}
+                            title={f.activo ? 'Un activo no se borra: primero desactivalo' : (r.respuestas || 0) > 0 ? 'Tiene respuestas: desactivalo en vez de borrarlo' : 'Eliminar'}
                             aria-label={`Eliminar ${f.nombre}`}>
                             <Trash2 />
                         </button>
@@ -133,6 +136,7 @@ const Lista = ({ onAbrir }) => {
                     <Tarjeta
                         key={f.id}
                         f={f}
+                        onSlug={(id, slug) => setForms((prev) => prev.map((x) => (x.id === id ? { ...x, slug } : x)))}
                         borrando={borrando === f.id}
                         onPedirBorrar={setBorrando}
                         onCancelarBorrar={() => setBorrando(null)}
@@ -277,10 +281,9 @@ const Editor = ({ id, modo, onModo, onVolver }) => {
                         <p className="tl-fe-meta">
                             <b>{r.activas}</b> de {r.total} preguntas activas<i />
                             <b style={{ color: 'var(--error)' }}>{r.excluyentes}</b> con excluyentes<i />
-                            {form.activo
-                                ? <a className="tl-fe-url" href={URL_FORMULARIO} target="_blank" rel="noreferrer"><Globe size={13} />{URL_FORMULARIO.replace(/^https?:\/\//, '').replace(/\/$/, '')}</a>
-                                : 'No está en la página'}
+                            {form.activo ? 'En la página' : 'No está en la página'}
                         </p>
+                        <LinkFormulario form={form} onCambio={(slug) => setForm((prev) => ({ ...prev, slug }))} />
                     </section>
                     <EditorPreguntas preguntas={form.preguntas || []} tasaBrl={tasaBrl} onCambiar={(preguntas) => cambiar({ preguntas })} />
                 </>

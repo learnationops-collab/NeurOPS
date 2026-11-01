@@ -7,7 +7,7 @@ app/services/hiring_forms.py); acá solo se valida y se persiste. El editor
 guarda solo, con un debounce, así que el PUT de un formulario se llama seguido:
 no hace más que validar, guardar y contar respuestas.
 
-Un solo formulario `activo` a la vez: es el que lee el formulario público.
+Cada formulario tiene su link público (`slug`); puede haber varios activos a la vez.
 """
 import copy
 import logging
@@ -92,7 +92,8 @@ def crear_form():
         origen = hf.form_activo()
     preguntas = copy.deepcopy(origen.preguntas if origen else hf.PREGUNTAS_BASE)
 
-    form = HiringForm(nombre=nombre, activo=False, preguntas=preguntas, created_by_id=current_user.id)
+    form = HiringForm(nombre=nombre, slug=hf.slug_libre(nombre), activo=False, preguntas=preguntas,
+                      created_by_id=current_user.id)
     db.session.add(form)
     return _guardar(lambda: (jsonify(_completo(form)), 201), 'crear el formulario')
 
@@ -119,6 +120,12 @@ def editar_form(form_id):
         if error:
             return jsonify({"message": error}), 400
         form.nombre = nombre
+    if 'slug' in data:
+        try:
+            form.slug = hf.validar_slug(data.get('slug'), form.id)
+        except hf.SlugInvalido as e:
+            db.session.rollback()
+            return jsonify({"message": str(e)}), 409
     if 'preguntas' in data:
         try:
             hf.validar_preguntas(data['preguntas'])
@@ -135,8 +142,8 @@ def editar_form(form_id):
 @login_required
 @hiring_required
 def activar_form(form_id):
-    """`activo: true` lo deja como el único activo; `activo: false` lo apaga y
-    entonces el formulario público queda sin formulario."""
+    """`activo: true` lo publica en su link; `activo: false` lo saca (su link
+    muestra la búsqueda cerrada). No toca a los demás."""
     hf.asegurar_semilla()
     form = HiringForm.query.get_or_404(form_id)
     data = request.get_json(silent=True) or {}
@@ -144,9 +151,8 @@ def activar_form(form_id):
     if not isinstance(activo, bool):
         return jsonify({"message": "`activo` tiene que ser true o false."}), 400
 
-    if activo:
-        HiringForm.query.filter(HiringForm.id != form.id, HiringForm.activo.is_(True)).update(
-            {HiringForm.activo: False}, synchronize_session=False)
+    if activo and not form.slug:
+        form.slug = hf.slug_libre(form.nombre)
     form.activo = activo
     return _guardar(lambda: (jsonify(_listado()), 200), 'activar el formulario')
 
@@ -157,8 +163,9 @@ def activar_form(form_id):
 def duplicar_form(form_id):
     hf.asegurar_semilla()
     origen = HiringForm.query.get_or_404(form_id)
+    nombre = f'{origen.nombre} · copia'[:MAX_NOMBRE]
     copia = HiringForm(
-        nombre=f'{origen.nombre} · copia'[:MAX_NOMBRE], activo=False,
+        nombre=nombre, slug=hf.slug_libre(nombre), activo=False,
         preguntas=copy.deepcopy(origen.preguntas), created_by_id=current_user.id,
     )
     db.session.add(copia)
@@ -169,12 +176,12 @@ def duplicar_form(form_id):
 @login_required
 @hiring_required
 def borrar_form(form_id):
-    """No se borra el activo (el formulario público se quedaría sin preguntas) ni
+    """No se borra un activo (su link se quedaría sin preguntas) ni
     uno que ya tiene postulaciones (perderían con qué preguntas se contestaron)."""
     hf.asegurar_semilla()
     form = HiringForm.query.get_or_404(form_id)
     if form.activo:
-        return jsonify({"message": "No se puede borrar el formulario activo: activá otro o desactivalo primero."}), 409
+        return jsonify({"message": "No se puede borrar un formulario activo: desactivalo primero."}), 409
     con_postulaciones = AssistantApplication.query.filter_by(form_id=form.id).count()
     if con_postulaciones:
         return jsonify({

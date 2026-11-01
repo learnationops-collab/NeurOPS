@@ -420,3 +420,11 @@
 - **Decisión:** papelera en cada tarjeta del tablero (`EliminarLead`), con `ConfirmDelete` dentro de la tarjeta, que llama a ese endpoint. Se borra (no se marca «No Lead»): «No Lead» cuenta como descalificada en los números de dirección, y esto no tiene que contar en ninguno.
 - **Qué se pierde (nombrado):** el borrado no se deshace, y `eliminar_agenda` borra también el evento de Google Calendar del closer. Si la reunión por la otra cosa igual ocurre, desaparece del calendario.
 - **Consecuencias:** la regla de qué se conserva (respuestas del formulario, plan de cuotas) sigue siendo la de `BookingService.eliminar_agenda`, compartida con la dirección comercial.
+
+## ADR-W052: Cada formulario de Hiring tiene su propio link y puede haber varios activos
+
+- **Fecha:** 2026-11-01 · **Subsistema:** Hiring (Talent › Forms) e institute-site · **Estado:** implementado en local, sin desplegar.
+- **Contexto:** el formulario de Asistente vivía en un solo link fijo (`/vacante-assistant/`) y solo un formulario podía estar activo. Mario quiere copiar el link desde la tarjeta del formulario y elegir cómo se llama.
+- **Decisión:** columna `hiring_forms.slug` (única). Cada formulario se publica en `institute.thelearnation.com/vacante/<slug>/` (página de la vacante) y `/vacante/<slug>/formulario/`; el `.htaccess` de institute-site sirve ahí los mismos archivos de `vacante-assistant/`, que leen el slug de la URL y piden `GET /api/public/assistant-form?slug=`. Activar ya no apaga a los demás. El slug se edita en la tarjeta y en el editor (`LinkFormulario`, se guarda al confirmar; 409 si otro lo usa). Los nuevos y las copias lo sacan del nombre. La migración deja `assistant` al activo más antiguo.
+- **Qué se pierde:** el link viejo `/vacante-assistant/` sigue andando pero muestra el activo más antiguo, no uno elegido. Los filtros del Inbox siguen tomando las preguntas de ese mismo formulario. Cambiar un slug rompe los links ya compartidos con el anterior (muestran la búsqueda cerrada). La página de la vacante es la misma para todos los links (el texto del puesto no cambia por formulario).
+- **Consecuencias:** el avance guardado en el navegador de la postulante va aparte por slug. Los assets de la página de la vacante pasan a rutas absolutas.

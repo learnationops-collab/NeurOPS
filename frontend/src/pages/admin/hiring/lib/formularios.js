@@ -24,6 +24,17 @@ export const FIJAS = new Set(['nombre']);
 export const URL_FORMULARIO = import.meta.env.VITE_TALENT_FORM_URL
     || 'https://institute.thelearnation.com/vacante-assistant/formulario/';
 
+// Cada formulario vive en su link: /vacante/<slug>/ (el .htaccess de institute-site
+// sirve ahí la página de la vacante, que carga el formulario de ese slug).
+export const URL_VACANTES = import.meta.env.VITE_TALENT_VACANTES_URL
+    || 'https://institute.thelearnation.com/vacante/';
+
+export const linkDe = (slug) => (slug ? `${URL_VACANTES}${slug}/` : '');
+
+/** Lo que se tipea en el link, en el formato que acepta el backend. */
+export const limpiarSlug = (texto) => texto.normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/-{2,}/g, '-').slice(0, 60);
+
 export const resumen = (preguntas = []) => {
     const sinIntro = preguntas.filter((q) => q.tipo !== 'intro');
     const activas = sinIntro.filter((q) => q.on !== false);
