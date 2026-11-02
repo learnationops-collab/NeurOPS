@@ -12,7 +12,8 @@ show up, ventas, cuotas cobradas, cash y los costos.
     atribuye a una palabra clave de ManyChat es de Setting; si no, manda la agenda que originó el
     pago (workshop vivo o grabación → Workshop; un setter → Setting). Lo demás (VSL, Fulfillment,
     sin procedencia) no es de ninguna de las dos y queda en `otras`.
-  · **Base**: cash BRUTO, como el «Cash collected» del dashboard comercial y la tabla de Marketing.
+  · **Base**: cash NETO desde el 02/11/2026 (`commission_service.cash_neto`: la comisión real del pago o, si falta, el
+    promedio de su plataforma). Antes era bruto, como el «Cash collected» del dashboard comercial; ese sigue en bruto.
   · **Agendas y show up**: por fecha de ALTA o de REUNIÓN, a elección (`conteo_agendas_service`: ahí está
     la definición de cada una y de las tres fuentes, Setting, Workshop y Otras). Show up: asistieron ÷ citas
     con resultado (asistieron + no show), igual que Workshop. Los costos van siempre por fecha de alta.
@@ -48,6 +49,7 @@ agrupado de `ticket_service`.
 """
 from app import db
 from app.services import conteo_agendas_service
+from app.services.commission_service import cash_neto
 from app.services.marketing_formulas import aplicar, dividir  # noqa: F401  (`dividir` lo importan otros módulos desde acá)
 from app.services.fuente_service import FUENTE_SETTING, es_workshop_landing, es_workshop_vivo, normalizar
 from app.services.procedencia_ingresos_service import (
@@ -159,7 +161,7 @@ def _cobros_para_sumar(cobros, claves):
     filas = []
     for cobro in cobros:
         _programa, tipo, es_venta = ComercialService.clasificar_venta(cobro)
-        filas.append({'monto': round(float(cobro.monto or 0), 2), 'es_venta': es_venta, 'es_cuota': tipo == 'cuota',
+        filas.append({'monto': round(cash_neto(cobro), 2), 'es_venta': es_venta, 'es_cuota': tipo == 'cuota',
                       'es_upsell': tipo == 'upsell', 'cliente': cliente_de.get(cobro.id) or f'cobro-{cobro.id}',
                       'por_clave': bool(claves.get(cobro.id)), 'balde': baldes[cobro.id][0],
                       # El rótulo del detalle de su procedencia (el setter, En vivo, Grabación…): el «origen» de Segmentos.

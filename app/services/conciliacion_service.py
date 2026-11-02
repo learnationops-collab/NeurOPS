@@ -48,7 +48,7 @@ from app import db
 from app.models import (Client, ConciliacionCarga, ConciliacionMovimiento, ConciliacionRevision, FinancialSale,
                         PersonIdentity)
 from app.services import conciliacion_csv as lector
-from app.services.commission_service import COMISION_PASARELA
+from app.services.comision_plataforma_service import tasa_promedio
 
 PASARELAS = lector.PASARELAS
 VENTANA = timedelta(days=3)
@@ -59,8 +59,6 @@ MAX_RAFAGA = 6       # cobros que puede tener una ráfaga
 MAX_CANDIDATOS = 4
 ESTADOS = ('coincide', 'monto_distinto', 'sin_reportar', 'sin_ingreso')
 PENDIENTES = ('monto_distinto', 'sin_reportar', 'sin_ingreso')
-# Lo que Finanzas descuenta de comisión cuando no sabe la real: la misma definición que el Resumen.
-COMISION_ESTIMADA = COMISION_PASARELA
 
 # Lo firme primero: el mismo correo o el mismo cliente, el correo cortado, el nombre, y el nombre con
 # el correo del cobro registrado a otro cliente del sistema.
@@ -635,7 +633,7 @@ def _kpis(filas, ventas, movs, inicio, fin, pasarelas, con_csv=True):
         'ingresado': ingresado, 'movimientos': len(cobros),
         'neto': _neto(cobros) if con_csv else None,
         'comision': _total((m['obj'].comision or 0.0) for m in cobros) if con_csv else None,
-        'comision_estimada': _total(v['monto'] * COMISION_ESTIMADA[v['pasarela']] for v in suyas),
+        'comision_estimada': _total(v['monto'] * tasa_promedio(v['pasarela']) for v in suyas),
         'diferencia': round(ingresado - reportado, 2) if con_csv else None,
         'diferencia_por': {
             'pendientes': _total(f['aporte'] for f in filas if f['estado'] in PENDIENTES and not f['revisada']),
