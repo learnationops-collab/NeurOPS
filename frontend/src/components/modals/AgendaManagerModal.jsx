@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import ErrorBoundary from '../ErrorBoundary';
 import api from '../../services/api';
+import { faltaDeMotivo, motivoAlcanza, pideMotivo, preguntaDeMotivo } from '../../utils/motivoEstado';
 import {
     X,
     Calendar,
@@ -149,8 +150,12 @@ const AgendaManagerModal = ({ isOpen, appointment, onClose, onSuccess, mode = 'c
         }
 
         // Validar notas/razón para estados especiales
-        const needsNote = status === 'Reagendado' || status === 'Cancelado' || status === '2da call';
-        if (needsNote && !note.trim()) {
+        // «Reagendado», «No Show» y «Cancelado» piden un motivo de 10+ caracteres (ADR-W065); la 2da call, una razón.
+        if (pideMotivo(status) && !motivoAlcanza(note)) {
+            setError(faltaDeMotivo(note));
+            return;
+        }
+        if (status === '2da call' && !note.trim()) {
             setError("Debes escribir una razón para el cambio");
             return;
         }
@@ -386,9 +391,9 @@ const AgendaManagerModal = ({ isOpen, appointment, onClose, onSuccess, mode = 'c
                                         )}
 
                                          {/* Razón del Cambio (Nota) */}
-                                         {(status === 'Reagendado' || status === 'Cancelado' || status === '2da call') && (
+                                         {(pideMotivo(status) || status === '2da call') && (
                                              <div className="space-y-2 p-4 bg-[#181922] border border-slate-800 rounded-3xl animate-in slide-in-from-top-4 duration-300 text-left">
-                                                 <label className="text-[9px] font-black text-slate-400 tracking-widest block uppercase">¿Razón del cambio? *</label>
+                                                 <label className="text-[9px] font-black text-slate-400 tracking-widest block uppercase">{preguntaDeMotivo(status) || '¿Razón del cambio?'} *</label>
                                                  <textarea
                                                      rows={3}
                                                      value={note}
@@ -396,6 +401,9 @@ const AgendaManagerModal = ({ isOpen, appointment, onClose, onSuccess, mode = 'c
                                                      placeholder="Escribe la razón para el Lead Roadmap..."
                                                      className="w-full bg-main border border-base rounded-2xl py-3 px-4 text-white text-xs font-bold outline-none focus:border-primary/50 transition-all resize-none"
                                                  />
+                                                 {pideMotivo(status) && faltaDeMotivo(note) && (
+                                                     <p className="text-[10px] font-bold text-amber-400">{faltaDeMotivo(note)}</p>
+                                                 )}
                                              </div>
                                          )}
 
@@ -555,7 +563,7 @@ const AgendaManagerModal = ({ isOpen, appointment, onClose, onSuccess, mode = 'c
                         <Button
                             onClick={handleProcess}
                             loading={submitting}
-                            disabled={sinCita || !status || (showReschedule && !rescheduleDate)}
+                            disabled={sinCita || !status || (showReschedule && !rescheduleDate) || (pideMotivo(status) && !motivoAlcanza(note))}
                             variant="primary"
                             className="w-full py-6 h-18 text-xs font-black tracking-widest shadow-2xl shadow-primary/30"
                             icon={Check}
