@@ -132,3 +132,14 @@ def comision_de(venta):
 def fees_por_metodo():
     """{método: factor que queda del bruto} de cada plataforma con comisión promedio (para cuentas en SQL)."""
     return {m: round(1 - d['tasa'], 6) for m, d in promedios().items()}
+
+
+def etiqueta_de(venta):
+    """Con qué comisión se pasó ese pago a neto, para las listas: 'real 4,3 %', 'promedio Stripe 4,3 %' o
+    'sin comisión' (no se sabe cuánto cobra su plataforma)."""
+    c = comision_de(venta)
+    if c['origen'] == ORIGEN_NINGUNA:
+        return ORIGEN_NINGUNA
+    pct = f"{c['tasa'] * 100:.1f}".replace('.', ',')
+    nombre = f" {c['plataforma'].capitalize()}" if c['origen'] == ORIGEN_PROMEDIO else ''
+    return f"{c['origen']}{nombre} {pct} %"
