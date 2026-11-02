@@ -36,6 +36,7 @@ import TriageAbandonos from '../triage/components/TriageAbandonos';
 import CompartidosConmigo, { useCompartidos } from '../../components/compartidos/CompartidosConmigo';
 import ProcrastinarModal from './components/ProcrastinarModal';
 import YaTieneAgenda from './components/YaTieneAgenda';
+import EliminarLead from './components/EliminarLead';
 import { localInputsToUtcIso, parseUtcIso, splitLocalDateTime, localToday, localDateFromNow, formatCountdown, formatAgendaDateTime, viewerTimezoneLabel } from '../../utils/datetime';
 import AgendaCountdown from '../../components/shared/AgendaCountdown';
 import FichaLeadModal from '../../components/ficha/FichaLeadModal';
@@ -1353,6 +1354,13 @@ const CloserWorkflowPage = () => {
         return /^\$?\s*[\d.,]+\s*(usd)?$/i.test(txt) && n > 0 ? `$${n.toLocaleString('es-AR')}` : txt;
     };
 
+    // Sale del tablero al momento; los conteos de arriba se rehacen con el refresco.
+    const alEliminarLead = (leadId) => {
+        setAgendas(prev => prev.filter(x => x.id !== leadId));
+        if (selectedLead?.id === leadId) setSelectedLead(null);
+        fetchAgendas();
+    };
+
     // Renderizar una tarjeta individual del Kanban de confirmación (v6).
     // `orden` es su lugar en la fila de entrada: el renglón del tablero por la cantidad de
     // columnas, más la columna. Así entran de a una, de izquierda a derecha y de arriba abajo, con
@@ -1521,6 +1529,7 @@ const CloserWorkflowPage = () => {
                     </div>
                 )}
                 </div>
+                {a.id > 0 && <EliminarLead agenda={a} onEliminado={alEliminarLead} />}
                 </div>
 
                 {/* Cada dato con su ícono, en una línea separada por filetes: inversión, decisión

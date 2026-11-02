@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback } from 'react';
 import useEstadoGuardado from '../../../hooks/useEstadoGuardado';
+import { useDatosCacheados } from '../../../services/cacheDeVistas';
 import { useVerRegistros } from '../../../components/standard';
 import ContenidoRegistros from '../../admin/marketing/anuncios/ContenidoRegistros';
 import {
@@ -39,8 +40,6 @@ const normalizar = (m) => ({ ...m, quitados: normalizarQuitados(m.quitados), cor
     ocultas: Array.isArray(m.ocultas) ? m.ocultas : [], orden: m.orden?.col ? m.orden : INICIAL.orden });
 
 const SegmentosPanel = ({ filtros, rol, elegidos, onElegir, version = 0 }) => {
-    const [datos, setDatos] = useState(null);
-    const [error, setError] = useState(false);
     const [guardado, poner] = useEstadoGuardado('cm_segmentos_vista', INICIAL, { normalizar });
     const { corte, campo: campoKey, ocultas, orden } = guardado;
     const registros = useVerRegistros();
@@ -49,15 +48,10 @@ const SegmentosPanel = ({ filtros, rol, elegidos, onElegir, version = 0 }) => {
     const base = filtros;
     const clave = JSON.stringify({ base, corte });
 
-    useEffect(() => {
-        const control = new AbortController();
-        setError(false);
-        getSegmentos(base, { signal: control.signal }, corte)
-            .then(setDatos)
-            .catch(() => { if (!control.signal.aborted) setError(true); });
-        return () => control.abort();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [clave, version]);
+    // Recordado por filtro y corte (cacheDeVistas): volver a Analizar no lo vuelve a pedir.
+    const { datos, error: falla } = useDatosCacheados(`comercial:segmentos:${clave}`,
+        (signal) => getSegmentos(base, { signal }, corte), { version });
+    const error = Boolean(falla);
 
     const abrir = useCallback((grupo, metrica, titulo, segmento, nombre, previo = false) => {
         const periodo = previo ? { start: datos.dates.compare_start, end: datos.dates.compare_end } : datos.dates;

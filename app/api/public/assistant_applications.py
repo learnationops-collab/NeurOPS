@@ -165,7 +165,11 @@ def ver_assistant_form():
     `?preview=<id>` devuelve ese formulario con sus preguntas aunque esté
     inactivo, para que el editor lo pruebe antes de activarlo: `preview: true`
     y `activo` dice si de verdad es el activo. Las preguntas no son secretas: el
-    formulario activo las muestra a cualquiera."""
+    formulario activo las muestra a cualquiera.
+
+    `?slug=<slug>` es el formulario de un link (/vacante/<slug>/): si no existe o
+    está inactivo, `activo: false`, igual que una búsqueda cerrada. Sin slug, el
+    activo más antiguo (el link viejo, /vacante-assistant/)."""
     hiring_forms.asegurar_semilla()
     config = HiringConfig.vigente()
     config_publica = {
@@ -174,10 +178,15 @@ def ver_assistant_form():
     }
 
     preview = request.args.get('preview')
+    slug = (request.args.get('slug') or '').strip().lower()
     if preview:
         form = _form_pedido(preview)
         if form is None:
             return jsonify({"message": "No existe ese formulario"}), 404
+    elif slug:
+        form = HiringForm.query.filter_by(slug=slug, activo=True).first()
+        if form is None:
+            return jsonify({"activo": False, "config": config_publica}), 200
     else:
         form = hiring_forms.form_activo()
         if form is None:

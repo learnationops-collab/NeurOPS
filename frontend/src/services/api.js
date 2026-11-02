@@ -1,5 +1,6 @@
 import axios from "axios";
 import { triggerBugReport } from "../utils/bugReportBus";
+import { limpiarCache } from "./cacheDeVistas";
 
 // Sin timeout, una petición colgada (proxy, servidor saturado, red) dejaba cualquier acción del
 // mazo (ej. "Pagó" → registrar cobro) con el spinner girando para siempre, sin error ni forma de
@@ -69,7 +70,13 @@ api.interceptors.request.use(
 );
 
 api.interceptors.response.use(
-    (response) => response,
+    (response) => {
+        // Lo recordado por las vistas (cacheDeVistas) deja de ser verdad apenas algo se guarda: la
+        // próxima vez que se mire, se vuelve a pedir.
+        const metodo = (response.config?.method || 'get').toLowerCase();
+        if (metodo !== 'get' && metodo !== 'head' && metodo !== 'options') limpiarCache();
+        return response;
+    },
     async (error) => {
         if (error.response && error.response.status === 401) {
             // Allow requests to skip global auth error handling (e.g. background fetches)

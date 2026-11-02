@@ -516,6 +516,14 @@ body.tl-redim *{cursor:col-resize!important;user-select:none!important}
 .talent .tl-dato b small{font-size:13px;color:var(--text-muted-40)}
 .talent .tl-dato span{font-size:9.5px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted-40)}
 .talent .tl-dato--ko b{color:var(--error)}
+.talent .tl-flink{position:relative;display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap;min-width:0}
+.talent .tl-flink .ui-entry{flex:1 1 260px;min-width:0}
+.talent .tl-flink .ui-field-error{flex-basis:100%}
+.talent .tl-flink-url{flex:1;min-width:0;display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 14px;border-radius:var(--radius-pill);
+  background:var(--bg-input);border:1px solid var(--border-subtle);font-size:13px;font-weight:700;color:var(--text-muted);text-decoration:none}
+.talent .tl-flink-url span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.talent .tl-flink-url:hover{color:var(--text-on-surface);border-color:var(--focus-blue)}
+.talent .tl-fe-cab .tl-flink{margin-top:var(--s3);max-width:620px}
 .talent .tl-fcard-pie{display:flex;align-items:center;gap:var(--s2);margin-top:auto;padding-top:var(--s4);border-top:1px solid var(--border-subtle);flex-wrap:wrap}
 .talent .tl-fcard-pie .der{margin-left:auto;display:flex;gap:var(--s2);align-items:center;flex-wrap:wrap}
 .talent .tl-fcard-aviso{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap;margin-top:auto;padding:var(--s3);border-radius:16px;

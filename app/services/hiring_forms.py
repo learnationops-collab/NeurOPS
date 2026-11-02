@@ -20,11 +20,14 @@ primera vez que alguien lo pide (los endpoints del editor y el GET público).
 import copy
 import json
 import re
+import unicodedata
 
 from app import db
 from app.models import AssistantApplication, HiringForm
 
 NOMBRE_BASE = 'Asistente Administrativa y Personal'
+# El primero conserva el link de siempre (/vacante-assistant/ también lo muestra).
+SLUG_BASE = 'assistant'
 
 NIVEL5 = [
     'Nunca lo usé', 'Básico, me defiendo con lo esencial', 'Intermedio, lo uso seguido sin ayuda',
@@ -294,7 +297,7 @@ def asegurar_semilla():
     None. Una consulta barata en el caso normal: se llama en cada endpoint."""
     if db.session.query(HiringForm.id).first() is not None:
         return None
-    form = HiringForm(nombre=NOMBRE_BASE, activo=True, preguntas=copy.deepcopy(PREGUNTAS_BASE))
+    form = HiringForm(nombre=NOMBRE_BASE, slug=SLUG_BASE, activo=True, preguntas=copy.deepcopy(PREGUNTAS_BASE))
     db.session.add(form)
     db.session.flush()
     AssistantApplication.query.filter(AssistantApplication.form_id.is_(None)).update(
@@ -304,7 +307,50 @@ def asegurar_semilla():
 
 
 def form_activo():
+    """El que muestra el link viejo (/vacante-assistant/, sin slug): el activo
+    más antiguo. Con varios activos, cada uno vive además en su propio link."""
     return HiringForm.query.filter_by(activo=True).order_by(HiringForm.id).first()
+
+
+# --- Link público ------------------------------------------------------------
+# Cada formulario vive en institute.thelearnation.com/vacante/<slug>/.
+
+SLUG_RE = re.compile(r'^[a-z0-9]+(?:-[a-z0-9]+)*$')
+SLUG_MIN, SLUG_MAX = 3, 60
+
+
+class SlugInvalido(ValueError):
+    pass
+
+
+def slugificar(texto):
+    """«Asistente · Brasil» -> «asistente-brasil»."""
+    plano = unicodedata.normalize('NFKD', texto or '').encode('ascii', 'ignore').decode()
+    return re.sub(r'[^a-z0-9]+', '-', plano.lower()).strip('-')[:SLUG_MAX].strip('-')
+
+
+def validar_slug(valor, form_id=None):
+    """El slug limpio, o SlugInvalido con el mensaje para el panel."""
+    slug = valor.strip().lower() if isinstance(valor, str) else ''
+    if not SLUG_MIN <= len(slug) <= SLUG_MAX or not SLUG_RE.match(slug):
+        raise SlugInvalido(f"El link va con minúsculas, números y guiones, entre {SLUG_MIN} y {SLUG_MAX} caracteres.")
+    otro = HiringForm.query.filter(HiringForm.slug == slug, HiringForm.id != form_id).first()
+    if otro is not None:
+        raise SlugInvalido(f"Ese link ya lo usa «{otro.nombre}».")
+    return slug
+
+
+def slug_libre(nombre):
+    """Un slug sin usar armado desde el nombre (asistente-brasil, asistente-brasil-2…)."""
+    base = slugificar(nombre)
+    if len(base) < SLUG_MIN:
+        base = 'formulario'
+    base = base[:SLUG_MAX - 4].strip('-')
+    usados = {s for (s,) in db.session.query(HiringForm.slug).filter(HiringForm.slug.like(f'{base}%'))}
+    slug, n = base, 2
+    while slug in usados:
+        slug, n = f'{base}-{n}', n + 1
+    return slug
 
 
 def respuestas_por_form():
@@ -337,6 +383,7 @@ def form_dict(form, respuestas=None, con_preguntas=False):
     data = {
         "id": form.id,
         "nombre": form.nombre,
+        "slug": form.slug,
         "activo": bool(form.activo),
         "created_at": form.created_at.isoformat() if form.created_at else None,
         "updated_at": form.updated_at.isoformat() if form.updated_at else None,

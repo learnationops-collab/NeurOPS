@@ -1,4 +1,11 @@
-# Bitácora - Noviembre 2026
+# Bitácora · Noviembre 2026
+
+- **1 de Noviembre de 2026 (Hiring: cada formulario tiene su propio link)** *([LinkFormulario.jsx](../../frontend/src/pages/admin/hiring/components/forms/LinkFormulario.jsx), [hiring_forms.py](../../app/api/hiring_forms.py), [ADR-W052](../DECISIONS.md))*:
+  - Talent › Forms: la tarjeta y el editor muestran el link público del formulario (`institute.thelearnation.com/vacante/<slug>/`), con botones para copiarlo y para cambiar su parte final.
+  - Puede haber varios formularios activos a la vez, cada uno en su link. Los nuevos y las copias toman el link de su nombre.
+  - `GET /api/public/assistant-form?slug=` devuelve el formulario de ese link (inactivo o inexistente: búsqueda cerrada). Sin slug, el activo más antiguo (link viejo `/vacante-assistant/`).
+  - Migración `b7d9f1a3c5e8`: columna `hiring_forms.slug` (única); el formulario actual queda con `assistant`.
+  - Va junto con institute-site (`.htaccess` y `vacante-assistant/`), que sirve `/vacante/<slug>/` y pide ese formulario.
 
 - **2 de Noviembre de 2026 (Triage: el rol se llama «Triage» y descalificar pide el motivo en texto libre)** *([TeamManagementPage.jsx](../../frontend/src/pages/admin/team/TeamManagementPage.jsx), [SubDescalificar.jsx](../../frontend/src/components/ficha/tabs/confirmacion/SubDescalificar.jsx))*:
   - El rol `triage` ya no se muestra como «Call confirmer» en Equipo ni en el editor de cursos.
@@ -6,3 +13,15 @@
   - Reprogramar sigue ofreciendo solo horarios libres (sin cambios): la regla de bloquear el horario ocupado se mantiene.
 - **2 de Noviembre de 2026 (Discord: la tarjeta de lo que el triage pasa al closer)** *([avisos_discord.py](../../app/agendas_v2/avisos_discord.py), [triage_service.py](../../app/services/triage_service.py))*: la agenda de closing que nace de una llamada de triage salía como «Nueva agenda» gris y vacía, porque nace sin formulario. Ahora es «Pasó de Triage a Closing»: lleva el segmento y las respuestas del formulario del lead, dice «Triage · quien la pasó» y trae la nota que le dejó al closer.
 - **2 de Noviembre de 2026 (Santiago y Mario no aparecen a la dirección comercial)** *([user.py](../../app/models/user.py))*: quien es closer pero también admin u operador (Santiago por pruebas, Mario como dueño) sale del selector de miembros, del ranking de closers y del reporte del director. Sus agendas y ventas siguen contando en los totales.
+
+- **2 de Noviembre de 2026 (Lo ya cargado se queda al cambiar de sección o de pestaña)** *([usePedidos.js](../../frontend/src/pages/comercial/usePedidos.js), [DashboardComercial.jsx](../../frontend/src/pages/comercial/DashboardComercial.jsx), [Finanzas.jsx](../../frontend/src/pages/comercial/components/finanzas/Finanzas.jsx), [api.js](../../frontend/src/services/api.js))*:
+  - Dirección comercial recuerda lo que ya pidió (contexto, KPIs, Comparativas, Variabilidad, tablas de Revisar, Segmentos, Triage y todas las pestañas de Finanzas y Payroll): ir y volver entre Analizar, Revisar y Triage, o entre sus pestañas, ya no vuelve a pedir ni muestra el esqueleto.
+  - Lo recordado vale 5 minutos; pasado ese tiempo se muestra igual y se actualiza en silencio. «Reintentar» y lo que sigue a un guardado piden siempre; y cualquier guardado (POST, PUT, PATCH, DELETE) vacía todo lo recordado.
+  - En el espacio del triage, las métricas se recuerdan por período y la lista de Abandonos se muestra al instante con lo último visto y se actualiza sola.
+- **2 de Noviembre de 2026 (Triage: trabaja el lead como un closer y cambia el estado de la agenda con un clic)** *([ficha_lead_service.py](../../app/services/ficha_lead_service.py), [ResultadoTriage.jsx](../../frontend/src/components/ficha/tabs/ResultadoTriage.jsx), [recorrido.js](../../frontend/src/components/ficha/triage/recorrido.js), [FichaLeadModal.jsx](../../frontend/src/components/ficha/FichaLeadModal.jsx))*:
+  - El triage puede corregir el historial (agendas, seguimientos, objeciones y eventos), los datos del lead y el estado de la agenda; Juliana no podía registrar seguimientos porque esos permisos eran solo del closer. Sigue sin cobrar, borrar ni reasignar.
+  - El progreso de Resultado es la navegación del lead, también en la agenda de closing: cada etapa es un botón que se abre en cualquier momento. «Confirmado» abre la confirmación dentro del mismo panel (el triage puede registrar la que se le olvidó, sin pestaña aparte); «Resultado» abre «¿Qué pasó con esta llamada?» para cambiar el estado; «Calificación» reabre esa pregunta; «Seguimiento» (antes «Siguiente paso» en el triage) abre «¿Qué pasó con este contacto?», el mismo reporte del closer. Los hitos ya salen según lo reportado (un No Show ya no muestra «Calificación»).
+  - En el closer el progreso suma un hito «Seguimiento» al final si todavía no hay «Siguiente paso», y «Confirmado», «Resultado» y «Siguiente paso» reabren su reporte.
+  - Volver a reportar como «Califica» una llamada que ya pasó al closer se rechaza: crearía una segunda agenda de closing.
+  - «Viene de triage · aprobado por…» en la agenda de closing muestra solo el título; la nota se lee al pasar el ratón (en Comunicación sigue completa, en el chat).
+- **2 de Noviembre de 2026 («Volver a mi sesión» lleva al Portal)** *([impersonation.js](../../frontend/src/utils/impersonation.js))*: al terminar una simulación se entra al Portal en vez de a la pantalla del rol (a un operador lo mandaba a Equipo).

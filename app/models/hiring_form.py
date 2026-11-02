@@ -8,8 +8,9 @@ el formulario público lo lea de la API. Las preguntas no se interpretan acá m�
 de lo necesario: lo que el backend no entiende lo guarda tal cual (ver
 `app/services/hiring_forms.py`).
 
-Puede haber varios formularios (borradores, copias), pero uno solo `activo`: es
-el que sirve el endpoint público.
+Puede haber varios formularios (borradores, copias) y varios `activo` a la vez:
+cada uno se publica en su propio link (`slug`, institute.thelearnation.com/vacante/<slug>/).
+El link viejo (/vacante-assistant/, sin slug) muestra el activo más antiguo.
 """
 from datetime import datetime
 
@@ -34,8 +35,9 @@ class HiringForm(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(120), nullable=False)
-    # A lo sumo uno en True: lo garantizan los endpoints de activar (no hay un
-    # índice parcial para no depender del motor).
+    # Lo que va después de /vacante/ en el link público. Lo edita el panel.
+    slug = db.Column(db.String(60), nullable=True, unique=True)
+    # Publicado en su link. Puede haber varios.
     activo = db.Column(db.Boolean, nullable=False, default=False)
     # Lista de preguntas con el esquema del `PREGUNTAS` del formulario público,
     # más dos claves del editor: `on` (si se pregunta) y `base` (si es una de

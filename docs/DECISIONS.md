@@ -148,7 +148,7 @@
 - **Consecuencias:** mover un taller cambia las tareas en segundos; el token de Leadership pasa a ser un secreto de producción de Work.
 
 
-## ADR-W017: La cifra sola y su cuenta en un tooltip (`CifraConCuenta`), y las listas de Workshop
+## ADR-W050: La cifra sola y su cuenta en un tooltip (`CifraConCuenta`), y las listas de Workshop
 - **Fecha:** 2026-10-28 · **Subsistema:** Componentes estándar, Workshop y Analizar · **Estado:** implementado
 - **Contexto:** Kerwin pidió que todo porcentaje, costo y ROAS diga «N de M» como Closing, sin texto explicativo, y que cada parte abra su lista (ADR-W015). En Marketing ya existía `CifraConCuenta` dentro de una carpeta de pantalla.
 - **Decisión:** `CifraConCuenta` es un componente estándar. Muestra solo la cifra; el «N de M» sale en un tooltip que se dibuja en el `.dc-shell` con `position:fixed`, y cada parte abre la lista que la suma (`onVer(metrica, titulo)`). Workshop gana `GET /workshop/registros` (mismo código que `calcular_prefill`) y el Resumen pasa a ocho tarjetas con New Cash y Cash total y sus dos ROAS del mismo peso. Los números que se cargan por taller abren una lista taller por taller.
@@ -414,3 +414,32 @@
 - **Decisión:** `agenda_v2.html` rehecha: el color de toda la tarjeta (fondo, borde y barra de arriba) es el del segmento (A verde, B azul, C amarillo, D rojo; gris sin segmento); aro con los puntos y la confianza; chips de teléfono, día y hora con la de Bolivia; cajas de Closer (o del motivo) y Origen; y hasta 7 fichas de respuestas con ícono, el examen, la inversión, la etapa, el trabajo y quién decide primero (`_tiles`). Una respuesta con versión corta usa la corta de título y la larga de detalle; una larga sin corta pasa a detalle y el título es la pregunta. `_segmento_visual` arma el aro. El alto de la imagen se calcula con las fichas, dos por fila.
 - **Qué se pierde:** desaparece la «Nota /10» de la cabecera y los colores por respuesta (verde/amarillo/rojo según sus puntos): el color ahora es solo el del segmento.
 - **Consecuencias:** sin cambios en los datos que guarda la agenda (`segmento_lead` y `respuestas` ya estaban). Si el formulario no segmenta, la tarjeta sale gris sin aro. Falta verla pasar por el servicio real de imágenes en staging.
+## ADR-W051: El closer borra desde su tablero la agenda de quien agendó por otra cosa
+- **Fecha:** 2026-10-30 · **Subsistema:** Closer Workspace (tablero de Reportar) · **Estado:** implementado
+- **Contexto:** hay personas que agendan por otra cosa (no es una llamada de venta) y cuentan en la asistencia, la comisión y las métricas del closer. El backend ya tenía el borrado del mazo (`DELETE /closer/deck/<id>`), pero ninguna pantalla lo usaba.
+- **Decisión:** papelera en cada tarjeta del tablero (`EliminarLead`), con `ConfirmDelete` dentro de la tarjeta, que llama a ese endpoint. Se borra (no se marca «No Lead»): «No Lead» cuenta como descalificada en los números de dirección, y esto no tiene que contar en ninguno.
+- **Qué se pierde (nombrado):** el borrado no se deshace, y `eliminar_agenda` borra también el evento de Google Calendar del closer. Si la reunión por la otra cosa igual ocurre, desaparece del calendario.
+- **Consecuencias:** la regla de qué se conserva (respuestas del formulario, plan de cuotas) sigue siendo la de `BookingService.eliminar_agenda`, compartida con la dirección comercial.
+
+## ADR-W052: Cada formulario de Hiring tiene su propio link y puede haber varios activos
+
+- **Fecha:** 2026-11-01 · **Subsistema:** Hiring (Talent › Forms) e institute-site · **Estado:** implementado en local, sin desplegar.
+- **Contexto:** el formulario de Asistente vivía en un solo link fijo (`/vacante-assistant/`) y solo un formulario podía estar activo. Mario quiere copiar el link desde la tarjeta del formulario y elegir cómo se llama.
+- **Decisión:** columna `hiring_forms.slug` (única). Cada formulario se publica en `institute.thelearnation.com/vacante/<slug>/` (página de la vacante) y `/vacante/<slug>/formulario/`; el `.htaccess` de institute-site sirve ahí los mismos archivos de `vacante-assistant/`, que leen el slug de la URL y piden `GET /api/public/assistant-form?slug=`. Activar ya no apaga a los demás. El slug se edita en la tarjeta y en el editor (`LinkFormulario`, se guarda al confirmar; 409 si otro lo usa). Los nuevos y las copias lo sacan del nombre. La migración deja `assistant` al activo más antiguo.
+- **Qué se pierde:** el link viejo `/vacante-assistant/` sigue andando pero muestra el activo más antiguo, no uno elegido. Los filtros del Inbox siguen tomando las preguntas de ese mismo formulario. Cambiar un slug rompe los links ya compartidos con el anterior (muestran la búsqueda cerrada). La página de la vacante es la misma para todos los links (el texto del puesto no cambia por formulario).
+- **Consecuencias:** el avance guardado en el navegador de la postulante va aparte por slug. Los assets de la página de la vacante pasan a rutas absolutas.
+
+## ADR-W053: Las vistas de la dirección comercial recuerdan lo ya cargado (extiende `cacheDeVistas` más allá de Marketing y Workshop)
+
+- **Fecha:** 2026-11-02 · **Subsistema:** Frontend / Dirección comercial · **Estado:** implementada en local, sin desplegar. Pedido de Kerwin: «si ya se cargó, tiene que quedarse ahí».
+- **Contexto:** `cacheDeVistas` (19/10) solo lo usaban Marketing y Workshop. En Dirección comercial cada cambio de sección o de pestaña volvía a pedir todo, porque los efectos dependían de la sección y las pantallas hijas (Triage, Finanzas, Payroll, Segmentos) pedían al montarse.
+- **Decisión:** se usa el mismo recuerdo en memoria (5 minutos de vigencia): `usePedidos.pedirCacheado` para el dashboard (contexto, KPIs, Comparativas, Variabilidad, tablas), `useDatosCacheados` para Triage, Segmentos y las métricas del triage, y el hook de Finanzas con clave por vista y período. Fresco: se muestra y no se pide; viejo: se muestra y se actualiza en silencio. Reintentar y lo que sigue a un guardado piden siempre (`forzar`). El interceptor de `api.js` vacía todo el recuerdo en cualquier respuesta exitosa que no sea GET.
+- **Qué se pierde:** hasta 5 minutos, lo que cambie en el servidor por otra persona no se ve al volver a una pestaña ya cargada (sí se ve al recargar la página, al guardar algo o al cambiar de período). Un guardado vacía el recuerdo de todas las vistas, no solo de la que cambió.
+- **Consecuencias:** quedan fuera, por ahora, las pantallas con su propio patrón de carga (espacio del setter, mazo del closer, espacio del operador, contratación). Las que se refrescan solas (avisos, comentarios, Agendas 2.0, conversaciones) no usan este recuerdo.
+## ADR-W054: El triage trabaja el lead como un closer, sin cobrar ni borrar
+
+- **Fecha:** 2026-11-02 · **Subsistema:** Ficha del lead / Triage · **Estado:** implementada en local, sin desplegar. Pedido de Kerwin tras el reporte de Juliana (no podía registrar seguimientos).
+- **Contexto:** `permisos_de` daba a `triage` solo «confirmar» (y «triar» en su propia agenda). El historial, los seguimientos, los eventos, las objeciones y los datos exigen `reportar` o `editar_datos`, de closer y dirección; Confirmación desaparecía con la llamada pasada.
+- **Decisión:** `triage` recibe `reportar` y `editar_datos` (los permisos que ya gobiernan el historial y el estado de la agenda) y `triar` en cualquier agenda de triage, no solo la suya; entra como rol sin alcance en `_process_agenda`. En Resultado el progreso pasa a ser la navegación del lead (triage y closer): cada etapa se abre en cualquier momento (Confirmado con la confirmación dentro del panel, Resultado, Calificación y Seguimiento con «¿Qué pasó con este contacto?», el reporte del closer), así la pestaña Confirmación no hace falta cuando la llamada pasó. «Siguiente paso» pasa a «Seguimiento» en el triage.
+- **Qué se pierde:** el triage puede ahora reportar (árbol del closer) y declarar una venta por la API en cualquier agenda; la pantalla solo se lo ofrece donde corresponde. Una llamada ya pasada al closer no se puede volver a pasar desde el triage.
+- **Consecuencias:** `cobrar`, `eliminar` y `reasignar` siguen siendo de closer y dirección.

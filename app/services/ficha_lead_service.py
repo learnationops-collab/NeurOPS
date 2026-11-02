@@ -400,25 +400,29 @@ def permisos_de(usuario, appt=None):
     generaba friccion) y lo que ya permitia el lapiz del mazo por `PATCH /closer/customers/<id>`:
     un closer que cubre a un companero, que trabaja un lead de la busqueda global o un huerfano del
     pool de cobro (anclado a 'otro' o a un closer inactivo) tiene que poder arreglarle el telefono.
-    Un setter o triage no: confirman la agenda, los datos no son suyos.
+    Un setter no: confirma la agenda, los datos no son suyos. El triage sí (02/11/2026, pedido de
+    Kerwin): trabaja el lead igual que un closer —corrige el historial, los seguimientos, los datos
+    y el estado de la agenda, y confirma aunque la llamada ya haya pasado—, pero no cobra, no borra
+    ni reasigna. La confirmación de una llamada ya pasada se registra desde el progreso de la pestaña
+    Resultado.
     """
     rol = getattr(usuario, 'role', None)
     direccion = rol in ROLES_DIRECCION
     uid = getattr(usuario, 'id', None)
     setter_dueno = rol == 'setter' and appt is not None and appt.setter_id == uid
-    # La llamada de triage se reporta con su propio recorrido (`triage_service`): la triage, en la suya.
+    # La llamada de triage se reporta con su propio recorrido (`triage_service`): cualquier triage, en las de triage.
     de_triage = triage_service.es_de_triage(appt)
     return {
         'confirmar': direccion or rol in ('closer', 'triage') or setter_dueno,
-        'reportar': direccion or rol == 'closer',
+        'reportar': direccion or rol in ('closer', 'triage'),
         'cobrar': direccion or rol == 'closer',
         'eliminar': direccion or rol == 'closer',
         # El lead entero con todas sus agendas (los de prueba): solo la dirección y solo sin plata ni suscripción.
         'eliminar_lead': direccion,
-        'editar_datos': direccion or rol == 'closer',
+        'editar_datos': direccion or rol in ('closer', 'triage'),
         'reasignar': direccion or rol == 'closer',
         'comentar': True,
-        'triar': de_triage and (direccion or (rol == 'triage' and appt.closer_id == uid)),
+        'triar': de_triage and (direccion or rol == 'triage'),
         # Una agenda del closer que todavía no empezó (app/agendas_v2/a_triage.py).
         'pasar_triage': (direccion or rol == 'closer') and appt is not None and not de_triage
                         and not appt.closer_processed and bool(appt.start_time)
@@ -464,7 +468,6 @@ def ficha(appointment_id=None, client_id=None, usuario=None, ahora=None):
                              etapa_confirmacion=appt.confirmation_stage if appt else None,
                              tiene_venta=bool(ventas), deuda=deuda, baja=bool(baja),
                              solo_sena=_que_compro(tipos_vendidos)[1])
-
     return {
         'identidad': _identidad(appt, client, programa_nombre, _iso(enrollment_dt), baja),
         'estado': estado,

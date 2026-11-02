@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import api from '../../../services/api';
+import { guardarCache, leerCache } from '../../../services/cacheDeVistas';
 import { Button, Chip, EmptyState, FieldError, Panel, Segmented, Skeleton, SkeletonPanel } from '../../../components/standard';
 import { formatAgendaDateTime } from '../../../utils/datetime';
 
@@ -20,11 +21,15 @@ const CONTACTO = {
 
 const whatsapp = (telefono) => `https://wa.me/${(telefono || '').replace(/\D/g, '')}`;
 
+const CLAVE_ABANDONOS = 'triage:abandonos';
+
 function useAbandonos() {
-    const [datos, setDatos] = useState(null);
+    // Es la lista de trabajo del triage y entran abandonos nuevos solos: se muestra lo último que se vio
+    // (sin esqueleto) y se actualiza siempre en silencio al volver.
+    const [datos, setDatos] = useState(() => leerCache(CLAVE_ABANDONOS)?.datos ?? null);
     const [error, setError] = useState(null);
     const cargar = useCallback(() => api.get('/triage/abandonos')
-        .then((res) => { setDatos(res.data); setError(null); })
+        .then((res) => { guardarCache(CLAVE_ABANDONOS, res.data); setDatos(res.data); setError(null); })
         .catch((err) => setError(err?.response?.data?.message || 'No se pudieron cargar los abandonos.')), []);
     useEffect(() => { cargar(); }, [cargar]);
 

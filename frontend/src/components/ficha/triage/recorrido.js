@@ -88,6 +88,17 @@ export function faltan(paso, r) {
   return f;
 }
 
+const RES_DE_LA_AGENDA = [[/no.?show|no asisti/i, 'no_asistio'], [/cancel/i, 'cancelo'], [/reagend/i, 'reagenda'], [/show|asisti/i, 'asistio']];
+
+/** Las respuestas de un reporte que ya está guardado (bloque `triage` de la ficha), para dibujar sus hitos. */
+export function respuestasGuardadas(triage = {}) {
+  const res = RES_DE_LA_AGENDA.find(([patron]) => patron.test(triage.asistencia || ''))?.[1];
+  return {
+    modo: 'llamada', res, cal: triage.calificacion || undefined, lt: triage.low_ticket || undefined,
+    seguimiento: !!triage.fecha_seguimiento,
+  };
+}
+
 /** Los hitos de la columna de progreso (`StepperFicha` vertical), según el camino. */
 export function hitos(r, hechos, guardado) {
   const dado = (p) => guardado || hechos.includes(p);
@@ -113,10 +124,13 @@ export function hitos(r, hechos, guardado) {
         { key: 'nota_closer', label: 'Nota al closer', estado: est(dado('nota_closer')) });
     } else if (descalifica(r)) {
       lista.push(...lt, { key: 'por_que', label: 'Por qué', estado: est(dado('por_que')) });
+      // El low ticket en seguimiento: lo que pasó en cada contacto se registra desde acá.
+      if (r.lt === 'seguimiento') lista.push({ key: 'seg', label: 'Seguimiento', estado: r.seguimiento ? 'hecho' : 'pendiente' });
     } else if (r.res === 'reagenda') {
       lista.push({ key: 'reagenda', label: 'Fecha nueva', estado: est(dado('reagenda')) });
-    } else if (!r.res || r.res === 'asistio') {
-      lista.push({ key: 'sig', label: 'Siguiente paso', estado: 'pendiente' });
+    } else if (!r.res || r.res === 'asistio' || r.res === 'no_asistio' || r.res === 'cancelo') {
+      // El lead que no pasó al closer ni al low ticket queda para seguirlo: tocar el hito abre las opciones.
+      lista.push({ key: 'seg', label: 'Seguimiento', estado: r.seguimiento ? 'hecho' : 'pendiente' });
     }
   }
   return [...lista, { key: 'revision', label: 'Revisión', estado: est(guardado) }];

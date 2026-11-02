@@ -168,6 +168,10 @@ def reportar(appt, datos, usuario):
     nota = (datos.get('nota') or '').strip() or None
     calificacion = datos.get('calificacion') if datos['asistencia'] == 'asistio' else None
 
+    # Volver a reportar una llamada ya reportada es válido (corregir el estado), pero pasarla otra vez
+    # al closer crearía una segunda agenda de closing: esa se mueve desde su propia ficha.
+    if calificacion == 'calificado' and Appointment.query.filter_by(agenda_triage_id=appt.id).first():
+        raise _error('Este lead ya pasó al closer: cambiá su llamada desde la agenda de closing.')
     # El pase primero: si el horario del closer está ocupado, no queda nada reportado a medias.
     closing = _pasar_al_closer(appt, datos, usuario) if calificacion == 'calificado' else None
     # Lo mismo con la venta del low ticket: si no se registra, no queda reportada como cerrada.
