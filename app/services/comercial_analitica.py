@@ -23,6 +23,7 @@ from app.services.commission_service import CLOSER_RATE
 from app.services.procedencia_ingresos_service import agendas_para_atribuir, procedencia_de_ventas
 from app.services.senas_conversion import claves_de_fila, conversion_de, pagos_posteriores
 from app.services.ticket_service import pago_de_fila, primeras_cuotas, sin_cuotas, ticket_promedio
+from app.services.triage_pases import partir_por_canal
 
 # Qué métricas llevan badge de delta y cómo se lee la diferencia: 'pts' para las tasas (la
 # diferencia entre dos porcentajes son puntos, no un porcentaje) y 'pct' para montos y conteos.
@@ -340,7 +341,8 @@ def bloque_closers(start, end, closer_id=None, closer_nombre=None, con_reales=Tr
     tot_a = ComercialService.totales_agendas(agendas)
     tot_v = ComercialService.totales_ventas(ventas)
     estados = estados_de(agendas)
-    reales = (cierres_reales(start, end, ventas, tot_a['asistieron'], closer_nombre=closer_nombre)
+    reales = (cierres_reales(start, end, ventas, tot_a['asistieron'], closer_nombre=closer_nombre,
+                             asistieron_canal=partir_por_canal(f for f in agendas if f['asistio']))
               if con_reales else None)
 
     # Presentaciones: asistencias en las que se presentó la oferta. Una venta cuenta como
@@ -473,13 +475,16 @@ def bloque_closers(start, end, closer_id=None, closer_nombre=None, con_reales=Tr
             # Las descartadas (canceló, lead perdido, descalificada, archivada sin reporte) salen de la
             # lista «Vigentes» de Revisar: el embudo cuenta todas y dice cuántas de cada una (28/10/2026).
             {'paso': 'Agendas', 'n': tot_a['agendas'], 'vigentes': tot_a['agendas'] - descartadas,
-             'descartadas': descartadas},
+             'descartadas': descartadas, 'por_canal': partir_por_canal(agendas)},
             # Asistieron y Ventas dicen con qué cuenta se calcula su tasa (28/10/2026): el show up es el de la
             # tarjeta (leads con resultado, no las agendas) y las ventas se miden sobre las presentaciones.
             {'paso': 'Asistieron', 'n': tot_a['asistieron'], 'show_up': pct(len(leads_asistieron), len(leads_realizadas)),
-             'leads_asistieron': len(leads_asistieron), 'leads_realizadas': len(leads_realizadas)},
-            {'paso': 'Presentaciones', 'n': presentaciones},
-            {'paso': 'Ventas', 'n': tot_a['ventas'], 'presentaciones': presentaciones},
+             'leads_asistieron': len(leads_asistieron), 'leads_realizadas': len(leads_realizadas),
+             'por_canal': partir_por_canal(f for f in agendas if f['asistio'])},
+            {'paso': 'Presentaciones', 'n': presentaciones,
+             'por_canal': partir_por_canal(f for f in agendas if f['asistio'] and f['presento'])},
+            {'paso': 'Ventas', 'n': tot_a['ventas'], 'presentaciones': presentaciones,
+             'por_canal': partir_por_canal(f for f in agendas if f['post_call']['key'] == 'venta')},
         ],
         'senas': senas_de(ventas),
     }

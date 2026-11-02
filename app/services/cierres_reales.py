@@ -40,6 +40,7 @@ from app.services.closer_name_service import resolver_nombre_closer
 from app.services.comercial_cruces import _limpiar_email, _limpiar_ig, clientes_de_ventas
 from app.services.comercial_vocabulario import pct
 from app.services.senas_conversion import COMPLETO, claves_de_fila, conversion_de, pagos_posteriores
+from app.services.triage_pases import DESDE_TRIAGE, DIRECTA, origen_de
 from app.services.ventas_previas import TOLERANCIA_DIAS
 
 # Cuánto antes del pago puede estar la llamada de la que salió: una seña o un seguimiento tarda
@@ -163,14 +164,37 @@ def _fila_de_cierre(fila, llamada, origen, via, tipo):
     return {
         'id': fila['id'], 'cliente': fila['cliente'], 'fecha': fila['fecha'], 'monto': fila['monto'],
         'tipo': tipo, 'via': via, 'origen': origen,
-        'llamada': ({'fecha': llamada.start_time.isoformat(),
+        'llamada': ({'id': llamada.id, 'fecha': llamada.start_time.isoformat(),
                      'closer': llamada.closer.username if llamada.closer else ''} if llamada else None),
+        # 'directa' | 'triage' | None (sin llamada): se completa en `cierres_reales` si se pide el desglose.
+        'canal': None,
     }
 
 
-def cierres_reales(start, end, ventas, asistieron, closer_nombre=None):
+def _por_canal(filas, asistieron_canal):
+    """El close rate real de cada canal (agendas directas y agendas que vienen del triage): la misma cuenta que
+    el total, con las llamadas y los cierres de ese canal. Los cobros sin llamada no tienen canal y quedan fuera,
+    como quedan fuera de la tasa total."""
+    salida = {}
+    for canal in (DIRECTA, DESDE_TRIAGE):
+        propias = [f for f in filas if f['canal'] == canal]
+        del_periodo = sum(1 for f in propias if f['origen'] == PERIODO)
+        anteriores = sum(1 for f in propias if f['origen'] == ANTERIOR)
+        asistieron = asistieron_canal.get(canal, 0)
+        cierres = del_periodo + anteriores
+        base = max(asistieron, del_periodo) + anteriores
+        salida[canal] = {'cierres': cierres, 'del_periodo': del_periodo, 'anteriores': anteriores,
+                         'asistieron': asistieron, 'base': base, 'pct': pct(cierres, base)}
+    return salida
+
+
+def cierres_reales(start, end, ventas, asistieron, closer_nombre=None, asistieron_canal=None):
     """El bloque `reales` del cierre. `ventas` son las filas de `ComercialService.ventas` del
-    período (con el mismo alcance que `closer_nombre`) y `asistieron` las llamadas con show up."""
+    período (con el mismo alcance que `closer_nombre`) y `asistieron` las llamadas con show up.
+
+    `asistieron_canal` (`{'directa': n, 'triage': n}`, las llamadas con show up de cada canal) pide además
+    `por_canal`: el mismo close rate partido entre agendas directas y agendas que vienen del triage, con el
+    `canal` de cada cobro en `filas`. Sin él, `por_canal` es None y no se paga la consulta."""
     nuevas = [f for f in ventas if f['es_venta']]
     # (fila, día que se mira para buscar la llamada, cómo se cerró, tipo para mostrar)
     cierres = [(f, _dia(f['fecha']), 'venta', f['tipo_pago_raw']) for f in nuevas]
@@ -184,7 +208,15 @@ def cierres_reales(start, end, ventas, asistieron, closer_nombre=None):
     for fila, dia, via, tipo in cierres:
         origen, llamada = llamadas.origen(fila, dia, start)
         conteo[origen] += 1
-        filas.append(_fila_de_cierre(fila, llamada, origen, via, tipo))
+        filas.append({**_fila_de_cierre(fila, llamada, origen, via, tipo), '_llamada': llamada})
+    por_canal = None
+    if asistieron_canal is not None:
+        canales = origen_de([f['_llamada'] for f in filas if f['_llamada']])
+        for f in filas:
+            f['canal'] = canales[f['_llamada'].id] if f['_llamada'] else None
+        por_canal = _por_canal(filas, asistieron_canal)
+    for f in filas:
+        f.pop('_llamada')
     filas.sort(key=lambda f: (f['origen'] != ANTERIOR, f['origen'] != PERIODO, f['fecha'] or ''))
 
     del_periodo, anteriores = conteo[PERIODO], conteo[ANTERIOR]
@@ -201,6 +233,7 @@ def cierres_reales(start, end, ventas, asistieron, closer_nombre=None):
         'asistieron': asistieron,
         'base': base,
         'pct': pct(cerrados, base),
+        'por_canal': por_canal,
         'filas': filas,
     }
 
