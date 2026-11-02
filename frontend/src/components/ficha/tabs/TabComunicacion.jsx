@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Send } from 'lucide-react';
 import { instanteLegible } from '../piezas/fecha';
+import NotaFormateada, { esEstructurada } from '../piezas/NotaFormateada';
 import CampoConMenciones from '../piezas/CampoConMenciones';
 import useComentariosAcademia, { comoNota } from '../useComentariosAcademia';
 
@@ -78,7 +79,11 @@ const TabComunicacion = ({ ficha, onAccion, puedeEditar = true }) => {
                                     «2026-10-09T21:19:05.691000», y en otro huso que el del servidor. */}
                                 <span className="t-cap mut">{[n.rol, instanteLegible(n.fecha)].filter(Boolean).join(' · ')}</span>
                             </div>
-                            <div className="t-sm fi-globo">{conMencionesResaltadas(n.texto, n.notificados)}</div>
+                            {/* Una nota larga con títulos y viñetas (las del triage y de la Academia) se lee con
+                                formato; un mensaje corto, tal cual, con sus «@» resaltados. */}
+                            <div className="t-sm fi-globo">
+                                {esEstructurada(n.texto) ? <NotaFormateada texto={n.texto} /> : conMencionesResaltadas(n.texto, n.notificados)}
+                            </div>
                             {n.notificados?.length > 0 && (
                                 <span className="t-cap mut">Notificó a {n.notificados.join(', ')}</span>
                             )}
