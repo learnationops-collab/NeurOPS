@@ -1,4 +1,5 @@
 import React from 'react';
+import PanelesConservados from '../../../components/ui/PanelesConservados';
 import PostulacionesInbox from './components/PostulacionesInbox';
 import PostulacionesRevisoresTab from './components/PostulacionesRevisoresTab';
 import PostulacionesStatsTab from './components/PostulacionesStatsTab';
@@ -25,14 +26,15 @@ export const PESTANAS_CLOSER = [
 
 // Tailwind con la paleta `dash-v6`: quien la monta la deja FUERA de un `.dc-shell`, cuyo reset de
 // botones (`background:none;border:0;padding:0`) y su exención tipográfica le cambiarían el look.
+// Cada pestaña que se abrió queda montada y escondida (PanelesConservados): volver a ella no recarga.
 const PostulacionesCloser = ({ pestana }) => (
-    <>
-        {pestana === 'pendientes' && <PostulacionesInbox grupo="pend" />}
-        {pestana === 'analizados' && <PostulacionesInbox grupo="anal" />}
-        {pestana === 'revisores' && <PostulacionesRevisoresTab />}
-        {pestana === 'estadisticas' && <PostulacionesStatsTab />}
-        {pestana === 'clarity' && <PostulacionesClarityTab />}
-    </>
+    <PanelesConservados activa={pestana} paneles={{
+        pendientes: () => <PostulacionesInbox grupo="pend" />,
+        analizados: () => <PostulacionesInbox grupo="anal" />,
+        revisores: () => <PostulacionesRevisoresTab />,
+        estadisticas: () => <PostulacionesStatsTab />,
+        clarity: () => <PostulacionesClarityTab />,
+    }} />
 );
 
 export default PostulacionesCloser;

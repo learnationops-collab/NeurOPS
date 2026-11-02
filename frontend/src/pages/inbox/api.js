@@ -29,7 +29,7 @@ export const inboxApi = {
     ponerEtiqueta: (id, etiqueta) => api.post(`/inbox/conversaciones/${id}/etiquetas`, etiqueta).then((r) => r.data.etiquetas),
     sacarEtiqueta: (id, tagId) => api.delete(`/inbox/conversaciones/${id}/etiquetas/${tagId}`).then((r) => r.data.etiquetas),
     // Lo que el setter trabaja sobre la conversación (app/automatizaciones/api_trabajo.py)
-    leido: (id) => api.post(`/inbox/conversaciones/${id}/leido`),
+    leido: (id) => api.post(`/inbox/conversaciones/${id}/leido`, null, { conservarCache: true }),
     asignar: (id, setterId) => api.post(`/inbox/conversaciones/${id}/asignar`, { setter_id: setterId }).then(datos),
     moverEtapa: (id, etapa) => api.put(`/inbox/conversaciones/${id}/etapa`, { etapa }).then(datos),
     corregirVariable: (id, campo, valor) => api.put(`/inbox/conversaciones/${id}/variables`, { campo, valor }).then(datos),

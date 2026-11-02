@@ -1,7 +1,8 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../../../services/api';
+import { useDatosCacheados } from '../../../../services/cacheDeVistas';
 import FlujoEmbudo from '../../../comercial/components/FlujoEmbudo';
 import { EsqueletoTablero, PanelCab, Segmented } from '../../../comercial/components/Shared';
 import ListaConfigurable from '../../../../components/listas/ListaConfigurable';
@@ -70,35 +71,29 @@ const FACETAS_SESIONES = [
 const RANGOS = [{ key: 7, label: '7 días' }, { key: 30, label: '30 días' }, { key: 90, label: '90 días' }];
 
 const WorkshopLandingView = () => {
-    const [stats, setStats] = useState(null);
-    const [sesiones, setSesiones] = useState([]);
-    const [agendas, setAgendas] = useState(null);
-    const [loading, setLoading] = useState(true);
     const [dias, setDias] = useState(30);
+    const [version, setVersion] = useState(0);
 
-    const cargar = useCallback(async () => {
-        setLoading(true);
-        try {
-            const hasta = new Date();
-            const desde = new Date(hasta.getTime() - dias * 86400000);
-            const rango = `desde=${desde.toISOString().slice(0, 10)}&hasta=${hasta.toISOString().slice(0, 10)}`;
-            const [rStats, rSes, rAg] = await Promise.all([
-                api.get(`/workshop/landing/stats?${rango}`),
-                api.get(`/workshop/landing/sesiones?${rango}&limit=1000`),
-                api.get(`/workshop/landing/agendas?${rango}`),
-            ]);
-            setStats(rStats.data);
-            setSesiones(rSes.data || []);
-            setAgendas(rAg.data);
-        } catch (e) {
-            console.error('[landing] Error al cargar', e);
-            toast.error('No se pudieron cargar las métricas de la landing');
-        } finally {
-            setLoading(false);
-        }
-    }, [dias]);
-
-    useEffect(() => { cargar(); }, [cargar]);
+    // Recordado por rango (cacheDeVistas): volver a esta vista no vuelve a pedir las tres cosas.
+    const { datos, error, cargando } = useDatosCacheados(`workshop:landing:${dias}`, async (signal) => {
+        const hasta = new Date();
+        const desde = new Date(hasta.getTime() - dias * 86400000);
+        const rango = `desde=${desde.toISOString().slice(0, 10)}&hasta=${hasta.toISOString().slice(0, 10)}`;
+        const [rStats, rSes, rAg] = await Promise.all([
+            api.get(`/workshop/landing/stats?${rango}`, { signal }),
+            api.get(`/workshop/landing/sesiones?${rango}&limit=1000`, { signal }),
+            api.get(`/workshop/landing/agendas?${rango}`, { signal }),
+        ]);
+        return { stats: rStats.data, sesiones: rSes.data || [], agendas: rAg.data };
+    }, {
+        version,
+        onError: (e) => { console.error('[landing] Error al cargar', e); toast.error('No se pudieron cargar las métricas de la landing'); },
+    });
+    const stats = datos?.stats ?? null;
+    const sesiones = datos?.sesiones ?? [];
+    const agendas = datos?.agendas ?? null;
+    const loading = cargando || (!datos && !error);
+    const cargar = useCallback(() => setVersion((v) => v + 1), []);
 
     const barra = (
         <div className="fila wt-landing-barra">

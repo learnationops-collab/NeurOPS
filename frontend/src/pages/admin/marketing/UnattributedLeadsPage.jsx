@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import api from '../../../services/api';
+import { esFresco, guardarCache, leerCache } from '../../../services/cacheDeVistas';
 import { 
     Loader2, 
     Search, 
@@ -31,6 +32,10 @@ const AttributedBadge = ({ label, type }) => (
     </span>
 );
 
+const SIN_DATOS = { summary: { unattributed_sales: 0, unattributed_agendas: 0, total_unattributed: 0 }, sales: [], agendas: [] };
+// Lo ya pedido queda recordado por filtros (cacheDeVistas): volver a la pantalla no vuelve a cargar.
+const claveLeads = (desde, hasta, tipo, texto) => `mk:sin-atribuir:${desde}:${hasta}:${tipo}:${texto}`;
+
 const UnattributedLeadsPage = () => {
     // Rango de fechas por defecto: ultimos 30 dias
     const getPastDateStr = (days) => {
@@ -47,11 +52,11 @@ const UnattributedLeadsPage = () => {
     const [searchQuery, setSearchQuery] = useState('');
     
     const [loading, setLoading] = useState(false);
-    const [data, setData] = useState({ summary: { unattributed_sales: 0, unattributed_agendas: 0, total_unattributed: 0 }, sales: [], agendas: [] });
+    const [data, setData] = useState(() => leerCache(claveLeads(getPastDateStr(30), getTodayStr(), 'all', ''))?.datos ?? SIN_DATOS);
     const [activeTab, setActiveTab] = useState('sales');
 
     // Listado de anuncios para modal
-    const [ads, setAds] = useState([]);
+    const [ads, setAds] = useState(() => leerCache('mk:anuncios-publicos')?.datos ?? []);
     const [loadingAds, setLoadingAds] = useState(false);
 
     // Modal State
@@ -62,8 +67,9 @@ const UnattributedLeadsPage = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Fetch data principal
-    const fetchUnattributedLeads = async () => {
-        setLoading(true);
+    // `opciones.silencioso`: ya hay algo a la vista, se actualiza sin marcar la pantalla como cargando.
+    const fetchUnattributedLeads = async (opciones) => {
+        if (opciones?.silencioso !== true) setLoading(true);
         try {
             const response = await api.get('/public/marketing/unattributed-leads', {
                 params: {
@@ -73,6 +79,7 @@ const UnattributedLeadsPage = () => {
                     search: searchQuery
                 }
             });
+            guardarCache(claveLeads(startDate, endDate, leadType, searchQuery), response.data);
             setData(response.data);
             
             // Auto-ajustar tab si viene filtrado
@@ -91,6 +98,7 @@ const UnattributedLeadsPage = () => {
         setLoadingAds(true);
         try {
             const response = await api.get('/public/ads');
+            guardarCache('mk:anuncios-publicos', response.data);
             setAds(response.data);
         } catch (error) {
             console.error('Error al cargar anuncios:', error);
@@ -101,11 +109,17 @@ const UnattributedLeadsPage = () => {
     };
 
     useEffect(() => {
-        fetchUnattributedLeads();
+        const guardado = leerCache(claveLeads(startDate, endDate, leadType, searchQuery));
+        if (guardado) {
+            setData(guardado.datos);
+            if (esFresco(guardado)) return;
+        }
+        fetchUnattributedLeads({ silencioso: Boolean(guardado) });
     }, [startDate, endDate, leadType]);
 
     useEffect(() => {
-        fetchAds();
+        const guardado = leerCache('mk:anuncios-publicos');
+        if (!esFresco(guardado)) fetchAds();
     }, []);
 
     // Filtrado local de anuncios por busqueda en modal

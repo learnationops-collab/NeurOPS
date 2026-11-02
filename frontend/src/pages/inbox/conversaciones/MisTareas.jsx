@@ -5,11 +5,12 @@ import { CalendarCheck } from 'lucide-react';
 import useEnPantalla from '../../../components/ui/useEnPantalla';
 import { Avatar, IconButton } from '../../../components/standard';
 import { inboxApi } from '../api';
+import { recordado, recordar } from '../recuerdo';
 import { quien } from './colas';
 import { momento } from './Feed';
 
 export default function MisTareas({ onAbrir, marca }) {
-    const [tareas, setTareas] = useState([]);
+    const [tareas, setTareas] = useState(() => recordado('tareas', []));
     const [abierto, setAbierto] = useState(false);
     const caja = useRef(null);
     const pop = useEnPantalla();
@@ -17,7 +18,7 @@ export default function MisTareas({ onAbrir, marca }) {
     // `marca` cambia con cada vuelta de la bandeja: ahí se vuelve a pedir.
     useEffect(() => {
         let vivo = true;
-        inboxApi.misTareas().then((t) => { if (vivo) setTareas(t); })
+        inboxApi.misTareas().then((t) => { recordar('tareas', t); if (vivo) setTareas(t); })
             .catch(() => { /* sin cambios: se reintenta en la próxima vuelta */ });
         return () => { vivo = false; };
     }, [marca]);

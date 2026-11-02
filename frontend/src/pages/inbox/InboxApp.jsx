@@ -20,6 +20,7 @@ import Flujos from './Flujos';
 import Conversaciones from './Conversaciones';
 import Campanas from './Campanas';
 import { inboxApi } from './api';
+import { recordado, recordar } from './recuerdo';
 
 export const SECCIONES = [
     { id: 'flujos', label: 'Flujos', Icono: Workflow },
@@ -59,10 +60,10 @@ export default function InboxApp() {
     const { abrir: abrirConfiguracion } = useConfiguracion();
     const apariencia = useApariencia();
     const [seccion, setSeccion] = useState(seccionGuardada);
-    const [estado, setEstado] = useState(null);
+    const [estado, setEstado] = useState(() => recordado('estado'));
 
     useEffect(() => { document.title = 'Inbox · Learnation'; }, []);
-    useEffect(() => { inboxApi.estado().then(setEstado).catch(() => setEstado({ puede_editar: false, modo: null })); }, []);
+    useEffect(() => { inboxApi.estado().then((e) => setEstado(recordar('estado', e))).catch(() => setEstado({ puede_editar: false, modo: null })); }, []);
 
     const elegir = (id) => {
         setSeccion(id);
