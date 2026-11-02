@@ -42,8 +42,9 @@ INVERSION, ETAPA, EXAMEN, DECIDE = 'qglxqqlsgya', 'qg8xclvqc4c', 'qg6raaks2pe', 
 VERSION = '2026-12.4'
 SESION_TRIAGE = 'sesion-diagnostica'
 
-# Etapa
+# Etapa («Soy estudiante» e «internado» son opciones aparte y van juntas)
 ESTUDIANTE, RURAL, GENERAL, RESIDENTE, ESPECIALISTA = 'og8xclet205', 'og8xclf4go4', 'og94zlvu9m2', 'og9azfspw7e', 'og9ed3qtpzx'
+INTERNADO = 'og-internado'
 # Examen
 COLOMBIA, PERU, ENARM, SIN_EXAMEN = 'og77bdut6ym', 'og6raas2nv9', 'og7imnc8sh8', 'og7p4glxgce'
 # Decide
@@ -98,6 +99,7 @@ def _reglas(datos):
     apoyo = [x for x in ops[DECIDE] if x != SOLO]
     mg = [GENERAL, RURAL]
     resi = [RESIDENTE, ESPECIALISTA]
+    est = [x for x in ops[ETAPA] if x in (ESTUDIANTE, INTERNADO)]
     c = lambda q, xs: {'q': q, 'ops': list(xs)}  # noqa: E731
 
     def r(rid, seg, *cond):
@@ -109,11 +111,11 @@ def _reglas(datos):
         r('a-mg-otros', 'A', c(SEG_Q, ['A']), c(ETAPA, mg), c(EXAMEN, otros)),
         r('a-mg-apoyo', 'A', c(SEG_Q, ['A']), c(ETAPA, mg), c(EXAMEN, col_peru), c(DECIDE, apoyo)),
         r('a-resi', 'A', c(INVERSION, dinero), c(ETAPA, resi), c(DECIDE, [SOLO])),
-        r('a-estudiante', 'A', c(INVERSION, dinero), c(ETAPA, [ESTUDIANTE]), c(EXAMEN, col_peru), c(DECIDE, [SOLO])),
+        r('a-estudiante', 'A', c(INVERSION, dinero), c(ETAPA, est), c(EXAMEN, col_peru), c(DECIDE, [SOLO])),
         r('b-mg', 'B', c(SEG_Q, ['B']), c(ETAPA, mg)),
         r('b-resi', 'B', c(INVERSION, dinero), c(ETAPA, resi), c(DECIDE, apoyo)),
-        r('b-estudiante-otros', 'B', c(INVERSION, dinero), c(ETAPA, [ESTUDIANTE]), c(EXAMEN, otros)),
-        r('b-estudiante-apoyo', 'B', c(INVERSION, dinero), c(ETAPA, [ESTUDIANTE]), c(EXAMEN, col_peru), c(DECIDE, apoyo)),
+        r('b-estudiante-otros', 'B', c(INVERSION, dinero), c(ETAPA, est), c(EXAMEN, otros)),
+        r('b-estudiante-apoyo', 'B', c(INVERSION, dinero), c(ETAPA, est), c(EXAMEN, col_peru), c(DECIDE, apoyo)),
         r('c', 'C', c(SEG_Q, ['C'])),
         r('d', 'D', c(SEG_Q, ['D'])),
     ]
@@ -162,6 +164,11 @@ def preparar(datos):
     faltan = [q for q in (INVERSION, ETAPA, EXAMEN, DECIDE) if q not in preguntas]
     if faltan:
         raise SystemExit(f'Faltan preguntas en el formulario: {faltan}')
+    # Una etapa nueva sin clasificar no sabría a qué regla ir: mejor frenar.
+    sueltas = [o['texto'] for o in preguntas[ETAPA]['opciones']
+               if o['id'] not in (ESTUDIANTE, INTERNADO, RURAL, GENERAL, RESIDENTE, ESPECIALISTA)]
+    if sueltas:
+        raise SystemExit(f'Etapas sin clasificar: {sueltas}')
     ids = {o['id'] for q in (ETAPA, EXAMEN, DECIDE) for o in preguntas[q]['opciones']}
     faltan = [x for x in (ESTUDIANTE, RURAL, GENERAL, RESIDENTE, ESPECIALISTA, COLOMBIA, PERU, ENARM, SIN_EXAMEN, SOLO)
               if x not in ids]
