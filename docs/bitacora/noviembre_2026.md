@@ -47,3 +47,8 @@
   - El editor de reglas ya no ofrece «Segmento del lead»; las reglas de «Sesión de Aceleración» pasan a escribirse solo con respuestas (no se pisan y cubren todas las combinaciones).
   - Un formulario puede tener hasta 40 reglas (antes 20).
   - Team queda con las cinco estrategias de los segmentos; se borran las que ningún otro formulario usa.
+
+- **2 de Noviembre de 2026 (Agendas tomadas por fuera de Thalamus: botón «+» junto al buscador)** *([CloserWorkflowPage.jsx](../../frontend/src/pages/closer/CloserWorkflowPage.jsx), [closer.py](../../app/api/closer.py), [a_triage.py](../../app/agendas_v2/a_triage.py))*:
+  - En la vista del triage y del closer, un «+» al lado del buscador abre «Nueva agenda» para cargar a mano una agenda que se tomó fuera del CRM. El closer ya tenía ese modal en el menú del dock; el triage no podía crearlas.
+  - `POST /api/closer/appointments` acepta el rol `triage`: la agenda queda a su nombre (mismo camino que Thalamus: Meet, invitación y avisos) y dura lo que su sesión diagnóstica (`sesion_propia_de`).
+  - Fuente nueva «Externa» (por defecto para el triage); el subtítulo del modal pasa a «Agendas que no llegaron por Thalamus».

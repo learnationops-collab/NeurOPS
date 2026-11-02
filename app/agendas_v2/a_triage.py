@@ -86,6 +86,17 @@ def sesion_closing_de(user):
     return {'duracion_min': int(dur), 'margen_min': int(margen or 0)}
 
 
+def sesion_propia_de(user):
+    """{'duracion_min', 'margen_min'} de la sesión que atiende esa persona (la diagnóstica, si es del triage),
+    o None si no está en Team: la agenda que carga a mano dura lo mismo que las de Thalamus."""
+    d = servicio.colecciones()
+    p = servicio.persona_de_usuario(d, user)
+    if not p:
+        return None
+    dur, margen = sesion_de_la_persona(d, p)
+    return {'duracion_min': int(dur), 'margen_min': int(margen or 0)}
+
+
 def personas_que_atienden():
     """[{id, nombre, rol}] de las cuentas activas con horario en Team que toman llamadas (closers y triage):
     a quién se le puede mover una agenda."""

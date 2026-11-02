@@ -510,16 +510,18 @@ const CloserWorkflowPage = () => {
     const [newAgendaModalOpen, setNewAgendaModalOpen] = useState(false);
     // El lead ya tiene una agenda abierta: se pregunta si se reprograma o se suma otra (como Thalamus).
     const [yaTieneAgenda, setYaTieneAgenda] = useState(null);
-    const [newAgendaForm, setNewAgendaForm] = useState({
+    // El triage carga sobre todo agendas que tomó por fuera de Thalamus: su fuente es «Externa».
+    const agendaVacia = () => ({
         lead_name: '',
         instagram: '',
         phone: '',
         email: '',
         date: localToday(),
         time: '18:00',
-        origin: 'Setter',
+        origin: esTriage ? 'Externa' : 'Setter',
         examen: ''
     });
+    const [newAgendaForm, setNewAgendaForm] = useState(agendaVacia);
 
     const [manualRefModalOpen, setManualRefModalOpen] = useState(false);
     const [manualRefForm, setManualRefForm] = useState({
@@ -724,6 +726,8 @@ const CloserWorkflowPage = () => {
         }
     };
 
+    const abrirNuevaAgenda = () => { setYaTieneAgenda(null); setNewAgendaModalOpen(true); };
+
     // Crear Nueva Agenda (Modal v7)
     const handleCreateAgenda = async (siYaTiene = null) => {
         if (!newAgendaForm.lead_name.trim()) {
@@ -771,16 +775,7 @@ const CloserWorkflowPage = () => {
             }
             setYaTieneAgenda(null);
             setNewAgendaModalOpen(false);
-            setNewAgendaForm({
-                lead_name: '',
-                instagram: '',
-                phone: '',
-                email: '',
-                date: localToday(),
-                time: '18:00',
-                origin: 'Setter',
-                examen: ''
-            });
+            setNewAgendaForm(agendaVacia());
             fetchAgendas();
         } catch (err) {
             if (err.response?.data?.codigo === 'ya_tiene') {
@@ -1741,7 +1736,7 @@ const CloserWorkflowPage = () => {
         user, logout, navigate: (ruta) => window.location.assign(ruta),
         acciones: [
             ...(esTriage ? [] : [
-                { id: 'agenda', label: 'Nueva agenda', Icono: CalendarPlus, onClick: () => { setYaTieneAgenda(null); setNewAgendaModalOpen(true); } },
+                { id: 'agenda', label: 'Nueva agenda', Icono: CalendarPlus, onClick: abrirNuevaAgenda },
                 { id: 'referido', label: 'Referido manual', Icono: Gift, onClick: () => setManualRefModalOpen(true) },
             ]),
             ...(counts.seguimientos > 0
@@ -1783,6 +1778,7 @@ const CloserWorkflowPage = () => {
                     </div>
                     
                     <div className="search-v6">
+                        <div className="buscar-fila-v6">
                         <div className="sinner-v6">
                             {/* Mientras se abre el lead que se tocó, la lupa gira: es un aviso de
                                 la acción, en el lugar donde se hizo, no una carga del mazo. */}
@@ -1799,6 +1795,14 @@ const CloserWorkflowPage = () => {
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 onFocus={() => { if (searchResults.length > 0) setShowSearchResults(true); }}
                             />
+                        </div>
+                        {/* Una agenda que se tomó por fuera de Thalamus se carga a mano acá. */}
+                        {!paraVender && (
+                            <button type="button" className="mas-v6" onClick={abrirNuevaAgenda}
+                                title="Agregar una agenda que no llegó por Thalamus" aria-label="Agregar una agenda a mano">
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                            </button>
+                        )}
                         </div>
                         {/* Siempre presente y con el texto cambiando: un lector de pantalla sólo
                             anuncia los cambios de una región que ya estaba en la página. */}
@@ -2851,7 +2855,7 @@ const CloserWorkflowPage = () => {
                             <div className="flex justify-between items-start border-b border-slate-800 pb-4">
                                 <div>
                                     <h3 className="text-lg font-black text-white italic">Nueva agenda</h3>
-                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Referidos · leads propios</p>
+                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Agendas que no llegaron por Thalamus</p>
                                 </div>
                                 <button onClick={() => setNewAgendaModalOpen(false)} className="text-slate-500 hover:text-white p-1">
                                     <X size={18} />
@@ -2932,6 +2936,7 @@ const CloserWorkflowPage = () => {
                                             <option value="Workshop">Workshop</option>
                                             <option value="VSL">VSL</option>
                                             <option value="Referido">Referido</option>
+                                            <option value="Externa">Externa</option>
                                         </select>
                                     </div>
                                 </div>
