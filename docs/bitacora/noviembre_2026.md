@@ -29,3 +29,4 @@
   - Mazo del closer y del triage: cada pestaña y día (Confirmar, Reportar, Seguir) y Compartidos y Abandonos muestran al instante lo último que se vio, sin esqueleto, y se actualizan en silencio por detrás.
   - Espacio del setter: Mis agendas y el Historial de reportes recuerdan lo último que se vio (el reporte diario, que es un formulario, se sigue pidiendo fresco).
   - Operador (Equipo, Soporte, Datos, Formularios, Curso) y Formularios de contratación: el panel que ya se abrió queda montado y escondido, así que volver a él no pide nada.
+- **2 de Noviembre de 2026 (Los descalificados agendan con el triage)** *([triage.py](../../app/agendas_v2/nucleo/triage.py), [servicio.py](../../app/agendas_v2/servicio.py))*: una opción que descalifica, «No califica» y la regla de otra página (`mk-academy`) ya no cortan el formulario público: el lead agenda con el triage en la Sesión diagnóstica, como los C y D. Sin grupo «Triage» no cambia nada.

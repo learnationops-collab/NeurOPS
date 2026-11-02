@@ -47,6 +47,7 @@ from app.agendas_v2.nucleo.normalizar import (
 )
 from app.agendas_v2.nucleo.ocupacion import opciones_de_ocupacion
 from app.agendas_v2.nucleo.reserva import armar_reserva, telefono_e164
+from app.agendas_v2.nucleo.triage import con_triage
 from app.agendas_v2.nucleo.util import slugify, uid
 from app.services.learnation_service import LearnationAPIError, LearnationService
 
@@ -858,6 +859,8 @@ def _disponible(d, e):
     form = pub.get('form') or (form_solo_contacto() if pub['evento'].get('persona') else None)
     if not form:
         return None
+    # Con grupo de triage el formulario ya no corta: los que no calificaban agendan con el triage.
+    form = con_triage(form, d)
     funnel = buscar(d, 'funnels', pub['evento'].get('funnel'))
     if funnel and not funnel.get('activo'):
         return None
