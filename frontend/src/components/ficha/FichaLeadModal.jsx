@@ -4,6 +4,7 @@ import { AlertTriangle } from 'lucide-react';
 import FichaHeader from './FichaHeader';
 import FichaTabs from './FichaTabs';
 import { Aviso, diaLegible, useMovimiento } from './piezas';
+import NotaEnTooltip from './piezas/NotaEnTooltip';
 import { Hueso } from '../huesos/Huesos';
 import { enSoloLectura, leerEstado } from './estadoFicha';
 import { ejecutarAccion, ejecutarConsulta, mensajeDeError, obtenerFicha } from './fichaApi';
@@ -407,15 +408,14 @@ const FichaLeadModal = ({
                         {/* La agenda de closing que pasó el triage: quién lo aprobó y su nota, a la
                             vista en cualquier pestaña para que el closer llegue con contexto. */}
                         {/* Solo el título: la nota completa (que también queda en Comunicación) se
-                            lee al pasar el ratón, para no ocupar media ficha. */}
+                            lee con formato al pasar el ratón, para no ocupar media ficha. */}
                         {ficha?.triage?.viene_de_triage && (
-                            <div title={ficha.triage.viene_de_triage.nota || 'Sin nota del triage.'}
-                                style={{ cursor: 'help' }}>
+                            <NotaEnTooltip texto={ficha.triage.viene_de_triage.nota || 'Sin nota del triage.'}>
                                 <Aviso tono="info" titulo={[
                                     `Viene de triage · aprobado por ${ficha.triage.viene_de_triage.por || 'el triage'}`,
                                     ficha.triage.viene_de_triage.segmento && `segmento ${ficha.triage.viene_de_triage.segmento}`,
                                 ].filter(Boolean).join(' · ')} />
-                            </div>
+                            </NotaEnTooltip>
                         )}
                         {error && !ficha && (
                             <Aviso tono="error" titulo="No se pudo abrir la ficha">{error}</Aviso>
