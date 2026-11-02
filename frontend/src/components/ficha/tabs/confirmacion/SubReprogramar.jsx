@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Input, Select } from '../../../standard';
+import { FieldError, Select, TextArea } from '../../../standard';
 import api from '../../../../services/api';
 import { browserTimezone } from '../../../../utils/datetime';
+import { faltaDeMotivo, motivoAlcanza, preguntaDeMotivo } from '../../../../utils/motivoEstado';
 import { SubVista } from '../../piezas';
 
 const enZona = (iso, tz, o) => new Date(iso).toLocaleString('es', { timeZone: tz, ...o });
@@ -45,7 +46,7 @@ const SubReprogramar = ({ ficha, onVolver, onConfirmar, guardando = false }) => 
         return acc;
     }, {});
     const lead = tzLead || miZona;
-    const puede = !!cuando && !!datos?.persona_id && motivo.trim().length >= 3 && !guardando;
+    const puede = !!cuando && !!datos?.persona_id && motivoAlcanza(motivo) && !guardando;
 
     return (
         <SubVista titulo="Reprogramar llamada" onVolver={onVolver}
@@ -104,9 +105,11 @@ const SubReprogramar = ({ ficha, onVolver, onConfirmar, guardando = false }) => 
                     )}
 
                     <div style={{ display: 'grid', gap: 'var(--s1)' }}>
-                        <small className="t-rotulo">¿Por qué se reprograma?</small>
-                        <Input aria-label="Motivo" value={motivo} placeholder="Ej.: pidió cambiar el horario"
+                        <small className="t-rotulo">{preguntaDeMotivo('Reagendado')}</small>
+                        <TextArea aria-label="Motivo" rows={3} value={motivo}
+                            invalid={!!motivo && !motivoAlcanza(motivo)} placeholder="Ej.: pidió cambiar el horario porque trabaja de guardia"
                             onChange={(e) => setMotivo(e.target.value)} />
+                        {faltaDeMotivo(motivo) && <FieldError role="note" icon={false}>{faltaDeMotivo(motivo)}</FieldError>}
                     </div>
                 </div>
             )}
