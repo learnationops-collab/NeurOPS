@@ -9,6 +9,8 @@ import BorrarConConfirmacion from '../historial/BorrarConConfirmacion';
 import MotivoDelFallo from '../historial/MotivoDelFallo';
 import FilaAgenda from '../historial/FilaAgenda';
 import ObjecionDeAgenda from '../historial/ObjecionDeAgenda';
+import MotivoDeEstado from '../historial/MotivoDeEstado';
+import { pideMotivo } from '../../../utils/motivoEstado';
 import FilaSeguimiento, { estadoDeSeguimiento } from '../historial/FilaSeguimiento';
 import AgendarSeguimiento from '../historial/AgendarSeguimiento';
 import FilaPago from '../historial/FilaPago';
@@ -286,6 +288,8 @@ const Agendas = ({ agendas, vocabulario, closerId, puedeEditar, puedeReasignar, 
     const [agregando, setAgregando] = useState(false);
     const [cuando, setCuando] = useState(hoyMasUnDia);
     const [ocupada, setOcupada] = useState(null);
+    // El estado que espera su motivo: «Reagendado», «No Show» y «Cancelado» no se corrigen sin él.
+    const [pendiente, setPendiente] = useState(null);
 
     const preCall = vocabulario?.pre_call || [];
     const postCall = vocabulario?.post_call || [];
@@ -300,6 +304,11 @@ const Agendas = ({ agendas, vocabulario, closerId, puedeEditar, puedeReasignar, 
         } finally {
             setOcupada(null);
         }
+    };
+
+    const elegirEstado = (a, campo, valor, opciones) => {
+        if (!pideMotivo(valor)) { corregir(a.id, campo, valor); return; }
+        setPendiente({ agendaId: a.id, campo, valor, etiqueta: opciones.find((o) => o.key === valor)?.label || valor });
     };
 
     const agendar = async () => {
@@ -332,18 +341,31 @@ const Agendas = ({ agendas, vocabulario, closerId, puedeEditar, puedeReasignar, 
                     onBorrar={() => onAccion?.('eliminar_agenda', {}, a.id)}
                     // La objeción de una llamada que no cerró: se agrega o se reemplaza acá, con el
                     // mismo permiso que corregir la agenda (es la ruta de reportar).
-                    pie={<ObjecionDeAgenda agenda={a} puedeEditar={puedeEditar}
-                        onGuardar={(texto) => onAccion?.('guardar_objecion', { texto }, a.id)} />}>
+                    pie={(
+                        <>
+                            {pendiente?.agendaId === a.id && (
+                                <MotivoDeEstado estado={pendiente.valor} etiqueta={pendiente.etiqueta}
+                                    onCancelar={() => setPendiente(null)}
+                                    onConfirmar={async (motivo) => {
+                                        await onAccion?.('estado_agenda',
+                                            { campo: pendiente.campo, valor: pendiente.valor, motivo }, a.id);
+                                        setPendiente(null);
+                                    }} />
+                            )}
+                            <ObjecionDeAgenda agenda={a} puedeEditar={puedeEditar}
+                                onGuardar={(texto) => onAccion?.('guardar_objecion', { texto }, a.id)} />
+                        </>
+                    )}>
                     {puedeEditar ? (
                         <>
                             <SelectorEstado etiqueta={`Pre call de la agenda del ${instanteLegible(a.fecha)}`}
                                 valor={a.pre_call} opciones={preCall}
                                 disabled={ocupada === `${a.id}:pre_call`}
-                                onCambiar={(v) => corregir(a.id, 'pre_call', v)} />
+                                onCambiar={(v) => elegirEstado(a, 'pre_call', v, preCall)} />
                             <SelectorEstado etiqueta={`Post call de la agenda del ${instanteLegible(a.fecha)}`}
                                 valor={a.post_call} opciones={postCall}
                                 disabled={ocupada === `${a.id}:post_call`}
-                                onCambiar={(v) => corregir(a.id, 'post_call', v)} />
+                                onCambiar={(v) => elegirEstado(a, 'post_call', v, postCall)} />
                         </>
                     ) : a.chip && <Chip label={a.chip.label} tono={a.chip.tone} ayuda={a.chip.ayuda} />}
                 </FilaAgenda>
