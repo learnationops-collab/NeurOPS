@@ -327,8 +327,13 @@ def _cobro(client, ventas, deuda, programa_code, programa_nombre, enrollment_dt,
                   .order_by(InstallmentPlan.fecha_vencimiento.asc()).all()]
 
     pagos = []
+    por_email = {}  # el closer de cada pago se resuelve una vez por correo (alias incluidos)
     for v in ventas:
         programa, tipo = SheetsService.parse_tipo_pago(v.tipo_pago)
+        email = (v.email_vendedor or '').strip().lower()
+        if email not in por_email:
+            por_email[email] = CloserFollowUpService._resolve_closer_for_email_vendedor(v.email_vendedor) if email else None
+        closer = por_email[email]
         # El id es la venta: con el se corrige o se borra ESE pago desde el historial. El
         # `tipo_pago` crudo y el programa son con lo que arranca su editor; `tipo` sigue siendo la
         # palabra canonica ('cuota', 'seña'...) y `None` cuando el texto no dice ninguna. En un pago
@@ -337,7 +342,10 @@ def _cobro(client, ventas, deuda, programa_code, programa_nombre, enrollment_dt,
                       'monto': float(v.monto or 0.0), 'tipo': tipo,
                       'tipo_pago': v.tipo_pago or None, 'programa_code': programa,
                       'es_transferencia': es_transferencia(v.metodo_pago),
-                      'transferido_a': v.transferido_a, 'sale_id': v.sale_id})
+                      'transferido_a': v.transferido_a, 'sale_id': v.sale_id,
+                      # A quién se le atribuye el pago (comisión y nómina): cada pago es de SU closer.
+                      'vendedor': closer.username if closer else (email.split('@')[0] or None),
+                      'vendedor_id': closer.id if closer else None})
     # Las ventas del cliente (20/10/2026): a cuál pertenece cada pago, y entre cuáles se elige al
     # cargar o mover uno.
     ventas_del_cliente = ([s.to_dict() for s in Sale.query.filter_by(client_id=client_id)

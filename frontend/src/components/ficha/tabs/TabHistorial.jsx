@@ -429,6 +429,7 @@ const Pagos = ({ pagos, ventas = [], programaDelCliente, vocabulario, puedeEdita
             {pagos.length ? pagos.map((p, i) => (
                 <FilaPago key={p.id ?? `${p.fecha}-${i}`} pago={p} medios={medios}
                     programas={programas} tipos={tipos} transferencias={transferencias} ventas={ventas}
+                    closers={vocabulario?.closers || []}
                     // Sin el id de su venta no hay a dónde mandar la corrección (datos viejos).
                     puedeEditar={puedeEditar && p.id != null}
                     onCorregir={(cambios) => onAccion?.('corregir_pago', { pago_id: p.id, ...cambios })}

@@ -10,6 +10,7 @@ import CamposPago, {
 } from './CamposPago';
 import BorrarConConfirmacion from './BorrarConConfirmacion';
 import MotivoDelFallo from './MotivoDelFallo';
+import Desplegable from './Desplegable';
 
 /**
  * Una fila de la sección «Pagos» del historial, con su editor en el sitio y su borrado.
@@ -36,7 +37,7 @@ import MotivoDelFallo from './MotivoDelFallo';
 const diaDe = (fecha) => (fecha ? String(fecha).slice(0, 10) : '');
 
 const FilaPago = ({
-    pago: p, medios = [], programas = [], tipos = [], transferencias = [], ventas = [], puedeEditar = false,
+    pago: p, medios = [], programas = [], tipos = [], transferencias = [], ventas = [], closers = [], puedeEditar = false,
     onCorregir, onBorrar,
 }) => {
     const reducido = useReducedMotion();
@@ -51,6 +52,7 @@ const FilaPago = ({
         fecha: diaDe(p.fecha), monto: p.monto != null ? String(p.monto) : '', medio: p.medio || '',
         programa: p.programa_code || '', tipo: p.tipo || '', transferido_a: p.transferido_a || null,
         venta: p.sale_id != null ? String(p.sale_id) : '',
+        vendedor: p.vendedor_id != null ? String(p.vendedor_id) : '',
     };
     const suVenta = ventas.find(v => v.id === p.sale_id);
     // El backend dice si es transferencia (`es_transferencia`); sin el dato, la misma regla acá.
@@ -59,6 +61,8 @@ const FilaPago = ({
     const tipo = p.tipo ? etiquetaDeTipo(tipos, p.tipo) : (p.tipo_pago || 'Sin tipo');
     const detalle = [p.programa_code ? nombreDePrograma(programas, p.programa_code) : 'Sin programa',
         p.medio || 'Sin medio',
+        // De quién es el pago (comisión y nómina): un lead puede tener pagos de distintos closers.
+        p.vendedor ? `de ${p.vendedor}` : null,
         // Con más de una venta, de cuál es este pago: «venta Renovación · 1 jul 2026».
         ventas.length > 1 && suVenta ? `venta ${etiquetaDeVenta(programas, suVenta, { conPrograma: false })}` : null,
     ].filter(Boolean).join(' · ');
@@ -91,6 +95,7 @@ const FilaPago = ({
             cambios.programa_code = valores.programa;
         }
         if (valores.tipo && valores.tipo !== inicial.tipo) cambios.tipo = valores.tipo;
+        if (valores.vendedor && valores.vendedor !== inicial.vendedor) cambios.vendedor_id = Number(valores.vendedor);
         // Moverlo a otra venta del mismo programa. «Automática» no viaja: si cambió el tipo o el
         // programa, el sistema lo vuelve a ubicar solo.
         if (valores.venta && valores.venta !== inicial.venta
@@ -223,6 +228,17 @@ const FilaPago = ({
                         medios={medios} programas={programas} tipos={tipos} transferencias={transferencias}
                         ventas={ventas} actual={{ medio: p.medio, programa: p.programa_code, tipo: p.tipo,
                             tipoCrudo: p.tipo_pago, transferido_a: p.transferido_a }} />
+
+                    {closers.length > 0 && (
+                        <div className="fi-campo">
+                            <label className="t-rotulo" htmlFor={`${ids}-closer`}>Closer del pago</label>
+                            <Desplegable id={`${ids}-closer`} etiqueta="Closer del pago" valor={valores.vendedor ?? ''}
+                                disabled={guardando} onCambiar={(v) => { setError(null); setValores(x => ({ ...x, vendedor: v })); }}>
+                                {!inicial.vendedor && <option value="">{p.vendedor ? `${p.vendedor} (fuera de la lista)` : 'Sin closer · elegí uno'}</option>}
+                                {closers.map(c => <option key={c.id} value={String(c.id)}>{c.nombre}</option>)}
+                            </Desplegable>
+                        </div>
+                    )}
 
                     <small className="t-cap mut">
                         Corrige el pago y lo que cuenta la deuda. No escribe en Google Sheets ni le avisa
