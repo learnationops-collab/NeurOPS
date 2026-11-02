@@ -7,22 +7,26 @@
 // low ticket» (la venta sin reporte) y «Pasar a seguimiento» (la llamada sin resultado, como el
 // closer). El recorrido vive en `triage/recorrido.js`; todo se guarda por `onAccion`.
 
-import { useCallback, useMemo, useState } from 'react';
+import { Suspense, lazy, useCallback, useMemo, useState } from 'react';
 import { CalendarClock, CalendarX, CheckCircle2, DollarSign, XCircle } from 'lucide-react';
 import { StepperFicha, TarjetaAccion } from '../acciones/piezas';
 import PasarARecuperacion from './PasarARecuperacion';
+import TabConfirmacion from './TabConfirmacion';
 import { mensajeDeError } from '../fichaApi';
 import { instanteLegible } from '../piezas/fecha';
 import { Button } from '../../standard';
 import { localDateFromNow } from '../../../utils/datetime';
 import {
   CALIFICACION, LOW_TICKET, RAICES, actual, califica, filas, hastaAntesDe, hitos, inicial, payload,
-  secuencia, textoGuardar, vende,
+  respuestasGuardadas, secuencia, textoGuardar, vende,
 } from '../triage/recorrido';
 import {
   Fecha, Horario, Nota, Opciones, Revision, Titulo, Venta,
 } from '../triage/PantallasTriage';
 import './resultado.css';
+
+// El reporte del seguimiento («¿qué pasó con este contacto?») es el del closer.
+const TabResultado = lazy(() => import('./TabResultado'));
 
 const ICONOS = { asistio: CheckCircle2, no_asistio: XCircle, cancelo: CalendarX, reagenda: CalendarClock };
 const ATAJOS_SEGUIMIENTO = [
@@ -45,7 +49,7 @@ const filasReportadas = (t) => [
   t.low_ticket === 'seguimiento' && t.fecha_seguimiento && { label: 'Seguimiento', valor: String(t.fecha_seguimiento).slice(0, 10) },
 ].filter(Boolean);
 
-export default function ResultadoTriage({ ficha, onAccion, puedeEditar = true }) {
+export default function ResultadoTriage({ ficha, onAccion, irA = null, puedeEditar = true }) {
   const triage = ficha?.triage || {};
   const vocab = ficha?.vocabulario || {};
   const closers = vocab.closers || [];
@@ -59,12 +63,32 @@ export default function ResultadoTriage({ ficha, onAccion, puedeEditar = true })
   const [guardado, setGuardado] = useState(null);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
+  // Con la llamada ya reportada, tocar «Resultado» o «Seguimiento» (o «Editar») reabre las opciones.
+  const [editando, setEditando] = useState(false);
+  // El panel abierto desde el progreso: 'conf' (confirmación) o 'seg' (qué pasó en el seguimiento).
+  const [seccion, setSeccion] = useState(null);
 
   const paso = actual(r, hechos);
   const closer = useMemo(() => closers.find((c) => String(c.id) === String(r.closerId)), [closers, r.closerId]);
-  const reportada = triage.reportada && r.modo === 'llamada' && !guardado;
+  const reportada = triage.reportada && r.modo === 'llamada' && !guardado && !editando;
 
-  const empezar = (modo) => { setR({ ...inicial(modo), closerId: r.closerId }); setHechos([]); setError(null); };
+  const empezar = (modo) => {
+    setR({ ...inicial(modo), closerId: r.closerId }); setHechos([]); setError(null); setEditando(true); setSeccion(null);
+  };
+  // Cambiar el estado de una llamada ya reportada: vuelve a «¿Qué pasó con esta llamada?».
+  const cambiarEstado = () => { setGuardado(null); empezar('llamada'); };
+  // Cada etapa del progreso se abre en cualquier momento: Confirmado y Seguimiento son paneles
+  // propios, Resultado y Calificación reabren sus preguntas y Revisión vuelve al resumen.
+  const alTocarHito = (clave) => {
+    if (!puedeEditar) return;
+    if (clave === 'conf' || clave === 'seg') { setSeccion(clave); return; }
+    if (clave === 'res') cambiarEstado();
+    else if (clave === 'cal') {
+      cambiarEstado();
+      setR({ ...inicial('llamada'), res: 'asistio', closerId: r.closerId });
+      setHechos(['raices']);
+    } else { setSeccion(null); setEditando(false); setGuardado(null); }
+  };
   const cambiar = useCallback((cambios) => setR((prev) => ({ ...prev, ...cambios })), []);
   const elegir = (p, cambios) => {
     const nuevo = { ...r, ...cambios };
@@ -152,17 +176,29 @@ export default function ResultadoTriage({ ficha, onAccion, puedeEditar = true })
   };
 
   const listo = guardado || reportada;
-  const pasos = reportada ? hitos({ modo: 'llamada', res: 'asistio' }, [], true) : hitos(r, hechos, !!guardado);
+  const pasos = (reportada ? hitos(respuestasGuardadas(triage), [], true) : hitos(r, hechos, !!guardado))
+    .map((p) => (p.key === seccion ? { ...p, estado: 'actual' } : p));
+  // El progreso es la navegación: cada etapa se abre en cualquier momento, esté la llamada
+  // reportada o no (el panel de confirmación y el de seguimiento viven acá, sin pestañas aparte).
   return (
     <div className="fi-res">
       <aside className="fi-res-hitos" aria-label="Progreso del reporte">
         <small className="fi-res-hitos-tit">Progreso</small>
-        <StepperFicha pasos={pasos} onPaso={null} vertical />
+        <StepperFicha pasos={pasos} onPaso={puedeEditar ? alTocarHito : null} vertical />
       </aside>
       <div className="fi-res-main">
-        {listo ? (
+        {seccion === 'conf' ? (
+          <TabConfirmacion ficha={ficha} onAccion={onAccion} irA={irA} puedeEditar={puedeEditar} />
+        ) : seccion === 'seg' ? (
+          <Suspense fallback={<p className="t-sm mut">Cargando…</p>}>
+            <TabResultado ficha={ficha} onAccion={onAccion} irA={irA} puedeEditar={puedeEditar}
+              seguimientoPedido="contacto" sinProgreso />
+          </Suspense>
+        ) : listo ? (
           <section aria-label="Guardado" style={{ display: 'grid', gap: 'var(--space-4)' }}>
-            <Revision texto={guardado ? guardado.titulo : 'Llamada reportada'} filas={guardado ? guardado.filas : filasReportadas(triage)} />
+            <Revision texto={guardado ? guardado.titulo : 'Llamada reportada'}
+              filas={(guardado ? guardado.filas : filasReportadas(triage)).map((f) => ({ ...f, paso: f.paso || 'raices' }))}
+              onEditar={puedeEditar ? cambiarEstado : null} />
             {/* El seguimiento del low ticket que después cerró o se perdió. */}
             {puedeEditar && triage.calificacion === 'descalificado' && triage.low_ticket !== 'cerrado' && (
               <div><Button onClick={() => { setGuardado(null); empezar('actualizar'); }}>Actualizar el low ticket</Button></div>

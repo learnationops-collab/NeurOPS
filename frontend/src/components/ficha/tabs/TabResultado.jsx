@@ -27,6 +27,7 @@ import { moneda } from '../acciones/planCuotas';
 import GrabacionFathom from './GrabacionFathom';
 import PasarARecuperacion from './PasarARecuperacion';
 import PasoSeguimiento from './PasoSeguimiento';
+import TabConfirmacion from './TabConfirmacion';
 import ConfirmarDatos, { confirmables } from './ConfirmarDatos';
 import { useChequeoVenta } from './useChequeoVenta';
 import './resultado.css';
@@ -150,6 +151,7 @@ function useEstadoVenta(ficha, programa, onConsultar) {
 export default function TabResultado({
   ficha, onAccion, onConsultar = null, irA, puedeEditar = true, arrancarEnVenta = false,
   seguimientoPedido = null,
+  sinProgreso = false,   // dentro del Resultado del triage, que pinta su propio progreso
 }) {
   const reducido = useReducedMotion();
   const precarga = useMemo(() => precargar(ficha), []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -170,6 +172,10 @@ export default function TabResultado({
   // Lo que quedó guardado. Mientras existe, la pestaña muestra la confirmación y no la revisión:
   // con la revisión a la vista, un segundo clic en «Registrar la venta» la declaraba dos veces.
   const [hecho, setHecho] = useState(null);
+  // El progreso se puede tocar: 'conf' abre la confirmación; `modoElegido` ('llamada' | 'seguimiento')
+  // reabre el reporte de la llamada o el del siguiente contacto, sin esperar a que la agenda lo diga.
+  const [seccion, setSeccion] = useState(null);
+  const [modoElegido, setModoElegido] = useState(null);
 
   const programa = esVenta(respuestas) ? respuestas.programa : null;
   const venta = useEstadoVenta(ficha, programa, onConsultar);
@@ -181,8 +187,10 @@ export default function TabResultado({
     // la ficha (`seguimientoPedido`) y eso gana; si no, lo dice el seguimiento vivo de la agenda.
     const cobro = seguimientoPedido === 'cobro'
       || (!seguimientoPedido && res.seguimiento_activo && res.seguimiento_tipo === 'cerrada');
+    const modoDeLaAgenda = cobro ? 'cobro' : (seguimientoPedido || res.seguimiento_activo ? 'seguimiento' : 'llamada');
     return {
-      modo: cobro ? 'cobro' : (seguimientoPedido || res.seguimiento_activo ? 'seguimiento' : 'llamada'),
+      // Lo que se tocó en el progreso (Resultado o Siguiente paso) manda sobre lo que dice la agenda.
+      modo: modoElegido && modoDeLaAgenda !== 'cobro' ? modoElegido : modoDeLaAgenda,
       intento: res.seguimiento_intento || 1,
       seguimientoTipo: res.seguimiento_tipo || null,
       appointmentId: ficha?.identidad?.appointment_id ?? null,
@@ -198,7 +206,7 @@ export default function TabResultado({
       // El programa que ya compró: es el que paga quien registra un pago.
       programaCliente: ficha?.cobro?.programa_code || null,
     };
-  }, [ficha, venta.estado, venta.cargando, seguimientoPedido]);
+  }, [ficha, venta.estado, venta.cargando, seguimientoPedido, modoElegido]);
 
   // El precio del programa se propone solo, como en el wizard, sin pisar lo que el closer ya
   // escribió. Si cambia de programa, se cambia la propuesta, no un número tipeado a mano. Y si el
@@ -295,13 +303,36 @@ export default function TabResultado({
   // abajo de las tarjetas, nunca arriba de la pregunta que se está contestando.
   const grabacion = <GrabacionFathom ficha={ficha} onAccion={onAccion} />;
 
+  // Tocar una etapa del progreso la abre: Confirmado, Resultado (la llamada) y Siguiente paso (el
+  // contacto que sigue) reabren su reporte; Cierre y lo demás se corrigen desde la revisión.
+  const alTocarHito = (clave) => {
+    setError(null);
+    if (clave === 'confirmado') { setSeccion('conf'); return; }
+    setSeccion(null);
+    if (clave === 'resultado' || clave === 'siguiente' || clave === 'seguimiento') {
+      setModoElegido(clave === 'resultado' ? 'llamada' : 'seguimiento');
+      empezarDeNuevo();
+    }
+  };
+  // El contacto de seguimiento siempre está a un toque: si el árbol todavía no tiene «Siguiente
+  // paso» (no se sabe aún que no hay venta), se suma al final.
+  const conSeguimiento = pasos.some((p) => p.key === 'siguiente') ? pasos : [
+    ...pasos, { key: 'seguimiento', label: 'Seguimiento', sub: 'Qué pasó en el contacto',
+      estado: contexto.modo === 'seguimiento' ? 'actual' : 'pendiente' },
+  ];
+  const pasosTocables = conSeguimiento.map((p) => (p.key === 'confirmado' && seccion === 'conf' ? { ...p, estado: 'actual' } : p));
+
   return (
-    <div className="fi-res">
-    <aside className="fi-res-hitos" aria-label="Progreso del reporte">
-      <small className="fi-res-hitos-tit">Progreso</small>
-      <StepperFicha pasos={pasos} onPaso={null} vertical />
-    </aside>
+    <div className={sinProgreso ? undefined : 'fi-res'}>
+    {!sinProgreso && (
+      <aside className="fi-res-hitos" aria-label="Progreso del reporte">
+        <small className="fi-res-hitos-tit">Progreso</small>
+        <StepperFicha pasos={pasosTocables} onPaso={alTocarHito} vertical />
+      </aside>
+    )}
     <div className="fi-res-main">
+      {seccion === 'conf' && <TabConfirmacion ficha={ficha} onAccion={onAccion} irA={irA} puedeEditar={puedeEditar} />}
+      {seccion !== 'conf' && (<>
       {error && (
         <div className="ln-alert ln-alert--error" role="alert">
           <span className="ln-alert-ico"><AlertTriangle /></span>
@@ -394,7 +425,7 @@ export default function TabResultado({
             />
           </motion.section>
         )}
-
+      </>)}
     </div>
     </div>
   );

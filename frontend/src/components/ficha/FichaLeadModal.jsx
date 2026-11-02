@@ -406,15 +406,16 @@ const FichaLeadModal = ({
                         )}
                         {/* La agenda de closing que pasó el triage: quién lo aprobó y su nota, a la
                             vista en cualquier pestaña para que el closer llegue con contexto. */}
+                        {/* Solo el título: la nota completa (que también queda en Comunicación) se
+                            lee al pasar el ratón, para no ocupar media ficha. */}
                         {ficha?.triage?.viene_de_triage && (
-                            <Aviso tono="info" titulo={[
-                                `Viene de triage · aprobado por ${ficha.triage.viene_de_triage.por || 'el triage'}`,
-                                ficha.triage.viene_de_triage.segmento && `segmento ${ficha.triage.viene_de_triage.segmento}`,
-                            ].filter(Boolean).join(' · ')}>
-                                <span style={{ whiteSpace: 'pre-wrap' }}>
-                                    {ficha.triage.viene_de_triage.nota || 'Sin nota del triage.'}
-                                </span>
-                            </Aviso>
+                            <div title={ficha.triage.viene_de_triage.nota || 'Sin nota del triage.'}
+                                style={{ cursor: 'help' }}>
+                                <Aviso tono="info" titulo={[
+                                    `Viene de triage · aprobado por ${ficha.triage.viene_de_triage.por || 'el triage'}`,
+                                    ficha.triage.viene_de_triage.segmento && `segmento ${ficha.triage.viene_de_triage.segmento}`,
+                                ].filter(Boolean).join(' · ')} />
+                            </div>
                         )}
                         {error && !ficha && (
                             <Aviso tono="error" titulo="No se pudo abrir la ficha">{error}</Aviso>
