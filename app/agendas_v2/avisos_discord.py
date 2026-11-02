@@ -27,12 +27,13 @@ from app.agendas_v2.operacion import BANDERAS, DIAS, ZONA_EQUIPO, zona_del_lead
 TIPOS = {
     'nueva': {'titulo': 'Nueva agenda', 'emoji': '📅', 'color': 0x2ECC71},
     'reprogramada': {'titulo': 'Agenda reprogramada', 'emoji': '🔁', 'color': 0xF1C40F},
+    'pase': {'titulo': 'Pasó de Triage a Closing', 'emoji': '🤝', 'color': 0x3498DB},
     'no_califica': {'titulo': 'No calificó', 'emoji': '🚫', 'color': 0x95A5A6},
     'abandono': {'titulo': 'No terminó de agendar', 'emoji': '⏳', 'color': 0xE67E22},
 }
 # A quién le interesa cada aviso: el que no califica, al setter (lo sigue); la agenda nueva, a los dos;
 # la reprogramada, solo al closer (el setter ya la cerró).
-ETIQUETA = {'nueva': ('closer', 'setter'), 'reprogramada': ('closer',), 'no_califica': ('setter',), 'abandono': ('triage',)}
+ETIQUETA = {'nueva': ('closer', 'setter'), 'reprogramada': ('closer',), 'pase': ('closer',), 'no_califica': ('setter',), 'abandono': ('triage',)}
 FUNNELS = {'setting': 'Setting', 'workshop': 'Workshop', 'otro': '', 'manual': ''}
 MOTIVOS = {
     'respuesta': 'Eligió una respuesta que descalifica',
@@ -188,9 +189,52 @@ def _base(tipo, payload, setter, evento_nombre):
     }
 
 
+def _pase_de_triage(payload):
+    """(agenda del triage, quién la pasó, su nota) si esta agenda de closing sale de una llamada de triage;
+    None si no. La llamada del triage es la anterior (`pase_triage`, o la «adicional» de la que nace)."""
+    from app.models import Appointment
+    from app.services.triage_service import es_de_triage
+
+    pase = payload.get('pase_triage') or {}
+    origen_id = pase.get('agenda_id') or (payload.get('sesion_adicional_de') or {}).get('agenda_id')
+    origen = db.session.get(Appointment, origen_id) if origen_id else None
+    if not es_de_triage(origen):
+        return None
+    quien = db.session.get(User, (payload.get('manual') or {}).get('por') or 0) or origen.closer
+    return origen, pase.get('por') or quien.username, pase.get('nota') or ''
+
+
+def _datos_de_pase(appt, payload, origen, por, nota):
+    """La agenda de closing que el triage le pasa al closer: lleva el segmento, las respuestas y la nota de la
+    llamada de triage (la de closing nace sin formulario), y dice de dónde viene y quién la pasó."""
+    previo = origen.agenda_payload or {}
+    lead = payload.get('lead') or previo.get('lead') or {}
+    closer = db.session.get(User, appt.closer_id)
+    funnel = previo.get('funnel_tipo') or payload.get('funnel_tipo')
+    d = {
+        **_base('pase', {**previo, 'lead': lead}, None, payload.get('evento_nombre') or previo.get('evento_nombre')),
+        'closer': closer.username if closer else '-',
+        'closer_discord': _id_discord(closer),
+        'prioridad': _segmento(previo) or '-',
+        'horario': _horario(appt.start_time, lead),
+        'antes': None,
+        'meet': payload.get('meet') or '',
+        'pie': f'Agendas 2.0 · agenda #{appt.id} · viene de la #{origen.id}',
+        'setter': f'Triage · {por}',
+        'funnel': FUNNELS.get(funnel, str(funnel or '').capitalize()),
+    }
+    if nota:
+        d['tiles'] = [{'icono': 'bandeja', 'titulo': _corto(nota, 140), 'sub': f'Nota de {por} para el closer'},
+                      *d['tiles']][:MAX_TILES]
+    return d
+
+
 def datos_de_agenda(appt):
     """Todo lo del aviso de una agenda, ya resuelto (el hilo no toca la base)."""
     payload = appt.agenda_payload or {}
+    pase = _pase_de_triage(payload)
+    if pase:
+        return _datos_de_pase(appt, payload, *pase)
     lead = payload.get('lead') or {}
     closer = db.session.get(User, appt.closer_id)
     setter = db.session.get(User, appt.setter_id) if appt.setter_id else None
