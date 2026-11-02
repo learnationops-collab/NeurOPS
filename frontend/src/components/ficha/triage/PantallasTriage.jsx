@@ -11,6 +11,7 @@ import { Button, Chip, Input, Select, TextArea } from '../../standard';
 import api from '../../../services/api';
 import { browserTimezone } from '../../../utils/datetime';
 import { zonedToUtc } from '../../../pages/agendas_v2/core/tiempo';
+import { MINIMO_MOTIVO } from '../../../utils/motivoEstado';
 import { MINIMO_NOTA, esTransferencia, faltan as faltanDe } from './recorrido';
 
 const ICONOS = {
@@ -59,13 +60,13 @@ const Falta = ({ lista }) => (lista.length ? (
   </div>
 ) : null);
 
-const Minimo = ({ texto }) => {
+const Minimo = ({ texto, minimo = MINIMO_NOTA }) => {
   const n = (texto || '').trim().length;
-  const listo = n >= MINIMO_NOTA;
+  const listo = n >= minimo;
   return (
     <div className={`fi-minimo${listo ? ' fi-minimo--listo' : ''}`}>
-      <span className="fi-minimo-riel"><i style={{ width: `${Math.min(100, (n / MINIMO_NOTA) * 100)}%` }} /></span>
-      <small>{listo ? 'Listo' : `${n}/${MINIMO_NOTA}`}</small>
+      <span className="fi-minimo-riel"><i style={{ width: `${Math.min(100, (n / minimo) * 100)}%` }} /></span>
+      <small>{listo ? 'Listo' : `${n}/${minimo}`}</small>
     </div>
   );
 };
@@ -98,11 +99,12 @@ const Campos = ({ paso, r, texto, ayuda, nav, children }) => {
   );
 };
 
-export const Nota = ({ paso, r, campo, texto, ayuda, placeholder, minimo = true, onCambiar, nav }) => (
+// `minimo`: cuántos caracteres pide (por defecto MINIMO_NOTA); `false` = opcional, sin barrita.
+export const Nota = ({ paso, r, campo, texto, ayuda, placeholder, minimo = MINIMO_NOTA, onCambiar, nav }) => (
   <Campos paso={paso} r={r} texto={texto} ayuda={ayuda} nav={nav}>
     <TextArea autoFocus value={r[campo] || ''} placeholder={placeholder}
       onChange={(e) => onCambiar({ [campo]: e.target.value })} />
-    {minimo && <Minimo texto={r[campo]} />}
+    {minimo && <Minimo texto={r[campo]} minimo={minimo} />}
   </Campos>
 );
 

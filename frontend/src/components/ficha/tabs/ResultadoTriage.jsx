@@ -15,6 +15,7 @@ import TabConfirmacion from './TabConfirmacion';
 import { mensajeDeError } from '../fichaApi';
 import { instanteLegible } from '../piezas/fecha';
 import { Button } from '../../standard';
+import { MINIMO_MOTIVO, preguntaDeMotivo } from '../../../utils/motivoEstado';
 import { localDateFromNow } from '../../../utils/datetime';
 import {
   CALIFICACION, LOW_TICKET, RAICES, actual, califica, filas, hastaAntesDe, hitos, inicial, payload,
@@ -162,9 +163,8 @@ export default function ResultadoTriage({ ficha, onAccion, irA = null, puedeEdit
         texto="¿Por qué no califica?" ayuda="Qué dijo del dinero, qué le ofreciste y cómo quedó." />;
       case 'reagenda': return <Fecha paso={paso} r={r} campo="nueva" conHora onCambiar={cambiar} nav={navCampos}
         texto="¿Para cuándo la pasa?" ayuda="La Sesión diagnóstica se mueve a la nueva fecha y vuelve a Confirmar." />;
-      case 'nota': return <Nota paso={paso} r={r} campo="nota" minimo={false} onCambiar={cambiar} nav={navCampos}
-        texto={r.res === 'no_asistio' ? '¿Qué pasó?' : r.res === 'cancelo' ? '¿Qué dijo al cancelar?' : '¿Algo para dejar anotado?'}
-        ayuda="Opcional." />;
+      case 'nota': return <Nota paso={paso} r={r} campo="nota" minimo={MINIMO_MOTIVO} onCambiar={cambiar} nav={navCampos}
+        texto={preguntaDeMotivo(r.res)} ayuda="Queda anotado en Comunicación, con tu nombre." />;
       default: return (
         <Revision texto={vende(r) ? 'Revisá la venta antes de registrarla' : 'Revisá el resultado antes de guardarlo'}
           filas={filas(r, contexto)} error={error} guardando={guardando} textoGuardar={textoGuardar(r)}

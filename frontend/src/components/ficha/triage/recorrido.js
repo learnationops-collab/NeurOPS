@@ -7,8 +7,10 @@
 // «actualizar» (el low ticket de un descalificado ya reportado: el seguimiento que después cerró).
 
 import { datetimeLocalToUtcIso } from '../../../utils/datetime';
+import { motivoAlcanza } from '../../../utils/motivoEstado';
 
 export const MINIMO_NOTA = 20;
+// «No asistió», «Canceló» y «Reagenda» piden el motivo en la nota (ADR-W065): el mínimo es el de `utils/motivoEstado`.
 export const PRECIO_LOW_TICKET = '100';
 
 export const RAICES = [
@@ -84,6 +86,7 @@ export function faltan(paso, r) {
   if (paso === 'venta' && esTransferencia(r.medio) && !r.transferidoA) f.push('A quién se lo transfirió');
   if (paso === 'fecha_seg' && !r.fechaSeg) f.push('Fecha');
   if (paso === 'reagenda' && !r.nueva) f.push('Fecha nueva');
+  if (paso === 'nota' && !motivoAlcanza(r.nota)) f.push('Motivo');
   if (paso === 'por_que' && !largo(r.nota)) f.push('Por qué no califica');
   return f;
 }
@@ -158,7 +161,7 @@ export function filas(r, { closers = [], medios = [], personas = [], legible = (
   }
   if (r.lt === 'seguimiento' && r.modo !== 'venta') fila('Seguimiento', r.fechaSeg, 'fecha_seg');
   if (descalifica(r)) fila('Por qué no califica', r.nota, 'por_que');
-  if (r.modo === 'llamada' && r.res && r.res !== 'asistio' && r.nota) fila('Nota', r.nota, 'nota');
+  if (r.modo === 'llamada' && r.res && r.res !== 'asistio' && r.nota) fila('Motivo', r.nota, 'nota');
   return f;
 }
 
