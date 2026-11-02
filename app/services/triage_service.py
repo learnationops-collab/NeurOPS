@@ -26,6 +26,8 @@ PROGRAMA_LOW_TICKET = 'LT'
 LOW_TICKET = ('no_pitch', 'cerrado', 'no_cerrado', 'seguimiento', 'descartado')
 PITCHEADO = ('cerrado', 'no_cerrado', 'seguimiento', 'descartado')
 ASISTENCIAS = ('asistio', 'no_show', 'cancelo')
+# Lo que no es «asistió» es un estado marcado a mano: pide su motivo en la nota (ADR-W065).
+_ESTADO_DE_ASISTENCIA = {'no_show': 'No Show', 'cancelo': 'Cancelado', 'reagenda': 'Reagendado'}
 _SEGMENTO = ('segmento', 'segmento_puntos', 'segmento_preguntas', 'segmento_confianza', 'segmento_version')
 _LOW_TICKET_TEXTO = {'no_pitch': 'no se le pitcheó el low ticket', 'cerrado': 'cerró el low ticket',
                      'no_cerrado': 'no cerró el low ticket', 'seguimiento': 'low ticket en seguimiento',
@@ -100,6 +102,9 @@ def _validar(appt, datos):
     if asistencia not in ASISTENCIAS + ('reagenda',):
         raise _error('Elegí si el lead se presentó.', 'asistencia')
     if asistencia != 'asistio':
+        from app.services.ficha_acciones_service import _motivo_de
+
+        _motivo_de(_ESTADO_DE_ASISTENCIA[asistencia], datos.get('nota'), 'nota')
         return
     calificacion = datos.get('calificacion')
     if calificacion not in CALIFICACIONES:
@@ -197,17 +202,21 @@ def reportar(appt, datos, usuario):
 
 def _reagendar(appt, datos, usuario):
     """La misma agenda a la hora nueva, de vuelta a confirmar (la reagenda del árbol del closer)."""
-    from app.services import ficha_acciones_service as acciones
+    from app.services import ficha_acciones_service as acciones, motivo_estado_service
     from app.services.deck_escritura_service import aplicar_cambios
-    from app.services.ficha_agendas_service import _instante_utc
+    from app.services.ficha_agendas_service import _en_la_zona, _instante_utc
+    from app.services.user_time_service import zona_del_usuario
 
     inicio = _instante_utc(datos.get('fecha'))
     if inicio <= datetime.utcnow():
         raise _error('La fecha nueva tiene que ser futura.', 'fecha')
     acciones._mover_la_llamada(appt, inicio, usuario)
     aplicar_cambios(appt, {'confirm_status': 'por_confirmar', 'result': 'Pendiente'}, usuario)
-    db.session.commit()
     nota = (datos.get('nota') or '').strip()
+    # El motivo (ya validado) queda en el hilo de la persona, con la fecha nueva.
+    motivo_estado_service.registrar(appt, usuario, 'Reagendado', nota,
+                                    nueva_fecha=_en_la_zona(inicio, zona_del_usuario(usuario)))
+    db.session.commit()
     _log(appt, usuario, f'{usuario.username} reagendó la sesión diagnóstica' + (f': «{nota}».' if nota else '.'))
     return {**bloque(appt), 'avisos': [], 'vendio': False}
 
