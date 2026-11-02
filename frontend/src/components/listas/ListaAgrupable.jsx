@@ -107,7 +107,8 @@ const ListaAgrupable = ({ filas, dimension, renderFilas, renderPie, formatoMonto
     // Memorizados: cada grupo abierto pagina su arreglo `filas` por identidad, y recalcularlos en
     // cada render lo devolvería a la primera tanda cada vez que se abre o cierra OTRO grupo.
     const grupos = useMemo(() => agruparPor(filas, dimension), [filas, dimension]);
-    const porDefecto = grupos.length === 1;
+    // `dimension.abierta`: la dimensión pide arrancar abierta (la de «Persona»: cada grupo son las llamadas de un lead).
+    const porDefecto = grupos.length === 1 || dimension?.abierta === true;
     const estaAbierto = (clave) => (elegidos.has(clave) ? elegidos.get(clave) : porDefecto);
 
     const alternar = (clave) => elegir(clave, !estaAbierto(clave));

@@ -306,6 +306,9 @@ export const TABLAS = {
             { key: 'descartadas', label: 'Descartadas', filtro: (f) => !!f.descartada },
         ],
         agrupables: [
+            // Una persona, todas sus agendas. Abierto de entrada: un grupo por lead cerrado sería un
+            // índice de cientos de nombres, y acá lo que se busca es ver las llamadas de cada uno.
+            { key: 'persona', label: 'Persona', de: (f) => f.cliente, abierta: true },
             { key: 'closer', label: 'Closer', de: (f) => f.closer },
             { key: 'fuente', label: 'Fuente', de: (f) => f.fuente },
             { key: 'estado', label: 'Estado', de: estadoDeAgenda },
