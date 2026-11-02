@@ -1,5 +1,5 @@
 // Segmentación: reglas en orden; la primera que se cumple elige la estrategia. Lo que no cumple ninguna va a "Todo lo demás".
-// «Probar un lead» muestra a dónde va un lead según sus respuestas.
+// «Simular» muestra a dónde va un lead según sus respuestas.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { almacen } from '../../data/hooks';
@@ -196,7 +196,7 @@ export default function Ruteo({ f, d, modo, msel }) {
                 <Segmented size="sm" label="Vista del ruteo" style={{ marginLeft: 'auto' }} itemProps={{ 'data-nav': '' }} value={modo}
                     onChange={v => setFormUi({ ruteoModo: v, msel: null })}
                     options={[{ value: 'reglas', label: 'Reglas', icon: <Icono n="lista" /> }, { value: 'flujo', label: 'Flujo', icon: <Icono n="flujo" /> },
-                        { value: 'probar', label: 'Probar un lead', icon: <Icono n="ojo" /> }]} />
+                        { value: 'probar', label: 'Simular', icon: <Icono n="rayo" /> }]} />
             </div>
             {modo !== 'probar' && <Revision avisos={avisos} />}
             {modo === 'probar' ? <RuteoSimulador f={f} d={d} />

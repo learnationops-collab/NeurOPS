@@ -56,3 +56,7 @@
   - Segmentación suma la vista «Probar un lead»: se eligen respuestas y se ve la regla, la estrategia con sus closers, la sesión y los puntos.
   - Sale «No califica» (botón de la barra y destino de las reglas). Eliminar un formulario pide dos confirmaciones.
   - La sesión «La del formulario» pasa a «La del link por el que agendó»; los eventos con el mismo nombre muestran su embudo.
+- **2 de Noviembre de 2026 (Thalamus: «Simular» con mejor diseño)** *([RuteoSimulador.jsx](../../frontend/src/pages/agendas_v2/secciones/forms/RuteoSimulador.jsx))*:
+  - «Probar un lead» pasa a llamarse «Simular». Cada pregunta lleva su ícono; el resultado va en una tarjeta con aura del color de la estrategia, anillo de puntos y entrada animada (sin animación si el sistema la pide reducida).
+  - «Por qué cae acá» muestra la respuesta del lead en cada condición y cuántas más entran, en vez de la lista entera.
+  - `segmentacion_alfa.py --revisar` también dice qué formularios y links usan cada estrategia que no es de los segmentos.

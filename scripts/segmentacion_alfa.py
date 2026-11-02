@@ -241,6 +241,17 @@ def main(apply=False, revisar=False):
         if revisar:
             # Solo lectura: cómo está hoy el formulario guardado.
             print('Reglas guardadas:', len(form['reglas']), '· resto', form.get('resto'), '· segmento', form['segmento'].get('version'))
+            for g in d['grupos']:
+                if g['id'] in GRUPOS:
+                    continue
+                for f in d['formularios']:
+                    reglas = [i + 1 for i, r in enumerate(f.get('reglas') or []) if r.get('grupo') == g['id']]
+                    resto = f.get('resto') == g['id']
+                    if reglas or resto:
+                        links = [e['nombre'] + ' (/' + e.get('slug', '') + ')' for e in d['eventos'] if e.get('formulario') == f['id']]
+                        print(f"Estrategia {g['nombre']}: formulario «{f['nombre']}»"
+                              f"{' reglas ' + str(reglas) if reglas else ''}{' · «Todo lo demás»' if resto else ''}"
+                              f" · links: {', '.join(links) or 'ninguno'}")
             cuenta = verificar(form)
             print('Las reglas guardadas cubren todo sin pisarse:', ' · '.join(f'{s} {cuenta.get(s, 0)}' for s in ('Alfa', 'A', 'B', 'C', 'D')))
             return

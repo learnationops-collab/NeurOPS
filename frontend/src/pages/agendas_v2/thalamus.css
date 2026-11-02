@@ -1629,25 +1629,54 @@
   background:color-mix(in srgb,var(--c) 10%,transparent);border:1px solid color-mix(in srgb,var(--c) 32%,transparent)}
 .thalamus .revision-item svg{flex-shrink:0;margin-top:2px;color:var(--c)}
 .thalamus .revision-ok{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--success)}
-/* Probar un lead (Segmentación): respuestas a la izquierda, a dónde va a la derecha. */
-.thalamus .sim{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:16px;align-items:start}
-.thalamus .sim-form{display:grid;gap:12px}
-.thalamus .sim-q{display:grid;gap:6px}
-.thalamus .sim-q-t{font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--text-muted)}
-.thalamus .sim-res{display:grid;gap:12px;padding:18px;border-radius:18px;border:1px solid color-mix(in srgb,var(--c) 45%,transparent);
-  background:linear-gradient(160deg,color-mix(in srgb,var(--c) 16%,transparent),var(--hundido) 70%)}
+/* Simular (Segmentación): respuestas a la izquierda; a la derecha, a dónde va, con aura del color de la estrategia. */
+.thalamus .sim{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:18px;align-items:start}
+.thalamus .sim-sub{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--text-muted)}
+.thalamus .sim-form{display:grid;gap:10px;padding:16px;border-radius:18px;background:var(--hundido);border:1px solid var(--border-main)}
+.thalamus .sim-q{display:grid;grid-template-columns:36px minmax(0,1fr);grid-template-areas:"ic t" "ic s";column-gap:12px;row-gap:6px;align-items:center;
+  padding:10px;border-radius:14px;transition:background .2s}
+.thalamus .sim-q:hover,.thalamus .sim-q:focus-within{background:color-mix(in srgb,var(--brand-secondary) 8%,transparent)}
+.thalamus .sim-q-ic{grid-area:ic;width:36px;height:36px;border-radius:11px;display:grid;place-items:center;align-self:start;margin-top:2px;
+  color:var(--brand-secondary);background:color-mix(in srgb,var(--brand-secondary) 14%,transparent);border:1px solid color-mix(in srgb,var(--brand-secondary) 30%,transparent)}
+.thalamus .sim-q-t{grid-area:t;font-size:13px;font-weight:800;color:var(--text-on-surface)}
+.thalamus .sim-q > :last-child{grid-area:s;min-width:0}
+.thalamus .sim-res.sim-res{position:relative;isolation:isolate;overflow:hidden;padding:22px;border-radius:22px;
+  border:1px solid color-mix(in srgb,var(--c) 45%,transparent);box-shadow:0 18px 50px -24px color-mix(in srgb,var(--c) 60%,transparent)}
+.thalamus .sim-in{display:grid;gap:14px}
+.thalamus .sim-top{display:flex;align-items:center;justify-content:space-between;gap:12px}
 .thalamus .sim-eyebrow{font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--c)}
-.thalamus .sim-dest{display:flex;align-items:center;gap:8px;margin:0;font-size:22px;font-weight:900;color:var(--text-on-surface)}
-.thalamus .sim-dest svg{color:var(--c)}
+.thalamus .sim-puntos{display:grid;place-items:center;width:62px;height:62px;border-radius:50%;line-height:1;
+  align-content:center;gap:3px;background:radial-gradient(closest-side,var(--bg-flotante) 78%,transparent 80% 100%),conic-gradient(var(--c),color-mix(in srgb,var(--c) 30%,transparent))}
+.thalamus .sim-puntos b{font-size:18px;font-weight:900;color:var(--text-on-surface)}
+.thalamus .sim-puntos small{font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted)}
+.thalamus .sim-dest{display:flex;align-items:center;gap:12px;margin:0;font-size:26px;font-weight:900;letter-spacing:-.01em;color:var(--text-on-surface)}
+.thalamus .sim-dest-ic{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;color:#fff;background:var(--c);
+  box-shadow:0 8px 24px -8px var(--c)}
 .thalamus .sim-gente{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
-.thalamus .sim-p{display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:13px}
+.thalamus .sim-p{display:inline-flex;align-items:center;gap:8px;font-weight:800;font-size:13px}
 .thalamus .sim-p > svg{color:var(--text-muted)}
-.thalamus .sim-txt{margin:0;font-size:13px;color:var(--text-muted);line-height:1.45}
-.thalamus .sim-chips{display:flex;flex-wrap:wrap;gap:6px}
-.thalamus .sim-conds{list-style:none;margin:0;padding:12px 0 0;border-top:1px solid var(--border-main);display:grid;gap:6px;font-size:13px}
-.thalamus .sim-conds li{display:grid;grid-template-columns:110px minmax(0,1fr);gap:10px}
-.thalamus .sim-conds b{color:var(--text-muted);font-weight:700}
-@media (max-width:760px){.thalamus .sim{grid-template-columns:minmax(0,1fr)}}
+.thalamus .sim-av{position:relative;display:inline-flex}
+.thalamus .sim-av i{position:absolute;right:-5px;bottom:-5px;width:16px;height:16px;border-radius:50%;display:grid;place-items:center;
+  font-size:9px;font-style:normal;font-weight:900;background:var(--text-on-surface);color:var(--bg-flotante)}
+.thalamus .sim-datos{display:flex;flex-wrap:wrap;gap:6px}
+.thalamus .sim-txt{margin:0;font-size:13px;color:var(--text-muted);line-height:1.5}
+.thalamus .sim-porque{display:grid;gap:10px;padding-top:14px;border-top:1px solid var(--border-main)}
+.thalamus .sim-porque ul{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.thalamus .sim-porque li{display:grid;grid-template-columns:minmax(120px,.8fr) minmax(0,1.2fr);gap:12px;align-items:center;
+  padding:9px 12px;border-radius:12px;background:color-mix(in srgb,var(--c) 7%,var(--hundido))}
+.thalamus .sim-porque-q{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;color:var(--text-muted)}
+.thalamus .sim-porque-q svg{color:var(--c)}
+.thalamus .sim-porque-a{display:flex;flex-wrap:wrap;align-items:center;gap:8px;min-width:0}
+.thalamus .sim-porque-a small{font-size:12px;color:var(--text-muted);cursor:help;border-bottom:1px dotted var(--text-muted)}
+.thalamus .sim-ok.ui-chip{--c:var(--success);max-width:100%;white-space:normal;text-align:left}
+@media (prefers-reduced-motion:no-preference){
+  .thalamus .sim-in{animation:sim-in .38s cubic-bezier(.2,.8,.2,1)}
+  .thalamus .sim-p,.thalamus .sim-porque li{animation:sim-in .38s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i,0) * 60ms + 80ms)}
+  .thalamus .sim-dest-ic{animation:sim-pop .5s cubic-bezier(.3,1.6,.5,1)}
+}
+@keyframes sim-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes sim-pop{0%{transform:scale(.6)}100%{transform:scale(1)}}
+@media (max-width:820px){.thalamus .sim{grid-template-columns:minmax(0,1fr)}.thalamus .sim-porque li{grid-template-columns:minmax(0,1fr)}}
 
 /* Foto de la cuenta (conf/FotoCuenta.jsx) */
 .thalamus .cu-foto{display:grid;gap:10px;justify-items:center}
