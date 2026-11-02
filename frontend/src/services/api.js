@@ -74,7 +74,8 @@ api.interceptors.response.use(
         // Lo recordado por las vistas (cacheDeVistas) deja de ser verdad apenas algo se guarda: la
         // próxima vez que se mire, se vuelve a pedir.
         const metodo = (response.config?.method || 'get').toLowerCase();
-        if (metodo !== 'get' && metodo !== 'head' && metodo !== 'options') limpiarCache();
+        // `conservarCache`: avisos sin efecto en lo que se muestra (ej. marcar un chat como leído).
+        if (metodo !== 'get' && metodo !== 'head' && metodo !== 'options' && !response.config?.conservarCache) limpiarCache();
         return response;
     },
     async (error) => {

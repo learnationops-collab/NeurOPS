@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Instagram, MessageSquare } from 'lucide-react';
 import { Avatar, EmptyState, IconButton, Panel } from '../../../components/standard';
 import { inboxApi } from '../api';
+import { recordado, recordar } from '../recuerdo';
 import Composer from './Composer';
 import Etiquetas from './Etiquetas';
 import FichaLead from './FichaLead';
@@ -45,12 +46,12 @@ function Chat({ datos, yo, onCambio }) {
 }
 
 export default function Detalle({ id, yo, onLeido }) {
-    const [datos, setDatos] = useState(null);
+    const [datos, setDatos] = useState(() => recordado(`chat:${id}`));
     const [error, setError] = useState(null);
-    // Cada conversación monta un Detalle nuevo (key={id}): arranca vacío. Se vuelve a pedir cada
+    // Cada conversación monta un Detalle nuevo (key={id}): arranca con lo último que se vio de ese chat (recuerdo.js). Se vuelve a pedir cada
     // REFRESCO, y después de cada acción del setter, sin vaciar lo que se ve.
     const pedir = useCallback(() => inboxApi.conversacion(id)
-        .then((d) => { setDatos(d); setError(null); })
+        .then((d) => { recordar(`chat:${id}`, d); setDatos(d); setError(null); })
         .catch(() => setError('No se pudo cargar la conversación')), [id]);
     useEffect(() => {
         pedir();

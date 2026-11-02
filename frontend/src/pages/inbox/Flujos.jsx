@@ -11,6 +11,7 @@ import NuevoFlujo from './flujos/NuevoFlujo';
 import Plantillas from './flujos/Plantillas';
 import Tarjeta from './flujos/Tarjeta';
 import { inboxApi } from './api';
+import { recordado, recordar } from './recuerdo';
 
 const FILTROS = [['todos', 'Todos'], ['activo', 'Activos'], ['pausado', 'Pausados'], ['borrador', 'Borradores']];
 
@@ -20,7 +21,7 @@ function coincide(f, texto) {
 }
 
 export default function Flujos({ puedeEditar }) {
-    const [flujos, setFlujos] = useState(null);
+    const [flujos, setFlujos] = useState(() => recordado('flujos'));
     const [error, setError] = useState(null);
     const [abierto, setAbierto] = useState(null);
     const [filtro, setFiltro] = useState('todos');
@@ -31,7 +32,7 @@ export default function Flujos({ puedeEditar }) {
     const [clonando, setClonando] = useState(false);
 
     const cargar = useCallback(() => {
-        inboxApi.flujos().then(setFlujos).catch(() => setError('No se pudieron cargar los flujos'));
+        inboxApi.flujos().then((l) => setFlujos(recordar('flujos', l))).catch(() => setError('No se pudieron cargar los flujos'));
     }, []);
     useEffect(() => { cargar(); }, [cargar]);
 

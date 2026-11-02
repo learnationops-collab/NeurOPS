@@ -17,6 +17,7 @@ import MisTareas from './conversaciones/MisTareas';
 import Resumen from './conversaciones/Resumen';
 import Stats from './conversaciones/Stats';
 import { VACIO } from './conversaciones/filtros';
+import { recordado, recordar } from './recuerdo';
 import './conversaciones/trabajo.css';
 
 const LIMITE = 300;
@@ -37,13 +38,13 @@ function useAhora() {
 
 // La lista: al buscar, a los 250 ms; después, cada REFRESCO sin vaciar lo que se ve. `vuelta` la pide ya.
 function useConversaciones(buscar) {
-    const [datos, setDatos] = useState(null);
+    const [datos, setDatos] = useState(() => recordado(`conversaciones:${buscar.trim()}`));
     const [error, setError] = useState(null);
     const [vuelta, setVuelta] = useState(0);
     useEffect(() => {
         let vivo = true;
         const pedir = () => inboxApi.conversaciones(buscar.trim(), LIMITE)
-            .then((d) => { if (vivo) { setDatos(d); setError(null); } })
+            .then((d) => { recordar(`conversaciones:${buscar.trim()}`, d); if (vivo) { setDatos(d); setError(null); } })
             .catch(() => { if (vivo) setError('No se pudieron cargar las conversaciones'); });
         const primera = setTimeout(pedir, vuelta ? 0 : 250);
         const cada = setInterval(pedir, REFRESCO);
