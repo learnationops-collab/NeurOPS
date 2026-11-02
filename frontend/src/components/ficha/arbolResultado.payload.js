@@ -96,6 +96,11 @@ const bloqueReferidos = (r) => ({
 // Motivo de la rama recorrida: cada rama lo guarda en su propio campo.
 const motivoDeRama = (r) => r.noshow_motivo || r.cancel_motivo || r.reag_motivo || null;
 
+// El motivo escrito de lo que el closer marcó a mano (ADR-W065). Cada rama tiene su campo, así el
+// texto de una rama que se abandonó con «Anterior» no viaja en la nueva.
+const MOTIVO_ESTADO = { no_asistio: 'motivo_noshow', cancelo: 'motivo_cancelo', reagenda: 'motivo_reagenda' };
+const motivoEstado = (r) => (MOTIVO_ESTADO[r.res] ? String(r[MOTIVO_ESTADO[r.res]] || '').trim() || null : null);
+
 // Tipo y subestado del seguimiento, tal como los arma hoy cada rama antes de llegar a `follow`.
 function seguimientoDeRama(r) {
   if (r.nocierre_next === 'seguimiento') {
@@ -374,6 +379,7 @@ export function construirPayload(respuestas = {}, contexto = {}) {
       cierre: r.cierre ?? null,
       objecion: noCerro ? (String(r.objecion || '').trim() || null) : null,
       motivo: motivoDeRama(r),
+      motivo_estado: motivoEstado(r),
       motivo_no_cierre: motivoNoCierre(r),
       motivo_descarte: r.motivo_descarte || null,
       deck: bloqueDeck(r, contexto),
