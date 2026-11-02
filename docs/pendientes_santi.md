@@ -43,6 +43,7 @@ Cómo se reparten las agendas entre closers.
 - [x] Momentum sessions por encima de C y D, o en los huecos de 15 minutos entre llamadas.
 - [x] Parte visual: el C/D desplazado en el mazo del closer y del triage; segmento y puntos en la ficha, la agenda del closer y el panel del triage; vista de Fulfillment reorganizada para el closer.
 - [ ] Revisar los puntos del segmento cada mes con `scripts/ajuste_segmentos.py`.
+- [ ] Reparar las agendas que ya perdieron la confirmación por una reagenda (02/11): 7088, 7087, 7095, 7080, 7075, 7071, 7070 y 7056 siguen pendientes, sin etapa, y su agenda vieja estaba confirmada. Copiar `result`, etapa, «cómo viene» y dolores de la agenda vieja con un script en producción (necesita OK explícito de Kerwin).
 
 ## Cobros y deudores
 Que el closer cobre las cuotas y que los datos de venta lleguen limpios.
