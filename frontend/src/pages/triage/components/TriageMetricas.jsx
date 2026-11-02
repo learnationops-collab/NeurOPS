@@ -3,8 +3,9 @@
 // → presentaciones del low ticket → cómo quedó. Abajo, el reporte lead por lead con sus notas: es el
 // reporte diario que pidió Marlon (27/10), con «Hoy».
 
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useState } from 'react';
 import api from '../../../services/api';
+import { useDatosCacheados } from '../../../services/cacheDeVistas';
 import { Bars, Chip, EmptyState, FieldError, Grid, Kpi, Panel, Segmented, SkeletonKpi, SkeletonPanel, Skeleton } from '../../../components/standard';
 import { formatAgendaDateTime, localDateFromNow, localToday } from '../../../utils/datetime';
 
@@ -137,16 +138,11 @@ const Cargando = () => (
 
 export default function TriageMetricas() {
     const [dias, setDias] = useState('6');
-    const [datos, setDatos] = useState(null);
-    const [error, setError] = useState(null);
-
-    useEffect(() => {
-        let vivo = true;
-        api.get('/triage/metricas', { params: { desde: localDateFromNow(-Number(dias)), hasta: localToday() } })
-            .then((res) => { if (vivo) { setDatos(res.data); setError(null); } })
-            .catch((err) => { if (vivo) setError(err?.response?.data?.message || 'No se pudieron cargar las métricas.'); });
-        return () => { vivo = false; };
-    }, [dias]);
+    // Recordado por período (cacheDeVistas, la misma clave que el Triage de Dirección comercial).
+    const { datos, error: falla } = useDatosCacheados(`triage:metricas:${dias}`, (signal) => api
+        .get('/triage/metricas', { params: { desde: localDateFromNow(-Number(dias)), hasta: localToday() }, signal })
+        .then((res) => res.data));
+    const error = falla ? (falla?.response?.data?.message || 'No se pudieron cargar las métricas.') : null;
 
     const m = datos?.total;
     return (

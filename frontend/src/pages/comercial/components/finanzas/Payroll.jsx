@@ -11,6 +11,7 @@ import Cifra from '../Cifra';
 import { useEnPantalla } from '../../../../components/ui/useEnPantalla';
 import RangoFechas, { rangoDe, textoRango } from '../RangoFechas';
 import { Cifron, HUMOS, dinero } from './comun';
+import { esFresco, guardarCache, leerCache } from '../../../../services/cacheDeVistas';
 import * as apiFz from './finanzasApi';
 
 /**
@@ -342,7 +343,9 @@ const Tile = ({ persona, datos, onVer }) => {
 };
 
 const Payroll = ({ desde, hasta, ver = null, onVer, grupos, personas = [], tasasAbiertas, onCerrarTasas, excluirAbierto, onCerrarExcluir }) => {
-    const [datos, setDatos] = useState(null);
+    // Recordado por período (cacheDeVistas): volver a Payroll no lo vuelve a pedir.
+    const claveCache = `finanzas:payroll:${desde}|${hasta}`;
+    const [datos, setDatos] = useState(() => leerCache(claveCache)?.datos ?? null);
 
     // Solo vale la respuesta del último pedido (09/10/2026): al pasar de «Este mes» a «Mes pasado»
     // antes de que terminara de cargar, la respuesta de octubre llegaba después y pisaba la de
@@ -351,10 +354,14 @@ const Payroll = ({ desde, hasta, ver = null, onVer, grupos, personas = [], tasas
     const cargar = useCallback(() => {
         const pedido = ++ultimo.current;
         return apiFz.getPayroll(desde, hasta)
-            .then((d) => { if (pedido === ultimo.current) setDatos(d); })
+            .then((d) => { guardarCache(claveCache, d); if (pedido === ultimo.current) setDatos(d); })
             .catch(() => { if (pedido === ultimo.current) toast.error('No se pudo cargar la nómina'); });
-    }, [desde, hasta]);
-    useEffect(() => { setDatos(null); cargar(); }, [cargar]);
+    }, [desde, hasta, claveCache]);
+    useEffect(() => {
+        const guardado = leerCache(claveCache);
+        setDatos(guardado ? guardado.datos : null);
+        if (!esFresco(guardado)) cargar();
+    }, [cargar]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // El detalle de ventas del PDF se arma solo mientras se imprime: siempre montado eran cientos
     // de filas escondidas y cada nombre dos veces en la página. `flushSync` porque el navegador

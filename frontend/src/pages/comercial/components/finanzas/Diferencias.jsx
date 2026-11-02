@@ -7,6 +7,7 @@ import InlineConfirm from '../../../../components/ui/InlineConfirm';
 import FichaLeadModal from '../../../../components/ficha/FichaLeadModal';
 import { EsqueletoTablero, PanelCab, Segmented } from '../Shared';
 import { Cifron, HUMOS, conSigno, dinero, tonoDe } from './comun';
+import { esFresco, guardarCache, leerCache } from '../../../../services/cacheDeVistas';
 import * as apiFz from './finanzasApi';
 
 /**
@@ -612,7 +613,8 @@ const Cargas = ({ cargas, pasarelas, onBorrar, onSubir, subiendo }) => {
 // ------------------------------------------------------------------------------------------------
 
 const Diferencias = ({ periodo }) => {
-    const [datos, setDatos] = useState(null);
+    const claveCache = `finanzas:diferencias:${periodo.desde}|${periodo.hasta}`;
+    const [datos, setDatos] = useState(() => leerCache(claveCache)?.datos ?? null);
     const [pasarela, setPasarela] = useState('todas');
     const [filtro, setFiltro] = useState('pendientes');
     const [buscar, setBuscar] = useState('');
@@ -628,12 +630,18 @@ const Diferencias = ({ periodo }) => {
         const n = ++pedido.current;
         try {
             const respuesta = await apiFz.getConciliacion(periodo);
+            guardarCache(claveCache, respuesta);
             if (n === pedido.current) setDatos(respuesta);
         } catch {
             if (n === pedido.current) toast.error('No se pudo cargar la conciliación');
         }
-    }, [periodo]);
-    useEffect(() => { cargar(); }, [cargar]);
+    }, [periodo, claveCache]);
+    // Recordado por período (cacheDeVistas): volver a Diferencias no lo vuelve a pedir.
+    useEffect(() => {
+        const guardado = leerCache(claveCache);
+        setDatos(guardado ? guardado.datos : null);
+        if (!esFresco(guardado)) cargar();
+    }, [cargar]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const subir = async (archivos, elegida = null) => {
         setSubiendo(true);

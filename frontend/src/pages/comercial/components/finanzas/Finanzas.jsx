@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import InlineConfirm from '../../../../components/ui/InlineConfirm';
 import { EsqueletoFilas, EsqueletoTablero, PanelCab, Tip } from '../Shared';
 import { CampoMonto, Cifron, HUMOS, conSigno, dinero, mesesDelRango, nombreDelMes, textoPeriodo, tonoDe } from './comun';
+import { esFresco, guardarCache, leerCache } from '../../../../services/cacheDeVistas';
 import * as apiFz from './finanzasApi';
 import Procedencia from './Procedencia';
 import Diferencias from './Diferencias';
@@ -35,15 +36,26 @@ export const TABS_FINANZAS = [
 const v = (tono) => `var(--${tono})`;
 const PASARELAS = ['Mercury', 'AirTM'];
 
-/** Pide al montar y cada vez que cambia `clave`; `recargar` vuelve a pedir sin parpadeo. */
-const useDatos = (pedir, clave) => {
-    const [datos, setDatos] = useState(null);
+/**
+ * Pide al montar y cada vez que cambia `clave`; `recargar` vuelve a pedir sin parpadeo.
+ * Lo pedido se recuerda por `vista` + `clave` (cacheDeVistas): volver a una pestaña de Finanzas no
+ * lo vuelve a pedir, y lo que ya es viejo se muestra y se actualiza en silencio.
+ */
+const useDatos = (pedir, clave, vista) => {
+    const claveCache = `finanzas:${vista}:${clave}`;
+    const [datos, ponerDatos] = useState(() => leerCache(claveCache)?.datos ?? null);
+    const setDatos = useCallback((cambio) => ponerDatos((prev) => {
+        const nuevo = typeof cambio === 'function' ? cambio(prev) : cambio;
+        if (nuevo != null) guardarCache(claveCache, nuevo);
+        return nuevo;
+    }), [claveCache]);
     const recargar = useCallback(() => pedir().then(setDatos)
-        .catch(() => toast.error('No se pudieron cargar los datos de Finanzas')), [pedir]);
+        .catch(() => toast.error('No se pudieron cargar los datos de Finanzas')), [pedir, setDatos]);
     useEffect(() => {
-        setDatos(null);
-        recargar();
-    }, [clave]); // eslint-disable-line react-hooks/exhaustive-deps
+        const guardado = leerCache(claveCache);
+        ponerDatos(guardado ? guardado.datos : null);
+        if (!esFresco(guardado)) recargar();
+    }, [claveCache]); // eslint-disable-line react-hooks/exhaustive-deps
     return [datos, recargar, setDatos];
 };
 
@@ -104,7 +116,7 @@ const Resumen = ({ periodo }) => {
         const [resumen, ahorros] = await Promise.all([apiFz.getResumen(periodo), apiFz.getAhorros(periodo)]);
         return { ...resumen, ahorros: ahorros.savings };
     }, [periodo]);
-    const [datos, recargar] = useDatos(pedir, claveDe(periodo));
+    const [datos, recargar] = useDatos(pedir, claveDe(periodo), 'resumen');
 
     if (!datos) return <EsqueletoTablero rotulo="Cargando el resumen…" />;
     const { kpis, expenses_breakdown: gastos, income_breakdown: ingresos } = datos;
@@ -225,7 +237,7 @@ const Resumen = ({ periodo }) => {
 
 const MediosDePago = ({ periodo }) => {
     const pedir = useCallback(() => apiFz.getSaldos(periodo), [periodo]);
-    const [datos, recargar] = useDatos(pedir, claveDe(periodo));
+    const [datos, recargar] = useDatos(pedir, claveDe(periodo), 'medios');
 
     const guardar = async (metodo, n) => {
         try {
@@ -289,7 +301,7 @@ const MediosDePago = ({ periodo }) => {
 
 const Anuncios = ({ periodo }) => {
     const pedir = useCallback(() => apiFz.getAnuncios(periodo), [periodo]);
-    const [datos, , setDatos] = useDatos(pedir, claveDe(periodo));
+    const [datos, , setDatos] = useDatos(pedir, claveDe(periodo), 'anuncios');
 
     const guardar = async (n) => {
         try {
@@ -533,7 +545,7 @@ const Nomina = ({ periodo }) => (periodo.mes ? <NominaDelMes mes={periodo.mes} /
 
 const NominaDelMes = ({ mes }) => {
     const pedir = useCallback(() => apiFz.getNomina(mes), [mes]);
-    const [datos, recargar, setDatos] = useDatos(pedir, mes);
+    const [datos, recargar, setDatos] = useDatos(pedir, mes, 'nomina');
     const [modal, setModal] = useState(null); // null | { integrante } (integrante null = nuevo)
 
     if (!datos) return <EsqueletoNomina />;
@@ -684,7 +696,7 @@ const NominaDelPeriodo = ({ periodo }) => {
         const { nominas, integrantes } = await apiFz.getNominas(meses.map(m => m.mes));
         return { filas: sumarNominas(meses, nominas), integrantes };
     }, [periodo]);
-    const [datos] = useDatos(pedir, claveDe(periodo));
+    const [datos] = useDatos(pedir, claveDe(periodo), 'nomina-periodo');
 
     if (!datos) return <EsqueletoNomina />;
     const { filas, integrantes } = datos;
@@ -767,7 +779,7 @@ const fechaInicial = ({ desde, hasta }) => {
 
 const Software = ({ periodo }) => {
     const pedir = useCallback(() => apiFz.getGastosSoftware(periodo), [periodo]);
-    const [gastos, recargar, setGastos] = useDatos(pedir, claveDe(periodo));
+    const [gastos, recargar, setGastos] = useDatos(pedir, claveDe(periodo), 'software');
     const [nuevo, setNuevo] = useState(() => ({ description: '', amount: '', date: fechaInicial(periodo) }));
     const [guardando, setGuardando] = useState(false);
 

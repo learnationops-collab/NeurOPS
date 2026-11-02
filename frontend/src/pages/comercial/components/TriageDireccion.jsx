@@ -3,8 +3,9 @@
 // Los datos son los de `GET /api/triage/metricas`. Cada cifra abre la lista que la compone y cada llamada, su ficha.
 // Se elige en el interruptor del dock (Closers · Setters · Triage), no es una sección más.
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import api from '../../../services/api';
+import { useDatosCacheados } from '../../../services/cacheDeVistas';
 import { EmptyState, FieldError, Skeleton, SkeletonKpi, SkeletonPanel } from '../../../components/standard';
 import { localDateFromNow, localToday } from '../../../utils/datetime';
 import { diasDe } from '../../triage/components/TriageMetricas';
@@ -37,16 +38,11 @@ export default function TriageDireccion({ onAbrirFila }) {
     const [dias, setDias] = useState('6');
     const [persona, setPersona] = useState('todas');
     const [ver, setVer] = useState(null);
-    const [datos, setDatos] = useState(null);
-    const [error, setError] = useState(null);
-
-    useEffect(() => {
-        let vivo = true;
-        api.get('/triage/metricas', { params: { desde: localDateFromNow(-Number(dias)), hasta: localToday() } })
-            .then((res) => { if (vivo) { setDatos(res.data); setError(null); } })
-            .catch((err) => { if (vivo) setError(err?.response?.data?.message || 'No se pudieron cargar las métricas.'); });
-        return () => { vivo = false; };
-    }, [dias]);
+    // Recordado por período (cacheDeVistas): volver a Triage no lo vuelve a pedir.
+    const { datos, error: falla } = useDatosCacheados(`triage:metricas:${dias}`, (signal) => api
+        .get('/triage/metricas', { params: { desde: localDateFromNow(-Number(dias)), hasta: localToday() }, signal })
+        .then((res) => res.data));
+    const error = falla ? (falla?.response?.data?.message || 'No se pudieron cargar las métricas.') : null;
 
     const personas = datos?.por_persona || [];
     const elegida = personas.find((p) => String(p.id) === persona);

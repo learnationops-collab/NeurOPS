@@ -3,6 +3,7 @@ import toast from 'react-hot-toast';
 import { Barra, EsqueletoFilas, PanelCab, Tip } from '../Shared';
 import { AYUDA_PROCEDENCIA } from '../procedencias';
 import { dinero } from './comun';
+import { esFresco, guardarCache, leerCache } from '../../../../services/cacheDeVistas';
 import * as apiFz from './finanzasApi';
 import './procedencia.css';
 
@@ -32,15 +33,19 @@ const pct = (n) => (n === null || n === undefined ? '—' : `${n.toFixed(1)}%`);
 const COLS = { '--cols': 'minmax(172px,1.1fr) minmax(80px,1.3fr) 56px 118px 56px', '--min': '600px' };
 
 const Procedencia = ({ desde, hasta }) => {
-    const [datos, setDatos] = useState(null);
+    // Recordado por período (cacheDeVistas): volver a la pestaña no lo vuelve a pedir.
+    const claveCache = `finanzas:procedencia:${desde}|${hasta}`;
+    const [datos, setDatos] = useState(() => leerCache(claveCache)?.datos ?? null);
     const [fallo, setFallo] = useState(false);
 
     useEffect(() => {
         let vigente = true;
-        setDatos(null);
+        const guardado = leerCache(claveCache);
+        setDatos(guardado ? guardado.datos : null);
         setFallo(false);
+        if (esFresco(guardado)) return undefined;
         apiFz.getProcedencia(desde, hasta)
-            .then((d) => { if (vigente) setDatos(d); })
+            .then((d) => { guardarCache(claveCache, d); if (vigente) setDatos(d); })
             .catch(() => {
                 if (!vigente) return;
                 setFallo(true);

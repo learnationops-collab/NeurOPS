@@ -31,6 +31,7 @@ import SegmentosPanel from './components/SegmentosPanel';
 import TriageDireccion from './components/TriageDireccion';
 import BarraSegmento, { segmentoDeLaVista } from './components/BarraSegmento';
 import useEstadoGuardado from '../../hooks/useEstadoGuardado';
+import { leerCache } from '../../services/cacheDeVistas';
 import { corregirAgenda, eliminarAgenda as eliminarAgendaApi, getComparativas, getContexto, getResumen, getTabla, getVariabilidad, marcarAgendaDuplicada } from './comercialApi';
 import { getNoCerradas, sincronizarAcademia as sincronizarAcademiaApi } from './comercialApi';
 import Finanzas, { TABS_FINANZAS } from './components/finanzas/Finanzas';
@@ -322,10 +323,10 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     }, [segmento]);
 
     // Cada bloque espera solo SU pedido y, si falla, ofrece reintentar (ver `usePedidos`).
-    const { pedir, fallas } = usePedidos();
-    const cargarContexto = useCallback(() => pedir('contexto', getContexto(), setContexto,
-        'No se pudo abrir el dashboard comercial'), [pedir]);
-    useEffect(() => { cargarContexto(); }, [cargarContexto]);
+    const { pedir, pedirCacheado, fallas } = usePedidos();
+    const cargarContexto = useCallback((forzar = true) => pedirCacheado('contexto', 'comercial:contexto',
+        () => getContexto(), setContexto, 'No se pudo abrir el dashboard comercial', { forzar }), [pedirCacheado]);
+    useEffect(() => { cargarContexto(false); }, [cargarContexto]);
 
     // El rol y la persona efectivos: para un closer o un setter los manda el backend y la query
     // string no puede cambiarlos (ver `alcance_de` en app/api/comercial.py).
@@ -407,33 +408,43 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     const esperaFechas = seccion === 'analizar' ? faltaPeriodo || faltaVs
         : seccion === 'revisar' && faltaPeriodo && tablaActual !== 'clientes';
 
-    const cargarAnalizar = useCallback(() => {
+    // Lo ya cargado se recuerda (ver `pedirCacheado`): cambiar de sección o de pestaña y volver no
+    // lo vuelve a pedir. Reintentar y lo que sigue a un guardado piden de nuevo (`forzar`).
+    const traerAnalizar = useCallback((forzar) => {
         if (!rol || faltaPeriodo || faltaVs) return;
-        pedir('resumen', getResumen(filtros), setResumen, 'No se pudieron cargar los KPIs');
+        const k = JSON.stringify(filtros);
+        pedirCacheado('resumen', `comercial:resumen:${k}`, () => getResumen(filtros), setResumen,
+            'No se pudieron cargar los KPIs', { forzar });
         if (tab === 'comparativas' && contexto?.puede_comparar) {
-            pedir('comparativas', getComparativas(filtros), setComparativas, 'No se pudieron cargar las comparativas');
+            pedirCacheado('comparativas', `comercial:comparativas:${k}`, () => getComparativas(filtros), setComparativas,
+                'No se pudieron cargar las comparativas', { forzar });
         }
         // Las series por dia se piden solo al abrir su pestania: son seis y no hacen falta para
         // ver el dashboard. Las de otro rol no se muestran (ver `Variabilidad`).
         if (tab === 'variabilidad') {
-            pedir('variabilidad', getVariabilidad(filtros), (d) => setVariabilidad({ ...d, rol }),
-                'No se pudieron cargar las series por dia');
+            pedirCacheado('variabilidad', `comercial:variabilidad:${k}`, () => getVariabilidad(filtros),
+                (d) => setVariabilidad({ ...d, rol }), 'No se pudieron cargar las series por dia', { forzar });
         }
-    }, [filtros, rol, tab, contexto, pedir, faltaPeriodo, faltaVs]);
+    }, [filtros, rol, tab, contexto, pedirCacheado, faltaPeriodo, faltaVs]);
+    const cargarAnalizar = useCallback(() => traerAnalizar(true), [traerAnalizar]);
 
-    const cargarTabla = useCallback(() => {
+    const traerTabla = useCallback((forzar) => {
         if (!rol || !tablaActual || (faltaPeriodo && tablaActual !== 'clientes')) return;
-        setCargandoTabla(true);
-        pedir('tabla', getTabla(filtros, tablaActual, basis, { operar }), setDatosTabla, 'No se pudo cargar la tabla')
+        const claveCache = `comercial:tabla:${tablaActual}:${basis}:${operar}:${JSON.stringify(filtros)}`;
+        // Una tabla recordada se muestra al instante: no hay esqueleto que esperar.
+        if (forzar || !leerCache(claveCache)) setCargandoTabla(true);
+        pedirCacheado('tabla', claveCache, () => getTabla(filtros, tablaActual, basis, { operar }), setDatosTabla,
+            'No se pudo cargar la tabla', { forzar })
             .finally(() => setCargandoTabla(false));
-    }, [filtros, rol, tablaActual, basis, operar, pedir, faltaPeriodo]);
+    }, [filtros, rol, tablaActual, basis, operar, pedirCacheado, faltaPeriodo]);
+    const cargarTabla = useCallback(() => traerTabla(true), [traerTabla]);
 
-    useEffect(() => { if (seccion === 'analizar') cargarAnalizar(); }, [seccion, cargarAnalizar]);
+    useEffect(() => { if (seccion === 'analizar') traerAnalizar(false); }, [seccion, traerAnalizar]);
 
     // La lista de «No cerradas» del panel Cierre, del mismo período y alcance que el resumen. Se pide
     // al abrir su modal, no con el resumen (ver `GET /comercial/cierres/no-cerradas`).
     const cargarNoCerradas = useCallback(() => getNoCerradas(filtros), [filtros]);
-    useEffect(() => { if (seccion === 'revisar') cargarTabla(); }, [seccion, cargarTabla]);
+    useEffect(() => { if (seccion === 'revisar') traerTabla(false); }, [seccion, traerTabla]);
 
     /**
      * Drill-down desde Analizar: abre Revisar en la tabla pedida, ya filtrada.
