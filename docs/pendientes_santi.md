@@ -36,6 +36,16 @@ Matriz A/B/C/D en Todos › Segmentos y panel de segmentos de setters y closers 
 - [ ] Segmentos cortados (28/10, ADR-W021): el filtro de segmento aún no llega al reporte diario del setter (ManyChat), a Comparativas, a Variabilidad ni a la tabla de palabras clave; y el origen de un cobro (procedencia) no siempre coincide con el de la agenda del mismo cliente. Decidir si vale la pena partir esos tableros.
 - [ ] Países en Marketing (pedido de Gabriela, 28/10): no entró en esta entrega.
 
+## Motivo obligatorio (02/11, ADR-W065)
+Reagendado, No Show y Cancelado piden un motivo de 10+ caracteres que queda en el hilo del lead.
+
+- [ ] Probar en el servidor de prueba antes de subir: reportar un No Show / Canceló / Reagenda desde el árbol del closer y del triage, corregir el estado desde el historial y el modal del dashboard, y cancelar desde Confirmación; ver que el hilo de Comunicación muestra una sola nota por acción (con el autor) y que sin motivo el botón queda apagado.
+- [ ] Tests viejos a revisar, porque marcan estos estados sin motivo (no se corrieron; sin escribir tests nuevos hasta que Kerwin lo pida): backend `tests/api/test_ficha_lead_escritura.py`, `tests/agendas_v2/test_manual.py`, `tests/api/test_comercial_dashboard.py`, `tests/services/test_descalificada.py`, `tests/services/test_estado_lead.py`; front `arbolResultado.test.js` (las ramas `no_asistio` y `cancelo` mandan `noshow_detalle`/`cancel_detalle` con `notes`: ahora son `motivo_noshow`/`motivo_cancelo`, y la reagenda suma `reag_detalle`), `arbolResultado.contrato.test.js`, `fichaApi.test.js` y los de `ResultadoTriage`/`recorrido` (la nota ya no es opcional).
+- [ ] «Nueva agenda» sobre una agenda existente reprograma con una nota automática («reprogramada desde “Nueva agenda” por X», `manual._reprogramar_en_neurops`) y no pide motivo. Decidir con Kerwin si debe preguntarlo (hoy se cuenta como reagenda automática).
+- [ ] Reagendar desde «Corregir estado» (historial o modal del dashboard) o desde la edición del Tablero de Agendas no mueve la llamada: solo cambia el estado, y el Tablero con «Reagendada» sin `reschedule_date` falla («Fecha de reagenda requerida»). Ya era así; ahora al menos queda el motivo.
+- [ ] Código muerto con estos estados que conviene borrar: el modal de motivo y las acciones rápidas de `CloserWorkflowPage.jsx` (`reasonModal`, `executeQuickAction`: nada los abre), `handleSetOutcome` de `closer/leads/LeadsPage.jsx` y `LeadsManagementPage.jsx` (sin ruta).
+- [ ] La edición en lote de Revisar › Agendas ya excluye estos estados del «Pre call» (solo «Confirmada» y «Sin confirmar»); si se pide cambiarlos en lote, hay que decidir cómo se carga un motivo por agenda.
+
 ## Agendas y reparto
 Cómo se reparten las agendas entre closers.
 
