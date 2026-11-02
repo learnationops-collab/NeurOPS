@@ -27,7 +27,7 @@ export const ROLES = [
     { id: 'director_marketing', label: 'Dirección de marketing', plural: 'Marketing', desc: 'Workshops y campañas' },
     { id: 'closer', label: 'Closer', plural: 'Closers', desc: 'Mazo de llamadas y cartera' },
     { id: 'setter', label: 'Setter', plural: 'Setters', desc: 'Calificación de leads' },
-    { id: 'triage', label: 'Call confirmer', plural: 'Call confirmers', desc: 'Confirma las llamadas' },
+    { id: 'triage', label: 'Triage', plural: 'Triage', desc: 'Confirma y cualifica las llamadas' },
     { id: 'hiring', label: 'Hiring', plural: 'Hiring', desc: 'Asistente de contratación' },
 ];
 const rotulo = (id) => ROLES.find(r => r.id === id)?.label || id;
