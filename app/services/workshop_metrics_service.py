@@ -29,6 +29,7 @@ from app.models import Client, FinancialAgenda, FinancialSale, Appointment, Work
 from app.services.fuente_service import (FUENTE_SETTING, es_workshop_landing, es_workshop_vivo,
                                          es_sin_dueno, normalizar)
 from app.services import pagos_copia
+from app.services.commission_service import cash_neto
 from app.services.workshop_estados import ESTADOS_DE_VENTA, bucket_estado as _bucket_estado, desglose_de_personas
 from app.services.workshop_intentos import contar_intentos
 from app.services.sales_consistency_service import filtro_de_pagos
@@ -375,12 +376,17 @@ def _resumen(personas, agendas, compradores, ventas):
     `cash_collected` (la base del ROAS Total) = New Cash + señas: las ventas nuevas y las señas
     mas las primeras cuotas que suman a esas ventas (29/10/2026). Antes se quedaba sin las cuotas
     y el total salia menor que el New Cash (3/10: $200 contra $500). Ver ADR-W035.
+
+    Todo el cash va en NETO desde el 02/11/2026 (`commission_service.cash_neto`: la comision real del pago o,
+    si falta, el promedio de su plataforma): el ROAS compara lo que quedo con lo que se gasto. Por eso el ticket
+    del taller (`cash_ventas` / `ventas_cobradas`) pasa a ser lo que deja cada venta, no su precio.
     """
     estados = desglose_de_personas(personas, _estado_post_call)
     # Los pagos de la misma persona en el mismo mes son UNA venta, con su primera cuota si llega
     # antes del mes (`ticket_service`, 19/10/2026)
     (cash_ventas, ventas_cobradas, _), cuotas = ticket_y_cuotas(
-        [(claves_de_venta(s), s.date, s.monto, VENTA if _es_cierre(s) else SENA) for s in ventas])
+        [(claves_de_venta(s), s.date, cash_neto(s), VENTA if _es_cierre(s) else SENA) for s in ventas],
+        monto_de=cash_neto)
     return {
         "agendas": len(personas),
         "llamadas": len(agendas),
@@ -390,7 +396,7 @@ def _resumen(personas, agendas, compradores, ventas):
         "citas_reportadas": estados["reportadas"],
         "citas_sin_reportar": estados["sin_reportar"],
         "sales": len(compradores),
-        "cash_collected": sum(s.monto or 0.0 for s in ventas) + sum(c[2] or 0.0 for c in cuotas),
+        "cash_collected": sum(cash_neto(s) for s in ventas) + sum(c[2] or 0.0 for c in cuotas),
         "cash_ventas": cash_ventas,
         "ventas_cobradas": ventas_cobradas,
         "breakdown": estados["desglose"],
