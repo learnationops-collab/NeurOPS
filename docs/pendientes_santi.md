@@ -24,6 +24,8 @@ Pasar al lead del triage al closing.
 - [ ] Reprogramar con otra persona (Leadership 986 a 989, ADR-W046): probar en staging que el evento de Google se mueve del calendario de quien la tenía al de quien la recibe (en local los sockets están bloqueados, no se vio), y que `reagenda_de` / el embudo del closer cuentan bien la agenda nueva.
 - [ ] Low ticket (`LT`, 100 USD por mes, Academia `low-ticket`): definir comisiones del triage y de Fulfillment (`comision_tasas_service.PROGRAMAS` no tiene LT) y cómo se cobra cada mes (hoy: un «LT - Renovacion» de 1 mes por la ficha).
 - [ ] Tests de suscripción que ya fallaban antes del low ticket (27/10): `test_la_sena_da_7_dias_y_el_saldo_la_pasa_a_completo`, `test_la_venta_da_4_meses_y_las_cuotas_no_mueven_la_fecha`, `test_encendido_manda_la_suscripcion_con_su_ultimo_cambio`, `test_el_aviso_del_pago_lleva_el_vencimiento_de_la_suscripcion` (vencimientos corridos 2 días).
+- [ ] Triage (02/11, [ADR-W065](DECISIONS.md)): cuando haya asistencias reales al closer, revisar los números de «Por closer» contra Revisar (hoy 10 pases y 0 asistencias en prod, todos de noviembre). Dos dudas abiertas: `pasaron` incluye las llamadas futuras (decidir si el % de asistencia las excluye) y los pases manuales desde la ficha no llevan `agenda_triage_id` (no cuentan; 2 de 9 al 02/11).
+- [ ] Triage (02/11): la tarjeta de asistencia pasó a asistieron ÷ agendas (antes ÷ (asistieron + no show)) en Dirección y en las métricas de la triage; avisarle al director.
 
 ## Segmentos en Marketing y dashboards
 Matriz A/B/C/D en Todos › Segmentos y panel de segmentos de setters y closers (28/10/2026, [MARKETING.md](MODELO/MARKETING.md)).
