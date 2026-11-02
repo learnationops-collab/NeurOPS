@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, AlertCircle, Instagram, ExternalLink, Phone, Loader2, CalendarDays, MessageSquare, Send } from 'lucide-react';
 import CommentsSection from '../../../components/shared/CommentsSection';
 import { parseUtcIso } from '../../../utils/datetime';
+import { faltaDeMotivo, motivoAlcanza, preguntaDeMotivo } from '../../../utils/motivoEstado';
 
 const TriageDetailModal = ({
     selectedLead,
@@ -208,14 +209,14 @@ const TriageDetailModal = ({
                                                 Sin Respuesta
                                             </button>
                                             <button
-                                                onClick={() => setRescheduleData({ apptId: selectedLead.id, date: '', status: 'Reagendada' })}
+                                                onClick={() => setRescheduleData({ apptId: selectedLead.id, date: '', status: 'Reagendada', motivo: '' })}
                                                 disabled={processingId === selectedLead.id}
                                                 className="h-10 px-4 bg-violet-650/80 hover:bg-violet-550 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all cursor-pointer disabled:opacity-50"
                                             >
                                                 Reagendar
                                             </button>
                                             <button
-                                                onClick={() => handleUpdateStatus(selectedLead.id, 'Cancelada')}
+                                                onClick={() => setRescheduleData({ apptId: selectedLead.id, date: '', status: 'Cancelada', motivo: '' })}
                                                 disabled={processingId === selectedLead.id}
                                                 className="h-10 px-4 bg-rose-650/90 hover:bg-rose-550 text-white font-black text-[10px] uppercase tracking-wider rounded-xl transition-all cursor-pointer disabled:opacity-50"
                                             >
@@ -226,22 +227,42 @@ const TriageDetailModal = ({
                                         {/* Selector de Reagenda inline */}
                                         {rescheduleData.apptId === selectedLead.id && (
                                             <div className="pt-4 border-t border-slate-900 flex flex-wrap items-center gap-3 animate-in slide-in-from-bottom-2 duration-200">
+                                                {/* «Reagendada» y «Cancelada» piden el motivo (ADR-W065); la fecha, solo la reagenda. */}
+                                                <div className="w-full space-y-1.5">
+                                                    <span className="text-[10px] font-black uppercase text-violet-400 tracking-wider">
+                                                        {preguntaDeMotivo(rescheduleData.status)}
+                                                    </span>
+                                                    <textarea
+                                                        rows={2}
+                                                        value={rescheduleData.motivo || ''}
+                                                        onChange={(e) => setRescheduleData(prev => ({ ...prev, motivo: e.target.value }))}
+                                                        placeholder="Escribí qué pasó, con tus palabras"
+                                                        className="w-full bg-slate-950 border border-slate-850 rounded-xl px-3 py-2 text-xs font-bold text-slate-200 outline-none focus:border-violet-500/50 resize-none"
+                                                    />
+                                                    {faltaDeMotivo(rescheduleData.motivo) && (
+                                                        <p className="text-[10px] font-bold text-amber-400">{faltaDeMotivo(rescheduleData.motivo)}</p>
+                                                    )}
+                                                </div>
+                                                {rescheduleData.status !== 'Cancelada' && (
                                                 <span className="text-[10px] font-black uppercase text-violet-400 tracking-wider flex items-center gap-1">
                                                     <CalendarDays size={14} className="text-violet-500" />
                                                     Nueva Fecha de Cita:
                                                 </span>
+                                                )}
+                                                {rescheduleData.status !== 'Cancelada' && (
                                                 <input 
                                                     type="datetime-local" 
                                                     value={rescheduleData.date ? formatToDatetimeLocal(rescheduleData.date) : ''}
                                                     onChange={(e) => setRescheduleData(prev => ({ ...prev, date: e.target.value }))}
                                                     className="bg-slate-950 border border-slate-850 rounded-xl px-3 py-2 text-xs font-bold text-slate-200 outline-none focus:border-violet-500/50"
                                                 />
+                                                )}
                                                 <button
                                                     onClick={handleConfirmReschedule}
-                                                    disabled={processingId === selectedLead.id || !rescheduleData.date}
+                                                    disabled={processingId === selectedLead.id || (rescheduleData.status !== 'Cancelada' && !rescheduleData.date) || !motivoAlcanza(rescheduleData.motivo)}
                                                     className="h-9 px-4 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-[10px] font-black uppercase tracking-wider rounded-xl transition-all flex items-center justify-center cursor-pointer"
                                                 >
-                                                    {processingId === selectedLead.id ? <Loader2 size={12} className="animate-spin" /> : 'Confirmar Reagenda'}
+                                                    {processingId === selectedLead.id ? <Loader2 size={12} className="animate-spin" /> : (rescheduleData.status === 'Cancelada' ? 'Confirmar Cancelación' : 'Confirmar Reagenda')}
                                                 </button>
                                                 <button 
                                                     onClick={() => setRescheduleData({ apptId: null, date: '', status: '' })}
