@@ -19,6 +19,7 @@ import pytz
 
 from app import db
 from app.models import Appointment, User
+from app.services import triage_pases
 from app.services.user_time_service import zona_del_negocio
 
 CALIFICACIONES = ('calificado', 'descalificado')
@@ -277,24 +278,21 @@ def bloque(appt):
 # --- Métricas ---------------------------------------------------------------------------------
 
 def _vacias():
-    return {k: 0 for k in ('agendas', 'confirmadas', 'asistencias', 'no_show', 'canceladas', 'sin_reporte',
+    return {k: 0 for k in ('agendas', 'asistencias', 'no_show', 'canceladas', 'sin_reporte',
                            'calificados', 'descalificados', 'pitch_low_ticket', 'no_pitch', 'cerrado',
-                           'no_cerrado', 'seguimiento', 'descartado', 'pasadas_asistieron')}
+                           'no_cerrado', 'seguimiento', 'descartado',
+                           'pasaron', 'closer_asistieron', 'closer_cerraron')}
 
 
-def _confirmada(a):
-    """Confirmó la llamada, o ya asistió (que la confirmó de hecho)."""
-    resultado = (a.closer_result or '').strip().lower()
-    previo = (a.result or '').strip().lower()
-    return previo == 'confirmado' or a.confirmation_stage == 'confirmado' or resultado == 'show up'
-
-
-def _sumar(m, a, closing_show):
+def _sumar(m, a, pase):
+    """Suma la agenda de triage `a` en `m`. `pase`: su agenda de closing (`triage_pases`) o None."""
     m['agendas'] += 1
     resultado = (a.closer_result or '').strip().lower()
     previo = (a.result or '').strip().lower()
-    if _confirmada(a):
-        m['confirmadas'] += 1
+    if pase:
+        m['pasaron'] += 1
+        m['closer_asistieron'] += 1 if pase['asistio'] else 0
+        m['closer_cerraron'] += 1 if pase['cerro'] else 0
     if resultado == 'show up':
         m['asistencias'] += 1
     elif resultado == 'no show':
@@ -305,7 +303,6 @@ def _sumar(m, a, closing_show):
         m['sin_reporte'] += 1
     if a.triage_calificacion == 'calificado':
         m['calificados'] += 1
-        m['pasadas_asistieron'] += 1 if a.id in closing_show else 0
     elif a.triage_calificacion == 'descalificado':
         m['descalificados'] += 1
         lt = a.triage_low_ticket
@@ -347,8 +344,9 @@ def _vale_mas(a, b):
 
 def metricas(desde, hasta, solo=None, zona=None):
     """El embudo del triage entre `desde` y `hasta` (datetimes UTC naive, por la hora de la llamada):
-    agendas → confirmadas → asistencias → calificados / descalificados → pitch del low ticket → cómo
-    quedó. `solo`: el id de una triage (la que mira lo suyo); si no, todas y el detalle por persona.
+    agendas → asistencias → calificados / descalificados → pitch del low ticket → cómo quedó. Los que
+    pasaron al closing suman además `pasaron` → `closer_asistieron` → `closer_cerraron` (`triage_pases`).
+    `solo`: el id de una triage (la que mira lo suyo); si no, todas y el detalle por persona.
     `zona`: la de quien mira, para cortar `por_dia` (por defecto la del negocio)."""
     zona = zona or zona_del_negocio()
     personas = triages(solo)
@@ -357,15 +355,14 @@ def metricas(desde, hasta, solo=None, zona=None):
         Appointment.closer_id.in_(ids or [0]),
         Appointment.start_time >= desde, Appointment.start_time < hasta,
     ).all())
-    pasadas = Appointment.query.filter(
-        Appointment.agenda_triage_id.in_([a.id for a in agendas] or [0])).all()
-    closing_show = {c.agenda_triage_id for c in pasadas if (c.closer_result or '').lower() == 'show up'}
+    pases = triage_pases.pases_de(agendas)
 
     total, por_id, por_dia = _vacias(), {p.id: _vacias() for p in personas}, {}
     for a in agendas:
-        _sumar(total, a, closing_show)
-        _sumar(por_id[a.closer_id], a, closing_show)
-        _sumar(por_dia.setdefault((_dia(a, zona), a.closer_id), _vacias()), a, closing_show)
+        pase = pases.get(a.id)
+        _sumar(total, a, pase)
+        _sumar(por_id[a.closer_id], a, pase)
+        _sumar(por_dia.setdefault((_dia(a, zona), a.closer_id), _vacias()), a, pase)
     from app.agendas_v2 import abandonos
 
     return {
@@ -374,13 +371,31 @@ def metricas(desde, hasta, solo=None, zona=None):
         'por_dia': [{'dia': dia, 'id': persona, **por_dia[(dia, persona)]} for dia, persona in sorted(por_dia)],
         'abandonos': abandonos.resumen(desde, hasta),
         'por_persona': [{'id': p.id, 'nombre': p.username, **por_id[p.id]} for p in personas],
-        'leads': _leads(agendas),
+        'por_closer': _por_closer(agendas, pases),
+        'leads': _leads(agendas, pases),
     }
 
 
-def _leads(agendas):
-    """El reporte del período, lead por lead: cómo quedó y sus dos notas (la de la llamada y la del closer).
-    Las notas salen del log en una sola consulta."""
+def _por_closer(agendas, pases):
+    """Un renglón por triage y por closer de lo que pasó al closing: cuántas llamadas, cuántas asistieron y
+    cuántas cerraron. La pantalla los suma para «todas» las personas o se queda con una."""
+    filas = {}
+    for a in agendas:
+        pase = pases.get(a.id)
+        if not pase:
+            continue
+        f = filas.setdefault((a.closer_id, pase['closer_id']), {
+            'triage_id': a.closer_id, 'closer_id': pase['closer_id'], 'closer': pase['closer'],
+            'pasaron': 0, 'asistieron': 0, 'cerraron': 0})
+        f['pasaron'] += 1
+        f['asistieron'] += 1 if pase['asistio'] else 0
+        f['cerraron'] += 1 if pase['cerro'] else 0
+    return sorted(filas.values(), key=lambda f: (f['closer'], f['triage_id']))
+
+
+def _leads(agendas, pases):
+    """El reporte del período, lead por lead: cómo quedó, su pase al closing y sus dos notas (la de la llamada
+    y la del closer). Las notas salen del log en una sola consulta."""
     from app.models import LeadEventLog
 
     notas = {}
@@ -392,7 +407,7 @@ def _leads(agendas):
     return [{
         'id': a.id, 'cliente': a.client.full_name if a.client else None, 'client_id': a.client_id,
         'hora': _iso(a.start_time), 'triage': a.closer.username if a.closer else None,
-        'confirmada': _confirmada(a), 'asistencia': a.closer_result,
+        'asistencia': a.closer_result, 'closing': pases.get(a.id),
         'calificacion': a.triage_calificacion, 'low_ticket': a.triage_low_ticket,
         'fecha_seguimiento': a.fecha_seguimiento,
         'nota': notas.get((a.id, 'nota_llamada')), 'nota_para_closer': notas.get((a.id, 'nota_para_closer')),
