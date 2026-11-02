@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import api from '../../../../services/api';
+import { useDatosCacheados } from '../../../../services/cacheDeVistas';
 import { Loader2, TrendingUp, Users, DollarSign } from 'lucide-react';
 import Card from '../../../../components/ui/Card';
 import {
@@ -38,8 +39,6 @@ const ICON_MAP = {
 };
 
 const ChartTile = ({ metric, filters, size = '2x2' }) => {
-    const [data, setData] = useState(null);
-    const [loading, setLoading] = useState(true);
     const chartRef = useRef(null);
 
     const [width, height] = size.split('x').map(Number);
@@ -49,29 +48,18 @@ const ChartTile = ({ metric, filters, size = '2x2' }) => {
     const Icon = ICON_MAP[metric] || TrendingUp;
     const colors = COLOR_MAP[metric] || COLOR_MAP['agendas'];
 
-    useEffect(() => {
-        const fetchSeries = async () => {
-            setLoading(true);
-            try {
-                const queryParams = new URLSearchParams({
-                    metric,
-                    period: filters.period,
-                    start_date: filters.start_date || '',
-                    end_date: filters.end_date || ''
-                });
-                const res = await api.get(`/analytics/time-series?${queryParams.toString()}`);
-                setData(res.data);
-            } catch (err) {
-                console.error("Error fetching time series", err);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        if (filters) {
-            fetchSeries();
-        }
-    }, [metric, filters]);
+    // Recordado por métrica y período (cacheDeVistas): volver al dashboard no vuelve a cargar los números.
+    const clave = filters ? `admin:serie:${metric}:${filters.period}:${filters.start_date || ''}:${filters.end_date || ''}` : null;
+    const { datos: data, error: fallo, cargando } = useDatosCacheados(clave, (signal) => {
+        const queryParams = new URLSearchParams({
+            metric,
+            period: filters.period,
+            start_date: filters.start_date || '',
+            end_date: filters.end_date || ''
+        });
+        return api.get(`/analytics/time-series?${queryParams.toString()}`, { signal }).then((res) => res.data);
+    }, { onError: (err) => console.error("Error fetching tile data", err) });
+    const loading = cargando || (Boolean(clave) && !data && !fallo);
 
     const chartData = {
         labels: data?.labels?.map(l => {

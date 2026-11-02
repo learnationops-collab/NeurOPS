@@ -23,6 +23,7 @@ Lo que hace (idempotente: correrlo dos veces deja lo mismo):
 Uso (en el servidor):
   python scripts/segmentacion_alfa.py            # ensayo: muestra cómo queda, no guarda
   python scripts/segmentacion_alfa.py --apply    # lo guarda
+  python scripts/segmentacion_alfa.py --revisar  # solo lectura: verifica las reglas que hay guardadas
 Después: python scripts/backfill_segmentos.py --apply --force (recalcula los segmentos con los puntos nuevos).
 """
 import copy
@@ -227,7 +228,7 @@ def mostrar(datos, grupos, d):
     print('  Todo lo demás →', grupos[datos['resto']]['nombre'])
 
 
-def main(apply=False):
+def main(apply=False, revisar=False):
     app = create_app()
     with app.app_context():
         from app.agendas_v2.servicio import borrar_doc, colecciones, guardar_doc
@@ -237,6 +238,23 @@ def main(apply=False):
             raise SystemExit(f'No existe el formulario {FORM_ID}')
         if not any(e['id'] == SESION_TRIAGE for e in d['eventos']):
             raise SystemExit(f'No existe el evento {SESION_TRIAGE}')
+        if revisar:
+            # Solo lectura: cómo está hoy el formulario guardado.
+            print('Reglas guardadas:', len(form['reglas']), '· resto', form.get('resto'), '· segmento', form['segmento'].get('version'))
+            for g in d['grupos']:
+                if g['id'] in GRUPOS:
+                    continue
+                for f in d['formularios']:
+                    reglas = [i + 1 for i, r in enumerate(f.get('reglas') or []) if r.get('grupo') == g['id']]
+                    resto = f.get('resto') == g['id']
+                    if reglas or resto:
+                        links = [e['nombre'] + ' (/' + e.get('slug', '') + ')' for e in d['eventos'] if e.get('formulario') == f['id']]
+                        print(f"Estrategia {g['nombre']}: formulario «{f['nombre']}»"
+                              f"{' reglas ' + str(reglas) if reglas else ''}{' · «Todo lo demás»' if resto else ''}"
+                              f" · links: {', '.join(links) or 'ninguno'}")
+            cuenta = verificar(form)
+            print('Las reglas guardadas cubren todo sin pisarse:', ' · '.join(f'{s} {cuenta.get(s, 0)}' for s in ('Alfa', 'A', 'B', 'C', 'D')))
+            return
         grupos = _grupos(d)
         datos = preparar(copy.deepcopy(form))
         mostrar(datos, grupos, d)
@@ -260,4 +278,4 @@ def main(apply=False):
 
 
 if __name__ == '__main__':
-    main(apply='--apply' in sys.argv)
+    main(apply='--apply' in sys.argv, revisar='--revisar' in sys.argv)

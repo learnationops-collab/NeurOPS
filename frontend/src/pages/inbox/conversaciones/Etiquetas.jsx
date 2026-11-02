@@ -6,6 +6,7 @@ import { Plus, X } from 'lucide-react';
 import useEnPantalla from '../../../components/ui/useEnPantalla';
 import { Button, Chip, Input, LinkButton, Switch, toast } from '../../../components/standard';
 import { inboxApi } from '../api';
+import { recordado, recordar } from '../recuerdo';
 
 export function Etiqueta({ e, onSacar }) {
     return (
@@ -40,11 +41,11 @@ function NuevoGrupo({ onCreado }) {
 }
 
 function Menu({ puestas, onPoner }) {
-    const [catalogo, setCatalogo] = useState(null);
+    const [catalogo, setCatalogo] = useState(() => recordado('etiquetas'));
     const [grupo, setGrupo] = useState(null);
     const [nombre, setNombre] = useState('');
     const [creandoGrupo, setCreandoGrupo] = useState(false);
-    useEffect(() => { inboxApi.etiquetas().then(setCatalogo).catch(() => setCatalogo({ grupos: [], sueltas: [] })); }, []);
+    useEffect(() => { inboxApi.etiquetas().then((c) => setCatalogo(recordar('etiquetas', c))).catch(() => setCatalogo({ grupos: [], sueltas: [] })); }, []);
     const tiene = (gid, n) => puestas.some((e) => (e.group_id || null) === gid && e.name === n);
     const agregar = (ev) => {
         ev.preventDefault();

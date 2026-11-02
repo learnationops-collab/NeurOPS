@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { motion } from 'framer-motion';
 import api from '../../services/api';
+import { esFresco, guardarCache, leerCache } from '../../services/cacheDeVistas';
+import PanelesConservados from '../../components/ui/PanelesConservados';
 import {
     Loader2, DollarSign, CalendarDays, Layers, Users, List, PenTool, ClipboardCheck, LayoutDashboard
 } from 'lucide-react';
@@ -144,19 +146,28 @@ const PublicCloserStatsPage = () => {
     }, [filters, activeTab]);
 
     const fetchStats = async () => {
-        setLoading(true);
+        const params = new URLSearchParams();
+        if (filters.closer_id) params.append('closer_id', filters.closer_id);
+        if (filters.start_date) params.append('start_date', filters.start_date);
+        if (filters.end_date) params.append('end_date', filters.end_date);
+        params.append('agg_type', filters.agg_type);
+        if (filters.compare) {
+            params.append('compare', 'true');
+            params.append('compare_mode', filters.compare_mode || 'period');
+        }
+        // Tablero recordado por filtros (cacheDeVistas): fresco no se pide; viejo se actualiza en silencio.
+        const clave = `public:closer-stats:${params.toString()}`;
+        const guardado = leerCache(clave);
+        if (guardado) {
+            setStats(guardado.datos);
+            setLoading(false);
+            if (esFresco(guardado)) return;
+        } else {
+            setLoading(true);
+        }
         try {
-            const params = new URLSearchParams();
-            if (filters.closer_id) params.append('closer_id', filters.closer_id);
-            if (filters.start_date) params.append('start_date', filters.start_date);
-            if (filters.end_date) params.append('end_date', filters.end_date);
-            params.append('agg_type', filters.agg_type);
-            if (filters.compare) {
-                params.append('compare', 'true');
-                params.append('compare_mode', filters.compare_mode || 'period');
-            }
-
             const res = await api.get(`/public/closer-stats?${params.toString()}`);
+            guardarCache(clave, res.data);
             setStats(res.data);
         } catch (err) {
             console.error("Error fetching closer stats:", err);
@@ -364,49 +375,42 @@ const PublicCloserStatsPage = () => {
                             />
                         )}
 
-                        {/* TAB DASHBOARD: el mismo dashboard visual que ve cada closer en su propio
-                            espacio (/closer/dashboard), reutilizado tal cual. Trae su propio selector
-                            de closer con "Todo el equipo" como opción por defecto. */}
-                        {activeTab === 'dashboard' && (
-                            <div className="animate-in fade-in duration-500 bg-slate-900 border border-slate-800 rounded-[2.5rem] mt-8 p-6 md:p-10 overflow-hidden">
-                                <CloserDashboard embedded />
-                            </div>
-                        )}
-
-                        {/* TAB HISTORIAL DE REPORTES */}
-                        {activeTab === 'history' && (
-                            <div className="animate-in fade-in duration-500">
-                                <CloserReportsTable closers={closers} />
-                            </div>
-                        )}
-
-                        {/* TAB REGISTRO DE VENTAS */}
-                        {activeTab === 'sales_log' && (
-                            <div className="animate-in fade-in duration-500 bg-slate-900 border border-slate-800 rounded-[2.5rem] mt-8 overflow-hidden">
-                                <PublicFinancialSalesPage />
-                            </div>
-                        )}
-
-                        {/* TAB CLIENTES NUEVOS */}
-                        {activeTab === 'new_clients' && (
-                            <div className="animate-in fade-in duration-500 bg-slate-900 border border-slate-800 rounded-[2.5rem] mt-8 overflow-hidden">
-                                <NewClientsTab />
-                            </div>
-                        )}
-
-                        {/* TAB REGISTRO AGENDAS */}
-                        {activeTab === 'agendas_log' && (
-                            <div className="animate-in fade-in duration-500 bg-slate-900 border border-slate-800 rounded-[2.5rem] mt-8 overflow-hidden">
-                                <FinancialAgendasPage />
-                            </div>
-                        )}
-
-                        {/* TAB FORMS */}
-                        {activeTab === 'forms' && (
-                            <div className="animate-in fade-in duration-500 bg-slate-900 border border-slate-800 rounded-[2.5rem] mt-8 overflow-hidden">
-                                <FormsManagementPage />
-                            </div>
-                        )}
+                        {/* Las pestañas que se abrieron quedan montadas y escondidas (PanelesConservados):
+                            volver a ellas no recarga. */}
+                        <PanelesConservados activa={activeTab} paneles={{
+                            // El mismo dashboard visual que ve cada closer en su propio espacio
+                            // (/closer/dashboard), reutilizado tal cual, con su propio selector de closer.
+                            dashboard: () => (
+                                <div className="animate-in fade-in duration-500 bg-slate-900 border border-slate-800 rounded-[2.5rem] mt-8 p-6 md:p-10 overflow-hidden">
+                                    <CloserDashboard embedded />
+                                </div>
+                            ),
+                            history: () => (
+                                <div className="animate-in fade-in duration-500">
+                                    <CloserReportsTable closers={closers} />
+                                </div>
+                            ),
+                            sales_log: () => (
+                                <div className="animate-in fade-in duration-500 bg-slate-900 border border-slate-800 rounded-[2.5rem] mt-8 overflow-hidden">
+                                    <PublicFinancialSalesPage />
+                                </div>
+                            ),
+                            new_clients: () => (
+                                <div className="animate-in fade-in duration-500 bg-slate-900 border border-slate-800 rounded-[2.5rem] mt-8 overflow-hidden">
+                                    <NewClientsTab />
+                                </div>
+                            ),
+                            agendas_log: () => (
+                                <div className="animate-in fade-in duration-500 bg-slate-900 border border-slate-800 rounded-[2.5rem] mt-8 overflow-hidden">
+                                    <FinancialAgendasPage />
+                                </div>
+                            ),
+                            forms: () => (
+                                <div className="animate-in fade-in duration-500 bg-slate-900 border border-slate-800 rounded-[2.5rem] mt-8 overflow-hidden">
+                                    <FormsManagementPage />
+                                </div>
+                            ),
+                        }} />
 
                         {!loading && !stats && activeTab === 'performance' && (
                             <div className="py-40 text-center text-slate-500 font-bold italic uppercase tracking-widest">Sin datos disponibles para este periodo</div>

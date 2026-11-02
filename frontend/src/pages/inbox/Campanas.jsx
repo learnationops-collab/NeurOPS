@@ -8,6 +8,7 @@ import EditorCampana from './campanas/EditorCampana';
 import TarjetaCampana from './campanas/TarjetaCampana';
 import { ESTADOS, copiaDe, estadoDe } from './campanas/campana';
 import { inboxApi } from './api';
+import { recordado, recordar } from './recuerdo';
 
 const FILTROS = [['todas', 'Todas'], ['vigente', 'Vigentes'], ['proxima', 'Próximas'], ['terminada', 'Terminadas']];
 const PERIODOS = [{ value: 7, label: '7 d' }, { value: 30, label: '30 d' }, { value: 90, label: '90 d' }];
@@ -21,24 +22,27 @@ function periodo(dias) {
 }
 
 export default function Campanas({ puedeEditar }) {
-    const [campanas, setCampanas] = useState(null);
+    const [campanas, setCampanas] = useState(() => recordado('campanas:30'));
     const [error, setError] = useState(null);
     const [filtro, setFiltro] = useState('todas');
     const [dias, setDias] = useState(30);
     const [editando, setEditando] = useState(null); // null cerrado · 'nueva' · la campaña
     const [plantilla, setPlantilla] = useState(null); // formulario de una campaña clonada (con editando = 'nueva')
-    const [flujos, setFlujos] = useState([]);
-    const [campanasMeta, setCampanasMeta] = useState([]);
-    const [setters, setSetters] = useState([]);
+    const [flujos, setFlujos] = useState(() => recordado('flujos', []));
+    const [campanasMeta, setCampanasMeta] = useState(() => recordado('campanas-meta', []));
+    const [setters, setSetters] = useState(() => recordado('setters', []));
 
     const cargar = useCallback(() => {
-        inboxApi.campanas(...periodo(dias)).then((r) => setCampanas(r.campanas)).catch(() => setError('No se pudieron cargar las campañas'));
+        // Otro período que ya se vio: se muestra lo recordado en vez de dejar el anterior.
+        const visto = recordado(`campanas:${dias}`);
+        if (visto) setCampanas(visto);
+        inboxApi.campanas(...periodo(dias)).then((r) => setCampanas(recordar(`campanas:${dias}`, r.campanas))).catch(() => setError('No se pudieron cargar las campañas'));
     }, [dias]);
     useEffect(() => { cargar(); }, [cargar]);
     useEffect(() => {
-        inboxApi.flujos().then(setFlujos).catch(() => setFlujos([]));
-        inboxApi.campanasMeta().then(setCampanasMeta).catch(() => setCampanasMeta([]));
-        inboxApi.setters().then(setSetters).catch(() => setSetters([]));
+        inboxApi.flujos().then((l) => setFlujos(recordar('flujos', l))).catch(() => setFlujos([]));
+        inboxApi.campanasMeta().then((c) => setCampanasMeta(recordar('campanas-meta', c))).catch(() => setCampanasMeta([]));
+        inboxApi.setters().then((s) => setSetters(recordar('setters', s))).catch(() => setSetters([]));
     }, []);
 
     const cerrar = () => { setEditando(null); setPlantilla(null); };

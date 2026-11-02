@@ -32,7 +32,7 @@ import math
 from datetime import date, datetime, time, timedelta
 
 from app import db
-from app.models import FinancialSale
+from app.models import FinancialSale, User
 from app.services import transferencias_service as transferencias
 from app.services.closer_followup_service import PROGRAM_CODE_NAMES, CloserFollowUpService
 from app.services.ficha_acciones_service import ErrorDeAccion
@@ -246,7 +246,7 @@ def crear(appt, datos, usuario):
 # Lo que se corrige de un pago, con los MISMOS nombres con los que lo lee y lo carga la ficha
 # (`fecha`, `monto`, `metodo_pago`, `programa_code`, `tipo`, `transferido_a`): si el GET dijera una
 # cosa y el PATCH pidiera otra, cada lado pasaria sus tests y en pantalla guardar no haria nada.
-CAMPOS = ('fecha', 'monto', 'metodo_pago', 'programa_code', 'tipo', 'transferido_a', 'sale_id')
+CAMPOS = ('fecha', 'monto', 'metodo_pago', 'programa_code', 'tipo', 'transferido_a', 'sale_id', 'vendedor_id')
 
 # El pago pedido no está entre las ventas del lead (`_venta_del_lead`).
 NO_ES_DE_ESTE_LEAD = 'Ese pago no es de este lead.'
@@ -348,7 +348,20 @@ def _aplicar(venta, datos):
                               SheetsService.parse_tipo_pago(tipo_pago or venta.tipo_pago)[0])
                if datos.get('sale_id') not in (None, '') else None)
 
+    # A quién se le atribuye el pago (02/11/2026): un lead puede tener pagos de distintos closers, y el que
+    # cargó un pago con el vendedor equivocado lo corrige acá. El correo es lo que leen la comisión y la nómina.
+    vendedor = None
+    if datos.get('vendedor_id') not in (None, ''):
+        vendedor = db.session.get(User, int(datos['vendedor_id']))
+        if not vendedor or not vendedor.email:
+            raise ErrorDeAccion('El closer elegido no existe.', 'vendedor_id')
+
     cambios, bitacora = set(), []
+    if vendedor and (vendedor.email or '').strip().lower() != (venta.email_vendedor or '').strip().lower():
+        actual = CloserFollowUpService._resolve_closer_for_email_vendedor(venta.email_vendedor)
+        bitacora.append(f'closer {actual.username if actual else (venta.email_vendedor or "sin closer")} → {vendedor.username}')
+        venta.email_vendedor = vendedor.email
+        cambios.add('vendedor')
     antes = _instante(venta.date)
     if dia and (antes is None or dia != antes.date()):
         bitacora.append(f'fecha {antes.date().isoformat() if antes else "sin fecha"} → '

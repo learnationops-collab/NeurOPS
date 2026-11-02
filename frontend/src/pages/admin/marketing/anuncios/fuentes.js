@@ -28,13 +28,13 @@ export const GRUPOS_COMPARACION = [
     { titulo: 'Plata', filas: [
         { key: 'gasto', label: 'Importe gastado', formato: 'money', ayuda: 'Gasto de Meta de los anuncios del embudo.' },
         { key: 'new_cash', label: 'New Cash', formato: 'money',
-            ayuda: 'Lo cobrado en pagos de venta nueva del período (completo + split).' },
+            ayuda: 'Neto cobrado en ventas nuevas del período (completo + split).' },
         { key: 'cash_total', label: 'Cash total', formato: 'money',
-            ayuda: 'Todo lo cobrado del período de los clientes de la fuente: ventas, cuotas, señas y upsells.' },
+            ayuda: 'Neto cobrado del período de los clientes de la fuente: ventas, cuotas, señas y upsells.' },
         { key: 'roas_new_cash', label: 'ROAS New Cash', formato: 'veces', mejor: 'mas',
-            ayuda: 'New Cash ÷ importe gastado.' },
+            ayuda: 'New Cash (neto) ÷ importe gastado.' },
         { key: 'roas_total', label: 'ROAS Total', formato: 'veces', mejor: 'mas',
-            ayuda: 'Cash total ÷ importe gastado.' },
+            ayuda: 'Cash total (neto) ÷ importe gastado.' },
     ] },
     { titulo: 'Costos', filas: [
         { key: 'cpl', label: 'Costo por lead', formato: 'money', mejor: 'menos', ayuda: 'Importe gastado ÷ leads entrantes.' },

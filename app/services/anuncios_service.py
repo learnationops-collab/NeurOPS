@@ -19,7 +19,8 @@ Marketing es una tabla al estilo del Administrador de anuncios de Meta, una fila
     por el Instagram no aparece, un Instagram parecido o el nombre (`cruce_conversaciones`).
   · **Ventas**: los pagos completos y split pay completados del período (la misma regla del dashboard
     comercial), atribuidos igual, con la última interacción de antes del pago. **Cobrado** es todo lo
-    cobrado de esas personas (también cuotas y señas). Lo cobrado que no llega a ninguna palabra clave
+    cobrado de esas personas (también cuotas y señas), en NETO desde el 02/11/2026: la comisión real del pago o, si
+    falta, el promedio de su plataforma (`commission_service.cash_neto`). Lo cobrado que no llega a ninguna palabra clave
     (workshop, VSL, renovaciones, setting sin conversación) se ve en «De dónde vino lo cobrado», que sale de las
     mismas fuentes que las tarjetas (`fuentes`: Setting, Workshop y Otras; Kerwin, 17/10/2026: «$5.138 me parece
     poco»; el período tenía $17.059). Desde el 29/10 lo reparte el ORIGEN del cliente, como el Cash total.
@@ -40,6 +41,7 @@ from app.models import MetaAnuncio, MetaGastoDiario
 from app.models.marketing import clave_de_palabra as clave_de  # noqa: F401  (lo importa meta_ads_service)
 from app.services.comercial_service import ComercialService, clientes_de_ventas, no_es_marcador, venta_completada
 from app.services import calificacion_service, fuentes_service, marketing_formulas as formulas
+from app.services.commission_service import cash_neto
 from app.services.cruce_conversaciones import Cruce
 from app.services.identity_service import normalize_ig
 # Partido en módulos (regla de las 500 líneas): se re-exporta todo para que `anuncios_service.X` siga igual.
@@ -227,10 +229,11 @@ def _ventas(desde_dt, hasta_dt, clave_de_anuncio):
             sin_atribuir += 1 if es_venta else 0
             sin_clave.append(cobro)
             continue
-        por_clave[clave]['cobrado'] += float(cobro.monto or 0)
+        neto = cash_neto(cobro)
+        por_clave[clave]['cobrado'] += neto
         if es_venta:
             por_clave[clave]['ventas'] += 1
-            por_clave[clave]['new_cash'] += float(cobro.monto or 0)
+            por_clave[clave]['new_cash'] += neto
             por_clave[clave]['personas'].add(cliente_de.get(cobro.id) or f'cobro-{cobro.id}')
     return por_clave, sin_atribuir, cobros, sin_clave, claves
 
@@ -406,8 +409,8 @@ def tablero(desde, hasta, base=None, segmento=None):
             'ventas': ventas_sin_atribuir,
             'gasto_meta': round(gasto_sin_clave, 2),
         },
-        # Todo lo cobrado del período (el Cash collected del dashboard comercial): lo que suman Setting, Workshop y Otras.
-        'cobrado_periodo': round(sum(float(c.monto or 0) for c in cobros), 2),
+        # Todo lo cobrado del período, en neto (el Cash collected del dashboard comercial es el mismo en bruto): lo que suman Setting, Workshop y Otras.
+        'cobrado_periodo': round(sum(cash_neto(c) for c in cobros), 2),
         'agrupaciones': _opciones_de_agrupacion(filas, conjuntos),
         # El gasto de Meta por embudo (setting, workshop…): el selector de Rendimiento (15/10/2026).
         'embudos': embudos,

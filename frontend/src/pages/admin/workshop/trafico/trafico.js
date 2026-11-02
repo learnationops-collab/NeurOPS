@@ -58,7 +58,9 @@ export const fechaHora = (iso) => {
 /** El referrer sin protocolo ni barra final: `institute.thelearnation.com/live-class-t5`. */
 export const referrerCorto = (url) => (url ? url.replace(/^https?:\/\//, '').replace(/\/$/, '') : null);
 
-export const EVENTO = { visita: 'Visita', clic_whatsapp: 'Clic al grupo' };
+export const EVENTO = {
+    visita: 'Visita', clic_whatsapp: 'Clic al grupo', clic_agendar: 'Clic a reservar', clic_aplicar: 'Clic a aplicar',
+};
 
 // Lo vacío como texto, para poder filtrarlo en el panel de facetas (un null no es una opción).
 export const o = (v, vacio) => (v == null || String(v).trim() === '' ? vacio : String(v).trim());

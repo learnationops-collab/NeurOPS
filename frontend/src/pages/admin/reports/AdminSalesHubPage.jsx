@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../../../contexts/AuthContext';
+import PanelesConservados from '../../../components/ui/PanelesConservados';
 import PublicSetterStatsPage from '../../public/PublicSetterStatsPage';
 import PublicCloserStatsPage from '../../public/PublicCloserStatsPage';
 import WorkshopDashboardPage from '../workshop/WorkshopDashboardPage';
@@ -38,9 +39,12 @@ const AdminSalesHubPage = () => {
             </div>
 
             <div className="w-full">
-                {tab === 'closer' && <PublicCloserStatsPage />}
-                {tab === 'setter' && <PublicSetterStatsPage />}
-                {tab === 'workshop' && puedeVerWorkshops && <WorkshopDashboardPage />}
+                {/* Cada pestaña que se abrió queda montada y escondida: volver a ella no recarga. */}
+                <PanelesConservados activa={tab} paneles={{
+                    closer: () => <PublicCloserStatsPage />,
+                    setter: () => <PublicSetterStatsPage />,
+                    ...(puedeVerWorkshops ? { workshop: () => <WorkshopDashboardPage /> } : {}),
+                }} />
             </div>
         </div>
     );

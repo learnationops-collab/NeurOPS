@@ -1,4 +1,4 @@
-// Editor de un formulario: barra (volver, vistas, importar preguntas, "No califica", eliminar) y la vista elegida.
+// Editor de un formulario: barra (volver, vistas, importar preguntas, eliminar) y la vista elegida.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { almacen, useDatos, usePermisos, useUi } from '../../data/hooks';
@@ -14,19 +14,19 @@ import { borrarForm } from './ListaForms';
 import Pregunta from './Pregunta';
 import Ruteo from './Ruteo';
 import Previa from './Previa';
-import { ModalImportar, ModalNoCalifica, fuentesImport } from './Modales';
+import { ModalImportar, fuentesImport } from './Modales';
 import { toast } from '../../ui/toast';
 
 const VISTAS = [{ v: 'preguntas', n: 'Preguntas', icono: 'lista' }, { v: 'ruteo', n: 'Segmentación', icono: 'flujo' }, { v: 'previa', n: 'Vista previa', icono: 'ojo' }];
 
 function cerrarForm() { almacen.flush(); ui.set({ form: null }); window.scrollTo({ top: 0 }); }
 
-function Barra({ f, vista, prevModo, onFin, finRef, onImportar }) {
+function Barra({ f, vista, prevModo, onImportar }) {
     const { lectura } = usePermisos();
-    const [borrar, setBorrar] = useState(false);
-    const r = resumenForm(f);
+    // Eliminar pide dos confirmaciones (Mario, 02/11): 1 = «¿Eliminar?», 2 = «¿Seguro?».
+    const [borrar, setBorrar] = useState(0);
     const papelera = useRef(null);
-    const cerrarPop = () => { setBorrar(false); papelera.current?.focus(); };
+    const cerrarPop = () => { setBorrar(0); papelera.current?.focus(); };
     return (
         <div className="barra">
             <Button icon={<Icono n="volver" />} data-nav="" onClick={cerrarForm}>Formularios</Button>
@@ -45,14 +45,16 @@ function Barra({ f, vista, prevModo, onFin, finRef, onImportar }) {
                         <button type="button" className="fe-btn" title="Traer preguntas de otro formulario" onClick={e => onImportar(e.currentTarget)}>
                             <Icono n="importar" s={15} /><span>Importar preguntas</span>
                         </button>
-                        <button type="button" className="fe-btn" ref={finRef} title="Pantalla para quien no califica" onClick={onFin}>
-                            <Icono n="prohibido" s={15} /><span>No califica</span>{r.filtra > 0 && <b className="num">{r.filtra}</b>}
-                        </button>
                         <div className="fe-borrar-caja" onKeyDown={e => { if (e.key === 'Escape' && borrar) { e.stopPropagation(); cerrarPop(); } }}>
-                            <IconButton label="Eliminar formulario" icon={<Icono n="basura" s={15} />} size="sm" danger ref={papelera} title="Eliminar formulario" aria-expanded={borrar}
-                                onClick={() => setBorrar(b => !b)} />
-                            {borrar && (
+                            <IconButton label="Eliminar formulario" icon={<Icono n="basura" s={15} />} size="sm" danger ref={papelera} title="Eliminar formulario" aria-expanded={borrar > 0}
+                                onClick={() => setBorrar(b => (b ? 0 : 1))} />
+                            {borrar === 1 && (
                                 <ConfirmDelete className="pop-borrar" name={f.nombre} detail="No se puede recuperar." icon={<Icono n="basura" />}
+                                    onCancel={cerrarPop} onConfirm={() => setBorrar(2)} />
+                            )}
+                            {borrar === 2 && (
+                                <ConfirmDelete className="pop-borrar" name={f.nombre} detail="¿Seguro? Se borran sus preguntas y su segmentación, y los links que lo usan dejan de agendar."
+                                    confirmLabel="Sí, eliminar para siempre" icon={<Icono n="basura" />}
                                     onCancel={cerrarPop} onConfirm={() => { ui.set({ form: null }); borrarForm(f); }} />
                             )}
                         </div>
@@ -151,8 +153,8 @@ export default function Editor() {
     const { d } = useDatos();
     const { form, prevModo } = useUi();
     const f = buscar(d, 'formularios', form.id);
-    const raiz = useRef(null), finRef = useRef(null), volver = useRef(null);
-    const [modal, setModal] = useState(null); // 'fin' | 'imp'
+    const raiz = useRef(null), volver = useRef(null);
+    const [modal, setModal] = useState(null); // 'imp'
 
     // Si el formulario desaparece (lo borró otra pestaña o se deshizo su creación), se vuelve a la lista.
     useEffect(() => { if (!f) ui.set({ form: null }); }, [f]);
@@ -171,11 +173,10 @@ export default function Editor() {
 
     return (
         <div ref={raiz} style={{ display: 'contents' }}>
-            <HeaderActions replaceTitle><Barra f={f} vista={vista} prevModo={prevModo} finRef={finRef} onFin={() => abrir('fin', finRef.current)} onImportar={importar} /></HeaderActions>
+            <HeaderActions replaceTitle><Barra f={f} vista={vista} prevModo={prevModo} onImportar={importar} /></HeaderActions>
             {vista === 'previa' ? <Previa f={f} prevModo={prevModo} />
-                : vista === 'ruteo' ? <Grid variant="column"><Ruteo f={f} d={d} modo={form.ruteoModo || 'reglas'} msel={form.msel || null} /></Grid>
+                : vista === 'ruteo' ? <Grid variant="column"><Ruteo f={f} d={d} modo={form.ruteoModo === 'probar' ? 'probar' : 'reglas'} msel={form.msel || null} /></Grid>
                     : <VistaPreguntas f={f} sel={form.sel || null} raiz={raiz} onImportar={importar} />}
-            {modal === 'fin' && <ModalNoCalifica f={f} onCerrar={cerrar} />}
             {modal === 'imp' && <ModalImportar f={f} d={d} onCerrar={cerrar} onImportado={(qid) => {
                 setModal(null); volver.current = null; setFormUi({ sel: qid, vista: 'preguntas' });
                 requestAnimationFrame(() => raiz.current?.querySelector('[data-q="' + qid + '"] .pq-abrir')?.focus());

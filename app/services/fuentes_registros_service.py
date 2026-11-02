@@ -4,6 +4,8 @@ Pedido de Kerwin (28/10/2026): cualquier cifra se abre en la lista de lo que la 
 Cada lista sale del MISMO código que la cifra (`conteo_agendas_service.personas` y `_cobros_para_sumar`),
 no de una consulta parecida: la suma de la lista es la cifra. Las agendas se cuentan por fecha de alta o de
 reunión (`base`); Otras es lo que no es de Setting ni de Workshop (solo agendas y cobros: no tiene leads ni gasto).
+Los montos de las listas de cobros son NETOS (comisión real del pago o promedio de su plataforma); el bruto y la
+comisión usada van en sus propias columnas.
 
   · agendas   las agendas del período en la base elegida (con «Asistió» y «Con resultado»).
   · agendas_alta   las mismas por fecha de alta, siempre: el denominador de los costos y del ROAS.
@@ -22,6 +24,8 @@ from app import db
 from app.models import Ad, Conversation, MetaAnuncio, MetaGastoDiario
 from app.services import anuncios_service, conteo_agendas_service, fuentes_service, workshop_meta_service
 from app.services.comercial_service import ComercialService
+from app.services.comision_plataforma_service import etiqueta_de
+from app.services.commission_service import cash_neto
 
 METRICAS = ('agendas', 'agendas_alta', 'reportadas', 'show_up', 'ventas', 'new_cash', 'cash_total', 'cash_anterior',
             'leads', 'gasto')
@@ -42,7 +46,9 @@ _COLUMNAS_AGENDAS = [
 _COLUMNAS_COBROS = [
     {'key': 'fecha', 'header': 'Fecha', 'tipo': 'fecha', 'ancho': '120px'},
     {'key': 'cliente', 'header': 'Cliente', 'tipo': 'texto', 'ancho': 'minmax(160px,1.6fr)'},
-    {'key': 'monto', 'header': 'Monto', 'tipo': 'dinero', 'ancho': '110px'},
+    {'key': 'monto', 'header': 'Neto', 'tipo': 'dinero', 'ancho': '110px'},
+    {'key': 'bruto', 'header': 'Bruto', 'tipo': 'dinero', 'ancho': '110px', 'oculta': True},
+    {'key': 'comision', 'header': 'Comisión usada', 'tipo': 'texto', 'ancho': 'minmax(150px,1fr)', 'oculta': True},
     {'key': 'tipo', 'header': 'Tipo', 'tipo': 'texto', 'ancho': '110px'},
     {'key': 'origen', 'header': 'De dónde viene', 'tipo': 'texto', 'ancho': 'minmax(210px,1.4fr)'},
     {'key': 'medio', 'header': 'Medio', 'tipo': 'texto', 'ancho': 'minmax(110px,1fr)', 'oculta': True},
@@ -145,11 +151,12 @@ def _cobros(fuente, metrica, desde, hasta):
             origen = f"{TIPOS.get(tipo, 'Cobro')} de una venta anterior"
         if metrica == 'cash_anterior' and 'anterior' not in origen:
             continue
-        monto = round(float(cobro.monto or 0), 2)
+        monto = round(cash_neto(cobro), 2)
         suma += monto
         filas.append({
             'id': str(cobro.id), 'fecha': cobro.date.isoformat() if cobro.date else '',
             'cliente': cobro.nombre_cliente or 'Sin nombre', 'monto': monto,
+            'bruto': round(float(cobro.monto or 0), 2), 'comision': etiqueta_de(cobro),
             'tipo': 'Venta nueva' if es_venta else TIPOS.get(tipo, 'Otro'), 'origen': origen,
             'medio': cobro.metodo_pago or '—', 'clave': claves.get(cobro.id) or '—',
         })

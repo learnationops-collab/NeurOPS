@@ -13,6 +13,7 @@ espera. Si falta el webhook o Discord falla, queda en el log: nunca frena la age
 
 import json
 import os
+import re
 import threading
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -204,6 +205,34 @@ def _pase_de_triage(payload):
     return origen, pase.get('por') or quien.username, pase.get('nota') or ''
 
 
+def _lineas_de_nota(nota):
+    """La nota sin marcas de formato (`*`, `**`, `#`, `>`), una línea por renglón y sin los vacíos."""
+    lineas = []
+    for l in str(nota or '').replace('\r', '').split('\n'):
+        t = re.sub(r'^[\s>#*•\-–]+', '', l).replace('**', '').strip()
+        if t:
+            lineas.append(t)
+    return lineas
+
+
+def _es_titulo(linea):
+    """«DIRECCIÓN» o «Contexto del estudio:» solos: encabezados que no dicen nada si van sueltos."""
+    letras = re.sub(r'[^A-Za-zÁÉÍÓÚÑÜáéíóúñü]', '', linea)
+    return len(linea) <= 45 and (linea.endswith(':') or (len(letras) >= 3 and linea == linea.upper()))
+
+
+def _resumen_de_nota(nota, n=130):
+    """Las primeras líneas con contenido, en una sola frase corta (lo que cabe en chico bajo el título)."""
+    utiles = [l for l in _lineas_de_nota(nota) if not _es_titulo(l)] or _lineas_de_nota(nota)
+    return _corto(' · '.join(utiles[:3]), n)
+
+
+def _nota_como_texto(por, nota, n=1500):
+    """La nota entera como cita del mensaje de Discord (fuera de la imagen), con su límite de 2000 caracteres."""
+    cuerpo = '\n'.join('> ' + l for l in _lineas_de_nota(nota))
+    return f'**Nota de {por} para el closer**\n' + _corto(cuerpo, n)
+
+
 def _datos_de_pase(appt, payload, origen, por, nota):
     """La agenda de closing que el triage le pasa al closer: lleva el segmento, las respuestas y la nota de la
     llamada de triage (la de closing nace sin formulario), y dice de dónde viene y quién la pasó."""
@@ -224,8 +253,10 @@ def _datos_de_pase(appt, payload, origen, por, nota):
         'funnel': FUNNELS.get(funnel, str(funnel or '').capitalize()),
     }
     if nota:
-        d['tiles'] = [{'icono': 'bandeja', 'titulo': _corto(nota, 140), 'sub': f'Nota de {por} para el closer'},
+        # En la imagen, el título y las primeras líneas en chico; la nota entera va como texto del mensaje.
+        d['tiles'] = [{'icono': 'bandeja', 'titulo': f'Nota de {por} para el closer', 'sub': _resumen_de_nota(nota)},
                       *d['tiles']][:MAX_TILES]
+        d['nota_larga'] = _nota_como_texto(por, nota)
     return d
 
 
@@ -287,6 +318,8 @@ def mensaje(d):
     va @everyone; sin triage activas no etiqueta a nadie."""
     partes = [f"{d['emoji']} **{d['titulo']}**", d['lead']['nombre'], d['lead']['telefono']]
     texto = ' · '.join(p for p in partes if p)
+    if d.get('nota_larga'):
+        texto += '\n' + d['nota_larga']
     presentes = []
     for q in ETIQUETA[d['tipo']]:
         valor = d.get(q + '_discord')

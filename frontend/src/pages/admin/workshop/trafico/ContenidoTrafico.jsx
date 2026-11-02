@@ -7,6 +7,7 @@ import { COLUMNAS_DETALLE, FACETAS_DETALLE, FACETAS_RANKING, buscarEnVisita, cla
 import { num } from './trafico';
 
 const EVENTO_CLIC = 'clic_whatsapp';
+const EVENTO_VISITA = 'visita';
 // El tope del backend: la lista tiene que traer TODAS las filas que suma la cifra (el detalle de la página pide 5.000).
 const LIMITE_LISTA = 20000;
 
@@ -26,7 +27,7 @@ const Visitas = ({ desde, hasta, tipo }) => {
         (signal) => api.get('/workshop/landing/trafico/visitas', { params: { desde, hasta, limite: LIMITE_LISTA }, signal })
             .then((r) => r.data));
     const filas = useMemo(
-        () => (datos ? datos.visitas.filter((v) => (tipo === 'clics') === (v.evento === EVENTO_CLIC)) : []),
+        () => (datos ? datos.visitas.filter((v) => v.evento === (tipo === 'clics' ? EVENTO_CLIC : EVENTO_VISITA)) : []),
         [datos, tipo]);
     if (error && !datos) return <EmptyState title="No se pudo traer la lista." />;
     if (!datos) return <Esqueleto />;

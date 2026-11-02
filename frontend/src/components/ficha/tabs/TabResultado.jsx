@@ -154,7 +154,9 @@ export default function TabResultado({
   sinProgreso = false,   // dentro del Resultado del triage, que pinta su propio progreso
 }) {
   const reducido = useReducedMotion();
-  const precarga = useMemo(() => precargar(ficha), []); // eslint-disable-line react-hooks/exhaustive-deps
+  // Se rehace si el lead se reasigna con la pestaña abierta: el closer de la agenda es el de la venta.
+  const closerId = ficha?.identidad?.closer?.id ?? null;
+  const precarga = useMemo(() => precargar(ficha), [closerId]); // eslint-disable-line react-hooks/exhaustive-deps
   // «Declarar venta» del dock abre la ficha para vender: se entra derecho a la venta directa, sin
   // pasar por las cuatro tarjetas de la llamada («Anterior» vuelve a ellas). «Registrar pago» de
   // Acciones (`'pago'`) entra ya en el camino del pago.
@@ -167,6 +169,19 @@ export default function TabResultado({
     }
     return arrancarEnVenta ? ventaDirecta(precarga) : precarga;
   });
+  // «La comisión va a» viene puesto con el closer de la agenda. Si el lead se reasigna con esta pestaña ya
+  // abierta (el botón de la cabecera), el closer anterior se quedaba de vendedor y el pago salía a su nombre
+  // (David Hernandez, 31/10/2026): si nadie eligió a otro a mano, pasa al closer nuevo.
+  const closerAnterior = useRef(closerId);
+  useEffect(() => {
+    const antes = closerAnterior.current;
+    closerAnterior.current = closerId;
+    if (antes === closerId || !closerId) return;
+    setRespuestas((prev) => (prev.vendedor_id === antes || prev.vendedor_id == null
+      ? actualizar(prev, { vendedor_id: closerId, email_vendedor: ficha?.identidad?.closer?.email || '' })
+      : prev));
+  }, [closerId]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState(null);
   // Lo que quedó guardado. Mientras existe, la pestaña muestra la confirmación y no la revisión:

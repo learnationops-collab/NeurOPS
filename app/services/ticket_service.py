@@ -127,10 +127,13 @@ def ticket_promedio(pagos):
     return round(cash, 2), len(ventas), (round(cash / len(ventas), 2) if ventas else None)
 
 
-def primeras_cuotas(pagos):
+def primeras_cuotas(pagos, monto_de=None):
     """Las cuotas completadas que pueden sumar a las ventas nuevas de `pagos`: las de esos clientes
     en el mes que sigue a cada venta, de cualquier closer y aunque caigan fuera del período que se
-    mira. La cuota es de la venta, no de quien la cargó ni del mes en que se mira. Una consulta."""
+    mira. La cuota es de la venta, no de quien la cargó ni del mes en que se mira. Una consulta.
+    `monto_de` (por defecto el bruto, `venta.monto`) dice con qué monto entra cada cuota: Marketing y
+    Workshop cuentan en neto y pasan el de `commission_service.cash_neto`."""
+    monto_de = monto_de or (lambda venta: venta.monto)
     ventas = [(p[0], _dia(p[1])) for p in pagos if p[3] == VENTA and p[0] and _dia(p[1])]
     if not SUMAR_PRIMERA_CUOTA or not ventas:
         return []
@@ -150,17 +153,17 @@ def primeras_cuotas(pagos):
             continue
         cs = claves_de_venta(s)
         if claves.intersection(cs):
-            cuotas.append((cs, s.date, s.monto, CUOTA))
+            cuotas.append((cs, s.date, monto_de(s), CUOTA))
     return cuotas
 
 
-def cuotas_que_suman(pagos, candidatas=None):
+def cuotas_que_suman(pagos, candidatas=None, monto_de=None):
     """Las primeras cuotas (los pagos de `primeras_cuotas`) que `ticket_de` le suma a las ventas de `pagos`:
     lo que hay que listar para que la suma de la lista sea el cash de las ventas nuevas. `candidatas`:
     las de `primeras_cuotas(pagos)` si ya se buscaron (evita repetir la consulta)."""
     pagos = sin_cuotas(pagos)
     if candidatas is None:
-        candidatas = primeras_cuotas(pagos)
+        candidatas = primeras_cuotas(pagos, monto_de)
     todo = [p for p in pagos + candidatas if _entra(p[3])]
     clientes = _unir_clientes([tuple(p[0] or ()) for p in todo])
     por_cliente = {}
@@ -187,10 +190,11 @@ def ticket_de(pagos):
     return ticket_promedio(pagos + primeras_cuotas(pagos))
 
 
-def ticket_y_cuotas(pagos):
-    """`ticket_de` más las cuotas que le sumó, con una sola búsqueda: ((cash, cuántas, ticket), cuotas)."""
+def ticket_y_cuotas(pagos, monto_de=None):
+    """`ticket_de` más las cuotas que le sumó, con una sola búsqueda: ((cash, cuántas, ticket), cuotas).
+    `monto_de`, como en `primeras_cuotas`: los montos de `pagos` ya vienen en la base que se quiera."""
     pagos = sin_cuotas(pagos)
-    candidatas = primeras_cuotas(pagos)
+    candidatas = primeras_cuotas(pagos, monto_de)
     return ticket_promedio(pagos + candidatas), cuotas_que_suman(pagos, candidatas)
 
 

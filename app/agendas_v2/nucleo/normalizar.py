@@ -238,6 +238,8 @@ def normal_form(id, d):
         'resto': txt(d.get('resto')),
         # Solo si segmenta: sin la clave, lo publicado antes queda idéntico.
         **({'segmento': seg} if seg else {}),
+        # Sin segmentación: cada link va a la persona de su evento. Sin la clave, lo publicado antes queda idéntico.
+        **({'sinSegmentacion': True} if d.get('sinSegmentacion') is True else {}),
         # url: la página a la que va el que no califica (la landing de descalificados); vacía, ve el título y el texto.
         'fin': {'titulo': cortar(txt(fin.get('titulo'), FIN_DEF['titulo']), 120), 'texto': cortar(texto_fin, 300),
                 'url': url_ok(fin.get('url'))},

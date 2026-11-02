@@ -1,5 +1,5 @@
 // Segmentación: reglas en orden; la primera que se cumple elige la estrategia. Lo que no cumple ninguna va a "Todo lo demás".
-// Una regla o «Todo lo demás» puede mandar a «No califica» en vez de a una estrategia: ese lead no agenda y ve el fin.
+// «Simular» muestra a dónde va un lead según sus respuestas. Sin segmentación, cada link va a la persona de su evento.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { almacen } from '../../data/hooks';
@@ -9,11 +9,11 @@ import { NO_CALIFICA, preguntasRuteo, reglasRotas, revisarSegmentacion } from '.
 import { urlOk } from '../../core/normalizar';
 import { uid } from '../../core/util';
 import { Humo, HUMO_MARCA, Icono, Sx } from '../../ui/base';
-import Lienzo from '../../ui/Lienzo';
 import { useOrdenable } from '../../ui/useOrdenable';
 import { colorNivel, mutarForm, opcionesPrioridad, setFormUi, useEnfocar } from './comun';
-import RuteoFlujo from './RuteoFlujo';
-import { FieldError, Grid, IconButton, Input, Segmented } from '../../../../components/standard';
+import RuteoSimulador from './RuteoSimulador';
+import RuteoSinSegmentacion from './RuteoSinSegmentacion';
+import { FieldError, Grid, IconButton, Input, Segmented, Switch } from '../../../../components/standard';
 import { useEnPantalla } from '../../../../components/ui/useEnPantalla';
 
 const AYUDA_RUTEO = 'Se revisan de arriba a abajo: la primera regla que se cumple elige la estrategia. En cada condición alcanza cualquiera de las respuestas marcadas.';
@@ -34,7 +34,7 @@ function Revision({ avisos }) {
     );
 }
 
-// «No califica»: va en todos los destinos, después de las estrategias.
+// «No califica» ya no se ofrece (nadie se descarta, Mario 02/11): solo se muestra si un destino viejo lo tiene.
 const OP_NO = { v: NO_CALIFICA, n: 'No califica', icono: 'prohibido', color: 'var(--error)' };
 
 function Destino({ d, valor, onChange, label, extra = [] }) {
@@ -42,15 +42,20 @@ function Destino({ d, valor, onChange, label, extra = [] }) {
     return (
         <div className="destino" style={{ '--c': g ? colorNivel(i + 1) : no ? 'var(--error)' : 'var(--idle)' }}>
             <span className="destino-flecha" aria-hidden="true"><Icono n="chevron-right" s={16} /></span>
-            <Sx sm label={label} valor={g || no ? valor : ''} opciones={opcionesPrioridad(d).concat([OP_NO], extra)} onChange={onChange} />
+            <Sx sm label={label} valor={g || no ? valor : ''} opciones={opcionesPrioridad(d).concat(no ? [OP_NO] : [], extra)} onChange={onChange} />
         </div>
     );
 }
 
-// La sesión que toma el lead de la regla: la del evento del formulario o otro evento del equipo
-// (C/D → «Sesión diagnóstica» de 30 min con el triage). Los eventos propios de un closer no van.
-const opcionesSesion = (d) => [{ v: '', n: 'La del formulario' },
-    ...ordCol(d, 'eventos').filter(e => !e.persona).map(e => ({ v: e.id, n: e.nombre }))];
+// La sesión que toma el lead de la regla: la del link por el que agendó (cada embudo tiene su evento con este
+// formulario) u otro evento del equipo (C/D → «Sesión diagnóstica» con el triage). Los eventos propios de un
+// closer no van. Dos eventos con el mismo nombre se distinguen por su embudo.
+const opcionesSesion = (d) => {
+    const es = ordCol(d, 'eventos').filter(e => !e.persona);
+    const repetido = (e) => es.filter(x => x.nombre === e.nombre).length > 1;
+    const embudo = (e) => { const fu = buscar(d, 'funnels', e.funnel); return fu ? ' · ' + fu.nombre : ''; };
+    return [{ v: '', n: 'La del link por el que agendó' }, ...es.map(e => ({ v: e.id, n: e.nombre + (repetido(e) ? embudo(e) : '') }))];
+};
 
 // Destino de una regla: una estrategia o una página (el lead no agenda y va a esa URL).
 // Lo que se escribe queda en borrador hasta que es una URL https válida: así no se borra mientras se tipea.
@@ -168,7 +173,6 @@ export default function Ruteo({ f, d, modo, msel }) {
     const qs = preguntasRuteo(f).filter(q => conOpciones(q.tipo) && q.opciones.some(o => o.texto.trim()));
     const rotas = reglasRotas(f);
     const avisos = revisarSegmentacion(f, (id) => nombreGrupo(d, id));
-    const conAviso = [...new Set(avisos.filter(a => a.regla != null && a.nivel !== 'info').map(a => a.regla))];
     const reordenar = useCallback((nuevos) => mutarForm(f.id, 'reglas', rs => nuevos.map(id => rs.find(r => r.id === id)).filter(Boolean)), [f.id]);
     const ord = useOrdenable(f.reglas.map(r => r.id), reordenar);
     const { contenedor, lista } = ord;
@@ -187,12 +191,19 @@ export default function Ruteo({ f, d, modo, msel }) {
             <div className="ruteo-cab">
                 <h2 className="t-h3">Segmentación</h2>
                 <span className="ayuda" tabIndex={0} role="note" aria-label={AYUDA_RUTEO} data-tip={AYUDA_RUTEO}>?</span>
-                <Segmented size="sm" label="Vista del ruteo" style={{ marginLeft: 'auto' }} itemProps={{ 'data-nav': '' }} value={modo}
+                <label className="ruteo-usa">
+                    <Switch checked={!f.sinSegmentacion} label="Usa segmentación"
+                        onChange={v => { almacen.editar('formularios', f.id, { sinSegmentacion: !v }); setFormUi({ ruteoModo: 'reglas', msel: null }); }} />
+                    <span>{f.sinSegmentacion ? 'Sin segmentación' : 'Con segmentación'}</span>
+                </label>
+                {!f.sinSegmentacion && <Segmented size="sm" label="Vista del ruteo" style={{ marginLeft: 'auto' }} itemProps={{ 'data-nav': '' }} value={modo}
                     onChange={v => setFormUi({ ruteoModo: v, msel: null })}
-                    options={[{ value: 'reglas', label: 'Reglas', icon: <Icono n="lista" /> }, { value: 'flujo', label: 'Flujo', icon: <Icono n="flujo" /> }]} />
+                    options={[{ value: 'reglas', label: 'Reglas', icon: <Icono n="lista" /> },
+                        { value: 'probar', label: 'Simular', icon: <Icono n="rayo" /> }]} />}
             </div>
-            <Revision avisos={avisos} />
-            {modo === 'flujo' ? <Lienzo etiqueta="Flujo de la segmentación"><RuteoFlujo f={f} d={d} rotas={rotas} avisos={conAviso} /></Lienzo>
+            {!f.sinSegmentacion && modo !== 'probar' && <Revision avisos={avisos} />}
+            {f.sinSegmentacion ? <RuteoSinSegmentacion f={f} d={d} />
+                : modo === 'probar' ? <RuteoSimulador f={f} d={d} />
                 : !qs.length ? (
                     <>
                         <p className="t-sm mut">Agregá preguntas de opción para armar reglas.</p>

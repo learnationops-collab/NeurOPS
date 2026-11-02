@@ -61,7 +61,8 @@ const TodosPage = () => {
     const segmento = ['resumen', 'detalle'].includes(vista) ? segmentoDeUrl(params).join(',') : '';
     const { datos, error: fallo, cargando } = useDatosCacheados(`mk:tablero:${base}:${rango.desde}:${rango.hasta}:${segmento}`,
         (signal) => pedirTablero(rango.desde, rango.hasta, { signal, base, segmento }),
-        { version, onError: (e) => toast.error(mensajeDeError(e, 'No se pudo cargar la comparación.')) });
+        // Segmentos pide lo suyo y avisa sus propios errores: el del tablero no lo bloquea ni lo repite.
+        { version, onError: (e) => { if (vista !== 'segmentos') toast.error(mensajeDeError(e, 'No se pudo cargar la comparación.')); } });
     const error = fallo ? mensajeDeError(fallo, 'No se pudo cargar la comparación.') : null;
 
     const setting = datos?.fuentes?.fuentes?.find((f) => f.key === SETTING.key);
@@ -79,6 +80,9 @@ const TodosPage = () => {
 
     const aviso = <AvisoSinCampana sinCampana={datos?.fuentes?.sin_campana} moneda={datos?.moneda} />;
     const contenido = () => {
+        if (vista === 'segmentos') {
+            return <SegmentosVista rango={rango} version={version} params={params} cambiar={cambiar} onReintentar={recargar} />;
+        }
         if (error && !datos) return <ErrorDeCarga titulo={error} onReintentar={recargar} />;
         if (vista === 'meta') {
             return (
@@ -103,9 +107,6 @@ const TodosPage = () => {
                     </section>
                 </div>
             );
-        }
-        if (vista === 'segmentos') {
-            return <SegmentosVista rango={rango} version={version} params={params} cambiar={cambiar} />;
         }
         if (!datos) return <EsqueletoResumen />;
         if (sinFuentes) {

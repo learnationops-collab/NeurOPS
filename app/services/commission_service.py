@@ -39,32 +39,33 @@ def clave_de_closer(nombre):
     from app.services.fuente_service import normalizar
     return CLOSERS_CON_COMISION.get(normalizar(nombre))
 
-# La comisión ESTIMADA de cada pasarela, como fracción del bruto: lo que se descuenta para llegar al
-# cash NETO de un cobro. Es la ÚNICA definición: el Resumen de Finanzas, Payroll y las comisiones
-# del equipo, el cash neto del dashboard comercial y del closer, marketing, el listado de ventas y
-# la comisión estimada de Diferencias salen de acá. Antes el 0.955 y el 0.911 estaban escritos a
-# mano en una docena de sitios.
+# La comisión de cada pasarela, como fracción del bruto: lo que se descuenta para llegar al cash NETO de un
+# cobro. Es la ÚNICA definición: el Resumen de Finanzas, Payroll y las comisiones del equipo, el cash neto del
+# dashboard comercial y del closer, marketing, el listado de ventas y la comisión estimada de Diferencias salen
+# de acá.
 #
-# 4,4 % y 8,2 % desde el 09/10/2026 (antes 4,5 % y 8,9 %), para todo el historial: lo que cobraron
-# de verdad en septiembre según los CSV de Finanzas › Diferencias. Stripe, 4,41 % efectivo en 38
-# cobros (≈ 4,36 % + $0,13 por cobro). Hotmart, ~8,2 % por cobro en 4 de 6; los otros 2 se llevaron
-# ~22 % y dejaron el mes en 11,5 % efectivo, pero Kerwin eligió lo típico por cobro.
-COMISION_PASARELA = {'stripe': 0.044, 'hotmart': 0.082}
-FEES_POR_METODO = {metodo: round(1 - comision, 6) for metodo, comision in COMISION_PASARELA.items()}
+# Desde el 02/11/2026 la comisión de un pago es la REAL cuando se conoce (verificado, `transaction_amount`) y,
+# si no, el PROMEDIO de su plataforma calculado con las comisiones reales ya cargadas
+# (`comision_plataforma_service`, Kerwin: no se fija un % a mano). Los valores de abajo son solo el último
+# recurso, si todavía no hay pagos verificados de esa plataforma: 4,4 % y 8,2 % (los de septiembre de 2026
+# según los CSV de Finanzas › Diferencias).
+# Hotmart 8,8 % desde el 02/11/2026 (cobra 8,77 % real en 41 pagos verificados; antes 8,2 %).
+COMISION_PASARELA = {'stripe': 0.044, 'hotmart': 0.088}
 
 
 def cash_neto_de(monto, metodo_pago):
-    """Lo que queda de un cobro despues de la fee de la pasarela. Un metodo desconocido (o
-    ninguno) no descuenta nada: es el criterio que ya aplicaba el calculo de comision."""
-    factor = FEES_POR_METODO.get((metodo_pago or '').strip().lower(), 1.0)
-    return float(monto or 0.0) * factor
+    """Lo que queda de un cobro despues de la comision PROMEDIO de su plataforma (la real, si se conoce, la
+    lee `cash_neto`). Una plataforma de la que no se sabe cuanto cobra (o ninguna) no descuenta nada."""
+    from app.services.comision_plataforma_service import tasa_promedio
+    return float(monto or 0.0) * (1 - tasa_promedio(metodo_pago))
 
 
 def cash_neto(venta):
     """El cash collect real de un pago: lo que entró según el extracto (`transaction_amount`, neto de la
-    pasarela) si está verificado; si no, el estimado (`cash_neto_de`). Es lo que cuenta para comisiones
-    (Santiago, 26/10/2026)."""
-    if venta.transaction_status == 'verified' and venta.transaction_amount is not None:
+    pasarela) si está verificado; si no, el estimado con el promedio de su plataforma (`cash_neto_de`). Es lo
+    que cuenta para comisiones (Santiago, 26/10/2026)."""
+    from app.services.comision_plataforma_service import tiene_comision_real
+    if tiene_comision_real(venta):
         return float(venta.transaction_amount)
     return cash_neto_de(venta.monto, venta.metodo_pago)
 

@@ -44,27 +44,43 @@ export const Encabezado = ({ pieza, orden, ordenarPor, ariaOrden, vista }) => {
     if (pieza.tipo === 'col') {
         const c = pieza.col;
         return (
-            <th scope="col" className="mk-num" aria-sort={ariaOrden(c.key)}>
-                <span className="mk-cab-celda">
-                    <Tip texto={c.ayuda} titulo={c.label} />
-                    <button type="button" className="mk-cab" onClick={() => ordenarPor(c.key, c.menor)}>
-                        {c.label} <Flecha orden={orden} clave={c.key} />
-                    </button>
+            <th scope="col" className="mk-num" aria-sort={c.pct && orden.clave === c.pct ? ariaOrden(c.pct) : ariaOrden(c.key)}>
+                <span className={`mk-cab-celda${c.pct ? ' mk-cab-celda--pct' : ''}`}>
+                    <span className="mk-cab-fila">
+                        <Tip texto={c.ayuda} titulo={c.label} />
+                        <button type="button" className="mk-cab" onClick={() => ordenarPor(c.key, c.menor)}>
+                            {c.label} <Flecha orden={orden} clave={c.key} />
+                        </button>
+                    </span>
+                    {c.pct && (
+                        // El porcentaje de debajo del número ordena por la tasa, no por el conteo.
+                        <button type="button" className={`mk-cab mk-cab--pct${orden.clave === c.pct ? ' is-on' : ''}`}
+                            aria-label={`Ordenar por % de ${c.label.toLowerCase()}`} title={`Ordenar por el % de ${c.label.toLowerCase()}`}
+                            onClick={() => ordenarPor(c.pct)}>
+                            % <Flecha orden={orden} clave={c.pct} />
+                        </button>
+                    )}
                 </span>
                 <Borde id={pieza.key} etiqueta={c.label} vista={vista} />
             </th>
         );
     }
     // Un grupo: su nombre y, debajo, cada métrica como botón para ordenar por ella.
-    const ordenada = pieza.cols.find((c) => c.key === orden.clave);
+    const ordenada = pieza.cols.find((c) => c.key === orden.clave || (c.pct && c.pct === orden.clave));
     return (
-        <th scope="col" className="mk-col-grupo" aria-sort={ordenada ? ariaOrden(ordenada.key) : 'none'}>
+        <th scope="col" className="mk-col-grupo" aria-sort={ordenada ? ariaOrden(orden.clave) : 'none'}>
             <span className="mk-grupo-tit">{pieza.grupo.label}</span>
             <span className="mk-grupo-orden" aria-label={`Ordenar ${pieza.grupo.label} por`}>
                 {pieza.cols.map((c) => (
                     <button key={c.key} type="button" className={`mk-grupo-por${orden.clave === c.key ? ' is-on' : ''}`}
                         title={`${c.label}: ${c.ayuda}`} onClick={() => ordenarPor(c.key, c.menor)}>
                         {CORTO[c.key]} <Flecha orden={orden} clave={c.key} />
+                    </button>
+                ))}
+                {pieza.cols.filter((c) => c.pct).map((c) => (
+                    <button key={c.pct} type="button" className={`mk-grupo-por${orden.clave === c.pct ? ' is-on' : ''}`}
+                        title={`Ordenar por el % de ${c.label.toLowerCase()}`} onClick={() => ordenarPor(c.pct)}>
+                        % {CORTO[c.key]} <Flecha orden={orden} clave={c.pct} />
                     </button>
                 ))}
             </span>

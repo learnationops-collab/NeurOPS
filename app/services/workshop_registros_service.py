@@ -6,6 +6,8 @@ cuando éste está al día; si el taller guarda otro (se calculó antes), la pan
 
   · show_up / reportadas   las personas que asistieron / las que tienen resultado (base del show up de citas).
   · ventas                 las personas compradoras (pago completo o split pay; la seña no).
+  Los montos van en NETO (`commission_service.cash_neto`, desde el 02/11/2026); el bruto y la comisión usada, en
+  sus columnas.
   · new_cash               los pagos de venta nueva (completo o split pay) más la primera cuota de cada venta si llega
     a menos de un mes (la base del ticket, `cash_ventas`, 19/10/2026): su suma es el New Cash.
   · cash_total             los pagos de venta nueva, las señas y las primeras cuotas que suman a esas ventas: su suma
@@ -18,6 +20,8 @@ Las agendas se abren con `workshop_agendas_service` (la lista de Revisar), que y
 from datetime import datetime
 
 from app.services import workshop_metrics_service as m
+from app.services.comision_plataforma_service import etiqueta_de
+from app.services.commission_service import cash_neto
 from app.services.ticket_service import SENA, VENTA, claves_de_venta, cuotas_que_suman
 from app.services.workshop_estados import bucket_de_persona
 
@@ -37,7 +41,9 @@ _PERSONAS = [
 _COBROS = [
     {'key': 'fecha', 'header': 'Fecha', 'tipo': 'fecha', 'ancho': '120px'},
     {'key': 'cliente', 'header': 'Cliente', 'tipo': 'texto', 'ancho': 'minmax(170px,1.6fr)'},
-    {'key': 'monto', 'header': 'Monto', 'tipo': 'dinero', 'ancho': '110px'},
+    {'key': 'monto', 'header': 'Neto', 'tipo': 'dinero', 'ancho': '110px'},
+    {'key': 'bruto', 'header': 'Bruto', 'tipo': 'dinero', 'ancho': '110px', 'oculta': True},
+    {'key': 'comision', 'header': 'Comisión usada', 'tipo': 'texto', 'ancho': 'minmax(150px,1fr)', 'oculta': True},
     {'key': 'tipo', 'header': 'Cuenta como', 'tipo': 'texto', 'ancho': '120px'},
     {'key': 'taller', 'header': 'Taller', 'tipo': 'texto', 'ancho': 'minmax(130px,1fr)'},
     {'key': 'embudo', 'header': 'Entró por', 'tipo': 'texto', 'ancho': '110px'},
@@ -98,21 +104,24 @@ def _cobros(talleres, metrica, tz_nombre):
         nonlocal suma
         monto = round(float(monto or 0), 2)
         suma += monto
+        # La primera cuota no trae su pago (`venta` None): de ella solo se sabe el neto.
         filas.append({'id': f'{taller.id}-{embudo}-{len(filas)}', 'fecha': fecha.isoformat() if fecha else '',
                       'cliente': cliente or 'Sin nombre', 'monto': monto, 'tipo': tipo, 'taller': taller.name,
+                      'bruto': round(float(venta.monto or 0), 2) if venta else None,
+                      'comision': etiqueta_de(venta) if venta else '—',
                       'embudo': _EMBUDO[embudo], 'medio': medio or '—'})
 
     for taller in talleres:
         for embudo, (_personas_, _compradores, ventas) in _grupos(taller, tz_nombre).items():
-            pagos = [(claves_de_venta(v), v.date, v.monto, VENTA if m._es_cierre(v) else SENA) for v in ventas]
+            pagos = [(claves_de_venta(v), v.date, cash_neto(v), VENTA if m._es_cierre(v) else SENA) for v in ventas]
             for venta, pago in zip(ventas, pagos):
                 nueva = pago[3] == VENTA
                 if metrica == 'new_cash' and not nueva:
                     continue
-                agregar(taller, embudo, venta, venta.monto, venta.date, venta.nombre_cliente,
+                agregar(taller, embudo, venta, cash_neto(venta), venta.date, venta.nombre_cliente,
                         'Venta nueva' if nueva else 'Seña', venta.metodo_pago)
             # Las primeras cuotas suman a New Cash y a Cash total
-            for claves, fecha, monto, _clase in cuotas_que_suman(pagos):
+            for claves, fecha, monto, _clase in cuotas_que_suman(pagos, monto_de=cash_neto):
                 dueno = next((v for v, p in zip(ventas, pagos) if set(p[0]) & set(claves or ())), None)
                 agregar(taller, embudo, None, monto, fecha, dueno.nombre_cliente if dueno else None,
                         'Primera cuota', None)

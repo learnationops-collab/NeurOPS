@@ -194,8 +194,9 @@ export const metricaActual = (metricas, elegida, config) => (
 /** Ordena por la métrica; sin dato siempre al final, sea cual sea el sentido. */
 export const ordenar = (filas, key, orden) => [...filas].sort((a, b) => {
     const va = a[key], vb = b[key];
-    if (va === null || va === undefined) return 1;
-    if (vb === null || vb === undefined) return -1;
+    const faltaA = va === null || va === undefined || Number.isNaN(va);
+    const faltaB = vb === null || vb === undefined || Number.isNaN(vb);
+    if (faltaA || faltaB) return faltaA === faltaB ? 0 : (faltaA ? 1 : -1);
     return orden === 'asc' ? va - vb : vb - va;
 });
 

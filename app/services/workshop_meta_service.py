@@ -179,12 +179,12 @@ def _landings_entre(inicio, fin):
     """{campana_id: (visitas, clics_whatsapp)} de las landings del taller en [inicio, fin) (UTC naive).
     Los anuncios de Meta mandan el id de la campaña en `utm_campaign` (visto el 15/10/2026); la grabación
     (/replay/) es otro embudo y queda afuera."""
-    from app.api.metrics import EVENTO_CLIC_WHATSAPP
+    from app.api.metrics import EVENTO_CLIC_WHATSAPP, EVENTO_VISITA
 
     filas = db.session.query(
         LandingTracking.utm_campaign,
         db.func.count(db.case((db.or_(LandingTracking.evento.is_(None),
-                                      LandingTracking.evento != EVENTO_CLIC_WHATSAPP), 1))),
+                                      LandingTracking.evento == EVENTO_VISITA), 1))),
         db.func.count(db.case((LandingTracking.evento == EVENTO_CLIC_WHATSAPP, 1))),
     ).filter(
         LandingTracking.created_at >= inicio, LandingTracking.created_at < fin,

@@ -184,6 +184,8 @@ const HiringDashboardPage = () => {
     // le cambiarían el look. El buscador de la cabecera tampoco va: busca entre las candidatas a
     // Asistente, no entre los closers.
     const hospeda = seccion === 'closers';
+    const visitoClosers = useRef(false);
+    if (hospeda) visitoClosers.current = true;
     const q = hospeda ? '' : query.trim();
     const enBusqueda = q.length > 0;
     const esTabla = enBusqueda || ES_TABLA.has(seccion);
@@ -475,10 +477,11 @@ const HiringDashboardPage = () => {
                 />
             </div>
 
-            {hospeda && (
-                // `key`: cada pestaña entra con el mismo fundido que las vistas de Talent.
-                <main className="tl-hospedado dash-v6 text-base" key={pestana}>
-                    <PostulacionesCloser pestana={pestana} />
+            {/* Closers, una vez abierta, queda montada y escondida al pasar a otra sección o pestaña:
+                volver no recarga (PostulacionesCloser conserva cada pestaña con PanelesConservados). */}
+            {visitoClosers.current && (
+                <main className="tl-hospedado dash-v6 text-base" hidden={!hospeda} style={hospeda ? undefined : { display: 'none' }}>
+                    <PostulacionesCloser pestana={pestanas.closers} />
                 </main>
             )}
 

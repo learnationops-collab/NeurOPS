@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
 import api from '../../../../services/api';
+import { useDatosCacheados } from '../../../../services/cacheDeVistas';
 import { Users, DollarSign, TrendingUp, Loader2 } from 'lucide-react';
 import Card from '../../../../components/ui/Card';
 import Counter from '../../../../components/ui/Counter';
@@ -17,8 +17,6 @@ const COLOR_MAP = {
 };
 
 const StatTile = ({ metric, filters, size = '1x2' }) => {
-    const [data, setData] = useState(null);
-    const [loading, setLoading] = useState(true);
     const Icon = ICON_MAP[metric] || Users;
 
     const [width, height] = size.split('x').map(Number);
@@ -31,29 +29,18 @@ const StatTile = ({ metric, filters, size = '1x2' }) => {
     const isLarge = width >= 2 && height >= 2;         // 2x2, 4x2 etc.
     const isXLarge = width >= 4;
 
-    useEffect(() => {
-        const fetchData = async () => {
-            setLoading(true);
-            try {
-                const queryParams = new URLSearchParams({
-                    metric,
-                    period: filters.period,
-                    start_date: filters.start_date || '',
-                    end_date: filters.end_date || ''
-                });
-                const res = await api.get(`/analytics/data?${queryParams.toString()}`);
-                setData(res.data);
-            } catch (err) {
-                console.error("Error fetching tile data", err);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        if (filters) {
-            fetchData();
-        }
-    }, [metric, filters]);
+    // Recordado por métrica y período (cacheDeVistas): volver al dashboard no vuelve a cargar los números.
+    const clave = filters ? `admin:stat:${metric}:${filters.period}:${filters.start_date || ''}:${filters.end_date || ''}` : null;
+    const { datos: data, error: fallo, cargando } = useDatosCacheados(clave, (signal) => {
+        const queryParams = new URLSearchParams({
+            metric,
+            period: filters.period,
+            start_date: filters.start_date || '',
+            end_date: filters.end_date || ''
+        });
+        return api.get(`/analytics/data?${queryParams.toString()}`, { signal }).then((res) => res.data);
+    }, { onError: (err) => console.error("Error fetching tile data", err) });
+    const loading = cargando || (Boolean(clave) && !data && !fallo);
 
     // Padding based on size
     const padding = isSquareSmall ? 'p-3' : (isLarge ? 'p-8' : 'p-6');

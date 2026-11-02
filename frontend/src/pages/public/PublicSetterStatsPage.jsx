@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { motion } from 'framer-motion';
 import api from '../../services/api';
+import { esFresco, guardarCache, leerCache } from '../../services/cacheDeVistas';
+import PanelesConservados from '../../components/ui/PanelesConservados';
 import {
     Loader2, TrendingUp, BarChart3, PieChart, Users,
     Target, MousePointer2, Link2, CalendarDays,
@@ -126,19 +128,28 @@ const PublicSetterStatsPage = ({ embebido = false }) => {
     }, [filters, activeTab, compare, compareMode]);
 
     const fetchStats = async () => {
-        setLoading(true);
+        const params = new URLSearchParams();
+        if (filters.setter_id) params.append('setter_id', filters.setter_id);
+        if (filters.start_date) params.append('start_date', filters.start_date);
+        if (filters.end_date) params.append('end_date', filters.end_date);
+        params.append('agg_type', filters.agg_type);
+        if (compare) {
+            params.append('compare', 'true');
+            params.append('compare_mode', compareMode);
+        }
+        // Tablero recordado por filtros (cacheDeVistas): fresco no se pide; viejo se actualiza en silencio.
+        const clave = `public:setter-stats:${params.toString()}`;
+        const guardado = leerCache(clave);
+        if (guardado) {
+            setStats(guardado.datos);
+            setLoading(false);
+            if (esFresco(guardado)) return;
+        } else {
+            setLoading(true);
+        }
         try {
-            const params = new URLSearchParams();
-            if (filters.setter_id) params.append('setter_id', filters.setter_id);
-            if (filters.start_date) params.append('start_date', filters.start_date);
-            if (filters.end_date) params.append('end_date', filters.end_date);
-            params.append('agg_type', filters.agg_type);
-            if (compare) {
-                params.append('compare', 'true');
-                params.append('compare_mode', compareMode);
-            }
-
             const res = await api.get(`/public/setter-stats?${params.toString()}`);
+            guardarCache(clave, res.data);
             setStats(res.data);
         } catch (err) {
             console.error("Error fetching stats:", err);
@@ -1104,24 +1115,21 @@ const PublicSetterStatsPage = ({ embebido = false }) => {
 
 
 
-                {/* --- TAB: REGISTROS (LOG) --- */}
-                {activeTab === 'reports' && (
-                    <SetterReportsTable setters={setters} />
-                )}
-
-                {/* --- TAB: REND. CONVERSACIONAL --- */}
-                {activeTab === 'conv_stats' && (
-                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
-                        <ConversationalStatsTab />
-                    </div>
-                )}
-
-                {/* --- TAB: LEADS ENTRANTES --- */}
-                {activeTab === 'incoming_leads' && (
-                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
-                        <IncomingLeadsTab />
-                    </div>
-                )}
+                {/* Registros, Rend. conversacional y Leads entrantes: la pestaña que se abrió queda montada y
+                    escondida (PanelesConservados), volver a ella no recarga. */}
+                <PanelesConservados activa={activeTab} paneles={{
+                    reports: () => <SetterReportsTable setters={setters} />,
+                    conv_stats: () => (
+                        <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+                            <ConversationalStatsTab />
+                        </div>
+                    ),
+                    incoming_leads: () => (
+                        <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+                            <IncomingLeadsTab />
+                        </div>
+                    ),
+                }} />
             </div>
 
             {!embebido && (
