@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import TabConfirmacion from './TabConfirmacion';
@@ -43,17 +43,16 @@ describe('TabConfirmacion · Descalificado', () => {
         expect(screen.getByRole('button', { name: 'Descalificar lead' })).toBeDisabled();
     });
 
-    it('con el motivo elegido manda `descalificar` con su clave y vuelve al menú', async () => {
+    it('con el motivo escrito manda `descalificar` tal cual y vuelve al menú', async () => {
         const usuario = userEvent.setup();
         const p = props();
         render(<TabConfirmacion {...p} />);
         await abrirSubvista(usuario);
 
-        await usuario.click(screen.getByRole('button', { expanded: false }));
-        await usuario.click(within(screen.getByRole('listbox')).getByRole('option', { name: /No es médico/ }));
+        await usuario.type(screen.getByRole('textbox', { name: 'Motivo de la descalificación' }), 'No es médico');
         await usuario.click(screen.getByRole('button', { name: 'Descalificar lead' }));
 
-        expect(p.onAccion).toHaveBeenCalledWith('descalificar', { motivo: 'no_es_medico' });
+        expect(p.onAccion).toHaveBeenCalledWith('descalificar', { motivo: 'No es médico' });
         // La acción salió bien: la pestaña vuelve al menú de la confirmación.
         expect(await screen.findByRole('button', { name: /Reprogramar/ })).toBeInTheDocument();
     });

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { DesplegableAgrupado, SubVista } from '../../piezas';
-import { grupos } from '../../estadoFicha';
+import { TextArea } from '../../../standard';
+import { SubVista } from '../../piezas';
 
 /**
  * El closer ve al confirmar que el lead no calificaba.
@@ -11,18 +11,18 @@ import { grupos } from '../../estadoFicha';
  *
  * Reemplaza al «Descartar lead» de la confirmación, que marcaba «No Lead»: era lo mismo, y la dirección
  * los cuenta juntos. No es «Canceló» (ahí el lead sigue vivo y se agenda un seguimiento): quien no
- * califica sale del embudo, así que no hay seguimiento. El motivo es obligatorio, porque «descalificado»
- * sin motivo no dice por qué entró una agenda que no servía.
+ * califica sale del embudo, así que no hay seguimiento. El motivo es obligatorio y de texto libre (sin lista
+ * cerrada, 02/11/2026): «descalificado» sin motivo no dice por qué entró una agenda que no servía.
  */
 const SubDescalificar = ({ ficha, onVolver, onConfirmar, guardando = false }) => {
-    const [motivo, setMotivo] = useState(null);
-    const listas = grupos(ficha, 'motivos_descalificacion');
+    const [motivo, setMotivo] = useState('');
+    const texto = motivo.trim();
 
     return (
         <SubVista titulo="Descalificar lead" onVolver={onVolver}
             acciones={(
-                <button type="button" className="btn btn--cta" disabled={!motivo || guardando}
-                    onClick={() => onConfirmar({ motivo })}>
+                <button type="button" className="btn btn--cta" disabled={texto.length < 3 || guardando}
+                    onClick={() => onConfirmar({ motivo: texto })}>
                     {guardando ? 'Descalificando…' : 'Descalificar lead'}
                 </button>
             )}>
@@ -31,10 +31,11 @@ const SubDescalificar = ({ ficha, onVolver, onConfirmar, guardando = false }) =>
                 del embudo.
             </p>
 
-            <DesplegableAgrupado rotulo="¿Por qué no califica?" etiqueta="Motivo de la descalificación"
-                placeholder="Elegí un motivo" grupos={listas}
-                valor={motivo} onChange={setMotivo}
-                onAgregar={() => {}} />
+            <div style={{ display: 'grid', gap: 'var(--s1)' }}>
+                <small className="t-rotulo">¿Por qué no califica?</small>
+                <TextArea rows={3} aria-label="Motivo de la descalificación" value={motivo} autoFocus
+                    placeholder="Qué viste: dinero, perfil, interés…" onChange={(e) => setMotivo(e.target.value)} />
+            </div>
         </SubVista>
     );
 };
