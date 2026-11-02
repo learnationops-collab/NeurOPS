@@ -94,3 +94,6 @@ El segmento de un lead lo calcula y guarda Thalamus (`segmento_service`, columna
 - Leads de Workshop por segmento (hoy no hay a quién mirarle el formulario).
 - Países en Marketing (pedido de Gabriela, 28/10).
 - Backfill del segmento de las agendas viejas: `scripts/backfill_segmentos.py` (acción sobre producción, la confirma Kerwin, Leadership 840).
+
+
+> **02/11/2026:** las cifras de Cash (Cobrado, New Cash, Cash total) y los ROAS van en neto, con la comisión real del pago o el promedio de su plataforma (ver ADR-W061).
