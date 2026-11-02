@@ -59,7 +59,7 @@ const NOTA_POR_CORTE = {
     origen: 'Origen: el setter de la agenda o del cobro; VSL, Momentum, Referido… en Otras; Workshop es uno solo.',
 };
 
-const SegmentosVista = ({ rango, version, params, cambiar }) => {
+const SegmentosVista = ({ rango, version, params, cambiar, onReintentar }) => {
     const [guardado, poner] = useEstadoGuardado('mk_segmentos_fuente', INICIAL, { normalizar });
     const { fuente: pestana, corte, campo: campoKey, ocultas, orden } = guardado;
     const comparacion = comparacionDeUrl(params);
@@ -86,7 +86,7 @@ const SegmentosVista = ({ rango, version, params, cambiar }) => {
         });
     }, [datos, rango.desde, rango.hasta, fuentes, corte, registros.abrir]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    if (fallo && !datos) return <ErrorDeCarga titulo={mensajeDeError(fallo, 'No se pudieron cargar los segmentos.')} onReintentar={() => cambiar({})} />;
+    if (fallo && !datos) return <ErrorDeCarga titulo={mensajeDeError(fallo, 'No se pudieron cargar los segmentos.')} onReintentar={onReintentar} />;
     if (!datos) return <EsqueletoSegmentos />;
 
     // El total de la fila de totales con un filtro puesto abre la lista del filtro, no la de todos los segmentos.

@@ -137,14 +137,15 @@ export const formatear = (v, formato, moneda) => {
     return ENTERO.format(v);
 };
 
-/** Ordena sin mover los «—» de abajo: un costo sin dato no es ni el mejor ni el peor. */
+/** Ordena sin mover los «—» de abajo: un costo sin dato no es ni el mejor ni el peor. Una columna con `pct`
+ *  se ordena por el conteo con su clave y por la tasa con la clave del porcentaje (`pct_calificados`). */
 export const ordenar = (filas, clave, dir) => {
     const signo = dir === 'asc' ? 1 : -1;
     return [...filas].sort((a, b) => {
         const va = clave === 'nombre' ? (a.nombre || '').toLowerCase() : a[clave];
         const vb = clave === 'nombre' ? (b.nombre || '').toLowerCase() : b[clave];
-        const nulaA = va === null || va === undefined;
-        const nulaB = vb === null || vb === undefined;
+        const nulaA = va === null || va === undefined || Number.isNaN(va);
+        const nulaB = vb === null || vb === undefined || Number.isNaN(vb);
         if (nulaA || nulaB) return nulaA === nulaB ? 0 : nulaA ? 1 : -1;
         if (va < vb) return -signo;
         if (va > vb) return signo;

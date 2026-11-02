@@ -40,11 +40,13 @@ const CruceSegmentos = ({ grupos, campo, campos, onCampo, moneda, color, onVer, 
     if (!grupos.length) return null;
     const segmentos = grupos[0].filas.map((f) => ({ key: f.segmento, label: f.label }));
     const valorDe = (g, col) => (col === 'nombre' ? g.label.toLowerCase()
-        : (col === 'total' ? g.total : g.filas.find((f) => f.segmento === col))?.[campo.key] ?? -Infinity);
+        : (col === 'total' ? g.total : g.filas.find((f) => f.segmento === col))?.[campo.key] ?? null);
     const signo = orden.dir === 'asc' ? 1 : -1;
+    // Sin dato siempre al final, suba o baje el orden; los empates conservan el orden que traen.
     const filas = [...grupos].sort((a, b) => {
         const va = valorDe(a, orden.col);
         const vb = valorDe(b, orden.col);
+        if (va === null || vb === null) return va === vb ? 0 : (va === null ? 1 : -1);
         return va < vb ? -signo : va > vb ? signo : 0;
     });
     const encabezado = (col, texto, punto) => (
