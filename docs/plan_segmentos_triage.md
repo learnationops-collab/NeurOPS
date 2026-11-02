@@ -382,3 +382,10 @@ Caso que lo disparó: una lead médica general de Perú que decide sola, pero qu
 - **Cortes:** A ≥ 4 · B ≥ 1 · C ≥ −1 · D el resto. Con A ≥ 4, los A son exactamente los mismos que antes (127 desde junio); con A ≥ 3 se duplicaban.
 - **Corte duro:** quien no invierte, aunque tenga lo mejor en todo lo demás (+3), queda en C como máximo. `scripts/segmentos_formulario.py` frena si una opción nueva lo rompe.
 - Efecto desde junio: 94 B pasan a C (no invierten), 52 C pasan a B (invierten y tenían el resto flojo); C y D van igual al triage.
+
+### 8.11 Descalificados agendan con el triage (Mario, 02/11/2026)
+
+Un lead que antes no agendaba (opción que descalifica, destino «No califica», regla con otra página como `mk-academy`) ya no se corta: agenda con el triage, en la «Sesión diagnóstica», como los C y D. Caso que lo disparó: una estudiante que no invierte veía «No calificó» en Discord aunque tenía que pasar al triage.
+
+- `app/agendas_v2/nucleo/triage.py` (`con_triage`, aplicado en `_disponible`): el formulario público deja de cortar. Cada opción que descalificaba suma una regla (primera) al grupo `ws-triage` y a `sesion-diagnostica`; las reglas con url o «No califica» y «Todo lo demás» en «No califica» apuntan ahí.
+- Sin grupo «Triage» el formulario queda como estaba. El editor de Thalamus y la prueba local siguen mostrando la lógica anterior.
