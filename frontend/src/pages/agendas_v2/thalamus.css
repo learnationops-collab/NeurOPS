@@ -1629,6 +1629,25 @@
   background:color-mix(in srgb,var(--c) 10%,transparent);border:1px solid color-mix(in srgb,var(--c) 32%,transparent)}
 .thalamus .revision-item svg{flex-shrink:0;margin-top:2px;color:var(--c)}
 .thalamus .revision-ok{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--success)}
+/* Probar un lead (Segmentación): respuestas a la izquierda, a dónde va a la derecha. */
+.thalamus .sim{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:16px;align-items:start}
+.thalamus .sim-form{display:grid;gap:12px}
+.thalamus .sim-q{display:grid;gap:6px}
+.thalamus .sim-q-t{font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--text-muted)}
+.thalamus .sim-res{display:grid;gap:12px;padding:18px;border-radius:18px;border:1px solid color-mix(in srgb,var(--c) 45%,transparent);
+  background:linear-gradient(160deg,color-mix(in srgb,var(--c) 16%,transparent),var(--hundido) 70%)}
+.thalamus .sim-eyebrow{font-size:11px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--c)}
+.thalamus .sim-dest{display:flex;align-items:center;gap:8px;margin:0;font-size:22px;font-weight:900;color:var(--text-on-surface)}
+.thalamus .sim-dest svg{color:var(--c)}
+.thalamus .sim-gente{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.thalamus .sim-p{display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:13px}
+.thalamus .sim-p > svg{color:var(--text-muted)}
+.thalamus .sim-txt{margin:0;font-size:13px;color:var(--text-muted);line-height:1.45}
+.thalamus .sim-chips{display:flex;flex-wrap:wrap;gap:6px}
+.thalamus .sim-conds{list-style:none;margin:0;padding:12px 0 0;border-top:1px solid var(--border-main);display:grid;gap:6px;font-size:13px}
+.thalamus .sim-conds li{display:grid;grid-template-columns:110px minmax(0,1fr);gap:10px}
+.thalamus .sim-conds b{color:var(--text-muted);font-weight:700}
+@media (max-width:760px){.thalamus .sim{grid-template-columns:minmax(0,1fr)}}
 
 /* Foto de la cuenta (conf/FotoCuenta.jsx) */
 .thalamus .cu-foto{display:grid;gap:10px;justify-items:center}

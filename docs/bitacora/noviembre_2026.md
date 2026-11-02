@@ -52,3 +52,7 @@
   - En la vista del triage y del closer, un «+» al lado del buscador abre «Nueva agenda» para cargar a mano una agenda que se tomó fuera del CRM. El closer ya tenía ese modal en el menú del dock; el triage no podía crearlas.
   - `POST /api/closer/appointments` acepta el rol `triage`: la agenda queda a su nombre (mismo camino que Thalamus: Meet, invitación y avisos) y dura lo que su sesión diagnóstica (`sesion_propia_de`).
   - Fuente nueva «Externa» (por defecto para el triage); el subtítulo del modal pasa a «Agendas que no llegaron por Thalamus».
+- **2 de Noviembre de 2026 (Thalamus: «Probar un lead» en Segmentación)** *([RuteoSimulador.jsx](../../frontend/src/pages/agendas_v2/secciones/forms/RuteoSimulador.jsx), [Ruteo.jsx](../../frontend/src/pages/agendas_v2/secciones/forms/Ruteo.jsx), [Editor.jsx](../../frontend/src/pages/agendas_v2/secciones/forms/Editor.jsx), [ADR-W059](../DECISIONS.md))*:
+  - Segmentación suma la vista «Probar un lead»: se eligen respuestas y se ve la regla, la estrategia con sus closers, la sesión y los puntos.
+  - Sale «No califica» (botón de la barra y destino de las reglas). Eliminar un formulario pide dos confirmaciones.
+  - La sesión «La del formulario» pasa a «La del link por el que agendó»; los eventos con el mismo nombre muestran su embudo.

@@ -1,5 +1,5 @@
 // Segmentación: reglas en orden; la primera que se cumple elige la estrategia. Lo que no cumple ninguna va a "Todo lo demás".
-// Una regla o «Todo lo demás» puede mandar a «No califica» en vez de a una estrategia: ese lead no agenda y ve el fin.
+// «Probar un lead» muestra a dónde va un lead según sus respuestas.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { almacen } from '../../data/hooks';
@@ -13,6 +13,7 @@ import Lienzo from '../../ui/Lienzo';
 import { useOrdenable } from '../../ui/useOrdenable';
 import { colorNivel, mutarForm, opcionesPrioridad, setFormUi, useEnfocar } from './comun';
 import RuteoFlujo from './RuteoFlujo';
+import RuteoSimulador from './RuteoSimulador';
 import { FieldError, Grid, IconButton, Input, Segmented } from '../../../../components/standard';
 import { useEnPantalla } from '../../../../components/ui/useEnPantalla';
 
@@ -34,7 +35,7 @@ function Revision({ avisos }) {
     );
 }
 
-// «No califica»: va en todos los destinos, después de las estrategias.
+// «No califica» ya no se ofrece (nadie se descarta, Mario 02/11): solo se muestra si un destino viejo lo tiene.
 const OP_NO = { v: NO_CALIFICA, n: 'No califica', icono: 'prohibido', color: 'var(--error)' };
 
 function Destino({ d, valor, onChange, label, extra = [] }) {
@@ -42,15 +43,20 @@ function Destino({ d, valor, onChange, label, extra = [] }) {
     return (
         <div className="destino" style={{ '--c': g ? colorNivel(i + 1) : no ? 'var(--error)' : 'var(--idle)' }}>
             <span className="destino-flecha" aria-hidden="true"><Icono n="chevron-right" s={16} /></span>
-            <Sx sm label={label} valor={g || no ? valor : ''} opciones={opcionesPrioridad(d).concat([OP_NO], extra)} onChange={onChange} />
+            <Sx sm label={label} valor={g || no ? valor : ''} opciones={opcionesPrioridad(d).concat(no ? [OP_NO] : [], extra)} onChange={onChange} />
         </div>
     );
 }
 
-// La sesión que toma el lead de la regla: la del evento del formulario o otro evento del equipo
-// (C/D → «Sesión diagnóstica» de 30 min con el triage). Los eventos propios de un closer no van.
-const opcionesSesion = (d) => [{ v: '', n: 'La del formulario' },
-    ...ordCol(d, 'eventos').filter(e => !e.persona).map(e => ({ v: e.id, n: e.nombre }))];
+// La sesión que toma el lead de la regla: la del link por el que agendó (cada embudo tiene su evento con este
+// formulario) u otro evento del equipo (C/D → «Sesión diagnóstica» con el triage). Los eventos propios de un
+// closer no van. Dos eventos con el mismo nombre se distinguen por su embudo.
+const opcionesSesion = (d) => {
+    const es = ordCol(d, 'eventos').filter(e => !e.persona);
+    const repetido = (e) => es.filter(x => x.nombre === e.nombre).length > 1;
+    const embudo = (e) => { const fu = buscar(d, 'funnels', e.funnel); return fu ? ' · ' + fu.nombre : ''; };
+    return [{ v: '', n: 'La del link por el que agendó' }, ...es.map(e => ({ v: e.id, n: e.nombre + (repetido(e) ? embudo(e) : '') }))];
+};
 
 // Destino de una regla: una estrategia o una página (el lead no agenda y va a esa URL).
 // Lo que se escribe queda en borrador hasta que es una URL https válida: así no se borra mientras se tipea.
@@ -189,10 +195,12 @@ export default function Ruteo({ f, d, modo, msel }) {
                 <span className="ayuda" tabIndex={0} role="note" aria-label={AYUDA_RUTEO} data-tip={AYUDA_RUTEO}>?</span>
                 <Segmented size="sm" label="Vista del ruteo" style={{ marginLeft: 'auto' }} itemProps={{ 'data-nav': '' }} value={modo}
                     onChange={v => setFormUi({ ruteoModo: v, msel: null })}
-                    options={[{ value: 'reglas', label: 'Reglas', icon: <Icono n="lista" /> }, { value: 'flujo', label: 'Flujo', icon: <Icono n="flujo" /> }]} />
+                    options={[{ value: 'reglas', label: 'Reglas', icon: <Icono n="lista" /> }, { value: 'flujo', label: 'Flujo', icon: <Icono n="flujo" /> },
+                        { value: 'probar', label: 'Probar un lead', icon: <Icono n="ojo" /> }]} />
             </div>
-            <Revision avisos={avisos} />
-            {modo === 'flujo' ? <Lienzo etiqueta="Flujo de la segmentación"><RuteoFlujo f={f} d={d} rotas={rotas} avisos={conAviso} /></Lienzo>
+            {modo !== 'probar' && <Revision avisos={avisos} />}
+            {modo === 'probar' ? <RuteoSimulador f={f} d={d} />
+                : modo === 'flujo' ? <Lienzo etiqueta="Flujo de la segmentación"><RuteoFlujo f={f} d={d} rotas={rotas} avisos={conAviso} /></Lienzo>
                 : !qs.length ? (
                     <>
                         <p className="t-sm mut">Agregá preguntas de opción para armar reglas.</p>

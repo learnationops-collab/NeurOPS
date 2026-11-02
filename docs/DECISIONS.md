@@ -475,3 +475,11 @@
 - **Decisión:** las reglas se escriben solo con respuestas: una por grupo de combinaciones, ninguna se pisa y todas quedan cubiertas (27 en «Sesión de Aceleración»). El tope de reglas por formulario sube de 20 a 40 (`normal_reglas` y `normalReglas`). El editor deja de ofrecer «Segmento del lead» (`preguntasRuteo`); el ruteo sigue entendiendo las reglas viejas que lo usan. Team queda con Segmento Alfa, A, B, Triage · Segmento C y Triage · Segmento D; las demás estrategias se borran salvo que otro formulario las use.
 - **Qué se pierde:** una regla ya no puede decir «Segmento es A»: si cambian los puntos, las reglas no se acomodan solas (se rehacen con `scripts/segmentacion_alfa.py`). Sin `ws-triage`, los descalificados de `con_triage` van al primer grupo cuyo nombre dice «triage».
 - **Consecuencias:** la letra guardada en la agenda (`segmento`) sigue saliendo de los puntos; que salga de la regla (y que exista «Alfa» como letra) queda para otro cambio.
+
+## ADR-W059: Segmentación con «Probar un lead», sin «No califica» y con doble confirmación para borrar un formulario
+
+- **Fecha:** 2026-11-02 · **Subsistema:** Thalamus (Forms › editor) · **Estado:** implementado.
+- **Contexto:** Mario quiere probar a dónde va un lead sin salir de Segmentación (lo venía haciendo en un simulador aparte), ya no descarta a nadie y teme borrar un formulario sin querer. «La del formulario» como sesión de una regla no se entendía, y dos eventos se llaman «Sesión de Aceleración».
+- **Decisión:** tercera vista en Segmentación, «Probar un lead» (`RuteoSimulador.jsx`): se eligen las respuestas de las preguntas que usan las reglas y se ve la regla que se cumple, la estrategia con sus closers y cómo reparte, la sesión y los puntos. Usa `grupoPorReglas`, el mismo ruteo de la reserva. Sale el botón «No califica» de la barra y la opción «No califica» de los destinos (se sigue mostrando si un destino viejo la tiene). Eliminar un formulario pide dos confirmaciones. La sesión «La del formulario» pasa a decir «La del link por el que agendó», y dos eventos con el mismo nombre se distinguen por su embudo.
+- **Qué se pierde:** desde el editor ya no se configura la pantalla del que no califica (`fin`); queda lo que tenía cada formulario.
+- **Consecuencias:** `scripts/segmentacion_alfa.py --revisar` verifica en solo lectura las reglas guardadas.
