@@ -1,6 +1,9 @@
 // Los paneles del Triage Dashboard (diseño de Claude Design, 30/10/2026): tarjetas, estados, embudo, low ticket,
 // abandonos. Cada cifra que abre una lista llama a `onVer(<clave de triageFiltros>)`.
 
+import { Fragment } from 'react';
+
+import { CifraConCuenta } from '../../../../components/standard';
 import { COLOR_DE_ESTADO, embudoDe, estadosDe, pct, pctTexto } from './triageDatos';
 
 export const TARJETA = {
@@ -23,13 +26,32 @@ export const Titulo = ({ texto, lado, children }) => (
     </div>
 );
 
-/** Las cuatro tarjetas de arriba; «Ver registros ›» abre su lista. */
+/** Una cifra con su cuenta («8 de 10») en el tooltip; cada parte abre la lista que la suma. Sin denominador, queda quieta. */
+export function Porcentaje({ a, b, onVer }) {
+    if (!b.n) return <>—</>;
+    return (
+        <CifraConCuenta onVer={(clave) => onVer(clave)}
+            cuenta={{ a: { t: `${a.n} ${a.texto}`, m: a.n ? a.clave : undefined, titulo: a.titulo }, b: { t: `${b.n} ${b.texto}`, m: b.clave, titulo: b.titulo } }}>
+            {pctTexto(a.n, b.n)}
+        </CifraConCuenta>
+    );
+}
+
+/** Las tarjetas de arriba (triage y closing); «Ver registros ›» abre su lista. */
 export function Tarjetas({ m, onVer }) {
+    const agendas = { n: m.agendas, texto: 'agendas', clave: 'agendas', titulo: 'Agendas' };
+    const pasaron = { n: m.pasaron, texto: 'pasaron', clave: 'pasaron', titulo: 'Pasaron a closing' };
+    const closerAsistieron = { n: m.closer_asistieron, texto: 'asistieron', clave: 'closer_asistieron', titulo: 'Asistieron al closer' };
     const tarjetas = [
         { rotulo: 'AGENDAS', valor: m.agendas, sub: `${m.agendas} ${m.agendas === 1 ? 'llamada' : 'llamadas'} en el período`, color: 'info', ver: 'agendas' },
-        { rotulo: 'ASISTENCIA', valor: pctTexto(m.asistencias, m.asistencias + m.no_show), sub: `${m.asistencias} asistieron · ${m.no_show} no show · ${m.canceladas} canceló`, color: 'success', ver: 'asistencias' },
-        { rotulo: 'CALIFICADOS', valor: pctTexto(m.calificados, m.asistencias), sub: `${m.calificados} pasados al closer · ${m.pasadas_asistieron} ya asistieron con él`, color: 'brand-secondary', ver: 'calificados' },
+        { rotulo: 'ASISTENCIA', valor: <Porcentaje onVer={onVer} a={{ n: m.asistencias, texto: 'asistieron', clave: 'asistencias', titulo: 'Asistieron' }} b={agendas} />,
+            sub: `${m.asistencias} asistieron · ${m.no_show} no show · ${m.canceladas} canceló`, color: 'success', ver: 'asistencias' },
+        { rotulo: 'CALIFICADOS', valor: pctTexto(m.calificados, m.asistencias), sub: `${m.calificados} pasados al closer · ${m.closer_asistieron} ya asistieron con él`, color: 'brand-secondary', ver: 'calificados' },
         { rotulo: 'CIERRES LOW TICKET', valor: pctTexto(m.cerrado, m.pitch_low_ticket), sub: `${m.cerrado} de ${m.pitch_low_ticket} presentaciones`, color: 'error', ver: 'cerrado' },
+        { rotulo: 'ASISTENCIA AL CLOSER', valor: <Porcentaje onVer={onVer} a={closerAsistieron} b={pasaron} />,
+            sub: `${m.closer_asistieron} de ${m.pasaron} que pasaron a closing`, color: 'info', ver: 'closer_asistieron' },
+        { rotulo: 'CONVERSIÓN CON EL CLOSER', valor: <Porcentaje onVer={onVer} a={{ n: m.closer_cerraron, texto: 'cerraron', clave: 'closer_cerraron', titulo: 'Cerraron con el closer' }} b={closerAsistieron} />,
+            sub: `${m.closer_cerraron} cierres de ${m.closer_asistieron} que asistieron`, color: 'success', ver: 'closer_cerraron' },
     ];
     return (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 16 }}>
@@ -105,23 +127,27 @@ export function Embudo({ m, onVer }) {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {etapas.map((e) => (
-                    <button key={e.clave} type="button" onClick={() => onVer(e.filtro)}
-                        style={{ ...boton, display: 'grid', gridTemplateColumns: '110px minmax(0,1fr) 56px', alignItems: 'center', gap: 12 }}>
-                        <small style={{ ...ROTULO, letterSpacing: '.16em' }}>{e.clave}</small>
-                        <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                            <span style={{ width: `max(${(e.n / mayor) * 100}%, 56px)`, height: 34, borderRadius: 10, background: `var(--${e.color})`,
-                                color: ['brand-secondary', 'success'].includes(e.color) ? 'var(--ink)' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 900 }}>
-                                {e.n}
+                    <Fragment key={e.filtro}>
+                        {e.grupo && <small style={{ ...ROTULO, marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border-subtle)' }}>{e.grupo}</small>}
+                        <button type="button" onClick={() => onVer(e.filtro)}
+                            style={{ ...boton, display: 'grid', gridTemplateColumns: '110px minmax(0,1fr) 56px', alignItems: 'center', gap: 12 }}>
+                            <small style={{ ...ROTULO, letterSpacing: '.16em' }}>{e.rotulo || e.clave}</small>
+                            <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                                {/* Cero es nada: sin barra, solo el número atenuado. */}
+                                <span style={{ width: e.n ? `max(${(e.n / mayor) * 100}%, 56px)` : 'auto', height: 34, borderRadius: 10, background: e.n ? `var(--${e.color})` : 'none',
+                                    color: !e.n ? 'var(--text-muted-40)' : ['brand-secondary', 'success'].includes(e.color) ? 'var(--ink)' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 900 }}>
+                                    {e.n}
+                                </span>
+                                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{e.nota || ' '}</span>
                             </span>
-                            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{e.nota || ' '}</span>
-                        </span>
-                        <span style={{ textAlign: 'right', fontSize: 15, fontWeight: 800, color: cuello === e.clave ? 'var(--error)' : 'var(--text-on-surface)' }}>
-                            {e.de ? pctTexto(e.n, e.de) : ''}
-                        </span>
-                    </button>
+                            <span style={{ textAlign: 'right', fontSize: 15, fontWeight: 800, color: cuello === e.clave ? 'var(--error)' : 'var(--text-on-surface)' }}>
+                                {e.de ? pctTexto(e.n, e.de) : ''}
+                            </span>
+                        </button>
+                    </Fragment>
                 ))}
             </div>
-            <small style={ROTULO}>DE {m.agendas} AGENDAS A {m.calificados} CALIFICADOS</small>
+            <small style={ROTULO}>DE {m.agendas} AGENDAS A {m.closer_cerraron} CIERRES CON EL CLOSER</small>
         </div>
     );
 }

@@ -9,9 +9,10 @@ import { useDatosCacheados } from '../../../services/cacheDeVistas';
 import { EmptyState, FieldError, Skeleton, SkeletonKpi, SkeletonPanel } from '../../../components/standard';
 import { localDateFromNow, localToday } from '../../../utils/datetime';
 import { diasDe } from '../../triage/components/TriageMetricas';
-import { FILTROS } from '../../triage/components/triageFiltros';
+import { filtroDe } from '../../triage/components/triageFiltros';
 import { Abandonos, Embudo, Estados, LowTicket, Tarjetas } from './triage/TriagePaneles';
 import { DiaPorDia, PorPersona } from './triage/TriagePersonasDias';
+import PorCloser, { closersDe } from './triage/TriagePorCloser';
 import TriageReporte from './triage/TriageReporte';
 
 const PERIODOS = [['0', 'Hoy'], ['6', '7 días'], ['29', '30 días']];
@@ -52,6 +53,8 @@ export default function TriageDireccion({ onAbrirFila }) {
         setVer(clave);
         document.getElementById('triage-reporte')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
+    const closers = useMemo(() => closersDe(datos?.por_closer, elegida?.id), [datos, elegida]);
+    const filtro = ver && ver !== 'agendas' ? filtroDe(ver, closers.find((c) => ver.startsWith(`cl:${c.id}:`))?.nombre) : null;
     const abrir = (l) => onAbrirFila?.({ tipo: 'agenda', id: l.id, client_id: l.client_id });
 
     return (
@@ -66,19 +69,20 @@ export default function TriageDireccion({ onAbrirFila }) {
             {error && <FieldError>{error}</FieldError>}
             {!m ? (!error && <Cargando />) : !m.agendas ? (
                 <EmptyState title="Sin llamadas en este período">
-                    Las métricas salen de lo que cada triage marca en el lead: confirmación, asistencia y resultado.
+                    Las métricas salen de lo que cada triage marca en el lead: asistencia y resultado.
                 </EmptyState>
             ) : (
                 <>
                     <Tarjetas m={m} onVer={verLista} />
                     <div style={FILA}><Estados m={m} onVer={verLista} /><Embudo m={m} onVer={verLista} /></div>
+                    <PorCloser closers={closers} onVer={verLista} />
                     <div style={FILA}><LowTicket m={m} onVer={verLista} /><Abandonos a={datos.abandonos} /></div>
                     <div style={FILA}>
                         {!elegida && <PorPersona personas={personas} onElegir={setPersona} />}
                         <DiaPorDia dias={diasDe(datos.por_dia, elegida?.id)} />
                     </div>
                     <TriageReporte leads={leads} ver={ver} onVer={setVer} onAbrir={abrir}
-                        titulo={ver && FILTROS[ver] && ver !== 'agendas' ? FILTROS[ver].titulo : 'Reporte'} />
+                        titulo={filtro?.titulo || 'Reporte'} />
                 </>
             )}
         </div>

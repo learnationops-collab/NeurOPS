@@ -4,7 +4,7 @@ import { iniciales, pct } from './triageDatos';
 import { ROTULO, TARJETA, Titulo } from './TriagePaneles';
 
 const CAJA = { background: 'rgba(2,6,23,.35)', border: '1px solid var(--border-subtle)' };
-const COLUMNAS = 'minmax(80px,1.4fr) repeat(6,minmax(0,1fr))';
+const COLUMNAS = 'minmax(80px,1.4fr) repeat(5,minmax(0,1fr))';
 const nombreDia = (dia) => new Date(`${dia}T12:00:00`).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
 
 /** Una tarjeta por persona: su % de asistencia y las cuatro cuentas con su barra. Tocarla la elige. */
@@ -18,8 +18,9 @@ export function PorPersona({ personas, onElegir }) {
                 {personas.map((p) => {
                     const tasa = Math.round(pct(p.asistencias, p.agendas));
                     const color = tasa >= 40 ? 'success' : tasa > 0 ? 'warning' : 'error';
-                    const filas = [['Agendas', p.agendas, 'brand-primary'], ['Confirmadas', p.confirmadas, 'info'],
-                        ['Asistieron', p.asistencias, 'brand-secondary'], ['Calificados', p.calificados, 'success']];
+                    const filas = [['Agendas', p.agendas, 'brand-primary'], ['Asistieron', p.asistencias, 'brand-secondary'],
+                        ['Calificados', p.calificados, 'success'], ['Asistieron al closer', p.closer_asistieron, 'info'],
+                        ['Cerraron con el closer', p.closer_cerraron, 'success']];
                     return (
                         <button key={p.id} type="button" onClick={() => onElegir(String(p.id))}
                             style={{ ...CAJA, display: 'flex', flexDirection: 'column', gap: 14, padding: 18, borderRadius: 20, color: 'inherit', font: 'inherit', textAlign: 'left', cursor: 'pointer' }}>
@@ -53,12 +54,12 @@ export function PorPersona({ personas, onElegir }) {
     );
 }
 
-/** Una fila por día con sus seis cuentas y una barra: asistieron, confirmadas que no asistieron y sin confirmar. */
+/** Una fila por día con sus cinco cuentas y una barra: asistieron y no asistieron. */
 export function DiaPorDia({ dias }) {
     if (!dias.length) return null;
     const mayor = Math.max(1, ...dias.map((d) => d.agendas));
-    const rotulos = ['AGEND.', 'CONF.', 'ASIST.', 'CALIF.', 'DESC.', 'LT'];
-    const leyenda = [['Asistieron', 'success'], ['Confirmadas', 'info'], ['Sin confirmar', 'idle']];
+    const rotulos = ['AGEND.', 'ASIST.', 'CALIF.', 'DESC.', 'LT'];
+    const leyenda = [['Asistieron', 'success'], ['No asistieron', 'idle']];
     return (
         <div style={{ ...TARJETA, gap: 18 }}>
             <Titulo texto="Día por día" />
@@ -67,20 +68,19 @@ export function DiaPorDia({ dias }) {
                 {rotulos.map((r) => <small key={r} style={{ ...ROTULO, fontSize: 11, letterSpacing: '.1em', textAlign: 'right' }}>{r}</small>)}
             </div>
             {dias.map((d) => {
-                const valores = [d.agendas, d.confirmadas, d.asistencias, d.calificados, d.descalificados, d.cerrado];
+                const valores = [d.agendas, d.asistencias, d.calificados, d.descalificados, d.cerrado];
                 const ancho = (n) => `${(n / mayor) * 100}%`;
                 return (
                     <div key={d.dia} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                         <div style={{ display: 'grid', gridTemplateColumns: COLUMNAS, gap: '0 8px', fontSize: 15, fontWeight: 700 }}>
                             <span style={{ fontWeight: 600 }}>{nombreDia(d.dia)}</span>
                             {valores.map((n, i) => (
-                                <span key={i} style={{ textAlign: 'right', color: !n ? 'var(--text-muted-40)' : i === 4 ? 'var(--warning)' : i === 3 ? 'var(--success)' : undefined }}>{n}</span>
+                                <span key={i} style={{ textAlign: 'right', color: !n ? 'var(--text-muted-40)' : i === 3 ? 'var(--warning)' : i === 2 ? 'var(--success)' : undefined }}>{n}</span>
                             ))}
                         </div>
                         <div style={{ display: 'flex', height: 6, gap: 2, borderRadius: 6, overflow: 'hidden', background: 'rgba(255,255,255,.06)' }}>
                             <div style={{ width: ancho(d.asistencias), background: 'var(--success)' }} />
-                            <div style={{ width: ancho(Math.max(0, d.confirmadas - d.asistencias)), background: 'var(--info)' }} />
-                            <div style={{ width: ancho(Math.max(0, d.agendas - d.confirmadas)), background: 'var(--idle)' }} />
+                            <div style={{ width: ancho(Math.max(0, d.agendas - d.asistencias)), background: 'var(--idle)' }} />
                         </div>
                     </div>
                 );
