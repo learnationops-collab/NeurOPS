@@ -2,13 +2,13 @@
 
 import { conOpciones } from './catalogos';
 import { normalPregunta } from './normalizar';
-import { SEG_Q, preguntaSegmento, segmentar } from './segmento';
+import { SEG_Q, segmentar } from './segmento';
 import { clonar, mayus, uid } from './util';
 
-// Las preguntas que puede usar una regla: las del formulario y, si segmenta, «Segmento del lead».
+// Las preguntas que puede usar una regla: solo las del formulario. El segmento sale de las reglas (Mario,
+// 02/11, ADR-W057), así que «Segmento del lead» ya no se ofrece; el ruteo sigue entendiendo las reglas viejas que lo usan.
 export function preguntasRuteo(fo) {
-    const seg = preguntaSegmento(fo);
-    return ((fo && fo.preguntas) || []).concat(seg ? [seg] : []);
+    return (fo && fo.preguntas) || [];
 }
 
 export function resumenForm(f) {
