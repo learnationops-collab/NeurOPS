@@ -297,7 +297,7 @@ def guardar(director, datos, fecha=None):
     # todas, y mezclar lo nuevo con lo viejo dejaría respuestas de una edición anterior.
     ReporteDirectorPersona.query.filter_by(reporte_id=reporte.id).delete()
     ids_validos = {u.id for u in User.query.filter(
-        User.role.in_(['closer', 'setter']), User.is_active.is_(True)).all()}
+        User.role.in_(['closer', 'setter']), User.is_active.is_(True)).all() if u.es_visible_a_direccion}
     for fila in (datos.get('individual') or []):
         miembro_id = fila.get('miembro_id')
         if miembro_id not in ids_validos or fila.get('trabajo') is None:

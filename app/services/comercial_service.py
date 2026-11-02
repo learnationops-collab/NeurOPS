@@ -78,7 +78,7 @@ class ComercialService(ComercialAgendasMixin, ComercialVentasMixin, ComercialLea
         """Las personas del equipo que el selector muestra, en orden alfabético."""
         role = 'closer' if rol == ROL_CLOSERS else 'setter'
         usuarios = User.query.filter_by(role=role, is_active=True).order_by(User.username).all()
-        return [{'id': u.id, 'nombre': u.username, 'rol': role} for u in usuarios]
+        return [{'id': u.id, 'nombre': u.username, 'rol': role} for u in usuarios if u.es_visible_a_direccion]
 
     @staticmethod
     def fecha_o_hoy(valor):

@@ -196,6 +196,12 @@ class User(UserMixin, db.Model):
         closer dado de baja; si figura como vendedor de una venta, esa venta sí se le registra."""
         return 'closer' in self.roles and set(self.roles) <= ROLES_CLOSER_DE_VENTAS
 
+    @property
+    def es_visible_a_direccion(self):
+        """Falso para quien es closer solo por testeo o por ser de la dueña (admin u operador: Santiago, Mario):
+        la dirección comercial no lo ve en sus selectores, rankings ni reportes (02/11/2026)."""
+        return not ({ROLE_ADMIN, ROLE_OPERATOR} & set(self.roles))
+
     def activar_rol(self, rol):
         """Fija el rol activo de este request. Un rol que la persona no tiene se ignora (queda el
         principal): el token puede traer cualquier cosa, así que SIEMPRE se valida acá."""

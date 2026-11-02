@@ -625,7 +625,8 @@ class CloserDashboardService:
         current['kpis']['deuda_total_pendiente'] = cuotas_totals['total']
         current['kpis']['deuda_vencida'] = cuotas_totals['vencido']
 
-        active_closers = User.query.filter_by(role='closer', is_active=True).order_by(User.username).all()
+        active_closers = [u for u in User.query.filter_by(role='closer', is_active=True).order_by(User.username).all()
+                          if u.es_visible_a_direccion]
         coverage = CloserDashboardService._reports_coverage(closer_id, start, end, active_closers)
         cupos_faltantes = len(CloserService.get_missing_slots_days(closer_id, start, end)) if closer_id else 0
         coverage_by_closer = {r['closer_id']: r for r in (coverage or {}).get('detalle', [])}
