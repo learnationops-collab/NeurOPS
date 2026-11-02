@@ -830,7 +830,7 @@ def fichas_de_agendas(desde, hasta):
     setter, confirmada, asistió y presentó con los mismos datos que la tabla, y no puede dar otro número."""
     from app.services.comercial_service import ComercialService
 
-    filas = ComercialService.agendas(ms_a_dt(desde).date(), ms_a_dt(hasta).date())
+    filas = ComercialService.agendas(ms_a_dt(desde).date(), ms_a_dt(hasta).date(), vigentes=False)
     return {str(f['id']): {k: f.get(k) for k in CAMPOS_DE_FICHA} for f in filas}
 
 

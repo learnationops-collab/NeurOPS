@@ -327,6 +327,24 @@ def _dia(a, zona):
     return pytz.UTC.localize(a.start_time).astimezone(zona).date().isoformat()
 
 
+def _una_por_persona(agendas):
+    """Una agenda por persona: sin las reemplazadas por una reagenda ni las repetidas en el mismo horario
+    (`agendas_vigentes`), y si aún quedan varias de la misma persona, la que ya tiene calificación y, si no,
+    la más reciente. Una persona que reagenda o vuelve a agendar es UNA en el embudo, no una por fila."""
+    from app.services.agendas_vigentes import persona_de, vigentes
+
+    elegida = {}
+    for a in vigentes(agendas):
+        actual = elegida.get(persona_de(a))
+        if actual is None or _vale_mas(a, actual):
+            elegida[persona_de(a)] = a
+    return [a for a in agendas if elegida.get(persona_de(a)) is a]
+
+
+def _vale_mas(a, b):
+    return (bool(a.triage_calificacion), a.start_time, a.id) > (bool(b.triage_calificacion), b.start_time, b.id)
+
+
 def metricas(desde, hasta, solo=None, zona=None):
     """El embudo del triage entre `desde` y `hasta` (datetimes UTC naive, por la hora de la llamada):
     agendas → confirmadas → asistencias → calificados / descalificados → pitch del low ticket → cómo
@@ -335,10 +353,10 @@ def metricas(desde, hasta, solo=None, zona=None):
     zona = zona or zona_del_negocio()
     personas = triages(solo)
     ids = [p.id for p in personas]
-    agendas = Appointment.query.filter(
+    agendas = _una_por_persona(Appointment.query.filter(
         Appointment.closer_id.in_(ids or [0]),
         Appointment.start_time >= desde, Appointment.start_time < hasta,
-    ).all()
+    ).all())
     pasadas = Appointment.query.filter(
         Appointment.agenda_triage_id.in_([a.id for a in agendas] or [0])).all()
     closing_show = {c.agenda_triage_id for c in pasadas if (c.closer_result or '').lower() == 'show up'}
