@@ -31,7 +31,7 @@ from app import db
 from app.models import LandingTracking, LandingSession, MetaAnuncio
 from app.decorators import ROLE_ADMIN, workshop_required
 from app.models.user import ROLE_OPERATOR
-from app.api.metrics import EVENTO_CLIC_WHATSAPP
+from app.api.metrics import EVENTO_CLIC_WHATSAPP, EVENTO_VISITA, EVENTOS_CLIC_CTA, EVENTOS_VALIDOS
 from app.api.workshop import bp
 from app.api.workshop_landing import _rango, _pct
 
@@ -39,9 +39,11 @@ PATH_REPLAY = '/replay/'
 
 # Landings cuyo boton principal lleva al grupo de WhatsApp del evento (ver
 # assets/js/workshops.js de institute-site). Sirve para marcarlas aunque en el
-# rango todavia no haya clics medidos.
+# rango todavia no haya clics medidos. Las del test de landings (/clase-hero/,
+# /clase-larga/, /clase-completa/ y /class1/ a /class4/) entran por prefijo;
+# /clase/ (la sesion de aceleracion) no tiene grupo y queda afuera.
 LANDINGS_CON_WHATSAPP = {'/live/', '/acceso/', '/crear-evento/'}
-PREFIJO_LIVE_CLASS = '/live-class'
+PREFIJOS_CON_WHATSAPP = ('/live-class', '/clase-', '/class')
 
 FUENTES = {
     'ig': 'Instagram', 'instagram': 'Instagram',
@@ -77,7 +79,7 @@ def normalizar_fuente(utm_source):
 
 
 def lleva_a_whatsapp(path):
-    return path in LANDINGS_CON_WHATSAPP or path.startswith(PREFIJO_LIVE_CLASS)
+    return path in LANDINGS_CON_WHATSAPP or path.startswith(PREFIJOS_CON_WHATSAPP)
 
 
 def _zona():
@@ -93,7 +95,14 @@ def _tasa(clics, visitas_medidas):
 
 
 def _nuevo():
-    return {'visitas': 0, 'clics_whatsapp': 0, 'visitas_medidas': 0}
+    return {'visitas': 0, 'clics_whatsapp': 0, 'clics_cta': 0, 'visitas_medidas': 0}
+
+
+def _clave_del_evento(evento):
+    """Donde se suma una fila: `clics_whatsapp`, `clics_cta` (reservar o aplicar) o `visitas`."""
+    if evento == EVENTO_CLIC_WHATSAPP:
+        return 'clics_whatsapp'
+    return 'clics_cta' if evento in EVENTOS_CLIC_CTA else 'visitas'
 
 
 def _limpio(valor):
@@ -165,15 +174,16 @@ def trafico_landings():
     por_anuncio = defaultdict(lambda: {**_nuevo(), 'campana_id': None})
     por_dia = defaultdict(_nuevo)
 
-    def sumar(path, utm_source, utm_campaign, utm_content, es_clic, creado):
+    def sumar(path, utm_source, utm_campaign, utm_content, evento, creado):
         utm_campaign, utm_content = _limpio(utm_campaign), _limpio(utm_content)
-        clave = 'clics_whatsapp' if es_clic else 'visitas'
+        clave = _clave_del_evento(evento)
+        es_visita = clave == 'visitas'
         fuente = normalizar_fuente(utm_source)
         landing = por_landing[path]
         landing[clave] += 1
         # Base de la tasa: visitas a landings con boton al grupo, posteriores al
         # primer clic medido (la de la fuente y la campaña tampoco cuentan /replay/).
-        medida = (not es_clic and primer_clic is not None and creado >= primer_clic
+        medida = (es_visita and primer_clic is not None and creado >= primer_clic
                   and lleva_a_whatsapp(path))
         if medida:
             landing['visitas_medidas'] += 1
@@ -182,7 +192,7 @@ def trafico_landings():
                 por_campana[utm_campaign]['visitas_medidas'] += 1
             if utm_content:
                 por_anuncio[utm_content]['visitas_medidas'] += 1
-        if not es_clic:
+        if es_visita:
             landing['fuentes'][fuente] += 1
             if landing['ultima'] is None or creado > landing['ultima']:
                 landing['ultima'] = creado
@@ -198,10 +208,10 @@ def trafico_landings():
         path = normalizar_path(page_path)
         if path == PATH_REPLAY:
             continue
-        sumar(path, utm_source, utm_campaign, utm_content, evento == EVENTO_CLIC_WHATSAPP, creado)
+        sumar(path, utm_source, utm_campaign, utm_content, evento, creado)
 
     for utm_source, utm_campaign, utm_content, creado in sesiones_replay:
-        sumar(PATH_REPLAY, utm_source, utm_campaign, utm_content, False, creado)
+        sumar(PATH_REPLAY, utm_source, utm_campaign, utm_content, EVENTO_VISITA, creado)
 
     landings = []
     for path, d in por_landing.items():
@@ -211,6 +221,7 @@ def trafico_landings():
             'path': path,
             'visitas': d['visitas'],
             'clics_whatsapp': d['clics_whatsapp'],
+            'clics_cta': d['clics_cta'],
             'tasa_whatsapp': _tasa(d['clics_whatsapp'], d['visitas_medidas']) if con_wa else None,
             'lleva_whatsapp': con_wa,
             'fuente_principal': fuente_top,
@@ -252,6 +263,7 @@ def trafico_landings():
     visitas_wa = sum(x['visitas'] for x in landings if x['lleva_whatsapp'])
     visitas_wa_medidas = sum(por_landing[x['path']]['visitas_medidas'] for x in landings if x['lleva_whatsapp'])
     clics = sum(x['clics_whatsapp'] for x in landings)
+    clics_cta = sum(x['clics_cta'] for x in landings)
 
     return jsonify({
         'rango': {'desde': desde_local.strftime('%Y-%m-%d'), 'hasta': (hasta_local - timedelta(days=1)).strftime('%Y-%m-%d')},
@@ -261,6 +273,7 @@ def trafico_landings():
             'visitas_landings_whatsapp': visitas_wa,
             'visitas_medidas': visitas_wa_medidas,
             'clics_whatsapp': clics,
+            'clics_cta': clics_cta,
             'tasa_whatsapp': _tasa(clics, visitas_wa_medidas),
         },
         'por_landing': landings,
@@ -304,7 +317,7 @@ def visitas_landings():
             'id': v.id,
             'landing': landing,
             'page_path': v.page_path,
-            'evento': EVENTO_CLIC_WHATSAPP if v.evento == EVENTO_CLIC_WHATSAPP else 'visita',
+            'evento': v.evento if v.evento in EVENTOS_VALIDOS else EVENTO_VISITA,
             'fuente': normalizar_fuente(v.utm_source),
             'utm_source': v.utm_source,
             'utm_medium': v.utm_medium,

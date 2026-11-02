@@ -12,7 +12,11 @@ bp = Blueprint('metrics', __name__)
 # ninguno) es una visita: asi una landing vieja que no manda `evento` sigue igual.
 EVENTO_VISITA = 'visita'
 EVENTO_CLIC_WHATSAPP = 'clic_whatsapp'
-EVENTOS_VALIDOS = {EVENTO_VISITA, EVENTO_CLIC_WHATSAPP}
+# Clics a los otros botones que importan: reservar la sesion (agenda de Talamus) y aplicar a una vacante.
+EVENTO_CLIC_AGENDAR = 'clic_agendar'
+EVENTO_CLIC_APLICAR = 'clic_aplicar'
+EVENTOS_CLIC_CTA = {EVENTO_CLIC_AGENDAR, EVENTO_CLIC_APLICAR}
+EVENTOS_VALIDOS = {EVENTO_VISITA, EVENTO_CLIC_WHATSAPP} | EVENTOS_CLIC_CTA
 
 @bp.route('/track-visit', methods=['POST'])
 @limitar('track-visit', 120, 10 * 60)
