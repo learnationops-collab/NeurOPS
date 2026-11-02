@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ChevronDown, Moon, PenLine } from 'lucide-react';
 import api from '../../../services/api';
+import { esFresco, guardarCache, leerCache } from '../../../services/cacheDeVistas';
 import ConversationalStatsTab from '../../public/ConversationalStatsTab';
 import IncomingLeadsTab from '../../public/IncomingLeadsTab';
 import Resumen from './Resumen';
@@ -105,8 +106,9 @@ const Historial = ({ setterId }) => {
     const [, setParams] = useSearchParams();
     const [vista, setVista] = useState('reportes');
     const [periodo, setPeriodo] = useState('30');
-    const [reportes, setReportes] = useState(null);
-    const [generadas, setGeneradas] = useState(null);
+    // Recordado por setter y período (cacheDeVistas): volver al historial no lo vuelve a pedir.
+    const [reportes, setReportes] = useState(() => leerCache(`setter:reportes:${setterId}:30`)?.datos ?? null);
+    const [generadas, setGeneradas] = useState(() => leerCache(`setter:generadas:${setterId}:30`)?.datos ?? null);
     const [error, setError] = useState(false);
     const [abierto, setAbierto] = useState(null);
 
@@ -115,17 +117,23 @@ const Historial = ({ setterId }) => {
         let vivo = true;
         const [desde, hasta] = rangoDe(periodo);
         const rango = { ...(desde ? { start_date: desde } : {}), ...(hasta ? { end_date: hasta } : {}) };
-        setReportes(null);
+        const claveR = `setter:reportes:${setterId}:${periodo}`;
+        const claveG = `setter:generadas:${setterId}:${periodo}`;
+        const guardadoR = leerCache(claveR);
+        const guardadoG = leerCache(claveG);
+        setReportes(guardadoR ? guardadoR.datos : null);
         setError(false);
         setAbierto(null);
-        api.get('/public/setter-reports', { params: { setter_id: setterId, per_page: 400, ...rango } })
-            .then(res => { if (vivo) setReportes(res.data?.reports || []); })
-            .catch(() => { if (vivo) { setReportes([]); setError(true); } });
+        if (!esFresco(guardadoR)) {
+            api.get('/public/setter-reports', { params: { setter_id: setterId, per_page: 400, ...rango } })
+                .then(res => { const lista = res.data?.reports || []; guardarCache(claveR, lista); if (vivo) setReportes(lista); })
+                .catch(() => { if (vivo && !guardadoR) { setReportes([]); setError(true); } });
+        }
         // Las generadas del sistema solo tienen sentido con un rango.
-        setGeneradas(null);
-        if (desde && hasta) {
+        setGeneradas(guardadoG ? guardadoG.datos : null);
+        if (desde && hasta && !esFresco(guardadoG)) {
             api.get('/public/setter-stats', { params: { setter_id: setterId, start_date: desde, end_date: hasta, agg_type: 'sum' } })
-                .then(res => { if (vivo) setGeneradas(res.data?.generadas ?? null); })
+                .then(res => { const g = res.data?.generadas ?? null; guardarCache(claveG, g); if (vivo) setGeneradas(g); })
                 .catch(() => { /* sin la píldora */ });
         }
         return () => { vivo = false; };

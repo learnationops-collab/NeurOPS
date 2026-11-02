@@ -4,15 +4,22 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import api from '../../services/api';
+import { guardarCache, leerCache } from '../../services/cacheDeVistas';
 import { Chip, EmptyState, FieldError, Panel, Skeleton, SkeletonPanel } from '../standard';
 import { formatAgendaDateTime } from '../../utils/datetime';
 import FichaLeadModal from '../ficha/FichaLeadModal';
 
 export function useCompartidos() {
-    const [lista, setLista] = useState(null);
+    // Lista de trabajo: se muestra lo último que se vio (cacheDeVistas, sin esqueleto) y se actualiza
+    // siempre en silencio al volver.
+    const [lista, setLista] = useState(() => leerCache('avisos:compartidos')?.datos ?? null);
     const [error, setError] = useState(null);
     const cargar = useCallback(() => api.get('/avisos/compartidos')
-        .then((res) => { setLista(res.data?.compartidos || []); setError(null); })
+        .then((res) => {
+            const datos = res.data?.compartidos || [];
+            guardarCache('avisos:compartidos', datos);
+            setLista(datos); setError(null);
+        })
         .catch((err) => setError(err?.response?.data?.message || 'No se pudieron cargar los leads compartidos.')), []);
     useEffect(() => { cargar(); }, [cargar]);
     return { lista, error, cargar };

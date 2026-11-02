@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { Check, Flame, RefreshCw } from 'lucide-react';
 import api from '../../../services/api';
+import { guardarCache, leerCache } from '../../../services/cacheDeVistas';
 import { EsqueletoFilas, Tip } from '../../comercial/components/Shared';
 import TarjetaAgenda from './TarjetaAgenda';
 import { agregarAnuncio } from './BuscadorAnuncio';
@@ -58,12 +59,14 @@ const ordenarCompletadas = (lista) => [...lista].sort((a, b) =>
 
 const MisAgendas = ({ onResumen, onVerDatos }) => {
     const reducir = useReducedMotion();
-    const [datos, setDatos] = useState(null);
+    // Lista de trabajo: al volver se ve lo último que se vio (cacheDeVistas, sin esqueleto) y se
+    // actualiza siempre en silencio.
+    const [datos, setDatos] = useState(() => leerCache('setter:agendas')?.datos ?? null);
     const [error, setError] = useState(false);
     // null, 'mes' (vació el que miraba y quedan otros) o 'todo' (no queda ninguna): ver `Premio`.
     const [festejo, setFestejo] = useState(null);
     const [aviso, setAviso] = useState('');
-    const [sinDueno, setSinDueno] = useState([]);
+    const [sinDueno, setSinDueno] = useState(() => leerCache('setter:sin-dueno')?.datos || []);
     // El mes que eligió en el selector; sin elegir, el actual.
     const [mesElegido, setMesElegido] = useState(null);
     // 'pendientes' (la bandeja) o 'completadas' (las del mes que ya tienen palabra clave).
@@ -94,6 +97,7 @@ const MisAgendas = ({ onResumen, onVerDatos }) => {
         try {
             const res = await api.get('/setter/palabras-clave');
             if (mio !== pedido.current) return;
+            guardarCache('setter:agendas', res.data);
             setDatos(res.data);
             setError(false);
             onResumen?.(res.data?.resumen);
@@ -104,7 +108,7 @@ const MisAgendas = ({ onResumen, onVerDatos }) => {
 
     useEffect(() => {
         cargar();
-        api.get('/setter/agendas/sin-asignar').then(r => setSinDueno(r.data || [])).catch(() => {});
+        api.get('/setter/agendas/sin-asignar').then(r => { guardarCache('setter:sin-dueno', r.data || []); setSinDueno(r.data || []); }).catch(() => {});
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const anuncioPorId = useMemo(() => new Map((datos?.anuncios || []).map(a => [a.id, a])), [datos?.anuncios]);

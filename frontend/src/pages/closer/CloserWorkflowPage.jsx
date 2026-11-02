@@ -12,6 +12,7 @@ import {
     CalendarPlus, Gift, Hourglass, Ghost, Filter, UserX, Share2
 } from 'lucide-react';
 import api from '../../services/api';
+import { guardarCache, leerCache } from '../../services/cacheDeVistas';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePlaybook } from '../../contexts/PlaybookContext';
 import TriageFollowUpModal from '../triage/components/TriageFollowUpModal';
@@ -876,6 +877,17 @@ const CloserWorkflowPage = () => {
         const pedido = ++pedidoMazoRef.current;
         const vigente = () => pedido === pedidoMazoRef.current;
         const clave = `${activeStep}|${selectedDate}`;
+        // Lo último que se vio de esta pestaña y día (cacheDeVistas): volver a ella se ve al instante,
+        // sin esqueleto, y se actualiza en silencio por detrás.
+        const claveCache = `closer:mazo:${user?.id}:${clave}`;
+        const recordado = mazoCargadoRef.current !== clave ? leerCache(claveCache)?.datos : null;
+        if (recordado) {
+            setAgendas(recordado.lista);
+            setReportedTodayCalls(recordado.reportadas);
+            setUnreadNoAgenda(recordado.sinAgenda);
+            mazoCargadoRef.current = clave;
+            setLoading(false);
+        }
         const conEsqueleto = mazoCargadoRef.current !== clave;
         if (conEsqueleto) setLoading(true);
         try {
@@ -888,25 +900,28 @@ const CloserWorkflowPage = () => {
             // Llamadas del día seleccionado ya reportadas, solo relevante en la pestaña de
             // Llamadas (columna "Reportadas" del Kanban) — ver el estado `reportedTodayCalls`
             // para el porqué de la consulta aparte.
+            let reportadas = [];
             if (activeStep === 'calls') {
                 try {
                     const allDayRes = await api.get(`/closer/deck?step=agendas&selected_date=${selectedDate}`);
                     if (!vigente()) return;
-                    setReportedTodayCalls((allDayRes.data || []).filter(a => a.closer_processed));
+                    reportadas = (allDayRes.data || []).filter(a => a.closer_processed);
                 } catch (err) {
                     console.error("Error al cargar llamadas reportadas del día:", err);
                 }
-            } else {
-                setReportedTodayCalls([]);
             }
+            setReportedTodayCalls(reportadas);
 
             // Cargar leads sin agenda con comentarios pendientes
+            let sinAgenda = [];
             try {
                 const unreadRes = await api.get('/closer/unread-no-agenda');
-                setUnreadNoAgenda(unreadRes.data || []);
+                sinAgenda = unreadRes.data || [];
+                setUnreadNoAgenda(sinAgenda);
             } catch (err) {
                 console.error("Error al cargar leads sin agenda para closer:", err);
             }
+            guardarCache(claveCache, { lista: dataList, reportadas, sinAgenda });
 
             // Si el lead actualmente seleccionado ya no está en la cola ni en unreadNoAgenda, deseleccionarlo
             if (!conservarFicha && selectedLead && !dataList.some(l => l.id === selectedLead.id) && !unreadNoAgenda.some(l => l.id === selectedLead.id)) {
