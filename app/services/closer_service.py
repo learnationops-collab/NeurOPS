@@ -788,9 +788,10 @@ class CloserService:
     @staticmethod
     def process_agenda(closer_id, appt_id, data, is_admin=False):
         from app.models import Appointment, db, User
+        from app.agendas_v2.reagenda import heredar_confirmacion
         from app.services import lead_log_service
         from app.services.booking_service import BookingService
-        
+
         user = User.query.get(closer_id) if closer_id else None
         if not user:
             # Buscar un administrador o primer usuario como autor fallback
@@ -957,6 +958,7 @@ class CloserService:
                 new_appt = BookingService.create_appointment(appt.client_id, destino.id if destino else appt.closer_id, new_dt, origin=appt.origin)
                 if new_appt:
                     new_appt.is_rescheduled = True
+                    heredar_confirmacion(new_appt, appt)
                     db.session.add(new_appt)
                     # El evento con Meet y los avisos van después del commit (manual.terminar).
                     new_appt.agenda_payload = payload_nueva
@@ -1057,6 +1059,7 @@ class CloserService:
                 new_appt = BookingService.create_appointment(appt.client_id, appt.closer_id, new_dt, origin=appt.origin)
                 if new_appt:
                     new_appt.is_rescheduled = True
+                    heredar_confirmacion(new_appt, appt)
                     db.session.add(new_appt)
                     # El evento con Meet y los avisos van después del commit (manual.terminar).
                     new_appt.agenda_payload = payload_nueva

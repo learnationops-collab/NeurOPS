@@ -8,6 +8,16 @@ from app.agendas_v2 import operacion
 from app.services import avisos_service
 
 
+def heredar_confirmacion(nueva, previa):
+    """La agenda nueva de una reagenda sigue en el punto de confirmación en que iba la vieja.
+    Sin esto nacía sin `result` ni etapa y un lead ya confirmado volvía a «Por contactar». El
+    recordatorio previo no se copia: era para la hora vieja."""
+    nueva.result = previa.result
+    nueva.confirmation_stage = previa.confirmation_stage
+    nueva.confirmation_contact_status = previa.confirmation_contact_status
+    nueva.confirmation_pain_points = previa.confirmation_pain_points
+
+
 def _mover(previa, cliente, closer, setter_id, inicio, payload, comentario, aviso, ignorar_ids=()):
     """Igual que «Reagendado» del mazo (CloserService.process_agenda), son dos filas. La vieja queda
     cerrada como 'Reagendado' y la nueva nace con `is_rescheduled`, con una nota en el log de la persona: de
@@ -36,6 +46,7 @@ def _mover(previa, cliente, closer, setter_id, inicio, payload, comentario, avis
         db.session.rollback()
         return None
     nueva.is_rescheduled = True
+    heredar_confirmacion(nueva, previa)
     if payload is not None:
         nueva.agenda_payload = {
             **payload,
