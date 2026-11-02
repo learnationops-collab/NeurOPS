@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { 
     Search, Calendar, RefreshCw, Loader2, ChevronDown, 
     Calendar as CalendarIcon, CheckSquare, Clock
 } from 'lucide-react';
 import api from '../../services/api';
+import { guardarCache, leerCache } from '../../services/cacheDeVistas';
 import { useAuth } from '../../contexts/AuthContext';
 import TriageKpiCards from './components/TriageKpiCards';
 import TriageLeadCard from './components/TriageLeadCard';
@@ -28,8 +29,15 @@ const TriageWorkflowPage = () => {
     const [sortBy, setSortBy] = useState('urgent');
     const [activeKpiFilter, setActiveKpiFilter] = useState('all');
 
-    const [agendas, setAgendas] = useState([]);
-    const [loading, setLoading] = useState(true);
+    // Lista de trabajo: al volver se ve lo último que se vio de ese día (cacheDeVistas), sin esqueleto,
+    // y se actualiza siempre en silencio.
+    const claveDe = (fecha) => `triage:confirmaciones:${fecha}`;
+    const [agendas, setAgendas] = useState(() => leerCache(claveDe(selectedDate))?.datos ?? []);
+    const [loading, setLoading] = useState(() => !leerCache(claveDe(selectedDate)));
+    const [actualizando, setActualizando] = useState(false);
+    // El día que ya tiene datos en pantalla, y el día elegido ahora (para ignorar respuestas viejas).
+    const cargadaRef = useRef(leerCache(claveDe(selectedDate)) ? selectedDate : null);
+    const fechaRef = useRef(selectedDate);
     const [processingId, setProcessingId] = useState(null);
     const [selectedLead, setSelectedLead] = useState(null);
 
@@ -56,7 +64,10 @@ const TriageWorkflowPage = () => {
 
     // Cargar agendas del día seleccionado
     const fetchAgendas = async () => {
-        setLoading(true);
+        const fecha = selectedDate;
+        // El esqueleto solo si de este día no hay nada que mostrar todavía.
+        if (cargadaRef.current !== fecha) setLoading(true);
+        setActualizando(true);
         try {
             const res = await api.get('/public/financial-agendas', {
                 params: {
@@ -66,6 +77,9 @@ const TriageWorkflowPage = () => {
                 }
             });
             const dataList = Array.isArray(res.data) ? res.data : (res.data?.data || []);
+            guardarCache(claveDe(fecha), dataList);
+            if (fechaRef.current !== fecha) return;
+            cargadaRef.current = fecha;
             setAgendas(dataList);
 
             if (selectedLead) {
@@ -76,11 +90,18 @@ const TriageWorkflowPage = () => {
             console.error("Error al cargar agendas:", err);
             toast.error("Error al cargar las agendas");
         } finally {
-            setLoading(false);
+            if (fechaRef.current === fecha) { setLoading(false); setActualizando(false); }
         }
     };
 
     useEffect(() => {
+        fechaRef.current = selectedDate;
+        const guardado = leerCache(claveDe(selectedDate))?.datos;
+        if (guardado) {
+            setAgendas(guardado);
+            cargadaRef.current = selectedDate;
+            setLoading(false);
+        }
         fetchAgendas();
     }, [selectedDate]);
 
@@ -365,10 +386,10 @@ const TriageWorkflowPage = () => {
 
                         <button
                             onClick={fetchAgendas}
-                            disabled={loading}
+                            disabled={actualizando}
                             className="p-2.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl text-slate-400 hover:text-white transition-all cursor-pointer border-none"
                         >
-                            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+                            <RefreshCw size={14} className={actualizando ? 'animate-spin' : ''} />
                         </button>
                     </div>
                 </div>
