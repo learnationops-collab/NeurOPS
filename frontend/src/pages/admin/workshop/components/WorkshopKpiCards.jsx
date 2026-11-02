@@ -66,10 +66,10 @@ const ROTULOS = [
     { key: 'leads', label: 'Leads', lista: 't_leads', ayuda: 'Leads de Meta. CPL = inversión ÷ leads.' },
     { key: 'agendas', label: 'Agendas', lista: 'agendas', ayuda: 'Personas con llamada agendada. CPA = inversión ÷ agendas.' },
     { key: 'sales', label: 'Ventas', lista: 'ventas', ayuda: 'Compradores (completo o split). CAC = inversión ÷ ventas.' },
-    { key: 'new_cash', label: 'New Cash', lista: 'new_cash', ayuda: 'Ventas nuevas y su primera cuota: la base del ticket.' },
-    { key: 'cash', label: 'Cash total', lista: 'cash_total', ayuda: 'New Cash más las señas cobradas.' },
-    { key: 'roas_nc', label: 'ROAS New Cash', lista: 'new_cash', ayuda: 'New Cash ÷ inversión.', base: true },
-    { key: 'roas', label: 'ROAS Total', lista: 'cash_total', ayuda: 'Cash total ÷ inversión. Desde 1,5x es sano.', base: true },
+    { key: 'new_cash', label: 'New Cash', lista: 'new_cash', ayuda: 'Neto de ventas nuevas y su primera cuota.' },
+    { key: 'cash', label: 'Cash total', lista: 'cash_total', ayuda: 'New Cash más las señas, en neto.' },
+    { key: 'roas_nc', label: 'ROAS New Cash', lista: 'new_cash', ayuda: 'New Cash (neto) ÷ inversión.', base: true },
+    { key: 'roas', label: 'ROAS Total', lista: 'cash_total', ayuda: 'Cash total (neto) ÷ inversión. Desde 1,5x es sano.', base: true },
 ];
 
 /** Cifra y detalle de cada tile: lo único que depende de los talleres. `cuenta` va solo donde la cifra es una razón. */
