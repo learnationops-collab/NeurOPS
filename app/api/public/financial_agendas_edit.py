@@ -22,6 +22,15 @@ def update_financial_agenda(agenda_id):
         return jsonify({"error": "Agenda no encontrada"}), 404
         
     try:
+        # «Reagendado», «No Show» y «Cancelado» piden el motivo en `note` (ADR-W065): se valida antes de
+        # tocar la agenda. Un estado que ya tenía no se vuelve a explicar.
+        from app.services import motivo_estado_service
+        motivo = None
+        if 'estado' in data and data['estado'] != agenda.estado:
+            motivo = motivo_estado_service.para_correccion(agenda.estado, data['estado'], data.get('note'))
+        if motivo is None and 'closer_result' in data:
+            motivo = motivo_estado_service.para_correccion(None, data['closer_result'], data.get('note'))
+        motivo_escrito = False  # `process_agenda` o la escritura directa ya lo dejaron en el hilo
         if 'nombre' in data:
             agenda.nombre = data['nombre']
         # El lead, su instagram, whatsapp y mail corrigen a su persona (lo que se muestra sale de ella).
@@ -144,6 +153,7 @@ def update_financial_agenda(agenda_id):
                         }
                         user_id = current_user.id if (current_user and current_user.is_authenticated) else appt.setter_id
                         CloserService.process_agenda(closer_id=user_id, appt_id=appt.id, data=process_payload, is_admin=True)
+                        motivo_escrito = True
 
         # Si se edita closer_result (desde la vista de admin/closer)
         if 'closer_result' in data:
@@ -197,12 +207,21 @@ def update_financial_agenda(agenda_id):
                         }
                         user_id = current_user.id if (current_user and current_user.is_authenticated) else appt.closer_id
                         CloserService.process_agenda(closer_id=user_id, appt_id=appt.id, data=process_payload, is_admin=True)
+                        motivo_escrito = True
                     else:
                         appt.closer_result = new_closer_res
                         if new_closer_res in ('Show up', 'No Show'):
                             appt.closer_processed = True
+                        if motivo:
+                            motivo_estado_service.registrar(appt, current_user, new_closer_res, motivo)
+                            motivo_escrito = True
                         db.session.add(appt)
                         BookingService.sync_appointment_to_financial_agenda(appt)
+
+        if motivo and not motivo_escrito:
+            # Sin cita en NeurOPS que procese el estado, el motivo cuelga de la persona de la fila.
+            motivo_estado_service.registrar_de_persona(
+                agenda.person_uuid, current_user, data.get('closer_result') or data.get('estado'), motivo)
 
         db.session.commit()
 
