@@ -45,11 +45,13 @@ export const Encabezado = ({ pieza, orden, ordenarPor, ariaOrden, vista }) => {
         const c = pieza.col;
         return (
             <th scope="col" className="mk-num" aria-sort={c.pct && orden.clave === c.pct ? ariaOrden(c.pct) : ariaOrden(c.key)}>
-                <span className="mk-cab-celda">
-                    <Tip texto={c.ayuda} titulo={c.label} />
-                    <button type="button" className="mk-cab" onClick={() => ordenarPor(c.key, c.menor)}>
-                        {c.label} <Flecha orden={orden} clave={c.key} />
-                    </button>
+                <span className={`mk-cab-celda${c.pct ? ' mk-cab-celda--pct' : ''}`}>
+                    <span className="mk-cab-fila">
+                        <Tip texto={c.ayuda} titulo={c.label} />
+                        <button type="button" className="mk-cab" onClick={() => ordenarPor(c.key, c.menor)}>
+                            {c.label} <Flecha orden={orden} clave={c.key} />
+                        </button>
+                    </span>
                     {c.pct && (
                         // El porcentaje de debajo del número ordena por la tasa, no por el conteo.
                         <button type="button" className={`mk-cab mk-cab--pct${orden.clave === c.pct ? ' is-on' : ''}`}

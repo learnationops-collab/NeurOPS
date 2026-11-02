@@ -136,6 +136,8 @@
 .dc-shell .mk-cab:hover{color:var(--text-on-surface)}
 .dc-shell .mk-tabla th[aria-sort="ascending"] .mk-cab,
 .dc-shell .mk-tabla th[aria-sort="descending"] .mk-cab{color:var(--text-on-surface)}
+.dc-shell .mk-cab-fila{display:inline-flex;align-items:center;justify-content:flex-end;gap:4px;width:100%}
+.dc-shell .mk-cab-celda--pct{flex-wrap:wrap;row-gap:3px}
 .dc-shell .mk-cab--pct{padding:0 5px;border:1px solid var(--border-subtle);border-radius:var(--radius-pill);font-size:10px;color:var(--text-muted)}
 .dc-shell .mk-cab--pct:hover,.dc-shell .mk-cab--pct.is-on{color:var(--text-on-surface);border-color:var(--text-muted)}
 .dc-shell .mk-valor{display:block;font-weight:700;color:var(--text-on-surface)}
