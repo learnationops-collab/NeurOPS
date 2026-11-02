@@ -123,8 +123,11 @@ def _pasar_al_closer(appt, datos, usuario):
 
     closer = db.session.get(User, int(datos['closer_id']))
     sesion = a_triage.sesion_closing_de(closer) if closer else None
-    nueva = acciones.crear_agenda(appt, {'fecha': datos['fecha'], 'closer_id': datos['closer_id'], 'sesion': sesion},
-                                  usuario)
+    # `pase_triage` viaja en el payload de la agenda de closing: de ahí sale la tarjeta de Discord «Pasó de Triage».
+    pase = {'pase_triage': {'agenda_id': appt.id, 'por': usuario.username,
+                            'nota': (datos.get('nota_para_closer') or '').strip()}}
+    nueva = acciones.crear_agenda(appt, {'fecha': datos['fecha'], 'closer_id': datos['closer_id'],
+                                         'sesion': {**(sesion or {}), **pase}}, usuario)
     closing = db.session.get(Appointment, nueva['id'])
     closing.agenda_triage_id = appt.id
     for campo in _SEGMENTO:  # mantiene el segmento original para medir después
