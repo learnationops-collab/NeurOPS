@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { Loader2 } from 'lucide-react';
 import api from '../../../services/api';
+import { useDatosCacheados } from '../../../services/cacheDeVistas';
 import { useAuth } from '../../../contexts/AuthContext';
 import PerformanceFilters from './components/PerformanceFilters';
 import PerformanceHighlights from './components/PerformanceHighlights';
@@ -44,37 +45,25 @@ const CloserDashboard = ({ embedded = false, onNavigate = null }) => {
     // Rangos libres: cada uno solo viaja al backend cuando su selector está en 'custom'.
     const [customRange, setCustomRange] = useState({ start: '', end: '' });
     const [compareRange, setCompareRange] = useState({ start: '', end: '' });
-    const [data, setData] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const [version, setVersion] = useState(0);
 
     const rangoIncompleto = (period === 'custom' && !(customRange.start && customRange.end))
         || (compare === 'custom' && !(compareRange.start && compareRange.end));
 
-    const fetchData = useCallback(async () => {
-        // Con el rango libre a medio elegir no se pide nada: se espera a que estén las dos puntas.
-        if (rangoIncompleto) return;
-        setLoading(true);
-        setError(null);
-        try {
-            const res = await api.get('/closer/performance-dashboard', {
-                params: {
-                    period, compare, closer_id: closerId,
-                    ...(period === 'custom' ? { start_date: customRange.start, end_date: customRange.end } : {}),
-                    ...(compare === 'custom' ? { compare_start: compareRange.start, compare_end: compareRange.end } : {})
-                }
-            });
-            setData(res.data);
-        } catch (err) {
-            console.error('Error fetching performance dashboard', err);
-            setError('No se pudo cargar el dashboard de performance.');
-        } finally {
-            setLoading(false);
-        }
-    }, [period, compare, closerId, customRange.start, customRange.end,
-        compareRange.start, compareRange.end, rangoIncompleto]);
-
-    useEffect(() => { fetchData(); }, [fetchData]);
+    const params = {
+        period, compare, closer_id: closerId,
+        ...(period === 'custom' ? { start_date: customRange.start, end_date: customRange.end } : {}),
+        ...(compare === 'custom' ? { compare_start: compareRange.start, compare_end: compareRange.end } : {})
+    };
+    // Con el rango libre a medio elegir no se pide nada: se espera a que estén las dos puntas. Lo ya
+    // pedido queda recordado por filtros (cacheDeVistas): volver a esta pantalla no vuelve a cargar.
+    const clave = rangoIncompleto ? null : `closer:performance:${JSON.stringify(params)}`;
+    const { datos: data, error: fallo, cargando } = useDatosCacheados(clave,
+        (signal) => api.get('/closer/performance-dashboard', { params, signal }).then((res) => res.data),
+        { version, onError: (err) => console.error('Error fetching performance dashboard', err) });
+    const error = fallo ? 'No se pudo cargar el dashboard de performance.' : null;
+    const loading = cargando || (Boolean(clave) && !data && !fallo);
+    const fetchData = useCallback(() => setVersion((v) => v + 1), []);
 
     /* Cada numero de este dashboard lleva a la lista que lo compone: la seccion Revisar del
        dashboard comercial, que ya existe y ya sabe acotar por persona y por periodo. El hook
