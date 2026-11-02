@@ -483,3 +483,11 @@
 - **Decisión:** tercera vista en Segmentación, «Probar un lead» (`RuteoSimulador.jsx`): se eligen las respuestas de las preguntas que usan las reglas y se ve la regla que se cumple, la estrategia con sus closers y cómo reparte, la sesión y los puntos. Usa `grupoPorReglas`, el mismo ruteo de la reserva. Sale el botón «No califica» de la barra y la opción «No califica» de los destinos (se sigue mostrando si un destino viejo la tiene). Eliminar un formulario pide dos confirmaciones. La sesión «La del formulario» pasa a decir «La del link por el que agendó», y dos eventos con el mismo nombre se distinguen por su embudo.
 - **Qué se pierde:** desde el editor ya no se configura la pantalla del que no califica (`fin`); queda lo que tenía cada formulario.
 - **Consecuencias:** `scripts/segmentacion_alfa.py --revisar` verifica en solo lectura las reglas guardadas.
+
+## ADR-W060: Un formulario puede no tener segmentación: cada link va a la persona de su evento
+
+- **Fecha:** 2026-11-02 · **Subsistema:** Thalamus (Forms › Segmentación) · **Estado:** implementado.
+- **Contexto:** los formularios simples (Hiring, Momentum, Consultoría…) agendan con una persona fija y no necesitan reglas ni estrategias, pero Segmentación les marcaba en rojo «Todos los leads quedan sin estrategia». El evento con `persona` ya saltea el ruteo (`_contexto`, `sesion_del_lead`, `asignacion`).
+- **Decisión:** interruptor «Con / Sin segmentación» en Segmentación (`sinSegmentacion` en el formulario; solo se guarda si es `true`, así lo publicado antes queda igual). Sin segmentación se esconden reglas, revisión y Simular, y se listan los links que usan el formulario con su persona; un link sin persona se marca en rojo porque no ofrecería horarios. Cada link se abre en Eventos.
+- **Qué se pierde:** nada en el ruteo: es una marca de la pantalla. Un link sin persona de un formulario sin segmentación sigue sin horarios hasta que se le elija una.
+- **Consecuencias:** con estos formularios marcados así, el Grupo 3 se puede borrar sin dejar links sin destino, si sus eventos tienen persona.

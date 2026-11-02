@@ -61,3 +61,4 @@
   - «Por qué cae acá» muestra la respuesta del lead en cada condición y cuántas más entran, en vez de la lista entera.
   - `segmentacion_alfa.py --revisar` también dice qué formularios y links usan cada estrategia que no es de los segmentos.
 - **2 de Noviembre de 2026 (Thalamus: sale la vista Flujo de Segmentación)** *([Ruteo.jsx](../../frontend/src/pages/agendas_v2/secciones/forms/Ruteo.jsx))*: Segmentación queda con Reglas y Simular; se borra `RuteoFlujo.jsx` (pedido de Mario).
+- **2 de Noviembre de 2026 (Thalamus: formularios sin segmentación)** *([RuteoSinSegmentacion.jsx](../../frontend/src/pages/agendas_v2/secciones/forms/RuteoSinSegmentacion.jsx), [Ruteo.jsx](../../frontend/src/pages/agendas_v2/secciones/forms/Ruteo.jsx), [ADR-W060](../DECISIONS.md))*: interruptor «Con / Sin segmentación»; sin ella, Segmentación lista los links del formulario con su persona y avisa el que no tiene.

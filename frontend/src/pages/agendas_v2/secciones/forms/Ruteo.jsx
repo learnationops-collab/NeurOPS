@@ -1,5 +1,5 @@
 // Segmentación: reglas en orden; la primera que se cumple elige la estrategia. Lo que no cumple ninguna va a "Todo lo demás".
-// «Simular» muestra a dónde va un lead según sus respuestas.
+// «Simular» muestra a dónde va un lead según sus respuestas. Sin segmentación, cada link va a la persona de su evento.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { almacen } from '../../data/hooks';
@@ -12,7 +12,8 @@ import { Humo, HUMO_MARCA, Icono, Sx } from '../../ui/base';
 import { useOrdenable } from '../../ui/useOrdenable';
 import { colorNivel, mutarForm, opcionesPrioridad, setFormUi, useEnfocar } from './comun';
 import RuteoSimulador from './RuteoSimulador';
-import { FieldError, Grid, IconButton, Input, Segmented } from '../../../../components/standard';
+import RuteoSinSegmentacion from './RuteoSinSegmentacion';
+import { FieldError, Grid, IconButton, Input, Segmented, Switch } from '../../../../components/standard';
 import { useEnPantalla } from '../../../../components/ui/useEnPantalla';
 
 const AYUDA_RUTEO = 'Se revisan de arriba a abajo: la primera regla que se cumple elige la estrategia. En cada condición alcanza cualquiera de las respuestas marcadas.';
@@ -190,13 +191,19 @@ export default function Ruteo({ f, d, modo, msel }) {
             <div className="ruteo-cab">
                 <h2 className="t-h3">Segmentación</h2>
                 <span className="ayuda" tabIndex={0} role="note" aria-label={AYUDA_RUTEO} data-tip={AYUDA_RUTEO}>?</span>
-                <Segmented size="sm" label="Vista del ruteo" style={{ marginLeft: 'auto' }} itemProps={{ 'data-nav': '' }} value={modo}
+                <label className="ruteo-usa">
+                    <Switch checked={!f.sinSegmentacion} label="Usa segmentación"
+                        onChange={v => { almacen.editar('formularios', f.id, { sinSegmentacion: !v }); setFormUi({ ruteoModo: 'reglas', msel: null }); }} />
+                    <span>{f.sinSegmentacion ? 'Sin segmentación' : 'Con segmentación'}</span>
+                </label>
+                {!f.sinSegmentacion && <Segmented size="sm" label="Vista del ruteo" style={{ marginLeft: 'auto' }} itemProps={{ 'data-nav': '' }} value={modo}
                     onChange={v => setFormUi({ ruteoModo: v, msel: null })}
                     options={[{ value: 'reglas', label: 'Reglas', icon: <Icono n="lista" /> },
-                        { value: 'probar', label: 'Simular', icon: <Icono n="rayo" /> }]} />
+                        { value: 'probar', label: 'Simular', icon: <Icono n="rayo" /> }]} />}
             </div>
-            {modo !== 'probar' && <Revision avisos={avisos} />}
-            {modo === 'probar' ? <RuteoSimulador f={f} d={d} />
+            {!f.sinSegmentacion && modo !== 'probar' && <Revision avisos={avisos} />}
+            {f.sinSegmentacion ? <RuteoSinSegmentacion f={f} d={d} />
+                : modo === 'probar' ? <RuteoSimulador f={f} d={d} />
                 : !qs.length ? (
                     <>
                         <p className="t-sm mut">Agregá preguntas de opción para armar reglas.</p>

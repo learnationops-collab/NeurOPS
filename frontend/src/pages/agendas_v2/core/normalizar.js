@@ -121,6 +121,8 @@ export function normalForm(id, d) {
         // Solo si segmenta: sin la clave, lo publicado antes queda idéntico.
         ...(normalSegmento(d.segmento) ? { segmento: normalSegmento(d.segmento) } : {}),
         // url: la página a la que va el que no califica (la landing de descalificados); vacía, ve el título y el texto.
+        // Sin segmentación: cada link va a la persona de su evento. Sin la clave, lo publicado antes queda idéntico.
+        ...(d.sinSegmentacion === true ? { sinSegmentacion: true } : {}),
         fin: { titulo: String(fin.titulo || FIN_DEF.titulo).slice(0, 120), texto: String(fin.texto == null ? FIN_DEF.texto : fin.texto).slice(0, 300), url: urlOk(fin.url) },
         orden: Number(d.orden) || 0,
     };
