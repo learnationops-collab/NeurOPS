@@ -1,0 +1,72 @@
+/* Embudo partido en dos canales (02/11/2026): cada barra en dos colores, la leyenda y la tira de close rates. */
+.dc-shell .dc-funnel-bar--partes {
+    gap: 2px;
+    overflow: hidden;
+    background: none;
+}
+
+.dc-shell .dc-funnel-parte {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 100%;
+    border: 0;
+    padding: 0;
+    color: var(--ink);
+    font-size: inherit;
+    font-weight: inherit;
+    font-variant-numeric: tabular-nums;
+}
+
+.dc-shell button.dc-funnel-parte { cursor: pointer; }
+.dc-shell button.dc-funnel-parte:hover { filter: brightness(1.12); }
+
+.dc-shell .dc-funnel-canales { margin: 0 0 var(--s3); }
+
+.dc-shell .dc-funnel-canal,
+.dc-shell .dc-canales-cr button {
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    color: inherit;
+    font: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    text-decoration: underline dotted;
+}
+
+/* Close rate real: total, directas y desde triage, una fila cada uno. */
+.dc-shell .dc-canales-cr {
+    display: grid;
+    gap: 6px;
+    margin-top: var(--s3);
+    padding-top: var(--s3);
+    border-top: 1px solid var(--border-subtle);
+}
+
+.dc-shell .dc-canales-cr-fila {
+    display: grid;
+    grid-template-columns: minmax(104px, auto) 64px 1fr;
+    gap: 10px;
+    align-items: baseline;
+}
+
+.dc-shell .dc-canales-cr-nombre {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.dc-shell .dc-canales-cr-pct {
+    font-size: 14px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+}

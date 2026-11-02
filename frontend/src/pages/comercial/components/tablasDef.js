@@ -144,6 +144,10 @@ export const presento = siNo((f) => f.asistio && f.presento);
 // ¿La llamada con show up terminó en venta o en seña? Solo se pregunta de las que asistieron: una
 // que no ocurrió no "no cerró". La marca la pone el backend (`no_cerrada`), la misma con la que el
 // panel Cierre cuenta sus «No cerradas», así la lista no puede dar otro número.
+// De dónde llegó la agenda (02/11/2026): directo al closer o pasada por el triage. El nombre de cada canal es la
+// etiqueta de la faceta «Origen» y el rótulo del embudo de Closing, así que vive acá.
+export const CANAL = { directa: 'Directa', triage: 'Desde triage' };
+export const canalDe = (f) => CANAL[f.canal] || CANAL.directa;
 export const cerro = (f) => (f.asistio ? (f.no_cerrada ? NO : SI) : null);
 export const respondio = siNo((f) => f.respondio);
 export const cualificado = siNo((f) => f.cualificado);
@@ -288,6 +292,7 @@ export const TABLAS = {
             { key: 'post_call', label: 'Post call', de: (f) => f.post_call.label, ayuda: ayudaDelEstado },
             { key: 'closer', label: 'Closer', de: (f) => f.closer },
             { key: 'fuente', label: 'Fuente', de: (f) => f.fuente },
+            { key: 'canal', label: 'Origen', de: canalDe },
             FACETA_SEGMENTO,
             { key: 'confirmada', label: 'Confirmada', de: fueConfirmada },
             { key: 'asistio', label: 'Asistió', de: asistio },

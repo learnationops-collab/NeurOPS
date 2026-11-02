@@ -1,5 +1,6 @@
 import React from 'react';
 import { CardHead, Tip, useMontado } from './Shared';
+import './embudoCanales.css';
 
 /**
  * Embudo del doc 03: barras centradas con cuello trapezoidal entre una y la siguiente, color en
@@ -23,13 +24,17 @@ import { CardHead, Tip, useMontado } from './Shared';
  * - `sinCuello` apaga el cuello de botella para los embudos donde la etiqueta no aporta.
  * - `sinFinal` quita el "X% final" del pie (primer paso contra el último). El de closers lo apaga:
  *   ahí sería ventas sobre agendas, una tasa que no se muestra.
+ * - `canales` parte cada barra en dos colores (02/11/2026: agendas directas y agendas desde triage):
+ *   `[{ nombre, color, n, ir }]`, en el orden de `partes`. Cada paso trae `partes: [n0, n1]` (suman `n`) y,
+ *   opcional, `irPartes: [ir0, ir1]`. Una parte en cero no se dibuja. Con `canales` el color del paso ya no
+ *   es el degradado: los dos colores significan otra cosa. `children` va entre las filas y el pie.
  *
  * Cada fila muestra las DOS cifras a la vez, como en el doc 03: la cantidad dentro de la banda y
  * la tasa contra el paso anterior a la derecha. Hubo un selector Cantidad/Tasa que no agregaba
  * nada —en Cantidad la tasa ya estaba a la derecha, y Tasa solo la mudaba a la banda y borraba
  * el conteo—, así que se veía la misma tasa dos veces según el modo. Lo sacó el usuario.
  */
-const Embudo = ({ pasos, sinCuello = false, sinFinal = false }) => {
+const Embudo = ({ pasos, sinCuello = false, sinFinal = false, canales = null, children = null }) => {
     const montado = useMontado();
     const primero = pasos[0]?.n || 0;
     // Cero es nada: un paso en cero no tiene banda, solo su número (16/10/2026).
@@ -58,6 +63,12 @@ const Embudo = ({ pasos, sinCuello = false, sinFinal = false }) => {
         const mezcla = pasos.length > 1 ? Math.round((i / (pasos.length - 1)) * 100) : 100;
         return `color-mix(in oklch, var(--brand-secondary) ${mezcla}%, var(--info))`;
     };
+    // El cuello toma los dos colores de la barra de arriba, en su misma proporción.
+    const fondoCuello = (p, i) => {
+        if (!canales || !p.partes || !p.n) return color(i);
+        const corte = (p.partes[0] / p.n) * 100;
+        return `linear-gradient(90deg, ${canales[0].color} ${corte}%, ${canales[1].color} ${corte}%)`;
+    };
     const final = primero ? ((pasos[pasos.length - 1].n / primero) * 100).toFixed(1) : '0.0';
     const irFinal = pasos[0]?.ir;
 
@@ -69,6 +80,21 @@ const Embudo = ({ pasos, sinCuello = false, sinFinal = false }) => {
                     <span className="dc-bottleneck">Cuello de botella · {pasos[cuello].paso}</span>
                 )}
             </CardHead>
+            {canales && (
+                <div className="leyenda dc-funnel-canales">
+                    {canales.map(c => (
+                        <span key={c.nombre}>
+                            <i style={{ background: c.color }} />
+                            {c.ir && c.n > 0 ? (
+                                <button type="button" className="dc-funnel-canal" onClick={c.ir}
+                                    title={`Ver las ${c.n} agendas: ${c.nombre.toLowerCase()}`}>
+                                    {c.nombre} · {c.n}
+                                </button>
+                            ) : `${c.nombre} · ${c.n}`}
+                        </span>
+                    ))}
+                </div>
+            )}
             {pasos.map((p, i) => {
                 const pct = i === 0 ? null : pasos[i - 1].n ? ((p.n / pasos[i - 1].n) * 100).toFixed(1) : null;
                 const anchoAqui = montado ? ancho(p.n) : 0;
@@ -88,10 +114,26 @@ const Embudo = ({ pasos, sinCuello = false, sinFinal = false }) => {
                                 ) : (
                                     <span className="dc-funnel-label" style={estiloCuello}>{p.paso}</span>
                                 )}
+                                {canales && p.partes && <small className="t-cap mut num">{p.n}</small>}
                                 {p.ayuda && <Tip texto={p.ayuda} />}
                             </span>
                             <div style={{ display: 'flex', justifyContent: 'center' }}>
-                                {p.n > 0 ? (
+                                {p.n > 0 && canales && p.partes ? (
+                                    <div className="dc-funnel-bar dc-funnel-bar--partes"
+                                        style={{ width: `${anchoAqui}%`, transitionDelay: `${120 + i * 90}ms` }}>
+                                        {p.partes.map((n, k) => n > 0 && (
+                                            p.irPartes?.[k] ? (
+                                                <button key={k} type="button" className="dc-funnel-parte"
+                                                    style={{ flex: n, background: canales[k].color }}
+                                                    title={`Ver las ${n} agendas: ${canales[k].nombre.toLowerCase()}`}
+                                                    onClick={p.irPartes[k]}>{n}</button>
+                                            ) : (
+                                                <span key={k} className="dc-funnel-parte"
+                                                    style={{ flex: n, background: canales[k].color }}>{n}</span>
+                                            )
+                                        ))}
+                                    </div>
+                                ) : p.n > 0 ? (
                                     <div className="dc-funnel-bar"
                                         style={{ width: `${anchoAqui}%`, background: color(i), transitionDelay: `${120 + i * 90}ms` }}>
                                         {p.n}
@@ -123,7 +165,7 @@ const Embudo = ({ pasos, sinCuello = false, sinFinal = false }) => {
                                 <span />
                                 <div style={{ display: 'flex', justifyContent: 'center' }}>
                                     <div className="dc-funnel-neck" style={{
-                                        width: '100%', background: color(i),
+                                        width: '100%', background: fondoCuello(p, i),
                                         transitionDelay: `${120 + i * 90}ms`,
                                         clipPath: `polygon(${(100 - anchoAqui) / 2}% 0, ${100 - (100 - anchoAqui) / 2}% 0, `
                                             + `${100 - (100 - anchoSig) / 2}% 100%, ${(100 - anchoSig) / 2}% 100%)`,
@@ -135,6 +177,7 @@ const Embudo = ({ pasos, sinCuello = false, sinFinal = false }) => {
                     </div>
                 );
             })}
+            {children}
             <div className="leyenda" style={{ justifyContent: 'space-between' }}>
                 <span className="t-cap mut num">
                     de {primero} {pasos[0]?.paso.toLowerCase()} a {pasos[pasos.length - 1]?.n} {pasos[pasos.length - 1]?.paso.toLowerCase()}

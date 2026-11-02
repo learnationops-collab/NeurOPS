@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { ChevronDown, CreditCard, PieChart, Rows } from 'lucide-react';
 import Embudo from './Embudo';
+import CloseRatesCanales from './CloseRatesCanales';
+import { canalesDe, partesDe } from './embudoCanales';
 // El "i" era una copia local con una prop `der` para forzar el lado a mano. El `Tip` compartido
 // mide y elige el lado que entra, así que la prop desapareció de todas las llamadas.
 import { FalloCarga, Segmented, Tip, fmt, useMontado } from './Shared';
@@ -823,6 +825,8 @@ const pasosDe = (funnel, vocabulario, irA) => funnel.map(p => {
         n: p.n,
         ayuda: def.ayuda,
         ir: abrir(irA, def.destino),
+        // El paso partido en agendas directas y desde triage (solo en el embudo de closers).
+        ...partesDe(p.por_canal, def.destino, irA),
         // Agendas: cuántas son vigentes y cuántas descartadas; la segunda cifra abre las descartadas.
         sub: p.descartadas != null ? `${p.vigentes} vigentes + ${p.descartadas} descartadas`
             : p.show_up != null ? `show up: ${p.leads_asistieron} de ${p.leads_realizadas} leads con resultado`
@@ -882,7 +886,10 @@ const DashboardClosers = ({ bloque, deltas, porCobrar, fuentes, irA, cargarNoCer
 
         <div className="grid-2">
             <PanelEstados bloque={bloque} irA={irA} />
-            <Embudo pasos={pasosDe(bloque.funnel, PASOS_CLOSER, irA)} sinFinal />
+            <Embudo pasos={pasosDe(bloque.funnel, PASOS_CLOSER, irA)} sinFinal
+                canales={canalesDe(bloque.funnel, PASOS_CLOSER.Agendas.destino, irA)}>
+                <CloseRatesCanales reales={bloque.cierres?.reales} irA={irA} />
+            </Embudo>
         </div>
 
         <div className="grid-2">
