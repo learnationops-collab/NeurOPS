@@ -9,10 +9,8 @@ import { NO_CALIFICA, preguntasRuteo, reglasRotas, revisarSegmentacion } from '.
 import { urlOk } from '../../core/normalizar';
 import { uid } from '../../core/util';
 import { Humo, HUMO_MARCA, Icono, Sx } from '../../ui/base';
-import Lienzo from '../../ui/Lienzo';
 import { useOrdenable } from '../../ui/useOrdenable';
 import { colorNivel, mutarForm, opcionesPrioridad, setFormUi, useEnfocar } from './comun';
-import RuteoFlujo from './RuteoFlujo';
 import RuteoSimulador from './RuteoSimulador';
 import { FieldError, Grid, IconButton, Input, Segmented } from '../../../../components/standard';
 import { useEnPantalla } from '../../../../components/ui/useEnPantalla';
@@ -174,7 +172,6 @@ export default function Ruteo({ f, d, modo, msel }) {
     const qs = preguntasRuteo(f).filter(q => conOpciones(q.tipo) && q.opciones.some(o => o.texto.trim()));
     const rotas = reglasRotas(f);
     const avisos = revisarSegmentacion(f, (id) => nombreGrupo(d, id));
-    const conAviso = [...new Set(avisos.filter(a => a.regla != null && a.nivel !== 'info').map(a => a.regla))];
     const reordenar = useCallback((nuevos) => mutarForm(f.id, 'reglas', rs => nuevos.map(id => rs.find(r => r.id === id)).filter(Boolean)), [f.id]);
     const ord = useOrdenable(f.reglas.map(r => r.id), reordenar);
     const { contenedor, lista } = ord;
@@ -195,12 +192,11 @@ export default function Ruteo({ f, d, modo, msel }) {
                 <span className="ayuda" tabIndex={0} role="note" aria-label={AYUDA_RUTEO} data-tip={AYUDA_RUTEO}>?</span>
                 <Segmented size="sm" label="Vista del ruteo" style={{ marginLeft: 'auto' }} itemProps={{ 'data-nav': '' }} value={modo}
                     onChange={v => setFormUi({ ruteoModo: v, msel: null })}
-                    options={[{ value: 'reglas', label: 'Reglas', icon: <Icono n="lista" /> }, { value: 'flujo', label: 'Flujo', icon: <Icono n="flujo" /> },
+                    options={[{ value: 'reglas', label: 'Reglas', icon: <Icono n="lista" /> },
                         { value: 'probar', label: 'Simular', icon: <Icono n="rayo" /> }]} />
             </div>
             {modo !== 'probar' && <Revision avisos={avisos} />}
             {modo === 'probar' ? <RuteoSimulador f={f} d={d} />
-                : modo === 'flujo' ? <Lienzo etiqueta="Flujo de la segmentación"><RuteoFlujo f={f} d={d} rotas={rotas} avisos={conAviso} /></Lienzo>
                 : !qs.length ? (
                     <>
                         <p className="t-sm mut">Agregá preguntas de opción para armar reglas.</p>

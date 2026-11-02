@@ -175,7 +175,7 @@ export default function Editor() {
         <div ref={raiz} style={{ display: 'contents' }}>
             <HeaderActions replaceTitle><Barra f={f} vista={vista} prevModo={prevModo} onImportar={importar} /></HeaderActions>
             {vista === 'previa' ? <Previa f={f} prevModo={prevModo} />
-                : vista === 'ruteo' ? <Grid variant="column"><Ruteo f={f} d={d} modo={form.ruteoModo || 'reglas'} msel={form.msel || null} /></Grid>
+                : vista === 'ruteo' ? <Grid variant="column"><Ruteo f={f} d={d} modo={form.ruteoModo === 'probar' ? 'probar' : 'reglas'} msel={form.msel || null} /></Grid>
                     : <VistaPreguntas f={f} sel={form.sel || null} raiz={raiz} onImportar={importar} />}
             {modal === 'imp' && <ModalImportar f={f} d={d} onCerrar={cerrar} onImportado={(qid) => {
                 setModal(null); volver.current = null; setFormUi({ sel: qid, vista: 'preguntas' });

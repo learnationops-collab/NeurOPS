@@ -60,3 +60,4 @@
   - «Probar un lead» pasa a llamarse «Simular». Cada pregunta lleva su ícono; el resultado va en una tarjeta con aura del color de la estrategia, anillo de puntos y entrada animada (sin animación si el sistema la pide reducida).
   - «Por qué cae acá» muestra la respuesta del lead en cada condición y cuántas más entran, en vez de la lista entera.
   - `segmentacion_alfa.py --revisar` también dice qué formularios y links usan cada estrategia que no es de los segmentos.
+- **2 de Noviembre de 2026 (Thalamus: sale la vista Flujo de Segmentación)** *([Ruteo.jsx](../../frontend/src/pages/agendas_v2/secciones/forms/Ruteo.jsx))*: Segmentación queda con Reglas y Simular; se borra `RuteoFlujo.jsx` (pedido de Mario).

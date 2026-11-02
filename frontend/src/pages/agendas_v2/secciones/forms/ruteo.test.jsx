@@ -1,6 +1,6 @@
-// La segmentación avisa lo que no cierra y su flujo se ve en un lienzo navegable.
+// La segmentación avisa lo que no cierra.
 import { describe, it, expect } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { normalForm } from '../../core/normalizar';
 import Ruteo from './Ruteo';
 
@@ -13,14 +13,9 @@ const f = normalForm('f', {
 const envolver = (el) => <div className="thalamus thalamus-app">{el}</div>;
 
 describe('Ruteo', () => {
-    it('avisa la regla que nunca decide y la marca en el flujo', () => {
-        const { container } = render(envolver(<Ruteo f={f} d={d} modo="flujo" msel={null} />));
+    it('avisa la regla que nunca decide', () => {
+        render(envolver(<Ruteo f={f} d={d} modo="reglas" msel={null} />));
         expect(screen.getByText(/La regla 2 nunca decide: sus casos ya los toma la regla 1/)).toBeInTheDocument();
-        expect(container.querySelectorAll('.rf-regla--aviso')).toHaveLength(1);
-        expect(screen.getByRole('region', { name: /Flujo de la segmentación/ })).toBeInTheDocument();
-        fireEvent.click(screen.getByRole('button', { name: 'Pantalla completa' }));
-        expect(container.querySelector('.lienzo--grande')).not.toBeNull();
-        fireEvent.click(screen.getByRole('button', { name: 'Acercar' }));
     });
     it('sin problemas lo dice', () => {
         const ok = normalForm('f', { ...f, reglas: [f.reglas[0]] });
