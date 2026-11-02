@@ -49,7 +49,8 @@ def clave_de_closer(nombre):
 # (`comision_plataforma_service`, Kerwin: no se fija un % a mano). Los valores de abajo son solo el último
 # recurso, si todavía no hay pagos verificados de esa plataforma: 4,4 % y 8,2 % (los de septiembre de 2026
 # según los CSV de Finanzas › Diferencias).
-COMISION_PASARELA = {'stripe': 0.044, 'hotmart': 0.082}
+# Hotmart 8,8 % desde el 02/11/2026 (cobra 8,77 % real en 41 pagos verificados; antes 8,2 %).
+COMISION_PASARELA = {'stripe': 0.044, 'hotmart': 0.088}
 
 
 def cash_neto_de(monto, metodo_pago):
