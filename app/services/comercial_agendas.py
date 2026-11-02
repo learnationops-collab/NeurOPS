@@ -23,7 +23,7 @@ class ComercialAgendasMixin:
     # --- Agendas ------------------------------------------------------------------------------
 
     @staticmethod
-    def agendas(start, end, closer_id=None, setter_id=None, basis='meet', de_setters=False):
+    def agendas(start, end, closer_id=None, setter_id=None, basis='meet', de_setters=False, vigentes=True):
         """Filas de la tabla "Agendas" (y de "Agendas generadas" cuando se acota por setter).
 
         `basis='creacion'` filtra por cuándo se creó la agenda en vez de por cuándo cae la
@@ -34,6 +34,10 @@ class ComercialAgendasMixin:
         período, también las de taller, VSL o landing que no generó ningún setter (en septiembre
         de 2026, 237 contra 129 de verdad). Con un `setter_id` no cambia nada: ya es suya. Tampoco
         entra el marcador que deja cualificar un lead, que no es una reserva (`no_es_marcador`).
+
+        `vigentes=True` deja afuera las agendas que no cuentan (`agendas_vigentes`): la fila vieja de una
+        reagenda y la repetida en el mismo horario. Una persona que reagenda suma UNA agenda. Solo el
+        calendario pide todas (`vigentes=False`): dibuja cada evento que existe.
         """
         from app.services.comercial_service import ComercialService
         desde, hasta = ComercialService._limites(start, end)
@@ -54,6 +58,9 @@ class ComercialAgendasMixin:
                 db.session.query(User.id).filter(User.role == 'setter')), no_es_marcador())
 
         appts = q.order_by(Appointment.start_time.desc(), Appointment.id.desc()).all()
+        if vigentes:
+            from app.services.agendas_vigentes import vigentes as solo_vigentes
+            appts = solo_vigentes(appts)
         return ComercialService.filas_de_citas(appts)
 
     @staticmethod

@@ -34,3 +34,12 @@
   - El texto tenía formato de markdown pero se veía crudo. Ahora se reconocen los títulos en mayúsculas, los grupos que terminan en «:», las viñetas con `*` o `-` (también anidadas) y «Etiqueta: texto» con la etiqueta en negrita; los `**` sueltos se limpian. Lo que no se reconoce queda como párrafo.
   - «Viene de triage» abre la nota con ese formato en una ventana propia al pasar el ratón (antes, el tooltip nativo en texto plano y cortado), con scroll si es larga.
   - En Comunicación, las notas largas con títulos o viñetas usan el mismo formato; un mensaje corto se deja tal cual, con sus «@» resaltados.
+- **2 de Noviembre de 2026 (Una persona suma una sola agenda en Closing y en Triage)** *([agendas_vigentes.py](../../app/services/agendas_vigentes.py), [comercial_agendas.py](../../app/services/comercial_agendas.py), [triage_service.py](../../app/services/triage_service.py), [tablasDef.js](../../frontend/src/pages/comercial/components/tablasDef.js), [ADR-W057](../DECISIONS.md))*:
+  - Cuando alguien reagenda (o lo reagendan), la fila vieja ya no suma como otra agenda: cuenta la nueva. Tampoco suman dos filas de la misma persona a la misma fecha y hora. Vale para Analizar, Revisar, reportes, simulador, Marketing «por reunión» y los segmentos; el calendario sigue mostrando cada evento.
+  - Las métricas del triage cuentan una agenda por persona (la que tiene calificación o, si no, la más reciente), sin la reagendada ni las repetidas: confirmadas, asistencias, calificados y low ticket salen de las mismas filas que la lista de leads.
+  - Revisar › Agendas ofrece «Agrupar por Persona» con los grupos abiertos: todas las llamadas de un lead juntas. Las filas no se borran de la base.
+
+- **2 de Noviembre de 2026 (Thalamus: segmento Alfa y reglas sin choques)** *([segmentacion_alfa.py](../../scripts/segmentacion_alfa.py), [ADR-W057](../DECISIONS.md))*:
+  - Script que carga en «Sesión de Aceleración» las estrategias Segmento Alfa, Segmento A, Segmento B, Triage · Segmento C y Triage · Segmento D, y 11 reglas que no se pisan (sale `mk-academy`: nadie se descarta).
+  - Examen: Colombia y Perú +2, el resto +1, sin examen −1, ENARM −2 (segmento `2026-12.4`).
+  - Antes de guardar prueba todas las combinaciones con el ruteo real y frena si alguna cumple dos reglas o va a otro grupo.
