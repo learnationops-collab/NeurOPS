@@ -180,3 +180,8 @@ Leads e inversión de cada taller entre el fin del anterior y el suyo (inicio + 
 ## Recordar lo cargado (Kerwin, 02/11)
 - [x] Extender el recuerdo de `cacheDeVistas` (ADR-W053) al resto de las vistas: hecho el 02/11 en closer, triage, setter, operador y contratación (ADR-W055). Queda por mirar la página vieja `TriageWorkflowPage` y las pantallas sueltas de Marketing/Inbox.
 - [ ] Verificar en el espacio del triage (entrando como Dari o Juliana) que Métricas y Abandonos no esperan al volver a la pestaña: cambié su código por el mismo patrón que Dirección, pero solo verifiqué esta última.
+## Hallazgos de la prueba a mano del 02/11 (local, como Juliana)
+- [ ] Buscador del mazo: al abrir un resultado que es un contacto de Instagram sin agenda ni cliente (p. ej. «dari polanco») la ficha dice «No se pudo abrir la ficha · Falta appointment_id, client_id o person_uuid». Ocultar esos resultados o abrir su lead de otra forma (`BuscadorGlobalDeck.jsx`, `GET /closer/leads/search`).
+- [ ] La revisión del reporte de triage («Nota para el closer») muestra la nota cruda, sin formato: usar `NotaFormateada` en esa fila (`ResultadoTriage.jsx`, `PantallasTriage.jsx` › `Revision`).
+- [ ] Probar en real (producción o staging con Google conectado) lo que local no puede: evento de Google al pasar al closer y al reprogramar, aviso de Discord y WhatsApp. En local salen bloqueados a propósito.
+- [ ] Servidores locales de varias sesiones en `localhost` se pisan la cookie de sesión (misma `SECRET_KEY`, mismo nombre): en un `run_local.py` poner `SESSION_COOKIE_NAME` y `REMEMBER_COOKIE_NAME` propios.
