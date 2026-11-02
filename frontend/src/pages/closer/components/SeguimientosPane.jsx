@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Esqueleto, Hueso, Renglon, escalonDe, useVentanaDeEntrada } from '../../../components/huesos/Huesos';
 import api from '../../../services/api';
+import { guardarCache, leerCache } from '../../../services/cacheDeVistas';
 
 // Orden pedido por el usuario (feedback en video, 27/ago/2026): "que aparezca primero cobros,
 // luego hot (llamadas tomadas) y luego fríos" — porque sabe que no le va a dar tiempo a todos,
@@ -266,11 +267,14 @@ const buildLeadPayload = (item, tipo) => ({
 // pestaña (cobros -> hot -> fríos) — lo consume "Tu siguiente paso" en CloserWorkflowPage para
 // mostrar un único botón en vez de una lista de bandejas (pedido del usuario, 28/ago/2026).
 const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0, onTopPending }) => {
-    const [grouped, setGrouped] = useState({ no_tomada: [], tomada: [], cerrada: [] });
-    const [poolCounts, setPoolCounts] = useState({ no_tomada: 0, tomada: 0, cerrada: 0 });
-    const [goal, setGoal] = useState({ hechos: 0, meta: 50, faltan: 50, pct: 0 });
-    const [earnings, setEarnings] = useState(null);
-    const [loading, setLoading] = useState(true);
+    // Lo último que se vio de este día (cacheDeVistas): al volver a la pestaña se ve al instante, sin
+    // esqueleto, y se actualiza en silencio por detrás.
+    const recuerdo = leerCache(`closer:seguimientos:${selectedDate}`)?.datos;
+    const [grouped, setGrouped] = useState(recuerdo?.grouped || { no_tomada: [], tomada: [], cerrada: [] });
+    const [poolCounts, setPoolCounts] = useState(recuerdo?.poolCounts || { no_tomada: 0, tomada: 0, cerrada: 0 });
+    const [goal, setGoal] = useState(recuerdo?.goal || { hechos: 0, meta: 50, faltan: 50, pct: 0 });
+    const [earnings, setEarnings] = useState(leerCache('closer:ganancias')?.datos || null);
+    const [loading, setLoading] = useState(!recuerdo);
     const [openPool, setOpenPool] = useState(null);
     const [poolItems, setPoolItems] = useState([]);
     const [poolLoading, setPoolLoading] = useState(false);
@@ -284,7 +288,7 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0, onTopPendi
     // La pantalla completa de "Cargando seguimientos..." solo tiene sentido cuando no hay nada que
     // mostrar todavía (primer render o cambio de día). En una recarga por acción, la lista se
     // reemplaza en silencio para no hacer parpadear el panel entero.
-    const loadedDateRef = useRef(null);
+    const loadedDateRef = useRef(recuerdo ? selectedDate : null);
     const loadedPoolRef = useRef(null);
     // Las filas entran escalonadas sólo en la tanda que reemplaza al esqueleto o que aparece al
     // desplegar una lista; una por una, después, entran sin esperar (ver `useVentanaDeEntrada`).
@@ -293,6 +297,16 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0, onTopPendi
     const [poolEntrando, abrirEntradaDelPool] = useVentanaDeEntrada();
 
     const fetchMain = useCallback(async () => {
+        const claveCache = `closer:seguimientos:${selectedDate}`;
+        // Otro día que ya se vio: se muestra lo recordado en vez del esqueleto.
+        const guardado = loadedDateRef.current !== selectedDate ? leerCache(claveCache)?.datos : null;
+        if (guardado) {
+            setGrouped(guardado.grouped);
+            setPoolCounts(guardado.poolCounts);
+            setGoal(guardado.goal);
+            loadedDateRef.current = selectedDate;
+            setLoading(false);
+        }
         const conEsqueleto = loadedDateRef.current !== selectedDate;
         if (conEsqueleto) setLoading(true);
         try {
@@ -304,6 +318,7 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0, onTopPendi
             setGrouped(todayRes.data.grouped);
             setPoolCounts(countsRes.data);
             setGoal(goalRes.data);
+            guardarCache(claveCache, { grouped: todayRes.data.grouped, poolCounts: countsRes.data, goal: goalRes.data });
         } catch (err) {
             console.error('Error cargando seguimientos', err);
         } finally {
@@ -321,7 +336,7 @@ const SeguimientosPane = ({ selectedDate, onOpenLead, refreshKey = 0, onTopPendi
     // cambio de `selectedDate`.
     useEffect(() => {
         api.get('/closer/followups/earnings-stats')
-            .then(res => setEarnings(res.data))
+            .then(res => { guardarCache('closer:ganancias', res.data); setEarnings(res.data); })
             .catch(err => console.error('Error cargando estadísticas de ganancia potencial', err));
     }, [refreshKey]);
 

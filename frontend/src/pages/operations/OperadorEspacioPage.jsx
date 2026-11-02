@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { motion, useReducedMotion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { ClipboardCheck, Database, Ghost, GraduationCap, LifeBuoy, Table2, Users } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
@@ -16,6 +15,7 @@ import '../comercial/comercial.css';
 import './operadorEspacio.css';
 import SeccionTecnica, { ETIQUETAS_TECNICAS } from './settings/SeccionTecnica';
 import DashboardComercial from '../comercial/DashboardComercial';
+import PanelesConservados from '../../components/ui/PanelesConservados';
 import FormsManagementPage from '../shared/FormsManagementPage';
 import CourseEditorPage from './course-editor/CourseEditorPage';
 
@@ -64,7 +64,6 @@ const OperadorEspacioPage = () => {
     const { abrir: abrirConfiguracion } = useConfiguracion();
     const { pendingCount, openPlaybook } = usePlaybook();
     const [params, setParams] = useSearchParams();
-    const reducir = useReducedMotion();
     const [saliendo, setSaliendo] = useState(false);
 
     // `/ops/agendas`, `/ops/ventas` y los `?step=agendas|ventas` guardados llevan a Registros, con la
@@ -119,7 +118,6 @@ const OperadorEspacioPage = () => {
     };
 
     const nombre = user?.name || user?.username || 'Operador';
-    const claveVista = `${seccion}-${tab || ''}`;
 
     const gruposDeSesion = armarMenuSesion({
         user, logout, navigate: (ruta) => window.location.assign(ruta),
@@ -156,26 +154,23 @@ const OperadorEspacioPage = () => {
                     )}
                 </div>
 
-                <motion.div key={claveVista}
-                    initial={reducir ? false : { opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.28, ease: [0.22, 0.7, 0.2, 1] }}>
-                    {seccion === 'equipo' && (
-                        <div className="operador-panel dash-v6 bg-main text-base"><SeccionTecnica id="team" embebido /></div>
-                    )}
-                    {(seccion === 'soporte' || seccion === 'datos') && (
-                        <div className="operador-panel dash-v6 bg-main text-base"><SeccionTecnica id={tab} embebido /></div>
-                    )}
-                    {/* El mismo Revisar de la dirección, con su período y sus tablas; trae su propia
-                        isla `.dc-shell`. */}
-                    {seccion === 'registros' && <DashboardComercial embebido seccionFija="revisar" />}
-                    {/* Formularios está diseñado sobre fondo oscuro (venía del hub de admin, que lo
-                        aportaba): necesita su propia superficie. */}
-                    {seccion === 'formularios' && (
-                        <div className="operador-oscuro"><FormsManagementPage /></div>
-                    )}
-                    {seccion === 'curso' && <CourseEditorPage />}
-                </motion.div>
+                {/* Los paneles que ya se abrieron quedan montados y escondidos (PanelesConservados): volver a
+                    uno lo muestra como estaba, sin pedir de nuevo lo que ya cargó (pedido de Kerwin, 02/11/2026).
+                    Registros no entra: es el dashboard comercial, que lee la URL y ya recuerda lo suyo. */}
+                <PanelesConservados activa={seccion === 'registros' ? null : (seccion === 'soporte' || seccion === 'datos' ? `${seccion}:${tab}` : seccion)}
+                    paneles={{
+                        equipo: () => <div className="operador-panel dash-v6 bg-main text-base"><SeccionTecnica id="team" embebido /></div>,
+                        ...Object.fromEntries(['soporte', 'datos'].flatMap(id => SECCIONES.find(s => s.id === id).tabs.map(t => [
+                            `${id}:${t.key}`,
+                            () => <div className="operador-panel dash-v6 bg-main text-base"><SeccionTecnica id={t.key} embebido /></div>,
+                        ]))),
+                        // Formularios está diseñado sobre fondo oscuro (venía del hub de admin, que lo
+                        // aportaba): necesita su propia superficie.
+                        formularios: () => <div className="operador-oscuro"><FormsManagementPage /></div>,
+                        curso: () => <CourseEditorPage />,
+                    }} />
+                {/* El mismo Revisar de la dirección, con su período y sus tablas; trae su propia isla `.dc-shell`. */}
+                {seccion === 'registros' && <DashboardComercial embebido seccionFija="revisar" />}
 
                 <div className="dc-shell dc-shell--embebido">
                     <DockSecciones secciones={SECCIONES} activa={seccion}

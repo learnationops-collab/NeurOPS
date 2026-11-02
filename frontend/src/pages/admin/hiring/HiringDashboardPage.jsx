@@ -18,6 +18,7 @@ import ResumenInbox from './components/ResumenInbox';
 import HiringStats from './components/HiringStats';
 import ConfigTalent from './components/ConfigTalent';
 import HiringForms from './components/forms/HiringForms';
+import PanelesConservados from '../../../components/ui/PanelesConservados';
 import { IsotipoTalent } from './components/Piezas';
 import PostulacionesCloser, { PESTANAS_CLOSER } from '../postulaciones/PostulacionesCloser';
 import {
@@ -440,7 +441,9 @@ const HiringDashboardPage = () => {
                             )}
 
                             {!enBusqueda && seccion === 'stats' && <HiringStats todas={todas} pestana={statsTab} segmento={statsSeg} />}
-                            {!enBusqueda && seccion === 'forms' && <HiringForms />}
+                            {/* Los formularios ya abiertos se quedan montados: volver no los pide de nuevo. */}
+                            <PanelesConservados activa={!enBusqueda && seccion === 'forms' ? 'forms' : null}
+                                paneles={{ forms: () => <HiringForms /> }} />
                         </main>
                     )}
                 </div>

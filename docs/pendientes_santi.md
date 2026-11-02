@@ -177,5 +177,5 @@ Leads e inversión de cada taller entre el fin del anterior y el suyo (inicio + 
 - [ ] `ResumenTab.test.jsx`, `TalleresVista.test.jsx` y los de `WorkshopKpiCards` no se corrieron tras el cambio (regla: sin tests); el Resumen ahora monta `FlujoEmbudo` y `Bars`.
 
 ## Recordar lo cargado (Kerwin, 02/11)
-- [ ] Extender el recuerdo de `cacheDeVistas` (ADR-W053) al resto de las vistas con pestañas: espacio del setter (Mis agendas, Historial, Reporte), mazo del closer, espacio del operador, contratación y la página vieja `TriageWorkflowPage`. Dirección comercial, Finanzas, Payroll y el Triage de dirección ya están. Para cada una: pedir con `useDatosCacheados` o `pedirCacheado` y verificar contando los pedidos al cambiar de pestaña.
+- [x] Extender el recuerdo de `cacheDeVistas` (ADR-W053) al resto de las vistas: hecho el 02/11 en closer, triage, setter, operador y contratación (ADR-W055). Queda por mirar la página vieja `TriageWorkflowPage` y las pantallas sueltas de Marketing/Inbox.
 - [ ] Verificar en el espacio del triage (entrando como Dari o Juliana) que Métricas y Abandonos no esperan al volver a la pestaña: cambié su código por el mismo patrón que Dirección, pero solo verifiqué esta última.
