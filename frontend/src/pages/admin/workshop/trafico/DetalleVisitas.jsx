@@ -18,7 +18,7 @@ import { EVENTO, LIMITE_DETALLE, fechaHora, num } from './trafico';
  * quien puede (admin y operator, `puede_borrar` del backend), con el deshacer de `InlineConfirm`.
  */
 
-const AYUDA = 'Una fila por cada carga de una landing (y por cada clic al botón del grupo de WhatsApp), '
+const AYUDA = 'Una fila por cada carga de una landing (y por cada clic al botón del grupo de WhatsApp, a reservar o a aplicar), '
     + 'de la más nueva a la más vieja. La grabación (/replay/) no está: se cuenta por sus sesiones, en Talleres.';
 
 const Campo = ({ rotulo, valor }) => (

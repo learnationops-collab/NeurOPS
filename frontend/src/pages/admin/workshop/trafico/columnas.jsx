@@ -40,7 +40,7 @@ const DeMeta = ({ nombre, id, de }) => {
 };
 
 const Evento = ({ evento }) => (
-    <span className={`chip wf-evento${evento === 'clic_whatsapp' ? ' wf-evento--clic' : ''}`}>
+    <span className={`chip wf-evento${evento.startsWith('clic_') ? ' wf-evento--clic' : ''}`}>
         <span className="trunc">{EVENTO[evento] || evento}</span>
     </span>
 );
@@ -54,6 +54,7 @@ export const AGRUPACIONES = [
     { key: 'anuncio', label: 'Por anuncio' },
 ];
 
+const AYUDA_OTROS_CLICS = 'Clics al botón de reservar la sesión (agenda de Tálamus) o de aplicar a una vacante.';
 const AYUDA_TASA = 'De las visitas a landings con botón al grupo, qué porcentaje hizo clic. Solo cuenta las visitas posteriores al primer clic medido.';
 
 /** Las columnas del ranking según la agrupación. `total` es el de visitas, para la parte de cada fila. */
@@ -93,6 +94,8 @@ export const columnasRanking = (agrupacion, total, medido) => {
     ];
     if (agrupacion === 'landing') {
         columnas.push(
+            { key: 'clics_cta', header: 'Reservar / aplicar', valor: (f) => f.clics_cta, alinear: 'der', width: 'minmax(104px,.9fr)',
+                ayuda: AYUDA_OTROS_CLICS, render: (f) => num(f.clics_cta) },
             { key: 'fuente_principal', header: 'Fuente', valor: (f) => f.fuente_principal, width: 'minmax(110px,1fr)',
                 ayuda: 'La fuente que más visitas le trajo a esa landing.' },
             { key: 'ultima', header: 'Última visita', valor: (f) => f.ultima_visita, width: 'minmax(104px,.9fr)',
