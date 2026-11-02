@@ -816,6 +816,43 @@ header.top-v6 {
   margin: 0 auto;
   position: relative;
 }
+/* El buscador y, al lado, el «+» de agregar una agenda a mano. Los resultados cuelgan de `.search-v6`,
+   así que siguen del ancho de los dos. */
+.buscar-fila-v6 {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+.buscar-fila-v6 .sinner-v6 {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.mas-v6 {
+  flex: none;
+  width: 44px;
+  display: grid;
+  place-items: center;
+  background: var(--ln-inset-bg, rgba(0,0,0,.32));
+  border: 1px solid var(--v6-bd);
+  border-radius: 13px;
+  color: var(--v6-pink);
+  cursor: pointer;
+  transition: .18s;
+}
+.mas-v6:hover,
+.mas-v6:focus-visible {
+  border-color: var(--v6-pink);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--ln-brand, #ff3fa4) 14%, transparent);
+  outline: none;
+}
+.mas-v6 svg {
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
 .sinner-v6 {
   display: flex;
   align-items: center;

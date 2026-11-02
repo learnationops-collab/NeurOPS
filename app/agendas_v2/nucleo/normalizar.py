@@ -189,7 +189,7 @@ def _dinero(d):
 
 def normal_reglas(reglas):
     out = []
-    for r in lista(reglas)[:20]:
+    for r in lista(reglas)[:40]:
         r = obj(r)
         cond = []
         for c in lista(r.get('cond'))[:8]:

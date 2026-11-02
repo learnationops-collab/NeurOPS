@@ -89,7 +89,7 @@ function normalDinero(d) {
 }
 
 export function normalReglas(reglas) {
-    return (Array.isArray(reglas) ? reglas : []).slice(0, 20).map(r => {
+    return (Array.isArray(reglas) ? reglas : []).slice(0, 40).map(r => {
         r = r || {};
         // url: la regla no manda a una estrategia sino a otra página (el lead no agenda).
         const url = urlOk(r.url);

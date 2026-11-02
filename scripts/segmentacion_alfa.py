@@ -1,12 +1,13 @@
-"""Segmentación con el segmento Alfa en el formulario «Sesión de Aceleración» (Mario, 02/11/2026, ADR-W056).
+"""Segmentación con el segmento Alfa en el formulario «Sesión de Aceleración» (Mario, 02/11/2026, ADR-W056 y ADR-W058).
 
 Lo que hace (idempotente: correrlo dos veces deja lo mismo):
   - Examen: Colombia y Perú +2 (los mejores); el resto de los exámenes +1; sin examen −1; ENARM −2.
     Versión del segmento 2026-12.4. Los demás puntos no cambian.
   - Cinco estrategias en Team: Segmento Alfa (Máxima disponibilidad: Marlon › Jean Carlo › Mario),
     Segmento A y Segmento B (Llenar agenda: Jean Carlo › Marlon), Triage · Segmento C y Triage · Segmento D
-    (Máxima disponibilidad: Juliana › Dari). Las estrategias que ya existen no se tocan.
-  - Reemplaza las reglas del formulario por 11 que no se pisan (nadie se descarta: sale `mk-academy`):
+    (Máxima disponibilidad: Juliana › Dari). Borra las demás estrategias, salvo las que use otro formulario.
+  - Reemplaza las reglas del formulario por reglas escritas solo con respuestas (sin «Segmento del lead»),
+    una por grupo de combinaciones, que no se pisan y cubren todo (nadie se descarta: sale `mk-academy`):
       quien puede invertir (inversión con dinero):
         Alfa  médico general o Rural + Colombia o Perú + decide solo
         A     médico general o Rural con segmento A por puntos (sin ser Alfa)
@@ -35,7 +36,6 @@ os.environ['DISABLE_REMINDER_SCHEDULER'] = 'true'
 os.environ['FOLLOWUP_REMINDERS_ENABLED'] = 'false'
 
 from app import create_app  # noqa: E402
-from app.agendas_v2.nucleo.segmento import SEG_Q  # noqa: E402
 
 FORM_ID = 'dg6gukz9emx'
 INVERSION, ETAPA, EXAMEN, DECIDE = 'qglxqqlsgya', 'qg8xclvqc4c', 'qg6raaks2pe', 'qgnajtuxkuz'
@@ -91,34 +91,49 @@ def _puntos_examen(q):
 
 
 def _reglas(datos):
+    """Reglas escritas solo con respuestas, sin «Segmento del lead». Por segmento (Alfa, A, B, C, D) agrupa por
+    inversión × etapa las combinaciones que van a ese segmento y junta las que piden lo mismo de examen y decide.
+    Cada regla toma solo combinaciones de su segmento: ninguna se pisa y todas quedan cubiertas."""
     preguntas = {q['id']: q for q in datos['preguntas']}
     ops = {qid: [o['id'] for o in preguntas[qid]['opciones']] for qid in (INVERSION, ETAPA, EXAMEN, DECIDE)}
-    dinero = datos['segmento']['dinero']['ops']
-    col_peru = [COLOMBIA, PERU]
-    otros = [x for x in ops[EXAMEN] if x not in col_peru]
-    apoyo = [x for x in ops[DECIDE] if x != SOLO]
-    mg = [GENERAL, RURAL]
-    resi = [RESIDENTE, ESPECIALISTA]
-    est = [x for x in ops[ETAPA] if x in (ESTUDIANTE, INTERNADO)]
-    c = lambda q, xs: {'q': q, 'ops': list(xs)}  # noqa: E731
-
-    def r(rid, seg, *cond):
-        return {'id': rid, 'grupo': GRUPO_DE[seg], 'url': '', 'cond': list(cond),
-                **({'evento': SESION_TRIAGE} if seg in ('C', 'D') else {})}
-
-    return [
-        r('alfa', 'Alfa', c(INVERSION, dinero), c(ETAPA, mg), c(EXAMEN, col_peru), c(DECIDE, [SOLO])),
-        r('a-mg-otros', 'A', c(SEG_Q, ['A']), c(ETAPA, mg), c(EXAMEN, otros)),
-        r('a-mg-apoyo', 'A', c(SEG_Q, ['A']), c(ETAPA, mg), c(EXAMEN, col_peru), c(DECIDE, apoyo)),
-        r('a-resi', 'A', c(INVERSION, dinero), c(ETAPA, resi), c(DECIDE, [SOLO])),
-        r('a-estudiante', 'A', c(INVERSION, dinero), c(ETAPA, est), c(EXAMEN, col_peru), c(DECIDE, [SOLO])),
-        r('b-mg', 'B', c(SEG_Q, ['B']), c(ETAPA, mg)),
-        r('b-resi', 'B', c(INVERSION, dinero), c(ETAPA, resi), c(DECIDE, apoyo)),
-        r('b-estudiante-otros', 'B', c(INVERSION, dinero), c(ETAPA, est), c(EXAMEN, otros)),
-        r('b-estudiante-apoyo', 'B', c(INVERSION, dinero), c(ETAPA, est), c(EXAMEN, col_peru), c(DECIDE, apoyo)),
-        r('c', 'C', c(SEG_Q, ['C'])),
-        r('d', 'D', c(SEG_Q, ['D'])),
-    ]
+    seg = {}
+    for combo in itertools.product(*(ops[q] for q in (INVERSION, ETAPA, EXAMEN, DECIDE))):
+        seg[combo] = esperado(datos, dict(zip((INVERSION, ETAPA, EXAMEN, DECIDE), combo)))
+    reglas = []
+    for s in ('Alfa', 'A', 'B', 'C', 'D'):
+        # celda inversión × etapa → {decides que van a s: exámenes}
+        celdas = {}
+        for a, b in itertools.product(ops[INVERSION], ops[ETAPA]):
+            patron = {}
+            for x in ops[EXAMEN]:
+                dec = tuple(d for d in ops[DECIDE] if seg[(a, b, x, d)] == s)
+                if dec:
+                    patron.setdefault(dec, []).append(x)
+            if patron:
+                celdas[(a, b)] = tuple(sorted((k, tuple(v)) for k, v in patron.items()))
+        por_inv = {}
+        for (a, b), pat in celdas.items():
+            por_inv.setdefault((a, pat), []).append(b)
+        juntas = {}
+        for (a, pat), etapas in por_inv.items():
+            juntas.setdefault((tuple(etapas), pat), []).append(a)
+        for (etapas, pat), invs in juntas.items():
+            for dec, exams in pat:
+                cond = []
+                if len(invs) < len(ops[INVERSION]):
+                    cond.append({'q': INVERSION, 'ops': list(invs)})
+                if len(etapas) < len(ops[ETAPA]):
+                    cond.append({'q': ETAPA, 'ops': list(etapas)})
+                if len(exams) < len(ops[EXAMEN]):
+                    cond.append({'q': EXAMEN, 'ops': list(exams)})
+                if len(dec) < len(ops[DECIDE]):
+                    cond.append({'q': DECIDE, 'ops': list(dec)})
+                n = sum(1 for r in reglas if r['grupo'] == GRUPO_DE[s]) + 1
+                reglas.append({'id': f'{s.lower()}-{n}', 'grupo': GRUPO_DE[s], 'url': '', 'cond': cond,
+                               **({'evento': SESION_TRIAGE} if s in ('C', 'D') else {})})
+    if len(reglas) > 40:
+        raise SystemExit(f'Salen {len(reglas)} reglas y Thalamus guarda hasta 40.')
+    return reglas
 
 
 def esperado(datos, resp):
@@ -145,8 +160,7 @@ def verificar(datos):
     for combo in itertools.product(*[[o['id'] for o in preguntas[q]['opciones']] for q in qs]):
         resp = dict(zip(qs, combo))
         seg = (segmentar(datos, resp) or {}).get('segmento')
-        cumplen = [r['id'] for r in datos['reglas']
-                   if all((seg if c['q'] == SEG_Q else resp.get(c['q'])) in c['ops'] for c in r['cond'])]
+        cumplen = [r['id'] for r in datos['reglas'] if all(resp.get(c['q']) in c['ops'] for c in r['cond'])]
         quiere = esperado(datos, resp)
         va = grupo_por_reglas(datos, resp)['grupo']
         cuenta[quiere] = cuenta.get(quiere, 0) + 1
@@ -183,11 +197,22 @@ def preparar(datos):
     return datos
 
 
+def _sobrantes(d):
+    """Las estrategias que no son las cinco de los segmentos. Se borran las que ningún otro formulario usa."""
+    sobran, quedan = [], []
+    for g in d['grupos']:
+        if g['id'] in GRUPOS:
+            continue
+        usan = [f['nombre'] for f in d['formularios'] if f['id'] != FORM_ID
+                and (f.get('resto') == g['id'] or any(r.get('grupo') == g['id'] for r in f.get('reglas') or []))]
+        (quedan.append((g, usan)) if usan else sobran.append(g))
+    return sobran, quedan
+
+
 def mostrar(datos, grupos, d):
     nombre = {p['id']: p.get('nombre') for p in d['personas']}
     textos = {o['id']: o['texto'] for q in datos['preguntas'] for o in q.get('opciones') or []}
     titulos = {q['id']: (q.get('corto') or q['titulo'])[:30] for q in datos['preguntas']}
-    titulos[SEG_Q] = 'Segmento'
     print('Estrategias nuevas:')
     for gid, g in grupos.items():
         print(f"  {gid}: {g['nombre']} ({g['estrategia']}) {' › '.join(nombre[m] for m in g['miembros'])}")
@@ -205,7 +230,7 @@ def mostrar(datos, grupos, d):
 def main(apply=False):
     app = create_app()
     with app.app_context():
-        from app.agendas_v2.servicio import colecciones, guardar_doc
+        from app.agendas_v2.servicio import borrar_doc, colecciones, guardar_doc
         d = colecciones()
         form = next((f for f in d['formularios'] if f['id'] == FORM_ID), None)
         if not form:
@@ -216,16 +241,22 @@ def main(apply=False):
         datos = preparar(copy.deepcopy(form))
         mostrar(datos, grupos, d)
         cuenta = verificar(datos)
+        sobran, quedan = _sobrantes(d)
+        print('\nEstrategias que se borran:', ', '.join(g['nombre'] for g in sobran) or 'ninguna')
+        for g, usan in quedan:
+            print(f"  NO se borra {g['nombre']}: la usa {', '.join(usan)}")
         print('\nVerificado: cada combinación cumple una sola regla y va al grupo de su segmento.',
               ' · '.join(f'{s} {cuenta.get(s, 0)}' for s in ('Alfa', 'A', 'B', 'C', 'D')))
         if not apply:
             print('\nENSAYO: no se guardó nada. Con --apply se guarda.')
             return
-        for gid, g in grupos.items():
-            existente = next((x for x in d['grupos'] if x['id'] == gid), None)
-            guardar_doc('grupos', gid, {**g, 'orden': existente['orden']} if existente else g)
+        for i, (gid, g) in enumerate(grupos.items(), 1):
+            guardar_doc('grupos', gid, {**g, 'orden': i})
         doc = guardar_doc('formularios', FORM_ID, datos)
         print('\nGuardado.', len(doc['reglas']), 'reglas · segmento', doc['segmento']['version'])
+        for g in sobran:
+            borrar_doc('grupos', g['id'])
+            print('Borrada la estrategia', g['nombre'])
 
 
 if __name__ == '__main__':

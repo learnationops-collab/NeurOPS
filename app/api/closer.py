@@ -688,7 +688,8 @@ def get_appointment(id):
 @bp.route('/appointments', methods=['POST'])
 @login_required
 def create_appointment():
-    if current_user.role not in ['closer', 'admin', 'setter']:
+    # El triage también carga a mano las agendas que tomó por fuera de Thalamus (la suya, como el closer).
+    if current_user.role not in ['closer', 'admin', 'setter', 'triage']:
         return jsonify({"message": "Forbidden"}), 403
     
     data = request.get_json() or {}
@@ -728,18 +729,19 @@ def create_appointment():
             return jsonify({"error": "No se encontró el cliente indicado para esta agenda."}), 400
 
         from app.models import User
-        target_closer_id = current_user.id if current_user.role == 'closer' else (data.get('closer_id') or current_user.id) # Fallback mostly for admins/setters to pick closer
+        target_closer_id = current_user.id if current_user.role in ('closer', 'triage') else (data.get('closer_id') or current_user.id) # Fallback mostly for admins/setters to pick closer
         closer = User.query.get(target_closer_id)
         if not closer:
             return jsonify({"error": "No se encontró el closer de esta agenda."}), 400
 
         # Mismo camino que una reserva de Thalamus: Meet con invitación al lead, payload, avisos y la
         # pregunta de qué hacer si el lead ya tiene una agenda abierta (app/agendas_v2/manual.py).
-        from app.agendas_v2 import manual
+        from app.agendas_v2 import a_triage, manual
         try:
             appt, con_evento = manual.agendar(
                 cliente, closer, start_time, current_user, via='nueva_agenda',
-                fuente=data.get('origin') or 'Manual Closer', decision=data.get('si_ya_tiene'))
+                fuente=data.get('origin') or 'Manual Closer', decision=data.get('si_ya_tiene'),
+                sesion=a_triage.sesion_propia_de(closer) if closer.role == 'triage' else None)
         except manual.AgendaManualError as e:
             return jsonify({"error": e.mensaje, "codigo": e.codigo, **e.datos}), 409
 
