@@ -6,7 +6,7 @@ import { SEG_Q, segmentar } from './segmento';
 import { clonar, mayus, uid } from './util';
 
 // Las preguntas que puede usar una regla: solo las del formulario. El segmento sale de las reglas (Mario,
-// 02/11, ADR-W057), así que «Segmento del lead» ya no se ofrece; el ruteo sigue entendiendo las reglas viejas que lo usan.
+// 02/11, ADR-W058), así que «Segmento del lead» ya no se ofrece; el ruteo sigue entendiendo las reglas viejas que lo usan.
 export function preguntasRuteo(fo) {
     return (fo && fo.preguntas) || [];
 }

@@ -1,4 +1,4 @@
-"""Segmentación con el segmento Alfa en el formulario «Sesión de Aceleración» (Mario, 02/11/2026, ADR-W056 y ADR-W057).
+"""Segmentación con el segmento Alfa en el formulario «Sesión de Aceleración» (Mario, 02/11/2026, ADR-W056 y ADR-W058).
 
 Lo que hace (idempotente: correrlo dos veces deja lo mismo):
   - Examen: Colombia y Perú +2 (los mejores); el resto de los exámenes +1; sin examen −1; ENARM −2.

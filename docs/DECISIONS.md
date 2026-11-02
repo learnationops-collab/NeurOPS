@@ -468,7 +468,7 @@
 - **Qué se pierde:** el segmento que se guarda en la agenda y en el cliente sigue saliendo de los puntos (A/B/C/D): Alfa se ve como A, y algunos casos llevan una letra distinta de su grupo (especialista con apoyo que suma 3 o más: dice A y va a Segmento B; residente o estudiante que decide solo con pocos puntos: dice B y va a Segmento A). El estudiante que no puede invertir ya no va a la página de gracias: agenda con el triage. Las estrategias viejas («Segmentos A y B», «Triage», grupos 1–5) quedan en Team sin usar por este formulario.
 - **Consecuencias:** después de aplicar, `backfill_segmentos.py --apply --force` recalcula los segmentos con el examen nuevo. Mostrar Alfa como segmento propio (chip, Discord, Marketing › Segmentos) y que la letra salga de la regla y no de los puntos necesita código: queda para otro ADR.
 
-## ADR-W057: La segmentación se escribe solo con respuestas: sin «Segmento del lead» en las reglas y hasta 40 reglas
+## ADR-W058: La segmentación se escribe solo con respuestas: sin «Segmento del lead» en las reglas y hasta 40 reglas
 
 - **Fecha:** 2026-11-02 · **Subsistema:** Thalamus (Forms › Segmentación, Team › Estrategias) · **Estado:** implementado.
 - **Contexto:** con ADR-W056 las reglas de «Sesión de Aceleración» usaban «Segmento del lead». El editor (`revisarSegmentacion`) recorre esa pregunta como si fuera independiente de las respuestas, así que avisaba choques y 328 combinaciones sin regla que en la realidad no existen (p. ej. «no puede invertir + Segmento A»). Mario quiere que el segmento se decida a mano en las reglas, no por otra vía, y que Team tenga solo las estrategias de los segmentos.
