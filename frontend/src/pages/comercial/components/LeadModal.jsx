@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Calendar, Check, CheckCircle2, Clock, CopyX, Inbox, Mail, Pencil, Phone, Target, X } from 'lucide-react';
 import InlineConfirm from '../../../components/ui/InlineConfirm';
+import { Button, FieldError, TextArea } from '../../../components/standard';
+import { faltaDeMotivo, pideMotivo, preguntaDeMotivo } from '../../../utils/motivoEstado';
 import { ChipTono } from './Revisar';
 import { cuandoDe, fmt } from './Shared';
 
@@ -55,9 +57,12 @@ const LeadModal = ({ fila, estados, puedeCorregir, duplicadaDe, onCorregir, onMa
     const [guardado, setGuardado] = useState(null);
     const [guardando, setGuardando] = useState(null);
     const [resolviendo, setResolviendo] = useState(false);
+    // El estado que espera su motivo: «Reagendado», «No Show» y «Cancelado» no se corrigen sin él (ADR-W065).
+    const [pendiente, setPendiente] = useState(null);
+    const [motivo, setMotivo] = useState('');
 
     // El aviso de "Guardado" es de ESTA fila: al abrir otra no tiene por qué seguir ahí.
-    useEffect(() => { setGuardado(null); }, [fila?.id]);
+    useEffect(() => { setGuardado(null); setPendiente(null); setMotivo(''); }, [fila?.id]);
 
     useEffect(() => {
         const esc = (e) => { if (e.key === 'Escape') onCerrar(); };
@@ -78,15 +83,24 @@ const LeadModal = ({ fila, estados, puedeCorregir, duplicadaDe, onCorregir, onMa
     const esAgenda = fila.tipo === 'agenda';
     const esVenta = fila.tipo === 'venta';
 
-    const corregir = async (campo, valor) => {
+    const corregir = async (campo, valor, motivoEscrito) => {
         setGuardando(`${campo}:${valor}`);
         try {
-            await onCorregir(fila, campo, valor);
+            await onCorregir(fila, campo, valor, motivoEscrito);
             setGuardado('Guardado · se actualizó en la tabla y en los totales');
+            setPendiente(null);
+            setMotivo('');
         } finally {
             setGuardando(null);
         }
     };
+
+    const elegir = (campo, o) => {
+        if (!pideMotivo(o.key)) { corregir(campo, o.key); return; }
+        setPendiente({ campo, valor: o.key, etiqueta: o.label });
+        setMotivo('');
+    };
+    const faltaMotivo = pendiente ? faltaDeMotivo(motivo) : null;
 
     const marcarDuplicada = async () => {
         if (resolviendo) return;
@@ -216,7 +230,7 @@ const LeadModal = ({ fila, estados, puedeCorregir, duplicadaDe, onCorregir, onMa
                                                                 color: 'var(--text-muted)',
                                                             }),
                                                         }}
-                                                        onClick={() => !activo && corregir(campo, o.key)}>
+                                                        onClick={() => !activo && elegir(campo, o)}>
                                                         {o.label}
                                                     </button>
                                                 );
@@ -224,6 +238,26 @@ const LeadModal = ({ fila, estados, puedeCorregir, duplicadaDe, onCorregir, onMa
                                         </div>
                                     </div>
                                 ))}
+
+                                {/* El motivo de «Reagendado», «No Show» y «Cancelado»: queda como nota en el hilo del lead. */}
+                                {pendiente && (
+                                    <div style={{ display: 'grid', gap: 'var(--s2)' }}>
+                                        <span className="t-cap mut40">{preguntaDeMotivo(pendiente.valor)}</span>
+                                        <TextArea aria-label={preguntaDeMotivo(pendiente.valor)} rows={3} autoFocus
+                                            value={motivo} invalid={!!motivo && !!faltaMotivo}
+                                            placeholder="Lo que pasó, con tus palabras"
+                                            onChange={(e) => setMotivo(e.target.value)} />
+                                        {faltaMotivo && <FieldError role="note" icon={false}>{faltaMotivo}</FieldError>}
+                                        <span className="fila" style={{ gap: 'var(--s2)' }}>
+                                            <Button disabled={guardando !== null}
+                                                onClick={() => { setPendiente(null); setMotivo(''); }}>Cancelar</Button>
+                                            <Button variant="primary" disabled={guardando !== null || !!faltaMotivo}
+                                                onClick={() => corregir(pendiente.campo, pendiente.valor, motivo.trim())}>
+                                                {`Guardar como ${pendiente.etiqueta}`}
+                                            </Button>
+                                        </span>
+                                    </div>
+                                )}
 
                                 {/* "Venta", "Seña" y "Seguimiento" NO son editables: son estados
                                     derivados (un pago cruzado por contacto, o una asistencia sin
