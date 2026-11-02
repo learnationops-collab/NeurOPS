@@ -318,7 +318,8 @@ def _cash_por_dia(filas_ventas, start, end):
     return dias, (mejor if mejor and mejor['cash'] > 0 else None)
 
 
-def bloque_closers(start, end, closer_id=None, closer_nombre=None, con_reales=True, segmento=None):
+def bloque_closers(start, end, closer_id=None, closer_nombre=None, con_reales=True, segmento=None,
+                   sin_excluidos=False):
     """Todos los números de Analizar para closers, de un período. Se llama dos veces (período y
     período comparado) para sacar los deltas sin duplicar ninguna fórmula.
 
@@ -329,6 +330,10 @@ def bloque_closers(start, end, closer_id=None, closer_nombre=None, con_reales=Tr
     esos leads (`segmentos_comercial`). Lo que no es de un lead (las deudas por cobrar, las fuentes) no se filtra."""
     agendas = ComercialService.agendas(start, end, closer_id=closer_id)
     ventas = ComercialService.ventas(start, end, closer_nombre=closer_nombre)
+    if sin_excluidos:
+        # La fila «Equipo» de las Comparativas: todo el equipo menos quienes no cuentan ahí.
+        agendas = [f for f in agendas if ComercialService.comparable(f['closer'])]
+        ventas = [f for f in ventas if ComercialService.comparable(f['closer'])]
     if segmento:
         from app.services.segmentos_comercial import filtrar
         agendas, ventas = filtrar(agendas, segmento), filtrar(ventas, segmento)
@@ -831,7 +836,7 @@ def comparativas(rol, start, end, prev_start=None, prev_end=None):
     equipo se leen una sola vez por período y se reparten (`setter_analitica.lecturas_por_setter`):
     el bloque de cada persona ya recorre sus agendas.
     """
-    miembros = ComercialService.miembros(rol)
+    miembros = ComercialService.miembros_comparativas(rol)
     bloque = _bloque_de(rol)
     de_setters = rol == ROL_SETTERS
     reportes = {}
@@ -869,7 +874,7 @@ def comparativas(rol, start, end, prev_start=None, prev_end=None):
     # La fila "Equipo" NO es la suma de las filas de arriba: las tasas se recalculan sobre el
     # total del equipo. Promediar los porcentajes de gente con volúmenes muy distintos da un
     # número que no le corresponde a nadie.
-    bloque_equipo = bloque(start, end, **kwargs(None))
+    bloque_equipo = bloque(start, end, **kwargs(None), **({} if de_setters else {'sin_excluidos': True}))
     equipo = _fila_comparativa(rol, bloque_equipo)
 
     salida = {'rol': rol, 'metricas': METRICAS[rol], 'columnas_info': COLUMNAS_INFO[rol],
