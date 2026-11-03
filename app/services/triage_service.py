@@ -29,7 +29,8 @@ PITCHEADO = ('cerrado', 'no_cerrado', 'seguimiento', 'descartado')
 ASISTENCIAS = ('asistio', 'no_show', 'cancelo')
 # Lo que no es «asistió» es un estado marcado a mano: pide su motivo en la nota (ADR-W066).
 _ESTADO_DE_ASISTENCIA = {'no_show': 'No Show', 'cancelo': 'Cancelado', 'reagenda': 'Reagendado'}
-_SEGMENTO = ('segmento', 'segmento_puntos', 'segmento_preguntas', 'segmento_confianza', 'segmento_version')
+# El lead que califica en el triage sube de segmento en su agenda de closing (la del triage guarda el original).
+_SUBE_AL_PASAR = {'C': 'A', 'D': 'B'}
 _LOW_TICKET_TEXTO = {'no_pitch': 'no se le pitcheó el low ticket', 'cerrado': 'cerró el low ticket',
                      'no_cerrado': 'no cerró el low ticket', 'seguimiento': 'low ticket en seguimiento',
                      'descartado': 'lead perdido'}
@@ -132,13 +133,27 @@ def _pasar_al_closer(appt, datos, usuario):
     # `pase_triage` viaja en el payload de la agenda de closing: de ahí sale la tarjeta de Discord «Pasó de Triage».
     pase = {'pase_triage': {'agenda_id': appt.id, 'por': usuario.username,
                             'nota': (datos.get('nota_para_closer') or '').strip()}}
+    # En el payload y no después: segmento_service lo escribe antes de que nazca el evento, y una C/D
+    # nacería «Disponible» en Google (desplazar.py) y dejaría agendar encima.
+    seg = _segmento_al_pasar(appt)
+    if seg:
+        pase['segmento_lead'] = seg
     nueva = acciones.crear_agenda(appt, {'fecha': datos['fecha'], 'closer_id': datos['closer_id'],
                                          'sesion': {**(sesion or {}), **pase}}, usuario)
     closing = db.session.get(Appointment, nueva['id'])
     closing.agenda_triage_id = appt.id
-    for campo in _SEGMENTO:  # mantiene el segmento original para medir después
-        setattr(closing, campo, getattr(appt, campo))
     return closing
+
+
+def _segmento_al_pasar(appt):
+    """El segmento de la agenda de triage (formato de nucleo/segmento.py) con C→A y D→B, o None."""
+    from app.services.segmento_service import COLUMNAS
+
+    if not appt.segmento:
+        return None
+    seg = {clave: getattr(appt, columna) for columna, clave in COLUMNAS.items()}
+    seg['segmento'] = _SUBE_AL_PASAR.get(appt.segmento, appt.segmento)
+    return seg
 
 
 def reportar(appt, datos, usuario):

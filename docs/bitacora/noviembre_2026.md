@@ -184,3 +184,6 @@
   - Dock como la barra de iOS: más alto, íconos grandes de trazo fino y el nombre de cada sección debajo; la activa en rosa y con su cuenta.
   - Inbox: Online es la primera pestaña y la que se abre; Híbridos aparece solo si hay alguna. En el teléfono no se muestra «Avance de la revisión».
   - Sin nadie por revisar ya no se repite el aviso (la tarjeta «Al día» y «Revisaste todas las online»): queda uno solo, con un check animado.
+- **3 de Noviembre de 2026 (El lead que pasa del triage sube de segmento y ya no se le agenda encima)** *([triage_service.py](../../app/services/triage_service.py), [subir_segmento_pases.py](../../scripts/subir_segmento_pases.py), [ADR-W085](../DECISIONS.md))*:
+  - Al pasar al closer, el segmento de la agenda de closing sube: C→A y D→B. Antes se copiaba el C/D y el evento nacía «Disponible» en Google, así que el pase de otro lead podía caer en el mismo horario (Astolfo y Cristina con Jean Carlo el 04/11 a las 23:30).
+  - Se corrigieron las 5 agendas futuras de Jean Carlo que ya habían pasado del triage: segmento subido y evento de Google ocupado.

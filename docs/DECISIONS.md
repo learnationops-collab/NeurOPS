@@ -683,3 +683,11 @@
 - **Decisión:** la opción `og8xclet205` pasa a ser «Soy estudiante» y se suma `og-internado` («Estoy en mi internado»), con la misma nota (0) y los mismos puntos de segmento (-3: no hay datos propios del interno). `mk-academy` queda igual, así que solo agarra al estudiante; el interno sin dinero cae en `sin-dinero` → triage. Se guardó solo la pregunta Etapa (`guardar_doc(parcial=True)`), y `scripts/segmentos_formulario.py` y `backfill_segmentos.py` conocen la opción nueva.
 - **Qué se pierde:** las respuestas viejas con `og8xclet205` (estudiantes e internos mezclados) se leen ahora como «Estudiante»; no hay forma de separarlas.
 - **Consecuencias:** rige para los formularios que se respondan desde ahora. Mitzia y otros internos que ya quedaron como «No calificó» no se recalculan: hay que pasarlos a mano.
+
+## ADR-W085: El lead que pasa del triage sube de segmento (C→A, D→B)
+
+- **Fecha:** 2026-11-03 · **Subsistema:** Agendas 2.0 / Triage · **Estado:** implementado.
+- **Contexto:** Jean Carlo tenía a Astolfo (D, pasado del triage) y a Cristina (C, pasada por Dari) el 04/11 a las 23:30. La agenda de closing copiaba el segmento C/D de la del triage, y su evento se creaba antes de grabar `agenda_triage_id`: nacía «Disponible» en Google como cualquier C/D (ADR-W082), el control de choques lo leía como borrado y dejó agendar encima. Las reagendas no llevan `agenda_triage_id`, así que una pasada y reagendada volvía a ser desplazable. Santi: «si es D pasa a B y si es C pasa a A».
+- **Decisión:** `triage_service._pasar_al_closer` manda en el payload de la agenda de closing `segmento_lead` con C→A y D→B (`_segmento_al_pasar`). `segmento_service` lo escribe antes de que nazca el evento, que nace ocupado, y la reagenda lo hereda. `scripts/subir_segmento_pases.py` corrigió las 5 agendas futuras ya pasadas (segmento y evento de Google a ocupado).
+- **Qué se pierde:** la agenda de closing ya no muestra el segmento con el que entró el lead; ese queda en la agenda del triage (`agenda_triage_id`).
+- **Consecuencias:** en los tableros por segmento, los pases cuentan como A/B en closing. El segmento del cliente no cambia.
