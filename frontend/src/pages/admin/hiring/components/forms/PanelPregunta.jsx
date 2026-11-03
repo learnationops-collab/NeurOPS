@@ -3,7 +3,7 @@ import {
     ArrowUp, ArrowDown, Copy, Trash2, Ban, BadgeCheck, X, Plus, Minus, Info,
     CircleDot, ListChecks, Search, Type, Mail, AlignLeft, Hash, DollarSign, Phone, Link2, Hand,
 } from 'lucide-react';
-import { Aura, IconButton, Select, Switch } from '../../../../../components/standard';
+import { Aura, IconButton, Select, Switch, TextArea } from '../../../../../components/standard';
 import { Chip } from '../Piezas';
 import { FIJAS, TIPOS, conOpciones, notasDe, tipoDe, tipoVisible } from '../../lib/formularios';
 
@@ -110,22 +110,23 @@ const Limites = ({ q, onCambiar }) => {
     const al = q.ko_min != null && q.ko_max != null && q.ko_min > q.ko_max;
     return (
         <div className={`tl-ed-limites${q.ko_min != null || q.ko_max != null ? ' is-activo' : ''}`}>
-            <span className="tl-ed-etq"><Ban size={12} aria-hidden="true" /> Límites excluyentes</span>
+            <span className="tl-ed-etq"><Ban size={12} aria-hidden="true" /> Descarta fuera de</span>
             <div className="tl-ed-limites-campos">
                 <label>
-                    <span>Descarta si es menor a</span>
+                    <span>Mínimo</span>
                     <input className="tl-input tl-input--sm" inputMode="numeric" placeholder="Sin mínimo"
                         value={q.ko_min ?? ''} onChange={(e) => set('ko_min', e.target.value)} />
                 </label>
                 <label>
-                    <span>Descarta si es mayor a</span>
+                    <span>Máximo</span>
                     <input className="tl-input tl-input--sm" inputMode="numeric" placeholder="Sin máximo"
                         value={q.ko_max ?? ''} onChange={(e) => set('ko_max', e.target.value)} />
                 </label>
             </div>
             <small className={al ? 'is-error' : undefined}>
-                {al ? 'El mínimo es mayor que el máximo: así no se guarda.'
-                    : `Quien responda fuera de ${q.ko_min ?? 'cero'} a ${q.ko_max ?? 'sin tope'}${q.unidad ? ` ${q.unidad}` : ''} va a la pantalla de descarte.`}
+                {al ? 'El mínimo es mayor que el máximo.'
+                    : q.ko_min == null && q.ko_max == null ? 'Sin límites: no descarta a nadie.'
+                        : `Fuera de ${q.ko_min ?? 0}–${q.ko_max ?? '∞'}${q.unidad ? ` ${q.unidad}` : ''}: descarte.`}
             </small>
         </div>
     );
@@ -161,11 +162,11 @@ const PanelPregunta = ({ q, num, primera, ultima, tasaBrl, depende, onCambiar, o
             </header>
 
             <div className="tl-ed-ajustes">
-                <Campo etiqueta="Tipo de respuesta" className="tl-ed-campo--tipo">
+                <div className="tl-ed-campo--tipo">
                     <Select label="Tipo de respuesta" value={visible} options={OPCIONES_TIPO} disabled={fija}
-                        title={fija ? 'El nombre es siempre texto corto' : undefined}
+                        title={fija ? 'El nombre es siempre texto corto' : 'Tipo de respuesta'}
                         onChange={(t) => t !== visible && onTipo(t)} />
-                </Campo>
+                </div>
                 <div className="tl-ed-sws">
                     <label className="tl-ed-sw">
                         <Switch checked={on} label="Activa" disabled={fija} onChange={() => onCambiar({ on: !on })}
@@ -182,7 +183,7 @@ const PanelPregunta = ({ q, num, primera, ultima, tasaBrl, depende, onCambiar, o
             </div>
 
             <Campo etiqueta="Pregunta">
-                <textarea className="tl-area tl-ed-tit" rows={2} maxLength={300} placeholder="Escribí la pregunta" value={q.t || ''}
+                <TextArea bare className="tl-area tl-ed-tit" maxLength={300} placeholder="Escribí la pregunta" value={q.t || ''}
                     onChange={(e) => onCambiar({ t: e.target.value })} />
             </Campo>
             {Object.keys(q.t_pais || {}).map((pais) => (
@@ -191,8 +192,8 @@ const PanelPregunta = ({ q, num, primera, ultima, tasaBrl, depende, onCambiar, o
                         onChange={(e) => onCambiar({ t_pais: { ...q.t_pais, [pais]: e.target.value } })} />
                 </Campo>
             ))}
-            <Campo etiqueta="Texto de ayuda">
-                <textarea className="tl-area" rows={2} maxLength={600} placeholder="Opcional"
+            <Campo etiqueta="Descripción">
+                <TextArea bare className="tl-area" maxLength={600} placeholder="Opcional: contexto que se lee debajo de la pregunta"
                     value={q.h || ''} onChange={(e) => onCambiar({ h: e.target.value })} />
             </Campo>
             {(visible === 'numero' || visible === 'dinero') && (

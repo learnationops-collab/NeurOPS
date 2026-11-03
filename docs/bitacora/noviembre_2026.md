@@ -123,3 +123,7 @@
 - **3 de Noviembre de 2026 (Hiring: opciones necesarias en varias opciones)** *([PanelPregunta.jsx](../../frontend/src/pages/admin/hiring/components/forms/PanelPregunta.jsx), [assistant_application.py](../../app/models/assistant_application.py), [ADR-W074](../DECISIONS.md))*:
   - En una pregunta de varias opciones, cada opción se puede marcar como «Necesaria». Si la postulante no marca todas las necesarias, va a la pantalla de descarte (puede marcar otras además) y el panel la muestra cortada por el formulario.
   - Va junto con institute-site, que aplica la regla en el formulario.
+- **3 de Noviembre de 2026 (Hiring: segunda pasada de diseño del editor de preguntas)** *([PanelPregunta.jsx](../../frontend/src/pages/admin/hiring/components/forms/PanelPregunta.jsx), [editorPreguntas.css](../../frontend/src/pages/admin/hiring/components/forms/editorPreguntas.css))*:
+  - Panel sin borde ni brillo rosa; más aire entre la cabecera del formulario y la lista; número de la pregunta en blanco.
+  - «Texto de ayuda» pasa a «Descripción»; los textos crecen solos (sin la manija de tamaño) y hay menos rótulos.
+  - Al elegir una pregunta, el número aparece y los bloques del panel entran en cascada; las filas se corren apenas al pasar el mouse.
