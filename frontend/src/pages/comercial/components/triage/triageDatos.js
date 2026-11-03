@@ -40,8 +40,8 @@ export function embudoDe(m) {
         { clave: 'AGENDAS', n: m.agendas, color: 'brand-primary', filtro: 'agendas' },
         { clave: 'ASISTIERON', n: m.asistencias, color: 'brand-secondary', de: m.agendas, nota: `${m.asistencias} de ${m.agendas} agendas`, filtro: 'asistencias', cuello: true },
         { clave: 'CALIFICADOS', n: m.calificados, color: 'success', de: m.asistencias, nota: `${m.calificados} de ${m.asistencias} asistieron`, filtro: 'calificados', cuello: true },
-        { clave: 'PASARON', rotulo: 'PASARON', n: m.pasaron, color: 'info', grupo: 'LO QUE PASÓ A CLOSING', filtro: 'pasaron', nota: `${m.pasaron} de ${m.calificados} calificados` },
-        { clave: 'ASISTIERON AL CLOSER', rotulo: 'ASISTIERON', n: m.closer_asistieron, color: 'brand-secondary', de: m.pasaron, nota: `${m.closer_asistieron} de ${m.pasaron} pasaron`, filtro: 'closer_asistieron' },
+        // Los que pasaron a closing son los calificados: no se repiten como etapa, el grupo arranca en lo que hizo el closer.
+        { clave: 'ASISTIERON AL CLOSER', rotulo: 'ASISTIERON', n: m.closer_asistieron, color: 'brand-secondary', de: m.pasaron, grupo: 'LO QUE PASÓ A CLOSING', nota: `${m.closer_asistieron} de ${m.pasaron} pasaron`, filtro: 'closer_asistieron' },
         { clave: 'CERRARON', rotulo: 'CERRARON', n: m.closer_cerraron, color: 'success', de: m.closer_asistieron, nota: `${m.closer_cerraron} de ${m.closer_asistieron} asistieron`, filtro: 'closer_cerraron' },
     ];
     const conPaso = etapas.filter((e) => e.de && e.cuello);

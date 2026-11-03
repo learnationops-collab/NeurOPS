@@ -12,7 +12,8 @@ import '../../admin/marketing/todos/segmentos.css';
 const TABLAS_CON_SEGMENTO = ['agendas', 'generadas', 'ventas'];
 
 /** { chips, texto } de lo que se ve, o null si el filtro no tiene nada que decir acá. */
-export const segmentoDeLaVista = ({ seccion, tab, rol, tabla }) => {
+export const segmentoDeLaVista = ({ seccion, tab, rol, tabla, triage = false }) => {
+    if (triage) return { chips: true, texto: 'Acota las llamadas del triage y lo que pasó al closing.' };
     if (seccion === 'analizar' && tab === 'dashboard') {
         return rol === 'closers'
             ? { chips: true, texto: 'Acota los KPIs, las listas y Segmentos; la deuda por cobrar y las fuentes no se parten.' }

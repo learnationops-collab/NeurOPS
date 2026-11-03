@@ -26,7 +26,7 @@ const Cifra = ({ n, clave, onVer }) => (n ? (
         style={{ background: 'none', border: 0, padding: 0, font: 'inherit', fontWeight: 800, color: 'inherit', cursor: 'pointer', textAlign: 'right' }}>{n}</button>
 ) : <span style={{ color: 'var(--text-muted-40)' }}>0</span>);
 
-function Fila({ nombre, id, pasaron, asistieron, cerraron, onVer, total = false }) {
+function Fila({ nombre, id, pasaron, asistieron, cerraron, onVer, total = false, color }) {
     const clave = (cuenta) => (total ? { pasaron: 'pasaron', asistieron: 'closer_asistieron', cerraron: 'closer_cerraron' }[cuenta] : `cl:${id}:${cuenta}`);
     const titulo = (t) => (total ? t : `${t} · ${nombre}`);
     const pasaronParte = { n: pasaron, texto: 'pasaron', clave: clave('pasaron'), titulo: titulo('Pasaron a closing') };
@@ -35,7 +35,9 @@ function Fila({ nombre, id, pasaron, asistieron, cerraron, onVer, total = false 
     return (
         <div style={{ display: 'grid', gridTemplateColumns: COLUMNAS, gap: '0 8px', alignItems: 'baseline', padding: '12px 0', borderTop: '1px solid var(--border-subtle)',
             fontSize: 15, fontWeight: total ? 900 : 700 }}>
-            <span>{nombre}</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                {color && <i style={{ width: 10, height: 10, borderRadius: '50%', background: color, flexShrink: 0 }} />}{nombre}
+            </span>
             <span style={{ textAlign: 'right' }}><Cifra n={pasaron} clave={pasaronParte.clave} onVer={onVer} /></span>
             <span style={{ textAlign: 'right' }}><Cifra n={asistieron} clave={asistieronParte.clave} onVer={onVer} /></span>
             <span style={{ textAlign: 'right', color: 'var(--info)' }}><Porcentaje a={asistieronParte} b={pasaronParte} onVer={onVer} /></span>
@@ -45,7 +47,7 @@ function Fila({ nombre, id, pasaron, asistieron, cerraron, onVer, total = false 
     );
 }
 
-export default function PorCloser({ closers, onVer }) {
+export default function PorCloser({ closers, onVer, colores = {} }) {
     const suma = (k) => closers.reduce((n, c) => n + c[k], 0);
     return (
         <div style={{ ...TARJETA, gap: 12 }}>
@@ -58,7 +60,7 @@ export default function PorCloser({ closers, onVer }) {
                         <small style={{ ...ROTULO, letterSpacing: '.1em' }}>CLOSER</small>
                         {RUTULOS.map((r) => <small key={r} style={{ ...ROTULO, letterSpacing: '.1em', textAlign: 'right' }}>{r}</small>)}
                     </div>
-                    {closers.map((c) => <Fila key={c.id} {...c} onVer={onVer} />)}
+                    {closers.map((c) => <Fila key={c.id} {...c} color={colores[c.id]} onVer={onVer} />)}
                     {closers.length > 1 && <Fila nombre="Total" pasaron={suma('pasaron')} asistieron={suma('asistieron')} cerraron={suma('cerraron')} onVer={onVer} total />}
                 </div>
             )}

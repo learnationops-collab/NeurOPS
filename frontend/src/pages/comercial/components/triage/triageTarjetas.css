@@ -1,0 +1,18 @@
+/* Las seis tarjetas del Triage de Dirección (02/11/2026): cuatro iguales arriba y dos del doble de ancho abajo, para que
+   cada fila ocupe todo el ancho. Con poco ancho pasan a dos columnas (2 + 2 + 2) y, en teléfono, a una. */
+.tg-kpis {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.tg-kpis > .tg-kpi--ancha { grid-column: span 2; }
+
+@media (max-width: 1100px) {
+    .tg-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .tg-kpis > .tg-kpi--ancha { grid-column: span 1; }
+}
+
+@media (max-width: 560px) {
+    .tg-kpis { grid-template-columns: minmax(0, 1fr); }
+}

@@ -7,26 +7,16 @@ import { useMemo, useState } from 'react';
 import api from '../../../services/api';
 import { useDatosCacheados } from '../../../services/cacheDeVistas';
 import { EmptyState, FieldError, Skeleton, SkeletonKpi, SkeletonPanel } from '../../../components/standard';
-import { localDateFromNow, localToday } from '../../../utils/datetime';
 import { diasDe } from '../../triage/components/TriageMetricas';
 import { filtroDe } from '../../triage/components/triageFiltros';
 import { Abandonos, Embudo, Estados, LowTicket, Tarjetas } from './triage/TriagePaneles';
 import { DiaPorDia, PorPersona } from './triage/TriagePersonasDias';
+import { coloresDe } from './triage/coloresCloser';
+import { rangoDePeriodo } from './triage/periodo';
 import PorCloser, { closersDe } from './triage/TriagePorCloser';
 import TriageReporte from './triage/TriageReporte';
 
-const PERIODOS = [['0', 'Hoy'], ['6', '7 días'], ['29', '30 días']];
 const FILA = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,460px),1fr))', gap: 16 };
-
-const Pildoras = ({ opciones, valor, onChange, etiqueta }) => (
-    <div role="group" aria-label={etiqueta} style={{ display: 'flex', flexShrink: 0, gap: 2, padding: 4, borderRadius: 999, border: '1px solid var(--border-main)', background: 'var(--bg-element)' }}>
-        {opciones.map(([v, texto]) => (
-            <button key={v} type="button" aria-pressed={valor === v} onClick={() => onChange(v)}
-                style={{ whiteSpace: 'nowrap', padding: '7px 14px', border: 0, borderRadius: 999, cursor: 'pointer', fontSize: 12, fontWeight: 700,
-                    background: valor === v ? '#fff' : 'transparent', color: valor === v ? 'var(--ink)' : 'var(--text-muted)' }}>{texto}</button>
-        ))}
-    </div>
-);
 
 const Cargando = () => (
     <Skeleton label="Cargando las métricas del triage">
@@ -35,18 +25,17 @@ const Cargando = () => (
     </Skeleton>
 );
 
-export default function TriageDireccion({ onAbrirFila }) {
-    const [dias, setDias] = useState('6');
-    const [persona, setPersona] = useState('todas');
+export default function TriageDireccion({ onAbrirFila, period, rango, triageId, segmento, onElegirPersona }) {
     const [ver, setVer] = useState(null);
-    // Recordado por período (cacheDeVistas): volver a Triage no lo vuelve a pedir.
-    const { datos, error: falla } = useDatosCacheados(`triage:metricas:${dias}`, (signal) => api
-        .get('/triage/metricas', { params: { desde: localDateFromNow(-Number(dias)), hasta: localToday() }, signal })
+    const fechas = rangoDePeriodo(period, rango);
+    // Recordado por período y segmento (cacheDeVistas): volver a Triage no lo vuelve a pedir.
+    const { datos, error: falla } = useDatosCacheados(`triage:metricas:${fechas.desde}:${fechas.hasta}:${segmento || ''}`, (signal) => api
+        .get('/triage/metricas', { params: { ...fechas, segmento: segmento || undefined }, signal })
         .then((res) => res.data));
     const error = falla ? (falla?.response?.data?.message || 'No se pudieron cargar las métricas.') : null;
 
     const personas = datos?.por_persona || [];
-    const elegida = personas.find((p) => String(p.id) === persona);
+    const elegida = personas.find((p) => String(p.id) === String(triageId));
     const m = elegida || datos?.total;
     const leads = useMemo(() => (datos?.leads || []).filter((l) => !elegida || l.triage === elegida.nombre), [datos, elegida]);
     const verLista = (clave) => {
@@ -54,31 +43,25 @@ export default function TriageDireccion({ onAbrirFila }) {
         document.getElementById('triage-reporte')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
     const closers = useMemo(() => closersDe(datos?.por_closer, elegida?.id), [datos, elegida]);
+    const colores = useMemo(() => coloresDe(datos?.por_closer), [datos]);
     const filtro = ver && ver !== 'agendas' ? filtroDe(ver, closers.find((c) => ver.startsWith(`cl:${c.id}:`))?.nombre) : null;
     const abrir = (l) => onAbrirFila?.({ tipo: 'agenda', id: l.id, client_id: l.client_id });
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20, paddingBottom: 120 }}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-                <Pildoras etiqueta="Período" opciones={PERIODOS} valor={dias} onChange={(v) => { setDias(v); setVer(null); }} />
-                {personas.length > 1 && (
-                    <Pildoras etiqueta="Persona" valor={persona} onChange={(v) => { setPersona(v); setVer(null); }}
-                        opciones={[['todas', 'Todas'], ...personas.map((p) => [String(p.id), p.nombre])]} />
-                )}
-            </div>
             {error && <FieldError>{error}</FieldError>}
             {!m ? (!error && <Cargando />) : !m.agendas ? (
-                <EmptyState title="Sin llamadas en este período">
+                <EmptyState title="Sin llamadas con este filtro">
                     Las métricas salen de lo que cada triage marca en el lead: asistencia y resultado.
                 </EmptyState>
             ) : (
                 <>
                     <Tarjetas m={m} onVer={verLista} />
-                    <div style={FILA}><Estados m={m} onVer={verLista} /><Embudo m={m} onVer={verLista} /></div>
-                    <PorCloser closers={closers} onVer={verLista} />
+                    <div style={FILA}><Estados m={m} onVer={verLista} /><Embudo m={m} onVer={verLista} closers={closers} colores={colores} /></div>
+                    <PorCloser closers={closers} colores={colores} onVer={verLista} />
                     <div style={FILA}><LowTicket m={m} onVer={verLista} /><Abandonos a={datos.abandonos} /></div>
                     <div style={FILA}>
-                        {!elegida && <PorPersona personas={personas} onElegir={setPersona} />}
+                        {!elegida && <PorPersona personas={personas} onElegir={(id) => onElegirPersona?.(String(id))} />}
                         <DiaPorDia dias={diasDe(datos.por_dia, elegida?.id)} />
                     </div>
                     <TriageReporte leads={leads} ver={ver} onVer={setVer} onAbrir={abrir}
