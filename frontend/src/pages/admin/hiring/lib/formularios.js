@@ -85,6 +85,30 @@ export const mover = (preguntas, id, delta) => {
     return copia;
 };
 
+// Claves que solo tienen sentido en ciertos tipos: al cambiar de tipo se sacan.
+const SOLO_EN = {
+    mail: ['texto'], unidad: ['numero'], min: ['numero'], max: ['numero'], ref: ['numero'],
+    largo: ['parrafo'], puntua: ['radio', 'check'], reqs: ['intro'],
+};
+
+/** Cambia el tipo de `q`. Una original pasa a ser nueva (otro id, `base: false`):
+ * el backend guarda su respuesta en `respuestas_extra` y la original cuenta como
+ * borrada (se recupera desde el final). Las condicionales que la nombraban la siguen.
+ * Devuelve la lista y el id con que quedó. */
+export const cambiarTipo = (preguntas, q, tipo) => {
+    const nueva = { ...q, tipo };
+    Object.entries(SOLO_EN).forEach(([k, tipos]) => { if (!tipos.includes(tipo)) delete nueva[k]; });
+    if (conOpciones(tipo) && !(nueva.o || []).length) nueva.o = [{ t: 'Opción A' }, { t: 'Opción B' }];
+    if (!q.base) return { lista: preguntas.map((x) => (x.id === q.id ? nueva : x)), id: q.id };
+    nueva.id = idNuevo(preguntas, q.id.slice(0, 30));
+    nueva.base = false;
+    const lista = preguntas.map((x) => {
+        if (x.id === q.id) return nueva;
+        return x.si && x.si.id === q.id ? { ...x, si: { ...x.si, id: nueva.id } } : x;
+    });
+    return { lista, id: nueva.id };
+};
+
 /** Suelta la pregunta `id` en el lugar de `destinoId` (arrastrar): queda antes
  * si sube y después si baja, y pasa al bloque de la pregunta donde cayó. */
 export const soltar = (preguntas, id, destinoId) => {
@@ -117,7 +141,7 @@ export const notasDe = (q, tasaBrl) => {
     if (q.tipo === 'tel') n.push('Pide el código de país con un selector que arranca en el país detectado (o el que eligió, si se pregunta). Sin la pregunta de país, el país sale de ese código.');
     if (q.tipo === 'buscable') n.push('La lista cambia según el país: provincias, estados o estados de Venezuela.');
     if (q.tipo === 'intro') n.push('Pantalla de bienvenida: hay que marcar las recomendaciones para empezar.');
-    if (q.base && !FIJAS.has(q.id)) n.push('Pregunta original: el panel la lee por su id, así que su tipo no se cambia. Se puede apagar o eliminar, y se recupera desde el final de la lista.');
+    if (q.base && !FIJAS.has(q.id)) n.push('Pregunta original: se puede apagar o eliminar, y se recupera desde el final de la lista. Si le cambiás el tipo pasa a ser una pregunta nueva: sus respuestas se guardan aparte y deja de sumar al score.');
     if (FIJAS.has(q.id)) n.push('Sin el nombre no se puede guardar la postulación: esta pregunta no se apaga ni se elimina.');
     return n;
 };

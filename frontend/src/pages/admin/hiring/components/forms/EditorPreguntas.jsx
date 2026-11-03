@@ -4,15 +4,15 @@ import {
 } from 'lucide-react';
 import { Chip } from '../Piezas';
 import {
-    FIJAS, TIPOS, conOpciones, dependientes, duplicar, mover, notasDe, preguntaNueva, soltar, tipoDe,
+    FIJAS, TIPOS, cambiarTipo, conOpciones, dependientes, duplicar, mover, notasDe, preguntaNueva, soltar, tipoDe,
 } from '../../lib/formularios';
 
 // Las preguntas de un formulario, agrupadas por bloque como las ve la
 // postulante. Cada una se prende o apaga desde su cabecera y, abierta, deja
 // editar el texto, la ayuda, las opciones (cuál es excluyente, cuántos puntos
 // suma) y su lugar en el formulario (flechas o arrastrando desde el asa). Las
-// originales no cambian de tipo (el panel las lee por su id), pero se pueden
-// borrar, menos el nombre, y se recuperan desde el final de la lista.
+// originales se pueden borrar, menos el nombre, y se recuperan desde el final
+// de la lista; si cambian de tipo pasan a ser nuevas (ver `cambiarTipo`).
 
 const Interruptor = ({ on, onClick, etiqueta, disabled, title }) => (
     <button type="button" role="switch" aria-checked={on} aria-label={etiqueta} title={title || etiqueta}
@@ -73,7 +73,7 @@ const Opciones = ({ q, onCambiar }) => {
     );
 };
 
-const Pregunta = ({ q, num, abierta, onAbrir, onCambiar, onMover, onDuplicar, onBorrar, primera, ultima, tasaBrl, depende, arrastre }) => {
+const Pregunta = ({ q, num, abierta, onAbrir, onCambiar, onTipo, onMover, onDuplicar, onBorrar, primera, ultima, tasaBrl, depende, arrastre }) => {
     const on = q.on !== false;
     const req = q.req !== false;
     const fija = FIJAS.has(q.id);
@@ -107,12 +107,9 @@ const Pregunta = ({ q, num, abierta, onAbrir, onCambiar, onMover, onDuplicar, on
                 <div className="tl-pq-cuerpo">
                     <div className="tl-pq-ajustes">
                         <label className="tl-sel">
-                            <select className="tl-input tl-input--sm" value={q.tipo} disabled={q.base} aria-label="Tipo de pregunta"
-                                title={q.base ? 'El tipo de una pregunta original no se cambia' : undefined}
-                                onChange={(e) => {
-                                    const tipo = e.target.value;
-                                    onCambiar(conOpciones(tipo) && !(q.o || []).length ? { tipo, o: [{ t: 'Opción A' }] } : { tipo });
-                                }}>
+                            <select className="tl-input tl-input--sm" value={q.tipo} disabled={fija} aria-label="Tipo de pregunta"
+                                title={fija ? 'El nombre es siempre texto corto' : undefined}
+                                onChange={(e) => onTipo(e.target.value)}>
                                 {TIPOS.map((t) => <option key={t.k} value={t.k}>{t.n}</option>)}
                             </select>
                             <ChevronDown size={15} />
@@ -233,6 +230,11 @@ const EditorPreguntas = ({ preguntas, originales, tasaBrl, onCambiar }) => {
                                     arrastre={arrastreDe(q.id)}
                                     onAbrir={() => setSel(sel === q.id ? null : q.id)}
                                     onCambiar={(cambio) => set(q.id, cambio)}
+                                    onTipo={(tipo) => {
+                                        const { lista, id } = cambiarTipo(preguntas, q, tipo);
+                                        onCambiar(lista);
+                                        setSel(id);
+                                    }}
                                     onMover={(d) => onCambiar(mover(preguntas, q.id, d))}
                                     onDuplicar={() => {
                                         const copia = duplicar(preguntas, q);

@@ -563,3 +563,11 @@
 - **Decisión:** `validar_preguntas` ya no exige las 35 originales; solo el nombre (presente, prendido y obligatoria). Para el score, una original borrada cuenta como apagada (`HiringForm._derivados`). El editor arrastra preguntas desde un asa (cambian al bloque donde caen), borra cualquier pregunta menos el nombre y las que tienen una condicional que depende de ellas, y lista al final las originales borradas para recuperarlas (`form_dict` manda `originales`). En institute-site, el WhatsApp tiene un selector de código (22 países y «Otro») que arranca en el país contestado o en el detectado por la zona horaria, y se guarda con el código (`+54 11…`). Sin país contestado, el backend lo deduce del código (`pais_de_whatsapp`).
 - **Qué se pierde:** una original borrada pierde sus textos editados (vuelve con los de fábrica). La detección por zona horaria falla con VPN o navegador mal configurado; la postulante lo corrige en el selector. Un código fuera de la lista («Otro») deja el país vacío si no se pregunta.
 - **Consecuencias:** los WhatsApp nuevos llegan con «+», que `whatsapp_completo` ya respetaba. Sin la pregunta de país, la lista de provincias usa el país del teléfono o el detectado.
+
+## ADR-W070: Una pregunta original de Hiring puede cambiar de tipo y pasa a ser nueva
+
+- **Fecha:** 2026-11-03 · **Subsistema:** Hiring (Talent › Forms) · **Estado:** implementado.
+- **Contexto:** el tipo de las originales estaba bloqueado porque el panel y el score leen su respuesta por id, en columnas con largo fijo y comparando el texto de las opciones. Mario quiere pasar cualquiera a varias opciones, texto o párrafo.
+- **Decisión:** el selector de tipo queda libre para todas menos el nombre. Al cambiarle el tipo a una original (`cambiarTipo` en lib/formularios.js) se convierte en nueva: id `<id>_xxxxxx`, `base: false`, respuestas en `respuestas_extra`; las condicionales que la nombraban pasan al id nuevo. Al cambiar de tipo se sacan las claves de otros tipos (`mail`, `unidad`, `largo`, `puntua`…).
+- **Qué se pierde:** esa pregunta deja de sumar al score y de llenar su columna (la original cuenta como borrada). Volver al tipo anterior no la vuelve original: para eso se recupera la original desde el final de la lista.
+- **Consecuencias:** sin migración ni cambios en el backend ni en el formulario público, que ya dibujan cualquier tipo.

@@ -108,3 +108,5 @@
   - Se pueden eliminar las preguntas originales (menos el nombre y las que tienen una condicional que depende de ellas); al final de la lista se recuperan. Para el score, una borrada cuenta como apagada.
   - Sin pregunta de país, el país de la postulación sale del código del WhatsApp (`pais_de_whatsapp`).
   - Va junto con institute-site: el WhatsApp tiene selector de código de país, que arranca en el país detectado.
+- **3 de Noviembre de 2026 (Hiring: el tipo de cualquier pregunta se cambia)** *([formularios.js](../../frontend/src/pages/admin/hiring/lib/formularios.js), [ADR-W070](../DECISIONS.md))*:
+  - El selector de tipo ya no está bloqueado en las originales (solo en el nombre). Una original que cambia de tipo pasa a ser nueva: sus respuestas van aparte y deja de sumar al score.
