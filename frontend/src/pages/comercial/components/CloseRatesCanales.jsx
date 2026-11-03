@@ -28,8 +28,17 @@ const CloseRatesCanales = ({ reales, irA }) => {
 
     return (
         <div className="dc-canales-cr" role="group" aria-label="Close rate real por origen">
+            <div className="dc-canales-cr-fila dc-canales-cr-cab" aria-hidden="true">
+                <span />
+                <small className="t-cap mut">General</small>
+                <small className="t-cap mut">Del período</small>
+                <span />
+            </div>
             {filas.map(({ clave, nombre, color, datos }) => {
-                const { cierres, asistieron, anteriores, pct } = datos;
+                const { cierres, asistieron, anteriores, pct, del_periodo: delPeriodo } = datos;
+                // Solo las llamadas de este período: sin las anteriores ni en los cierres ni en la base.
+                const baseDelPeriodo = Math.max(asistieron, delPeriodo || 0);
+                const pctDelPeriodo = baseDelPeriodo ? Math.round(((delPeriodo || 0) / baseDelPeriodo) * 1000) / 10 : null;
                 const abrirCobros = cierres > 0 ? () => setLista(clave) : undefined;
                 const abrirAsistieron = asistieron > 0 ? abrir(irA, destinoAsistieronCanal(clave)) : undefined;
                 return (
@@ -40,6 +49,10 @@ const CloseRatesCanales = ({ reales, irA }) => {
                         </span>
                         <span className="dc-canales-cr-pct" title="Cierres ÷ (asistieron + de llamadas anteriores)">
                             {fmt.pct(pct)}
+                        </span>
+                        <span className="dc-canales-cr-pct dc-canales-cr-pct--periodo"
+                            title={`${delPeriodo || 0} de ${baseDelPeriodo} llamadas de este período`}>
+                            {pctDelPeriodo === null ? '—' : fmt.pct(pctDelPeriodo)}
                         </span>
                         <span className="t-cap mut num">
                             <Cifra onClick={abrirCobros} titulo="Ver los cobros de estos cierres">
