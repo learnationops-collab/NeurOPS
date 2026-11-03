@@ -131,3 +131,5 @@
   - Cada opción se arrastra desde su letra (al pasar el mouse muestra el asa); las letras se reacomodan y las marcas de necesaria o excluyente viajan con la opción.
 - **3 de Noviembre de 2026 (Hiring: el nombre de cada bloque se edita)** *([EditorPreguntas.jsx](../../frontend/src/pages/admin/hiring/components/forms/EditorPreguntas.jsx))*:
   - Clic en el nombre del bloque en la lista (Experiencia, Idiomas…) para cambiarlo; se aplica a las preguntas de ese tramo y es lo que la postulante ve arriba de cada pregunta. Hasta 60 caracteres (lo valida el backend).
+- **3 de Noviembre de 2026 (Hiring: sin variantes de texto por país)** *([PanelPregunta.jsx](../../frontend/src/pages/admin/hiring/components/forms/PanelPregunta.jsx), [hiring_forms.py](../../app/services/hiring_forms.py))*:
+  - El editor ya no muestra «Si vive en Brasil»; la API pública no manda `t_pais`/`h_pais` (las guardadas quedan sin efecto) y el formulario de institute-site usa siempre el mismo texto para todos.

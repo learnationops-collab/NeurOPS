@@ -5,8 +5,6 @@ Asistente (institute-site, vacante-assistant/formulario/index.html, la versión
 que lee sus preguntas de la API): mismas claves, mismos textos y mismas opciones
 —texto suelto o {t} con sus marcas (`ko`, `pts`, `correcta`, `reexplica`,
 `bloquea`, `nota`)—. Allá ya es JSON puro:
-  · el texto que cambia según el país va en `t_pais` / `h_pais`
-    ({"Brasil": "..."});
   · la condición de una pregunta va en `si: {id, es}` (también `igual`,
     `valor`, `en` o `valores`; ver `cumple_condicion`);
   · la equivalencia en reales de `remuneracion` va en `ref: 'brl'` (la tasa sale
@@ -57,7 +55,7 @@ _PREGUNTAS = [
     {'id': 'pais', 'bloque': 'Identificación', 'tipo': 'radio', 'req': True, 't': '¿En qué país vivís?',
      'o': _o('🇦🇷  Argentina', '🇧🇷  Brasil', '🇻🇪  Venezuela')},
     {'id': 'ciudad', 'bloque': 'Identificación', 'tipo': 'buscable', 'req': True, 't': '¿En qué provincia vivís?',
-     't_pais': {'Brasil': '¿En qué estado vivís?'}, 'h': 'Escribí para filtrar y elegí una de la lista.'},
+     'h': 'Escribí para filtrar y elegí una de la lista.'},
     {'id': 'nombre', 'bloque': 'Identificación', 'tipo': 'texto', 'req': True, 't': '¿Cómo te llamás?',
      'h': 'Nombre y apellido, como figura en tus documentos.'},
     {'id': 'email', 'bloque': 'Identificación', 'tipo': 'texto', 'req': True, 'mail': True, 't': '¿Cuál es tu email?',
@@ -133,7 +131,7 @@ _PREGUNTAS = [
 
     # Bloque 5 · Idiomas
     {'id': 'idioma2', 'bloque': 'Idiomas', 'tipo': 'radio', 'req': True, 'o': _o(*IDIOMA4),
-     't': '¿Qué nivel de portugués tenés?', 't_pais': {'Brasil': '¿Qué nivel de español tenés?'}},
+     't': '¿Qué nivel de portugués tenés?'},
     {'id': 'ingles', 'bloque': 'Idiomas', 'tipo': 'radio', 'req': True, 't': '¿Qué nivel de inglés tenés?',
      'o': _o(*IDIOMA4)},
 
@@ -223,6 +221,8 @@ MAX_OPCIONES = 20
 MAX_BYTES = 200_000
 # Claves que el editor agrega y el formulario público no necesita.
 CLAVES_DEL_EDITOR = ('on', 'base')
+# Variantes del texto por país (`t_pais`, `h_pais`): ya no se usan; las guardadas no se publican.
+CLAVES_RETIRADAS = ('t_pais', 'h_pais')
 
 
 class PreguntasInvalidas(ValueError):
@@ -410,7 +410,7 @@ def preguntas_publicas(form):
     obligatoria (completitud) y el formulario público, como opcional (`q.req
     && vacio`). Así los dos piden lo mismo."""
     return [
-        {**{k: v for k, v in p.items() if k not in CLAVES_DEL_EDITOR}, 'req': bool(p.get('req', True))}
+        {**{k: v for k, v in p.items() if k not in CLAVES_DEL_EDITOR + CLAVES_RETIRADAS}, 'req': bool(p.get('req', True))}
         for p in (form.preguntas or [])
         if isinstance(p, dict) and p.get('on') is not False
     ]

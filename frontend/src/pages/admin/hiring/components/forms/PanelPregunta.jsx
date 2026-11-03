@@ -207,12 +207,6 @@ const PanelPregunta = ({ q, num, primera, ultima, tasaBrl, depende, onCambiar, o
                 <TextArea bare className="tl-area tl-ed-tit" maxLength={300} placeholder="Escribí la pregunta" value={q.t || ''}
                     onChange={(e) => onCambiar({ t: e.target.value })} />
             </Campo>
-            {Object.keys(q.t_pais || {}).map((pais) => (
-                <Campo key={pais} etiqueta={`Si vive en ${pais}`}>
-                    <input className="tl-input tl-input--sm" maxLength={300} value={q.t_pais[pais] || ''}
-                        onChange={(e) => onCambiar({ t_pais: { ...q.t_pais, [pais]: e.target.value } })} />
-                </Campo>
-            ))}
             <Campo etiqueta="Descripción">
                 <TextArea bare className="tl-area" maxLength={600} placeholder="Opcional: contexto que se lee debajo de la pregunta"
                     value={q.h || ''} onChange={(e) => onCambiar({ h: e.target.value })} />
