@@ -157,3 +157,6 @@
   - En Revisar › Agendas, el chip de esos estados muestra en un globito el motivo, quién lo escribió, cuándo y (si se reagendó) la cita nueva; hay además una columna «Motivo» con el texto, que también sale en la exportación.
   - Lo marcado antes del 02/11 muestra «Sin motivo registrado»; las reagendas automáticas muestran la nota del sistema.
   - Se borra la función `registrar_de_persona`, que estaba repetida en `motivo_estado_service.py`.
+- **3 de Noviembre de 2026 (Marketing: se abre la ficha del lead desde las listas de cifras)** *([ficha_de_fila.py](../../app/services/ficha_de_fila.py), [useFichaDeFila.jsx](../../frontend/src/pages/admin/marketing/anuncios/useFichaDeFila.jsx), [__init__.py](../../app/api/ficha/__init__.py))*:
+  - Tocar una fila de las listas de Setting, Workshop y Otras (agendas, cobros, entradas por palabra clave, Resumen de Workshop) abre la ficha del lead encima de la lista, solo para leer; Escape o cerrar vuelven a la lista.
+  - El director de marketing entra a la ficha solo con lectura (el servidor rechaza cualquier escritura) y abrir un cliente sin agenda no le crea una.
