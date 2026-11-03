@@ -163,3 +163,7 @@
 - **3 de Noviembre de 2026 (Pruebas: se arreglan las desactualizadas de la ficha, Marketing y Workshop)**:
   - 46 pruebas del frontend de la ficha, 17 de Marketing, 8 de Workshop y 23 del servidor (ficha, triage, motivos y contrato) vuelven a pasar; ninguna reveló un bug de la app. Quedan en verde 622 de vitest y 434 de pytest en esas carpetas.
   - La regla de pendientes del flujo de trabajo deja de mandar a `pendientes_santi.md`: lo resoluble se resuelve y lo abierto va a Leadership.
+- **3 de Noviembre de 2026 (Reasignar un lead le pasa también sus ventas)** *([ficha_acciones_service.py](../../app/services/ficha_acciones_service.py), [sale_service.py](../../app/services/sale_service.py), [ADR-W081](../DECISIONS.md))*:
+  - Al reasignar el closer desde la ficha, las ventas activas del lead que eran del closer anterior pasan al nuevo: le aparecen en «Mis ventas», en su deuda y en sus clientes. Los pagos siguen con quien los cobró.
+  - La nota de la bitácora del lead dice qué ventas pasaron.
+  - Se pasaron a mano a Jean Carlo las ventas de David Hernandez (era de Mario) y José Manuel Oliva (era de Gabriel), que él ya se había reasignado.
