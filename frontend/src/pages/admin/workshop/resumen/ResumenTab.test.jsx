@@ -89,7 +89,7 @@ describe('Workshop › Resumen', () => {
         const kpis = screen.getByRole('region', { name: 'Indicadores principales' });
         expect(kpis.getAttribute('aria-busy')).toBe('true');
         // Los rótulos y los nombres de las etapas no dependen de los datos: se ven ya.
-        expect(within(kpis).getByText('Cash collected')).toBeInTheDocument();
+        expect(within(kpis).getByText('Cash total')).toBeInTheDocument();
         expect(screen.getByRole('status', { name: 'Cargando la salud del embudo…' })).toHaveTextContent('Close rate');
         expect(screen.getByRole('status', { name: 'Cargando la prioridad…' })).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /Editar metas/ })).toBeDisabled();
@@ -103,14 +103,14 @@ describe('Workshop › Resumen', () => {
         expect(within(kpis).getByText('$600')).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /Todos los talleres/ })).toBeInTheDocument();
         expect(screen.getByRole('status', { name: 'Cargando la salud del embudo…' })).toBeInTheDocument();
-        expect(screen.getByRole('status', { name: 'Cargando el Clarity score…' })).toBeInTheDocument();
+        expect(screen.getByRole('status', { name: 'Cargando el plan de mejora…' })).toBeInTheDocument();
     });
 
     it('con las metas pero sin el plan, solo el Clarity score espera', () => {
         montar('/admin/workshops', { actions: null });
         expect(screen.getByRole('table', { name: 'Salud del embudo' })).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /Simular mejora/ })).toBeInTheDocument();
-        expect(screen.getByRole('status', { name: 'Cargando el Clarity score…' })).toBeInTheDocument();
+        expect(screen.getByRole('status', { name: 'Cargando el plan de mejora…' })).toBeInTheDocument();
         expect(screen.queryByRole('status', { name: 'Cargando la prioridad…' })).toBeNull();
     });
 

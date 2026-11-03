@@ -165,7 +165,8 @@ def test_cualquier_closer_y_la_direccion_la_agregan(client, db, equipo, agenda, 
     assert agregar(client, auth_headers, equipo['director'], appt).status_code == 201
 
 
-@pytest.mark.parametrize('rol', ['setter', 'triage'])
+# Triage trabaja el lead como un closer (ADR-W054): reporta, declara ventas y corrige datos; esto cuida al setter.
+@pytest.mark.parametrize('rol', ['setter'])
 def test_setter_y_triage_no_agregan_objeciones(client, db, equipo, agenda, auth_headers, rol):
     appt = agenda(10, closer_result='Show up', offer_presented=True)
 

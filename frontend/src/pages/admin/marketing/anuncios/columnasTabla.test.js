@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-    ANCHO, ANCHO_MAX, ANCHO_MIN, COLUMNAS_TABLA, OCULTAS_INICIALES, ORDEN_EMBUDO, PRESETS, acotar, anchoDe,
+    ANCHO, ANCHO_MAX, ANCHO_MIN, COLUMNAS_TABLA, GRUPOS, OCULTAS_INICIALES, ORDEN_EMBUDO, PRESETS, acotar, anchoDe,
     columnasDelCsv, columnasEnOrden, mismaVista, moverColumna, piezasDeLaTabla, soltarColumna,
 } from './columnasTabla';
 import { COLUMNAS } from './metricas';
@@ -34,7 +34,8 @@ describe('piezasDeLaTabla', () => {
     });
 
     it('un grupo sin columnas visibles no aparece', () => {
-        const piezas = piezasDeLaTabla(['agendas', 'ventas', 'cobrado', 'roas'], ['resultados']);
+        // Se ocultan todas las columnas del grupo, las que tenga hoy (el grupo creció con «Compradores» y «Por venta»).
+        const piezas = piezasDeLaTabla(GRUPOS.find((g) => g.key === 'resultados').cols, ['resultados']);
         expect(claves(piezas)).not.toContain('grupo:resultados');
     });
 });
@@ -65,10 +66,10 @@ describe('columnasDelCsv', () => {
 });
 
 describe('orden, vistas y % de calificación', () => {
-    it('el % de calificación es una columna más, después del costo por calificado, oculta de entrada', () => {
+    it('el % de calificación es una columna más, después del costo por calificado; ella y «Compradores» arrancan ocultas', () => {
         const claves = COLUMNAS_TABLA.map((c) => c.key);
         expect(claves.indexOf('pct_calificados')).toBe(claves.indexOf('cpl_calificado') + 1);
-        expect(OCULTAS_INICIALES).toEqual(['pct_calificados']);
+        expect(OCULTAS_INICIALES).toEqual(['pct_calificados', 'clientes_nuevos']);
     });
 
     it('el orden elegido manda y las columnas que no están en la lista van al final', () => {
@@ -101,7 +102,10 @@ describe('orden, vistas y % de calificación', () => {
     it('la vista «Embudo y costos» sigue el orden pedido por Kerwin, sin entrantes ni descalificados', () => {
         const embudo = PRESETS.find((p) => p.id === 'embudo');
         const visibles = piezasDeLaTabla(embudo.ocultas, embudo.juntados, embudo.orden).map((p) => p.key);
-        expect(visibles).toEqual(ORDEN_EMBUDO);
+        // Primero van las del orden pedido; las columnas que se sumaron después (Compradores, CAC, Por venta) quedan al final.
+        expect(visibles.slice(0, ORDEN_EMBUDO.length)).toEqual(ORDEN_EMBUDO);
+        expect(visibles).not.toContain('entrantes');
+        expect(visibles).not.toContain('descalificados');
         expect(ORDEN_EMBUDO.slice(0, 4)).toEqual(['calificados', 'en_conversacion', 'sin_respuesta', 'gasto']);
     });
 

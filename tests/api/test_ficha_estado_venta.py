@@ -59,7 +59,8 @@ def test_la_direccion_comercial_lo_consulta(client, db, lead, equipo, auth_heade
     assert r.get_json()['program_price'] == 1000
 
 
-@pytest.mark.parametrize('rol', ['setter', 'triage'])
+# Triage declara ventas como un closer (ADR-W054); solo el setter queda afuera.
+@pytest.mark.parametrize('rol', ['setter'])
 def test_quien_no_declara_ventas_no_lo_consulta(client, db, lead, equipo, auth_headers, rol):
     assert leer(client, auth_headers, equipo[rol], lead, 'RR').status_code == 403
 

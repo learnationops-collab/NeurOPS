@@ -86,7 +86,8 @@ def test_un_cliente_que_no_existe_da_404(client, db, equipo, auth_headers):
     assert pedir(client, auth_headers, equipo['closer'], 999999).status_code == 404
 
 
-@pytest.mark.parametrize('rol', ['setter', 'triage'])
+# Triage trabaja el lead como un closer (ADR-W054): reporta, declara ventas y corrige datos; esto cuida al setter.
+@pytest.mark.parametrize('rol', ['setter'])
 def test_setter_y_triage_no_venden(client, db, cliente, equipo, auth_headers, rol):
     r = pedir(client, auth_headers, equipo[rol], cliente.id)
 
@@ -154,7 +155,8 @@ def test_sin_nombre_o_sin_email_valido_no_crea_nada(client, db, equipo, auth_hea
     assert (Client.query.count(), Appointment.query.count()) == (0, 0)
 
 
-@pytest.mark.parametrize('rol', ['setter', 'triage'])
+# Triage trabaja el lead como un closer (ADR-W054): reporta, declara ventas y corrige datos; esto cuida al setter.
+@pytest.mark.parametrize('rol', ['setter'])
 def test_setter_y_triage_no_registran_compradores(client, db, equipo, auth_headers, rol):
     r = nuevo(client, auth_headers, equipo[rol], nombre='Bruno', email='bruno@mail.com')
 

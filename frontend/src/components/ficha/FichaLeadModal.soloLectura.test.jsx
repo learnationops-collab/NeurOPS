@@ -35,7 +35,7 @@ describe('ficha de solo lectura', () => {
     it('todos los permisos en false menos la nota, que queda como la dio el servidor', () => {
         expect(enSoloLectura(fichaPrecall).permisos).toEqual({
             confirmar: false, reportar: false, cobrar: false, reasignar: false, comentar: true,
-            eliminar: false, editar_datos: false,
+            eliminar: false, eliminar_lead: false, editar_datos: false, triar: false, pasar_triage: false,
         });
         // Sin permisos del servidor, la ficha se abriría editable: acá quedan todos en false.
         expect(leerEstado(enSoloLectura(fichaIncompleta)).puedeEditar).toBe(false);

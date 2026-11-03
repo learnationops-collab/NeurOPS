@@ -356,7 +356,8 @@ def test_la_direccion_comercial_reporta_por_el_arbol(client, db, lead, equipo, a
     assert lead.closer_result == 'No Show'
 
 
-@pytest.mark.parametrize('rol', ['setter', 'triage'])
+# Triage trabaja el lead como un closer (ADR-W054): reporta, declara ventas y corrige datos; esto cuida al setter.
+@pytest.mark.parametrize('rol', ['setter'])
 def test_setter_y_triage_no_reportan_la_llamada(client, db, lead, equipo, auth_headers, rol):
     r = reportar(client, auth_headers, equipo[rol], lead, 'no_asistio_seguimiento')
 

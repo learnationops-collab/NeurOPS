@@ -137,11 +137,20 @@ def test_la_direccion_comercial_reporta_la_llamada(client, db, lead, equipo, aut
 
 
 def test_reportar_un_no_show_deja_la_agenda_resuelta(client, db, lead, equipo, auth_headers):
-    r = client.post(url(lead, '/resultado'), json={'resultado': 'no_show'},
+    # El No Show pide su motivo (ADR-W066): sin él no se reporta.
+    r = client.post(url(lead, '/resultado'), json={'resultado': 'no_show', 'nota': 'No contestó el mensaje'},
                     headers=auth_headers(equipo['closer']))
 
     assert r.status_code == 200
     assert lead.closer_result == 'No Show'
+
+
+def test_un_no_show_sin_motivo_no_se_reporta(client, db, lead, equipo, auth_headers):
+    r = client.post(url(lead, '/resultado'), json={'resultado': 'no_show'},
+                    headers=auth_headers(equipo['closer']))
+
+    assert r.status_code == 400
+    assert lead.closer_result == 'Pendiente'
 
 
 def test_un_resultado_inventado_no_pasa(client, db, lead, equipo, auth_headers):
@@ -152,12 +161,12 @@ def test_un_resultado_inventado_no_pasa(client, db, lead, equipo, auth_headers):
     assert lead.closer_result == 'Pendiente'
 
 
-def test_triage_no_reporta_llamadas(client, db, lead, equipo, auth_headers):
+def test_triage_reporta_llamadas_como_un_closer(client, db, lead, equipo, auth_headers):
+    """ADR-W054: el triage reporta con los permisos del closer."""
     r = client.post(url(lead, '/resultado'), json={'resultado': 'asistio'},
                     headers=auth_headers(equipo['triage']))
 
-    assert r.status_code == 403
-    assert lead.closer_result == 'Pendiente'
+    assert r.status_code == 200
 
 
 # --- Venta ------------------------------------------------------------------------------------
@@ -269,7 +278,8 @@ def test_descalificar_sin_motivo_no_pasa(client, db, lead, equipo, auth_headers)
     assert lead.closer_result == 'Pendiente' and lead.closer_processed is False
 
 
-@pytest.mark.parametrize('rol', ['setter', 'triage'])
+# Triage trabaja el lead como un closer (ADR-W054): reporta, declara ventas y corrige datos; esto cuida al setter.
+@pytest.mark.parametrize('rol', ['setter'])
 def test_quien_no_reporta_no_descalifica(client, db, lead, equipo, auth_headers, rol):
     r = client.post(url(lead, '/descalificar'), json={'motivo': 'no es médico'},
                     headers=auth_headers(equipo[rol]))
@@ -542,7 +552,7 @@ def test_se_corrige_el_post_call_de_una_agenda_vieja_del_mismo_cliente(client, d
     db.session.commit()
 
     r = client.patch(f'/api/ficha/{vieja.id}/estado',
-                     json={'campo': 'post_call', 'valor': 'no_show'},
+                     json={'campo': 'post_call', 'valor': 'no_show', 'motivo': 'Nunca se conectó a la llamada'},
                      headers=auth_headers(equipo['director']))
 
     assert r.status_code == 200, r.get_json()
@@ -807,7 +817,8 @@ def test_cambiar_el_closer_pide_el_permiso_de_reasignar(client, db, lead, equipo
         assert r.status_code == 200, r.get_json()
 
 
-@pytest.mark.parametrize('rol', ['setter', 'triage'])
+# Triage trabaja el lead como un closer (ADR-W054): reporta, declara ventas y corrige datos; esto cuida al setter.
+@pytest.mark.parametrize('rol', ['setter'])
 def test_quien_no_reporta_no_corrige_una_agenda(client, db, lead, equipo, auth_headers, rol):
     antes = lead.start_time
 
@@ -957,7 +968,8 @@ def test_un_tipo_que_no_es_texto_se_rechaza_con_un_motivo_en_castellano(client, 
     assert r.get_json()['message'] == 'Elegí el tipo de seguimiento de la lista.'
 
 
-@pytest.mark.parametrize('rol', ['setter', 'triage'])
+# Triage trabaja el lead como un closer (ADR-W054): reporta, declara ventas y corrige datos; esto cuida al setter.
+@pytest.mark.parametrize('rol', ['setter'])
 def test_quien_no_reporta_no_agenda_seguimientos(client, db, lead, equipo, auth_headers, rol):
     r = client.put(seguimiento(lead), json={'fecha': '2026-10-06', 'tipo': 'tomada'},
                    headers=auth_headers(equipo[rol]))
@@ -1104,7 +1116,8 @@ def test_un_pedido_que_no_cambia_nada_no_deja_rastro(client, db, lead, equipo, a
     assert LeadEventLog.query.filter_by(action_type='seguimiento_corregido').count() == 0
 
 
-@pytest.mark.parametrize('rol', ['setter', 'triage'])
+# Triage trabaja el lead como un closer (ADR-W054): reporta, declara ventas y corrige datos; esto cuida al setter.
+@pytest.mark.parametrize('rol', ['setter'])
 def test_quien_no_reporta_no_corrige_seguimientos(client, db, lead, equipo, auth_headers, rol):
     vieja = _con_seguimiento(db, lead, equipo)
 
@@ -1434,8 +1447,8 @@ def test_las_respuestas_crudas_del_arbol_quedan_en_la_bitacora(client, db, lead,
     """El arbol recoge mas datos de los que tienen columna: simplificar es dejar de mostrar, no de
     guardar."""
     r = client.post(url(lead, '/resultado'),
-                    json={'resultado': 'no_show', 'respuestas': {'motivo': 'no contesto',
-                                                                 'angulo': 'urgencia'}},
+                    json={'resultado': 'no_show', 'nota': 'No contestó el mensaje',
+                          'respuestas': {'motivo': 'no contesto', 'angulo': 'urgencia'}},
                     headers=auth_headers(equipo['closer']))
 
     assert r.status_code == 200

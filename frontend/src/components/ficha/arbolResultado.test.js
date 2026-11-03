@@ -4,6 +4,7 @@ import {
   puedeAvanzar, completo, arrancado, hitos, resumen, esVenta, construirPayload,
   notaFinal, fechaHoraAIso, anterior, preguntaAnterior, elegida, RAICES, OBJECION_MINIMA,
 } from './arbolResultado';
+import { MINIMO_MOTIVO } from '../../utils/motivoEstado';
 
 // La rama de la venta tiene su propio archivo: `arbolResultado.venta.test.js`.
 
@@ -74,7 +75,8 @@ describe('camino: asistió, oferta presentada, no cerró', () => {
   it('el hito de cierre queda en ámbar con «No cerró»', () => {
     const h = hitos(recorrer(seguimiento));
     expect(h[2]).toMatchObject({ sub: 'No cerró', estado: 'alerta' });
-    expect(h[3].estado).toBe('pendiente');
+    // Sin venta no hay deuda ni upsell: el cuarto hito es el siguiente paso elegido.
+    expect(h[3]).toMatchObject({ clave: 'siguiente', estado: 'hecho' });
     expect(esVenta(recorrer(seguimiento))).toBe(false);
   });
 
@@ -128,11 +130,17 @@ describe('camino: asistió, oferta presentada, no cerró', () => {
     let r = recorrer(seguimiento);
     r = volverA(r, 'oferta');
     r = responder(r, 'oferta', { offer_presented: false });
+    // Sin oferta se pide su propio motivo, y es el que viaja para la base de no cerradas.
+    expect(preguntaActual(r).clave).toBe('motivo_sin_oferta');
+    r = responder(r, 'motivo_sin_oferta', { motivo_sin_oferta: 'No se presentó la oferta, faltó el decisor' });
     r = responder(r, 'nopres_next', { nopres_next: 'seguimiento' });
     r = responder(r, 'seguimiento', {});
     r = responder(r, 'refs_ask', { refs_ask: 'no' });
     expect(completo(r)).toBe(true);
-    expect(construirPayload(r, {}).datos).toMatchObject({ cierre: null, objecion: null });
+    expect(construirPayload(r, {}).datos).toMatchObject({
+      cierre: null, objecion: null,
+      motivo_no_cierre: { texto: 'No se presentó la oferta, faltó el decisor', oferta_presentada: false },
+    });
   });
 
   it('descartar exige el motivo y manda Lead Perdido', () => {
@@ -162,6 +170,10 @@ describe('camino: asistió sin presentación de oferta', () => {
     r = responder(r, 'res', { res: 'asistio' });
     r = responder(r, 'decisor', { with_decision_maker: false });
     r = responder(r, 'oferta', { offer_presented: false });
+    // Desde el 23/10/2026 «sin oferta» también dice por qué no se cerró, antes del siguiente paso.
+    expect(preguntaActual(r).clave).toBe('motivo_sin_oferta');
+    expect(faltantes(r)).toEqual(['Motivo (mínimo 10 caracteres, llevás 0)']);
+    r = responder(r, 'motivo_sin_oferta', { motivo_sin_oferta: 'Faltó el decisor y no se presentó la oferta' });
     expect(preguntaActual(r).clave).toBe('nopres_next');
     expect(preguntaActual(r).opciones.map((o) => o.valor)).toEqual(['segunda', 'seguimiento', 'descartar']);
     r = responder(r, 'nopres_next', { nopres_next: 'segunda' });
@@ -181,6 +193,7 @@ describe('camino: asistió sin presentación de oferta', () => {
   it('«Seguimiento» sin oferta usa el subestado de la 2ª llamada pendiente', () => {
     const r = recorrer({
       res: { res: 'asistio' }, decisor: { with_decision_maker: false }, oferta: { offer_presented: false },
+      motivo_sin_oferta: { motivo_sin_oferta: 'Faltó el decisor y no se presentó la oferta' },
       nopres_next: { nopres_next: 'seguimiento' }, seguimiento: { fecha_seguimiento: '2026-10-01', notes: 'le escribo' },
       refs_ask: { refs_ask: 'no' },
     });
@@ -193,19 +206,33 @@ describe('camino: asistió sin presentación de oferta', () => {
 describe('camino: no asistió', () => {
   const guion = {
     res: { res: 'no_asistio' },
-    noshow_motivo: { noshow_motivo: 'No contestó el mensaje' },
-    noshow_detalle: { notes: 'le escribí 3 veces, visto sin respuesta' },
+    noshow_detalle: { motivo_noshow: 'No contestó el mensaje y no volvió a escribir' },
     noshow_next: { noshow_next: 'seguimiento' },
     seguimiento: { fecha_seguimiento: '2026-09-27', notes: 'recupero con el caso de Ana' },
   };
 
-  it('pide los 6 motivos y NO pregunta por referidos (no hubo contacto)', () => {
+  it('pide el motivo en un solo cuadro de texto y NO pregunta por referidos (no hubo contacto)', () => {
     const claves = clavesRecorridas(guion);
-    expect(claves).toEqual(['res', 'noshow_motivo', 'noshow_detalle', 'noshow_next', 'seguimiento']);
+    expect(claves).toEqual(['res', 'noshow_detalle', 'noshow_next', 'seguimiento']);
     expect(claves).not.toContain('refs_ask');
+    const r = responder(estadoInicial(), 'res', { res: 'no_asistio' });
+    const q = preguntaActual(r);
+    expect(q).toMatchObject({ clave: 'noshow_detalle', tipo: 'formulario', enunciado: '¿Por qué no asistió?' });
+    expect(q.opciones || []).toHaveLength(0);
+    expect(q.campos).toEqual([expect.objectContaining({
+      campo: 'motivo_noshow', tipo: 'parrafo', requerido: true, minimoTexto: MINIMO_MOTIVO,
+    })]);
+  });
+
+  // Pedido de Kerwin (03/11/2026): sin opciones fijas, el closer escribe el motivo y no se puede saltear.
+  it('no deja seguir con el motivo vacío o de menos de 10 caracteres', () => {
     let r = responder(estadoInicial(), 'res', { res: 'no_asistio' });
-    expect(preguntaActual(r).opciones).toHaveLength(6);
-    expect(preguntaActual(r).opciones[0].label).toBe('No contestó el mensaje');
+    expect(faltantes(r)).toEqual(['Por qué no asistió (mínimo 10 caracteres, llevás 0)']);
+    expect(puedeAvanzar(r)).toBe(false);
+    r = actualizar(r, { motivo_noshow: '  no vino  ' });
+    expect(faltantes(r)).toEqual(['Por qué no asistió (mínimo 10 caracteres, llevás 7)']);
+    r = actualizar(r, { motivo_noshow: 'No vino ni avisó' });
+    expect(puedeAvanzar(r)).toBe(true);
   });
 
   it('el hito de resultado queda en ámbar', () => {
@@ -216,9 +243,20 @@ describe('camino: no asistió', () => {
   it('el deck queda como seguimiento de recuperación con el motivo en el subestado', () => {
     const { datos } = construirPayload(recorrer(guion), {});
     expect(datos.deck).toMatchObject({
-      result: 'No Show', seguimiento_tipo: 'no_tomada', seguimiento_sub: 'No show: No contestó el mensaje',
+      result: 'No Show', seguimiento_tipo: 'no_tomada',
+      seguimiento_sub: 'No show: No contestó el mensaje y no volvió a escribir',
     });
-    expect(datos.motivo).toBe('No contestó el mensaje');
+    expect(datos.motivo).toBe('No contestó el mensaje y no volvió a escribir');
+    expect(datos.motivo_estado).toBe('No contestó el mensaje y no volvió a escribir');
+  });
+
+  // `seguimiento_sub` es String(255) en la base: un motivo largo se recorta en el subestado y viaja entero aparte.
+  it('un motivo larguísimo se recorta en el subestado y viaja entero aparte', () => {
+    const largo = `${'No contestó nunca. '.repeat(30)}fin`;
+    const { datos } = construirPayload(recorrer({ ...guion, noshow_detalle: { motivo_noshow: largo } }), {});
+    expect(datos.deck.seguimiento_sub.length).toBeLessThanOrEqual(255);
+    expect(datos.deck.seguimiento_sub.endsWith('...')).toBe(true);
+    expect(datos.motivo).toBe(largo.trim());
   });
 
   it('descartar por no show manda Lead Perdido', () => {
@@ -227,40 +265,42 @@ describe('camino: no asistió', () => {
     });
     // Como en el mazo: el motivo elegido va delante del comentario libre.
     expect(construirPayload(r, {}).datos.process).toMatchObject({
-      status: 'Lead Perdido', note: 'No contestó el mensaje. no show reiterado',
+      status: 'Lead Perdido', note: 'No contestó el mensaje y no volvió a escribir. no show reiterado',
     });
   });
 });
 
 describe('camino: canceló', () => {
-  it('ofrece los 4 motivos y los 3 siguientes pasos', () => {
+  it('pide el motivo en un cuadro de texto y ofrece los 3 siguientes pasos', () => {
     let r = responder(estadoInicial(), 'res', { res: 'cancelo' });
-    expect(preguntaActual(r).opciones.map((o) => o.label)).toEqual([
-      'Sin tiempo / imprevisto', 'Ya no le interesa', 'Problema económico', 'No dio motivo']);
-    r = responder(r, 'cancel_motivo', { cancel_motivo: 'Problema económico' });
-    r = responder(r, 'cancel_detalle', { notes: 'dijo que no le entra ahora' });
+    expect(preguntaActual(r)).toMatchObject({ clave: 'cancel_detalle', tipo: 'formulario', enunciado: '¿Por qué se canceló?' });
+    expect(preguntaActual(r).campos).toEqual([expect.objectContaining({
+      campo: 'motivo_cancelo', tipo: 'parrafo', requerido: true, minimoTexto: MINIMO_MOTIVO,
+    })]);
+    expect(faltantes(r)).toEqual(['Por qué se canceló (mínimo 10 caracteres, llevás 0)']);
+    r = responder(r, 'cancel_detalle', { motivo_cancelo: 'Problema económico: no le entra ahora' });
     expect(preguntaActual(r).opciones.map((o) => o.valor)).toEqual(['reagendar', 'seguimiento', 'no_lead']);
   });
 
   it('«reagendar ahora» entra a la rama de reagenda con fecha y hora obligatorias', () => {
     let r = recorrer({
-      res: { res: 'cancelo' }, cancel_motivo: { cancel_motivo: 'Sin tiempo / imprevisto' },
-      cancel_detalle: { notes: 'tuvo guardia' }, cancel_next: { cancel_next: 'reagendar' },
-      reag_motivo: { reag_motivo: 'Pidió otro horario' }, reag_dejo_fecha: { reag_dejo_fecha: true },
+      res: { res: 'cancelo' }, cancel_detalle: { motivo_cancelo: 'Sin tiempo: tuvo guardia en el hospital' },
+      cancel_next: { cancel_next: 'reagendar' }, reag_dejo_fecha: { reag_dejo_fecha: true },
       reag_fecha: { nueva_fecha_agenda: '2026-10-05', nueva_hora_agenda: '20:00' },
     });
     expect(completo(r)).toBe(true);
     const { datos } = construirPayload(r, {});
     expect(datos.reagenda).toMatchObject({ modo: 'reagenda' });
     expect(datos.deck).toMatchObject({ confirm_status: 'por_confirmar', result: 'Pendiente' });
+    // Ya dio su motivo al cancelar: «Reagendar ahora» no lo vuelve a pedir y viaja el de la cancelación.
+    expect(datos.motivo_estado).toBe('Sin tiempo: tuvo guardia en el hospital');
 
     // sin la hora no se puede confirmar
     r = estadoInicial();
     r = responder(r, 'res', { res: 'cancelo' });
-    r = responder(r, 'cancel_motivo', { cancel_motivo: 'No dio motivo' });
-    r = responder(r, 'cancel_detalle', {});
+    r = responder(r, 'cancel_detalle', { motivo_cancelo: 'No dio ningún motivo concreto' });
     r = responder(r, 'cancel_next', { cancel_next: 'reagendar' });
-    r = responder(r, 'reag_motivo', { reag_motivo: 'No dio motivo' });
+    expect(preguntaActual(r).clave).toBe('reag_dejo_fecha');
     r = responder(r, 'reag_dejo_fecha', { reag_dejo_fecha: true });
     r = actualizar(r, { nueva_fecha_agenda: '2026-10-05' });
     expect(faltantes(r)).toEqual(['Completá Nueva hora']);
@@ -268,8 +308,8 @@ describe('camino: canceló', () => {
 
   it('«No Lead» manda el status No Lead', () => {
     const r = recorrer({
-      res: { res: 'cancelo' }, cancel_motivo: { cancel_motivo: 'Ya no le interesa' },
-      cancel_detalle: {}, cancel_next: { cancel_next: 'no_lead' },
+      res: { res: 'cancelo' }, cancel_detalle: { motivo_cancelo: 'Ya no le interesa el examen' },
+      cancel_next: { cancel_next: 'no_lead' },
       descarte: { motivo_descarte: 'no califica, no rinde examen' },
     });
     expect(construirPayload(r, {}).datos.process).toMatchObject({ status: 'No Lead' });
@@ -279,7 +319,7 @@ describe('camino: canceló', () => {
 describe('camino: reagenda', () => {
   it('sin fecha nueva no es reagenda: va a seguimiento', () => {
     const r = recorrer({
-      res: { res: 'reagenda' }, reag_motivo: { reag_motivo: 'Imprevisto del lead' },
+      res: { res: 'reagenda' }, reag_detalle: { motivo_reagenda: 'Imprevisto del lead: le salió una guardia' },
       reag_dejo_fecha: { reag_dejo_fecha: false },
       seguimiento: { fecha_seguimiento: '2026-09-29', notes: 'le pido fecha' },
     });
@@ -447,6 +487,7 @@ describe('referidos', () => {
     r = responder(r, 'res', { res: 'asistio' });
     r = responder(r, 'decisor', { with_decision_maker: true });
     r = responder(r, 'oferta', { offer_presented: false });
+    r = responder(r, 'motivo_sin_oferta', { motivo_sin_oferta: 'Faltó el decisor y no se presentó la oferta' });
     r = responder(r, 'nopres_next', { nopres_next: 'seguimiento' });
     r = responder(r, 'seguimiento', { fecha_seguimiento: '2026-10-01' });
     // Una pregunta por pantalla, como en el wizard: primero si los pidió, después quiénes.
@@ -463,6 +504,7 @@ describe('referidos', () => {
   it('si no dejó referidos no se pide la lista', () => {
     const r = recorrer({
       res: { res: 'asistio' }, decisor: { with_decision_maker: true }, oferta: { offer_presented: false },
+      motivo_sin_oferta: { motivo_sin_oferta: 'Faltó el decisor y no se presentó la oferta' },
       nopres_next: { nopres_next: 'seguimiento' }, seguimiento: { fecha_seguimiento: '2026-10-01' },
       refs_ask: { refs_ask: 'no' },
     });
@@ -479,7 +521,7 @@ describe('referidos', () => {
 describe('reiniciar, volver y limpieza de ramas', () => {
   it('reiniciar vuelve al estado inicial', () => {
     const r = recorrer({
-      res: { res: 'reagenda' }, reag_motivo: { reag_motivo: 'No dio motivo' },
+      res: { res: 'reagenda' }, reag_detalle: { motivo_reagenda: 'No dio ningún motivo concreto' },
       reag_dejo_fecha: { reag_dejo_fecha: false }, seguimiento: { fecha_seguimiento: '2026-10-01' },
     });
     expect(completo(r)).toBe(true);
@@ -500,31 +542,43 @@ describe('reiniciar, volver y limpieza de ramas', () => {
     expect(r.with_decision_maker).toBeUndefined();
     expect(r.offer_presented).toBeUndefined();
     expect(r.cierre).toBeUndefined();
-    expect(preguntaActual(r).clave).toBe('cancel_motivo');
-    expect(hitos(r)[2].sub).toBe('Pendiente');
+    expect(preguntaActual(r).clave).toBe('cancel_detalle');
+    // Cancelar no tiene cierre: el tercer hito pasa a ser el siguiente paso, todavía sin elegir.
+    expect(hitos(r)[2]).toMatchObject({ clave: 'siguiente', sub: 'Por elegir', estado: 'pendiente' });
   });
 
-  it('contestar un motivo no borra el motivo de otra rama que ya estaba puesto', () => {
+  it('contestar el siguiente paso no borra el motivo escrito', () => {
     let r = responder(estadoInicial(), 'res', { res: 'no_asistio' });
-    r = responder(r, 'noshow_motivo', { noshow_motivo: 'Se arrepintió' });
-    r = responder(r, 'noshow_detalle', { notes: 'avisó por WhatsApp' });
-    expect(r.noshow_motivo).toBe('Se arrepintió');
+    r = responder(r, 'noshow_detalle', { motivo_noshow: 'Se arrepintió y avisó por WhatsApp' });
+    r = responder(r, 'noshow_next', { noshow_next: 'seguimiento' });
+    expect(r.motivo_noshow).toBe('Se arrepintió y avisó por WhatsApp');
   });
 
-  it('volverA desmarca el paso y lo vuelve a pedir', () => {
+  it('volverA vuelve a pedir el paso y deja lo que se había escrito', () => {
     let r = responder(estadoInicial(), 'res', { res: 'no_asistio' });
-    r = responder(r, 'noshow_motivo', { noshow_motivo: 'Otro motivo' });
+    r = responder(r, 'noshow_detalle', { motivo_noshow: 'No contestó nunca más' });
+    expect(preguntaActual(r).clave).toBe('noshow_next');
+    r = volverA(r, 'noshow_detalle');
     expect(preguntaActual(r).clave).toBe('noshow_detalle');
-    r = volverA(r, 'noshow_motivo');
-    expect(preguntaActual(r).clave).toBe('noshow_motivo');
-    expect(r.noshow_motivo).toBeUndefined();
+    expect(r.motivo_noshow).toBe('No contestó nunca más');
+  });
+
+  // Cada rama guarda su motivo en su propio campo: el de una rama que se abandonó no viaja en la nueva.
+  it('el motivo de una rama abandonada no viaja en la rama nueva', () => {
+    let r = responder(estadoInicial(), 'res', { res: 'no_asistio' });
+    r = responder(r, 'noshow_detalle', { motivo_noshow: 'No contestó nunca más' });
+    r = responder(r, 'res', { res: 'cancelo' });
+    r = responder(r, 'cancel_detalle', { motivo_cancelo: 'Canceló por plata' });
+    expect(construirPayload(r, {}).datos).toMatchObject({
+      motivo: 'Canceló por plata', motivo_estado: 'Canceló por plata',
+    });
   });
 
   describe('«Corregir» desde la revisión', () => {
     // Es el «Guardar y volver» del wizard de venta: corregir un dato no obliga a rehacer todo lo
     // que viene después, salvo que la corrección cambie de rama.
     const guion = {
-      res: { res: 'reagenda' }, reag_motivo: { reag_motivo: 'Imprevisto del lead' },
+      res: { res: 'reagenda' }, reag_detalle: { motivo_reagenda: 'Imprevisto del lead' },
       reag_dejo_fecha: { reag_dejo_fecha: false },
       seguimiento: { fecha_seguimiento: '2026-09-29', notes: 'le pido fecha' },
     };
@@ -538,11 +592,11 @@ describe('reiniciar, volver y limpieza de ramas', () => {
     });
 
     it('volver a elegir lo mismo en una pregunta de opciones conserva lo que seguía', () => {
-      let r = volverA(recorrer(guion), 'reag_motivo');
-      expect(preguntaActual(r).clave).toBe('reag_motivo');
-      r = responder(r, 'reag_motivo', { reag_motivo: 'Imprevisto del lead' });
+      let r = volverA(recorrer(guion), 'reag_dejo_fecha');
+      expect(preguntaActual(r).clave).toBe('reag_dejo_fecha');
+      r = responder(r, 'reag_dejo_fecha', { reag_dejo_fecha: false });
       expect(completo(r)).toBe(true);
-      expect(r.reag_dejo_fecha).toBe(false);
+      expect(r.fecha_seguimiento).toBe('2026-09-29');
     });
 
     it('elegir otra cosa sí borra la rama vieja y sigue desde ahí', () => {
@@ -555,7 +609,7 @@ describe('reiniciar, volver y limpieza de ramas', () => {
 
   describe('«Anterior»', () => {
     const guion = {
-      res: { res: 'reagenda' }, reag_motivo: { reag_motivo: 'Imprevisto del lead' },
+      res: { res: 'reagenda' }, reag_detalle: { motivo_reagenda: 'Imprevisto del lead' },
       reag_dejo_fecha: { reag_dejo_fecha: false },
       seguimiento: { fecha_seguimiento: '2026-09-29', notes: 'le pido fecha' },
     };
@@ -568,11 +622,12 @@ describe('reiniciar, volver y limpieza de ramas', () => {
 
     it('reabre la pregunta de antes con la opción que se había elegido marcada', () => {
       let r = responder(estadoInicial(), 'res', { res: 'reagenda' });
-      r = responder(r, 'reag_motivo', { reag_motivo: 'Imprevisto del lead' });
-      expect(preguntaAnterior(r).clave).toBe('reag_motivo');
+      r = responder(r, 'reag_detalle', { motivo_reagenda: 'Imprevisto del lead' });
+      r = responder(r, 'reag_dejo_fecha', { reag_dejo_fecha: false });
+      expect(preguntaAnterior(r).clave).toBe('reag_dejo_fecha');
       r = anterior(r);
-      expect(preguntaActual(r).clave).toBe('reag_motivo');
-      expect(elegida(r, 'reag_motivo')).toBe('Imprevisto del lead');
+      expect(preguntaActual(r).clave).toBe('reag_dejo_fecha');
+      expect(elegida(r, 'reag_dejo_fecha')).toBe(false);
     });
 
     it('desde la revisión vuelve a la última pregunta, sin perder lo que se escribió', () => {
@@ -584,10 +639,10 @@ describe('reiniciar, volver y limpieza de ramas', () => {
     it('volver varios pasos y contestar lo mismo lleva de nuevo a la revisión en los mismos pasos', () => {
       let r = recorrer(guion);
       for (let i = 0; i < 3; i += 1) r = anterior(r);
-      expect(preguntaActual(r).clave).toBe('reag_motivo');
+      expect(preguntaActual(r).clave).toBe('reag_detalle');
       for (let i = 0; i < 3; i += 1) r = igual(r);
       expect(completo(r)).toBe(true);
-      expect(r).toMatchObject({ reag_motivo: 'Imprevisto del lead', reag_dejo_fecha: false, fecha_seguimiento: '2026-09-29' });
+      expect(r).toMatchObject({ motivo_reagenda: 'Imprevisto del lead', reag_dejo_fecha: false, fecha_seguimiento: '2026-09-29' });
     });
 
     it('elegir otra cosa al volver sigue por la rama nueva', () => {
@@ -619,14 +674,15 @@ describe('reiniciar, volver y limpieza de ramas', () => {
 describe('resumen de revisión', () => {
   it('lista cada respuesta contestada con su rótulo', () => {
     const r = recorrer({
-      res: { res: 'no_asistio' }, noshow_motivo: { noshow_motivo: 'Confundió la fecha' },
-      noshow_detalle: { notes: 'pensó que era mañana' }, noshow_next: { noshow_next: 'seguimiento' },
+      res: { res: 'no_asistio' }, noshow_detalle: { motivo_noshow: 'Confundió la fecha: pensó que era mañana' },
+      noshow_next: { noshow_next: 'seguimiento' },
       seguimiento: { fecha_seguimiento: '2026-09-28', followup_reminder_enabled: true, notes: 'le reagendo' },
     });
     const filas = resumen(r);
     const etiquetas = filas.map((f) => f.label);
     expect(etiquetas).toContain('¿Qué pasó con esta llamada?');
-    expect(etiquetas).toContain('¿Por qué no se presentó?');
+    expect(etiquetas).toContain('Por qué no asistió');
+    expect(filas.find((f) => f.label === 'Por qué no asistió').valor).toBe('Confundió la fecha: pensó que era mañana');
     expect(etiquetas).toContain('Fecha del próximo contacto');
     expect(filas.find((f) => f.label === '¿Qué pasó con esta llamada?').valor).toBe('No asistió');
     expect(filas.find((f) => f.label === 'Avisarme por WhatsApp').valor).toBe('Sí');

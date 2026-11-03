@@ -87,7 +87,11 @@ describe('Workshop › Planificar', () => {
 
         const check = screen.getByRole('checkbox', { name: 'Marcar hecha: Recordatorio' });
         await userEvent.click(check);
-        expect(screen.getByRole('checkbox', { name: 'Marcar pendiente: Recordatorio' })).toBeChecked();
+        // Tildada pasa de «por hacer» a la lista plegada de hechas, que se ve al abrirla.
+        expect(screen.queryByRole('checkbox', { name: 'Marcar hecha: Recordatorio' })).not.toBeInTheDocument();
+        await userEvent.click(screen.getByRole('button', { name: /Ver la hecha/ }));
+        expect(within(screen.getByRole('list', { name: 'Acciones hechas' }))
+            .getByRole('checkbox', { name: 'Marcar pendiente: Recordatorio' })).toBeChecked();
         expect(api.put).toHaveBeenCalledWith('workshop/actions/8', { status: 'done' });
         resolver({ data: {} });
     });

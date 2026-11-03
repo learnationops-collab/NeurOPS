@@ -7,6 +7,7 @@ vi.mock('../../../../contexts/AuthContext', () => ({ useAuth: () => ({ user: { r
 vi.mock('react-router-dom', async (original) => ({ ...(await original()), useNavigate: () => vi.fn() }));
 
 import TablaAnuncios from './TablaAnuncios';
+import { claveDeUsuario } from '../../../../hooks/useEstadoGuardado';
 
 const fila = (extra) => ({
     clave: 'A', nombre: 'A', archivado: false, meta: { anuncios: 2, activos: 1, nombres: [] },
@@ -115,13 +116,13 @@ describe('TablaAnuncios › usabilidad (23/10/2026)', () => {
         expect(cabeceras().join('|')).not.toMatch(/Leads entrantes/);
         expect(cabeceras().join('|')).toMatch(/% de calificación/);
 
-        await user.click(screen.getByRole('button', { name: 'Subir ROAS' }));
+        await user.click(screen.getByRole('button', { name: 'Subir ROAS Total' }));
         expect(cabeceras().join('|')).toMatch(/ROAS.*[|].*Cobrado/);
 
         await user.type(screen.getByRole('textbox', { name: 'Nombre de la vista a guardar' }), 'Mi vista');
         await user.click(screen.getByRole('button', { name: 'Guardar' }));
         expect(screen.getByRole('menuitemradio', { name: 'Mi vista' })).toHaveAttribute('aria-checked', 'true');
-        expect(JSON.parse(window.localStorage.getItem('mk_rendimiento_columnas')).vistas[0].nombre).toBe('Mi vista');
+        expect(JSON.parse(window.localStorage.getItem(claveDeUsuario('mk_rendimiento_columnas'))).vistas[0].nombre).toBe('Mi vista');
 
         await user.click(screen.getByRole('menuitemradio', { name: 'Todas' }));
         expect(cabeceras().join('|')).toMatch(/Leads entrantes/);

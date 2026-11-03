@@ -20,7 +20,7 @@ def claves(grupos):
 
 def test_las_etapas_de_confirmacion_son_las_de_la_columna():
     assert [e['clave'] for e in voc.ETAPAS_CONFIRMACION] == \
-        ['por_contactar', 'contactado', 'horario', 'videoask', 'testimonio']
+        ['por_contactar', 'contactado', 'confirmado']
 
 
 def test_los_tres_valores_historicos_de_como_viene_siguen_estando(db):
