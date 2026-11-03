@@ -11,7 +11,7 @@ Cada formulario tiene su link público (`slug`); puede haber varios activos a la
 """
 import copy
 import logging
-from datetime import date
+from datetime import date, datetime, timezone
 
 from flask import Blueprint, jsonify, request
 from flask_login import current_user, login_required
@@ -41,7 +41,35 @@ def _listado():
 
 
 def _completo(form):
-    return hf.form_dict(form, con_preguntas=True)
+    data = hf.form_dict(form, con_preguntas=True)
+    data["cierre"] = form.cierre_dict()
+    return data
+
+
+CIERRE_MAX_HORAS = 24 * 30
+
+
+def _aplicar_cierre(form, cierre):
+    """Valida y guarda el cierre que manda el editor: {modo, en, horas}."""
+    if not isinstance(cierre, dict):
+        raise ValueError("El cierre tiene que ser {modo, en, horas}.")
+    modo = cierre.get('modo') or None
+    if modo not in (None, 'fecha', 'visita'):
+        raise ValueError("El cierre es 'fecha', 'visita' o ninguno.")
+    if modo == 'fecha':
+        try:
+            en = datetime.fromisoformat(str(cierre.get('en')).replace('Z', '+00:00'))
+        except ValueError:
+            raise ValueError("La fecha de cierre no es válida.")
+        if en.tzinfo is not None:
+            en = en.astimezone(timezone.utc).replace(tzinfo=None)
+        form.cierre_en = en
+    if modo == 'visita':
+        horas = cierre.get('horas')
+        if isinstance(horas, bool) or not isinstance(horas, int) or not 1 <= horas <= CIERRE_MAX_HORAS:
+            raise ValueError(f"Las horas de la cuenta regresiva van de 1 a {CIERRE_MAX_HORAS}.")
+        form.cierre_horas = horas
+    form.cierre_modo = modo
 
 
 def _nombre_valido(valor):
@@ -134,6 +162,12 @@ def editar_form(form_id):
             return jsonify({"message": str(e)}), 400
         # Lista nueva (no se muta la vieja): db.JSON solo detecta reasignaciones.
         form.preguntas = data['preguntas']
+    if 'cierre' in data:
+        try:
+            _aplicar_cierre(form, data['cierre'])
+        except ValueError as e:
+            db.session.rollback()
+            return jsonify({"message": str(e)}), 400
 
     return _guardar(lambda: (jsonify(_completo(form)), 200), 'guardar el formulario')
 

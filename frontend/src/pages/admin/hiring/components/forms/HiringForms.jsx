@@ -9,6 +9,7 @@ import { Chip } from '../Piezas';
 import { URL_FORMULARIO, resumen } from '../../lib/formularios';
 import EditorPreguntas from './EditorPreguntas';
 import LinkFormulario from './LinkFormulario';
+import CierreFormulario from './CierreFormulario';
 
 // Forms: los formularios de postulación. Cada uno tiene su link público
 // (/vacante/<slug>/) y puede haber varios activos a la vez; los inactivos son
@@ -204,7 +205,7 @@ const Editor = ({ id, modo, onModo, onVolver }) => {
     const cambiar = (cambio) => {
         setForm((prev) => {
             const nuevo = { ...prev, ...cambio };
-            pendiente.current = { nombre: nuevo.nombre, preguntas: nuevo.preguntas };
+            pendiente.current = { nombre: nuevo.nombre, preguntas: nuevo.preguntas, cierre: nuevo.cierre };
             return nuevo;
         });
         setEstado('');
@@ -282,6 +283,7 @@ const Editor = ({ id, modo, onModo, onVolver }) => {
                             {form.activo ? 'En la página' : 'No está en la página'}
                         </p>
                         <LinkFormulario form={form} onCambio={(slug) => setForm((prev) => ({ ...prev, slug }))} />
+                        <CierreFormulario cierre={form.cierre} onCambio={(cierre) => cambiar({ cierre })} />
                     </section>
                     <EditorPreguntas preguntas={form.preguntas || []} originales={form.originales || []} onCambiar={(preguntas) => cambiar({ preguntas })} />
                 </>

@@ -150,3 +150,6 @@
 - **3 de Noviembre de 2026 (Hiring: ficha de la postulación con el diseño nuevo)** *([HiringCandidateModal.jsx](../../frontend/src/pages/admin/hiring/components/HiringCandidateModal.jsx), [PanelDecision.jsx](../../frontend/src/pages/admin/hiring/components/PanelDecision.jsx), [ADR-W077](../DECISIONS.md))*:
   - Contacto en cápsulas con copiar, secciones en dos columnas con color e ícono, puntos por pregunta y panel de decisión fijo con el score y su desglose por sección.
   - «Próxima a revisar» muestra las secciones con más puntos en vez de los criterios viejos.
+- **3 de Noviembre de 2026 (Hiring: el cierre de la búsqueda se configura por formulario)** *([CierreFormulario.jsx](../../frontend/src/pages/admin/hiring/components/forms/CierreFormulario.jsx), [hiring_forms.py](../../app/api/hiring_forms.py), [ADR-W078](../DECISIONS.md))*:
+  - En la cabecera del formulario: «Cierre» con Fecha fija (la misma para todos), Por visita (N horas desde la primera visita) o Sin cuenta. Se guarda solo.
+  - Migración `c4e6a8b0d2f4`: `hiring_forms.cierre_modo`, `cierre_en`, `cierre_horas`. La API pública manda `cierre` y la página de la vacante lo usa para su reloj (va con institute-site).
