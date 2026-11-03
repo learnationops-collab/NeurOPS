@@ -579,3 +579,11 @@
 - **Decisión:** `EditorPreguntas` muestra a la izquierda la lista compacta por bloque (arrastrar para ordenar, interruptor para prender o apagar, marcas de excluyente y condicional) y a la derecha un panel fijo (`PanelPregunta`) con la pregunta elegida: número, bloque, acciones (subir, bajar, duplicar, eliminar), Activa y Obligatoria, el tipo como fichas con ícono, texto, ayuda y opciones. Debajo de 1000 px va en una columna y al elegir baja al panel. Se sacan la nota «Pregunta original» y el chip «Nueva»; las borradas se recuperan en «Eliminadas». El botón de excluyente aparece también en las de varias opciones (el formulario público ya lo respetaba).
 - **Qué se pierde:** abrir varias preguntas a la vez; ahora se edita una por vez.
 - **Consecuencias:** estilos nuevos en `components/forms/editorPreguntas.css`; se borran las clases `tl-pq*` de talent.css.
+
+## ADR-W072: Una pregunta numérica de Hiring puede descartar por rango (ko_min / ko_max)
+
+- **Fecha:** 2026-11-03 · **Subsistema:** Hiring (Talent › Forms) · **Estado:** implementado.
+- **Contexto:** Mario quiere que la expectativa salarial (u otro número) descarte a quien pide fuera del presupuesto, con el límite configurable desde el editor. Hasta ahora solo las opciones podían ser excluyentes; `min`/`max` solo validan (piden corregir el número).
+- **Decisión:** claves `ko_min` y `ko_max` (enteros, opcionales) en las preguntas de tipo número. El editor las muestra como «Descarta si es menor a / mayor a». El formulario público, fuera del rango, va a la pantalla de descarte con la respuesta como `motivo_descarte`. El backend lo reconoce como corte del formulario (`HiringForm.rangos_excluyentes`, `AssistantApplication._fuera_de_rango` en `auto_ko` y `descarte_vigente`) y la cuenta de excluyentes lo incluye. `validar_preguntas` exige enteros sin signo y mínimo ≤ máximo.
+- **Qué se pierde:** el rango no reemplaza al presupuesto de Configuración (`presupuesto_min`/`max`): son datos aparte y hay que cargar los dos si se quiere lo mismo.
+- **Consecuencias:** cambiar el límite recalcula quién queda cortado (como sacarle la marca a una opción). Sin migración.

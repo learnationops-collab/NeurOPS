@@ -82,6 +82,13 @@ class HiringForm(db.Model):
                 for p in preguntas
                 if p.get('on') is not False and any(isinstance(o, dict) and o.get('ko') for o in (p.get('o') or []))
             },
+            # {id de pregunta numérica prendida: (ko_min, ko_max)}: fuera de ese rango corta.
+            'rangos': {
+                p.get('id'): (p.get('ko_min'), p.get('ko_max'))
+                for p in preguntas
+                if p.get('on') is not False and p.get('tipo') == 'numero'
+                and (p.get('ko_min') is not None or p.get('ko_max') is not None)
+            },
         }
         self.__dict__['_cache_derivados'] = (self.preguntas, derivados)
         return derivados
@@ -107,6 +114,11 @@ class HiringForm(db.Model):
         de las preguntas prendidas. Es lo que el formulario público usa para mandar
         a la pantalla de descarte."""
         return self._derivados()['excluyentes']
+
+    def rangos_excluyentes(self):
+        """{id de pregunta numérica: (ko_min, ko_max)}: una respuesta fuera del
+        rango manda a la pantalla de descarte (None = sin ese límite)."""
+        return self._derivados()['rangos']
 
     def preguntas_obligatorias(self):
         return self._derivados()['obligatorias']

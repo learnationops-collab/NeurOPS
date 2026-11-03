@@ -356,8 +356,19 @@ class AssistantApplication(db.Model):
             return False
         form = self.formulario()
         if form is not None:
-            return any(motivo in kos for kos in form.excluyentes().values())
+            return any(motivo in kos for kos in form.excluyentes().values()) or self._fuera_de_rango(form)
         return True
+
+    def _fuera_de_rango(self, form):
+        """True si alguna respuesta numérica quedó fuera del rango excluyente de su pregunta."""
+        for pregunta_id, (minimo, maximo) in form.rangos_excluyentes().items():
+            digitos = ''.join(c for c in str(self.respuesta(pregunta_id) or '') if c.isdigit())
+            if not digitos:
+                continue
+            numero = int(digitos)
+            if (minimo is not None and numero < minimo) or (maximo is not None and numero > maximo):
+                return True
+        return False
 
     def cortada_por_formulario(self):
         """Lo que el panel muestra como «descartada automáticamente»."""
@@ -375,7 +386,7 @@ class AssistantApplication(db.Model):
                 valor = self.respuesta(pregunta_id)
                 if valor not in (None, '') and _partes(valor) & kos:
                     return True
-            return False
+            return self._fuera_de_rango(form)
         for campo, esperado in EXCLUYENTES.items():
             valor = getattr(self, campo)
             if valor and valor != esperado:

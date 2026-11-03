@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Ban, GitBranch, GripVertical, Plus, RotateCcw } from 'lucide-react';
 import PanelPregunta, { Interruptor } from './PanelPregunta';
 import {
-    FIJAS, cambiarTipo, dependientes, duplicar, mover, preguntaNueva, soltar, tipoDe,
+    FIJAS, cambiarTipo, dependientes, duplicar, mover, preguntaNueva, soltar, tieneExcluyente, tipoDe,
 } from '../../lib/formularios';
 import './editorPreguntas.css';
 
@@ -13,7 +13,7 @@ import './editorPreguntas.css';
 const Fila = ({ q, num, elegida, onElegir, onCambiar, arrastre }) => {
     const on = q.on !== false;
     const fija = FIJAS.has(q.id);
-    const ko = (q.o || []).some((o) => o.ko);
+    const ko = tieneExcluyente(q);
     return (
         <div className={`tl-ed-fila${elegida ? ' is-elegida' : ''}${on ? '' : ' is-off'}${arrastre.clase}`}
             draggable {...arrastre.eventos}>

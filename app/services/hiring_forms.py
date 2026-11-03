@@ -272,6 +272,12 @@ def validar_preguntas(lista):
                     raise PreguntasInvalidas(
                         f'{rotulo}: cada opción necesita un texto de hasta {MAX_OPCION} caracteres.')
 
+        limites = [p.get(k) for k in ('ko_min', 'ko_max')]
+        if any(v is not None and (isinstance(v, bool) or not isinstance(v, int) or v < 0) for v in limites):
+            raise PreguntasInvalidas(f'{rotulo}: los límites excluyentes son números enteros sin signo.')
+        if None not in limites and limites[0] > limites[1]:
+            raise PreguntasInvalidas(f'{rotulo}: el mínimo excluyente no puede ser mayor que el máximo.')
+
         si = p.get('si')
         if si is not None and not (isinstance(si, dict) and isinstance(si.get('id'), str)):
             raise PreguntasInvalidas(f'{rotulo}: la condición tiene que decir de qué pregunta depende.')
@@ -371,6 +377,7 @@ def resumen(form, respuestas=None):
         "excluyentes": sum(
             1 for p in activas
             if any(isinstance(o, dict) and o.get('ko') for o in (p.get('o') or []))
+            or p.get('ko_min') is not None or p.get('ko_max') is not None
         ),
         "respuestas": respuestas.get(form.id, 0),
     }

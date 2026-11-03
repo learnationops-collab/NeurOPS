@@ -113,3 +113,6 @@
 - **3 de Noviembre de 2026 (Hiring: editor de preguntas en dos columnas)** *([EditorPreguntas.jsx](../../frontend/src/pages/admin/hiring/components/forms/EditorPreguntas.jsx), [PanelPregunta.jsx](../../frontend/src/pages/admin/hiring/components/forms/PanelPregunta.jsx), [ADR-W071](../DECISIONS.md))*:
   - Lista de preguntas a la izquierda (se arrastran y se prenden o apagan desde la fila) y la configuración de la elegida en un panel a la derecha, con el tipo como fichas con ícono.
   - Sin la nota «Pregunta original» ni el chip «Nueva». Las borradas se recuperan en «Eliminadas».
+- **3 de Noviembre de 2026 (Hiring: límites excluyentes en las preguntas numéricas)** *([PanelPregunta.jsx](../../frontend/src/pages/admin/hiring/components/forms/PanelPregunta.jsx), [hiring_form.py](../../app/models/hiring_form.py), [ADR-W072](../DECISIONS.md))*:
+  - Una pregunta de tipo número (expectativa salarial, edad…) tiene «Descarta si es menor a / mayor a». Fuera del rango, la postulante va a la pantalla de descarte y el panel la marca como cortada por el formulario.
+  - Va junto con institute-site, que aplica el rango en el formulario.

@@ -72,3 +72,13 @@
   .talent .tl-ed-panel-in{padding:var(--s4)}
   .talent .tl-ed-cab{flex-wrap:wrap}
 }
+
+/* Límites excluyentes de una pregunta numérica */
+.talent .tl-ed-limites{display:grid;gap:8px;padding:12px;border-radius:14px;background:var(--mat-1);border:1px solid var(--border-subtle)}
+.talent .tl-ed-limites.is-activo{border-color:var(--error-border);background:color-mix(in srgb,var(--error) 6%,var(--mat-1))}
+.talent .tl-ed-limites .tl-lbl-q{display:flex;align-items:center;gap:6px;margin:0}
+.talent .tl-ed-limites.is-activo .tl-lbl-q{color:var(--error)}
+.talent .tl-ed-limites-campos{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px}
+.talent .tl-ed-limites-campos label{display:grid;gap:4px;font-size:12px;font-weight:700;color:var(--text-muted)}
+.talent .tl-ed-limites small{font-size:12px;font-weight:600;color:var(--text-muted)}
+.talent .tl-ed-limites small.is-error{color:var(--error)}

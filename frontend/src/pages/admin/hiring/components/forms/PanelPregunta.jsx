@@ -71,6 +71,37 @@ const Opciones = ({ q, onCambiar }) => {
     );
 };
 
+// Límites excluyentes de una pregunta numérica: quien responde fuera va a la
+// pantalla de descarte (vacío = sin ese límite).
+const Limites = ({ q, onCambiar }) => {
+    const set = (k, texto) => {
+        const n = texto.replace(/\D/g, '');
+        onCambiar({ [k]: n === '' ? undefined : Number(n) });
+    };
+    const al = q.ko_min != null && q.ko_max != null && q.ko_min > q.ko_max;
+    return (
+        <div className={`tl-ed-limites${q.ko_min != null || q.ko_max != null ? ' is-activo' : ''}`}>
+            <p className="tl-lbl-q"><Ban size={12} aria-hidden="true" /> Límites excluyentes</p>
+            <div className="tl-ed-limites-campos">
+                <label>
+                    <span>Descarta si es menor a</span>
+                    <input className="tl-input tl-input--sm" inputMode="numeric" placeholder="Sin mínimo"
+                        value={q.ko_min ?? ''} onChange={(e) => set('ko_min', e.target.value)} />
+                </label>
+                <label>
+                    <span>Descarta si es mayor a</span>
+                    <input className="tl-input tl-input--sm" inputMode="numeric" placeholder="Sin máximo"
+                        value={q.ko_max ?? ''} onChange={(e) => set('ko_max', e.target.value)} />
+                </label>
+            </div>
+            <small className={al ? 'is-error' : undefined}>
+                {al ? 'El mínimo es mayor que el máximo: así no se guarda.'
+                    : `Quien responda fuera de ${q.ko_min ?? 'cero'} a ${q.ko_max ?? 'sin tope'}${q.unidad ? ` ${q.unidad}` : ''} va a la pantalla de descarte.`}
+            </small>
+        </div>
+    );
+};
+
 const PanelPregunta = ({ q, num, primera, ultima, tasaBrl, depende, onCambiar, onTipo, onMover, onDuplicar, onBorrar }) => {
     const on = q.on !== false;
     const req = q.req !== false;
@@ -141,6 +172,7 @@ const PanelPregunta = ({ q, num, primera, ultima, tasaBrl, depende, onCambiar, o
                     <p className="tl-lbl-q">Unidad</p>
                     <input className="tl-input tl-input--sm" maxLength={40} placeholder="Ej.: USD por mes" value={q.unidad || ''}
                         onChange={(e) => onCambiar({ unidad: e.target.value })} />
+                    <Limites q={q} onCambiar={onCambiar} />
                 </>
             )}
             {q.tipo === 'parrafo' && (

@@ -36,13 +36,16 @@ export const linkDe = (slug) => (slug ? `${URL_VACANTES}${slug}/` : '');
 export const limpiarSlug = (texto) => texto.normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
     .toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/-{2,}/g, '-').slice(0, 60);
 
+/** Si alguna respuesta la corta: una opción `ko` o un número fuera de `ko_min`/`ko_max`. */
+export const tieneExcluyente = (q) => (q.o || []).some((o) => o.ko) || q.ko_min != null || q.ko_max != null;
+
 export const resumen = (preguntas = []) => {
     const sinIntro = preguntas.filter((q) => q.tipo !== 'intro');
     const activas = sinIntro.filter((q) => q.on !== false);
     return {
         activas: activas.length,
         total: sinIntro.length,
-        excluyentes: activas.filter((q) => (q.o || []).some((o) => o.ko)).length,
+        excluyentes: activas.filter(tieneExcluyente).length,
     };
 };
 
@@ -88,6 +91,7 @@ export const mover = (preguntas, id, delta) => {
 // Claves que solo tienen sentido en ciertos tipos: al cambiar de tipo se sacan.
 const SOLO_EN = {
     mail: ['texto'], unidad: ['numero'], min: ['numero'], max: ['numero'], ref: ['numero'],
+    ko_min: ['numero'], ko_max: ['numero'],
     largo: ['parrafo'], puntua: ['radio', 'check'], reqs: ['intro'],
 };
 
