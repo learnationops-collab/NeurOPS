@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import api from '../../../services/api';
+import { faltaDeMotivo, motivoAlcanza, pideMotivo, preguntaDeMotivo } from '../../../utils/motivoEstado';
 import { toDatetimeLocalValue, datetimeLocalToUtcIso, viewerTimezoneLabel } from '../../../utils/datetime';
 import {
     Calendar as CalendarIcon,
@@ -521,6 +522,11 @@ const FinancialAgendasPage = () => {
             alert('La razón es obligatoria');
             return;
         }
+        // «Reagendado», «No Show» y «Cancelado» piden un motivo de 10+ caracteres (ADR-W066).
+        if (pideMotivo(nuevoEstado) && !motivoAlcanza(razon)) {
+            alert(faltaDeMotivo(razon));
+            return;
+        }
         if (requiresDate && !fechaHora) {
             alert('La fecha y hora de reprogramación son obligatorias');
             return;
@@ -543,7 +549,7 @@ const FinancialAgendasPage = () => {
             setStatusActionModal({ isOpen: false, agenda: null, nuevoEstado: '', isConfirmer: false, requiresDate: false, razon: '', fechaHora: '' });
         } catch (err) {
             console.error("Error al procesar cambio de estado in-line:", err);
-            alert("Error al actualizar el estado de la agenda");
+            alert(err.response?.data?.error || "Error al actualizar el estado de la agenda");
         }
     };
 
@@ -655,6 +661,11 @@ const FinancialAgendasPage = () => {
 
     const handleEditSubmit = async (e) => {
         e.preventDefault();
+        const cambiaAEstadoConMotivo = pideMotivo(editForm.estado) && editForm.estado !== editingAgenda?.estado;
+        if (cambiaAEstadoConMotivo && !motivoAlcanza(editForm.note)) {
+            alert(faltaDeMotivo(editForm.note));
+            return;
+        }
         try {
             // El formulario trabaja en hora local; el backend guarda UTC.
             const fechaUtc = datetimeLocalToUtcIso(editForm.fecha_meet) || editForm.fecha_meet;
@@ -1470,7 +1481,7 @@ const FinancialAgendasPage = () => {
                                                                 value={val}
                                                                 onChange={async (e) => {
                                                                     const nuevoEstado = e.target.value;
-                                                                    const isSpecial = ['Cancelada', 'Reagendada', '2TH Call'].includes(nuevoEstado);
+                                                                    const isSpecial = ['Cancelada', 'Reagendada', 'No Show', '2TH Call'].includes(nuevoEstado);
                                                                     if (isSpecial) {
                                                                         setStatusActionModal({ isOpen: true, agenda, nuevoEstado, isConfirmer: false, requiresDate: ['Reagendada', '2TH Call'].includes(nuevoEstado), razon: '', fechaHora: '' });
                                                                         return;
@@ -1662,6 +1673,14 @@ const FinancialAgendasPage = () => {
                                     <option key={st} value={st} className="bg-slate-900 text-white">{st}</option>
                                 ))}
                             </select>
+                            {pideMotivo(editForm.estado) && editForm.estado !== editingAgenda?.estado && (
+                                <textarea
+                                    placeholder={preguntaDeMotivo(editForm.estado)}
+                                    className="w-full mt-2 px-4 py-3 bg-slate-950 border border-amber-500/40 rounded-xl text-white outline-none focus:border-amber-400 text-xs font-semibold resize-none h-20"
+                                    value={editForm.note || ''}
+                                    onChange={e => setEditForm({ ...editForm, note: e.target.value })}
+                                />
+                            )}
                         </div>
                         {/* Octavo campo: hace pareja con Estado, así las dos columnas cierran parejas
                             (sin el Call Confirmer, retirado el 10/10/2026, ya no queda uno suelto). */}
@@ -1857,7 +1876,8 @@ const FinancialAgendasPage = () => {
                             </button>
                             <button 
                                 type="submit"
-                                className="flex-1 py-3 bg-indigo-600 text-xs font-black uppercase tracking-widest text-white rounded-xl hover:bg-indigo-500 transition-colors shadow-lg shadow-indigo-600/30"
+                                disabled={pideMotivo(statusActionModal.nuevoEstado) && !motivoAlcanza(statusActionModal.razon)}
+                                className="flex-1 py-3 bg-indigo-600 text-xs font-black uppercase tracking-widest text-white rounded-xl hover:bg-indigo-500 transition-colors shadow-lg shadow-indigo-600/30 disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                                 Confirmar
                             </button>
@@ -1899,7 +1919,7 @@ const FinancialAgendasPage = () => {
                     )}
 
                     <div className="space-y-1.5 text-left">
-                        <label className="text-[9px] font-black text-slate-455 uppercase tracking-widest ml-1">Razón del cambio (Obligatoria)</label>
+                        <label className="text-[9px] font-black text-slate-455 uppercase tracking-widest ml-1">{preguntaDeMotivo(statusActionModal.nuevoEstado) || 'Razón del cambio'} (Obligatoria)</label>
                         <textarea 
                             placeholder="Ingresa detalladamente por qué se está realizando este cambio..."
                             className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none focus:border-indigo-500 text-xs font-semibold resize-none h-28"
@@ -1907,6 +1927,9 @@ const FinancialAgendasPage = () => {
                             onChange={e => setStatusActionModal(prev => ({ ...prev, razon: e.target.value }))}
                             required
                         />
+                        {pideMotivo(statusActionModal.nuevoEstado) && faltaDeMotivo(statusActionModal.razon) && (
+                            <p className="text-[10px] font-bold text-amber-400 ml-1">{faltaDeMotivo(statusActionModal.razon)}</p>
+                        )}
                     </div>
                 </Modal>
             )}

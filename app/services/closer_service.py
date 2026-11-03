@@ -789,7 +789,7 @@ class CloserService:
     def process_agenda(closer_id, appt_id, data, is_admin=False):
         from app.models import Appointment, db, User
         from app.agendas_v2.reagenda import heredar_confirmacion
-        from app.services import lead_log_service
+        from app.services import lead_log_service, motivo_estado_service
         from app.services.booking_service import BookingService
 
         user = User.query.get(closer_id) if closer_id else None
@@ -818,6 +818,9 @@ class CloserService:
         last_stage = data.get('last_stage')
         role = data.get('role', 'closer') # 'closer' por defecto si no viene
         note = data.get('note') # Razón guardada en Lead Roadmap
+        # «Reagendado», «No Show» y «Cancelado» piden el motivo (ADR-W066): se valida antes de tocar nada
+        # y levanta `MotivoInvalido`, así ninguna puerta que llegue hasta acá lo evita.
+        note = motivo_estado_service.exigir(new_status, note)
 
         # Reprogramar y 2da llamada siguen el camino de Thalamus (app/agendas_v2/manual.py): Meet con
         # invitación al lead, payload y avisos. El horario se chequea ANTES de tocar nada: leer Google
@@ -892,6 +895,7 @@ class CloserService:
             elif new_status == 'No Show':
                 appt.closer_result = 'No Show'
                 appt.closer_processed = True
+                motivo_estado_service.registrar(appt, closer_id, new_status, note, quien=user_display)
 
             elif new_status in ['Lead Perdido', 'Perdido']:
                 appt.closer_result = 'Lead Perdido'
@@ -909,9 +913,7 @@ class CloserService:
 
             elif new_status == 'Cancelado':
                 appt.closer_processed = True
-                if note:
-                    if closer_id:
-                        lead_log_service.nota(f"Cancelado por {user_display}: {note}", closer_id, appt=appt)
+                motivo_estado_service.registrar(appt, closer_id, new_status, note, quien=user_display)
                 # Delete GCal
                 if appt.google_event_id:
                     try:
@@ -941,10 +943,9 @@ class CloserService:
                 appt.closer_processed = True
                 if not reschedule_date:
                     raise Exception("Fecha de reagenda requerida")
-                if note:
-                    if closer_id:
-                        lead_log_service.nota(f"Reagendado por {user_display}. Razón: {note}. Nueva cita el {formatted_reschedule}", closer_id, appt=appt)
-                
+                motivo_estado_service.registrar(appt, closer_id, new_status, note, quien=user_display,
+                                                nueva_fecha=formatted_reschedule)
+
                 # Delete GCal
                 if appt.google_event_id:
                     try:
@@ -1039,12 +1040,14 @@ class CloserService:
             if new_status:
                 appt.result = new_status
 
+            if new_status == 'No Show':
+                motivo_estado_service.registrar(appt, closer_id, new_status, note, quien=user_display)
+
             if new_status == 'Reagendado':
                 if not reschedule_date:
                     raise Exception("Fecha de reagenda requerida")
-                if note:
-                    if closer_id:
-                        lead_log_service.nota(f"Reagendado por {user_display}. Razón: {note}. Nueva cita el {formatted_reschedule}", closer_id, appt=appt)
+                motivo_estado_service.registrar(appt, closer_id, new_status, note, quien=user_display,
+                                                nueva_fecha=formatted_reschedule)
 
                 # Delete GCal
                 if appt.google_event_id:
@@ -1066,9 +1069,7 @@ class CloserService:
                     nueva_agenda = new_appt
 
             elif new_status == 'Cancelado':
-                if note:
-                    if closer_id:
-                        lead_log_service.nota(f"Cancelado por {user_display}: {note}", closer_id, appt=appt)
+                motivo_estado_service.registrar(appt, closer_id, new_status, note, quien=user_display)
                 # Delete GCal
                 if appt.google_event_id:
                     try:

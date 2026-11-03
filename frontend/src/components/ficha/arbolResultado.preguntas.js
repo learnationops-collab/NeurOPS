@@ -21,6 +21,7 @@ import {
   cuotasPendientes, armaPlan, cantidadCuotas, cronogramaEnTexto, fechaCorta, MAXIMO_CUOTAS,
 } from './arbolResultado.venta';
 import { PREGUNTA_TRANSFERENCIA, efectoDeTransferido, esTransferencia } from './transferencia';
+import { MINIMO_MOTIVO, preguntaDeMotivo } from '../../utils/motivoEstado';
 
 // Cómo se cuenta en la revisión lo que en crudo no se lee.
 const enPlata = (v) => (v === '' || v === undefined || v === null ? null : moneda(v));
@@ -434,9 +435,12 @@ export const PREGUNTAS = [
     enunciado: '¿Por qué no se presentó?', opciones: opts(MOTIVOS_NO_SHOW, 'error'),
     cuando: (r, c) => enLlamada(r, c) && r.res === 'no_asistio',
   },
-  {
-    clave: 'noshow_detalle', hito: 'resultado', tipo: 'formulario', enunciado: '¿Qué pasó exactamente?',
-    campos: [{ campo: 'notes', label: 'Qué pasó exactamente', tipo: 'parrafo' }],
+  { // Marcar «No asistió» a mano pide su motivo (ADR-W066): viaja como `motivo_estado` y el backend lo deja en el hilo.
+    clave: 'noshow_detalle', hito: 'resultado', tipo: 'formulario', enunciado: preguntaDeMotivo('No Show'),
+    ayuda: 'Queda anotado en Comunicación, con tu nombre.',
+    campos: [{
+      campo: 'motivo_noshow', label: 'Por qué no asistió', tipo: 'parrafo', requerido: true, minimoTexto: MINIMO_MOTIVO,
+    }],
     cuando: (r, c) => enLlamada(r, c) && r.res === 'no_asistio',
   },
   {
@@ -455,9 +459,12 @@ export const PREGUNTAS = [
     enunciado: '¿Cuál fue el motivo de la cancelación?', opciones: opts(MOTIVOS_CANCELACION, 'warning'),
     cuando: (r, c) => enLlamada(r, c) && r.res === 'cancelo',
   },
-  {
-    clave: 'cancel_detalle', hito: 'resultado', tipo: 'formulario', enunciado: 'Comentario del closer',
-    campos: [{ campo: 'notes', label: 'Detalle de lo que dijo', tipo: 'parrafo' }],
+  { // Lo mismo para «Canceló» (ADR-W066).
+    clave: 'cancel_detalle', hito: 'resultado', tipo: 'formulario', enunciado: preguntaDeMotivo('Cancelado'),
+    ayuda: 'Queda anotado en Comunicación, con tu nombre.',
+    campos: [{
+      campo: 'motivo_cancelo', label: 'Por qué se canceló', tipo: 'parrafo', requerido: true, minimoTexto: MINIMO_MOTIVO,
+    }],
     cuando: (r, c) => enLlamada(r, c) && r.res === 'cancelo',
   },
   {
@@ -476,6 +483,14 @@ export const PREGUNTAS = [
     clave: 'reag_motivo', hito: 'resultado', campo: 'reag_motivo', tipo: 'opciones',
     enunciado: '¿Por qué se reagenda?', opciones: opts(MOTIVOS_REAGENDA, 'info'),
     cuando: (r, c) => (enLlamada(r, c) && r.res === 'reagenda') || r.cancel_next === 'reagendar',
+  },
+  { // Y para «Reagenda» (ADR-W066). Si viene de una cancelación («Reagendar ahora») ya dio su motivo arriba.
+    clave: 'reag_detalle', hito: 'resultado', tipo: 'formulario', enunciado: preguntaDeMotivo('Reagendado'),
+    ayuda: 'Queda anotado en Comunicación, con tu nombre.',
+    campos: [{
+      campo: 'motivo_reagenda', label: 'Por qué se reagenda', tipo: 'parrafo', requerido: true, minimoTexto: MINIMO_MOTIVO,
+    }],
+    cuando: (r, c) => enLlamada(r, c) && r.res === 'reagenda',
   },
   {
     clave: 'reag_dejo_fecha', hito: 'resultado', campo: 'reag_dejo_fecha', tipo: 'opciones',

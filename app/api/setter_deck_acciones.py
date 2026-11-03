@@ -20,7 +20,11 @@ def process_setter_card(appt_id):
         return jsonify({"message": "Forbidden"}), 403
         
     data = request.get_json() or {}
-    
+    # «Reagendado», «No Show» y «Cancelado» piden un motivo (ADR-W066) y el mazo del setter no lo pregunta.
+    from app.services import motivo_estado_service
+    if motivo_estado_service.clave_de(data.get('result')):
+        return jsonify({"message": "Ese estado se marca desde la ficha del lead, con su motivo."}), 400
+
     # 1. Actualizar datos del Cliente
     if appt.client:
         if 'instagram' in data:
@@ -63,14 +67,17 @@ def bulk_update_setter_cards():
     appt_ids = data.get('appt_ids', [])
     result = data.get('result')
     keyword = data.get('keyword')
-    
+
     if not appt_ids:
         return jsonify({"message": "No se proporcionaron IDs de citas"}), 400
-        
+    from app.services import motivo_estado_service
+    if motivo_estado_service.clave_de(result):
+        return jsonify({"message": "Ese estado se marca desde la ficha del lead, con su motivo."}), 400
+
     appointments = Appointment.query.filter(Appointment.id.in_(appt_ids)).all()
-    
+
     from app.services.booking_service import BookingService
-    
+
     for appt in appointments:
         if current_user.role != 'admin' and appt.setter_id != current_user.id:
             continue  # Evitar modificar lo que no pertenece al setter

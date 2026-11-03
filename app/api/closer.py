@@ -1063,9 +1063,17 @@ def update_appointment_outcome(id):
     if outcome not in valid_outcomes:
         return jsonify({"error": "Resultado no válido"}), 400
         
+    # «Cancelada» y «Reprogramada» son estados marcados a mano: piden el motivo (ADR-W066).
+    from app.services import motivo_estado_service
+    try:
+        motivo = motivo_estado_service.para_correccion(appt.result, outcome, data.get('motivo'))
+    except motivo_estado_service.MotivoInvalido as e:
+        return jsonify({"error": str(e), "campo": "motivo"}), 400
     appt.result = outcome
+    if motivo:
+        motivo_estado_service.registrar(appt, current_user, outcome, motivo)
     db.session.commit()
-    
+
     return jsonify({"message": "Resultado actualizado", "outcome": outcome}), 200
 
 # GET /stats («Tus Estadísticas» del closer) se retiró el 10/10/2026: su única pantalla,
@@ -1940,8 +1948,18 @@ def process_closer_card(appt_id):
     # El cuerpo vive en app/services/deck_escritura_service.py: la ficha unificada
     # (`/api/ficha`) tiene que escribir exactamente lo mismo, incluidas la regla de
     # `closer_processed` y los logs condicionales, y duplicarlo las haría divergir.
+    from app.services import motivo_estado_service
     from app.services.deck_escritura_service import aplicar_cambios
+
+    # Marcar a mano «Reagendado», «No Show» o «Cancelado» pide el motivo (ADR-W066). La ficha los reporta por
+    # su propio guardado; acá solo llegan del mazo viejo, y si el estado no cambia no hay nada que explicar.
+    try:
+        motivo = motivo_estado_service.para_correccion(appt.closer_result, data.get('result'), data.get('motivo_estado'))
+    except motivo_estado_service.MotivoInvalido as e:
+        return jsonify({"message": str(e), "campo": "motivo_estado"}), 400
     aplicar_cambios(appt, data, current_user)
+    if motivo:
+        motivo_estado_service.registrar(appt, current_user, data['result'], motivo)
 
     try:
         db.session.commit()
@@ -2024,14 +2042,19 @@ def bulk_update_closer_cards():
     data = request.get_json() or {}
     appt_ids = data.get('appt_ids', [])
     result = data.get('result')
-    
+
     if not appt_ids:
         return jsonify({"message": "No se proporcionaron IDs de citas"}), 400
-        
+
+    # En lote no hay un motivo por agenda: «Reagendado», «No Show» y «Cancelado» se marcan una por una (ADR-W066).
+    from app.services import motivo_estado_service
+    if motivo_estado_service.clave_de(result):
+        return jsonify({"message": f"«{result}» pide un motivo por agenda: marcalas de a una."}), 400
+
     appointments = Appointment.query.filter(Appointment.id.in_(appt_ids)).all()
-    
+
     from app.services.closer_service import CloserService
-    
+
     for appt in appointments:
         if current_user.role != 'admin' and appt.closer_id != current_user.id:
             continue

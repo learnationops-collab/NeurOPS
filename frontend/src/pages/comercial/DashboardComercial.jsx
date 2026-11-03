@@ -583,9 +583,9 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
         }
     }, [cargarTabla]);
 
-    const corregir = useCallback(async (fila, campo, valor) => {
+    const corregir = useCallback(async (fila, campo, valor, motivo) => {
         try {
-            await corregirAgenda(fila.id, campo, valor);
+            await corregirAgenda(fila.id, campo, valor, motivo);
             const datos = await getTabla(filtros, tablaActual, basis, { operar });
             setDatosTabla(datos);
             setFilaAbierta(datos.filas.find(f => f.id === fila.id && f.tipo === fila.tipo) || null);
@@ -593,7 +593,8 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
         } catch (error) {
             toast.error(error?.response?.status === 403
                 ? 'Solo puede corregirla quien la atiende o la dirección comercial'
-                : 'No se pudo guardar la corrección');
+                : error?.response?.data?.campo === 'motivo' ? error.response.data.message
+                    : 'No se pudo guardar la corrección');
             throw error;
         }
     }, [filtros, tablaActual, basis, operar]);

@@ -12,6 +12,7 @@ import TriageLeadCard from './components/TriageLeadCard';
 import TriageRightPanel from './components/TriageRightPanel';
 import TriageDetailModal from './components/TriageDetailModal';
 import TriageFollowUpModal from './components/TriageFollowUpModal';
+import { faltaDeMotivo, motivoAlcanza } from '../../utils/motivoEstado';
 
 const TriageWorkflowPage = () => {
     const { user } = useAuth();
@@ -235,39 +236,43 @@ const TriageWorkflowPage = () => {
     };
 
     // Confirmar Reagenda
+    // También cancela: «Reagendada» y «Cancelada» piden el motivo y lo mandan en `note` (ADR-W066).
     const handleConfirmReschedule = async () => {
-        const { apptId, date } = rescheduleData;
-        if (!date) {
+        const { apptId, date, status, motivo } = rescheduleData;
+        const cancelando = status === 'Cancelada';
+        if (!cancelando && !date) {
             toast.error("Selecciona una fecha y hora");
+            return;
+        }
+        if (!motivoAlcanza(motivo)) {
+            toast.error(faltaDeMotivo(motivo));
             return;
         }
 
         setProcessingId(apptId);
         try {
-            const payload = {
-                estado: 'Reagendada',
-                date: date,
-                reschedule_date: date
-            };
+            const payload = cancelando
+                ? { estado: 'Cancelada', note: motivo.trim() }
+                : { estado: 'Reagendada', date: date, reschedule_date: date, note: motivo.trim() };
 
             if (user?.username) payload.encargado_triage = user.username;
 
             await api.put(`/public/financial-agendas/${apptId}`, payload);
-            toast.success("Cita reagendada exitosamente");
+            toast.success(cancelando ? "Cita cancelada" : "Cita reagendada exitosamente");
 
             const targetAgenda = agendas.find(a => a.id === apptId) || selectedLead;
             setFollowUpModal({
                 show: true,
                 agendaId: apptId,
                 leadName: targetAgenda ? (targetAgenda.lead || targetAgenda.nombre || 'Prospecto') : 'Prospecto',
-                newStatus: 'Reagendada'
+                newStatus: cancelando ? 'Cancelada' : 'Reagendada'
             });
 
-            setRescheduleData({ apptId: null, date: '', status: '' });
+            setRescheduleData({ apptId: null, date: '', status: '', motivo: '' });
             fetchAgendas();
         } catch (err) {
             console.error("Error al reprogramar:", err);
-            toast.error("Error al procesar la reagenda");
+            toast.error(err.response?.data?.error || "Error al procesar la reagenda");
         } finally {
             setProcessingId(null);
         }
