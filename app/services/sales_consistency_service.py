@@ -157,6 +157,8 @@ class SalesConsistencyService:
             'has_installments': has_installments,
             'has_renewal_or_upsell': has_renewal_or_upsell,
             'sales_count': len(relevant),
+            # Programas en los que tiene pagos aparte de este: un upsell viene de uno de ellos.
+            'other_programs': sorted(other_codes),
             'can_settle_balance_with_installment': has_first_payment and not has_full_payment and balance_remaining > 0.01,
         }
 
@@ -210,7 +212,11 @@ class SalesConsistencyService:
             # renovación de un cliente que viene pagando en cuotas porque "no tiene venta
             # registrada" es un falso negativo. Reportado con un caso real: Jonathan Aparicio,
             # 4 ventas reales en el programa (3 Cuota + 1 Renovación previa) bloqueado igual.
-            if not (state['has_full_payment'] or state['has_first_payment'] or state['has_installments'] or state['has_deposit']):
+            compro_aca = state['has_full_payment'] or state['has_first_payment'] or state['has_installments'] or state['has_deposit']
+            # El upsell es pasar a OTRO programa: alcanza con haber comprado cualquiera (Mario, 31/10).
+            if tipo == 'upsell' and not (compro_aca or state['other_programs']):
+                return False, "Este cliente no compró ningún programa todavía — no corresponde Upsell.", state
+            if tipo == 'renovacion' and not compro_aca:
                 return False, f"Este cliente no tiene ninguna venta real registrada en este programa todavía — no corresponde {tipo_pago_simple}.", state
 
             # La deuda para decidir si se bloquea la renovación usa el mismo cálculo que el

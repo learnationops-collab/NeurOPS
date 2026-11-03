@@ -167,3 +167,6 @@
   - Al reasignar el closer desde la ficha, las ventas activas del lead que eran del closer anterior pasan al nuevo: le aparecen en «Mis ventas», en su deuda y en sus clientes. Los pagos siguen con quien los cobró.
   - La nota de la bitácora del lead dice qué ventas pasaron.
   - Se pasaron a mano a Jean Carlo las ventas de David Hernandez (era de Mario) y José Manuel Oliva (era de Gabriel), que él ya se había reasignado.
+- **3 de Noviembre de 2026 (Cargar un upsell: la opción se ve y el aviso ya no lo desaconseja)** *([arbolResultado.preguntas.js](../../frontend/src/components/ficha/arbolResultado.preguntas.js), [sales_consistency_service.py](../../app/services/sales_consistency_service.py))*:
+  - «¿Qué estás registrando?» dice «Una venta nueva, renovación o upsell», y «Un pago de algo que ya compró» aclara que si renueva o pasa a otro programa es venta nueva. Mario había cargado un upsell como cuota por ese camino.
+  - El aviso de «¿Cómo paga?» ya no dice «no corresponde Upsell» cuando el alumno no compró el programa nuevo: alcanza con que haya comprado cualquier otro. La renovación sigue pidiendo una venta del mismo programa.
