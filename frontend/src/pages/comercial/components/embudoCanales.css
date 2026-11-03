@@ -70,3 +70,33 @@
     font-variant-numeric: tabular-nums;
     text-align: right;
 }
+
+/* Embudo de Closing con el aspecto del de Triage (02/11/2026): barras redondeadas más altas, sin cuello entre una y otra,
+   la cuenta «N de M» bajo cada barra y filas con aire. */
+.dc-shell .dc-funnel--barras .dc-funnel-neck { display: none; }
+
+.dc-shell .dc-funnel--barras .dc-funnel-row {
+    grid-template-columns: 112px 1fr 64px;
+    padding: 3px 0;
+}
+
+.dc-shell .dc-funnel--barras .dc-funnel-label {
+    font-size: 11px;
+    letter-spacing: .16em;
+}
+
+.dc-shell .dc-funnel--barras .dc-funnel-bar {
+    height: 40px;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 900;
+}
+
+.dc-shell .dc-funnel--barras .dc-funnel-bar--partes { gap: 3px; }
+
+.dc-shell .dc-funnel--barras .dc-funnel-parte { border-radius: 9px; }
+
+.dc-shell .dc-funnel--barras .dc-funnel-pct {
+    font-size: 16px;
+    font-weight: 800;
+}

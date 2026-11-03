@@ -73,7 +73,7 @@ const Embudo = ({ pasos, sinCuello = false, sinFinal = false, canales = null, ch
     const irFinal = pasos[0]?.ir;
 
     return (
-        <div className="panel">
+        <div className={canales ? 'panel dc-funnel--barras' : 'panel'}>
             <CardHead titulo="Embudo"
                 tip="De agendas a ventas, paso por paso. El porcentaje de cada fila es contra el paso anterior.">
                 {cuello !== null && (
@@ -146,6 +146,15 @@ const Embudo = ({ pasos, sinCuello = false, sinFinal = false, canales = null, ch
                                 {p.tasa ? p.tasa : pct === null ? '' : `${pct}%`}
                             </span>
                         </div>
+                        {canales && !p.sub && i > 0 && pasos[i - 1].n > 0 && (
+                            <div className="dc-funnel-row">
+                                <span />
+                                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                                    <span className="t-cap mut num">{p.n} de {pasos[i - 1].n}</span>
+                                </div>
+                                <span />
+                            </div>
+                        )}
                         {p.sub && (
                             <div className="dc-funnel-row">
                                 <span />
