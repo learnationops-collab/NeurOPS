@@ -20,7 +20,8 @@ import { fichaPrecall } from '../__fixtures__/ficha';
 
 const LINK = 'https://fathom.video/share/AbC123xyz';
 const conLink = (ficha, link) => ({ ...ficha, identidad: { ...ficha.identidad, fathom_url: link } });
-const campo = () => screen.getByLabelText('Link de Fathom');
+// Desde el 23/10/2026 el campo es «Link de la call»: sirve cualquier grabación, no solo Fathom.
+const campo = () => screen.getByLabelText('Link de la call');
 
 beforeEach(() => { vi.clearAllMocks(); });
 
@@ -70,13 +71,13 @@ describe('el campo del link en Resultado', () => {
     expect(onAccion).toHaveBeenCalledWith('guardar_fathom', { fathom_url: '' });
   });
 
-  it('un link que no es de Fathom avisa pero se puede guardar', async () => {
+  it('un link que no es de Fathom se puede guardar y no avisa nada', async () => {
     const usuario = userEvent.setup();
     render(<GrabacionFathom ficha={fichaAgendaVencida} onAccion={vi.fn().mockResolvedValue({})} />);
 
     await usuario.type(campo(), 'https://drive.google.com/file/d/1');
 
-    expect(screen.getByText(/No parece un link de Fathom/)).toBeInTheDocument();
+    expect(screen.queryByText(/No parece un link de Fathom/)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Guardar' })).toBeEnabled();
   });
 
@@ -113,7 +114,7 @@ describe('el campo del link en Resultado', () => {
   it('quien no puede reportar no ve el campo', () => {
     render(<TabResultado ficha={{ ...fichaAgendaVencida, permisos: { reportar: false } }}
       onAccion={vi.fn()} irA={vi.fn()} />);
-    expect(screen.queryByLabelText('Link de Fathom')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Link de la call')).not.toBeInTheDocument();
   });
 });
 
@@ -130,7 +131,7 @@ describe('la ruta y el cascarón', () => {
     api.patch.mockResolvedValue({ data: { id: 9012, fathom_url: LINK, es_fathom: true, cambio: true } });
     render(<FichaLeadModal appointmentId={9012} onCerrar={vi.fn()} pestanaInicial="resultado" />);
 
-    const input = await screen.findByLabelText('Link de Fathom', {}, { timeout: 5000 });
+    const input = await screen.findByLabelText('Link de la call', {}, { timeout: 5000 });
     await usuario.type(input, LINK);
     await usuario.click(within(input.closest('form')).getByRole('button', { name: 'Guardar' }));
 

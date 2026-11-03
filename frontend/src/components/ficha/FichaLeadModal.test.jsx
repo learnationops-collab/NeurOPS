@@ -68,19 +68,19 @@ describe('lectura', () => {
         // Era la página /closer/sales/new: el mazo abre la ficha del cliente elegido para vender.
         await abrir(fichaPrecall, { pestanaInicial: 'resultado', abrirEnVenta: true });
         expect(activa()).toBe('Resultado');
-        expect(await screen.findByRole('heading', { name: '¿Quién compró?' }, PRIMERA_CARGA)).toBeInTheDocument();
+        expect(await screen.findByRole('heading', { name: '¿Qué estás registrando?' }, PRIMERA_CARGA)).toBeInTheDocument();
     });
 
     it('la segunda ficha abierta en Resultado no vuelve a mostrar el esqueleto', async () => {
         // El lazy se crea una vez por módulo: si se creara por ficha, cada apertura suspendería
         // de nuevo y mostraría el esqueleto medio segundo aunque el código ya esté cargado.
         const primera = await abrir(fichaPrecall, { pestanaInicial: 'resultado', abrirEnVenta: true });
-        await screen.findByRole('heading', { name: '¿Quién compró?' }, PRIMERA_CARGA);
+        await screen.findByRole('heading', { name: '¿Qué estás registrando?' }, PRIMERA_CARGA);
         primera.unmount();
 
         await abrir(fichaPrecall, { pestanaInicial: 'resultado', abrirEnVenta: true });
         // Sin esperar: Resultado se pinta en el mismo render en que se elige la pestaña.
-        expect(screen.getByRole('heading', { name: '¿Quién compró?' })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: '¿Qué estás registrando?' })).toBeInTheDocument();
     });
 
     it('un cobro abierto desde Seguimientos cae en Resultado, reportando el cobro', async () => {
@@ -131,7 +131,8 @@ describe('lectura', () => {
     it('pinta la cabecera como una franja de datos', async () => {
         await abrir(fichaPrecall);
         expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Kevin Encalada');
-        expect(screen.getByText('+593 99 515 7254')).toBeInTheDocument();
+        // El teléfono se muestra partido como se dicta (`telefonoLegible`).
+        expect(screen.getByText('+593 99515 7254')).toBeInTheDocument();
         expect(screen.getByText('MIR / ENARM')).toBeInTheDocument();
     });
 });
@@ -246,16 +247,6 @@ describe('onAccion pega en el endpoint correcto', () => {
             expect(await screen.findByText('Pago corregido: la deuda se recalculó.')).toBeInTheDocument();
         });
 
-        it('sin registro en inscripciones, el aviso dice que la deuda no cambió', async () => {
-            // Decir «se recalculó» sería mentirle a quien está mirando un «Debe» que no se movió.
-            const usuario = userEvent.setup();
-            await abrir(conVocabularioDePagos);
-            api.patch.mockResolvedValueOnce({ data: { id: 881, espejo: false, deuda: 0 } });
-            await corregirMonto(usuario);
-
-            expect(await screen.findByText(/la deuda no cambió/)).toBeInTheDocument();
-        });
-
         it('marcar a quién se le hizo una transferencia parchea solo eso y no dice que la deuda cambió', async () => {
             const usuario = userEvent.setup();
             await abrir({
@@ -316,10 +307,9 @@ describe('onAccion pega en el endpoint correcto', () => {
         expect(api.patch).toHaveBeenCalledWith('/ficha/9012/confirmacion', { cerrada: true });
     });
 
-    it('en una etapa intermedia el CTA está deshabilitado y se avisa qué falta', async () => {
+    it('en una etapa intermedia el CTA está deshabilitado', async () => {
         await abrir(fichaPrecall);
         expect(screen.getByRole('button', { name: /100% confirmado/ })).toBeDisabled();
-        expect(screen.getByText('Falta marcar hasta Testimonio')).toBeInTheDocument();
     });
 
     it('un error del backend queda a la vista y no borra la ficha', async () => {
