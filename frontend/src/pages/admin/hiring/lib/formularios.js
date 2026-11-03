@@ -49,8 +49,8 @@ export const linkDe = (slug) => (slug ? `${URL_VACANTES}${slug}/` : '');
 export const limpiarSlug = (texto) => texto.normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
     .toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/-{2,}/g, '-').slice(0, 60);
 
-/** Si alguna respuesta la corta: una opción `ko` o un número fuera de `ko_min`/`ko_max`. */
-export const tieneExcluyente = (q) => (q.o || []).some((o) => o.ko) || q.ko_min != null || q.ko_max != null;
+/** Si alguna respuesta la corta: una opción `ko`, una `necesaria` sin marcar o un número fuera de `ko_min`/`ko_max`. */
+export const tieneExcluyente = (q) => (q.o || []).some((o) => o.ko || o.necesaria) || q.ko_min != null || q.ko_max != null;
 
 export const resumen = (preguntas = []) => {
     const sinIntro = preguntas.filter((q) => q.tipo !== 'intro');
@@ -118,6 +118,10 @@ export const cambiarTipo = (preguntas, q, visible) => {
     Object.entries(SOLO_EN).forEach(([k, tipos]) => { if (!tipos.includes(visible)) delete nueva[k]; });
     Object.assign(nueva, marcas);
     if (visible === 'dinero' && !nueva.unidad) nueva.unidad = 'USD por mes';
+    // «Necesaria» solo vale en varias opciones.
+    if (tipo !== 'check' && (nueva.o || []).some((o) => o.necesaria)) {
+        nueva.o = nueva.o.map(({ necesaria, ...o }) => o);
+    }
     if (conOpciones(tipo) && !(nueva.o || []).length) nueva.o = [{ t: 'Opción A' }, { t: 'Opción B' }];
     // Mismo tipo guardado (texto ↔ correo, número ↔ dinero): la respuesta sigue en su lugar.
     if (!q.base || q.tipo === tipo) return { lista: preguntas.map((x) => (x.id === q.id ? nueva : x)), id: q.id };

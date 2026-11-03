@@ -376,7 +376,7 @@ def resumen(form, respuestas=None):
         "total": len(preguntas),
         "excluyentes": sum(
             1 for p in activas
-            if any(isinstance(o, dict) and o.get('ko') for o in (p.get('o') or []))
+            if any(isinstance(o, dict) and (o.get('ko') or o.get('necesaria')) for o in (p.get('o') or []))
             or p.get('ko_min') is not None or p.get('ko_max') is not None
         ),
         "respuestas": respuestas.get(form.id, 0),

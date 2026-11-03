@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-    ArrowUp, ArrowDown, Copy, Trash2, Ban, X, Plus, Minus, Info,
+    ArrowUp, ArrowDown, Copy, Trash2, Ban, BadgeCheck, X, Plus, Minus, Info,
     CircleDot, ListChecks, Search, Type, Mail, AlignLeft, Hash, DollarSign, Phone, Link2, Hand,
 } from 'lucide-react';
 import { Aura, IconButton, Select, Switch } from '../../../../../components/standard';
@@ -27,6 +27,20 @@ const Campo = ({ etiqueta, children, className = '' }) => (
     </div>
 );
 
+// Lo que exige una de varias opciones, dicho en una línea debajo de las opciones.
+const ReglaNecesarias = ({ ops }) => {
+    const letras = ops.map((o, j) => (o.necesaria ? String.fromCharCode(65 + j) : null)).filter(Boolean);
+    if (!letras.length) {
+        return <small className="tl-ed-regla">Marcá con <BadgeCheck size={13} aria-hidden="true" /> las opciones que tiene que tener sí o sí.</small>;
+    }
+    const lista = letras.length === 1 ? letras[0] : `${letras.slice(0, -1).join(', ')} y ${letras[letras.length - 1]}`;
+    return (
+        <small className="tl-ed-regla is-activa">
+            <BadgeCheck size={13} aria-hidden="true" /> Si no marca {lista}, va a la pantalla de descarte. Puede marcar otras además.
+        </small>
+    );
+};
+
 const Opciones = ({ q, onCambiar }) => {
     // Las opciones sin marcas llegan como texto plano (así las escribe el formulario público);
     // al tocar una, todas pasan a objeto. El backend acepta las dos formas.
@@ -37,7 +51,7 @@ const Opciones = ({ q, onCambiar }) => {
             <div className="tl-ops">
                 {ops.map((o, j) => {
                     const letra = String.fromCharCode(65 + j);
-                    const cls = o.ko ? ' tl-op--ko' : o.correcta ? ' tl-op--ok' : '';
+                    const cls = o.ko ? ' tl-op--ko' : o.necesaria ? ' tl-op--nec' : o.correcta ? ' tl-op--ok' : '';
                     let extra = <span />;
                     if (q.puntua) {
                         extra = (
@@ -56,9 +70,16 @@ const Opciones = ({ q, onCambiar }) => {
                             <input className="tl-op-in" maxLength={240} value={o.t || ''} aria-label={`Opción ${letra}`}
                                 onChange={(e) => set(j, { t: e.target.value })} />
                             {extra}
+                            {q.tipo === 'check' ? (
+                                <button type="button" className="ibtn tl-op-nec" aria-pressed={Boolean(o.necesaria)} aria-label="Necesaria"
+                                    title="Necesaria: si no la marca, va a la pantalla de descarte"
+                                    onClick={() => set(j, { necesaria: !o.necesaria, ko: false })}>
+                                    <BadgeCheck size={15} />
+                                </button>
+                            ) : <span />}
                             <button type="button" className="ibtn" aria-pressed={Boolean(o.ko)} aria-label="Excluyente"
                                 title="Excluyente: quien la elige va a la pantalla de descarte"
-                                onClick={() => set(j, { ko: !o.ko })}>
+                                onClick={() => set(j, { ko: !o.ko, necesaria: false })}>
                                 <Ban size={15} />
                             </button>
                             <button type="button" className="ibtn ibtn--peligro" aria-label="Eliminar opción" disabled={ops.length <= 1}
@@ -74,6 +95,7 @@ const Opciones = ({ q, onCambiar }) => {
                     <Plus size={14} /> Opción
                 </button>
             </div>
+            {q.tipo === 'check' && <ReglaNecesarias ops={ops} />}
         </Campo>
     );
 };

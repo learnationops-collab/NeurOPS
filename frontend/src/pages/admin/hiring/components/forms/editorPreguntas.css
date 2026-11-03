@@ -95,3 +95,10 @@
   .talent .tl-ed-panel-in{padding:20px}
   .talent .tl-ed-cab{flex-wrap:wrap}
 }
+
+/* Opciones: «necesaria» (varias opciones) junto a «excluyente» */
+.talent .tl-ed .tl-op{grid-template-columns:28px minmax(0,1fr) auto 32px 32px 32px}
+.talent .tl-ed .tl-op--nec{border-color:color-mix(in srgb,var(--success) 45%,var(--border-subtle));background:color-mix(in srgb,var(--success) 7%,var(--bg-input))}
+.talent .tl-ed .tl-op .tl-op-nec[aria-pressed="true"]{color:var(--success);background:color-mix(in srgb,var(--success) 14%,transparent);border-color:color-mix(in srgb,var(--success) 40%,transparent)}
+.talent .tl-ed-regla{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12px;font-weight:600;color:var(--text-muted)}
+.talent .tl-ed-regla.is-activa{color:var(--success)}

@@ -82,6 +82,16 @@ class HiringForm(db.Model):
                 for p in preguntas
                 if p.get('on') is not False and any(isinstance(o, dict) and o.get('ko') for o in (p.get('o') or []))
             },
+            # {id de pregunta de varias opciones prendida: textos que tiene que marcar sí o sí}.
+            'necesarias': {
+                p.get('id'): frozenset(
+                    str(o.get('t') or '').strip() for o in (p.get('o') or [])
+                    if isinstance(o, dict) and o.get('necesaria')
+                )
+                for p in preguntas
+                if p.get('on') is not False and p.get('tipo') == 'check'
+                and any(isinstance(o, dict) and o.get('necesaria') for o in (p.get('o') or []))
+            },
             # {id de pregunta numérica prendida: (ko_min, ko_max)}: fuera de ese rango corta.
             'rangos': {
                 p.get('id'): (p.get('ko_min'), p.get('ko_max'))
@@ -114,6 +124,11 @@ class HiringForm(db.Model):
         de las preguntas prendidas. Es lo que el formulario público usa para mandar
         a la pantalla de descarte."""
         return self._derivados()['excluyentes']
+
+    def opciones_necesarias(self):
+        """{id de pregunta de varias opciones: textos que tiene que marcar}: si
+        falta alguna, la postulación se corta."""
+        return self._derivados()['necesarias']
 
     def rangos_excluyentes(self):
         """{id de pregunta numérica: (ko_min, ko_max)}: una respuesta fuera del

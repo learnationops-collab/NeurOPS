@@ -349,15 +349,26 @@ class AssistantApplication(db.Model):
         Sin motivo guardado no hay cómo saberlo y la marca vale."""
         if not self.descartado:
             return False
+        form = self.formulario()
+        if form is not None and self._corte_sin_opcion(form):
+            return True
         motivo = (self.motivo_descarte or '').strip()
         if not motivo:
             return True
         if motivo not in self._valores_contestados():
             return False
-        form = self.formulario()
         if form is not None:
-            return any(motivo in kos for kos in form.excluyentes().values()) or self._fuera_de_rango(form)
+            return any(motivo in kos for kos in form.excluyentes().values())
         return True
+
+    def _corte_sin_opcion(self, form):
+        """Cortes que no son una opción excluyente: un número fuera de su rango o
+        una de varias opciones sin todas las necesarias."""
+        for pregunta_id, necesarias in form.opciones_necesarias().items():
+            valor = self.respuesta(pregunta_id)
+            if valor not in (None, '') and not necesarias <= _partes(valor):
+                return True
+        return self._fuera_de_rango(form)
 
     def _fuera_de_rango(self, form):
         """True si alguna respuesta numérica quedó fuera del rango excluyente de su pregunta."""
@@ -386,7 +397,7 @@ class AssistantApplication(db.Model):
                 valor = self.respuesta(pregunta_id)
                 if valor not in (None, '') and _partes(valor) & kos:
                     return True
-            return self._fuera_de_rango(form)
+            return self._corte_sin_opcion(form)
         for campo, esperado in EXCLUYENTES.items():
             valor = getattr(self, campo)
             if valor and valor != esperado:

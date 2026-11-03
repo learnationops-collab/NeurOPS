@@ -120,3 +120,6 @@
   - Tipos «Correo electrónico» y «Dinero». El tipo se elige en un desplegable con íconos.
   - «Activa» y «Obligatoria» junto al tipo; el panel con aura de marca, campos con espaciado parejo y notas sin recuadro.
   - La fila elegida se marca con un tono suave en lugar del borde rosa; el foco se ve solo con teclado y en rosa, sin los recuadros azules.
+- **3 de Noviembre de 2026 (Hiring: opciones necesarias en varias opciones)** *([PanelPregunta.jsx](../../frontend/src/pages/admin/hiring/components/forms/PanelPregunta.jsx), [assistant_application.py](../../app/models/assistant_application.py), [ADR-W074](../DECISIONS.md))*:
+  - En una pregunta de varias opciones, cada opción se puede marcar como «Necesaria». Si la postulante no marca todas las necesarias, va a la pantalla de descarte (puede marcar otras además) y el panel la muestra cortada por el formulario.
+  - Va junto con institute-site, que aplica la regla en el formulario.

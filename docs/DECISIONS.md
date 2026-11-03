@@ -595,3 +595,11 @@
 - **Decisión:** el editor ofrece `email` y `dinero` como tipos visibles, pero se guardan como `texto` + `mail: true` y `numero` + `dinero: true` (`tipoVisible`, `cambiarTipo` en lib/formularios.js); `ref: 'brl'` también se lee como dinero. Pasar de texto a correo o de número a dinero no cambia el tipo guardado, así que una original no pierde su columna. El tipo se elige con el `Select` estándar (con íconos); los interruptores pasan a `Switch` estándar y el panel usa `Aura`.
 - **Qué se pierde:** nada en el formulario público ni en el backend, que siguen viendo texto y número.
 - **Consecuencias:** sin migración. Un tipo nuevo que necesite otro dibujo en el formulario público sí tiene que sumarse en institute-site y en `TIPOS` del backend.
+
+## ADR-W074: En las preguntas de varias opciones de Hiring se marcan las opciones necesarias
+
+- **Fecha:** 2026-11-03 · **Subsistema:** Hiring (Talent › Forms) · **Estado:** implementado.
+- **Contexto:** en «Equipo tecnológico» (varias opciones) Mario necesita exigir que la postulante tenga ciertas cosas (computadora, celular, internet) y aceptar otras de más. Una opción excluyente corta por elegirla; acá corta por no elegirla.
+- **Decisión:** marca `necesaria` en las opciones de una pregunta `check` (excluye a `ko` en la misma opción). El formulario público, si falta alguna, va a la pantalla de descarte con `motivo_descarte` «Sin: …». El backend lo reconoce como corte del formulario (`HiringForm.opciones_necesarias`, `AssistantApplication._corte_sin_opcion`, que también agrupa el rango numérico) en `auto_ko` y `descarte_vigente`; cuenta como pregunta con excluyentes. Al pasar la pregunta a otro tipo se sacan las marcas.
+- **Qué se pierde:** nada; una pregunta sin necesarias se comporta igual que antes.
+- **Consecuencias:** cambiar qué opciones son necesarias recalcula quién queda cortado. Sin migración.
