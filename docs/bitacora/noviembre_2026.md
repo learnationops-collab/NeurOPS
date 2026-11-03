@@ -160,3 +160,6 @@
 - **3 de Noviembre de 2026 (Marketing: se abre la ficha del lead desde las listas de cifras)** *([ficha_de_fila.py](../../app/services/ficha_de_fila.py), [useFichaDeFila.jsx](../../frontend/src/pages/admin/marketing/anuncios/useFichaDeFila.jsx), [__init__.py](../../app/api/ficha/__init__.py))*:
   - Tocar una fila de las listas de Setting, Workshop y Otras (agendas, cobros, entradas por palabra clave, Resumen de Workshop) abre la ficha del lead encima de la lista, solo para leer; Escape o cerrar vuelven a la lista.
   - El director de marketing entra a la ficha solo con lectura (el servidor rechaza cualquier escritura) y abrir un cliente sin agenda no le crea una.
+- **3 de Noviembre de 2026 (Pruebas: se arreglan las desactualizadas de la ficha, Marketing y Workshop)**:
+  - 46 pruebas del frontend de la ficha, 17 de Marketing, 8 de Workshop y 23 del servidor (ficha, triage, motivos y contrato) vuelven a pasar; ninguna reveló un bug de la app. Quedan en verde 622 de vitest y 434 de pytest en esas carpetas.
+  - La regla de pendientes del flujo de trabajo deja de mandar a `pendientes_santi.md`: lo resoluble se resuelve y lo abierto va a Leadership.
