@@ -1550,5 +1550,7 @@ def reservar(d, evento, form, funnel, cuerpo, ahora=None):
     con_evento = operacion.crear_evento(appt, sesion['nombre'], evento_a_borrar=evento_viejo)
     avisos_discord.avisar_agenda(appt)
     operacion.avisar_whatsapp(appt)
+    if desplazadas:
+        desplazar.pasar_al_triage(appt)
     invitacion = limpias.get('c-email') if con_evento else None
     return {**_respuesta(appt), 'consultor': _consultor(d, closer), 'invitacion': invitacion}, True

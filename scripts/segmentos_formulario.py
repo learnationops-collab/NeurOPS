@@ -49,7 +49,8 @@ PUNTOS_SEG = {
     INVERSION: {'ogmgmpvwtgt': 4, 'oa9pmy94tfg': 4, 'ogmdr0s275v': 4, 'oglxqq0u44o': 2, 'og-menos-200': -2,
                 'o8slpjgvje7': -3, 'oglxqqlugub': -4},
     # Rural y general (+1) · especialista (-1) · residente (-2) · estudiante o interno (-3: compra 3,4%).
-    ETAPA: {'og8xclet205': -3, 'og8xclf4go4': 1, 'og94zlvu9m2': 1, 'og9azfspw7e': -2, 'og9ed3qtpzx': -1},
+    # Internado: separado de estudiante el 02/11 (ADR-W084), sin datos propios: los mismos -3.
+    ETAPA: {'og8xclet205': -3, 'og-internado': -3, 'og8xclf4go4': 1, 'og94zlvu9m2': 1, 'og9azfspw7e': -2, 'og9ed3qtpzx': -1},
     # Colombia y Perú (+1) · Otro y USMLE (0) · no busca examen (-1) · ENARM (-2). MIR daba +1 y queda en 0:
     # España no es mercado prioritario (Mario, 24/10/2026). Chile, Panamá y Ecuador no tienen datos propios:
     # siguen el orden que les dio Mario (Chile y Panamá como Colombia, Ecuador abajo).
@@ -95,7 +96,8 @@ def _insertar(opciones, nueva, antes_de=None, despues_de=None):
 
 def _reglas(reglas, inversion):
     """Las reglas con url (mk-academy) primero y una por segmento después; las mk-g* se van.
-    mk-academy: el estudiante que no invierte, sea «no estoy dispuesto» o «podría conseguir ayuda» (Mario, 26/10)."""
+    mk-academy: el estudiante que no invierte, sea «no estoy dispuesto» o «podría conseguir ayuda» (Mario, 26/10).
+    El internado no entra (ADR-W084): va al triage como cualquiera sin dinero."""
     filtros = [r for r in reglas if r.get('url')]
     existen = {o['id'] for o in inversion['opciones']}
     for r in filtros:
@@ -115,6 +117,13 @@ def preparar(datos, quien_decide=False):
     faltan = [q for q in PUNTOS_SEG if q not in preguntas]
     if faltan:
         raise SystemExit(f'Faltan preguntas en el formulario: {faltan}')
+
+    # Estudiante e internado, separados: solo el estudiante sin dinero va a la página de gracias (ADR-W084).
+    eta = preguntas[ETAPA]['opciones']
+    for o in eta:
+        if o['id'] == 'og8xclet205':
+            o['texto'], o['corto'] = 'Soy estudiante', 'Estudiante'
+    _insertar(eta, {**_op('og-internado', 'Estoy en mi internado'), 'corto': 'Internado', 'puntos': 0}, despues_de='og8xclet205')
 
     exa = preguntas[EXAMEN]['opciones']
     for id_, texto in (('og-ecuador', 'Examen de residencias | Ecuador'), ('og-chile', 'EUNACOM | Chile'),

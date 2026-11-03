@@ -659,3 +659,27 @@
 - **Decisión:** al reasignar desde la ficha, las ventas activas de la persona que eran del closer anterior (sus identificadores de `_resolve_sale_identifiers`) pasan al closer nuevo (`closer_email` = su correo). La nota de la bitácora dice qué ventas pasaron. Los pagos no se tocan: cada uno sigue con quien lo cobró. Santi eligió esto frente a una «cartera» que dejara la venta con quien la cerró.
 - **Qué se pierde:** el closer que cerró la venta la pierde de su historial y de su «Mis ventas»; lo que ya cobró sigue a su nombre.
 - **Consecuencias:** las ventas de David Hernandez (391) y José Manuel Oliva (557) se pasaron a mano en producción. Editar la agenda desde el historial (`ficha_agendas_service.editar_agenda`) y el endpoint viejo `PATCH /appointments/<id>/reassign` siguen cambiando solo la agenda.
+
+## ADR-W082: La agenda C/D desplazada por un A/B pasa sola al triage
+
+- **Fecha:** 2026-10-31 · **Subsistema:** Agendas 2.0 (`desplazar.py`, `a_triage.py`) · **Estado:** implementado.
+- **Contexto:** cuando un lead A/B (o una Momentum) toma el horario de una C/D, la C/D quedaba con el closer marcada «Reagendar: horario tomado», con aviso al closer y a los admins. Pero con el ruteo por dinero los C/D son del triage, y la triage no se enteraba.
+- **Decisión:** después de guardar la agenda nueva, cada C/D desplazada pasa por el mismo «Pasar a triage» de la ficha (`a_triage.pasar`, con `motivo` y sin usuario). Va a la triage libre a esa hora, que la conserva sin la marca de desplazada, o a la de menos carga, que la recibe marcada para reagendar. Su evento se borra del Google del closer y al lead le llega la invitación de la triage. El aviso a la triage es `agenda_desplazada`. Si no hay triage disponible, se vuelve a lo de antes: queda con el closer y el aviso va al closer y a los admins.
+- **Qué se pierde:** el closer ya no decide qué hacer con la C/D que le desplazaron; sale de su mazo.
+- **Consecuencias:** un error al pasarla (Google, base) se registra y no frena la agenda nueva, y esa C/D queda marcada con el closer pero sin aviso.
+
+## ADR-W083: El upsell reemplaza la suscripción vieja y da su acceso entero
+
+- **Fecha:** 2026-10-31 · **Subsistema:** Suscripciones (`subscription_service`) · **Estado:** implementado.
+- **Contexto:** con el upsell AL→RR de Melissa Quezada, la suscripción de AL seguía vigente al lado de la de RR, y el plan de cuotas del upsell le recortaba el acceso a RR hasta la próxima cuota más la gracia (07/12 en vez de 27/02). Santi: «en caso de upsell la antigua suscripción se reemplaza por la nueva, extendida».
+- **Decisión:** el pago que abre una venta `upsell` (`al_ubicar_pago` → `_reemplazar_por_upsell`) termina el día del upsell las suscripciones vigentes de otros productos de la persona (evento `correccion`, «Reemplazada por el upsell a X»), y la nueva arranca con sus 120 días. `ajustar_por_plan` no toca una suscripción cuya venta es un upsell: el plan de cuotas no la acorta ni la estira.
+- **Qué se pierde:** un alumno con upsell en cuotas mantiene el acceso aunque se atrase; el control queda en la cola de cobro, no en el vencimiento. Los días que le quedaban del producto viejo no se suman al nuevo.
+- **Consecuencias:** el caso de Melissa se arregló a mano (AL hasta el 30/10, RR hasta el 27/02/2027). Los upsells anteriores no se recorren.
+
+## ADR-W084: El interno sin dinero va al triage; solo el estudiante va a la página de gracias
+
+- **Fecha:** 2026-11-02 · **Subsistema:** Agendas 2.0 (formulario «Sesión de Aceleración») · **Estado:** implementado.
+- **Contexto:** la regla `mk-academy` manda a «gracias por postularte» al que eligió «Soy estudiante o estoy en mi internado» y no invierte. Mitzia Vazquez (interna, «podría conseguir ayuda») salió como «No calificó» y Mario esperaba que pasara al triage. Santi: «si es estudiante no pasa, si es interno sí». Con una sola opción para los dos, la regla no podía separarlos.
+- **Decisión:** la opción `og8xclet205` pasa a ser «Soy estudiante» y se suma `og-internado` («Estoy en mi internado»), con la misma nota (0) y los mismos puntos de segmento (-3: no hay datos propios del interno). `mk-academy` queda igual, así que solo agarra al estudiante; el interno sin dinero cae en `sin-dinero` → triage. Se guardó solo la pregunta Etapa (`guardar_doc(parcial=True)`), y `scripts/segmentos_formulario.py` y `backfill_segmentos.py` conocen la opción nueva.
+- **Qué se pierde:** las respuestas viejas con `og8xclet205` (estudiantes e internos mezclados) se leen ahora como «Estudiante»; no hay forma de separarlas.
+- **Consecuencias:** rige para los formularios que se respondan desde ahora. Mitzia y otros internos que ya quedaron como «No calificó» no se recalculan: hay que pasarlos a mano.

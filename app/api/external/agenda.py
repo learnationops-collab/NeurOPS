@@ -651,6 +651,8 @@ def _reservar_momentum(u, datos, inicio, inicio_dt, dur):
                           'appointment', appt.id, person_uuid=appt.person_uuid)
     db.session.commit()
     servicio._google_cache.pop(u.id, None)
+    if desplazadas:
+        desplazar.pasar_al_triage(appt)
     _aviso(u, inicio, servicio.zona_de_usuario(u), aviso.get('sesion'), aviso.get('alumno') or invitado.get('nombre'))
     return jsonify({'event_id': event_id, 'calendar_id': GoogleService._calendario(u.id), 'meet': meet,
                     'appointment_id': appt.id}), 200

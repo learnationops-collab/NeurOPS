@@ -47,7 +47,7 @@ NO_DISPUESTO, PODRIA_AYUDA = 'oglxqqlugub', 'o8slpjgvje7'
 EQUIVALENCIAS = {
     'inversion': (INVERSION, [(r'no estoy|no puedo|posicion', PODRIA_AYUDA), (r'200', 'oglxqq0u44o'),
                               (r'500|1000', 'ogmdr0s275v'), (r'sentido', 'oglxqq0u44o')]),
-    'formacion': (ETAPA, [(r'estudiante|internado', 'og8xclet205'), (r'rural|social', 'og8xclf4go4'),
+    'formacion': (ETAPA, [(r'^estoy en mi internado', 'og-internado'), (r'estudiante|internado', 'og8xclet205'), (r'rural|social', 'og8xclf4go4'),
                           (r'trabajando|general', 'og94zlvu9m2'), (r'residente', 'og9azfspw7e'),
                           (r'especialista', 'og9ed3qtpzx')]),
     'examen': (EXAMEN, [(r'colombia', 'og77bdut6ym'), (r'\bmir\b', 'og7cr7tiwh9'), (r'peru', 'og6raas2nv9'),

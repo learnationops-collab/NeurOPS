@@ -148,6 +148,8 @@ def al_ubicar_pago(session, sale, fila, pago, abre, abierta):
     if abre and pago.tipo == 'seña':
         return otorgar(session, fila.client_id, slug, dia + timedelta(days=DIAS_SENA), 'alta',
                        is_deposit=True, reason='Seña: 7 días', **comun)
+    if abre and sale.kind == 'upsell':
+        _reemplazar_por_upsell(session, fila.client_id, slug, dia, sale, fila)
     if abre and pago.tipo in ('completo', 'parcial', 'upsell'):
         meses = MESES_DE_ALTA.get(pago.programa)
         hasta = _add_months(dia, meses) if meses else dia + timedelta(days=DURACION_DIAS)
@@ -157,6 +159,17 @@ def al_ubicar_pago(session, sale, fila, pago, abre, abierta):
         return otorgar(session, fila.client_id, slug, dia + timedelta(days=DURACION_DIAS), 'conversion',
                        is_deposit=False, reason='La seña pasó a acceso completo', **comun)
     return None
+
+
+def _reemplazar_por_upsell(session, client_id, slug, dia, sale, fila):
+    """El upsell reemplaza la suscripción vieja (Santiago, 31/10/2026): las de otros productos que siguen
+    vigentes terminan el día del upsell."""
+    for vieja in _suyas(session, client_id).filter(Subscription.product_slug != slug,
+                                                   Subscription.status == 'active',
+                                                   Subscription.expires_at > dia).all():
+        otorgar(session, client_id, vieja.product_slug, dia, 'correccion', programa=vieja.program_code,
+                sale=None, payment=fila, reason=f'Reemplazada por el upsell a {sale.program_code}',
+                puede_acortar=True)
 
 
 def venta_que_extiende(client, slug, hasta):
@@ -286,7 +299,8 @@ def ajustar_por_plan(client_id, programa):
 
     slug = slug_de(programa)
     sub = _de(db.session, client_id, slug) if slug and client_id else None
-    if sub is None or sub.is_deposit:
+    # El upsell da su acceso entero aunque deba cuotas (Santiago, 31/10/2026).
+    if sub is None or sub.is_deposit or (sub.sale is not None and sub.sale.kind == 'upsell'):
         return None
     cuotas = InstallmentPlan.query.filter_by(client_id=client_id, programa_code=programa).all()
     if not cuotas:
