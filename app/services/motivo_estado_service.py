@@ -8,8 +8,9 @@ canceló?»), y eso queda como nota en el hilo de la persona, donde el equipo lo
 
   · una fila de `lead_event_logs` con `action_type='nota'` (la nota del equipo), `origen='appointment'`,
     `origen_id` la agenda y `user_id` quien la escribió;
-  · `payload = {'motivo_estado': 'no_show' | 'cancelado' | 'reagendado'}` marca la nota como motivo y dice
-    de qué estado es;
+  · `payload = {'motivo_estado': 'no_show' | 'cancelado' | 'reagendado', 'motivo': <texto crudo>}` marca la
+    nota como motivo, dice de qué estado es y trae lo escrito sin el prefijo (desde el 03/11/2026; las notas
+    anteriores no traen `motivo` y `motivos_agenda` lo recorta de la descripción);
   · `description` empieza con el estado y con quién lo marcó, y termina con el texto TAL CUAL se escribió
     (ver `texto_nota`).
 
@@ -119,17 +120,7 @@ def registrar_de_persona(person_uuid, usuario, estado, texto):
         return None
     nombre = getattr(usuario, 'username', None) or 'el equipo'
     return lead_log_service.registrar(person_uuid, 'nota', texto_nota(clave, texto, nombre),
-                                      user_id=lead_log_service._uid(usuario), payload={'motivo_estado': clave})
-
-
-def registrar_de_persona(person_uuid, usuario, estado, texto):
-    """Lo mismo que `registrar` para una fila del Tablero de Agendas sin cita: la nota cuelga de la persona."""
-    clave = clave_de(estado)
-    if clave is None or not person_uuid:
-        return None
-    nombre = getattr(usuario, 'username', None) or 'el equipo'
-    return lead_log_service.registrar(person_uuid, 'nota', texto_nota(clave, texto, nombre),
-                                      user_id=lead_log_service._uid(usuario), payload={'motivo_estado': clave})
+                                      user_id=lead_log_service._uid(usuario), payload={'motivo_estado': clave, 'motivo': texto})
 
 
 def registrar(appt, usuario, estado, texto, quien=None, nueva_fecha=None):
@@ -142,4 +133,4 @@ def registrar(appt, usuario, estado, texto, quien=None, nueva_fecha=None):
         return None
     nombre = quien or getattr(usuario, 'username', None) or 'el equipo'
     return lead_log_service.nota(texto_nota(clave, texto, nombre, nueva_fecha), usuario, appt=appt,
-                                 payload={'motivo_estado': clave})
+                                 payload={'motivo_estado': clave, 'motivo': texto})

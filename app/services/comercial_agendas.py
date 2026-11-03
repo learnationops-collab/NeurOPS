@@ -17,6 +17,24 @@ from app.services.comercial_vocabulario import (
 )
 from app.services.ventas_previas import con_venta_posterior
 
+# Estados de la fila que piden motivo (`motivo_estado_service`), por la clave del chip.
+_MOTIVO_DE_POST = {'no_show': 'no_show', 'reagendo': 'reagendado', 'cancelo': 'cancelado'}
+
+
+def _con_motivo(filas):
+    """Suma `motivo` a las filas No show / Canceló / Reagendó (el tooltip de Revisar, 03/11/2026)."""
+    from app.services import motivos_agenda
+
+    pedidas = []
+    for f in filas:
+        clave = _MOTIVO_DE_POST.get(f['post_call']['key']) or ('cancelado' if f['pre_call']['key'] == 'cancelo' else None)
+        if clave:
+            pedidas.append((f['id'], clave, f['person_uuid']))
+    motivos = motivos_agenda.de_agendas(pedidas)
+    for f in filas:
+        if f['id'] in motivos:
+            f['motivo'] = motivos[f['id']]
+
 
 class ComercialAgendasMixin:
 
@@ -173,6 +191,7 @@ class ComercialAgendasMixin:
                 # 'directa' o 'triage': si la agenda llegó directo al closer o la pasó el triage (02/11/2026).
                 'canal': canales[a.id],
             })
+        _con_motivo(filas)
         return filas
 
     @staticmethod
