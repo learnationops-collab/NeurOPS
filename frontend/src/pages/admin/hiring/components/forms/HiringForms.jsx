@@ -172,7 +172,6 @@ const Editor = ({ id, modo, onModo, onVolver }) => {
     const [estado, setEstado] = useState('');
     const [pantalla, setPantalla] = useState('escritorio');
     const [version, setVersion] = useState(0);
-    const [tasaBrl, setTasaBrl] = useState(null);
     const espera = useRef(null);
     const pendiente = useRef(null);
 
@@ -180,7 +179,6 @@ const Editor = ({ id, modo, onModo, onVolver }) => {
         api.get(`/hiring/forms/${id}`)
             .then((res) => setForm(res.data))
             .catch((err) => setError(err.response?.data?.message || 'No se pudo abrir el formulario.'));
-        api.get('/hiring/config').then((res) => setTasaBrl(res.data.tasa_brl)).catch(() => {});
     }, [id]);
 
     // Cada cambio se guarda solo, medio segundo después del último toque.
@@ -285,7 +283,7 @@ const Editor = ({ id, modo, onModo, onVolver }) => {
                         </p>
                         <LinkFormulario form={form} onCambio={(slug) => setForm((prev) => ({ ...prev, slug }))} />
                     </section>
-                    <EditorPreguntas preguntas={form.preguntas || []} tasaBrl={tasaBrl} onCambiar={(preguntas) => cambiar({ preguntas })} />
+                    <EditorPreguntas preguntas={form.preguntas || []} originales={form.originales || []} onCambiar={(preguntas) => cambiar({ preguntas })} />
                 </>
             )}
         </>

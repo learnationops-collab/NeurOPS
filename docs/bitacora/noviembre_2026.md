@@ -102,3 +102,42 @@
   - Las seis tarjetas: cuatro iguales arriba y las dos del closer (asistencia y conversión) del doble de ancho abajo, con su barra.
   - El embudo de Closing toma el aspecto del de Triage: barras redondeadas más altas, sin cuello entre una y otra y «N de M» bajo cada una (solo con los dos canales; el de Setters no cambia).
 - **2 de Noviembre de 2026 (Close rate general y del período, los dos a la vista)** *([CloseRatesCanales.jsx](../../frontend/src/pages/comercial/components/CloseRatesCanales.jsx), [CierresReales.jsx](../../frontend/src/components/dashboard/CierresReales.jsx))*: en el embudo, cada close rate (total, directas y desde triage) muestra dos columnas: «General» (cierres ÷ asistieron + llamadas anteriores que cerraron) y «Del período» (solo las llamadas de este período, `del_periodo` ÷ asistieron). En la tarjeta Cierre, bajo el close rate real, se suma «Close rate del período» con su cuenta. Solo frontend: los datos ya venían en `cierres.reales`.
+
+- **3 de Noviembre de 2026 (Hiring: preguntas que se arrastran y se borran, WhatsApp con código de país)** *([EditorPreguntas.jsx](../../frontend/src/pages/admin/hiring/components/forms/EditorPreguntas.jsx), [hiring_forms.py](../../app/services/hiring_forms.py), [ADR-W069](../DECISIONS.md))*:
+  - Talent › Forms: cada pregunta se arrastra desde su asa a cualquier lugar (pasa al bloque donde cae).
+  - Se pueden eliminar las preguntas originales (menos el nombre y las que tienen una condicional que depende de ellas); al final de la lista se recuperan. Para el score, una borrada cuenta como apagada.
+  - Sin pregunta de país, el país de la postulación sale del código del WhatsApp (`pais_de_whatsapp`).
+  - Va junto con institute-site: el WhatsApp tiene selector de código de país, que arranca en el país detectado.
+- **3 de Noviembre de 2026 (Hiring: el tipo de cualquier pregunta se cambia)** *([formularios.js](../../frontend/src/pages/admin/hiring/lib/formularios.js), [ADR-W070](../DECISIONS.md))*:
+  - El selector de tipo ya no está bloqueado en las originales (solo en el nombre). Una original que cambia de tipo pasa a ser nueva: sus respuestas van aparte y deja de sumar al score.
+- **3 de Noviembre de 2026 (Hiring: editor de preguntas en dos columnas)** *([EditorPreguntas.jsx](../../frontend/src/pages/admin/hiring/components/forms/EditorPreguntas.jsx), [PanelPregunta.jsx](../../frontend/src/pages/admin/hiring/components/forms/PanelPregunta.jsx), [ADR-W071](../DECISIONS.md))*:
+  - Lista de preguntas a la izquierda (se arrastran y se prenden o apagan desde la fila) y la configuración de la elegida en un panel a la derecha, con el tipo como fichas con ícono.
+  - Sin la nota «Pregunta original» ni el chip «Nueva». Las borradas se recuperan en «Eliminadas».
+- **3 de Noviembre de 2026 (Hiring: límites excluyentes en las preguntas numéricas)** *([PanelPregunta.jsx](../../frontend/src/pages/admin/hiring/components/forms/PanelPregunta.jsx), [hiring_form.py](../../app/models/hiring_form.py), [ADR-W072](../DECISIONS.md))*:
+  - Una pregunta de tipo número (expectativa salarial, edad…) tiene «Descarta si es menor a / mayor a». Fuera del rango, la postulante va a la pantalla de descarte y el panel la marca como cortada por el formulario.
+  - Va junto con institute-site, que aplica el rango en el formulario.
+- **3 de Noviembre de 2026 (Hiring: pulido del editor de preguntas)** *([PanelPregunta.jsx](../../frontend/src/pages/admin/hiring/components/forms/PanelPregunta.jsx), [editorPreguntas.css](../../frontend/src/pages/admin/hiring/components/forms/editorPreguntas.css), [ADR-W073](../DECISIONS.md))*:
+  - Tipos «Correo electrónico» y «Dinero». El tipo se elige en un desplegable con íconos.
+  - «Activa» y «Obligatoria» junto al tipo; el panel con aura de marca, campos con espaciado parejo y notas sin recuadro.
+  - La fila elegida se marca con un tono suave en lugar del borde rosa; el foco se ve solo con teclado y en rosa, sin los recuadros azules.
+- **3 de Noviembre de 2026 (Hiring: opciones necesarias en varias opciones)** *([PanelPregunta.jsx](../../frontend/src/pages/admin/hiring/components/forms/PanelPregunta.jsx), [assistant_application.py](../../app/models/assistant_application.py), [ADR-W074](../DECISIONS.md))*:
+  - En una pregunta de varias opciones, cada opción se puede marcar como «Necesaria». Si la postulante no marca todas las necesarias, va a la pantalla de descarte (puede marcar otras además) y el panel la muestra cortada por el formulario.
+  - Va junto con institute-site, que aplica la regla en el formulario.
+- **3 de Noviembre de 2026 (Hiring: segunda pasada de diseño del editor de preguntas)** *([PanelPregunta.jsx](../../frontend/src/pages/admin/hiring/components/forms/PanelPregunta.jsx), [editorPreguntas.css](../../frontend/src/pages/admin/hiring/components/forms/editorPreguntas.css))*:
+  - Panel sin borde ni brillo rosa; más aire entre la cabecera del formulario y la lista; número de la pregunta en blanco.
+  - «Texto de ayuda» pasa a «Descripción»; los textos crecen solos (sin la manija de tamaño) y hay menos rótulos.
+  - Al elegir una pregunta, el número aparece y los bloques del panel entran en cascada; las filas se corren apenas al pasar el mouse.
+- **3 de Noviembre de 2026 (Hiring: las opciones de una pregunta se ordenan arrastrando)** *([PanelPregunta.jsx](../../frontend/src/pages/admin/hiring/components/forms/PanelPregunta.jsx))*:
+  - Cada opción se arrastra desde su letra (al pasar el mouse muestra el asa); las letras se reacomodan y las marcas de necesaria o excluyente viajan con la opción.
+- **3 de Noviembre de 2026 (Hiring: el nombre de cada bloque se edita)** *([EditorPreguntas.jsx](../../frontend/src/pages/admin/hiring/components/forms/EditorPreguntas.jsx))*:
+  - Clic en el nombre del bloque en la lista (Experiencia, Idiomas…) para cambiarlo; se aplica a las preguntas de ese tramo y es lo que la postulante ve arriba de cada pregunta. Hasta 60 caracteres (lo valida el backend).
+- **3 de Noviembre de 2026 (Hiring: sin variantes de texto por país)** *([PanelPregunta.jsx](../../frontend/src/pages/admin/hiring/components/forms/PanelPregunta.jsx), [hiring_forms.py](../../app/services/hiring_forms.py))*:
+  - El editor ya no muestra «Si vive en Brasil»; la API pública no manda `t_pais`/`h_pais` (las guardadas quedan sin efecto) y el formulario de institute-site usa siempre el mismo texto para todos.
+- **3 de Noviembre de 2026 (Hiring: arreglos del editor y sin reales)** *([EditorPreguntas.jsx](../../frontend/src/pages/admin/hiring/components/forms/EditorPreguntas.jsx), [formularios.js](../../frontend/src/pages/admin/hiring/lib/formularios.js))*:
+  - Con títulos largos la lista se ensanchaba por debajo del panel (pista de grilla sin `minmax(0,1fr)`): arreglado.
+  - Una pregunta de la que depende otra ya se puede eliminar: las que dependían quedan apagadas y sin condición, y el panel lo avisa antes.
+  - Fuera el equivalente en reales: la API no publica `ref` y el formulario de institute-site no lo muestra; el editor ya no pide la tasa.
+- **3 de Noviembre de 2026 (Closer: el reporte de no asistió, canceló y reagenda pide solo un cuadro de texto)** *([arbolResultado.preguntas.js](../../frontend/src/components/ficha/arbolResultado.preguntas.js), [arbolResultado.payload.js](../../frontend/src/components/ficha/arbolResultado.payload.js))*:
+  - Se quitan las opciones fijas de motivo; queda un único cuadro obligatorio (10+ caracteres) por rama, que viaja como `motivo_estado` y se anota en Comunicación.
+  - El subestado del seguimiento se recorta a 180 caracteres (`seguimiento_sub` es String(255)): un motivo largo ya no rompe el guardado.
+  - Contrato front/back (`reportes.json`) regenerado; pruebas del reporte ajustadas.

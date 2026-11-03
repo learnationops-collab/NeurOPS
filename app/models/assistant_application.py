@@ -103,6 +103,31 @@ COLUMNAS_DE_RESPUESTA = frozenset(CAMPOS_FORMULARIO + CAMPOS_LEGACY)
 # la opción (`prefijo`).
 PREFIJOS = {'Argentina': '+54', 'Brasil': '+55', 'Venezuela': '+58'}
 
+# Los códigos que ofrece el selector del WhatsApp en el formulario (el mismo
+# PAISES_TEL de institute-site). Con la pregunta de país borrada o apagada, el
+# país sale del código que eligió.
+PAIS_DE_CODIGO = {
+    '54': 'Argentina', '55': 'Brasil', '58': 'Venezuela', '598': 'Uruguay', '595': 'Paraguay',
+    '56': 'Chile', '591': 'Bolivia', '51': 'Perú', '593': 'Ecuador', '57': 'Colombia',
+    '52': 'México', '506': 'Costa Rica', '507': 'Panamá', '502': 'Guatemala', '503': 'El Salvador',
+    '504': 'Honduras', '505': 'Nicaragua', '53': 'Cuba', '1': 'Estados Unidos', '34': 'España',
+    '351': 'Portugal', '39': 'Italia',
+}
+
+
+def pais_de_whatsapp(numero):
+    """«+54 11 2345 6789» -> «Argentina». None si no trae «+» o el código no
+    es de la lista (el más largo gana: +598 es Uruguay, no +59…)."""
+    crudo = (numero or '').strip()
+    if not crudo.startswith('+'):
+        return None
+    digitos = ''.join(c for c in crudo if c.isdigit())
+    for largo in (3, 2, 1):
+        pais = PAIS_DE_CODIGO.get(digitos[:largo])
+        if pais:
+            return pais
+    return None
+
 
 class AssistantApplication(db.Model):
     """Una fila por candidato. Se actualiza (no se duplica) por `dedupe_key`:
@@ -324,15 +349,37 @@ class AssistantApplication(db.Model):
         Sin motivo guardado no hay cómo saberlo y la marca vale."""
         if not self.descartado:
             return False
+        form = self.formulario()
+        if form is not None and self._corte_sin_opcion(form):
+            return True
         motivo = (self.motivo_descarte or '').strip()
         if not motivo:
             return True
         if motivo not in self._valores_contestados():
             return False
-        form = self.formulario()
         if form is not None:
             return any(motivo in kos for kos in form.excluyentes().values())
         return True
+
+    def _corte_sin_opcion(self, form):
+        """Cortes que no son una opción excluyente: un número fuera de su rango o
+        una de varias opciones sin todas las necesarias."""
+        for pregunta_id, necesarias in form.opciones_necesarias().items():
+            valor = self.respuesta(pregunta_id)
+            if valor not in (None, '') and not necesarias <= _partes(valor):
+                return True
+        return self._fuera_de_rango(form)
+
+    def _fuera_de_rango(self, form):
+        """True si alguna respuesta numérica quedó fuera del rango excluyente de su pregunta."""
+        for pregunta_id, (minimo, maximo) in form.rangos_excluyentes().items():
+            digitos = ''.join(c for c in str(self.respuesta(pregunta_id) or '') if c.isdigit())
+            if not digitos:
+                continue
+            numero = int(digitos)
+            if (minimo is not None and numero < minimo) or (maximo is not None and numero > maximo):
+                return True
+        return False
 
     def cortada_por_formulario(self):
         """Lo que el panel muestra como «descartada automáticamente»."""
@@ -350,7 +397,7 @@ class AssistantApplication(db.Model):
                 valor = self.respuesta(pregunta_id)
                 if valor not in (None, '') and _partes(valor) & kos:
                     return True
-            return False
+            return self._corte_sin_opcion(form)
         for campo, esperado in EXCLUYENTES.items():
             valor = getattr(self, campo)
             if valor and valor != esperado:

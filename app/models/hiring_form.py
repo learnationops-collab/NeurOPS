@@ -41,7 +41,7 @@ class HiringForm(db.Model):
     activo = db.Column(db.Boolean, nullable=False, default=False)
     # Lista de preguntas con el esquema del `PREGUNTAS` del formulario público,
     # más dos claves del editor: `on` (si se pregunta) y `base` (si es una de
-    # las 35 originales, que se pueden apagar pero no borrar).
+    # las 35 originales, que se pueden apagar o borrar, menos el nombre).
     preguntas = db.Column(db.JSON, nullable=False, default=list)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -56,13 +56,16 @@ class HiringForm(db.Model):
         cache = self.__dict__.get('_cache_derivados')
         if cache is not None and cache[0] is self.preguntas:
             return cache[1]
+        from app.services.hiring_forms import IDS_BASE
         preguntas = [p for p in (self.preguntas or []) if isinstance(p, dict)]
         derivados = {
             'por_id': {p.get('id'): p for p in preguntas},
-            # Columnas de las preguntas apagadas (para el score).
+            # Columnas de las preguntas apagadas o de las originales que se
+            # borraron (para el score: a nadie se le preguntaron).
             'apagadas': frozenset(
-                COLUMNA_DE_PREGUNTA.get(p.get('id'), p.get('id'))
-                for p in preguntas if p.get('on') is False
+                COLUMNA_DE_PREGUNTA.get(pid, pid)
+                for pid in [p.get('id') for p in preguntas if p.get('on') is False]
+                + [pid for pid in IDS_BASE if pid not in {p.get('id') for p in preguntas}]
             ),
             # Las que cuentan para la completitud antes de mirar condiciones.
             'obligatorias': [
@@ -78,6 +81,23 @@ class HiringForm(db.Model):
                 )
                 for p in preguntas
                 if p.get('on') is not False and any(isinstance(o, dict) and o.get('ko') for o in (p.get('o') or []))
+            },
+            # {id de pregunta de varias opciones prendida: textos que tiene que marcar sí o sí}.
+            'necesarias': {
+                p.get('id'): frozenset(
+                    str(o.get('t') or '').strip() for o in (p.get('o') or [])
+                    if isinstance(o, dict) and o.get('necesaria')
+                )
+                for p in preguntas
+                if p.get('on') is not False and p.get('tipo') == 'check'
+                and any(isinstance(o, dict) and o.get('necesaria') for o in (p.get('o') or []))
+            },
+            # {id de pregunta numérica prendida: (ko_min, ko_max)}: fuera de ese rango corta.
+            'rangos': {
+                p.get('id'): (p.get('ko_min'), p.get('ko_max'))
+                for p in preguntas
+                if p.get('on') is not False and p.get('tipo') == 'numero'
+                and (p.get('ko_min') is not None or p.get('ko_max') is not None)
             },
         }
         self.__dict__['_cache_derivados'] = (self.preguntas, derivados)
@@ -104,6 +124,16 @@ class HiringForm(db.Model):
         de las preguntas prendidas. Es lo que el formulario público usa para mandar
         a la pantalla de descarte."""
         return self._derivados()['excluyentes']
+
+    def opciones_necesarias(self):
+        """{id de pregunta de varias opciones: textos que tiene que marcar}: si
+        falta alguna, la postulación se corta."""
+        return self._derivados()['necesarias']
+
+    def rangos_excluyentes(self):
+        """{id de pregunta numérica: (ko_min, ko_max)}: una respuesta fuera del
+        rango manda a la pantalla de descarte (None = sin ese límite)."""
+        return self._derivados()['rangos']
 
     def preguntas_obligatorias(self):
         return self._derivados()['obligatorias']

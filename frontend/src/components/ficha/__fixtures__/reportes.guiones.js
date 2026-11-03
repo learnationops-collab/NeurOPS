@@ -46,7 +46,9 @@ export const GUIONES = {
     contexto: LLAMADA,
     pasos: [
       ['res', { res: 'asistio' }], ['decisor', { with_decision_maker: false }],
-      ['oferta', { offer_presented: false }], ['nopres_next', { nopres_next: 'segunda' }],
+      ['oferta', { offer_presented: false }],
+      ['motivo_sin_oferta', { motivo_sin_oferta: 'Faltó el decisor y no se llegó a presentar la oferta' }],
+      ['nopres_next', { nopres_next: 'segunda' }],
       ['segunda_llamada', { nueva_fecha_agenda: '2026-10-08', nueva_hora_agenda: '19:30', notes: 'Faltó el decisor' }],
       ['refs_ask', { refs_ask: 'no_pedido' }],
     ],
@@ -55,7 +57,9 @@ export const GUIONES = {
     contexto: LLAMADA,
     pasos: [
       ['res', { res: 'asistio' }], ['decisor', { with_decision_maker: false }],
-      ['oferta', { offer_presented: false }], ['nopres_next', { nopres_next: 'descartar' }],
+      ['oferta', { offer_presented: false }],
+      ['motivo_sin_oferta', { motivo_sin_oferta: 'Faltó el decisor y no se llegó a presentar la oferta' }],
+      ['nopres_next', { nopres_next: 'descartar' }],
       ['descarte', { motivo_descarte: 'No califica: no rinde este año' }],
       ['refs_ask', { refs_ask: 'no_pedido' }],
     ],
@@ -63,48 +67,53 @@ export const GUIONES = {
   no_asistio_seguimiento: {
     contexto: LLAMADA,
     pasos: [
-      ['res', { res: 'no_asistio' }], ['noshow_motivo', { noshow_motivo: 'Confundió la fecha' }],
-      ['noshow_detalle', { notes: 'Pensó que era mañana' }], ['noshow_next', { noshow_next: 'seguimiento' }],
+      ['res', { res: 'no_asistio' }],
+      ['noshow_detalle', { motivo_noshow: 'Confundió la fecha: pensó que era mañana' }],
+      ['noshow_next', { noshow_next: 'seguimiento' }],
       ['seguimiento', { fecha_seguimiento: '2026-10-02' }],
     ],
   },
   no_asistio_descartar: {
     contexto: LLAMADA,
     pasos: [
-      ['res', { res: 'no_asistio' }], ['noshow_motivo', { noshow_motivo: 'Bloqueó / desapareció' }],
-      ['noshow_detalle', { notes: 'Me bloqueó en WhatsApp' }], ['noshow_next', { noshow_next: 'descartar' }],
+      ['res', { res: 'no_asistio' }],
+      ['noshow_detalle', { motivo_noshow: 'Bloqueó / desapareció: me bloqueó en WhatsApp' }],
+      ['noshow_next', { noshow_next: 'descartar' }],
       ['descarte', { motivo_descarte: 'No responde hace dos semanas' }],
     ],
   },
   cancelo_reagendar_con_fecha: {
     contexto: LLAMADA,
     pasos: [
-      ['res', { res: 'cancelo' }], ['cancel_motivo', { cancel_motivo: 'Sin tiempo / imprevisto' }],
-      ['cancel_detalle', { notes: 'Tuvo guardia' }], ['cancel_next', { cancel_next: 'reagendar' }],
-      ['reag_motivo', { reag_motivo: 'Pidió otro horario' }], ['reag_dejo_fecha', { reag_dejo_fecha: true }],
+      ['res', { res: 'cancelo' }],
+      ['cancel_detalle', { motivo_cancelo: 'Sin tiempo: tuvo guardia y pidió otro horario' }],
+      ['cancel_next', { cancel_next: 'reagendar' }], ['reag_dejo_fecha', { reag_dejo_fecha: true }],
       ['reag_fecha', { nueva_fecha_agenda: '2026-10-05', nueva_hora_agenda: '20:00' }],
     ],
   },
   cancelo_seguimiento: {
     contexto: LLAMADA,
     pasos: [
-      ['res', { res: 'cancelo' }], ['cancel_motivo', { cancel_motivo: 'Problema económico' }],
-      ['cancel_detalle', { notes: 'Cobra a fin de mes' }], ['cancel_next', { cancel_next: 'seguimiento' }],
+      ['res', { res: 'cancelo' }],
+      ['cancel_detalle', { motivo_cancelo: 'Problema económico: cobra a fin de mes' }],
+      ['cancel_next', { cancel_next: 'seguimiento' }],
       ['seguimiento', { fecha_seguimiento: '2026-10-03', notes: 'Le escribo el 3 con la propuesta en cuotas' }],
     ],
   },
   cancelo_no_lead: {
     contexto: LLAMADA,
     pasos: [
-      ['res', { res: 'cancelo' }], ['cancel_motivo', { cancel_motivo: 'Ya no le interesa' }],
-      ['cancel_detalle', {}], ['cancel_next', { cancel_next: 'no_lead' }],
+      ['res', { res: 'cancelo' }],
+      ['cancel_detalle', { motivo_cancelo: 'Ya no le interesa seguir con el examen' }],
+      ['cancel_next', { cancel_next: 'no_lead' }],
       ['descarte', { motivo_descarte: 'No rinde examen, no califica' }],
     ],
   },
   reagenda_con_fecha: {
     contexto: LLAMADA,
     pasos: [
-      ['res', { res: 'reagenda' }], ['reag_motivo', { reag_motivo: 'Imprevisto del lead' }],
+      ['res', { res: 'reagenda' }],
+      ['reag_detalle', { motivo_reagenda: 'Imprevisto del lead: le salió una guardia' }],
       ['reag_dejo_fecha', { reag_dejo_fecha: true }],
       ['reag_fecha', { nueva_fecha_agenda: '2026-10-07', nueva_hora_agenda: '17:15' }],
     ],
@@ -112,7 +121,8 @@ export const GUIONES = {
   reagenda_sin_fecha: {
     contexto: LLAMADA,
     pasos: [
-      ['res', { res: 'reagenda' }], ['reag_motivo', { reag_motivo: 'No dio motivo' }],
+      ['res', { res: 'reagenda' }],
+      ['reag_detalle', { motivo_reagenda: 'No dio un motivo claro, le pido fecha nueva' }],
       ['reag_dejo_fecha', { reag_dejo_fecha: false }],
       ['seguimiento', { fecha_seguimiento: '2026-10-01', notes: 'Le pido fecha nueva' }],
     ],

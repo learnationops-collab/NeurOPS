@@ -7,6 +7,11 @@
       "cierre": false,
       "objecion": "Lo tiene que hablar con la pareja: el precio le parece alto.",
       "motivo": null,
+      "motivo_estado": null,
+      "motivo_no_cierre": {
+        "texto": "Lo tiene que hablar con la pareja: el precio le parece alto.",
+        "oferta_presentada": true
+      },
       "motivo_descarte": null,
       "deck": {
         "closer_notes": "Lo habla con la pareja; vuelvo con el caso de Ana. | Referidos: 1 referido(s) con datos → agenda creada; Referido(s) sin datos: Caro",
@@ -40,6 +45,7 @@
       },
       "respuestas": {
         "_pasos": [
+          "venta_detalles",
           "res",
           "decisor",
           "oferta",
@@ -82,6 +88,11 @@
       "cierre": false,
       "objecion": "No tiene cómo pagarlo este año y no quiere cuotas.",
       "motivo": null,
+      "motivo_estado": null,
+      "motivo_no_cierre": {
+        "texto": "No tiene cómo pagarlo este año y no quiere cuotas.",
+        "oferta_presentada": true
+      },
       "motivo_descarte": "Objeción de precio insalvable",
       "deck": {
         "closer_notes": "Se pidieron referidos, no dejó.",
@@ -104,6 +115,7 @@
       },
       "respuestas": {
         "_pasos": [
+          "venta_detalles",
           "res",
           "decisor",
           "oferta",
@@ -132,6 +144,11 @@
       "cierre": null,
       "objecion": null,
       "motivo": null,
+      "motivo_estado": null,
+      "motivo_no_cierre": {
+        "texto": "Faltó el decisor y no se llegó a presentar la oferta",
+        "oferta_presentada": false
+      },
       "motivo_descarte": null,
       "deck": {
         "closer_notes": "Faltó el decisor | No se pidieron referidos.",
@@ -153,9 +170,11 @@
       },
       "respuestas": {
         "_pasos": [
+          "venta_detalles",
           "res",
           "decisor",
           "oferta",
+          "motivo_sin_oferta",
           "nopres_next",
           "segunda_llamada",
           "refs_ask"
@@ -163,6 +182,7 @@
         "res": "asistio",
         "with_decision_maker": false,
         "offer_presented": false,
+        "motivo_sin_oferta": "Faltó el decisor y no se llegó a presentar la oferta",
         "nopres_next": "segunda",
         "nueva_fecha_agenda": "2026-10-08",
         "nueva_hora_agenda": "19:30",
@@ -179,6 +199,11 @@
       "cierre": null,
       "objecion": null,
       "motivo": null,
+      "motivo_estado": null,
+      "motivo_no_cierre": {
+        "texto": "Faltó el decisor y no se llegó a presentar la oferta",
+        "oferta_presentada": false
+      },
       "motivo_descarte": "No califica: no rinde este año",
       "deck": {
         "closer_notes": "No se pidieron referidos.",
@@ -201,9 +226,11 @@
       },
       "respuestas": {
         "_pasos": [
+          "venta_detalles",
           "res",
           "decisor",
           "oferta",
+          "motivo_sin_oferta",
           "nopres_next",
           "descarte",
           "refs_ask"
@@ -211,6 +238,7 @@
         "res": "asistio",
         "with_decision_maker": false,
         "offer_presented": false,
+        "motivo_sin_oferta": "Faltó el decisor y no se llegó a presentar la oferta",
         "nopres_next": "descartar",
         "motivo_descarte": "No califica: no rinde este año",
         "refs_ask": "no_pedido"
@@ -224,16 +252,18 @@
       "contacto_result": null,
       "cierre": null,
       "objecion": null,
-      "motivo": "Confundió la fecha",
+      "motivo": "Confundió la fecha: pensó que era mañana",
+      "motivo_estado": "Confundió la fecha: pensó que era mañana",
+      "motivo_no_cierre": null,
       "motivo_descarte": null,
       "deck": {
-        "closer_notes": "Pensó que era mañana",
+        "closer_notes": "Programó seguimiento",
         "with_decision_maker": null,
         "offer_presented": null,
         "result": "No Show",
         "fecha_seguimiento": "2026-10-02",
         "seguimiento_tipo": "no_tomada",
-        "seguimiento_sub": "No show: Confundió la fecha",
+        "seguimiento_sub": "No show: Confundió la fecha: pensó que era mañana",
         "seguimiento_intento": 1,
         "seguimiento_realizado": false,
         "followup_reminder_enabled": false,
@@ -249,15 +279,14 @@
       },
       "respuestas": {
         "_pasos": [
+          "venta_detalles",
           "res",
-          "noshow_motivo",
           "noshow_detalle",
           "noshow_next",
           "seguimiento"
         ],
         "res": "no_asistio",
-        "noshow_motivo": "Confundió la fecha",
-        "notes": "Pensó que era mañana",
+        "motivo_noshow": "Confundió la fecha: pensó que era mañana",
         "noshow_next": "seguimiento",
         "fecha_seguimiento": "2026-10-02"
       }
@@ -270,17 +299,19 @@
       "contacto_result": null,
       "cierre": null,
       "objecion": null,
-      "motivo": "Bloqueó / desapareció",
+      "motivo": "Bloqueó / desapareció: me bloqueó en WhatsApp",
+      "motivo_estado": "Bloqueó / desapareció: me bloqueó en WhatsApp",
+      "motivo_no_cierre": null,
       "motivo_descarte": "No responde hace dos semanas",
       "deck": {
-        "closer_notes": "Me bloqueó en WhatsApp",
+        "closer_notes": "Reporte de llamada",
         "with_decision_maker": null,
         "offer_presented": null
       },
       "process": {
         "status": "Lead Perdido",
         "role": "closer",
-        "note": "Bloqueó / desapareció. No responde hace dos semanas",
+        "note": "Bloqueó / desapareció: me bloqueó en WhatsApp. No responde hace dos semanas",
         "with_decision_maker": null,
         "offer_presented": null
       },
@@ -293,15 +324,14 @@
       },
       "respuestas": {
         "_pasos": [
+          "venta_detalles",
           "res",
-          "noshow_motivo",
           "noshow_detalle",
           "noshow_next",
           "descarte"
         ],
         "res": "no_asistio",
-        "noshow_motivo": "Bloqueó / desapareció",
-        "notes": "Me bloqueó en WhatsApp",
+        "motivo_noshow": "Bloqueó / desapareció: me bloqueó en WhatsApp",
         "noshow_next": "descartar",
         "motivo_descarte": "No responde hace dos semanas"
       }
@@ -314,10 +344,12 @@
       "contacto_result": null,
       "cierre": null,
       "objecion": null,
-      "motivo": "Sin tiempo / imprevisto",
+      "motivo": "Sin tiempo: tuvo guardia y pidió otro horario",
+      "motivo_estado": "Sin tiempo: tuvo guardia y pidió otro horario",
+      "motivo_no_cierre": null,
       "motivo_descarte": null,
       "deck": {
-        "closer_notes": "Tuvo guardia",
+        "closer_notes": "Reagendado por: Sin tiempo: tuvo guardia y pidió otro horario",
         "with_decision_maker": null,
         "offer_presented": null,
         "confirm_status": "por_confirmar",
@@ -336,19 +368,16 @@
       },
       "respuestas": {
         "_pasos": [
+          "venta_detalles",
           "res",
-          "cancel_motivo",
           "cancel_detalle",
           "cancel_next",
-          "reag_motivo",
           "reag_dejo_fecha",
           "reag_fecha"
         ],
         "res": "cancelo",
-        "cancel_motivo": "Sin tiempo / imprevisto",
-        "notes": "Tuvo guardia",
+        "motivo_cancelo": "Sin tiempo: tuvo guardia y pidió otro horario",
         "cancel_next": "reagendar",
-        "reag_motivo": "Pidió otro horario",
         "reag_dejo_fecha": true,
         "nueva_fecha_agenda": "2026-10-05",
         "nueva_hora_agenda": "20:00"
@@ -362,7 +391,9 @@
       "contacto_result": null,
       "cierre": null,
       "objecion": null,
-      "motivo": "Problema económico",
+      "motivo": "Problema económico: cobra a fin de mes",
+      "motivo_estado": "Problema económico: cobra a fin de mes",
+      "motivo_no_cierre": null,
       "motivo_descarte": null,
       "deck": {
         "closer_notes": "Le escribo el 3 con la propuesta en cuotas",
@@ -371,7 +402,7 @@
         "result": "No Show",
         "fecha_seguimiento": "2026-10-03",
         "seguimiento_tipo": "no_tomada",
-        "seguimiento_sub": "Cancelación: Problema económico",
+        "seguimiento_sub": "Cancelación: Problema económico: cobra a fin de mes",
         "seguimiento_intento": 1,
         "seguimiento_realizado": false,
         "followup_reminder_enabled": false,
@@ -387,17 +418,17 @@
       },
       "respuestas": {
         "_pasos": [
+          "venta_detalles",
           "res",
-          "cancel_motivo",
           "cancel_detalle",
           "cancel_next",
           "seguimiento"
         ],
         "res": "cancelo",
-        "cancel_motivo": "Problema económico",
-        "notes": "Le escribo el 3 con la propuesta en cuotas",
+        "motivo_cancelo": "Problema económico: cobra a fin de mes",
         "cancel_next": "seguimiento",
-        "fecha_seguimiento": "2026-10-03"
+        "fecha_seguimiento": "2026-10-03",
+        "notes": "Le escribo el 3 con la propuesta en cuotas"
       }
     }
   },
@@ -408,7 +439,9 @@
       "contacto_result": null,
       "cierre": null,
       "objecion": null,
-      "motivo": "Ya no le interesa",
+      "motivo": "Ya no le interesa seguir con el examen",
+      "motivo_estado": "Ya no le interesa seguir con el examen",
+      "motivo_no_cierre": null,
       "motivo_descarte": "No rinde examen, no califica",
       "deck": {
         "closer_notes": "Reporte de llamada",
@@ -431,14 +464,14 @@
       },
       "respuestas": {
         "_pasos": [
+          "venta_detalles",
           "res",
-          "cancel_motivo",
           "cancel_detalle",
           "cancel_next",
           "descarte"
         ],
         "res": "cancelo",
-        "cancel_motivo": "Ya no le interesa",
+        "motivo_cancelo": "Ya no le interesa seguir con el examen",
         "cancel_next": "no_lead",
         "motivo_descarte": "No rinde examen, no califica"
       }
@@ -451,10 +484,12 @@
       "contacto_result": null,
       "cierre": null,
       "objecion": null,
-      "motivo": "Imprevisto del lead",
+      "motivo": "Imprevisto del lead: le salió una guardia",
+      "motivo_estado": "Imprevisto del lead: le salió una guardia",
+      "motivo_no_cierre": null,
       "motivo_descarte": null,
       "deck": {
-        "closer_notes": "Reagendado por: Imprevisto del lead",
+        "closer_notes": "Reagendado por: Imprevisto del lead: le salió una guardia",
         "with_decision_maker": null,
         "offer_presented": null,
         "confirm_status": "por_confirmar",
@@ -473,13 +508,14 @@
       },
       "respuestas": {
         "_pasos": [
+          "venta_detalles",
           "res",
-          "reag_motivo",
+          "reag_detalle",
           "reag_dejo_fecha",
           "reag_fecha"
         ],
         "res": "reagenda",
-        "reag_motivo": "Imprevisto del lead",
+        "motivo_reagenda": "Imprevisto del lead: le salió una guardia",
         "reag_dejo_fecha": true,
         "nueva_fecha_agenda": "2026-10-07",
         "nueva_hora_agenda": "17:15"
@@ -493,7 +529,9 @@
       "contacto_result": null,
       "cierre": null,
       "objecion": null,
-      "motivo": "No dio motivo",
+      "motivo": "No dio un motivo claro, le pido fecha nueva",
+      "motivo_estado": "No dio un motivo claro, le pido fecha nueva",
+      "motivo_no_cierre": null,
       "motivo_descarte": null,
       "deck": {
         "closer_notes": "Le pido fecha nueva",
@@ -518,13 +556,14 @@
       },
       "respuestas": {
         "_pasos": [
+          "venta_detalles",
           "res",
-          "reag_motivo",
+          "reag_detalle",
           "reag_dejo_fecha",
           "seguimiento"
         ],
         "res": "reagenda",
-        "reag_motivo": "No dio motivo",
+        "motivo_reagenda": "No dio un motivo claro, le pido fecha nueva",
         "reag_dejo_fecha": false,
         "fecha_seguimiento": "2026-10-01",
         "notes": "Le pido fecha nueva"
@@ -539,6 +578,8 @@
       "cierre": null,
       "objecion": null,
       "motivo": null,
+      "motivo_estado": null,
+      "motivo_no_cierre": null,
       "motivo_descarte": null,
       "deck": {
         "closer_notes": "[Modalidad: Mensaje, Llamada] Visto sin respuesta, dos llamadas",
@@ -562,6 +603,7 @@
       },
       "respuestas": {
         "_pasos": [
+          "venta_detalles",
           "contacto_result",
           "contacto_detalle",
           "sig_action",
@@ -586,6 +628,8 @@
       "cierre": null,
       "objecion": null,
       "motivo": null,
+      "motivo_estado": null,
+      "motivo_no_cierre": null,
       "motivo_descarte": null,
       "deck": {
         "closer_notes": "[Modalidad: Llamada] Me pidió que no lo contacte más | Motivo de cierre: Pidió que no lo contacten | Se pidieron referidos, no dejó.",
@@ -605,6 +649,7 @@
       },
       "respuestas": {
         "_pasos": [
+          "venta_detalles",
           "contacto_result",
           "contacto_detalle",
           "sig_action",
@@ -630,6 +675,8 @@
       "cierre": null,
       "objecion": null,
       "motivo": null,
+      "motivo_estado": null,
+      "motivo_no_cierre": null,
       "motivo_descarte": null,
       "deck": {
         "closer_notes": "[Modalidad: Mensaje] Aceptó volver al meet el jueves | Referidos: 1 referido(s) con datos → agenda creada",
@@ -659,6 +706,7 @@
       },
       "respuestas": {
         "_pasos": [
+          "venta_detalles",
           "contacto_result",
           "contacto_detalle",
           "refs_ask",
@@ -689,6 +737,8 @@
       "cierre": null,
       "objecion": null,
       "motivo": null,
+      "motivo_estado": null,
+      "motivo_no_cierre": null,
       "motivo_descarte": null,
       "deck": {
         "closer_notes": "Le recordé la cuota de octubre, visto sin respuesta",
@@ -713,6 +763,7 @@
       },
       "respuestas": {
         "_pasos": [
+          "venta_detalles",
           "contacto_result",
           "contacto_detalle",
           "cobro_fecha"
@@ -733,6 +784,8 @@
       "cierre": null,
       "objecion": null,
       "motivo": null,
+      "motivo_estado": null,
+      "motivo_no_cierre": null,
       "motivo_descarte": null,
       "deck": {
         "closer_notes": "Cobra el viernes y transfiere el lunes a primera hora | No se pidieron referidos.",
@@ -757,6 +810,7 @@
       },
       "respuestas": {
         "_pasos": [
+          "venta_detalles",
           "contacto_result",
           "contacto_detalle",
           "cobro_fecha",
@@ -778,6 +832,8 @@
       "cierre": null,
       "objecion": null,
       "motivo": null,
+      "motivo_estado": null,
+      "motivo_no_cierre": null,
       "motivo_descarte": null,
       "deck": {
         "closer_notes": "Dice que no va a seguir y que no paga el resto | Motivo de cierre: No va a pagar",
@@ -797,6 +853,7 @@
       },
       "respuestas": {
         "_pasos": [
+          "venta_detalles",
           "contacto_result",
           "contacto_detalle"
         ],

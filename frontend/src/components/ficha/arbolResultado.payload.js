@@ -78,7 +78,7 @@ export function notaFinal(r = {}) {
 // bitácora diga qué pasó y no un «Reporte de llamada» genérico.
 function notaPorDefecto(r) {
   if (r.nopres_next === 'segunda') return 'Agendó 2ª llamada';
-  if (r.reag_dejo_fecha === true) return `Reagendado por: ${r.reag_motivo || 'Sin especificar'}`;
+  if (r.reag_dejo_fecha === true) return `Reagendado por: ${motivoDeRama(r) || 'Sin especificar'}`;
   if (seguimientoDeRama(r)) return 'Programó seguimiento';
   return 'Reporte de llamada';
 }
@@ -93,13 +93,19 @@ const bloqueReferidos = (r) => ({
   referralCount: (r.refs_rows || []).filter((f) => (f.nombre || '').trim()).length,
 });
 
-// Motivo de la rama recorrida: cada rama lo guarda en su propio campo.
-const motivoDeRama = (r) => r.noshow_motivo || r.cancel_motivo || r.reag_motivo || null;
-
 // El motivo escrito de lo que el closer marcó a mano (ADR-W066). Cada rama tiene su campo, así el
 // texto de una rama que se abandonó con «Anterior» no viaja en la nueva.
 const MOTIVO_ESTADO = { no_asistio: 'motivo_noshow', cancelo: 'motivo_cancelo', reagenda: 'motivo_reagenda' };
 const motivoEstado = (r) => (MOTIVO_ESTADO[r.res] ? String(r[MOTIVO_ESTADO[r.res]] || '').trim() || null : null);
+
+// Motivo de la rama recorrida: el mismo texto que escribió el closer (ya no hay opciones fijas).
+const motivoDeRama = motivoEstado;
+
+// `seguimiento_sub` es String(255) en la base: un motivo largo lo rompería y el closer no podría guardar.
+const enSub = (texto) => {
+  const t = String(texto || '').replace(/\s+/g, ' ').trim() || 'Sin especificar';
+  return t.length > 180 ? `${t.slice(0, 177)}...` : t;
+};
 
 // Tipo y subestado del seguimiento, tal como los arma hoy cada rama antes de llegar a `follow`.
 function seguimientoDeRama(r) {
@@ -110,8 +116,8 @@ function seguimientoDeRama(r) {
     };
   }
   if (r.nopres_next === 'seguimiento') return { tipo: 'tomada', sub: 'Falta agendar 2ª llamada' };
-  if (r.noshow_next === 'seguimiento') return { tipo: 'no_tomada', sub: `No show: ${r.noshow_motivo || 'Sin especificar'}` };
-  if (r.cancel_next === 'seguimiento') return { tipo: 'no_tomada', sub: `Cancelación: ${r.cancel_motivo || 'Sin especificar'}` };
+  if (r.noshow_next === 'seguimiento') return { tipo: 'no_tomada', sub: `No show: ${enSub(motivoDeRama(r))}` };
+  if (r.cancel_next === 'seguimiento') return { tipo: 'no_tomada', sub: `Cancelación: ${enSub(motivoDeRama(r))}` };
   if (r.reag_dejo_fecha === false) return { tipo: 'no_tomada', sub: 'Reprogramó sin fecha' };
   return null;
 }
@@ -147,10 +153,9 @@ function bloqueProcess(r) {
   return {
     status: descarte[elegido],
     role: 'closer',
-    // Como en el mazo: en el no show, el motivo elegido («Bloqueó / desapareció») va delante del
-    // comentario libre en vez de perderse.
-    note: r.noshow_next === 'descartar' && r.noshow_motivo && r.motivo_descarte
-      ? `${r.noshow_motivo}. ${r.motivo_descarte}`
+    // Como en el mazo: en el no show, el motivo escrito va delante del comentario libre en vez de perderse.
+    note: r.noshow_next === 'descartar' && motivoDeRama(r) && r.motivo_descarte
+      ? `${motivoDeRama(r)}. ${r.motivo_descarte}`
       : (r.motivo_descarte || motivoDeRama(r) || null),
     with_decision_maker: r.with_decision_maker ?? null,
     offer_presented: r.offer_presented ?? null,

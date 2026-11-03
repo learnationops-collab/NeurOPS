@@ -5,14 +5,11 @@ Asistente (institute-site, vacante-assistant/formulario/index.html, la versión
 que lee sus preguntas de la API): mismas claves, mismos textos y mismas opciones
 —texto suelto o {t} con sus marcas (`ko`, `pts`, `correcta`, `reexplica`,
 `bloquea`, `nota`)—. Allá ya es JSON puro:
-  · el texto que cambia según el país va en `t_pais` / `h_pais`
-    ({"Brasil": "..."});
   · la condición de una pregunta va en `si: {id, es}` (también `igual`,
     `valor`, `en` o `valores`; ver `cumple_condicion`);
-  · la equivalencia en reales de `remuneracion` va en `ref: 'brl'` (la tasa sale
-    de la configuración de la búsqueda, ver HiringConfig).
-Cada pregunta suma `on` (si se pregunta) y `base` (una de las originales: se
-puede apagar pero no borrar, porque tiene columna y la usan el score y el panel).
+Cada pregunta suma `on` (si se pregunta) y `base` (una de las originales: tiene
+columna y la usan el score y el panel; se puede apagar o borrar, y una borrada
+cuenta como apagada).
 
 El primer formulario no lo siembra la migración: lo crea `asegurar_semilla()` la
 primera vez que alguien lo pide (los endpoints del editor y el GET público).
@@ -56,7 +53,7 @@ _PREGUNTAS = [
     {'id': 'pais', 'bloque': 'Identificación', 'tipo': 'radio', 'req': True, 't': '¿En qué país vivís?',
      'o': _o('🇦🇷  Argentina', '🇧🇷  Brasil', '🇻🇪  Venezuela')},
     {'id': 'ciudad', 'bloque': 'Identificación', 'tipo': 'buscable', 'req': True, 't': '¿En qué provincia vivís?',
-     't_pais': {'Brasil': '¿En qué estado vivís?'}, 'h': 'Escribí para filtrar y elegí una de la lista.'},
+     'h': 'Escribí para filtrar y elegí una de la lista.'},
     {'id': 'nombre', 'bloque': 'Identificación', 'tipo': 'texto', 'req': True, 't': '¿Cómo te llamás?',
      'h': 'Nombre y apellido, como figura en tus documentos.'},
     {'id': 'email', 'bloque': 'Identificación', 'tipo': 'texto', 'req': True, 'mail': True, 't': '¿Cuál es tu email?',
@@ -103,7 +100,7 @@ _PREGUNTAS = [
     {'id': 'remuneracion', 'bloque': 'Remuneración', 'tipo': 'numero', 'req': True, 'unidad': 'USD por mes',
      't': '¿Cuánto pedís por mes?',
      'h': 'Pon tu remuneración mensual en dólares pretendida por un trabajo de 4 horas diarias.',
-     'ph': '300', 'ref': 'brl'},
+     'ph': '300', 'dinero': True},
 
     # Bloque 4 · Experiencia
     {'id': 'experiencia', 'bloque': 'Experiencia', 'tipo': 'radio', 'req': True, 't': '¿Cuántos años de experiencia tenés?',
@@ -132,7 +129,7 @@ _PREGUNTAS = [
 
     # Bloque 5 · Idiomas
     {'id': 'idioma2', 'bloque': 'Idiomas', 'tipo': 'radio', 'req': True, 'o': _o(*IDIOMA4),
-     't': '¿Qué nivel de portugués tenés?', 't_pais': {'Brasil': '¿Qué nivel de español tenés?'}},
+     't': '¿Qué nivel de portugués tenés?'},
     {'id': 'ingles', 'bloque': 'Idiomas', 'tipo': 'radio', 'req': True, 't': '¿Qué nivel de inglés tenés?',
      'o': _o(*IDIOMA4)},
 
@@ -216,11 +213,15 @@ TIPOS_CON_OPCIONES = ('radio', 'check')
 RE_ID = re.compile(r'^[a-z][a-z0-9_]{1,40}$')
 MAX_TITULO = 300
 MAX_AYUDA = 600
+MAX_BLOQUE = 60
 MAX_OPCION = 240
 MAX_OPCIONES = 20
 MAX_BYTES = 200_000
 # Claves que el editor agrega y el formulario público no necesita.
 CLAVES_DEL_EDITOR = ('on', 'base')
+# Variantes del texto por país (`t_pais`, `h_pais`) y equivalente en reales (`ref`):
+# ya no se usan; las guardadas no se publican.
+CLAVES_RETIRADAS = ('t_pais', 'h_pais', 'ref')
 
 
 class PreguntasInvalidas(ValueError):
@@ -258,6 +259,8 @@ def validar_preguntas(lista):
             raise PreguntasInvalidas(f'{rotulo}: el tipo tiene que ser uno de {", ".join(TIPOS)}.')
         if not isinstance(p.get('t', ''), str) or len(p.get('t', '')) > MAX_TITULO:
             raise PreguntasInvalidas(f'{rotulo}: el enunciado es texto de hasta {MAX_TITULO} caracteres.')
+        if p.get('bloque') is not None and (not isinstance(p['bloque'], str) or len(p['bloque']) > MAX_BLOQUE):
+            raise PreguntasInvalidas(f'{rotulo}: el nombre del bloque es texto de hasta {MAX_BLOQUE} caracteres.')
         if p.get('h') is not None and (not isinstance(p['h'], str) or len(p['h']) > MAX_AYUDA):
             raise PreguntasInvalidas(f'{rotulo}: la ayuda es texto de hasta {MAX_AYUDA} caracteres.')
 
@@ -271,6 +274,12 @@ def validar_preguntas(lista):
                     raise PreguntasInvalidas(
                         f'{rotulo}: cada opción necesita un texto de hasta {MAX_OPCION} caracteres.')
 
+        limites = [p.get(k) for k in ('ko_min', 'ko_max')]
+        if any(v is not None and (isinstance(v, bool) or not isinstance(v, int) or v < 0) for v in limites):
+            raise PreguntasInvalidas(f'{rotulo}: los límites excluyentes son números enteros sin signo.')
+        if None not in limites and limites[0] > limites[1]:
+            raise PreguntasInvalidas(f'{rotulo}: el mínimo excluyente no puede ser mayor que el máximo.')
+
         si = p.get('si')
         if si is not None and not (isinstance(si, dict) and isinstance(si.get('id'), str)):
             raise PreguntasInvalidas(f'{rotulo}: la condición tiene que decir de qué pregunta depende.')
@@ -278,14 +287,10 @@ def validar_preguntas(lista):
         if p.get('base') and pid not in IDS_BASE:
             raise PreguntasInvalidas(f'{rotulo}: una pregunta nueva no puede marcarse como base.')
 
-    faltan = [pid for pid in IDS_BASE if pid not in vistos]
-    if faltan:
-        raise PreguntasInvalidas(
-            'No se pueden borrar las preguntas originales del formulario (se pueden apagar): '
-            f'faltan {", ".join(faltan)}.')
-
-    nombre = next(p for p in lista if p['id'] == 'nombre')
-    if nombre.get('on') is False or nombre.get('req') is False:
+    # Las originales se pueden borrar (el score las toma como apagadas, ver
+    # HiringForm._derivados), menos el nombre: sin él no se guarda la postulación.
+    nombre = next((p for p in lista if p['id'] == 'nombre'), None)
+    if nombre is None or nombre.get('on') is False or nombre.get('req') is False:
         raise PreguntasInvalidas('«nombre» tiene que quedar prendida y obligatoria: sin el nombre no se guarda la postulación.')
 
 
@@ -373,7 +378,8 @@ def resumen(form, respuestas=None):
         "total": len(preguntas),
         "excluyentes": sum(
             1 for p in activas
-            if any(isinstance(o, dict) and o.get('ko') for o in (p.get('o') or []))
+            if any(isinstance(o, dict) and (o.get('ko') or o.get('necesaria')) for o in (p.get('o') or []))
+            or p.get('ko_min') is not None or p.get('ko_max') is not None
         ),
         "respuestas": respuestas.get(form.id, 0),
     }
@@ -391,6 +397,8 @@ def form_dict(form, respuestas=None, con_preguntas=False):
     }
     if con_preguntas:
         data["preguntas"] = form.preguntas or []
+        # Para que el editor ofrezca volver a sumar las originales que se borraron.
+        data["originales"] = PREGUNTAS_BASE
     return data
 
 
@@ -401,7 +409,7 @@ def preguntas_publicas(form):
     obligatoria (completitud) y el formulario público, como opcional (`q.req
     && vacio`). Así los dos piden lo mismo."""
     return [
-        {**{k: v for k, v in p.items() if k not in CLAVES_DEL_EDITOR}, 'req': bool(p.get('req', True))}
+        {**{k: v for k, v in p.items() if k not in CLAVES_DEL_EDITOR + CLAVES_RETIRADAS}, 'req': bool(p.get('req', True))}
         for p in (form.preguntas or [])
         if isinstance(p, dict) and p.get('on') is not False
     ]

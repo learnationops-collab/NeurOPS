@@ -555,3 +555,51 @@
 - **Decisión:** (1) Triage reutiliza la barra de arriba del dashboard (período, equipo y segmentos): `rangoDePeriodo` lleva el id del período a `desde`/`hasta` y `miembros_por_rol.triage` trae las personas. (2) `GET /api/triage/metricas?segmento=` filtra las agendas con la lectura de segmento del dashboard (`segmentos_lectura.de_filas`). (3) Se quita «Pasaron» del embudo; «Asistieron» y «Cerraron» del closer se parten por closer con un color estable por id. (4) Tarjetas 4 + 2 (las del closer del doble de ancho). (5) El embudo de Closing con canales usa barras redondeadas sin cuello, como el de Triage.
 - **Qué se pierde:** la elección de período propia de Triage (ahora el valor por defecto es «Este mes»). Si lo calificado y lo pasado a closing difieren (pases manuales), el embudo ya no lo muestra; sigue en «Por closer» y en la tarjeta de asistencia.
 - **Consecuencias:** sin migración. El segmento de una llamada de triage es el de la persona o el cliente (igual que en Closers). El color de cada closer sale de su orden entre los closers del período.
+
+## ADR-W069: Las preguntas originales del formulario de Hiring se pueden borrar y el WhatsApp pide el código de país
+
+- **Fecha:** 2026-11-03 · **Subsistema:** Hiring (Talent › Forms) · **Estado:** implementado.
+- **Contexto:** Mario quiere acortar el formulario de Asistente: mover preguntas con libertad y borrar las que no usa (la bienvenida, el país), no solo apagarlas. Sin la pregunta de país, el WhatsApp no tenía de dónde sacar el código.
+- **Decisión:** `validar_preguntas` ya no exige las 35 originales; solo el nombre (presente, prendido y obligatoria). Para el score, una original borrada cuenta como apagada (`HiringForm._derivados`). El editor arrastra preguntas desde un asa (cambian al bloque donde caen), borra cualquier pregunta menos el nombre y las que tienen una condicional que depende de ellas, y lista al final las originales borradas para recuperarlas (`form_dict` manda `originales`). En institute-site, el WhatsApp tiene un selector de código (22 países y «Otro») que arranca en el país contestado o en el detectado por la zona horaria, y se guarda con el código (`+54 11…`). Sin país contestado, el backend lo deduce del código (`pais_de_whatsapp`).
+- **Qué se pierde:** una original borrada pierde sus textos editados (vuelve con los de fábrica). La detección por zona horaria falla con VPN o navegador mal configurado; la postulante lo corrige en el selector. Un código fuera de la lista («Otro») deja el país vacío si no se pregunta.
+- **Consecuencias:** los WhatsApp nuevos llegan con «+», que `whatsapp_completo` ya respetaba. Sin la pregunta de país, la lista de provincias usa el país del teléfono o el detectado.
+
+## ADR-W070: Una pregunta original de Hiring puede cambiar de tipo y pasa a ser nueva
+
+- **Fecha:** 2026-11-03 · **Subsistema:** Hiring (Talent › Forms) · **Estado:** implementado.
+- **Contexto:** el tipo de las originales estaba bloqueado porque el panel y el score leen su respuesta por id, en columnas con largo fijo y comparando el texto de las opciones. Mario quiere pasar cualquiera a varias opciones, texto o párrafo.
+- **Decisión:** el selector de tipo queda libre para todas menos el nombre. Al cambiarle el tipo a una original (`cambiarTipo` en lib/formularios.js) se convierte en nueva: id `<id>_xxxxxx`, `base: false`, respuestas en `respuestas_extra`; las condicionales que la nombraban pasan al id nuevo. Al cambiar de tipo se sacan las claves de otros tipos (`mail`, `unidad`, `largo`, `puntua`…).
+- **Qué se pierde:** esa pregunta deja de sumar al score y de llenar su columna (la original cuenta como borrada). Volver al tipo anterior no la vuelve original: para eso se recupera la original desde el final de la lista.
+- **Consecuencias:** sin migración ni cambios en el backend ni en el formulario público, que ya dibujan cualquier tipo.
+
+## ADR-W071: El editor de preguntas de Hiring va en dos columnas: lista a la izquierda, configuración a la derecha
+
+- **Fecha:** 2026-11-03 · **Subsistema:** Hiring (Talent › Forms) · **Estado:** implementado.
+- **Contexto:** cada pregunta se abría en su lugar y ocupaba todo el ancho: con 35 preguntas no se veía el formulario entero mientras se editaba una. Además el editor seguía diciendo «Pregunta original», un concepto que ya no le sirve a quien edita.
+- **Decisión:** `EditorPreguntas` muestra a la izquierda la lista compacta por bloque (arrastrar para ordenar, interruptor para prender o apagar, marcas de excluyente y condicional) y a la derecha un panel fijo (`PanelPregunta`) con la pregunta elegida: número, bloque, acciones (subir, bajar, duplicar, eliminar), Activa y Obligatoria, el tipo como fichas con ícono, texto, ayuda y opciones. Debajo de 1000 px va en una columna y al elegir baja al panel. Se sacan la nota «Pregunta original» y el chip «Nueva»; las borradas se recuperan en «Eliminadas». El botón de excluyente aparece también en las de varias opciones (el formulario público ya lo respetaba).
+- **Qué se pierde:** abrir varias preguntas a la vez; ahora se edita una por vez.
+- **Consecuencias:** estilos nuevos en `components/forms/editorPreguntas.css`; se borran las clases `tl-pq*` de talent.css.
+
+## ADR-W072: Una pregunta numérica de Hiring puede descartar por rango (ko_min / ko_max)
+
+- **Fecha:** 2026-11-03 · **Subsistema:** Hiring (Talent › Forms) · **Estado:** implementado.
+- **Contexto:** Mario quiere que la expectativa salarial (u otro número) descarte a quien pide fuera del presupuesto, con el límite configurable desde el editor. Hasta ahora solo las opciones podían ser excluyentes; `min`/`max` solo validan (piden corregir el número).
+- **Decisión:** claves `ko_min` y `ko_max` (enteros, opcionales) en las preguntas de tipo número. El editor las muestra como «Descarta si es menor a / mayor a». El formulario público, fuera del rango, va a la pantalla de descarte con la respuesta como `motivo_descarte`. El backend lo reconoce como corte del formulario (`HiringForm.rangos_excluyentes`, `AssistantApplication._fuera_de_rango` en `auto_ko` y `descarte_vigente`) y la cuenta de excluyentes lo incluye. `validar_preguntas` exige enteros sin signo y mínimo ≤ máximo.
+- **Qué se pierde:** el rango no reemplaza al presupuesto de Configuración (`presupuesto_min`/`max`): son datos aparte y hay que cargar los dos si se quiere lo mismo.
+- **Consecuencias:** cambiar el límite recalcula quién queda cortado (como sacarle la marca a una opción). Sin migración.
+
+## ADR-W073: Tipos «Correo electrónico» y «Dinero» en el editor de Hiring, y el tipo como desplegable
+
+- **Fecha:** 2026-11-03 · **Subsistema:** Hiring (Talent › Forms) · **Estado:** implementado.
+- **Contexto:** Mario quiere reconocer de un vistazo las preguntas de correo y de plata; las fichas de tipo ocupaban mucho y se cortaban («Lista con b…»).
+- **Decisión:** el editor ofrece `email` y `dinero` como tipos visibles, pero se guardan como `texto` + `mail: true` y `numero` + `dinero: true` (`tipoVisible`, `cambiarTipo` en lib/formularios.js); `ref: 'brl'` también se lee como dinero. Pasar de texto a correo o de número a dinero no cambia el tipo guardado, así que una original no pierde su columna. El tipo se elige con el `Select` estándar (con íconos); los interruptores pasan a `Switch` estándar y el panel usa `Aura`.
+- **Qué se pierde:** nada en el formulario público ni en el backend, que siguen viendo texto y número.
+- **Consecuencias:** sin migración. Un tipo nuevo que necesite otro dibujo en el formulario público sí tiene que sumarse en institute-site y en `TIPOS` del backend.
+
+## ADR-W074: En las preguntas de varias opciones de Hiring se marcan las opciones necesarias
+
+- **Fecha:** 2026-11-03 · **Subsistema:** Hiring (Talent › Forms) · **Estado:** implementado.
+- **Contexto:** en «Equipo tecnológico» (varias opciones) Mario necesita exigir que la postulante tenga ciertas cosas (computadora, celular, internet) y aceptar otras de más. Una opción excluyente corta por elegirla; acá corta por no elegirla.
+- **Decisión:** marca `necesaria` en las opciones de una pregunta `check` (excluye a `ko` en la misma opción). El formulario público, si falta alguna, va a la pantalla de descarte con `motivo_descarte` «Sin: …». El backend lo reconoce como corte del formulario (`HiringForm.opciones_necesarias`, `AssistantApplication._corte_sin_opcion`, que también agrupa el rango numérico) en `auto_ko` y `descarte_vigente`; cuenta como pregunta con excluyentes. Al pasar la pregunta a otro tipo se sacan las marcas.
+- **Qué se pierde:** nada; una pregunta sin necesarias se comporta igual que antes.
+- **Consecuencias:** cambiar qué opciones son necesarias recalcula quién queda cortado. Sin migración.

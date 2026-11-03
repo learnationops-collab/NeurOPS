@@ -157,7 +157,7 @@ export const respuestasVentaParcial = {
 export const respuestasNoShowSeguimiento = {
   _pasos: ['noshow_detalle', 'seguimiento'],
   res: 'no_asistio',
-  noshow_motivo: 'No contestó el mensaje',
+  motivo_noshow: 'No contestó el mensaje y no volvió a escribir',
   noshow_next: 'seguimiento',
   notes: 'le escribí 3 veces, visto sin respuesta',
   fecha_seguimiento: '2026-09-27',
