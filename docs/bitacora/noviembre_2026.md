@@ -176,3 +176,7 @@
   - Cada sección muestra solo su título, más grande y en tipo oración («Inteligencia artificial»), sin bajada. Preguntas en letra fina y respuestas en semibold.
   - El score ya no se corta en el panel (la tarjeta se encogía); número más grande y desglose con los nombres de sección en tipo oración.
   - Íconos propios duotono para Excluyentes, Deseables, Inteligencia artificial y Cualitativo, con el trazo que se dibuja al abrir.
+- **3 de Noviembre de 2026 (Talent en el teléfono)** *([talentMovil.css](../../frontend/src/pages/admin/hiring/talentMovil.css))*:
+  - Dock: ocupa el ancho de la pantalla y muestra solo íconos; entran las seis secciones, el orbe y la sesión sin que la sesión tape secciones.
+  - Inbox: buscador y filtro en una fila, pestañas debajo; en «Próxima a revisar» el score va al lado del nombre y «Abrir postulación» ocupa el ancho.
+  - Ficha: arriba el score con el desglose (excluyentes, deseables, IA…) y el perfil con la pretensión; después las secciones; los botones de decisión quedan fijos abajo. Nombre, flechas y cerrar en una fila; el contacto (WhatsApp, correo, CV) en otra que se desliza.

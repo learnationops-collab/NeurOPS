@@ -27,6 +27,7 @@ import {
 } from './lib/vista';
 import '../../comercial/comercial.css';
 import './talent.css';
+import './talentMovil.css';
 
 // Learnation Talent: el panel del rol `hiring` (postulaciones al puesto de
 // Asistente Administrativa y Personal). Corre sin MainLayout (ver App.jsx): es
