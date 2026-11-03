@@ -35,19 +35,6 @@ export const RAICES = [
   { valor: 'reagenda', label: 'Reagenda', sub: 'Pidió nueva fecha', tono: 'info' },
 ];
 
-// ← los 6 motivos fijos del paso `noshow` (2798).
-export const MOTIVOS_NO_SHOW = [
-  'No contestó el mensaje', 'Bloqueó / desapareció', 'Se arrepintió',
-  'Problema técnico / horario', 'Confundió la fecha', 'Otro motivo',
-];
-// ← los 4 motivos fijos del paso `cancel` (2856).
-export const MOTIVOS_CANCELACION = [
-  'Sin tiempo / imprevisto', 'Ya no le interesa', 'Problema económico', 'No dio motivo',
-];
-// ← los 4 motivos fijos del paso `reagQ` (2915).
-export const MOTIVOS_REAGENDA = [
-  'Imprevisto del lead', 'Sin tiempo suficiente', 'Pidió otro horario', 'No dio motivo',
-];
 // ← los 4 motivos de cierre del paso `seg` (3237).
 export const MOTIVOS_CIERRE_SEGUIMIENTO = [
   'Pidió que no lo contacten', 'Se agotaron los 4 intentos', 'Compró en otro lado', 'Ya no califica',
@@ -430,11 +417,6 @@ export const PREGUNTAS = [
   },
 
   // ---------- rama no asistió ----------
-  { // ← noshow (2797)
-    clave: 'noshow_motivo', hito: 'resultado', campo: 'noshow_motivo', tipo: 'opciones',
-    enunciado: '¿Por qué no se presentó?', opciones: opts(MOTIVOS_NO_SHOW, 'error'),
-    cuando: (r, c) => enLlamada(r, c) && r.res === 'no_asistio',
-  },
   { // Marcar «No asistió» a mano pide su motivo (ADR-W066): viaja como `motivo_estado` y el backend lo deja en el hilo.
     clave: 'noshow_detalle', hito: 'resultado', tipo: 'formulario', enunciado: preguntaDeMotivo('No Show'),
     ayuda: 'Queda anotado en Comunicación, con tu nombre.',
@@ -454,11 +436,6 @@ export const PREGUNTAS = [
   },
 
   // ---------- rama canceló ----------
-  { // ← cancel (2855)
-    clave: 'cancel_motivo', hito: 'resultado', campo: 'cancel_motivo', tipo: 'opciones',
-    enunciado: '¿Cuál fue el motivo de la cancelación?', opciones: opts(MOTIVOS_CANCELACION, 'warning'),
-    cuando: (r, c) => enLlamada(r, c) && r.res === 'cancelo',
-  },
   { // Lo mismo para «Canceló» (ADR-W066).
     clave: 'cancel_detalle', hito: 'resultado', tipo: 'formulario', enunciado: preguntaDeMotivo('Cancelado'),
     ayuda: 'Queda anotado en Comunicación, con tu nombre.',
@@ -479,11 +456,6 @@ export const PREGUNTAS = [
   },
 
   // ---------- rama reagenda ----------
-  { // ← reagQ (2914)
-    clave: 'reag_motivo', hito: 'resultado', campo: 'reag_motivo', tipo: 'opciones',
-    enunciado: '¿Por qué se reagenda?', opciones: opts(MOTIVOS_REAGENDA, 'info'),
-    cuando: (r, c) => (enLlamada(r, c) && r.res === 'reagenda') || r.cancel_next === 'reagendar',
-  },
   { // Y para «Reagenda» (ADR-W066). Si viene de una cancelación («Reagendar ahora») ya dio su motivo arriba.
     clave: 'reag_detalle', hito: 'resultado', tipo: 'formulario', enunciado: preguntaDeMotivo('Reagendado'),
     ayuda: 'Queda anotado en Comunicación, con tu nombre.',

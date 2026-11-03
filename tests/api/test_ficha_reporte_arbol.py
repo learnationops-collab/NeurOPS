@@ -188,9 +188,9 @@ def test_no_asistio_queda_como_no_show_en_seguimiento_de_recuperacion(client, db
 
     assert r.status_code == 200
     assert (lead.closer_result, lead.closer_processed) == ('No Show', True)
-    assert (lead.seguimiento_tipo, lead.seguimiento_sub) == ('no_tomada', 'No show: Confundió la fecha')
+    assert (lead.seguimiento_tipo, lead.seguimiento_sub) == ('no_tomada', 'No show: Confundió la fecha: pensó que era mañana')
     assert str(lead.fecha_seguimiento) == '2026-10-02'
-    assert lead.closer_notes == 'Pensó que era mañana'
+    assert lead.closer_notes == 'Programó seguimiento'
 
 
 # --- Canceló y reagenda ------------------------------------------------------------------------
@@ -211,11 +211,11 @@ def test_con_fecha_nueva_la_llamada_se_mueve_y_vuelve_a_confirmaciones(client, d
 def test_una_reagenda_sin_nota_dice_por_que_se_reagendo(client, db, lead, equipo, auth_headers):
     reportar(client, auth_headers, equipo['closer'], lead, 'reagenda_con_fecha')
 
-    assert lead.closer_notes == 'Reagendado por: Imprevisto del lead'
+    assert lead.closer_notes == 'Reagendado por: Imprevisto del lead: le salió una guardia'
 
 
 @pytest.mark.parametrize('caso,sub', [
-    ('cancelo_seguimiento', 'Cancelación: Problema económico'),
+    ('cancelo_seguimiento', 'Cancelación: Problema económico: cobra a fin de mes'),
     ('reagenda_sin_fecha', 'Reprogramó sin fecha'),
 ])
 def test_sin_fecha_nueva_va_a_seguimiento(client, db, lead, equipo, auth_headers, caso, sub):
