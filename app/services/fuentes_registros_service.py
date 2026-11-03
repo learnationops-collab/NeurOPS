@@ -22,7 +22,7 @@ from collections import defaultdict
 
 from app import db
 from app.models import Ad, Conversation, MetaAnuncio, MetaGastoDiario
-from app.services import anuncios_service, conteo_agendas_service, fuentes_service, workshop_meta_service
+from app.services import anuncios_service, conteo_agendas_service, ficha_de_fila, fuentes_service, workshop_meta_service
 from app.services.comercial_service import ComercialService
 from app.services.comision_plataforma_service import etiqueta_de
 from app.services.commission_service import cash_neto
@@ -101,8 +101,11 @@ def _agendas(fuente, metrica, desde, hasta, base, origen=None):
         personas = [p for p in personas if p['asistio']]
     elif metrica == 'reportadas':
         personas = [p for p in personas if p['con_resultado']]
+    con_cliente = ficha_de_fila.personas_con_cliente(p.get('person_uuid') for p in personas)
     filas = [{
         'id': f"{p['agenda_id']}", 'persona': p['persona'] or 'Sin nombre', 'alta': p['alta'],
+        'ficha': ficha_de_fila.ficha_de(appointment_id=p.get('appointment_id'), person_uuid=p.get('person_uuid'),
+                                        con_cliente=con_cliente),
         'cita': p['cita'], 'origen': p['origen'] or '—', 'closer': p['closer'] or '—',
         'estado': p['estado'] or '—', 'asistio': _si_no(p['asistio']), 'con_resultado': _si_no(p['con_resultado']),
         '_dia': p['dia'],
@@ -139,6 +142,7 @@ def _cobros(fuente, metrica, desde, hasta):
     # separa el ROAS Total del ROAS New Cash). La misma regla que `cash_anterior` de la tarjeta.
     nuevos = fuentes_service.clientes_nuevos(f for _, f in pares)
     filas, suma = [], 0.0
+    con_cliente = ficha_de_fila.personas_con_cliente(c.person_uuid for c, _ in pares)
     for cobro, f in pares:
         if metrica in ('ventas', 'new_cash') and not f['es_venta']:
             continue
@@ -159,6 +163,8 @@ def _cobros(fuente, metrica, desde, hasta):
             'bruto': round(float(cobro.monto or 0), 2), 'comision': etiqueta_de(cobro),
             'tipo': 'Venta nueva' if es_venta else TIPOS.get(tipo, 'Otro'), 'origen': origen,
             'medio': cobro.metodo_pago or '—', 'clave': claves.get(cobro.id) or '—',
+            'ficha': ficha_de_fila.ficha_de(client_id=cobro.client_id, person_uuid=cobro.person_uuid,
+                                            con_cliente=con_cliente),
         })
     filas.sort(key=lambda r: r['fecha'], reverse=True)
     anteriores = round(sum(r['monto'] for r in filas if 'anterior' in r['origen']), 2)
@@ -191,6 +197,7 @@ def _leads(fuente, metrica, desde, hasta):
     conversaciones = {c.id: c for c in Conversation.query.filter(Conversation.id.in_({e['lead_id'] for e in entradas}))} \
         if entradas else {}
     filas = []
+    con_cliente = ficha_de_fila.personas_con_cliente(c.person_uuid for c in conversaciones.values())
     for e in entradas:
         c = conversaciones.get(e['lead_id'])
         estado = ESTADO_ENTRANTE.get(e['calificacion']) or ('En conversación' if e['respondio'] else 'Sin respuesta')
@@ -198,6 +205,7 @@ def _leads(fuente, metrica, desde, hasta):
             'id': f"{e['lead_id']}-{e['clave'] or 'sin'}", 'persona': (c.name if c and c.name else None) or (f'@{c.ig}' if c and c.ig else 'Sin nombre'),
             'instagram': (c.ig if c else '') or '—', 'clave': e['clave'] or 'Sin palabra clave',
             'fecha': e['cuando'].isoformat(), 'estado': estado, 'setter': (c.setter if c else '') or '—',
+            'ficha': ficha_de_fila.ficha_de(person_uuid=c.person_uuid if c else None, con_cliente=con_cliente),
         })
     filas.sort(key=lambda f: f['fecha'], reverse=True)
     cuenta = defaultdict(int)

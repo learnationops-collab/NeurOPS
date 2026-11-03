@@ -57,7 +57,7 @@ def _iso(valor):
 
 # --- Identidad del lead -----------------------------------------------------------------------
 
-def resolver_lead(appointment_id=None, client_id=None):
+def resolver_lead(appointment_id=None, client_id=None, anclar=True):
     """(appt, client) del lead que se pide, o (None, None) si no existe.
 
     Acepta las dos claves porque el estado operativo cuelga de `Appointment` y el cobro cuelga de
@@ -65,7 +65,7 @@ def resolver_lead(appointment_id=None, client_id=None):
     agenda mas reciente; si el cliente ya compro y nunca tuvo ninguna, se ancla una con
     `_ensure_appointment_for_client` — el mismo comportamiento que ya tienen
     `GET /closer/leads/<id>/stage` y `GET /comercial/clientes/<id>`, del que depende que las
-    escrituras de cobro tengan un id donde guardar.
+    escrituras de cobro tengan un id donde guardar. `anclar=False` (quien solo lee) no crea nada.
     """
     if appointment_id:
         appt = db.session.get(Appointment, appointment_id)
@@ -78,7 +78,7 @@ def resolver_lead(appointment_id=None, client_id=None):
         return None, None
     appt = (Appointment.query.filter_by(client_id=client.id)
             .order_by(Appointment.start_time.desc()).first())
-    if not appt and CloserFollowUpService._client_has_sale(client):
+    if not appt and anclar and CloserFollowUpService._client_has_sale(client):
         appt = CloserFollowUpService._ensure_appointment_for_client(client)
     return appt, client
 
@@ -429,7 +429,8 @@ def permisos_de(usuario, appt=None):
         'eliminar_lead': direccion,
         'editar_datos': direccion or rol in ('closer', 'triage'),
         'reasignar': direccion or rol == 'closer',
-        'comentar': True,
+        # El director de marketing mira la ficha desde sus listas y no escribe en ella (`ROLES_SOLO_LECTURA`).
+        'comentar': rol != 'director_marketing',
         'triar': de_triage and (direccion or rol == 'triage'),
         # Una agenda del closer que todavía no empezó (app/agendas_v2/a_triage.py).
         'pasar_triage': (direccion or rol == 'closer') and appt is not None and not de_triage
@@ -440,13 +441,13 @@ def permisos_de(usuario, appt=None):
 
 # --- La ficha completa ------------------------------------------------------------------------
 
-def ficha(appointment_id=None, client_id=None, usuario=None, ahora=None):
+def ficha(appointment_id=None, client_id=None, usuario=None, ahora=None, anclar=True):
     """El JSON completo de la ficha, o None si el lead no existe.
 
     Todo campo que pueda faltar viaja en `null` o en lista vacia, nunca ausente: el frontend no
     tiene que preguntar si la clave existe.
     """
-    appt, client = resolver_lead(appointment_id, client_id)
+    appt, client = resolver_lead(appointment_id, client_id, anclar=anclar)
     if not appt and not client:
         return None
 

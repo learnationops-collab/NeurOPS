@@ -57,7 +57,7 @@ def _de_alta(desde, hasta):
         persona = por_persona.setdefault((fuente, f.person_uuid or f'agenda-{f.id}'), {
             'fuente': fuente, 'dia': f.created_at.date().isoformat(), 'alta': f.created_at.date().isoformat(),
             'asistio': False, 'ultima': None, 'persona': f.nombre_persona, 'origen': f.nombre, 'closer': f.closer,
-            'cita': f.date, 'estado': f.estado, 'agenda_id': f.id})
+            'cita': f.date, 'estado': f.estado, 'agenda_id': f.id, 'person_uuid': f.person_uuid})
         bucket = bucket_estado(f.estado)
         if bucket == 'Show Up' or not persona['asistio']:
             persona['estado'] = f.estado
@@ -84,7 +84,7 @@ def _de_reunion(desde, hasta):
             'fuente': _fuente(f['fuente'], setters), 'dia': (f['fecha'] or '')[:10], 'alta': (f['creada'] or '')[:10],
             'asistio': bool(f['asistio']), 'con_resultado': bool(f['realizada']), 'ultima': None,
             'persona': f['cliente'], 'origen': f['fuente'], 'closer': f['closer'] if f['closer_id'] else None,
-            'cita': f['fecha'] or '', 'estado': f['post_call']['label'], 'agenda_id': f['id'],
+            'cita': f['fecha'] or '', 'estado': f['post_call']['label'], 'agenda_id': f['id'], 'appointment_id': f['id'],
             # El lead (la persona, o el cliente sin ella): el show up de Analizar cuenta leads, no llamadas.
             'lead': ('p', f['person_uuid']) if f.get('person_uuid') else ('c', f['client_id'])})
     return [f for f in filas if f['dia']]

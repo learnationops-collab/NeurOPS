@@ -19,6 +19,7 @@ Las agendas se abren con `workshop_agendas_service` (la lista de Revisar), que y
 """
 from datetime import datetime
 
+from app.services import ficha_de_fila
 from app.services import workshop_metrics_service as m
 from app.services.comision_plataforma_service import etiqueta_de
 from app.services.commission_service import cash_neto
@@ -70,6 +71,7 @@ def _grupos(taller, tz_nombre):
 def _personas(talleres, metrica, tz_nombre):
     ahora = datetime.utcnow()
     filas = []
+    ultimas = []
     for taller in talleres:
         for embudo, (personas, compradores, _ventas) in _grupos(taller, tz_nombre).items():
             for agendas in personas:
@@ -81,12 +83,16 @@ def _personas(talleres, metrica, tz_nombre):
                     continue
                 ultima = max(agendas, key=lambda a: (a.date is not None, a.date))
                 contacto = ultima.contacto()
+                ultimas.append(ultima)
                 filas.append({
                     'id': f'{taller.id}-{ultima.id}', 'persona': contacto['lead'] or contacto['mail'] or 'Sin nombre',
                     'taller': taller.name, 'embudo': _EMBUDO[embudo], 'cita': ultima.date.isoformat() if ultima.date else '',
                     'closer': (ultima.closer or '').strip() or '—', 'estado': bucket,
                     'comprador': 'Sí' if compro else 'No', 'instagram': contacto['instagram'] or '—',
                 })
+    con_cliente = ficha_de_fila.personas_con_cliente(a.person_uuid for a in ultimas)
+    for fila, ultima in zip(filas, ultimas):
+        fila['ficha'] = ficha_de_fila.ficha_de(person_uuid=ultima.person_uuid, con_cliente=con_cliente)
     filas.sort(key=lambda f: f['cita'], reverse=True)
     asistieron = sum(1 for f in filas if f['estado'] == 'Show Up')
     resumen = {'show_up': f'{len(filas)} personas que asistieron a su cita',
@@ -99,9 +105,11 @@ def _cobros(talleres, metrica, tz_nombre):
     """new_cash: las ventas nuevas y las primeras cuotas que suman al ticket (`cash_ventas`);
     cash_total: las ventas nuevas, las señas y esas cuotas (`cash_collected`). Por embudo, como las suma `_resumen`."""
     filas, suma = [], 0.0
+    duenos = []
 
-    def agregar(taller, embudo, venta, monto, fecha, cliente, tipo, medio):
+    def agregar(taller, embudo, venta, monto, fecha, cliente, tipo, medio, dueno=None):
         nonlocal suma
+        duenos.append(venta or dueno)
         monto = round(float(monto or 0), 2)
         suma += monto
         # La primera cuota no trae su pago (`venta` None): de ella solo se sabe el neto.
@@ -124,7 +132,11 @@ def _cobros(talleres, metrica, tz_nombre):
             for claves, fecha, monto, _clase in cuotas_que_suman(pagos, monto_de=cash_neto):
                 dueno = next((v for v, p in zip(ventas, pagos) if set(p[0]) & set(claves or ())), None)
                 agregar(taller, embudo, None, monto, fecha, dueno.nombre_cliente if dueno else None,
-                        'Primera cuota', None)
+                        'Primera cuota', None, dueno=dueno)
+    con_cliente = ficha_de_fila.personas_con_cliente(v.person_uuid for v in duenos if v)
+    for fila, v in zip(filas, duenos):
+        fila['ficha'] = ficha_de_fila.ficha_de(client_id=v.client_id, person_uuid=v.person_uuid,
+                                               con_cliente=con_cliente) if v else None
     filas.sort(key=lambda f: f['fecha'], reverse=True)
     senas = round(sum(f['monto'] for f in filas if f['tipo'] == 'Seña'), 2)
     cuotas = round(sum(f['monto'] for f in filas if f['tipo'] == 'Primera cuota'), 2)
