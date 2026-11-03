@@ -20,7 +20,7 @@ const chip = (texto, color) => {
 const Llamada = ({ l, onAbrir }) => {
     const [abierta, setAbierta] = useState(false);
     const estado = estadoDe(l);
-    const extra = l.calificacion === 'calificado' ? 'Pasado al closer'
+    const extra = l.calificacion === 'calificado' ? (l.closing ? `Pasó a ${l.closing.closer}` : 'Pasado al closer')
         : l.low_ticket ? `${LOW_TICKET[l.low_ticket] || l.low_ticket}${l.low_ticket === 'seguimiento' && l.fecha_seguimiento ? ` · ${l.fecha_seguimiento}` : ''}` : null;
     const boton = { marginLeft: 6, padding: '5px 12px', borderRadius: 999, border: '1px solid var(--border-control)', background: 'transparent',
         color: 'var(--text-on-surface)', fontSize: 12, fontWeight: 700, cursor: 'pointer' };
@@ -31,6 +31,8 @@ const Llamada = ({ l, onAbrir }) => {
                 <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{formatAgendaDateTime(l.hora)}{l.triage ? ` · ${l.triage}` : ''}</span>
                 {chip(estado, COLOR_DE_ESTADO[estado])}
                 {extra && chip(extra, 'info')}
+                {l.closing?.asistio && chip('Asistió al closer', 'success')}
+                {l.closing?.cerro && chip('Cerró', 'success')}
                 <span style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
                     {l.nota_para_closer && <button type="button" style={boton} onClick={() => setAbierta((v) => !v)}>{abierta ? 'Ocultar nota' : 'Ver nota'}</button>}
                     {onAbrir && <button type="button" style={boton} onClick={() => onAbrir(l)}>Ver ficha</button>}

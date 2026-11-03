@@ -60,9 +60,9 @@ export const getNoCerradas = (filtros) =>
     api.get('/comercial/cierres/no-cerradas', { params: filtrosQuery(filtros) }).then(r => r.data);
 
 /** Corrige el pre call o el post call de una agenda. Devuelve el valor anterior, por si hay que
- *  deshacerlo desde la interfaz. */
-export const corregirAgenda = (id, campo, valor) =>
-    api.patch(`/comercial/agendas/${id}`, { campo, valor }).then(r => r.data);
+ *  deshacerlo desde la interfaz. «Reagendado», «No Show» y «Cancelado» llevan su `motivo` (ADR-W066). */
+export const corregirAgenda = (id, campo, valor, motivo) =>
+    api.patch(`/comercial/agendas/${id}`, { campo, valor, ...(motivo ? { motivo } : {}) }).then(r => r.data);
 
 /** Cancela una agenda por ser una copia de otra. Devuelve el id de la que se conserva. */
 export const marcarAgendaDuplicada = (id) =>

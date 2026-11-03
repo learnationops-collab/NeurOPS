@@ -337,9 +337,11 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     // Las personas del selector son las del rol elegido: con Setters, los setters. Un `m` de la
     // URL que no es de ese rol (un link viejo, o el closer que quedó elegido al cambiar el switch)
     // se ignora y se ve el equipo: acotar las agendas de setters por el id de un closer daba 0.
-    const miembrosDelRol = contexto?.miembros_por_rol?.[rol] || contexto?.miembros || [];
-    const miembroId = contexto?.puede_elegir_equipo
+    // En Triage el selector son las personas de triage (`miembros_por_rol.triage`) y la elegida no se manda a los closers.
+    const miembrosDelRol = contexto?.miembros_por_rol?.[vistaTriage ? 'triage' : rol] || contexto?.miembros || [];
+    const miembroElegido = contexto?.puede_elegir_equipo
         && miembrosDelRol.some(m => String(m.id) === String(miembroPedido)) ? miembroPedido : null;
+    const miembroId = vistaTriage ? null : miembroElegido;
     // Quien opera los registros (admin y operador) pide las tablas para operarlas: en Ventas llegan
     // también las no completadas, con su estado y su agenda (10/10/2026, ver `getTabla`).
     const operar = !!contexto?.puede_operar;
@@ -583,9 +585,9 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
         }
     }, [cargarTabla]);
 
-    const corregir = useCallback(async (fila, campo, valor) => {
+    const corregir = useCallback(async (fila, campo, valor, motivo) => {
         try {
-            await corregirAgenda(fila.id, campo, valor);
+            await corregirAgenda(fila.id, campo, valor, motivo);
             const datos = await getTabla(filtros, tablaActual, basis, { operar });
             setDatosTabla(datos);
             setFilaAbierta(datos.filas.find(f => f.id === fila.id && f.tipo === fila.tipo) || null);
@@ -593,7 +595,8 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
         } catch (error) {
             toast.error(error?.response?.status === 403
                 ? 'Solo puede corregirla quien la atiende o la dirección comercial'
-                : 'No se pudo guardar la corrección');
+                : error?.response?.data?.campo === 'motivo' ? error.response.data.message
+                    : 'No se pudo guardar la corrección');
             throw error;
         }
     }, [filtros, tablaActual, basis, operar]);
@@ -622,8 +625,8 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     // En un espacio la vuelta a otro lado es el menú del dock (ver `gruposDeSesion`).
     const salida = delEspacio ? null : SALIDA[contexto.yo.rol];
 
-    const miembroNombre = miembroId
-        ? miembrosDelRol.find(m => String(m.id) === String(miembroId))?.nombre
+    const miembroNombre = miembroElegido
+        ? miembrosDelRol.find(m => String(m.id) === String(miembroElegido))?.nombre
         : null;
     const etiquetaPeriodo = contexto.periodos.find(p => p.key === period)?.label;
     // La cartera no se acota al periodo (es un saldo a hoy, ver `ComercialService.clientes`), asi
@@ -755,10 +758,10 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                     )}
 
                     <div className="barra-der">
-                        {contexto.puede_elegir_equipo && seccion === 'analizar' && !vistaTriage && (
+                        {contexto.puede_elegir_equipo && seccion === 'analizar' && (
                             <PillMenu icono={<Users size={14} />}
                                 texto={miembroNombre || 'Todo el equipo'}
-                                valor={miembroId || 'all'}
+                                valor={miembroElegido || 'all'}
                                 opciones={[{ key: 'all', label: 'Todo el equipo' },
                                     ...miembrosDelRol.map(m => ({ key: String(m.id), label: m.nombre }))]}
                                 onChange={(k) => set({ m: k === 'all' ? null : k })} />
@@ -790,10 +793,10 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                         )}
                         {seccion === 'payroll' && !sinPermiso && <MenuPeriodoPayroll rango={rangoNomina} onCambiar={setRangoNomina} />}
 
-                        {seccion !== 'reportar' && !CON_PERIODO_PROPIO.includes(seccion) && !vistaTriage && (
+                        {seccion !== 'reportar' && !CON_PERIODO_PROPIO.includes(seccion) && (
                             <PillMenu icono={<Calendar size={14} />} rotulo="período"
                                 texto={rango ? textoRango(rango) : etiquetaPeriodo}
-                                detalle={period !== 'custom' && resumen?.dates
+                                detalle={period !== 'custom' && !vistaTriage && resumen?.dates
                                     ? `${resumen.dates.start.slice(8)}–${resumen.dates.end.slice(8)}` : null}
                                 valor={period}
                                 opciones={contexto.periodos.map(p => (p.key === 'custom' ? { ...p, quedaAbierto: true } : p))}
@@ -818,8 +821,8 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                 {/* `.vista` es lo que separa las filas de paneles: sin el, cada seccion
                     renderiza sus filas como hermanas sueltas y quedan pegadas (medido: 0px
                     entre todas). Ademas trae la animacion de entrada de la referencia. */}
-                {!esperaFechas && !vistaTriage && (
-                    <BarraSegmento vista={segmentoDeLaVista({ seccion, tab, rol, tabla: tablaActual })} elegidos={elegidosSeg}
+                {!esperaFechas && (
+                    <BarraSegmento vista={segmentoDeLaVista({ seccion, tab, rol, tabla: tablaActual, triage: vistaTriage })} elegidos={elegidosSeg}
                         onElegir={(lista) => set({ seg: lista.join(',') })} />
                 )}
                 <div className="vista">
@@ -831,7 +834,10 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                     {esperaFechas && !faltaPeriodo && (
                         <FaltaFecha texto="Elegí las dos fechas de la comparación.">{camposDeLaComparacion}</FaltaFecha>
                     )}
-                    {vistaTriage && <TriageDireccion onAbrirFila={abrirFila} />}
+                    {vistaTriage && !esperaFechas && (
+                        <TriageDireccion key={`${period}|${rango?.desde}|${rango?.hasta}|${segmento}|${miembroElegido}`} onAbrirFila={abrirFila}
+                            period={period} rango={rango} triageId={miembroElegido} segmento={segmento} onElegirPersona={(id) => set({ m: id })} />
+                    )}
                     {!esperaFechas && !vistaTriage && seccion === 'analizar' && tab === 'dashboard' && (
                         <Analizar datos={resumen} rol={rol} irA={irADetalle}
                             fallo={fallas.resumen} onReintentar={cargarAnalizar}

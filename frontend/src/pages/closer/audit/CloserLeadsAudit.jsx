@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import api from '../../../services/api';
 import { parseUtcIso } from '../../../utils/datetime';
 import { ayudaDeResultado } from '../../../utils/estadosAgenda';
+import { faltaDeMotivo, motivoAlcanza, pideMotivo, preguntaDeMotivo } from '../../../utils/motivoEstado';
 
 const CLOSER_RESULT_OPTIONS = [
     'Pendiente', 'Show up', 'No Show', 'Cancelado', 'Reagendado', '2da call', 'Lead Perdido'
@@ -29,15 +30,21 @@ const AppointmentRow = ({ appt, onSaved }) => {
     const [status, setStatus] = useState(appt.closer_result || 'Pendiente');
     const [dateStr, setDateStr] = useState(appt.start_time ? appt.start_time.slice(0, 16) : '');
     const [saving, setSaving] = useState(false);
+    // «Reagendado», «No Show» y «Cancelado» piden el motivo (ADR-W066) al cambiar el estado.
+    const [note, setNote] = useState('');
+    const cambiaEstado = status !== appt.closer_result;
+    const faltaMotivo = cambiaEstado && pideMotivo(status) && !motivoAlcanza(note);
 
     const handleSave = async () => {
+        if (faltaMotivo) return;
         setSaving(true);
         try {
             if (dateStr && dateStr !== (appt.start_time ? appt.start_time.slice(0, 16) : '')) {
                 await api.patch(`/closer/appointments/${appt.id}`, { start_time: new Date(dateStr).toISOString() });
             }
-            if (status !== appt.closer_result) {
-                await api.post(`/closer/appointments/${appt.id}/process`, { status, role: 'closer' });
+            if (cambiaEstado) {
+                await api.post(`/closer/appointments/${appt.id}/process`,
+                    { status, role: 'closer', ...(pideMotivo(status) ? { note: note.trim() } : {}) });
             }
             toast.success('Agenda actualizada');
             setEditing(false);
@@ -67,7 +74,20 @@ const AppointmentRow = ({ appt, onSaved }) => {
                     >
                         {CLOSER_RESULT_OPTIONS.map(opt => <option key={opt} value={opt}>{opt}</option>)}
                     </select>
-                    <button onClick={handleSave} disabled={saving} className="ml-auto px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold disabled:opacity-50 flex items-center gap-1">
+                    {cambiaEstado && pideMotivo(status) && (
+                        <div className="basis-full space-y-1">
+                            <textarea
+                                rows={2}
+                                value={note}
+                                onChange={(e) => setNote(e.target.value)}
+                                placeholder={preguntaDeMotivo(status)}
+                                aria-label={preguntaDeMotivo(status)}
+                                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-white resize-none"
+                            />
+                            {faltaMotivo && <p className="text-[10px] font-bold text-amber-400">{faltaDeMotivo(note)}</p>}
+                        </div>
+                    )}
+                    <button onClick={handleSave} disabled={saving || faltaMotivo} className="ml-auto px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold disabled:opacity-50 flex items-center gap-1">
                         {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />} Guardar
                     </button>
                     <button onClick={() => setEditing(false)} className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg font-bold">Cancelar</button>

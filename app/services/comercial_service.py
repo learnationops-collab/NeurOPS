@@ -101,6 +101,12 @@ class ComercialService(ComercialAgendasMixin, ComercialVentasMixin, ComercialLea
         return base + [{'id': u.id, 'nombre': u.username, 'rol': 'triage'} for u in triage]
 
     @staticmethod
+    def miembros_triage():
+        """Las personas de triage activas: el selector de equipo del tablero de Triage."""
+        usuarios = User.query.filter_by(role='triage', is_active=True).order_by(User.username).all()
+        return [{'id': u.id, 'nombre': u.username, 'rol': 'triage'} for u in usuarios]
+
+    @staticmethod
     def fecha_o_hoy(valor):
         """Una fecha ISO del request, o hoy. Un valor que no parsea cae a hoy en vez de romper:
         el peor caso es que el director vea el día equivocado, no un 500."""

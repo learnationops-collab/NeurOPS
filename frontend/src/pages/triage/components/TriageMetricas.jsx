@@ -1,6 +1,6 @@
 // «Métricas» del espacio del triage: el embudo de sus llamadas, calculado de lo que marca en cada
-// lead (GET /api/triage/metricas). Agendas → confirmadas → asistencias → calificados / descalificados
-// → presentaciones del low ticket → cómo quedó. Abajo, el reporte lead por lead con sus notas: es el
+// lead (GET /api/triage/metricas). Agendas → asistencias → calificados / descalificados → presentaciones
+// del low ticket → cómo quedó, y lo que pasó al closing (pasaron → asistieron → cerraron). Abajo, el reporte lead por lead con sus notas: es el
 // reporte diario que pidió Marlon (27/10), con «Hoy».
 
 import { Fragment, useState } from 'react';
@@ -19,10 +19,12 @@ export const pct = (a, b) => (b ? `${Math.round((a / b) * 100)}%` : '—');
 
 export const embudo = (m) => [
     { key: 'agendas', label: 'Agendas', value: m.agendas },
-    { key: 'confirmadas', label: 'Confirmadas', value: m.confirmadas, detail: pct(m.confirmadas, m.agendas) },
     { key: 'asistencias', label: 'Asistieron', value: m.asistencias, detail: pct(m.asistencias, m.agendas) },
     { key: 'calificados', label: 'Calificados +500 USD', value: m.calificados, detail: pct(m.calificados, m.asistencias), color: 'var(--success)' },
     { key: 'descalificados', label: 'Descalificados', value: m.descalificados, detail: pct(m.descalificados, m.asistencias), color: 'var(--warning)' },
+    { key: 'pasaron', label: 'Pasaron a closing', value: m.pasaron, color: 'var(--info)' },
+    { key: 'closer_asistieron', label: 'Asistieron al closer', value: m.closer_asistieron, detail: pct(m.closer_asistieron, m.pasaron), color: 'var(--info)' },
+    { key: 'closer_cerraron', label: 'Cerraron con el closer', value: m.closer_cerraron, detail: pct(m.closer_cerraron, m.closer_asistieron), color: 'var(--success)' },
 ];
 
 export const lowTicket = (m) => [
@@ -45,12 +47,12 @@ export const diasDe = (porDia = [], persona = null) => {
 };
 
 const COLUMNAS_DIA = [
-    ['agendas', 'Agendas'], ['confirmadas', 'Confirmadas'], ['asistencias', 'Asistieron'],
+    ['agendas', 'Agendas'], ['asistencias', 'Asistieron'],
     ['calificados', 'Calificados'], ['descalificados', 'Descalif.'], ['cerrado', 'Cierres LT'],
 ];
 const nombreDia = (dia) => new Date(`${dia}T12:00:00`).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
 
-/** Día por día: agendas, confirmaciones y asistencias de cada día del período (con más de un día). */
+/** Día por día: agendas, asistencias y calificaciones de cada día del período (con más de un día). */
 export const PorDia = ({ dias }) => (dias.length > 1 ? (
     <Panel>
         <h3 className="t-sm">Día por día</h3>
@@ -152,17 +154,17 @@ export default function TriageMetricas() {
                 {error && <FieldError>{error}</FieldError>}
                 {!m ? (!error && <Cargando />) : !m.agendas ? (
                     <EmptyState title="Sin llamadas en este período">
-                        Las métricas salen de lo que marcás en cada lead: confirmación, asistencia y resultado.
+                        Las métricas salen de lo que marcás en cada lead: asistencia y resultado.
                     </EmptyState>
                 ) : (
                     <>
                         <Grid variant="kpis">
                             <Kpi label="Agendas" value={m.agendas}><small>{`${m.sin_reporte} sin reportar`}</small></Kpi>
-                            <Kpi label="Asistencia" value={pct(m.asistencias, m.asistencias + m.no_show)}>
+                            <Kpi label="Asistencia" value={pct(m.asistencias, m.agendas)}>
                                 <small>{`${m.asistencias} asistieron · ${m.no_show} no show · ${m.canceladas} cancelaron`}</small>
                             </Kpi>
                             <Kpi label="Calificados" value={pct(m.calificados, m.asistencias)}>
-                                <small>{`${m.calificados} pasados al closer · ${m.pasadas_asistieron} ya asistieron con él`}</small>
+                                <small>{`${m.calificados} pasados al closer · ${m.closer_asistieron} ya asistieron con él`}</small>
                             </Kpi>
                             <Kpi label="Cierres del low ticket" value={pct(m.cerrado, m.pitch_low_ticket)}>
                                 <small>{`${m.cerrado} de ${m.pitch_low_ticket} presentaciones`}</small>

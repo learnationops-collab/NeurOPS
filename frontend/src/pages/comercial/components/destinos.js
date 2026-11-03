@@ -1,4 +1,4 @@
-import { ESTADO_CARTERA, NO, SENA_ESTADO, diaDe, rotuloDetalleFuente } from './tablasDef';
+import { CANAL, ESTADO_CARTERA, NO, SENA_ESTADO, diaDe, rotuloDetalleFuente } from './tablasDef';
 
 /**
  * El mapa "dato del dashboard comercial → lista que lo compone".
@@ -218,6 +218,21 @@ export const PASOS_CLOSER = {
         destino: { tabla: 'agendas', filtro: { post_call: 'Venta' }, de: 'Embudo · Ventas' },
     },
 };
+
+/**
+ * El mismo destino de un paso del embudo, cortado por canal (02/11/2026): `canal` es 'directa' o 'triage'
+ * y la faceta «Origen» de Agendas lo reconoce por su etiqueta. Cada parte de una barra abre con esto la lista
+ * de las agendas que la suman.
+ */
+export const destinoDeCanal = (destino, canal) => (destino
+    ? { ...destino, filtro: { ...destino.filtro, canal: CANAL[canal] }, de: `${destino.de} · ${CANAL[canal]}` }
+    : undefined);
+
+/** Las llamadas con show up de un canal (`null` = todas): lo que el close rate real tiene por base. */
+export const destinoAsistieronCanal = (canal) => ({
+    tabla: 'agendas', filtro: { asistio: 'Sí', ...(canal ? { canal: CANAL[canal] } : {}) },
+    de: `Close rate · ${canal ? CANAL[canal] : 'Total'}`,
+});
 
 /* ============================================================
    VARIABILIDAD — una barra, una celda o un punto es UN DÍA

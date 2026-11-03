@@ -146,6 +146,23 @@
 }
 
 /* Los números que arman la tasa, con el color de su tramo. */
+/* El close rate solo con las llamadas del período, junto al real (que suma las anteriores). */
+.mcr-periodo {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 12px;
+    min-width: 0;
+}
+
+.mcr-periodo-pct {
+    font-size: 22px;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -.02em;
+    font-variant-numeric: tabular-nums;
+}
+
 .mcr-datos {
     display: flex;
     flex-wrap: wrap;

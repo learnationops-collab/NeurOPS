@@ -131,7 +131,8 @@ def contexto():
         # volver a pedir el contexto: por eso van las dos. Antes solo viajaba `miembros` (siempre
         # los closers, porque el contexto se pide sin `rol`) y con Setters el selector ofrecía
         # closers: elegir uno acotaba las agendas por un setter_id que no generó ninguna y daba 0.
-        'miembros_por_rol': {r: ComercialService.miembros(r) for r in ROLES} if puede_elegir else {},
+        'miembros_por_rol': ({**{r: ComercialService.miembros(r) for r in ROLES}, 'triage': ComercialService.miembros_triage()}
+                             if puede_elegir else {}),
         'periodos': PERIODOS,
         'comparaciones': COMPARACIONES,
         'estados': {'pre_call': PRE_CALL, 'post_call': POST_CALL},
@@ -420,18 +421,31 @@ def corregir_agenda(agenda_id):
     datos = request.get_json(silent=True) or {}
     campo, valor = datos.get('campo'), datos.get('valor')
 
-    if campo == 'pre_call' and valor in PRE_CALL_A_RESULT:
-        anterior, columna, nuevo = appt.result, 'result', PRE_CALL_A_RESULT[valor]
+    from app.services import motivo_estado_service
+
+    try:
+        if campo == 'pre_call' and valor in PRE_CALL_A_RESULT:
+            anterior, columna, nuevo = appt.result, 'result', PRE_CALL_A_RESULT[valor]
+            motivo = motivo_estado_service.para_correccion(anterior, nuevo, datos.get('motivo'))
+        elif campo == 'post_call' and valor in POST_CALL_A_CLOSER_RESULT:
+            anterior, columna, nuevo = appt.closer_result, 'closer_result', POST_CALL_A_CLOSER_RESULT[valor]
+            motivo = motivo_estado_service.para_correccion(anterior, nuevo, datos.get('motivo'))
+        else:
+            return jsonify({'message': 'Campo o valor no admitido'}), 400
+    except motivo_estado_service.MotivoInvalido as e:
+        # «Reagendado», «No Show» y «Cancelado» piden su motivo (ADR-W066): se rechaza antes de tocar la agenda.
+        return jsonify({'message': str(e), 'campo': 'motivo'}), 400
+
+    if campo == 'pre_call':
         appt.result = nuevo
-    elif campo == 'post_call' and valor in POST_CALL_A_CLOSER_RESULT:
-        anterior, columna, nuevo = appt.closer_result, 'closer_result', POST_CALL_A_CLOSER_RESULT[valor]
+    else:
         appt.closer_result = nuevo
         # Darle un resultado a la llamada es reportarla: sin esto, la agenda seguiria apareciendo
         # en el mazo del closer como pendiente de reportar.
         appt.closer_processed = valor != 'pendiente'
-    else:
-        return jsonify({'message': 'Campo o valor no admitido'}), 400
 
+    if motivo:
+        motivo_estado_service.registrar(appt, current_user, nuevo, motivo)
     db.session.commit()
     BookingService.log_lead_event(
         appt.id, current_user.id, 'status_changed',

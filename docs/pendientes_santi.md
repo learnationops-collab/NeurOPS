@@ -24,6 +24,8 @@ Pasar al lead del triage al closing.
 - [ ] Reprogramar con otra persona (Leadership 986 a 989, ADR-W046): probar en staging que el evento de Google se mueve del calendario de quien la tenía al de quien la recibe (en local los sockets están bloqueados, no se vio), y que `reagenda_de` / el embudo del closer cuentan bien la agenda nueva.
 - [ ] Low ticket (`LT`, 100 USD por mes, Academia `low-ticket`): definir comisiones del triage y de Fulfillment (`comision_tasas_service.PROGRAMAS` no tiene LT) y cómo se cobra cada mes (hoy: un «LT - Renovacion» de 1 mes por la ficha).
 - [ ] Tests de suscripción que ya fallaban antes del low ticket (27/10): `test_la_sena_da_7_dias_y_el_saldo_la_pasa_a_completo`, `test_la_venta_da_4_meses_y_las_cuotas_no_mueven_la_fecha`, `test_encendido_manda_la_suscripcion_con_su_ultimo_cambio`, `test_el_aviso_del_pago_lleva_el_vencimiento_de_la_suscripcion` (vencimientos corridos 2 días).
+- [ ] Triage (02/11, [ADR-W065](DECISIONS.md)): cuando haya asistencias reales al closer, revisar los números de «Por closer» contra Revisar (hoy 10 pases y 0 asistencias en prod, todos de noviembre). Dos dudas abiertas: `pasaron` incluye las llamadas futuras (decidir si el % de asistencia las excluye) y los pases manuales desde la ficha no llevan `agenda_triage_id` (no cuentan; 2 de 9 al 02/11).
+- [ ] Triage (02/11): la tarjeta de asistencia pasó a asistieron ÷ agendas (antes ÷ (asistieron + no show)) en Dirección y en las métricas de la triage; avisarle al director.
 
 ## Segmentos en Marketing y dashboards
 Matriz A/B/C/D en Todos › Segmentos y panel de segmentos de setters y closers (28/10/2026, [MARKETING.md](MODELO/MARKETING.md)).
@@ -35,6 +37,16 @@ Matriz A/B/C/D en Todos › Segmentos y panel de segmentos de setters y closers 
 - [ ] Segmentos de Todos (29/10): mirar con Kerwin si prefiere la tabla del primer grupo abierta al entrar (hoy abre el Cruce y las tablas cerradas con su resumen); es cambiar un `open` en `bloquesSegmentos.jsx`.
 - [ ] Segmentos cortados (28/10, ADR-W021): el filtro de segmento aún no llega al reporte diario del setter (ManyChat), a Comparativas, a Variabilidad ni a la tabla de palabras clave; y el origen de un cobro (procedencia) no siempre coincide con el de la agenda del mismo cliente. Decidir si vale la pena partir esos tableros.
 - [ ] Países en Marketing (pedido de Gabriela, 28/10): no entró en esta entrega.
+
+## Motivo obligatorio (02/11, ADR-W066)
+Reagendado, No Show y Cancelado piden un motivo de 10+ caracteres que queda en el hilo del lead.
+
+- [ ] Probar en el servidor de prueba antes de subir: reportar un No Show / Canceló / Reagenda desde el árbol del closer y del triage, corregir el estado desde el historial y el modal del dashboard, y cancelar desde Confirmación; ver que el hilo de Comunicación muestra una sola nota por acción (con el autor) y que sin motivo el botón queda apagado.
+- [ ] Tests viejos a revisar, porque marcan estos estados sin motivo (no se corrieron; sin escribir tests nuevos hasta que Kerwin lo pida): backend `tests/api/test_ficha_lead_escritura.py`, `tests/agendas_v2/test_manual.py`, `tests/api/test_comercial_dashboard.py`, `tests/services/test_descalificada.py`, `tests/services/test_estado_lead.py`; front `arbolResultado.test.js` (las ramas `no_asistio` y `cancelo` mandan `noshow_detalle`/`cancel_detalle` con `notes`: ahora son `motivo_noshow`/`motivo_cancelo`, y la reagenda suma `reag_detalle`), `arbolResultado.contrato.test.js`, `fichaApi.test.js` y los de `ResultadoTriage`/`recorrido` (la nota ya no es opcional).
+- [ ] «Nueva agenda» sobre una agenda existente reprograma con una nota automática («reprogramada desde “Nueva agenda” por X», `manual._reprogramar_en_neurops`) y no pide motivo. Decidir con Kerwin si debe preguntarlo (hoy se cuenta como reagenda automática).
+- [ ] Reagendar desde «Corregir estado» (historial o modal del dashboard) o desde la edición del Tablero de Agendas no mueve la llamada: solo cambia el estado, y el Tablero con «Reagendada» sin `reschedule_date` falla («Fecha de reagenda requerida»). Ya era así; ahora al menos queda el motivo.
+- [ ] Código muerto con estos estados que conviene borrar: el modal de motivo y las acciones rápidas de `CloserWorkflowPage.jsx` (`reasonModal`, `executeQuickAction`: nada los abre), `handleSetOutcome` de `closer/leads/LeadsPage.jsx` y `LeadsManagementPage.jsx` (sin ruta).
+- [ ] La edición en lote de Revisar › Agendas ya excluye estos estados del «Pre call» (solo «Confirmada» y «Sin confirmar»); si se pide cambiarlos en lote, hay que decidir cómo se carga un motivo por agenda.
 
 ## Agendas y reparto
 Cómo se reparten las agendas entre closers.
@@ -198,3 +210,5 @@ Leads e inversión de cada taller entre el fin del anterior y el suyo (inicio + 
 - [ ] Siguiente tarea de fuentes («Conectar las fuentes que falten»): `fbclid`/`_fbp`/`_fbc` en el lead (1–1,5 días), eventos de compra por CAPI (2–3 días), gasto por segmento (1–1,5 días); los links de reservar no llevan UTM a la agenda de Tálamus.
 - [ ] Caché de vistas: probar en staging «Closers» de Talent con muchas postulaciones (queda montada y escondida; si pesa, volver a desmontarla) y decidir si Postulaciones refresca al volver pasados 5 min.
 - [ ] Corregir en producción el pago 57752 (David Hernandez, 1000 USD, «RR - Cuota», 31/10) de Mario Bühler a Jean Carlo: con el editor «Closer del pago» una vez desplegado, o con una actualización autorizada. Es el único pago cargado tras una reasignación con el closer anterior de vendedor.
+- [ ] Embudo de Closing por origen (02/11): confirmar con el director si las agendas de las propias personas de triage (hoy cuentan en «Agendas» de «Todo el equipo» y como directas) deben salir del embudo de Closing; ver el embudo en staging con datos reales (hoy en prod hay ~10 pases al mes, las barras de triage serán finitas); si el tamaño de la parte de triage molesta a la vista, subir su ancho mínimo.
+- [ ] Embudo de Closing por origen: los pases manuales desde la ficha no llevan `agenda_triage_id` y cuentan como directos; si se quiere medirlos, hay que sellarlos al pasar.

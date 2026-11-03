@@ -99,6 +99,9 @@ class ComercialAgendasMixin:
         con_pago = [a for a in appts if any(t in REAL_SALE_TIPOS for t in tipos_de(a))]
         cierran = con_venta_posterior(con_pago)
 
+        from app.services.triage_pases import origen_de
+        canales = origen_de(appts)
+
         hoy = date.today()
         ahora = datetime.utcnow()
         filas = []
@@ -167,6 +170,8 @@ class ComercialAgendasMixin:
                 # 'primera', 'segunda' o 'momentum' (`manual.tipo_de_llamada`): el panel Estados
                 # muestra las primeras y las segundas llamadas por separado (26/10/2026).
                 'tipo_llamada': tipo_de_llamada(a),
+                # 'directa' o 'triage': si la agenda llegó directo al closer o la pasó el triage (02/11/2026).
+                'canal': canales[a.id],
             })
         return filas
 

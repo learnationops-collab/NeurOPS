@@ -69,11 +69,26 @@ def _texto(datos, clave, obligatorio=False):
     return valor or None
 
 
+def _motivo_de(estado, texto, campo='motivo'):
+    """El motivo obligatorio de «Reagendado», «No Show» o «Cancelado» (ADR-W066), o `ErrorDeAccion`
+    pegado al campo de la pantalla. Se pide ANTES de escribir nada: el guardado del mazo no comitea."""
+    from app.services import motivo_estado_service
+
+    try:
+        return motivo_estado_service.texto_valido(estado, texto)
+    except motivo_estado_service.MotivoInvalido as e:
+        raise ErrorDeAccion(str(e), campo) from None
+
+
 def _process_agenda(appt, usuario, payload):
+    from app.services import motivo_estado_service
     from app.services.closer_service import CloserService
 
-    CloserService.process_agenda(usuario.id, appt.id, {'role': 'closer', **payload},
-                                is_admin=usuario.role in ROLES_SIN_ALCANCE_EN_EL_MAZO)
+    try:
+        CloserService.process_agenda(usuario.id, appt.id, {'role': 'closer', **payload},
+                                    is_admin=usuario.role in ROLES_SIN_ALCANCE_EN_EL_MAZO)
+    except motivo_estado_service.MotivoInvalido as e:
+        raise ErrorDeAccion(str(e), e.campo) from None
 
 
 # --- Confirmacion -----------------------------------------------------------------------------
@@ -192,6 +207,8 @@ def resultado(appt, datos, usuario):
     if clave not in RESULTADOS:
         raise ErrorDeAccion(f'Resultado no admitido: {clave}.')
     status = RESULTADOS[clave]
+    # No asistió y canceló piden el motivo (ADR-W066): antes de que el guardado del mazo escriba algo.
+    nota = _motivo_de(status, datos.get('nota'), 'nota') if status in ('No Show', 'Cancelado') else datos.get('nota')
 
     # El mazo PRIMERO, `process_agenda` despues. El log `show_up_reported` del mazo solo se escribe
     # si `closer_result` cambio en ESE guardado (es como "Cerrar el dia" distingue el trabajo de hoy
@@ -208,7 +225,7 @@ def resultado(appt, datos, usuario):
 
     # `process_agenda` hace lo que el mazo no: borra el evento de Google Calendar cuando se cancela
     # y deja el comentario del lead perdido.
-    _process_agenda(appt, usuario, {'status': status, 'note': datos.get('nota')})
+    _process_agenda(appt, usuario, {'status': status, 'note': nota})
     _guardar_respuestas_del_arbol(appt, datos.get('respuestas'), usuario)
     db.session.commit()
     return {'id': appt.id, 'closer_result': appt.closer_result}
@@ -260,6 +277,8 @@ CAMPOS_DEL_REPORTE = (
 )
 # Los unicos estados que el arbol manda por `process`: los dos descartes.
 DESCARTES = ('Lead Perdido', 'No Lead')
+# Los estados que el closer marca a mano en el arbol y piden su motivo (`motivo_estado_service`).
+ESTADO_DEL_ARBOL = {'no_asistio': 'No Show', 'cancelo': 'Cancelado', 'reagenda': 'Reagendado'}
 
 
 def _no_cerro(datos, deck):
@@ -373,8 +392,12 @@ def _resultado_del_arbol(appt, datos, usuario):
     despues el descarte y al final los referidos, la objecion de un «No cerró» (con su nota en
     Comunicacion, ver `objeciones_service`) y las respuestas crudas a la bitacora.
     """
-    from app.services import motivos_no_cierre, objeciones_service
+    from app.services import motivo_estado_service, motivos_no_cierre, objeciones_service
 
+    # Lo que el closer marcó a mano pide su motivo (ADR-W066): la rama que eligió dice el estado.
+    estado_marcado = ESTADO_DEL_ARBOL.get(datos.get('resultado'))
+    motivo_marcado = (_motivo_de(estado_marcado, datos.get('motivo_estado'), 'motivo_estado')
+                      if estado_marcado else None)
     deck, nuevo_inicio, descarte, objecion = _reporte_valido(appt, datos)
     try:
         motivo = motivos_no_cierre.motivo_valido(datos.get('motivo_no_cierre'))
@@ -405,6 +428,13 @@ def _resultado_del_arbol(appt, datos, usuario):
     # Como en el mazo: sin contacto no hay a quien llamar, asi que solo queda anotado en la nota.
     referidos = _crear_referidos(appt, usuario, datos.get('referidos'),
                                  f'Referido durante {momento} de {nombre}.', solo_con_contacto=True)
+    if motivo_marcado:
+        # El árbol marca el estado por el guardado del mazo, no por `process_agenda`: el motivo se deja acá.
+        from app.services.ficha_agendas_service import _en_la_zona
+        from app.services.user_time_service import zona_del_usuario
+
+        cuando = _en_la_zona(nuevo_inicio, zona_del_usuario(usuario)) if nuevo_inicio else None
+        motivo_estado_service.registrar(appt, usuario, estado_marcado, motivo_marcado, nueva_fecha=cuando)
     if objecion:
         objeciones_service.registrar_objecion(appt, usuario, objecion)
     if motivo:
@@ -739,6 +769,7 @@ def reprogramar(appt, datos, usuario):
         return _reprogramar_a_un_horario(appt, datos, usuario)
     fecha = _texto(datos, 'fecha', obligatorio=True)
     status = '2da call' if datos.get('segunda_llamada') else 'Reagendado'
+    # «Reagendado» pide el motivo (lo valida `process_agenda`); la 2ª llamada lo deja como venga.
     _process_agenda(appt, usuario, {'status': status, 'reschedule_date': fecha,
                                     'note': datos.get('motivo')})
     db.session.commit()
@@ -752,7 +783,7 @@ def _reprogramar_a_un_horario(appt, datos, usuario):
     inicio = _instante_utc(datos.get('inicio'))
     if inicio <= datetime.utcnow():
         raise ErrorDeAccion('La fecha nueva tiene que ser futura.', 'inicio')
-    motivo = _texto(datos, 'motivo', obligatorio=True)
+    motivo = _motivo_de('Reagendado', datos.get('motivo'))
     persona_id = datos.get('persona_id')
     destino = db.session.get(User, int(persona_id)) if persona_id else appt.closer
     if destino is None or destino.id not in {p['id'] for p in a_triage.personas_que_atienden()}:
@@ -819,7 +850,7 @@ def cancelar(appt, datos, usuario):
     `process_agenda` con `Cancelado` ademas borra el evento de Google Calendar: si la cita no va a
     pasar, la agenda del closer tiene que quedar libre.
     """
-    motivo = _texto(datos, 'motivo', obligatorio=True)
+    motivo = _motivo_de('Cancelado', datos.get('motivo'))
     _process_agenda(appt, usuario, {'status': 'Cancelado', 'note': motivo,
                                     'fecha_seguimiento': datos.get('fecha_seguimiento')})
     db.session.commit()
@@ -1388,15 +1419,18 @@ def estado_agenda(appt, datos, usuario, *, desde='el historial de la ficha'):
     `desde` es de donde vino la correccion, para la bitacora: la edicion en lote de Revisar
     (10/10/2026) corrige el pre call de cada agenda con esta misma funcion.
     """
+    from app.services import motivo_estado_service
     from app.services.booking_service import BookingService
     from app.services.comercial_service import POST_CALL_A_CLOSER_RESULT, PRE_CALL_A_RESULT
 
     campo, valor = datos.get('campo'), datos.get('valor')
     if campo == 'pre_call' and valor in PRE_CALL_A_RESULT:
         anterior, columna, nuevo = appt.result, 'result', PRE_CALL_A_RESULT[valor]
+        motivo = _motivo_correccion(anterior, nuevo, datos)
         appt.result = nuevo
     elif campo == 'post_call' and valor in POST_CALL_A_CLOSER_RESULT:
         anterior, columna, nuevo = appt.closer_result, 'closer_result', POST_CALL_A_CLOSER_RESULT[valor]
+        motivo = _motivo_correccion(anterior, nuevo, datos)
         appt.closer_result = nuevo
         # Darle un resultado a la llamada es reportarla: sin esto la agenda seguiria apareciendo
         # en el mazo del closer como pendiente de reportar.
@@ -1404,12 +1438,25 @@ def estado_agenda(appt, datos, usuario, *, desde='el historial de la ficha'):
     else:
         raise ErrorDeAccion('Ese campo o ese valor no se pueden corregir.')
 
+    if motivo:
+        motivo_estado_service.registrar(appt, usuario, nuevo, motivo)
     db.session.commit()
     BookingService.log_lead_event(
         appt.id, usuario.id, 'status_changed',
         f'{usuario.username} corrigió {columna} desde {desde}: '
         f'{anterior!r} -> {nuevo!r}.')
     return {'id': appt.id, 'campo': campo, 'valor': valor, 'anterior': anterior}
+
+
+def _motivo_correccion(anterior, nuevo, datos):
+    """El motivo que pide corregir a mano la agenda a «Reagendado», «No Show» o «Cancelado», o None
+    (ver `motivo_estado_service.para_correccion`). Falla antes de tocar la agenda."""
+    from app.services import motivo_estado_service
+
+    try:
+        return motivo_estado_service.para_correccion(anterior, nuevo, datos.get('motivo'))
+    except motivo_estado_service.MotivoInvalido as e:
+        raise ErrorDeAccion(str(e), 'motivo') from None
 
 
 # --- Agenda nueva -----------------------------------------------------------------------------

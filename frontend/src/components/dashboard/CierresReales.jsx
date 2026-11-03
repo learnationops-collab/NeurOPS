@@ -46,6 +46,9 @@ const CierresReales = ({ reales, Ayuda }) => {
     const { cierres, del_periodo: delPeriodo, anteriores, sin_llamada: sinLlamada, por_cuota: porCuota,
         asistieron, base, pct, filas = [] } = reales;
     const cobros = cierres + sinLlamada;
+    // El mismo cierre pero solo con las llamadas de este período: sin las llamadas anteriores en ninguna de las dos partes.
+    const baseDelPeriodo = Math.max(asistieron, delPeriodo);
+    const pctDelPeriodo = baseDelPeriodo ? Math.round((delPeriodo / baseDelPeriodo) * 1000) / 10 : null;
     const ancho = (parte) => (base ? (parte / base) * 100 : 0);
     const texto = `Cierres ÷ (llamadas con show up + cierres de llamadas anteriores): ${n(cierres)} de ${n(base)}. `
         + AYUDA;
@@ -82,6 +85,13 @@ const CierresReales = ({ reales, Ayuda }) => {
                         {anteriores > 0 && <> + <b>{n(anteriores)}</b> {anteriores === 1 ? 'llamada anterior' : 'llamadas anteriores'} que cerraron</>}
                     </small>
                 </div>
+            </div>
+
+            <div className="mcr-periodo">
+                <small className="mc-eyebrow">Close rate del período</small>
+                <Pct valor={pctDelPeriodo} className="mcr-periodo-pct" />
+                <Fraccion num={delPeriodo} den={baseDelPeriodo} />
+                <small className="mcr-nota">solo las llamadas de este período</small>
             </div>
 
             <ul className="mcr-datos">
