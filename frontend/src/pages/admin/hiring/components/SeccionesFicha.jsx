@@ -1,10 +1,11 @@
 import React, { useLayoutEffect, useRef, useState } from 'react';
 import {
-    Briefcase, CalendarCheck, Check, ChevronDown, Copy, FileText, Filter, Languages, Layers, PenLine, Plus,
-    Puzzle, Sparkles, User, Wallet, Wrench, XCircle,
+    Briefcase, CalendarCheck, Check, ChevronDown, Copy, FileText, Languages, Layers,
+    Puzzle, User, Wallet, Wrench, XCircle,
 } from 'lucide-react';
 import { Aura } from '../../../../components/standard';
 import { href } from '../lib/escalas';
+import { IcoCualitativo, IcoDeseables, IcoExcluyentes, IcoIA } from './IconosSeccion';
 
 // Las tarjetas de sección de la ficha, armadas con lo que manda el backend
 // (`secciones`: un bloque de su formulario por sección, cada pregunta con su
@@ -12,20 +13,20 @@ import { href } from '../lib/escalas';
 // suma al score). No conoce las preguntas: si el formulario cambia, la ficha
 // cambia sola.
 
-// Color, ícono y bajada de cada sección según su nombre (lo edita quien arma el formulario).
+// Color e ícono de cada sección según su nombre (lo edita quien arma el formulario).
 const DECO_BLOQUE = [
-    [/excluy|requisit|filtro/, 'var(--success)', Filter, 'Requisitos mínimos para avanzar'],
-    [/deseab/, 'var(--info)', Plus, 'Suman puntos al score'],
-    [/inteligencia|\bia\b/, 'var(--brand-secondary)', Sparkles, 'Herramientas que ya usa'],
-    [/cualitativ|criterio|aporte|actitud/, 'var(--warning)', PenLine, 'Respuestas abiertas'],
-    [/identific|datos|contacto/, 'var(--idle)', User, null],
-    [/experien|trayect|antecedent/, 'var(--info)', Briefcase, null],
-    [/idioma|lengua/, 'var(--info)', Languages, null],
-    [/herramient|software|tecnolog/, 'var(--brand-secondary)', Wrench, null],
-    [/remunera|salari|sueldo|dinero|pago/, 'var(--success)', Wallet, null],
-    [/organiz|jornada|horario|disponib/, 'var(--success)', CalendarCheck, null],
-    [/resolv|caso|problema/, 'var(--warning)', Puzzle, null],
-    [/archivo|video|cv|curr/, 'var(--idle)', FileText, null],
+    [/excluy|requisit|filtro/, 'var(--success)', IcoExcluyentes],
+    [/deseab/, 'var(--info)', IcoDeseables],
+    [/inteligencia|\bia\b/, 'var(--brand-secondary)', IcoIA],
+    [/cualitativ|criterio|aporte|actitud/, 'var(--warning)', IcoCualitativo],
+    [/identific|datos|contacto/, 'var(--idle)', User],
+    [/experien|trayect|antecedent/, 'var(--info)', Briefcase],
+    [/idioma|lengua/, 'var(--info)', Languages],
+    [/herramient|software|tecnolog/, 'var(--brand-secondary)', Wrench],
+    [/remunera|salari|sueldo|dinero|pago/, 'var(--success)', Wallet],
+    [/organiz|jornada|horario|disponib/, 'var(--success)', CalendarCheck],
+    [/resolv|caso|problema/, 'var(--warning)', Puzzle],
+    [/archivo|video|cv|curr/, 'var(--idle)', FileText],
 ];
 const COLORES_SUELTOS = ['var(--info)', 'var(--brand-secondary)', 'var(--success)', 'var(--warning)'];
 
@@ -33,8 +34,14 @@ export const decoBloque = (titulo, i = 0) => {
     const t = String(titulo || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
     const hit = DECO_BLOQUE.find(([re]) => re.test(t));
     return hit
-        ? { color: hit[1], Icono: hit[2], bajada: hit[3] }
-        : { color: COLORES_SUELTOS[i % COLORES_SUELTOS.length], Icono: Layers, bajada: null };
+        ? { color: hit[1], Icono: hit[2] }
+        : { color: COLORES_SUELTOS[i % COLORES_SUELTOS.length], Icono: Layers };
+};
+
+/** «INTELIGENCIA ARTIFICIAL» → «Inteligencia artificial»: el título en mayúsculas se lee como oración. */
+export const titular = (t) => {
+    const s = String(t || '').trim();
+    return s && s === s.toUpperCase() ? s.charAt(0) + s.slice(1).toLowerCase() : s;
 };
 
 const LARGO = 48;
@@ -122,7 +129,7 @@ const Item = ({ p, pts, abierto, onToggle, onCopiar }) => {
     return (
         <div className={`tl-fi-item${esAncho(p) ? ' is-ancho' : ''}${p.corta ? ' is-corta' : ''}`}>
             <div className="tl-fi-item-etq">
-                <span title={p.t}>{p.t}</span>
+                <span title={p.t}>{String(p.t).replace(/\s*:\s*$/, '')}</span>
                 {p.corta && <span className="tl-fi-corta"><XCircle size={11} aria-hidden="true" /> Corta</span>}
                 {pts && <span className="tl-fi-pts" title={`Importancia ×${pts.peso}`}>{+pts.puntos.toFixed(1)}/{pts.maximo} pts</span>}
                 {copiable && <Copiar texto={p.valor} etiqueta="respuesta" onCopiar={onCopiar} />}
@@ -133,7 +140,7 @@ const Item = ({ p, pts, abierto, onToggle, onCopiar }) => {
 };
 
 export const Seccion = ({ s, i, puntos, abiertas, onToggle, onCopiar }) => {
-    const { color, Icono, bajada } = decoBloque(s.titulo, i);
+    const { color, Icono } = decoBloque(s.titulo, i);
     const total = s.preguntas.length;
     const bien = s.preguntas.filter((p) => p.valor != null && !p.corta).length;
     const corta = s.preguntas.some((p) => p.corta);
@@ -141,11 +148,8 @@ export const Seccion = ({ s, i, puntos, abiertas, onToggle, onCopiar }) => {
         <section className="tl-fi-sec" style={{ '--c': color, '--i': i }}>
             <Aura soft size="card" colors={[color, 'var(--brand-primary)']} />
             <header className="tl-fi-sec-cab">
-                <span className="tl-fi-tile"><Icono size={18} aria-hidden="true" /></span>
-                <div className="tl-fi-sec-tit">
-                    <h3>{s.titulo}</h3>
-                    <p>{bajada || `${total} ${total === 1 ? 'pregunta' : 'preguntas'}`}</p>
-                </div>
+                <span className="tl-fi-tile"><Icono size={20} aria-hidden="true" /></span>
+                <h3 className="tl-fi-sec-tit" title={titular(s.titulo)}>{titular(s.titulo)}</h3>
                 <span className="tl-fi-cuenta" style={corta ? { '--c': 'var(--error)' } : undefined}
                     title={corta ? 'Una respuesta corta la postulación' : 'Respondidas sin cortar'}>
                     <b>{bien}</b><span>/{total}</span>
