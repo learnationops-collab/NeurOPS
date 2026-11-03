@@ -110,3 +110,6 @@
   - Va junto con institute-site: el WhatsApp tiene selector de código de país, que arranca en el país detectado.
 - **3 de Noviembre de 2026 (Hiring: el tipo de cualquier pregunta se cambia)** *([formularios.js](../../frontend/src/pages/admin/hiring/lib/formularios.js), [ADR-W070](../DECISIONS.md))*:
   - El selector de tipo ya no está bloqueado en las originales (solo en el nombre). Una original que cambia de tipo pasa a ser nueva: sus respuestas van aparte y deja de sumar al score.
+- **3 de Noviembre de 2026 (Hiring: editor de preguntas en dos columnas)** *([EditorPreguntas.jsx](../../frontend/src/pages/admin/hiring/components/forms/EditorPreguntas.jsx), [PanelPregunta.jsx](../../frontend/src/pages/admin/hiring/components/forms/PanelPregunta.jsx), [ADR-W071](../DECISIONS.md))*:
+  - Lista de preguntas a la izquierda (se arrastran y se prenden o apagan desde la fila) y la configuración de la elegida en un panel a la derecha, con el tipo como fichas con ícono.
+  - Sin la nota «Pregunta original» ni el chip «Nueva». Las borradas se recuperan en «Eliminadas».

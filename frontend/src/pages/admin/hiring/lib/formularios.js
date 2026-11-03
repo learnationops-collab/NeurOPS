@@ -141,7 +141,6 @@ export const notasDe = (q, tasaBrl) => {
     if (q.tipo === 'tel') n.push('Pide el código de país con un selector que arranca en el país detectado (o el que eligió, si se pregunta). Sin la pregunta de país, el país sale de ese código.');
     if (q.tipo === 'buscable') n.push('La lista cambia según el país: provincias, estados o estados de Venezuela.');
     if (q.tipo === 'intro') n.push('Pantalla de bienvenida: hay que marcar las recomendaciones para empezar.');
-    if (q.base && !FIJAS.has(q.id)) n.push('Pregunta original: se puede apagar o eliminar, y se recupera desde el final de la lista. Si le cambiás el tipo pasa a ser una pregunta nueva: sus respuestas se guardan aparte y deja de sumar al score.');
     if (FIJAS.has(q.id)) n.push('Sin el nombre no se puede guardar la postulación: esta pregunta no se apaga ni se elimina.');
     return n;
 };

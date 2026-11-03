@@ -571,3 +571,11 @@
 - **Decisión:** el selector de tipo queda libre para todas menos el nombre. Al cambiarle el tipo a una original (`cambiarTipo` en lib/formularios.js) se convierte en nueva: id `<id>_xxxxxx`, `base: false`, respuestas en `respuestas_extra`; las condicionales que la nombraban pasan al id nuevo. Al cambiar de tipo se sacan las claves de otros tipos (`mail`, `unidad`, `largo`, `puntua`…).
 - **Qué se pierde:** esa pregunta deja de sumar al score y de llenar su columna (la original cuenta como borrada). Volver al tipo anterior no la vuelve original: para eso se recupera la original desde el final de la lista.
 - **Consecuencias:** sin migración ni cambios en el backend ni en el formulario público, que ya dibujan cualquier tipo.
+
+## ADR-W071: El editor de preguntas de Hiring va en dos columnas: lista a la izquierda, configuración a la derecha
+
+- **Fecha:** 2026-11-03 · **Subsistema:** Hiring (Talent › Forms) · **Estado:** implementado.
+- **Contexto:** cada pregunta se abría en su lugar y ocupaba todo el ancho: con 35 preguntas no se veía el formulario entero mientras se editaba una. Además el editor seguía diciendo «Pregunta original», un concepto que ya no le sirve a quien edita.
+- **Decisión:** `EditorPreguntas` muestra a la izquierda la lista compacta por bloque (arrastrar para ordenar, interruptor para prender o apagar, marcas de excluyente y condicional) y a la derecha un panel fijo (`PanelPregunta`) con la pregunta elegida: número, bloque, acciones (subir, bajar, duplicar, eliminar), Activa y Obligatoria, el tipo como fichas con ícono, texto, ayuda y opciones. Debajo de 1000 px va en una columna y al elegir baja al panel. Se sacan la nota «Pregunta original» y el chip «Nueva»; las borradas se recuperan en «Eliminadas». El botón de excluyente aparece también en las de varias opciones (el formulario público ya lo respetaba).
+- **Qué se pierde:** abrir varias preguntas a la vez; ahora se edita una por vez.
+- **Consecuencias:** estilos nuevos en `components/forms/editorPreguntas.css`; se borran las clases `tl-pq*` de talent.css.
