@@ -31,6 +31,7 @@ const AGENDA = {
     cliente: 'Ana Pérez', ig: '@ana', email: 'ana@x.com', telefono: '+54 11', fuente: 'Workshop',
     closer: 'Nerina', setter: 'Elias', pre_call: chip('confirmada', 'Confirmada'),
     post_call: chip('pendiente', 'Pendiente'), retraso_dias: 2, asistio: false,
+    motivo: { texto: 'Confundió la fecha', quien: 'Jean Carlo', cuando: '2026-10-30T16:40:00', auto: false, nueva_cita: null },
 };
 
 const COMPLETAS = {

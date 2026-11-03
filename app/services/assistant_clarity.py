@@ -251,10 +251,15 @@ def _valor_criterio(app):
 
 
 def _valor_aporte(app):
-    """Un aporte concreto y verificable: largo (40 %), una cifra o un dato (35 %)
-    y hechos en primera persona (25 %). Si es todo cualidades genéricas sin una
-    cifra, no pasa de 0.4."""
-    texto = str(app.aporte or '').strip()
+    return valor_texto(app.aporte)
+
+
+def valor_texto(valor):
+    """Una respuesta abierta concreta y verificable: largo (40 %), una cifra o un
+    dato (35 %) y hechos en primera persona (25 %). Si es todo cualidades
+    genéricas sin una cifra, no pasa de 0.4. También puntúa las preguntas de
+    texto de los formularios con puntos (ver `hiring_puntaje`)."""
+    texto = str(valor or '').strip()
     if not texto:
         return 0.0
     con_dato = bool(re.search(r'\d', texto))
@@ -418,7 +423,13 @@ def compute_criteria_values(app):
 def score_de(app, weights=None):
     """weights: {criterio: peso}; se normalizan solos (no hace falta que sumen
     100). Sin `weights` usa los pesos por defecto. Los criterios que no aplican a
-    la postulación (ver `aplica`) quedan fuera del promedio."""
+    la postulación (ver `aplica`) quedan fuera del promedio. Si su formulario
+    tiene puntos por pregunta, el score es ese y los pesos no cuentan."""
+    # Formulario con puntos cargados en el editor: manda ese score.
+    from app.services import hiring_puntaje
+    por_puntos = hiring_puntaje.score(app) if hasattr(app, 'formulario') else None
+    if por_puntos is not None:
+        return por_puntos
     pesos = weights or DEFAULT_WEIGHTS
     valores = compute_criteria_values(app)
     num = 0.0

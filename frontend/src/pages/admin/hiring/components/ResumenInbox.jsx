@@ -4,6 +4,7 @@ import { Humo } from '../../../comercial/components/Shared';
 import api from '../../../../services/api';
 import { haceTxt, horasDesde, pideNum } from '../lib/vista';
 import { Bandera, ChipModalidad, Inicial } from './Piezas';
+import { porSeccion } from './PanelDecision';
 
 // Arriba del Inbox: la próxima postulación a revisar (la de mejor score entre las
 // que nadie miró) y el avance de la revisión entera. Las dos tarjetas de la
@@ -27,7 +28,14 @@ const Foco = ({ p, pesos, onAbrir, onPesos }) => {
         setCriterios(null);
         if (!p) return undefined;
         api.get(`/assistant-applications/${p.id}`)
-            .then((res) => { if (vigente) setCriterios(res.data.criterios || {}); })
+            .then((res) => {
+                if (!vigente) return;
+                // Con puntos en el formulario, las razones son sus secciones (ver hiring_puntaje).
+                const secciones = porSeccion(res.data.puntaje);
+                setCriterios(secciones.length
+                    ? Object.fromEntries(secciones.map((g) => [`sec:${g.bloque}`, g.ratio]))
+                    : res.data.criterios || {});
+            })
             .catch(() => { if (vigente) setCriterios({}); });
         return () => { vigente = false; };
     }, [p?.id]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -48,7 +56,7 @@ const Foco = ({ p, pesos, onAbrir, onPesos }) => {
     }
 
     const razones = Object.entries(criterios || {})
-        .filter(([id]) => (pesos[id] || 0) > 0)
+        .filter(([id]) => id.startsWith('sec:') || (pesos[id] || 0) > 0)
         .sort((a, b) => b[1] - a[1])
         .slice(0, 3);
     const pide = pideNum(p);
@@ -75,7 +83,7 @@ const Foco = ({ p, pesos, onAbrir, onPesos }) => {
             <div className="tl-foco-pie">
                 <div className="tl-foco-razones">
                     {razones.map(([id, v]) => (
-                        <span key={id} className="chip chip--neutro"><Check size={12} />{CRITERIO_CORTO[id] || id} {Math.round(v * 100)}</span>
+                        <span key={id} className="chip chip--neutro"><Check size={12} />{id.startsWith('sec:') ? id.slice(4) : CRITERIO_CORTO[id] || id} {Math.round(v * 100)}</span>
                     ))}
                     {pide > 0 && <span className="chip chip--neutro">{pide} USD / mes</span>}
                 </div>

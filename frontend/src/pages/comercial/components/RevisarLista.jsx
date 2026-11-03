@@ -9,6 +9,7 @@ import { Tip, cuandoDe, fmt } from './Shared';
 import { useEnPantalla } from '../../../components/ui/useEnPantalla';
 import { DIAS_DATO_VIEJO, diasDesde, formatoAcademia, haceCuanto } from './academia';
 import { SIN_PALABRA_CLAVE } from './tablasSetter';
+import { CeldaMotivo, ConMotivo, llevaMotivo } from './MotivoDeEstado';
 
 /**
  * Cómo se dibujan las filas de Revisar: como tabla o como tarjetas, sueltas o repartidas en grupos.
@@ -50,9 +51,10 @@ import { SIN_PALABRA_CLAVE } from './tablasSetter';
  *
  * El tooltip es la `ayuda` del estado cuando el backend la manda («Lead perdido», «Archivada sin
  * reporte»: los que hay que explicar), y si no la etiqueta entera, por si se cortó. */
-export const ChipTono = ({ chip }) => (chip
+export const ChipTono = ({ chip, sinTitulo }) => (chip
     ? (
-        <span className="chip" style={{ '--c': `var(--${chip.tone})` }} title={chip.ayuda || chip.label}>
+        <span className="chip" style={{ '--c': `var(--${chip.tone})` }}
+            title={sinTitulo ? undefined : (chip.ayuda || chip.label)}>
             <span className="trunc">{chip.label}</span>
         </span>
     )
@@ -78,13 +80,19 @@ const Celda = ({ fila, col }) => {
                 </span>
             );
         case 'pre_call':
-            return <ChipTono chip={fila.pre_call} />;
+            return llevaMotivo(fila, 'pre_call')
+                ? <ConMotivo fila={fila} grupo="pre_call" chip={<ChipTono chip={fila.pre_call} sinTitulo />} />
+                : <ChipTono chip={fila.pre_call} />;
+        case 'motivo':
+            return <CeldaMotivo fila={fila} />;
         case 'post_call':
             // El retraso va DEBAJO del chip de resultado: el chip dice qué pasó y la bajada dice
             // desde cuándo nadie lo carga, que es lo que hay que ir a resolver.
             return (
                 <>
-                    <ChipTono chip={fila.post_call} />
+                    {llevaMotivo(fila, 'post_call')
+                        ? <ConMotivo fila={fila} grupo="post_call" chip={<ChipTono chip={fila.post_call} sinTitulo />} />
+                        : <ChipTono chip={fila.post_call} />}
                     {fila.retraso_dias > 0 && (
                         <span className="celda-sub num"
                             style={{ color: 'var(--error)', fontWeight: 700 }}>

@@ -104,7 +104,7 @@ export const mover = (preguntas, id, delta) => {
 // Claves que solo tienen sentido en ciertos tipos: al cambiar de tipo se sacan.
 const SOLO_EN = {
     mail: ['email'], dinero: ['dinero'], ref: ['dinero'], unidad: ['numero', 'dinero'], min: ['numero', 'dinero'], max: ['numero', 'dinero'],
-    ko_min: ['numero', 'dinero'], ko_max: ['numero', 'dinero'],
+    ko_min: ['numero', 'dinero'], ko_max: ['numero', 'dinero'], tramos: ['numero', 'dinero'],
     largo: ['parrafo'], puntua: ['radio', 'check'], reqs: ['intro'],
 };
 
@@ -170,7 +170,6 @@ export const notasDe = (q) => {
             ? `Condicional: aparece solo si en «${q.si.id}» responde «${texto}».`
             : `Condicional: aparece solo si «${q.si.id}» tiene respuesta.`);
     }
-    if (q.puntua) n.push('Cada opción suma puntos; el techo de IA de la tabla sale de la opción más alta que marca.');
     if (q.mail) n.push('Valida que sea un correo.');
     if (q.tipo === 'tel') n.push('Pide el código de país con un selector que arranca en el país detectado (o el que eligió, si se pregunta). Sin la pregunta de país, el país sale de ese código.');
     if (q.tipo === 'buscable') n.push('La lista cambia según el país: provincias, estados o estados de Venezuela.');
@@ -178,3 +177,23 @@ export const notasDe = (q) => {
     if (FIJAS.has(q.id)) n.push('Sin el nombre no se puede guardar la postulación: esta pregunta no se apaga ni se elimina.');
     return n;
 };
+
+// Puntaje de cada pregunta: la misma regla que app/services/hiring_puntaje.py.
+export const PTS_MAX = 3;
+export const ptsDe = (o) => (o && typeof o === 'object' ? Math.max(0, Math.min(PTS_MAX, Number(o.pts) || 0)) : 0);
+const TIPOS_TEXTO = ['parrafo', 'texto'];
+
+/** Importancia (0 no cuenta). Sin guardar: ×1 las de opciones y números, 0 las de texto. */
+export const pesoDe = (q) => (q.peso != null ? q.peso : ['radio', 'check', 'numero'].includes(q.tipo) ? 1 : 0);
+
+/** Lo máximo que suma la pregunta (0 = no puntúa). */
+export const maximoDe = (q) => {
+    const ops = (q.o || []).map(ptsDe);
+    if (q.tipo === 'radio') return Math.max(0, ...ops);
+    if (q.tipo === 'check') return Math.min(PTS_MAX, ops.reduce((a, b) => a + b, 0));
+    if (q.tipo === 'numero') return Math.max(0, ...(q.tramos || []).map(ptsDe));
+    if (TIPOS_TEXTO.includes(q.tipo) || q.tipo === 'link') return PTS_MAX;
+    return 0;
+};
+
+export const puntuaQ = (q) => q.on !== false && q.tipo !== 'intro' && pesoDe(q) > 0 && maximoDe(q) > 0;

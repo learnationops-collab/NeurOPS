@@ -217,8 +217,10 @@ MAX_BLOQUE = 60
 MAX_OPCION = 240
 MAX_OPCIONES = 20
 MAX_BYTES = 200_000
-# Claves que el editor agrega y el formulario público no necesita.
-CLAVES_DEL_EDITOR = ('on', 'base')
+MAX_TRAMOS = 10
+# Claves que el editor agrega y el formulario público no necesita. Los puntajes
+# tampoco se publican: dirían qué respuesta suma.
+CLAVES_DEL_EDITOR = ('on', 'base', 'peso', 'tramos')
 # Variantes del texto por país (`t_pais`, `h_pais`) y equivalente en reales (`ref`):
 # ya no se usan; las guardadas no se publican.
 CLAVES_RETIRADAS = ('t_pais', 'h_pais', 'ref')
@@ -274,6 +276,8 @@ def validar_preguntas(lista):
                     raise PreguntasInvalidas(
                         f'{rotulo}: cada opción necesita un texto de hasta {MAX_OPCION} caracteres.')
 
+        _validar_puntaje(p, rotulo)
+
         limites = [p.get(k) for k in ('ko_min', 'ko_max')]
         if any(v is not None and (isinstance(v, bool) or not isinstance(v, int) or v < 0) for v in limites):
             raise PreguntasInvalidas(f'{rotulo}: los límites excluyentes son números enteros sin signo.')
@@ -292,6 +296,27 @@ def validar_preguntas(lista):
     nombre = next((p for p in lista if p['id'] == 'nombre'), None)
     if nombre is None or nombre.get('on') is False or nombre.get('req') is False:
         raise PreguntasInvalidas('«nombre» tiene que quedar prendida y obligatoria: sin el nombre no se guarda la postulación.')
+
+
+def _entero(v, maximo):
+    return not isinstance(v, bool) and isinstance(v, int) and 0 <= v <= maximo
+
+
+def _validar_puntaje(p, rotulo):
+    """`peso` 0-3, `pts` de cada opción 0-10 (los formularios viejos llegan a 6;
+    el score toma hasta 3) y `tramos` [{hasta, pts}] de las numéricas."""
+    if p.get('peso') is not None and not _entero(p['peso'], 3):
+        raise PreguntasInvalidas(f'{rotulo}: la importancia va de 0 a 3.')
+    for opcion in p.get('o') or []:
+        if isinstance(opcion, dict) and opcion.get('pts') is not None and not _entero(opcion['pts'], 10):
+            raise PreguntasInvalidas(f'{rotulo}: los puntos de cada opción van de 0 a 3.')
+    tramos = p.get('tramos')
+    if tramos is None:
+        return
+    if not isinstance(tramos, list) or len(tramos) > MAX_TRAMOS or not all(
+            isinstance(t, dict) and _entero(t.get('hasta'), 10_000_000) and _entero(t.get('pts'), 3) for t in tramos):
+        raise PreguntasInvalidas(
+            f'{rotulo}: cada tramo de puntos necesita un «hasta» entero y de 0 a 3 puntos (hasta {MAX_TRAMOS} tramos).')
 
 
 # --- Semilla, resumen y serialización ----------------------------------------
@@ -409,7 +434,16 @@ def preguntas_publicas(form):
     obligatoria (completitud) y el formulario público, como opcional (`q.req
     && vacio`). Así los dos piden lo mismo."""
     return [
-        {**{k: v for k, v in p.items() if k not in CLAVES_DEL_EDITOR + CLAVES_RETIRADAS}, 'req': bool(p.get('req', True))}
+        {**{k: v for k, v in p.items() if k not in CLAVES_DEL_EDITOR + CLAVES_RETIRADAS},
+         'req': bool(p.get('req', True)), **_opciones_publicas(p)}
         for p in (form.preguntas or [])
         if isinstance(p, dict) and p.get('on') is not False
     ]
+
+
+def _opciones_publicas(p):
+    """Las opciones sin `pts`, salvo en las que el formulario manda `<id>_pts`
+    (`puntua`). Sin opciones, nada."""
+    if 'o' not in p or p.get('puntua'):
+        return {}
+    return {'o': [{k: v for k, v in o.items() if k != 'pts'} if isinstance(o, dict) else o for o in p.get('o') or []]}

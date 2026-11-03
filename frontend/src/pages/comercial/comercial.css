@@ -439,6 +439,9 @@
 
 /* Tooltip */
 .dc-shell .tip{position:relative;display:inline-flex;align-items:center}
+.dc-shell .tip--ancla{max-width:100%;min-width:0}
+.dc-shell .tip--ancla .chip{cursor:help}
+.dc-shell .tip-pie{display:block;margin-top:6px;font-size:11px;color:var(--text-muted)}
 .dc-shell .tip-dot{width:18px;height:18px;flex-shrink:0;border-radius:var(--radius-pill);
   display:inline-flex;align-items:center;justify-content:center;
   border:1px solid var(--border-subtle);background:var(--bg-input);

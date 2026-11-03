@@ -43,6 +43,12 @@ class HiringForm(db.Model):
     # más dos claves del editor: `on` (si se pregunta) y `base` (si es una de
     # las 35 originales, que se pueden apagar o borrar, menos el nombre).
     preguntas = db.Column(db.JSON, nullable=False, default=list)
+    # Cuenta regresiva de la página de la vacante. 'fecha': hasta `cierre_en`
+    # (UTC), la misma para todos; 'visita': `cierre_horas` desde la primera
+    # visita de cada persona; None: sin cuenta regresiva.
+    cierre_modo = db.Column(db.String(12), nullable=True)
+    cierre_en = db.Column(db.DateTime, nullable=True)
+    cierre_horas = db.Column(db.Integer, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     created_by_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
@@ -137,6 +143,14 @@ class HiringForm(db.Model):
 
     def preguntas_obligatorias(self):
         return self._derivados()['obligatorias']
+
+    def cierre_dict(self):
+        """{modo, en (ISO en UTC), horas} para el panel y la página de la vacante."""
+        return {
+            "modo": self.cierre_modo,
+            "en": self.cierre_en.isoformat() + 'Z' if self.cierre_en else None,
+            "horas": self.cierre_horas,
+        }
 
     def __repr__(self):
         return f'<HiringForm {self.id} {self.nombre}{" (activo)" if self.activo else ""}>'

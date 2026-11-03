@@ -20,7 +20,7 @@ from app.models import AssistantApplication, AssistantClarityWeight
 from app.models.assistant_application import (
     BLOQUES, CAMPOS_FORMULARIO, ESTADOS, ETIQUETAS_PREGUNTA, OPCIONALES, VERIFICADO_OK, pais_limpio,
 )
-from app.services import assistant_clarity
+from app.services import assistant_clarity, hiring_ficha, hiring_puntaje
 from app.services.hiring_forms import form_activo
 from app.services.assistant_clarity import CLARITY_CRITERIA
 from flask_login import current_user
@@ -174,6 +174,12 @@ def ver_assistant_application(app_id):
     # Rótulos de las respuestas a preguntas agregadas desde el editor (no
     # tienen columna ni lugar en `bloques`).
     data["preguntas_extra"] = app_row.preguntas_extra()
+    # Lo que dibuja la ficha: un bloque por sección de su formulario, cada
+    # pregunta con su tipo y si la respuesta la corta (ver hiring_ficha).
+    data["secciones"] = hiring_ficha.secciones(app_row)
+    # Los puntos de cada pregunta que suma al score (vacío si su formulario no
+    # tiene puntos): la ficha los agrupa por sección.
+    data["puntaje"] = hiring_puntaje.detalle(app_row) if app_row.formulario() else []
     return jsonify(data), 200
 
 

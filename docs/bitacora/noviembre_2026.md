@@ -141,3 +141,19 @@
   - Se quitan las opciones fijas de motivo; queda un único cuadro obligatorio (10+ caracteres) por rama, que viaja como `motivo_estado` y se anota en Comunicación.
   - El subestado del seguimiento se recorta a 180 caracteres (`seguimiento_sub` es String(255)): un motivo largo ya no rompe el guardado.
   - Contrato front/back (`reportes.json`) regenerado; pruebas del reporte ajustadas.
+- **3 de Noviembre de 2026 (Hiring: la ficha de la postulación sigue al formulario)** *([SeccionesFicha.jsx](../../frontend/src/pages/admin/hiring/components/SeccionesFicha.jsx), [hiring_ficha.py](../../app/services/hiring_ficha.py), [ADR-W075](../DECISIONS.md))*:
+  - La ficha muestra una tarjeta por bloque del formulario (con ícono), cada respuesta con el ícono de su tipo; varias opciones como etiquetas; textos largos con «Ver todo» y copiar; la respuesta que corta, en rojo.
+  - Contacto aparte (correo y WhatsApp con copiar, abrir WhatsApp, país, edad, CV). Sin la píldora del video.
+- **3 de Noviembre de 2026 (Hiring: score por puntos del formulario)** *([hiring_puntaje.py](../../app/services/hiring_puntaje.py), [PuntajePregunta.jsx](../../frontend/src/pages/admin/hiring/components/forms/PuntajePregunta.jsx), [ADR-W076](../DECISIONS.md))*:
+  - Cada opción vale 0 a 3 pts (en las de varias opciones suman con tope 3), las numéricas puntúan por tramos y cada pregunta tiene importancia ×0 a ×3. Score = promedio ponderado, 0-100. Con puntos en el formulario reemplaza a la rúbrica de Clarity.
+  - Los puntajes no se publican en el formulario. `scripts/puntajes_asistente_ejecutiva.py` carga los iniciales de «Asistente Ejecutiva».
+- **3 de Noviembre de 2026 (Hiring: ficha de la postulación con el diseño nuevo)** *([HiringCandidateModal.jsx](../../frontend/src/pages/admin/hiring/components/HiringCandidateModal.jsx), [PanelDecision.jsx](../../frontend/src/pages/admin/hiring/components/PanelDecision.jsx), [ADR-W077](../DECISIONS.md))*:
+  - Contacto en cápsulas con copiar, secciones en dos columnas con color e ícono, puntos por pregunta y panel de decisión fijo con el score y su desglose por sección.
+  - «Próxima a revisar» muestra las secciones con más puntos en vez de los criterios viejos.
+- **3 de Noviembre de 2026 (Hiring: el cierre de la búsqueda se configura por formulario)** *([CierreFormulario.jsx](../../frontend/src/pages/admin/hiring/components/forms/CierreFormulario.jsx), [hiring_forms.py](../../app/api/hiring_forms.py), [ADR-W078](../DECISIONS.md))*:
+  - En la cabecera del formulario: «Cierre» con Fecha fija (la misma para todos), Por visita (N horas desde la primera visita) o Sin cuenta. Se guarda solo.
+  - Migración `c4e6a8b0d2f4`: `hiring_forms.cierre_modo`, `cierre_en`, `cierre_horas`. La API pública manda `cierre` y la página de la vacante lo usa para su reloj (va con institute-site).
+- **3 de Noviembre de 2026 (Dirección comercial: el motivo de No show, Canceló y Reagendó se lee al pasar el mouse)** *([motivos_agenda.py](../../app/services/motivos_agenda.py), [MotivoDeEstado.jsx](../../frontend/src/pages/comercial/components/MotivoDeEstado.jsx), [Tip.jsx](../../frontend/src/pages/comercial/components/Tip.jsx))*:
+  - En Revisar › Agendas, el chip de esos estados muestra en un globito el motivo, quién lo escribió, cuándo y (si se reagendó) la cita nueva; hay además una columna «Motivo» con el texto, que también sale en la exportación.
+  - Lo marcado antes del 02/11 muestra «Sin motivo registrado»; las reagendas automáticas muestran la nota del sistema.
+  - Se borra la función `registrar_de_persona`, que estaba repetida en `motivo_estado_service.py`.

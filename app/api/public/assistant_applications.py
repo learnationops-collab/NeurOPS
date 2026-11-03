@@ -198,6 +198,8 @@ def ver_assistant_form():
         "nombre": form.nombre,
         "preguntas": hiring_forms.preguntas_publicas(form),
         "config": config_publica,
+        # La cuenta regresiva de la página de la vacante (ver HiringForm.cierre_dict).
+        "cierre": form.cierre_dict(),
     }
     if preview:
         data["preview"] = True
