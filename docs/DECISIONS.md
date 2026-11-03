@@ -635,3 +635,11 @@
 - **Decisión:** columnas `hiring_forms.cierre_modo` ('fecha' | 'visita' | NULL), `cierre_en` (UTC) y `cierre_horas` (migración `c4e6a8b0d2f4`). El editor las configura en la cabecera (`CierreFormulario`: Fecha fija / Por visita / Sin cuenta) con el autoguardado; `PUT /hiring/forms/<id>` las valida (horas de 1 a 720). `GET /api/public/assistant-form` devuelve `cierre` y la página de la vacante lo aplica a su reloj: fecha igual para todos, horas desde la primera visita (por link) o sin reloj. Si la API no contesta, sigue la ventana de 96 h por visita.
 - **Qué se pierde:** `hiring_config.cierre` (fecha global sin uso en la página) queda sin efecto. Pasada la fecha, la página muestra el reloj en cero, pero el formulario sigue abierto mientras esté activo.
 - **Consecuencias:** se corrige el reloj, que redondeaba los días hacia arriba (2,5 días mostraba «03 días 12 horas»).
+
+## ADR-W079: El motivo de un No show, una cancelación o una reagenda se lee en Revisar al pasar el mouse
+
+- **Fecha:** 2026-11-03 · **Subsistema:** Dashboard comercial (Revisar › Agendas) · **Estado:** implementado.
+- **Contexto:** desde el 02/11 (ADR-W066) los tres estados piden un motivo escrito, pero solo se leía abriendo la ficha de cada lead. La dirección comercial quiere mirar un mes («hubo 5 reagendamientos») y entender la causa sin entrar de a una.
+- **Decisión:** cada fila de la tabla de agendas en esos estados trae `motivo` (`{texto, quien, cuando, auto, nueva_cita}`, armado por `app/services/motivos_agenda.py` con dos consultas por lote). Revisar lo muestra en un globito sobre el chip (`Tip` con `ancla` y `pie`) y en una columna «Motivo» (también en el CSV). Sin motivo escrito sale «Sin motivo registrado»; en una reagenda automática (link del lead, Calendar) se muestra la nota que dejó el sistema en la agenda nueva, marcada `auto`. Las notas de motivo guardan además el texto crudo en `payload.motivo`; las anteriores se recortan de la descripción.
+- **Qué se pierde:** nada. Lo marcado antes del 02/11 no tiene motivo y no se inventa. La lista sigue con las reglas de siempre: una reagenda que ya tiene su cita nueva no es una fila vigente.
+- **Consecuencias:** sin migración. La lista de agendas hace dos consultas más a `lead_event_logs` por carga, solo por las filas de esos tres estados. Todo lo que lee `filas_de_citas` recibe `motivo` en esas filas.
