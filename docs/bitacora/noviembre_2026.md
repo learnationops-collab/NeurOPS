@@ -141,3 +141,6 @@
   - Se quitan las opciones fijas de motivo; queda un único cuadro obligatorio (10+ caracteres) por rama, que viaja como `motivo_estado` y se anota en Comunicación.
   - El subestado del seguimiento se recorta a 180 caracteres (`seguimiento_sub` es String(255)): un motivo largo ya no rompe el guardado.
   - Contrato front/back (`reportes.json`) regenerado; pruebas del reporte ajustadas.
+- **3 de Noviembre de 2026 (Hiring: la ficha de la postulación sigue al formulario)** *([SeccionesFicha.jsx](../../frontend/src/pages/admin/hiring/components/SeccionesFicha.jsx), [hiring_ficha.py](../../app/services/hiring_ficha.py), [ADR-W075](../DECISIONS.md))*:
+  - La ficha muestra una tarjeta por bloque del formulario (con ícono), cada respuesta con el ícono de su tipo; varias opciones como etiquetas; textos largos con «Ver todo» y copiar; la respuesta que corta, en rojo.
+  - Contacto aparte (correo y WhatsApp con copiar, abrir WhatsApp, país, edad, CV). Sin la píldora del video.

@@ -1,23 +1,13 @@
-import React, { useEffect, useLayoutEffect, useState, useCallback, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { motion } from 'framer-motion';
 import {
     X, ChevronLeft, ChevronRight, ChevronDown, CheckCircle2, XCircle, Clock,
-    Target, Trash2, Trophy, Star, PlayCircle, FileText, Inbox, MessageCircle,
-    AlertTriangle, Copy, DollarSign, Info, Sparkles, Filter, ListChecks, PenLine,
+    Target, Trash2, Trophy, Star, FileText, AlertTriangle, DollarSign, Info,
 } from 'lucide-react';
 import api from '../../../../services/api';
-import {
-    PREGUNTA_CORTA, CAMPOS_ESCRITOS, VAL_CORTO, AREA_CORTO,
-    escalaDe, nivelDe, techoIA, nivelCorto, estrellas, BANDERA, soloDigitos, href, MODALIDAD,
-} from '../lib/escalas';
+import { BANDERA, href, MODALIDAD } from '../lib/escalas';
 import { VEREDICTO } from './comun';
-import logoSheets from '../assets/apps/google-sheets.png';
-import logoChatgpt from '../assets/apps/chatgpt.png';
-import logoClaude from '../assets/apps/claude.png';
-import logoMeta from '../assets/apps/meta.png';
-import logoNotion from '../assets/apps/notion.png';
-import logoWhatsapp from '../assets/apps/whatsapp.png';
-import logoZapier from '../assets/apps/zapier.png';
+import { ContactoFicha, Seccion } from './SeccionesFicha';
 
 // Los siete veredictos que puede poner un revisor. 'baja' pide motivo: es la
 // única que describe algo que pasó DESPUÉS de seleccionar/hacer entrar a
@@ -76,25 +66,6 @@ const ICONO_VEREDICTO = {
     baja: Trash2,
 };
 
-// Los 4 excluyentes + la verificación de comprensión: son lo primero que mira
-// un revisor, así que abren el primer riel.
-const REQUISITOS = [
-    ['equipo', (v) => /^S[íi]/.test(v || '')],
-    ['disponibilidad', (v) => /4 horas ahora/.test(v || '')],
-    ['horario', (v) => /^S[íi]/.test(v || '')],
-    ['empleo', (v) => /^No/.test(v || '')],
-    ['confirma', (v) => /4 horas diarias y desde el tercer mes/.test(v || '')],
-];
-
-// Cada fila del riel de experiencia: escala 0-4 + etiqueta corta.
-const EXPERIENCIA = ['experiencia', 'digital', 'remoto', 'dinero', 'pm', 'educacion'];
-
-// Preguntas de opción con una escala medible: su tarjeta lleva estrellas.
-const NIVELES = {
-    ia_avanzado: techoIA,
-    pendientes: (valor) => escalaDe('pendientes', valor),
-};
-
 // --- Tamaño del panel ---
 
 // El panel usa casi toda la pantalla (hasta 1600px de ancho, con un margen del
@@ -132,7 +103,6 @@ const useDimensionesPanel = () => {
 const BOTON_CABECERA = 'inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-xl border text-[13.5px] font-bold transition-all';
 const PILDORA = `${BOTON_CABECERA} px-3`;
 const PILDORA_NEUTRA = `${PILDORA} border-white/[.32] bg-white/[.04] hover:bg-[#5B7CFF]/20`;
-const PILDORA_AUSENTE = `${PILDORA} border-[#4C2227] bg-[#1B0F1D] text-[#E85C4A]`;
 const BOTON_ICONO = 'flex h-10 w-10 flex-none items-center justify-center rounded-[11px] border border-white/[.32] bg-white/[.04] transition-all hover:bg-[#5B7CFF]/20 disabled:opacity-30';
 
 // Las etiquetas en mayúsculas van en <small>: el reset tipográfico global
@@ -142,15 +112,6 @@ const Etiqueta = ({ children, className = '' }) => (
     <small className={`block text-[11px] font-extrabold uppercase leading-none tracking-[.08em] text-white/45 ${className}`}>
         {children}
     </small>
-);
-
-// Los cuatro puntitos del nivel (0-4), más grandes que los del listado.
-const Puntos = ({ n, color = '#5B7CFF' }) => (
-    <span className="flex flex-none gap-1">
-        {[1, 2, 3, 4].map((j) => (
-            <span key={j} className="h-[7px] w-[7px] rounded-full" style={{ background: j <= n ? color : 'rgba(255,255,255,.14)' }} />
-        ))}
-    </span>
 );
 
 // Qué tan completo quedó el formulario del registro. El número lo calcula el
@@ -185,294 +146,12 @@ export const Completitud = ({ valor }) => {
     );
 };
 
-const Riel = ({ titulo, icono: Icono, className = '', children }) => (
-    <section className={`flex min-w-0 flex-col rounded-2xl border border-white/[.09] bg-white/[.03] px-4 pb-2 pt-3.5 ${className}`}>
-        <small className="flex items-center gap-2 pb-3 text-[11.5px] font-extrabold uppercase leading-none tracking-[.1em] text-white/55">
-            <Icono size={15} className="flex-none text-[#5B7CFF]" />
-            {titulo}
-        </small>
-        {children}
-    </section>
-);
-
-// Una fila de los rieles angostos: etiqueta (y medidor) arriba, valor abajo.
-const FilaRiel = ({ k, title, medidor, children }) => (
-    <div className="border-t border-white/[.07] py-2" title={title}>
-        <div className="flex items-center justify-between gap-2">
-            <Etiqueta>{k}</Etiqueta>
-            {medidor}
-        </div>
-        <div className="mt-1.5 text-[14px] font-bold leading-snug">{children}</div>
-    </div>
-);
-
-const Contacto = ({ tile, texto, vacio, onCopiar }) => (
-    <div className="flex items-center gap-2 rounded-xl border border-white/[.08] bg-white/[.03] p-2">
-        {tile}
-        {texto ? (
-            <button
-                type="button"
-                onClick={onCopiar}
-                title="Copiar"
-                className="group flex min-w-0 flex-1 items-center gap-1.5 text-left text-[13px] font-semibold tabular-nums hover:text-white"
-            >
-                <span className="truncate">{texto}</span>
-                <Copy size={14} className="flex-none text-white/30 transition-colors group-hover:text-white/70" />
-            </button>
-        ) : <span className="text-[13px] text-white/35">{vacio}</span>}
-    </div>
-);
-
-// Banderitas redondas de los idiomas (los emoji de bandera no se dibujan en
-// Windows: salen como "BR"/"GB").
-const BANDERA_IDIOMA = {
-    pt: (
-        <>
-            <rect width="20" height="20" fill="#009C3B" />
-            <path d="M10 3 18 10 10 17 2 10Z" fill="#FFDF00" />
-            <circle cx="10" cy="10" r="3.5" fill="#002776" />
-        </>
-    ),
-    en: (
-        <>
-            <rect width="20" height="20" fill="#012169" />
-            <path d="M0 0 20 20M20 0 0 20" stroke="#fff" strokeWidth="3.4" />
-            <path d="M0 0 20 20M20 0 0 20" stroke="#C8102E" strokeWidth="1.4" />
-            <path d="M10 0v20M0 10h20" stroke="#fff" strokeWidth="5.6" />
-            <path d="M10 0v20M0 10h20" stroke="#C8102E" strokeWidth="3.2" />
-        </>
-    ),
-    es: (
-        <>
-            <rect width="20" height="20" fill="#AA151B" />
-            <rect y="5" width="20" height="10" fill="#F1BF00" />
-        </>
-    ),
-};
-
-const Bandera = ({ idioma }) => (
-    <span className="block h-6 w-6 flex-none overflow-hidden rounded-full ring-1 ring-white/20">
-        <svg viewBox="0 0 20 20" className="h-full w-full" aria-hidden="true">{BANDERA_IDIOMA[idioma]}</svg>
-    </span>
-);
-
-const Logo = ({ src, className = '' }) => (
-    <img src={src} alt="" width="24" height="24" draggable={false} className={`h-6 w-6 flex-none rounded-[6px] ${className}`} />
-);
-
-const LogosIA = () => (
-    <span className="flex flex-none">
-        <Logo src={logoChatgpt} />
-        <Logo src={logoClaude} className="-ml-2 ring-1 ring-[#0B0F26]" />
-    </span>
-);
-
-// Idiomas y herramientas, en el orden del mockup. `escala` es la escala propia
-// del campo; sin ella rige la genérica de nivel (idiomas, Sheets, IA).
-// `etiqueta` e `icono` pueden depender de la candidata (a una brasileña se le
-// pregunta por español, no por portugués).
-const HERRAMIENTAS = [
-    {
-        campo: 'idioma2',
-        etiqueta: (d) => (d.pais === 'Brasil' ? 'Español' : 'Portugués'),
-        icono: (d) => <Bandera idioma={d.pais === 'Brasil' ? 'es' : 'pt'} />,
-    },
-    { campo: 'ingles', etiqueta: 'Inglés', icono: <Bandera idioma="en" /> },
-    { campo: 'sheets', etiqueta: 'Google Sheets', icono: <Logo src={logoSheets} /> },
-    { campo: 'ia_nivel', etiqueta: 'ChatGPT · Claude', icono: <LogosIA /> },
-    { campo: 'meta', etiqueta: 'Meta Ads', icono: <Logo src={logoMeta} />, escala: 'meta' },
-    { campo: 'notion', etiqueta: 'Notion', icono: <Logo src={logoNotion} />, escala: 'notion' },
-    { campo: 'wa_tools', etiqueta: 'WhatsApp', icono: <Logo src={logoWhatsapp} />, escala: 'wa_tools' },
-    { campo: 'automatizaciones', etiqueta: 'Zapier', icono: <Logo src={logoZapier} />, escala: 'automatizaciones' },
-];
-
-// Lo que la cabecera muestra tal cual: nunca es una tarjeta.
-const EN_CABECERA = ['pais', 'nombre', 'email', 'whatsapp', 'edad', 'remuneracion', 'video', 'video_verificado', 'cv'];
-
-// Todo lo que ya tiene lugar propio arriba (cabecera, rieles, herramientas):
-// lo que queda del formulario son las "Respuestas". Con «Abrir todas las
-// respuestas» salen también las de los rieles, con la respuesta entera.
-const YA_MOSTRADAS = new Set([
-    ...EN_CABECERA,
-    ...REQUISITOS.map(([campo]) => campo),
-    ...EXPERIENCIA,
-    'area',
-    ...HERRAMIENTAS.map((h) => h.campo),
-]);
-
-const Celda = ({ etiqueta, icono, label, n, title }) => (
-    <div className="flex min-w-0 items-center gap-3 border-t border-white/[.07] px-0.5 py-2.5" title={title}>
-        {icono}
-        <div className="min-w-0 flex-1">
-            <Etiqueta className="truncate">{etiqueta}</Etiqueta>
-            <div className="mt-1.5 flex items-center justify-between gap-2">
-                <span
-                    className="min-w-0 truncate text-[14px] font-bold leading-none"
-                    style={{ color: n > 0 ? '#fff' : 'rgba(255,255,255,.45)' }}
-                >
-                    {label}
-                </span>
-                <Puntos n={n} />
-            </div>
-        </div>
-    </div>
-);
-
-const Estrellas = ({ n }) => (
-    <span
-        className="inline-flex flex-none items-center gap-1 rounded-full border border-[#FF3FA4]/45 bg-[#FF3FA4]/10 py-[3px] pl-2 pr-2.5"
-        title={`${n} de 5`}
-    >
-        <span className="flex gap-px">
-            {[1, 2, 3, 4, 5].map((i) => (
-                <Star
-                    key={i}
-                    size={11}
-                    strokeWidth={2}
-                    fill={i <= n ? 'currentColor' : 'none'}
-                    className={i <= n ? 'text-[#FF6AD5]' : 'text-white/25'}
-                />
-            ))}
-        </span>
-        <span className="text-[12px] font-bold leading-none tabular-nums text-[#FF6AD5]">{n}/5</span>
-    </span>
-);
-
-// Se despliega y se pliega con la altura animada; `initial={false}` para que lo
-// que ya está abierto al montar no se anime al aparecer.
-const Plegable = ({ abierto, children }) => (
-    <AnimatePresence initial={false}>
-        {abierto && (
-            <motion.div
-                key="contenido"
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.18, ease: 'easeOut' }}
-                className="overflow-hidden"
-            >
-                {children}
-            </motion.div>
-        )}
-    </AnimatePresence>
-);
-
-// Dice si el texto, tal como está colapsado (una línea), queda cortado: solo
-// entonces tiene sentido ofrecer abrirlo. Cerrado no vuelve a medir, así que
-// la flecha para volver a cerrarlo no desaparece.
-const useCortado = (colapsado, texto) => {
-    const ref = useRef(null);
-    const [cortado, setCortado] = useState(false);
-    useLayoutEffect(() => {
-        const el = ref.current;
-        if (!el || !colapsado) return undefined;
-        const medir = () => setCortado(el.scrollWidth > el.clientWidth + 1);
-        medir();
-        const observador = new ResizeObserver(medir);
-        observador.observe(el);
-        return () => observador.disconnect();
-    }, [colapsado, texto]);
-    return [ref, cortado];
-};
-
-const CLASE_TARJETA = 'min-w-0 rounded-2xl border border-white/[.1] bg-white/[.04] transition-colors hover:border-[#5B7CFF]/45 hover:bg-[#5B7CFF]/[.07]';
-
-const TarjetaRespuesta = ({ campo, valor, etiqueta, abierta, onToggle }) => {
-    const texto = String(valor);
-    const enlace = campo === 'diseno_link' ? href(texto) : null;
-    const nivel = NIVELES[campo]?.(texto);
-    const puntos = nivel?.ok ? estrellas(nivel.n, nivel.max) : null;
-    const [textoRef, cortado] = useCortado(!abierta, texto);
-    const expandible = !enlace && (abierta || cortado);
-
-    const titulo = (
-        <span className="flex items-center gap-2">
-            <span className="truncate text-[13px] font-bold">{PREGUNTA_CORTA[campo] || etiqueta || campo}</span>
-            {puntos && <Estrellas n={puntos} />}
-        </span>
-    );
-
-    if (enlace) {
-        return (
-            <div className={`${CLASE_TARJETA} px-4 py-2`}>
-                {titulo}
-                <a href={enlace} target="_blank" rel="noreferrer" className="mt-1 block truncate text-[14.5px] leading-snug text-[#8AA3FF] hover:underline">
-                    {texto}
-                </a>
-            </div>
-        );
-    }
-
-    return (
-        <div className={CLASE_TARJETA}>
-            <button
-                type="button"
-                disabled={!expandible}
-                onClick={onToggle}
-                aria-expanded={expandible ? abierta : undefined}
-                className="flex w-full items-start gap-2 px-4 py-2 text-left disabled:cursor-default"
-            >
-                <span className="min-w-0 flex-1">
-                    {titulo}
-                    <span
-                        ref={textoRef}
-                        className={`mt-1 block text-[14.5px] leading-snug text-white/75 ${abierta ? 'whitespace-pre-wrap break-words' : 'truncate'}`}
-                    >
-                        {texto}
-                    </span>
-                </span>
-                {expandible && (
-                    <ChevronDown
-                        size={18}
-                        className="mt-0.5 flex-none text-white/35 transition-transform duration-200"
-                        style={{ transform: abierta ? 'rotate(180deg)' : 'none' }}
-                    />
-                )}
-            </button>
-        </div>
-    );
-};
-
-const GrupoRespuestas = ({ icono: Icono, titulo, campos, d, columnas, cerrado, onToggleGrupo, abiertas, todasAbiertas, onToggle }) => {
-    if (campos.length === 0) return null;
-    return (
-        <div>
-            <button
-                type="button"
-                onClick={onToggleGrupo}
-                aria-expanded={!cerrado}
-                className="flex items-center gap-2 py-1 text-white/55 transition-colors hover:text-white/85"
-            >
-                <Icono size={15} className="text-[#5B7CFF]" />
-                <small className="text-[11.5px] font-extrabold uppercase leading-none tracking-[.14em]">{titulo}</small>
-                <small className="rounded-full bg-white/10 px-2 py-[3px] text-[11px] font-extrabold leading-none tabular-nums">{campos.length}</small>
-                <ChevronDown size={14} className="transition-transform duration-200" style={{ transform: cerrado ? 'rotate(-90deg)' : 'none' }} />
-            </button>
-            <Plegable abierto={!cerrado}>
-                <div className={`grid items-start gap-2 pb-1 pt-1 ${columnas}`}>
-                    {campos.map((campo) => (
-                        <TarjetaRespuesta
-                            key={campo}
-                            campo={campo}
-                            valor={d[campo]}
-                            etiqueta={d.__etiquetas?.[campo]}
-                            abierta={todasAbiertas || abiertas.has(campo)}
-                            onToggle={() => onToggle(campo)}
-                        />
-                    ))}
-                </div>
-            </Plegable>
-        </div>
-    );
-};
-
 const HiringCandidateModal = ({ applicationId, ids, onClose, onNavigate, onDecidido }) => {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [fallo, setFallo] = useState(false);
     const [abiertas, setAbiertas] = useState(new Set());
     const [todasAbiertas, setTodasAbiertas] = useState(false);
-    const [gruposCerrados, setGruposCerrados] = useState(new Set());
     const [bajaAbierta, setBajaAbierta] = useState(false);
     const [motivo, setMotivo] = useState('');
     const [copiado, setCopiado] = useState(null);
@@ -568,51 +247,15 @@ const HiringCandidateModal = ({ applicationId, ids, onClose, onNavigate, onDecid
         return next;
     });
 
-    const toggleGrupo = (grupo) => setGruposCerrados((prev) => {
-        const next = new Set(prev);
-        next.has(grupo) ? next.delete(grupo) : next.add(grupo);
-        return next;
-    });
-
     const d = data || {};
     const cargando = loading && !data;
-    const digitos = soloDigitos(d.whatsapp);
-    const videoHref = href(d.video);
     const cvHref = href(d.cv);
     const veredicto = VEREDICTO[d.veredicto] || VEREDICTO.sin_analizar;
     const IconoVeredicto = ICONO_VEREDICTO[d.veredicto] || Info;
     const ubicacion = [[d.pais, d.provincia].filter(Boolean).join(' - '), d.edad && `${d.edad} años`].filter(Boolean).join(' · ') || '—';
 
-    // Lo que el formulario preguntó y no tiene lugar propio arriba, en el orden
-    // en que lo contestó la candidata y partido en dos: opción y escritas. Solo
-    // lo respondido — un campo vacío (o una pregunta condicional que no le
-    // tocó) no es una tarjeta más que revisar. Con todas abiertas entran
-    // también las resumidas en los rieles.
-    //
-    // Las preguntas que se agregaron desde el editor de Forms no tienen columna: llegan en
-    // `respuestas_extra`, con su enunciado en `preguntas_extra`; sin lugar en `bloques`, van
-    // al final, como escritas si la respuesta es larga. Los `<id>_pts` son el puntaje de una
-    // de varias opciones, no una respuesta.
-    const extras = d.respuestas_extra || {};
-    const dResp = {
-        ...extras,
-        ...d,
-        __etiquetas: Object.fromEntries((d.preguntas_extra || []).map((q) => [q.id, q.t])),
-    };
-    const ocultas = todasAbiertas ? new Set(EN_CABECERA) : YA_MOSTRADAS;
-    const opcion = [];
-    const escritas = [];
-    const puestas = new Set();
-    const sumar = (campo) => {
-        const valor = dResp[campo];
-        if (puestas.has(campo) || ocultas.has(campo) || campo.endsWith('_pts') || valor == null || valor === '') return;
-        puestas.add(campo);
-        const escrita = CAMPOS_ESCRITOS.has(campo) || (!PREGUNTA_CORTA[campo] && String(valor).length > 60);
-        (escrita ? escritas : opcion).push(campo);
-    };
-    (d.bloques || []).forEach((bloque) => bloque.campos.forEach(sumar));
-    Object.keys(extras).forEach(sumar);
-
+    const secciones = d.secciones || [];
+    const conTextoLargo = secciones.some((s) => s.preguntas.some((p) => p.valor != null && (p.tipo === 'parrafo' || String(p.valor).length > 90)));
     const botones = botonesDe(d);
     const estadoTexto = [
         d.revisado_por && `Decidió ${d.revisado_por}`,
@@ -676,25 +319,15 @@ const HiringCandidateModal = ({ applicationId, ids, onClose, onNavigate, onDecid
                     <div className="flex flex-wrap items-center gap-x-2 gap-y-2">
                         {!cargando && !fallo && (
                             <>
-                                {videoHref ? (
-                                    <a href={videoHref} target="_blank" rel="noreferrer" className={PILDORA_NEUTRA}>
-                                        <PlayCircle size={17} /> Presentación
-                                        {!d.video_ok && <span className="text-[11.5px] font-bold text-[#FF6AD5]">· sin verificar</span>}
-                                    </a>
-                                ) : (
-                                    <span className={PILDORA_AUSENTE}><PlayCircle size={17} /> Sin video</span>
-                                )}
-                                {cvHref ? (
+                                {cvHref && (
                                     <a href={cvHref} target="_blank" rel="noreferrer" className={PILDORA_NEUTRA}>
                                         <FileText size={17} /> CV
                                     </a>
-                                ) : (
-                                    <span className={PILDORA_AUSENTE}><FileText size={17} /> Sin CV</span>
                                 )}
                                 <span className={`${PILDORA} border`} style={{ color: veredicto.fg, background: veredicto.bg, borderColor: veredicto.bd }}>
                                     <IconoVeredicto size={16} /> {veredicto.label}
                                 </span>
-                                <span className={`${PILDORA} gap-2 border-[#5B7CFF]/50 bg-[#1323C6]/[.14]`}>
+                                {d.remuneracion && <span className={`${PILDORA} gap-2 border-[#5B7CFF]/50 bg-[#1323C6]/[.14]`}>
                                     <span className="grid h-6 w-6 flex-none place-items-center rounded-full border border-[#8AA3FF]/60 text-[#8AA3FF]">
                                         <DollarSign size={13} strokeWidth={2.6} />
                                     </span>
@@ -702,7 +335,7 @@ const HiringCandidateModal = ({ applicationId, ids, onClose, onNavigate, onDecid
                                         {d.remuneracion || '—'}
                                     </span>
                                     <Etiqueta>USD / mes</Etiqueta>
-                                </span>
+                                </span>}
                                 <span className={`${PILDORA} gap-2 border-white/[.32] bg-white/[.04]`}>
                                     <Etiqueta>Score</Etiqueta>
                                     <span className="text-[20px] font-black tabular-nums" style={{ color: d.score >= 85 ? '#5B7CFF' : '#fff' }}>
@@ -749,140 +382,37 @@ const HiringCandidateModal = ({ applicationId, ids, onClose, onNavigate, onDecid
                                     <AlertTriangle size={19} className="mt-px flex-none text-[#E85C4A]" />
                                     <span className="text-[14px] leading-snug text-white/60">
                                         <span className="font-bold text-[#E85C4A]">El formulario cortó esta postulación · </span>
-                                        {d.motivo_descarte || 'Una respuesta del bloque Requisitos es excluyente. No llegó a completar el resto.'}
+                                        {d.motivo_descarte || 'Una respuesta excluyente cortó el formulario. Está marcada abajo con «Corta».'}
                                         {!d.estado && ' · Si igual vale la pena, abajo podés seleccionarla o pasarla a prueba.'}
                                     </span>
                                 </div>
                             )}
 
-                            <div className="grid items-stretch gap-3 sm:grid-cols-2 lg:grid-cols-[236px_236px_minmax(0,1fr)]">
-                                <Riel titulo="Filtros y jornada" icono={CheckCircle2}>
-                                    {REQUISITOS.map(([campo, ok]) => {
-                                        const valor = d[campo];
-                                        return (
-                                            <FilaRiel key={campo} k={PREGUNTA_CORTA[campo]} title={valor || 'Sin respuesta'}>
-                                                <span className="flex items-start gap-2">
-                                                    {valor
-                                                        ? (ok(valor)
-                                                            ? <CheckCircle2 size={17} className="mt-px flex-none text-[#2FBF8F]" />
-                                                            : <AlertTriangle size={17} className="mt-px flex-none text-[#D9A441]" />)
-                                                        : <XCircle size={17} className="mt-px flex-none text-white/25" />}
-                                                    <span className={valor ? '' : 'text-white/35'}>
-                                                        {VAL_CORTO[valor] || valor || 'Sin respuesta'}
-                                                    </span>
-                                                </span>
-                                            </FilaRiel>
-                                        );
-                                    })}
-                                    <div className="flex flex-col gap-2 border-t border-white/[.07] pb-1.5 pt-3">
-                                        <Contacto
-                                            tile={<span className="grid h-8 w-8 flex-none place-items-center rounded-[10px] bg-white/[.07] text-white/65"><Inbox size={16} /></span>}
-                                            texto={d.email}
-                                            vacio="Sin correo"
-                                            onCopiar={() => copiar(d.email, 'correo')}
-                                        />
-                                        <Contacto
-                                            tile={digitos ? (
-                                                <a
-                                                    href={`https://wa.me/${digitos}`}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    aria-label="Abrir WhatsApp"
-                                                    title="Abrir WhatsApp"
-                                                    className="grid h-8 w-8 flex-none place-items-center rounded-[10px] bg-[#25D366]/20 text-[#25D366] transition-colors hover:bg-[#25D366]/35"
-                                                >
-                                                    <MessageCircle size={16} />
-                                                </a>
-                                            ) : (
-                                                <span className="grid h-8 w-8 flex-none place-items-center rounded-[10px] bg-white/[.07] text-white/30"><MessageCircle size={16} /></span>
-                                            )}
-                                            texto={digitos ? d.whatsapp : null}
-                                            vacio="Sin WhatsApp"
-                                            onCopiar={() => copiar(d.whatsapp, 'whatsapp')}
-                                        />
-                                    </div>
-                                </Riel>
-
-                                <Riel titulo="Experiencia" icono={Sparkles}>
-                                    {EXPERIENCIA.map((campo) => {
-                                        const e = escalaDe(campo, d[campo]);
-                                        return (
-                                            <FilaRiel key={campo} k={PREGUNTA_CORTA[campo]} title={d[campo] || 'Sin respuesta'} medidor={<Puntos n={e.n} />}>
-                                                <span className={e.ok ? '' : 'text-white/35'}>{e.label}</span>
-                                            </FilaRiel>
-                                        );
-                                    })}
-                                    <FilaRiel k={PREGUNTA_CORTA.area} title={d.area || ''}>
-                                        <span className={d.area ? 'text-white/85' : 'text-white/35'}>{AREA_CORTO[d.area] || d.area || 'Sin respuesta'}</span>
-                                    </FilaRiel>
-                                </Riel>
-
-                                <div className="flex min-w-0 flex-col gap-3 sm:col-span-2 lg:col-span-1">
-                                    <Riel titulo="Idiomas y herramientas" icono={Filter}>
-                                        <div className="grid grid-cols-2 gap-x-5 min-[1240px]:grid-cols-4">
-                                            {HERRAMIENTAS.map((h) => {
-                                                const valor = d[h.campo];
-                                                const nivel = h.escala ? escalaDe(h.escala, valor) : { n: nivelDe(valor), label: nivelCorto(valor) };
-                                                const resolver = (x) => (typeof x === 'function' ? x(d) : x);
-                                                return (
-                                                    <Celda
-                                                        key={h.campo}
-                                                        etiqueta={resolver(h.etiqueta)}
-                                                        icono={resolver(h.icono)}
-                                                        label={valor ? nivel.label : 'Sin respuesta'}
-                                                        n={valor ? nivel.n : 0}
-                                                        title={valor || 'Sin respuesta'}
-                                                    />
-                                                );
-                                            })}
-                                        </div>
-                                    </Riel>
-
-                                    <section className="flex min-w-0 flex-col">
-                                        <div className="flex flex-wrap items-center justify-between gap-2 pb-1.5 pt-0.5">
-                                            <small className="text-[11.5px] font-extrabold uppercase leading-none tracking-[.14em] text-white/55">Respuestas</small>
+                            <div className="grid items-start gap-3 lg:grid-cols-[260px_minmax(0,1fr)]">
+                                <div className="lg:sticky lg:top-0">
+                                    <ContactoFicha d={d} onCopiar={copiar} />
+                                </div>
+                                <div className="min-w-0">
+                                    {conTextoLargo && (
+                                        <div className="flex justify-end pb-2">
                                             <button
                                                 type="button"
                                                 onClick={() => { setTodasAbiertas((v) => !v); setAbiertas(new Set()); }}
-                                                className="inline-flex h-8 items-center gap-2 rounded-xl border border-white/[.32] bg-white/[.04] px-4 text-[13px] font-bold transition-all hover:bg-[#5B7CFF]/20"
+                                                className="inline-flex h-8 items-center gap-2 rounded-xl border border-white/[.2] bg-white/[.04] px-3.5 text-[12.5px] font-bold text-white/75 transition-all hover:bg-[#5B7CFF]/20 hover:text-white"
                                             >
-                                                {todasAbiertas ? 'Cerrar las respuestas' : 'Abrir todas las respuestas'}
-                                                <ChevronDown size={15} className="transition-transform duration-200" style={{ transform: todasAbiertas ? 'rotate(180deg)' : 'none' }} />
+                                                {todasAbiertas ? 'Cerrar las respuestas escritas' : 'Abrir las respuestas escritas'}
+                                                <ChevronDown size={14} className="transition-transform duration-200" style={{ transform: todasAbiertas ? 'rotate(180deg)' : 'none' }} />
                                             </button>
                                         </div>
-
-                                        {opcion.length === 0 && escritas.length === 0 && (
-                                            <span className="py-4 text-[14px] text-white/35">Todavía no hay más respuestas para revisar.</span>
-                                        )}
-
-                                        <GrupoRespuestas
-                                            icono={ListChecks}
-                                            titulo="Choice"
-                                            campos={opcion}
-                                            d={dResp}
-                                            columnas="sm:grid-cols-2"
-                                            cerrado={gruposCerrados.has('opcion')}
-                                            onToggleGrupo={() => toggleGrupo('opcion')}
-                                            abiertas={abiertas}
-                                            todasAbiertas={todasAbiertas}
-                                            onToggle={toggle}
-                                        />
-                                        {/* Con más de tres escritas van de a dos: una postulación
-                                            completa (el formulario viejo tiene hasta ocho) sigue
-                                            entrando en una pantalla de notebook. */}
-                                        <GrupoRespuestas
-                                            icono={PenLine}
-                                            titulo="Escrito"
-                                            campos={escritas}
-                                            d={dResp}
-                                            columnas={escritas.length > 3 ? 'sm:grid-cols-2' : ''}
-                                            cerrado={gruposCerrados.has('escrito')}
-                                            onToggleGrupo={() => toggleGrupo('escrito')}
-                                            abiertas={abiertas}
-                                            todasAbiertas={todasAbiertas}
-                                            onToggle={toggle}
-                                        />
-                                    </section>
+                                    )}
+                                    {secciones.length === 0 && (
+                                        <span className="block py-4 text-[14px] text-white/35">Todavía no hay respuestas para revisar.</span>
+                                    )}
+                                    <div className="gap-3 xl:columns-2">
+                                        {secciones.map((s, k) => (
+                                            <Seccion key={`${s.titulo}-${k}`} s={s} abiertas={abiertas} todasAbiertas={todasAbiertas} onToggle={toggle} onCopiar={copiar} />
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
                         </motion.div>
