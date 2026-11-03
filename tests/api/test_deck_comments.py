@@ -50,8 +50,9 @@ def test_el_comentario_del_closer_queda_en_la_bitacora_del_lead(client, equipo, 
     comentar(client, 'closer', equipo['closer'], auth_headers, cita, text='Pidio mas tiempo')
 
     registro = LeadEventLog.query.one()
-    assert (registro.appointment_id, registro.user_id, registro.action_type) == (cita.id, equipo['closer'].id, 'comment')
-    assert 'Closer carla' in registro.description and 'Pidio mas tiempo' in registro.description
+    assert (registro.appointment_id, registro.user_id, registro.action_type) == (cita.id, equipo['closer'].id, 'nota')
+    # Quién escribió va en `user_id`; la descripción es el texto de la nota, tal cual.
+    assert registro.description == 'Pidio mas tiempo'
 
 
 def test_el_closer_puede_responder_a_un_comentario(client, equipo, auth_headers, cita):
@@ -91,7 +92,8 @@ def test_sin_sesion_es_401(client, cita, rol, metodo):
     assert getattr(client, metodo)(url(rol, cita), json={'text': 'x'}).status_code == 401
 
 
-@pytest.mark.parametrize('rol', ['triage', 'hiring', 'director_marketing'])
+# Triage sí comenta en el mazo (lo permite `post_closer_deck_comment`).
+@pytest.mark.parametrize('rol', ['hiring', 'director_marketing'])
 def test_otros_roles_no_comentan(client, make_user, auth_headers, cita, rol):
     respuesta = client.post(url('closer', cita), headers=auth_headers(make_user(role=rol)), json={'text': 'x'})
 

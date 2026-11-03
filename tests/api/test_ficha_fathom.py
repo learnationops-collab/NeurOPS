@@ -190,7 +190,8 @@ def test_otro_closer_tambien_puede_como_con_el_reporte(client, db, lead, equipo,
     assert eventos(lead)[0].user_id == equipo['ajeno'].id
 
 
-@pytest.mark.parametrize('rol', ['setter', 'triage'])
+# Triage trabaja el lead como un closer (ADR-W054): reporta, declara ventas y corrige datos; esto cuida al setter.
+@pytest.mark.parametrize('rol', ['setter'])
 def test_setter_y_triage_no_cargan_el_link(client, db, lead, equipo, auth_headers, rol):
     r = guardar(client, auth_headers, equipo[rol], lead, fathom_url=FATHOM)
 

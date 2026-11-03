@@ -129,7 +129,8 @@ def test_un_closer_corrige_tambien_el_lead_de_otro_closer(client, db, lead, equi
     assert evento.user_id == equipo['ajeno'].id
 
 
-@pytest.mark.parametrize('rol', ['setter', 'triage'])
+# Triage trabaja el lead como un closer (ADR-W054): reporta, declara ventas y corrige datos; esto cuida al setter.
+@pytest.mark.parametrize('rol', ['setter'])
 def test_un_setter_y_triage_no_corrigen(client, db, lead, equipo, auth_headers, rol):
     """El setter de ESTE lead tampoco: confirma su agenda, pero los datos no son suyos."""
     r = editar(client, auth_headers, equipo[rol], lead, nombre='Otro nombre')

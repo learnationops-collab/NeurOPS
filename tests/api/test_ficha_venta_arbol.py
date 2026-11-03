@@ -379,7 +379,8 @@ def test_la_venta_de_la_llamada_sigue_atada_a_su_agenda(client, db, lead, equipo
 
 # --- Quien puede --------------------------------------------------------------------------------
 
-@pytest.mark.parametrize('rol', ['setter', 'triage'])
+# Triage trabaja el lead como un closer (ADR-W054): reporta, declara ventas y corrige datos; esto cuida al setter.
+@pytest.mark.parametrize('rol', ['setter'])
 def test_setter_y_triage_no_declaran_la_venta(client, db, lead, equipo, auth_headers, rol):
     r, enviado = declarar(client, auth_headers, equipo[rol], lead, venta_del_arbol())
 

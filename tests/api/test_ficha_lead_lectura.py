@@ -98,8 +98,10 @@ def test_la_direccion_puede_todo_incluido_borrar(client, db, lead, equipo, auth_
     permisos = abrir(client, auth_headers, equipo['director'], appointment_id=lead.id) \
         .get_json()['permisos']
 
+    # `pasar_triage`: la llamada de la fixture es de mañana y sigue sin reportar.
     assert permisos == {'confirmar': True, 'reportar': True, 'cobrar': True, 'eliminar': True,
-                        'editar_datos': True, 'reasignar': True, 'comentar': True, 'triar': False}
+                        'eliminar_lead': True, 'editar_datos': True, 'reasignar': True, 'comentar': True,
+                        'triar': False, 'pasar_triage': True}
 
 
 def test_cualquier_closer_borra_una_agenda_no_solo_el_suyo(client, db, lead, equipo, auth_headers):
@@ -112,12 +114,13 @@ def test_cualquier_closer_borra_una_agenda_no_solo_el_suyo(client, db, lead, equ
     assert ajena['eliminar'] is True
 
 
-def test_triage_confirma_pero_no_reporta_ni_cobra(client, db, lead, equipo, auth_headers):
+def test_triage_confirma_y_reporta_pero_no_cobra_ni_reasigna(client, db, lead, equipo, auth_headers):
+    """Triage trabaja el lead como un closer (ADR-W054) salvo cobrar, borrar y reasignar."""
     permisos = abrir(client, auth_headers, equipo['triage'], appointment_id=lead.id) \
         .get_json()['permisos']
 
     assert permisos['confirmar'] is True
-    assert (permisos['reportar'], permisos['cobrar'], permisos['reasignar']) == (False, False, False)
+    assert (permisos['reportar'], permisos['cobrar'], permisos['reasignar']) == (True, False, False)
 
 
 def test_el_setter_confirma_solo_la_agenda_que_genero(client, db, lead, equipo, auth_headers,
@@ -145,7 +148,7 @@ def test_la_ficha_trae_todos_los_bloques_del_contrato(client, db, lead, equipo, 
     datos = abrir(client, auth_headers, equipo['director'], appointment_id=lead.id).get_json()
 
     assert set(datos) == {'identidad', 'estado', 'confirmacion', 'resultado', 'cobro', 'historial',
-                          'formulario', 'comunicacion', 'permisos', 'vocabulario'}
+                          'formulario', 'comunicacion', 'permisos', 'vocabulario', 'triage'}
 
 
 def test_lo_que_falta_viaja_en_null_y_no_ausente(client, db, equipo, auth_headers):
@@ -179,7 +182,8 @@ def test_la_confirmacion_traduce_los_slugs_a_etiquetas(client, db, lead, equipo,
     conf = abrir(client, auth_headers, equipo['director'], appointment_id=lead.id) \
         .get_json()['confirmacion']
 
-    assert conf['etapa'] == 'horario'
+    # «Horario» es una etapa vieja: se lee como Contactado (ver `_confirmacion`).
+    assert conf['etapa'] == 'contactado'
     assert conf['cerrada'] is False
     assert conf['como_viene'] == {'clave': 'espera_respuesta', 'label': 'A la espera de respuesta'}
     assert [d['label'] for d in conf['dolores']] == ['Ansiedad', 'Se distrae']
