@@ -8,7 +8,7 @@ from app.models import Sale
 from app.services import ficha_lead_service, ventas_service
 
 # Quién lee las ventas de una persona: los que cobran o corrigen (no setter ni triage).
-ROLES_QUE_LEEN = ('admin', 'director_comercial', 'operator', 'closer')
+ROLES_QUE_LEEN = ('admin', 'director_comercial', 'operator', 'closer', 'director_marketing')
 
 
 def _no_lee():

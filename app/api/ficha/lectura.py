@@ -5,7 +5,7 @@ from flask import jsonify, request
 from flask_login import current_user
 
 from app import db
-from app.api.ficha import bp, sin_permiso
+from app.api.ficha import ROLES_SOLO_LECTURA, bp, sin_permiso
 from app.services import ficha_lead_service
 from app.services.leads_del_setter import puede_abrir
 
@@ -42,7 +42,7 @@ def lead():
     # Un setter abre solo sus leads (los de su Revisar, ver `leads_del_setter`); el resto de los
     # roles, cualquiera. Se mira antes de armar la ficha, que puede anclarle una agenda al cliente.
     datos = (ficha_lead_service.ficha(appointment_id=appointment_id, client_id=client_id,
-                                      usuario=current_user)
+                                      usuario=current_user, anclar=current_user.role not in ROLES_SOLO_LECTURA)
              if puede_abrir(current_user, appointment_id=appointment_id, client_id=client_id) else None)
     if not datos:
         # 404 y no 403 tambien cuando el recurso existe pero queda fuera de alcance: un 403

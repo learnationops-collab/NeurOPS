@@ -16,7 +16,7 @@ cinco roles, y cada escritura comprueba el bloque `permisos` de la lectura (ver
 Fuera de alcance responde **404, no 403**: el precedente es `GET /api/comercial/clientes/<id>`. Un
 403 confirmaria que el recurso existe, que es informacion que quien pregunta no deberia obtener.
 """
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
 from flask_login import current_user, login_required
 
 bp = Blueprint('ficha_api', __name__)
@@ -24,7 +24,10 @@ bp = Blueprint('ficha_api', __name__)
 # Quien entra a la ficha. Los roles que trabajan un lead: la direccion, el closer que la atiende, el
 # setter que la genero, triage, que confirma, y Operaciones, que corrige los registros desde Revisar
 # (10/10/2026, cuando sus tablas viejas pasaron ahi).
-ROLES_CON_ACCESO = ('admin', 'director_comercial', 'operator', 'closer', 'setter', 'triage')
+# El director de marketing (03/11/2026) abre la ficha desde las listas de cifras de Setting y Workshop, SOLO para
+# leerla: ninguna ruta que no sea GET le responde (ver abajo).
+ROLES_CON_ACCESO = ('admin', 'director_comercial', 'operator', 'closer', 'setter', 'triage', 'director_marketing')
+ROLES_SOLO_LECTURA = ('director_marketing',)
 
 
 @bp.before_request
@@ -32,6 +35,8 @@ ROLES_CON_ACCESO = ('admin', 'director_comercial', 'operator', 'closer', 'setter
 def _solo_roles_con_acceso():
     if current_user.role not in ROLES_CON_ACCESO:
         return jsonify({'message': 'Forbidden'}), 403
+    if current_user.role in ROLES_SOLO_LECTURA and request.method not in ('GET', 'HEAD', 'OPTIONS'):
+        return jsonify({'message': 'Tu rol solo puede ver la ficha del lead.'}), 403
 
 
 # Los permisos cuyo nombre no se lee como un verbo en la frase del 403.
