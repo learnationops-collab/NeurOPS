@@ -137,3 +137,7 @@
   - Con títulos largos la lista se ensanchaba por debajo del panel (pista de grilla sin `minmax(0,1fr)`): arreglado.
   - Una pregunta de la que depende otra ya se puede eliminar: las que dependían quedan apagadas y sin condición, y el panel lo avisa antes.
   - Fuera el equivalente en reales: la API no publica `ref` y el formulario de institute-site no lo muestra; el editor ya no pide la tasa.
+- **3 de Noviembre de 2026 (Closer: el reporte de no asistió, canceló y reagenda pide solo un cuadro de texto)** *([arbolResultado.preguntas.js](../../frontend/src/components/ficha/arbolResultado.preguntas.js), [arbolResultado.payload.js](../../frontend/src/components/ficha/arbolResultado.payload.js))*:
+  - Se quitan las opciones fijas de motivo; queda un único cuadro obligatorio (10+ caracteres) por rama, que viaja como `motivo_estado` y se anota en Comunicación.
+  - El subestado del seguimiento se recorta a 180 caracteres (`seguimiento_sub` es String(255)): un motivo largo ya no rompe el guardado.
+  - Contrato front/back (`reportes.json`) regenerado; pruebas del reporte ajustadas.
