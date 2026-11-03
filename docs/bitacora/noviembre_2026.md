@@ -127,3 +127,5 @@
   - Panel sin borde ni brillo rosa; más aire entre la cabecera del formulario y la lista; número de la pregunta en blanco.
   - «Texto de ayuda» pasa a «Descripción»; los textos crecen solos (sin la manija de tamaño) y hay menos rótulos.
   - Al elegir una pregunta, el número aparece y los bloques del panel entran en cascada; las filas se corren apenas al pasar el mouse.
+- **3 de Noviembre de 2026 (Hiring: las opciones de una pregunta se ordenan arrastrando)** *([PanelPregunta.jsx](../../frontend/src/pages/admin/hiring/components/forms/PanelPregunta.jsx))*:
+  - Cada opción se arrastra desde su letra (al pasar el mouse muestra el asa); las letras se reacomodan y las marcas de necesaria o excluyente viajan con la opción.

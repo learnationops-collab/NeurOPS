@@ -109,3 +109,13 @@
 .talent .tl-ed .tl-op .tl-op-nec[aria-pressed="true"]{color:var(--success);background:color-mix(in srgb,var(--success) 14%,transparent);border-color:color-mix(in srgb,var(--success) 40%,transparent)}
 .talent .tl-ed-regla{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12px;font-weight:600;color:var(--text-muted)}
 .talent .tl-ed-regla.is-activa{color:var(--success)}
+
+/* Opciones que se ordenan arrastrando desde la letra */
+.talent .tl-ed .tl-op{transition:opacity .2s ease,box-shadow .2s ease,border-color .2s ease}
+.talent .tl-ed .tl-op-asa{cursor:grab;touch-action:none}
+.talent .tl-ed .tl-op-asa svg{display:none}
+.talent .tl-ed .tl-op-asa:hover b{display:none}
+.talent .tl-ed .tl-op-asa:hover svg{display:block}
+.talent .tl-ed .tl-op.is-arrastrando{opacity:.35}
+.talent .tl-ed .tl-op.is-destino{box-shadow:0 -2px 0 var(--ed-rosa)}
+.talent .tl-ed .tl-op.is-destino-abajo{box-shadow:0 2px 0 var(--ed-rosa)}

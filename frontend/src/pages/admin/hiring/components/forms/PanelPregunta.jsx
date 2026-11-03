@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
-    ArrowUp, ArrowDown, Copy, Trash2, Ban, BadgeCheck, X, Plus, Minus, Info,
+    ArrowUp, ArrowDown, Copy, Trash2, Ban, BadgeCheck, GripVertical, X, Plus, Minus, Info,
     CircleDot, ListChecks, Search, Type, Mail, AlignLeft, Hash, DollarSign, Phone, Link2, Hand,
 } from 'lucide-react';
 import { Aura, IconButton, Select, Switch, TextArea } from '../../../../../components/standard';
@@ -46,12 +46,26 @@ const Opciones = ({ q, onCambiar }) => {
     // al tocar una, todas pasan a objeto. El backend acepta las dos formas.
     const ops = (q.o || []).map((o) => (typeof o === 'string' ? { t: o } : o));
     const set = (j, cambio) => onCambiar({ o: ops.map((o, k) => (k === j ? { ...o, ...cambio } : o)) });
+    // Se arrastra desde la letra (`asa`): con toda la fila arrastrable no se podría seleccionar texto.
+    const [asa, setAsa] = useState(null);
+    const [arrastrando, setArrastrando] = useState(null);
+    const [sobre, setSobre] = useState(null);
+    const soltarEn = (k) => {
+        if (arrastrando === null || arrastrando === k) return;
+        const lista = [...ops];
+        const [o] = lista.splice(arrastrando, 1);
+        lista.splice(k, 0, o);
+        onCambiar({ o: lista });
+    };
+    const fin = () => { setAsa(null); setArrastrando(null); setSobre(null); };
     return (
         <Campo etiqueta="Opciones">
             <div className="tl-ops">
                 {ops.map((o, j) => {
                     const letra = String.fromCharCode(65 + j);
-                    const cls = o.ko ? ' tl-op--ko' : o.necesaria ? ' tl-op--nec' : o.correcta ? ' tl-op--ok' : '';
+                    let cls = o.ko ? ' tl-op--ko' : o.necesaria ? ' tl-op--nec' : o.correcta ? ' tl-op--ok' : '';
+                    if (arrastrando === j) cls += ' is-arrastrando';
+                    else if (sobre === j && arrastrando !== null) cls += arrastrando < j ? ' is-destino-abajo' : ' is-destino';
                     let extra = <span />;
                     if (q.puntua) {
                         extra = (
@@ -65,8 +79,15 @@ const Opciones = ({ q, onCambiar }) => {
                     else if (o.reexplica) extra = <Chip c="var(--warning)" chico>Reexplica</Chip>;
                     else if (o.bloquea) extra = <Chip c="var(--warning)" chico>Bloquea</Chip>;
                     return (
-                        <div key={j} className={`tl-op${cls}`}>
-                            <span className="tl-op-letra">{letra}</span>
+                        <div key={j} className={`tl-op${cls}`} draggable={asa === j}
+                            onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; setArrastrando(j); }}
+                            onDragOver={(e) => { if (arrastrando === null) return; e.preventDefault(); if (sobre !== j) setSobre(j); }}
+                            onDrop={(e) => { e.preventDefault(); soltarEn(j); fin(); }}
+                            onDragEnd={fin}>
+                            <span className="tl-op-letra tl-op-asa" title="Arrastrá para ordenar"
+                                onPointerDown={() => setAsa(j)} onPointerUp={() => setAsa(null)}>
+                                <b>{letra}</b><GripVertical size={14} aria-hidden="true" />
+                            </span>
                             <input className="tl-op-in" maxLength={240} value={o.t || ''} aria-label={`Opción ${letra}`}
                                 onChange={(e) => set(j, { t: e.target.value })} />
                             {extra}
