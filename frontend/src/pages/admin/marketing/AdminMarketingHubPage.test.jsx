@@ -5,7 +5,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 vi.mock('../../../services/api', () => ({ default: { get: vi.fn(), post: vi.fn(), put: vi.fn() } }));
 vi.mock('react-hot-toast', () => ({ default: { success: vi.fn(), error: vi.fn() } }));
-// El rol decide si «De dónde vino lo cobrado» lleva a Revisar (solo admin y dirección comercial).
+// El rol de la sesión (admin o dirección de marketing: las dos entran a este espacio).
 const sesion = vi.hoisted(() => ({ user: { role: 'admin' } }));
 vi.mock('../../../contexts/AuthContext', () => ({ useAuth: () => sesion }));
 const navegar = vi.hoisted(() => vi.fn());
@@ -13,6 +13,7 @@ vi.mock('react-router-dom', async (original) => ({ ...(await original()), useNav
 
 import api from '../../../services/api';
 import AdminMarketingHubPage from './AdminMarketingHubPage';
+import { claveDeUsuario } from '../../../hooks/useEstadoGuardado';
 
 const fila = (extra) => ({
     clave: 'APLICAR', nombre: 'APLICAR', ad_id: 1, archivado: false,
@@ -33,7 +34,19 @@ const FUENTES = { fuentes: [{ key: 'setting', label: 'Setting', ...FUENTE },
     { key: 'workshop', label: 'Workshop', ...FUENTE, roas_new_cash: 1.1, roas_total: 1.2, costo_agenda: 35, pct_show_up: 40 }],
 otras: { cash_total: 0, cobros: 0 } };
 
+// Las cuentas las manda el backend en `tablero.formulas` (`marketing_formulas.FORMULAS`) y la pantalla las aplica al sumar.
+const pct = (key, num, den = ['entrantes']) => ({ key, num, den, por: 100, dec: 1 });
+const costo = (key, den, num = 'gasto') => ({ key, num, den, dec: 2, con_gasto: true });
+const FORMULAS = [
+    pct('pct_calificados', 'calificados'), pct('pct_no_calificados', 'no_calificados'), pct('pct_descalificados', 'descalificados'),
+    pct('pct_en_conversacion', 'en_conversacion'), pct('pct_sin_respuesta', 'sin_respuesta'), pct('pct_pendientes', 'pendientes'),
+    costo('cpl', ['leads']), costo('cpl_calificado', ['calificados']), costo('costo_agenda', ['agendas_alta', 'agendas']),
+    costo('costo_venta', ['ventas']), costo('cac', ['clientes_nuevos']), costo('roas', ['gasto'], 'cobrado'),
+    { key: 'ingreso_venta', num: 'new_cash', den: ['ventas'], dec: 2 },
+];
+
 const TABLERO = {
+    formulas: FORMULAS,
     desde: '2026-09-15', hasta: '2026-10-14', moneda: 'USD',
     filas: [
         fila(),
@@ -62,6 +75,8 @@ const abrir = (ruta = '/admin/marketing') => render(
 
 describe('Marketing › Anuncios', () => {
     beforeEach(() => {
+        // Cada vista recuerda lo último que se usó (nivel, columnas, modo, filtros): una prueba no hereda lo de la anterior.
+        window.localStorage.clear();
         api.get.mockImplementation((url) => Promise.resolve({ data: url === '/marketing/anuncios' ? TABLERO : {
             anuncios: [], claves: ['APLICAR'], conectado: false, ultima_sincronizacion: null } }));
     });
@@ -69,8 +84,9 @@ describe('Marketing › Anuncios', () => {
     it('Rendimiento muestra solo Setting con los dos ROAS y sin la comparación', async () => {
         abrir();
         await screen.findByText('Obtener Guia');
-        expect(screen.getByText('ROAS New Cash')).toBeInTheDocument();
-        expect(screen.getByText('ROAS Total')).toBeInTheDocument();
+        // «ROAS Total» está en la tarjeta de Setting y en la columna de la tabla: alcanza con que estén los dos ROAS.
+        expect(screen.getAllByText('ROAS New Cash').length).toBeGreaterThan(0);
+        expect(screen.getAllByText('ROAS Total').length).toBeGreaterThan(0);
         expect(screen.queryByText('Setting vs Workshop')).not.toBeInTheDocument();
     });
 
@@ -124,7 +140,7 @@ describe('Marketing › Anuncios', () => {
         await screen.findByText('Obtener Guia');
 
         await user.click(screen.getByRole('button', { name: /^Columnas/ }));
-        await user.click(screen.getByRole('menuitemcheckbox', { name: 'ROAS' }));
+        await user.click(screen.getByRole('menuitemcheckbox', { name: 'ROAS Total' }));
         expect(screen.queryByRole('button', { name: /^ROAS/ })).not.toBeInTheDocument();
         await user.click(screen.getByRole('switch', { name: 'Juntar Leads en una columna' }));
         expect(screen.getByRole('columnheader', { name: /^Leads/ })).toBeInTheDocument();
@@ -136,13 +152,13 @@ describe('Marketing › Anuncios', () => {
         borde.focus();
         await user.keyboard('{ArrowRight}');
         expect(Number(borde.getAttribute('aria-valuenow'))).toBe(antes + 16);
-        expect(JSON.parse(window.localStorage.getItem('mk_rendimiento_columnas')).anchos.gasto).toBe(antes + 16);
+        expect(JSON.parse(window.localStorage.getItem(claveDeUsuario('mk_rendimiento_columnas'))).anchos.gasto).toBe(antes + 16);
 
         await user.click(screen.getByRole('button', { name: /^Exportar/ }));
         const panel = screen.getByRole('dialog', { name: 'Exportar' });
         expect(within(panel).getByText('Lo que estás viendo')).toBeInTheDocument();
         expect(within(panel).getByRole('checkbox', { name: /Palabra clave/ })).toHaveAttribute('aria-checked', 'true');
-        expect(within(panel).getByRole('checkbox', { name: 'ROAS' })).toHaveAttribute('aria-checked', 'false');
+        expect(within(panel).getByRole('checkbox', { name: 'ROAS Total' })).toHaveAttribute('aria-checked', 'false');
         window.localStorage.clear();
     });
 
@@ -167,40 +183,44 @@ describe('Marketing › Anuncios', () => {
         window.localStorage.clear();
     });
 
-    it('muestra de dónde vino lo cobrado que no está en la tabla', async () => {
-        api.get.mockImplementation((url) => Promise.resolve({ data: url === '/marketing/anuncios' ? {
-            ...TABLERO, totales: { cobrado: 5138 }, cobrado_periodo: 17059,
-            cobrado_fuera: [{ key: 'workshop', label: 'Workshop', monto: 6350, cantidad: 11, monto_total: 6792,
-                detalle: [{ label: 'En vivo', monto: 5850 }, { label: 'Grabación', monto: 500 }] }],
-        } : { anuncios: [], claves: [], conectado: false } }));
-        abrir();
-        const panel = (await screen.findByText('De dónde vino lo cobrado')).closest('section');
-        expect(within(panel).getByText('$17,059')).toBeInTheDocument();
-        expect(within(panel).getByText('Workshop')).toBeInTheDocument();
-        expect(within(panel).getByText('En vivo $5,850 · Grabación $500')).toBeInTheDocument();
-
-        // Tocar Workshop abre Revisar › Ventas con esa fuente y las fechas de la tabla.
-        await userEvent.click(within(panel).getByText('Workshop').closest('button'));
-        const destino = new URL(navegar.mock.calls.at(-1)[0], 'http://x');
-        expect(destino.pathname).toBe('/admin/comercial');
-        expect(Object.fromEntries(destino.searchParams)).toMatchObject({
-            s: 'revisar', t: 'ventas', p: 'custom', d: '2026-09-15', h: '2026-10-14' });
-        const filtro = JSON.parse(destino.searchParams.get('f'));
-        expect(filtro.fuente).toBe('Workshop');
-        // Revisar muestra también lo de Workshop que llegó por palabra clave: se dice cuánto.
-        expect(filtro.__de).toBe('Ingresos por fuente: Workshop · incluye $442 de palabra clave');
+    // «De dónde vino lo cobrado» sale de las mismas fuentes que las tarjetas (29/10/2026): Setting + Workshop + Otras.
+    const conCobrado = (extra = {}) => ({
+        ...TABLERO, totales: { cobrado: 5138 },
+        fuentes: {
+            fuentes: [{ ...FUENTES.fuentes[0], cash_total: 5138 },
+                { ...FUENTES.fuentes[1], cash_total: 6350, cuotas: 11, cash_anterior: 442 }],
+            otras: { cash_total: 5571, cobros: 3, detalle: [{ label: 'VSL', monto: 400 }, { label: 'Momentum', monto: 5171 }] },
+            ...extra,
+        },
     });
 
-    it('sin acceso al dashboard comercial, solo «Por palabra clave» se puede tocar', async () => {
-        sesion.user = { role: 'director_marketing' };
-        api.get.mockImplementation((url) => Promise.resolve({ data: url === '/marketing/anuncios' ? {
-            ...TABLERO, totales: { cobrado: 5138 }, cobrado_periodo: 17059,
-            cobrado_fuera: [{ key: 'vsl', label: 'VSL', monto: 400, cantidad: 2, detalle: [] }],
-        } : { anuncios: [], claves: [], conectado: false } }));
+    it('muestra de dónde vino lo cobrado y cada fuente abre la lista de sus cobros', async () => {
+        const vacia = { columnas: [{ key: 'cliente', header: 'Cliente', tipo: 'texto' }], filas: [], resumen: '0 cobros' };
+        api.get.mockImplementation((url) => Promise.resolve({ data: url === '/marketing/anuncios' ? conCobrado()
+            : url === '/marketing/anuncios/registros' ? vacia : { anuncios: [], claves: [], conectado: false } }));
         abrir();
         const panel = (await screen.findByText('De dónde vino lo cobrado')).closest('section');
-        expect(within(panel).getByText('VSL').closest('button')).toBeNull();
-        expect(within(panel).getByText('Por palabra clave (la tabla)').closest('button')).not.toBeNull();
+        // 5.138 + 6.350 + 5.571
+        expect(within(panel).getByText('$17,059')).toBeInTheDocument();
+        expect(within(panel).getByText('$5,138 por palabra clave · $0.00 sin')).toBeInTheDocument();
+        expect(within(panel).getByText('11 cuotas · $442 de ventas anteriores')).toBeInTheDocument();
+        expect(within(panel).getByText('VSL $400 · Momentum $5,171')).toBeInTheDocument();
+
+        // Tocar Workshop pide la lista de «Cash total» de esa fuente (ya no lleva a Revisar).
+        await userEvent.click(within(panel).getByText('Workshop').closest('button'));
+        await waitFor(() => expect(api.get).toHaveBeenCalledWith('/marketing/anuncios/registros', expect.objectContaining({
+            params: expect.objectContaining({ fuente: 'workshop', metrica: 'cash_total' }) })));
+        expect(navegar).not.toHaveBeenCalled();
+    });
+
+    it('la dirección de marketing también abre las listas de lo cobrado, de cualquier fuente', async () => {
+        sesion.user = { role: 'director_marketing' };
+        api.get.mockImplementation((url) => Promise.resolve({ data: url === '/marketing/anuncios'
+            ? conCobrado() : { anuncios: [], claves: [], conectado: false } }));
+        abrir();
+        const panel = (await screen.findByText('De dónde vino lo cobrado')).closest('section');
+        expect(within(panel).getByText('Otras').closest('button')).not.toBeNull();
+        expect(within(panel).getByText('Setting').closest('button')).not.toBeNull();
         sesion.user = { role: 'admin' };
     });
 

@@ -32,7 +32,7 @@ describe('Marketing › Entrantes', () => {
 
     it('cuenta por estado, sin la tarjeta de pendientes por paso', async () => {
         render(<div className="dc-shell"><EntrantesVista desde="2026-10-01" hasta="2026-10-16" /></div>);
-        expect(await screen.findByText('1 ya seguían la cuenta')).toBeInTheDocument();
+        expect(await screen.findByText('4 personas · 1 ya seguían la cuenta')).toBeInTheDocument();
         expect(screen.getByText('2 sin respuesta', { exact: false })).toBeInTheDocument();
         expect(screen.queryByRole('region', { name: 'Pendientes por paso' })).not.toBeInTheDocument();
         expect(screen.getByText('mostrando 4 de 4')).toBeInTheDocument();
