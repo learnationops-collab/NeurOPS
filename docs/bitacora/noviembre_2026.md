@@ -180,3 +180,7 @@
   - Dock: ocupa el ancho de la pantalla y muestra solo íconos; entran las seis secciones, el orbe y la sesión sin que la sesión tape secciones.
   - Inbox: buscador y filtro en una fila, pestañas debajo; en «Próxima a revisar» el score va al lado del nombre y «Abrir postulación» ocupa el ancho.
   - Ficha: arriba el score con el desglose (excluyentes, deseables, IA…) y el perfil con la pretensión; después las secciones; los botones de decisión quedan fijos abajo. Nombre, flechas y cerrar en una fila; el contacto (WhatsApp, correo, CV) en otra que se desliza.
+- **3 de Noviembre de 2026 (Talent en el teléfono, segunda vuelta)** *([talentMovil.css](../../frontend/src/pages/admin/hiring/talentMovil.css), [AlDia.jsx](../../frontend/src/pages/admin/hiring/components/AlDia.jsx))*:
+  - Dock como la barra de iOS: más alto, íconos grandes de trazo fino y el nombre de cada sección debajo; la activa en rosa y con su cuenta.
+  - Inbox: Online es la primera pestaña y la que se abre; Híbridos aparece solo si hay alguna. En el teléfono no se muestra «Avance de la revisión».
+  - Sin nadie por revisar ya no se repite el aviso (la tarjeta «Al día» y «Revisaste todas las online»): queda uno solo, con un check animado.

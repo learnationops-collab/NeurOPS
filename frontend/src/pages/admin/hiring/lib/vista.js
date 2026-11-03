@@ -13,8 +13,8 @@ import { AREA_CORTO, PREGUNTA_CORTA, VAL_CORTO, escalaDe, nivelCorto, nivelDe, t
 // después online) más las que abandonaron el formulario a medias.
 export const PESTANAS = {
     pend: [
-        { id: 'hibrido', label: 'Híbridos' },
         { id: 'online', label: 'Online' },
+        { id: 'hibrido', label: 'Híbridos' },
         { id: 'incompletas', label: 'Incompletas', c: 'var(--error)' },
     ],
     anal: [

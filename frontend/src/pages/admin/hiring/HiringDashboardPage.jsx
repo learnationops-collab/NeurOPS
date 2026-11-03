@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
-    Inbox, CheckCircle2, Trophy, BarChart3, FileText, Briefcase, Search, X, Filter, Check, ArrowLeft, AlertTriangle,
+    Inbox, CheckCircle2, Trophy, BarChart3, FileText, Briefcase, Search, X, Filter, ArrowLeft, AlertTriangle,
     SlidersHorizontal,
 } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -20,6 +20,7 @@ import ConfigTalent from './components/ConfigTalent';
 import HiringForms from './components/forms/HiringForms';
 import PanelesConservados from '../../../components/ui/PanelesConservados';
 import { IsotipoTalent } from './components/Piezas';
+import AlDia from './components/AlDia';
 import PostulacionesCloser, { PESTANAS_CLOSER } from '../postulaciones/PostulacionesCloser';
 import {
     PESTANAS, agrupar, colsVisibles, coincide, cuentas as contar, enPestana, filtrosActivos, guardarVista, leerVista,
@@ -76,7 +77,7 @@ const HiringDashboardPage = () => {
     const [params, setParams] = useSearchParams();
 
     const [seccion, setSeccion] = useState(() => seccionDeEntrada(params.get('s')));
-    const [pestanas, setPestanas] = useState({ pend: 'hibrido', anal: 'seleccionada', fin: 'testeo', closers: 'pendientes' });
+    const [pestanas, setPestanas] = useState({ pend: 'online', anal: 'seleccionada', fin: 'testeo', closers: 'pendientes' });
     const [statsTab, setStatsTab] = useState('panorama');
     const [statsSeg, setStatsSeg] = useState('gen');
     const [query, setQuery] = useState('');
@@ -108,11 +109,11 @@ const HiringDashboardPage = () => {
             setTodas(filas);
             setPreguntasFiltro(res.data.preguntas_filtro || []);
             setErrorCarga('');
-            // La primera vez, el Inbox abre en la tanda que tiene algo (híbridos primero).
+            // La primera vez, el Inbox abre en la tanda que tiene algo (online primero).
             if (!yaCargo.current) {
                 yaCargo.current = true;
                 const hay = (m) => filas.some((p) => p.veredicto === 'sin_analizar' && p.modalidad === m);
-                if (!hay('hibrido') && hay('online')) setPestanas((prev) => ({ ...prev, pend: 'online' }));
+                if (!hay('online') && hay('hibrido')) setPestanas((prev) => ({ ...prev, pend: 'hibrido' }));
             }
         } catch (err) {
             console.error('Error al cargar postulaciones de Asistente:', err);
@@ -255,7 +256,9 @@ const HiringDashboardPage = () => {
     // --- Cabecera: las pestañas de cada sección y el botón Vista ---
     let controles = null;
     if (!enBusqueda && ES_TABLA.has(seccion)) {
-        controles = <Pestanas lista={PESTANAS[seccion]} actual={pestana} onElegir={(id) => setPestanas((prev) => ({ ...prev, [seccion]: id }))} cuentaDe={(id) => c[id === 'incompletas' ? 'incompletas' : id]} />;
+        // Híbridos casi nunca tiene a nadie: la pestaña aparece solo si hay alguna (o si es la abierta).
+        const lista = PESTANAS[seccion].filter((t) => t.id !== 'hibrido' || c.hibrido > 0 || pestana === 'hibrido');
+        controles = <Pestanas lista={lista} actual={pestana} onElegir={(id) => setPestanas((prev) => ({ ...prev, [seccion]: id }))} cuentaDe={(id) => c[id === 'incompletas' ? 'incompletas' : id]} />;
     } else if (!enBusqueda && seccion === 'stats') {
         controles = (
             <>
@@ -308,7 +311,7 @@ const HiringDashboardPage = () => {
             const nombre = (m) => (m === 'hibrido' ? 'híbridas' : 'online');
             return (
                 <>
-                    <span className="tl-vacio-ico"><Check size={22} /></span>
+                    <AlDia />
                     <p className="t-h3">Revisaste todas las {nombre(pestana)}</p>
                     <p className="mut t-cap">{c[otra] ? `Quedan ${c[otra]} postulaciones ${nombre(otra)} sin analizar.` : 'No queda ninguna postulación sin analizar.'}</p>
                     {c[otra] > 0 && <button type="button" className="btn btn--linea btn--sm" onClick={() => irA('pend', otra)}>Ver las {nombre(otra)}</button>}
