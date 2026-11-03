@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Ban, GitBranch, GripVertical, Plus, RotateCcw } from 'lucide-react';
+import { Ban, GitBranch, GripVertical, Pencil, Plus, RotateCcw } from 'lucide-react';
 import PanelPregunta from './PanelPregunta';
 import { Switch } from '../../../../../components/standard';
 import {
@@ -30,6 +30,32 @@ const Fila = ({ q, num, elegida, onElegir, onCambiar, arrastre }) => {
                 title={fija ? 'Esta pregunta no se apaga' : on ? 'Activa: aparece en el formulario' : 'Apagada: no aparece'}
                 onChange={() => onCambiar({ on: !on })} />
         </div>
+    );
+};
+
+// Nombre de un bloque: clic para editarlo; Enter o salir del campo guarda, Escape cancela.
+const NombreBloque = ({ nombre, onRenombrar }) => {
+    const [texto, setTexto] = useState(null);
+    const guardar = () => {
+        const limpio = (texto || '').trim();
+        if (limpio && limpio !== nombre) onRenombrar(limpio);
+        setTexto(null);
+    };
+    if (texto !== null) {
+        return (
+            <input className="tl-ed-bloque-in" value={texto} maxLength={60} autoFocus aria-label="Nombre del bloque"
+                onChange={(e) => setTexto(e.target.value)} onBlur={guardar}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter') { e.preventDefault(); guardar(); }
+                    if (e.key === 'Escape') setTexto(null);
+                }} />
+        );
+    }
+    return (
+        <button type="button" className="tl-ed-bloque-nom" title="Cambiar el nombre del bloque" onClick={() => setTexto(nombre)}>
+            <span className="tl-rotulo">{nombre}</span>
+            <Pencil size={11} aria-hidden="true" />
+        </button>
     );
 };
 
@@ -89,7 +115,10 @@ const EditorPreguntas = ({ preguntas, originales, tasaBrl, onCambiar }) => {
                 {tramos.map((tr, k) => (
                     <div key={`${tr.bloque}-${k}`} className="tl-ed-bloque">
                         <div className="tl-bloque-cab">
-                            <span className="tl-rotulo">{tr.bloque}</span>
+                            <NombreBloque nombre={tr.bloque} onRenombrar={(nuevo) => {
+                                const delTramo = new Set(tr.items.map((x) => x.id));
+                                onCambiar(preguntas.map((x) => (delTramo.has(x.id) ? { ...x, bloque: nuevo } : x)));
+                            }} />
                             <b>{tr.items.filter((x) => x.on !== false).length} de {tr.items.length}</b>
                         </div>
                         {tr.items.map((x) => (

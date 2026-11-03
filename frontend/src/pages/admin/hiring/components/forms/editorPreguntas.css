@@ -119,3 +119,12 @@
 .talent .tl-ed .tl-op.is-arrastrando{opacity:.35}
 .talent .tl-ed .tl-op.is-destino{box-shadow:0 -2px 0 var(--ed-rosa)}
 .talent .tl-ed .tl-op.is-destino-abajo{box-shadow:0 2px 0 var(--ed-rosa)}
+
+/* Nombre del bloque, editable */
+.talent .tl-ed-bloque-nom{display:inline-flex;align-items:center;gap:6px;padding:2px 6px;margin-left:-6px;border-radius:8px;transition:background .15s ease}
+.talent .tl-ed-bloque-nom svg{color:var(--text-muted-40);opacity:0;transition:opacity .15s ease}
+.talent .tl-ed-bloque-nom:hover{background:var(--mat-1)}
+.talent .tl-ed-bloque-nom:hover svg,.talent .tl-ed-bloque-nom:focus-visible svg{opacity:1}
+.talent .tl-ed-bloque-in{height:26px;min-width:0;width:220px;max-width:100%;padding:0 8px;border-radius:8px;font-size:11px;font-weight:900;
+  letter-spacing:.12em;text-transform:uppercase;color:var(--text-on-surface);background:var(--bg-input);
+  border:1px solid color-mix(in srgb,var(--ed-rosa) 55%,var(--border-main));outline:none}

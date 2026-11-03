@@ -217,6 +217,7 @@ TIPOS_CON_OPCIONES = ('radio', 'check')
 RE_ID = re.compile(r'^[a-z][a-z0-9_]{1,40}$')
 MAX_TITULO = 300
 MAX_AYUDA = 600
+MAX_BLOQUE = 60
 MAX_OPCION = 240
 MAX_OPCIONES = 20
 MAX_BYTES = 200_000
@@ -259,6 +260,8 @@ def validar_preguntas(lista):
             raise PreguntasInvalidas(f'{rotulo}: el tipo tiene que ser uno de {", ".join(TIPOS)}.')
         if not isinstance(p.get('t', ''), str) or len(p.get('t', '')) > MAX_TITULO:
             raise PreguntasInvalidas(f'{rotulo}: el enunciado es texto de hasta {MAX_TITULO} caracteres.')
+        if p.get('bloque') is not None and (not isinstance(p['bloque'], str) or len(p['bloque']) > MAX_BLOQUE):
+            raise PreguntasInvalidas(f'{rotulo}: el nombre del bloque es texto de hasta {MAX_BLOQUE} caracteres.')
         if p.get('h') is not None and (not isinstance(p['h'], str) or len(p['h']) > MAX_AYUDA):
             raise PreguntasInvalidas(f'{rotulo}: la ayuda es texto de hasta {MAX_AYUDA} caracteres.')
 
