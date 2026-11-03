@@ -46,22 +46,15 @@ describe('Workshop › Próximos', () => {
         expect(within(filas[1]).getByText(/Meet heredado/)).toBeInTheDocument();
     });
 
-    it('cada taller muestra sus acciones y agrega una para él', async () => {
-        const onNuevaAccion = vi.fn();
-        const onTildar = vi.fn();
+    it('las acciones ya no van en cada taller: viven en el Plan de acciones', () => {
         const acciones = { 2: [{ id: 9, title: 'Recordatorio 1 h antes', status: 'pending', stage_key: 'asistencia', target_delta_pp: 4 }] };
         render(<WorkshopProximosView events={EVENTOS} onEdit={vi.fn()} onDelete={vi.fn()} onProgramado={vi.fn()}
-            acciones={acciones} onNuevaAccion={onNuevaAccion} onTildar={onTildar} onEditarAccion={vi.fn()} onBorrarAccion={vi.fn()} />);
+            acciones={acciones} onNuevaAccion={vi.fn()} onTildar={vi.fn()} />);
 
-        const del19 = within(screen.getByRole('list', { name: 'Acciones de WEBINAR 19 DE OCTUBRE 2026' }));
-        expect(del19.getByText('Recordatorio 1 h antes')).toBeInTheDocument();
-        expect(del19.getByText('Asistencia al workshop · +4 pts')).toBeInTheDocument();
-
-        await userEvent.click(del19.getByRole('checkbox', { name: /Marcar hecha: Recordatorio/ }));
-        expect(onTildar).toHaveBeenCalledWith(acciones[2][0]);
-
-        await userEvent.click(screen.getByRole('button', { name: 'Agregar acción a SIN HORA' }));
-        expect(onNuevaAccion).toHaveBeenCalledWith(EVENTOS[3]);
+        // Desde el 24/10/2026 el taller no lista sus acciones ni ofrece agregar una.
+        expect(screen.queryByRole('list', { name: /^Acciones de/ })).not.toBeInTheDocument();
+        expect(screen.queryByText('Recordatorio 1 h antes')).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /^Agregar acción a/ })).not.toBeInTheDocument();
     });
 
     it('editar abre el taller elegido', async () => {

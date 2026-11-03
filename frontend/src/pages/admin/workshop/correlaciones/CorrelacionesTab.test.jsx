@@ -48,8 +48,10 @@ describe('Workshop › Correlaciones', () => {
         api.get.mockResolvedValue({ data: RESPUESTA });
         render(<CorrelacionesTab />);
 
-        expect(await screen.findByText(/Solo 5 talleres/)).toBeInTheDocument();
-        expect(screen.getByText(/no prueba que una cosa cause la otra/)).toBeInTheDocument();
+        // Los avisos van en el tooltip «Leelo con cuidado» del mapa (ya no en un panel arriba de todo).
+        const aviso = await screen.findByRole('note', { name: /Leelo con cuidado/ });
+        expect(aviso).toHaveAttribute('aria-label', expect.stringMatching(/Solo 5 talleres/));
+        expect(aviso).toHaveAttribute('aria-label', expect.stringMatching(/no prueba que una cosa cause la otra/));
 
         // Ranking: la más fuerte contra cash va primero.
         const filas = within(screen.getByRole('list', { name: /ordenadas por relación con Cash collected/ })).getAllByRole('button');

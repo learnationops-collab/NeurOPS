@@ -60,7 +60,7 @@ describe('ModalAgendasTaller', () => {
         abrirModal({ tallerIds: [7, 8] });
 
         expect(await screen.findByText('Ana Pérez')).toBeInTheDocument();
-        expect(api.get).toHaveBeenCalledWith('workshop/agendas', { params: { ids: '7,8' } });
+        expect(api.get).toHaveBeenCalledWith('workshop/agendas', { params: { ids: '7,8' }, signal: expect.anything() });
         expect(screen.getByText('Beto Ríos')).toBeInTheDocument();
         expect(screen.getByText('Gus Mora')).toBeInTheDocument();
         expect(screen.getAllByText('Marlon').length).toBeGreaterThan(0);
@@ -161,7 +161,7 @@ describe('AgendasDelTaller', () => {
         await userEvent.click(screen.getByRole('button', { name: 'Ver las 4 agendas de WEBINAR 17' }));
 
         expect(await screen.findByText('Ana Pérez')).toBeInTheDocument();
-        expect(api.get).toHaveBeenCalledWith('workshop/agendas', { params: { ids: '7' } });
+        expect(api.get).toHaveBeenCalledWith('workshop/agendas', { params: { ids: '7' }, signal: expect.anything() });
         expect(alFila).not.toHaveBeenCalled();
         const modal = screen.getByRole('dialog', { name: /WEBINAR 17/ });
         await userEvent.click(within(modal).getByRole('button', { name: 'Cerrar' }));
