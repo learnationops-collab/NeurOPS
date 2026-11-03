@@ -23,7 +23,7 @@ def _dia(clave, defecto):
 @triage_metricas_required
 def metricas():
     """`desde` y `hasta` (AAAA-MM-DD, en la zona de quien mira; por defecto los últimos 7 días).
-    La triage ve lo suyo; la dirección, todas o una (`triage_id`)."""
+    La triage ve lo suyo; la dirección, todas o una (`triage_id`). `segmento`: A,B,C,D,sin separados por coma."""
     hoy = date.today()
     desde = _dia('desde', hoy - timedelta(days=6))
     hasta = _dia('hasta', hoy)
@@ -31,4 +31,6 @@ def metricas():
         return jsonify({'message': '«Desde» es posterior a «hasta».'}), 400
     inicio, fin = limites_rango_utc(current_user, desde, hasta)
     solo = current_user.id if current_user.role == 'triage' else request.args.get('triage_id', type=int)
-    return jsonify(triage_service.metricas(inicio, fin, solo=solo, zona=zona_del_usuario(current_user))), 200
+    segmentos = {s for s in (request.args.get('segmento') or '').split(',') if s in ('A', 'B', 'C', 'D', 'sin')}
+    return jsonify(triage_service.metricas(inicio, fin, solo=solo, zona=zona_del_usuario(current_user),
+                                           segmentos=segmentos)), 200

@@ -351,12 +351,13 @@ def _vale_mas(a, b):
     return (bool(a.triage_calificacion), a.start_time, a.id) > (bool(b.triage_calificacion), b.start_time, b.id)
 
 
-def metricas(desde, hasta, solo=None, zona=None):
+def metricas(desde, hasta, solo=None, zona=None, segmentos=None):
     """El embudo del triage entre `desde` y `hasta` (datetimes UTC naive, por la hora de la llamada):
     agendas → asistencias → calificados / descalificados → pitch del low ticket → cómo quedó. Los que
     pasaron al closing suman además `pasaron` → `closer_asistieron` → `closer_cerraron` (`triage_pases`).
     `solo`: el id de una triage (la que mira lo suyo); si no, todas y el detalle por persona.
-    `zona`: la de quien mira, para cortar `por_dia` (por defecto la del negocio)."""
+    `zona`: la de quien mira, para cortar `por_dia` (por defecto la del negocio).
+    `segmentos`: claves A/B/C/D/sin; vacío = todos (la misma lectura de segmento del dashboard comercial)."""
     zona = zona or zona_del_negocio()
     personas = triages(solo)
     ids = [p.id for p in personas]
@@ -364,6 +365,11 @@ def metricas(desde, hasta, solo=None, zona=None):
         Appointment.closer_id.in_(ids or [0]),
         Appointment.start_time >= desde, Appointment.start_time < hasta,
     ).all())
+    if segmentos:
+        from app.services import segmentos_lectura
+
+        filas = [{'person_uuid': a.person_uuid, 'client_id': a.client_id} for a in agendas]
+        agendas = [a for a, g in zip(agendas, segmentos_lectura.de_filas(filas)) if g in segmentos]
     pases = triage_pases.pases_de(agendas)
 
     total, por_id, por_dia = _vacias(), {p.id: _vacias() for p in personas}, {}

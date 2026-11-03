@@ -131,7 +131,8 @@ def contexto():
         # volver a pedir el contexto: por eso van las dos. Antes solo viajaba `miembros` (siempre
         # los closers, porque el contexto se pide sin `rol`) y con Setters el selector ofrecía
         # closers: elegir uno acotaba las agendas por un setter_id que no generó ninguna y daba 0.
-        'miembros_por_rol': {r: ComercialService.miembros(r) for r in ROLES} if puede_elegir else {},
+        'miembros_por_rol': ({**{r: ComercialService.miembros(r) for r in ROLES}, 'triage': ComercialService.miembros_triage()}
+                             if puede_elegir else {}),
         'periodos': PERIODOS,
         'comparaciones': COMPARACIONES,
         'estados': {'pre_call': PRE_CALL, 'post_call': POST_CALL},
