@@ -40,6 +40,9 @@ import './listas.css';
  * `pegada: true` en una columna la deja fija a la izquierda al desplazar la tabla (solo las primeras, con
  * `width` en px; ver `anchoColumnas.js`).
  *
+ * `onAbrirFila(fila)`: tocar una fila. `puedeAbrirFila(fila)` (opcional) deja sin abrir las que no tienen a dónde ir: sin
+ * eso toda fila de la lista es tocable.
+ *
  * `extra` va al final de la barra (botones propios de la lista). `marcada` es la clave de la fila
  * abierta, que se resalta. Las filas se dibujan de a páginas al scrollear (`usePaginaProgresiva`),
  * así una lista de miles no traba la pantalla.
@@ -146,7 +149,7 @@ const SIN_AGRUPABLES = [];
 const SIN_VISTAS = [];
 
 const ListaConfigurable = ({
-    columnas, facetas = SIN_FACETAS, filas, clave, onAbrirFila, buscar, buscarPlaceholder = 'Buscar…',
+    columnas, facetas = SIN_FACETAS, filas, clave, onAbrirFila, puedeAbrirFila = null, buscar, buscarPlaceholder = 'Buscar…',
     claveGuardado, vacio = 'No hay filas para mostrar.', ayuda, extra, ordenInicial = null, marcada = null,
     agrupables = SIN_AGRUPABLES, vistas = SIN_VISTAS, totales = null,
 }) => {
@@ -200,16 +203,18 @@ const ListaConfigurable = ({
         base, c.alinear === 'der' && 'lc-der', c.pegada && 'lc-pegada', conGrupos && c.grupo && i > 0 && 'lc-grupo-inicio',
     ].filter(Boolean).join(' ') || undefined;
 
-    const dibujarFila = (fila) => (
+    const dibujarFila = (fila) => {
+        const abre = onAbrirFila && (!puedeAbrirFila || puedeAbrirFila(fila));
+        return (
         <div key={clave(fila)} className="tabla-fila" role="row" style={{ '--cols': plantilla }}
-            {...(onAbrirFila ? {
+            {...(abre ? {
                 tabIndex: 0,
                 onClick: () => onAbrirFila(fila),
                 onKeyDown: (e) => {
                     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onAbrirFila(fila); }
                 },
             } : {})}
-            data-abre={onAbrirFila ? '' : undefined}
+            data-abre={abre ? '' : undefined}
             aria-current={marcada != null && clave(fila) === marcada ? 'true' : undefined}>
             {visibles.map((c, i) => (
                 <div key={c.key} data-h={c.header} role="cell" className={claseDe(c, i, c.alinear === 'der' ? 'num' : '')}
@@ -218,7 +223,8 @@ const ListaConfigurable = ({
                 </div>
             ))}
         </div>
-    );
+        );
+    };
 
     const plantilla = visibles.map((c) => c.width || 'minmax(0,1fr)').join(' ');
     // Con muchas columnas la tabla se desplaza adentro de su caja (ver `anchoColumnas.js`).

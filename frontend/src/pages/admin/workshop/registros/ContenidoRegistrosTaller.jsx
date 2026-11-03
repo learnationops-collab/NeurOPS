@@ -3,6 +3,7 @@ import ListaConfigurable from '../../../../components/listas/ListaConfigurable';
 import { EmptyState, Skeleton, SkeletonRow } from '../../../../components/standard';
 import api from '../../../../services/api';
 import { columnaDe } from '../../marketing/anuncios/ContenidoRegistros';
+import { columnaVer, textoDeFila, tieneFicha, useFichaDeFila } from '../../marketing/anuncios/useFichaDeFila';
 
 /**
  * La lista de personas o de cobros detrás de una cifra del Resumen (`GET /workshop/registros`), armada por el
@@ -11,6 +12,7 @@ import { columnaDe } from '../../marketing/anuncios/ContenidoRegistros';
  */
 const ContenidoRegistrosTaller = ({ ids, metrica, esperado = null }) => {
     const [estado, setEstado] = useState({ datos: null, error: null });
+    const { abrir, modal } = useFichaDeFila();
     const clave = ids.join(',');
     useEffect(() => {
         const control = new AbortController();
@@ -26,7 +28,7 @@ const ContenidoRegistrosTaller = ({ ids, metrica, esperado = null }) => {
     }, [clave, metrica]);
 
     const { datos, error } = estado;
-    const columnas = useMemo(() => (datos ? datos.columnas.map((c) => columnaDe(c, 'USD')) : []), [datos]);
+    const columnas = useMemo(() => (datos ? [...datos.columnas.map((c) => columnaDe(c, 'USD')), ...columnaVer(datos.filas)] : []), [datos]);
     if (error) return <EmptyState title={error} />;
     if (!datos) {
         return (
@@ -46,8 +48,10 @@ const ContenidoRegistrosTaller = ({ ids, metrica, esperado = null }) => {
                 </p>
             )}
             <ListaConfigurable columnas={columnas} filas={datos.filas} clave={(f) => f.id}
-                claveGuardado={`wr_registros_${metrica}`} buscar={(f) => Object.values(f).join(' ')}
+                claveGuardado={`wr_registros_${metrica}`} buscar={textoDeFila}
+                onAbrirFila={abrir} puedeAbrirFila={tieneFicha}
                 buscarPlaceholder="Buscar en la lista" vacio="Ninguna fila suma a esta cifra en esta selección." />
+            {modal}
         </>
     );
 };
