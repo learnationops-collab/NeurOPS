@@ -1,13 +1,15 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
-    X, ChevronLeft, ChevronRight, ChevronDown, CheckCircle2, XCircle, Clock,
-    Target, Trash2, Trophy, Star, FileText, AlertTriangle, DollarSign, Info,
+    X, ChevronLeft, ChevronRight, CheckCircle2, XCircle, Clock, Copy, Check,
+    Target, Trash2, Trophy, Star, FileText, AlertTriangle, MessageCircle,
 } from 'lucide-react';
 import api from '../../../../services/api';
-import { BANDERA, href, MODALIDAD } from '../lib/escalas';
-import { VEREDICTO } from './comun';
-import { ContactoFicha, Seccion } from './SeccionesFicha';
+import { Aura } from '../../../../components/standard';
+import { href, soloDigitos } from '../lib/escalas';
+import { Seccion, repartir } from './SeccionesFicha';
+import PanelDecision from './PanelDecision';
+import './fichaPostulacion.css';
 
 // Los siete veredictos que puede poner un revisor. 'baja' pide motivo: es la
 // única que describe algo que pasó DESPUÉS de seleccionar/hacer entrar a
@@ -53,19 +55,6 @@ export const botonesDe = (d) => ACCIONES.filter((a) => {
     return !(d.veredicto === 'descartado' && a.id === 'descartado' && d.estado !== 'descartado');
 });
 
-// El icono que acompaña al veredicto en la cabecera.
-const ICONO_VEREDICTO = {
-    sin_analizar: Info,
-    incompleta: AlertTriangle,
-    seleccionada: CheckCircle2,
-    en_reserva: Clock,
-    testeo: Target,
-    winner: Trophy,
-    top_tier: Star,
-    descartado: XCircle,
-    baja: Trash2,
-};
-
 // --- Tamaño del panel ---
 
 // El panel usa casi toda la pantalla (hasta 1600px de ancho, con un margen del
@@ -97,22 +86,6 @@ const useDimensionesPanel = () => {
     }, []);
     return dim;
 };
-
-// --- Piezas chicas ---
-
-const BOTON_CABECERA = 'inline-flex h-10 items-center justify-center gap-2 whitespace-nowrap rounded-xl border text-[13.5px] font-bold transition-all';
-const PILDORA = `${BOTON_CABECERA} px-3`;
-const PILDORA_NEUTRA = `${PILDORA} border-white/[.32] bg-white/[.04] hover:bg-[#5B7CFF]/20`;
-const BOTON_ICONO = 'flex h-10 w-10 flex-none items-center justify-center rounded-[11px] border border-white/[.32] bg-white/[.04] transition-all hover:bg-[#5B7CFF]/20 disabled:opacity-30';
-
-// Las etiquetas en mayúsculas van en <small>: el reset tipográfico global
-// (index.html) pisa el peso y el tracking de span/div/button/h*, pero no el de
-// <small> — el mismo truco que ya usa el encabezado del panel.
-const Etiqueta = ({ children, className = '' }) => (
-    <small className={`block text-[11px] font-extrabold uppercase leading-none tracking-[.08em] text-white/45 ${className}`}>
-        {children}
-    </small>
-);
 
 // Qué tan completo quedó el formulario del registro. El número lo calcula el
 // backend (`completitud`, entero 0-100); acá solo se dibuja. Sin dato, nada.
@@ -146,14 +119,22 @@ export const Completitud = ({ valor }) => {
     );
 };
 
+// Una cápsula de contacto de la cabecera: el dato y el botón de copiarlo.
+const Capsula = ({ valor, etiqueta, copiado, onCopiar, children }) => (
+    <div className="tl-fi-capsula">
+        <span title={valor}>{children || valor}</span>
+        <button type="button" className={`tl-fi-ibtn${copiado ? ' is-hecho' : ''}`} onClick={() => onCopiar(valor, etiqueta)}
+            aria-label={`Copiar ${etiqueta}`} title={copiado ? 'Copiado' : `Copiar ${etiqueta}`}>
+            {copiado ? <Check size={16} /> : <Copy size={16} />}
+        </button>
+    </div>
+);
+
 const HiringCandidateModal = ({ applicationId, ids, onClose, onNavigate, onDecidido }) => {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [fallo, setFallo] = useState(false);
     const [abiertas, setAbiertas] = useState(new Set());
-    const [todasAbiertas, setTodasAbiertas] = useState(false);
-    const [bajaAbierta, setBajaAbierta] = useState(false);
-    const [motivo, setMotivo] = useState('');
     const [copiado, setCopiado] = useState(null);
     const cuerpo = useRef(null);
     const dim = useDimensionesPanel();
@@ -180,13 +161,9 @@ const HiringCandidateModal = ({ applicationId, ids, onClose, onNavigate, onDecid
 
     useEffect(() => {
         if (applicationId) cargar(applicationId);
-        // Nada de la postulación anterior queda en pantalla mientras carga la
-        // siguiente: la cabecera con el nombre de una y el pie de otra confunde.
+        // Nada de la postulación anterior queda en pantalla mientras carga la siguiente.
         setData(null);
         setAbiertas(new Set());
-        setTodasAbiertas(false);
-        setBajaAbierta(false);
-        setMotivo('');
         cuerpo.current?.scrollTo({ top: 0 });
     }, [applicationId, cargar]);
 
@@ -196,6 +173,7 @@ const HiringCandidateModal = ({ applicationId, ids, onClose, onNavigate, onDecid
 
     useEffect(() => {
         const onKey = (e) => {
+            if (e.target?.tagName === 'INPUT') return;
             if (e.key === 'Escape') onClose();
             if (e.key === 'ArrowLeft') anterior();
             if (e.key === 'ArrowRight') siguiente();
@@ -207,27 +185,19 @@ const HiringCandidateModal = ({ applicationId, ids, onClose, onNavigate, onDecid
     if (!applicationId) return null;
 
     const decidir = async (valor, motivoTexto) => {
-        // Tocar de nuevo el mismo botón activo lo deshace (vuelve a null) — eso
-        // no es "avanzar a la próxima decisión", es corregir la actual, así que
-        // no dispara el auto-avance.
+        // Tocar de nuevo el mismo botón activo lo deshace (vuelve a null): es
+        // corregir la decisión actual, así que no dispara el auto-avance.
         const esUndo = data?.estado === valor && !motivoTexto;
         try {
             await api.post(`/assistant-applications/${applicationId}/estado`, {
                 valor: esUndo ? null : valor,
                 motivo: motivoTexto || null,
             });
-            setBajaAbierta(false);
-            setMotivo('');
             onDecidido?.();
-            // Auto-avance: decidido el veredicto, se salta sola a la siguiente
-            // postulación de la lista para poder despachar en cadena, igual que
-            // pidió Kerwin en la grabación. Si era la última, se queda mostrando
-            // esta (ya actualizada).
-            if (!esUndo && idx < ids.length - 1) {
-                siguiente();
-            } else {
-                await cargar(applicationId);
-            }
+            // Auto-avance: decidido el veredicto, salta a la siguiente de la lista
+            // para despachar en cadena. Si era la última, se queda en esta.
+            if (!esUndo && idx < ids.length - 1) siguiente();
+            else await cargar(applicationId);
         } catch (err) {
             console.error('Error al guardar el veredicto:', err);
         }
@@ -242,26 +212,20 @@ const HiringCandidateModal = ({ applicationId, ids, onClose, onNavigate, onDecid
 
     const toggle = (campo) => setAbiertas((prev) => {
         const next = new Set(prev);
-        next.has(campo) ? next.delete(campo) : next.add(campo);
-        setTodasAbiertas(false);
+        if (next.has(campo)) next.delete(campo);
+        else next.add(campo);
         return next;
     });
 
     const d = data || {};
-    const cargando = loading && !data;
     const cvHref = href(d.cv);
-    const veredicto = VEREDICTO[d.veredicto] || VEREDICTO.sin_analizar;
-    const IconoVeredicto = ICONO_VEREDICTO[d.veredicto] || Info;
-    const ubicacion = [[d.pais, d.provincia].filter(Boolean).join(' - '), d.edad && `${d.edad} años`].filter(Boolean).join(' · ') || '—';
-
+    const digitos = soloDigitos(d.whatsapp);
     const secciones = d.secciones || [];
-    const conTextoLargo = secciones.some((s) => s.preguntas.some((p) => p.valor != null && (p.tipo === 'parrafo' || String(p.valor).length > 90)));
-    const botones = botonesDe(d);
-    const estadoTexto = [
-        d.revisado_por && `Decidió ${d.revisado_por}`,
-        d.estado_motivo,
-        copiado && `${copiado} copiado`,
-    ].filter(Boolean).join(' · ');
+    const titulos = secciones.map((s) => s.titulo);
+    // {id de pregunta: {puntos, maximo, peso}} para mostrar lo que suma cada una.
+    const puntos = Object.fromEntries((d.puntaje || []).map((r) => [r.id, r]));
+    const columnas = repartir(secciones);
+    const nota = [d.revisado_por && `Decidió ${d.revisado_por}`, d.estado_motivo].filter(Boolean).join(' · ');
 
     return (
         <motion.div
@@ -271,216 +235,82 @@ const HiringCandidateModal = ({ applicationId, ids, onClose, onNavigate, onDecid
             animate={{ opacity: 1 }}
             transition={{ duration: 0.15 }}
         >
-            {/* El diálogo ocupa casi toda la pantalla y mide siempre lo mismo, venga
-                la postulación que venga (ver `dimensionesPanel`); en las pantallas
-                bajas —un notebook chico— va a pantalla completa, sin margen ni
-                bordes redondeados, para que todo entre sin scrollear. */}
+            {/* Mide siempre lo mismo, venga la postulación que venga (ver
+                `dimensionesPanel`); en pantallas bajas va a pantalla completa. */}
             <motion.div
                 role="dialog"
                 aria-modal="true"
                 aria-label={d.nombre ? `Postulación de ${d.nombre}` : 'Postulación'}
-                className={`flex flex-col overflow-hidden ${dim ? '' : 'h-full w-full'} border-white/[.12] bg-[#0B0F26] shadow-2xl [@media(min-width:640px)_and_(min-height:681px)]:rounded-[24px] [@media(min-width:640px)_and_(min-height:681px)]:border`}
+                className={`tl-fi ${dim ? '' : 'h-full w-full'} shadow-2xl [@media(min-width:640px)_and_(min-height:681px)]:rounded-[24px] [@media(min-width:640px)_and_(min-height:681px)]:border [@media(min-width:640px)_and_(min-height:681px)]:border-white/[.15]`}
                 style={dim ? { zoom: dim.zoom, width: dim.width, height: dim.height } : undefined}
                 onClick={(e) => e.stopPropagation()}
                 initial={{ opacity: 0, y: 10, scale: 0.985 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
             >
-                {/* Cabecera fija: identidad a la izquierda; acceso rápido al video, al
-                    CV, el veredicto, lo que pide y el score a la derecha. */}
-                <header className="flex flex-none flex-wrap items-center gap-x-4 gap-y-2.5 border-b border-white/10 bg-[#020617]/95 px-5 py-2.5 sm:px-6">
-                    <div className="flex min-w-0 flex-1 basis-[280px] items-center gap-3.5">
-                        <span
-                            className="grid h-11 w-11 flex-none place-items-center rounded-[13px] text-[20px] font-black"
-                            style={{ background: 'linear-gradient(135deg,#1323C6,#5B7CFF)' }}
-                        >
-                            {(d.nombre || '?')[0]}
-                        </span>
-                        <div className="min-w-0">
-                            <span className="mb-1 flex items-center gap-2">
-                                <small className="block text-[11px] font-extrabold uppercase leading-none tracking-[.18em] text-[#FF3FA4]">Postulación</small>
-                                {d.modalidad && (
-                                    <span
-                                        className="flex-none rounded-full border px-2 py-[2px] text-[10px] font-black uppercase leading-none tracking-[.1em]"
-                                        style={{ color: MODALIDAD[d.modalidad]?.fg, borderColor: MODALIDAD[d.modalidad]?.bd, background: MODALIDAD[d.modalidad]?.bg }}
-                                    >
-                                        {MODALIDAD[d.modalidad]?.label}
-                                    </span>
-                                )}
-                            </span>
-                            <h2 className="truncate text-[26px] font-black leading-[1.1] tracking-tight" title={d.nombre || undefined}>{d.nombre || '—'}</h2>
-                            <span className="mt-1 flex items-center gap-2.5 text-[13.5px] leading-none text-white/55">
-                                <span className="h-3.5 w-5 flex-none rounded-[3px]" style={{ background: BANDERA[d.pais] || 'rgba(255,255,255,.2)' }} />
-                                <span className="min-w-0 truncate">{ubicacion}</span>
-                            </span>
-                        </div>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-2">
-                        {!cargando && !fallo && (
-                            <>
-                                {cvHref && (
-                                    <a href={cvHref} target="_blank" rel="noreferrer" className={PILDORA_NEUTRA}>
-                                        <FileText size={17} /> CV
+                <header className="tl-fi-cab">
+                    <Aura size="hero" colors={['var(--brand-secondary)', 'var(--brand-primary)', 'var(--info)']} />
+                    <h2 className="tl-fi-nombre" title={d.nombre || undefined}>{d.nombre || (loading ? 'Cargando…' : '—')}</h2>
+                    <div className="tl-fi-acc">
+                        {d.email && <Capsula valor={d.email} etiqueta="correo" copiado={copiado === 'correo'} onCopiar={copiar} />}
+                        {d.whatsapp && (
+                            <Capsula valor={d.whatsapp} etiqueta="WhatsApp" copiado={copiado === 'WhatsApp'} onCopiar={copiar}>
+                                {digitos ? (
+                                    <a href={`https://wa.me/${digitos}`} target="_blank" rel="noreferrer" title="Abrir WhatsApp">
+                                        <MessageCircle size={14} style={{ display: 'inline', marginRight: 6, verticalAlign: '-2px' }} aria-hidden="true" />
+                                        {d.whatsapp}
                                     </a>
-                                )}
-                                <span className={`${PILDORA} border`} style={{ color: veredicto.fg, background: veredicto.bg, borderColor: veredicto.bd }}>
-                                    <IconoVeredicto size={16} /> {veredicto.label}
-                                </span>
-                                {d.remuneracion && <span className={`${PILDORA} gap-2 border-[#5B7CFF]/50 bg-[#1323C6]/[.14]`}>
-                                    <span className="grid h-6 w-6 flex-none place-items-center rounded-full border border-[#8AA3FF]/60 text-[#8AA3FF]">
-                                        <DollarSign size={13} strokeWidth={2.6} />
-                                    </span>
-                                    <span className="text-[19px] font-black tabular-nums" style={{ color: Number(d.remuneracion) > 400 ? '#FF6AD5' : '#fff' }}>
-                                        {d.remuneracion || '—'}
-                                    </span>
-                                    <Etiqueta>USD / mes</Etiqueta>
-                                </span>}
-                                <span className={`${PILDORA} gap-2 border-white/[.32] bg-white/[.04]`}>
-                                    <Etiqueta>Score</Etiqueta>
-                                    <span className="text-[20px] font-black tabular-nums" style={{ color: d.score >= 85 ? '#5B7CFF' : '#fff' }}>
-                                        {d.score ?? '—'}
-                                    </span>
-                                </span>
-                                <Completitud valor={d.completitud} />
-                            </>
+                                ) : d.whatsapp}
+                            </Capsula>
                         )}
-
-                        <span className="flex flex-none items-center gap-1.5">
-                            <button type="button" onClick={anterior} disabled={idx <= 0} aria-label="Anterior" className={BOTON_ICONO}>
-                                <ChevronLeft size={19} />
-                            </button>
-                            {idx >= 0 && (
-                                <span className="min-w-[36px] text-center text-[13px] font-bold tabular-nums text-white/50">{idx + 1}/{ids.length}</span>
-                            )}
-                            <button type="button" onClick={siguiente} disabled={idx >= ids.length - 1} aria-label="Siguiente" className={BOTON_ICONO}>
-                                <ChevronRight size={19} />
-                            </button>
-                            <button type="button" onClick={onClose} aria-label="Cerrar" className={`${BOTON_ICONO} ml-1`}>
-                                <X size={19} />
-                            </button>
-                        </span>
+                        {cvHref && (
+                            <a className="tl-fi-cv" href={cvHref} target="_blank" rel="noreferrer">
+                                <Aura soft colors={['var(--brand-secondary)', 'var(--brand-primary)', 'var(--info)']} />
+                                <FileText size={15} aria-hidden="true" /> Abrir CV
+                            </a>
+                        )}
+                        <span className="tl-fi-sep" aria-hidden="true" />
+                        <div className="tl-fi-nav">
+                            <button type="button" className="tl-fi-ibtn" onClick={anterior} disabled={idx <= 0} aria-label="Anterior"><ChevronLeft size={18} /></button>
+                            {idx >= 0 && <b>{idx + 1} / {ids.length}</b>}
+                            <button type="button" className="tl-fi-ibtn" onClick={siguiente} disabled={idx >= ids.length - 1} aria-label="Siguiente"><ChevronRight size={18} /></button>
+                        </div>
+                        <button type="button" className="tl-fi-ibtn tl-fi-ibtn--borde" onClick={onClose} aria-label="Cerrar"><X size={18} /></button>
                     </div>
                 </header>
 
-                {/* Cuerpo: lo único que puede scrollear, y solo si la pantalla es
-                    más chica que la postulación. */}
-                <div ref={cuerpo} className="custom-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain">
-                    {cargando && <div className="px-7 py-24 text-center text-[16px] text-white/40">Cargando la postulación…</div>}
-                    {fallo && !data && <div className="px-7 py-24 text-center text-[16px] text-[#E85C4A]">No se pudo cargar la postulación.</div>}
-
+                <div ref={cuerpo} className="tl-fi-cuerpo custom-scrollbar">
+                    {!data && (
+                        <div className="tl-fi-vacio" style={fallo ? { color: 'var(--error)' } : undefined}>
+                            {fallo ? 'No se pudo cargar la postulación.' : 'Cargando la postulación…'}
+                        </div>
+                    )}
                     {data && (
-                        <motion.div
-                            key={applicationId}
-                            className="flex w-full flex-col gap-3 px-5 py-3 sm:px-6"
-                            initial={{ opacity: 0, y: 6 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.16 }}
-                        >
+                        <>
                             {(d.descartado || d.auto_ko) && (
-                                <div className="flex items-start gap-3 rounded-2xl border border-[#4C2227] bg-[#1B0F1D] px-4 py-3">
-                                    <AlertTriangle size={19} className="mt-px flex-none text-[#E85C4A]" />
-                                    <span className="text-[14px] leading-snug text-white/60">
-                                        <span className="font-bold text-[#E85C4A]">El formulario cortó esta postulación · </span>
-                                        {d.motivo_descarte || 'Una respuesta excluyente cortó el formulario. Está marcada abajo con «Corta».'}
-                                        {!d.estado && ' · Si igual vale la pena, abajo podés seleccionarla o pasarla a prueba.'}
+                                <div className="tl-fi-aviso">
+                                    <AlertTriangle size={18} aria-hidden="true" />
+                                    <span>
+                                        <b>El formulario cortó esta postulación · </b>
+                                        {d.motivo_descarte || 'Una respuesta excluyente cortó el formulario. Está marcada con «Corta».'}
+                                        {!d.estado && ' Si igual vale la pena, podés seleccionarla o pasarla a prueba.'}
                                     </span>
                                 </div>
                             )}
-
-                            <div className="grid items-start gap-3 lg:grid-cols-[260px_minmax(0,1fr)]">
-                                <div className="lg:sticky lg:top-0">
-                                    <ContactoFicha d={d} onCopiar={copiar} />
+                            {secciones.length === 0 && <div className="tl-fi-vacio">Todavía no hay respuestas para revisar.</div>}
+                            {secciones.length > 0 && columnas.map((col, k) => (
+                                <div key={`${applicationId}-${k}`} className="tl-fi-col">
+                                    {col.map(({ s, i }) => (
+                                        <Seccion key={`${s.titulo}-${i}`} s={s} i={i} puntos={puntos} abiertas={abiertas}
+                                            onToggle={toggle} onCopiar={copiar} />
+                                    ))}
                                 </div>
-                                <div className="min-w-0">
-                                    {conTextoLargo && (
-                                        <div className="flex justify-end pb-2">
-                                            <button
-                                                type="button"
-                                                onClick={() => { setTodasAbiertas((v) => !v); setAbiertas(new Set()); }}
-                                                className="inline-flex h-8 items-center gap-2 rounded-xl border border-white/[.2] bg-white/[.04] px-3.5 text-[12.5px] font-bold text-white/75 transition-all hover:bg-[#5B7CFF]/20 hover:text-white"
-                                            >
-                                                {todasAbiertas ? 'Cerrar las respuestas escritas' : 'Abrir las respuestas escritas'}
-                                                <ChevronDown size={14} className="transition-transform duration-200" style={{ transform: todasAbiertas ? 'rotate(180deg)' : 'none' }} />
-                                            </button>
-                                        </div>
-                                    )}
-                                    {secciones.length === 0 && (
-                                        <span className="block py-4 text-[14px] text-white/35">Todavía no hay respuestas para revisar.</span>
-                                    )}
-                                    <div className="gap-3 xl:columns-2">
-                                        {secciones.map((s, k) => (
-                                            <Seccion key={`${s.titulo}-${k}`} s={s} abiertas={abiertas} todasAbiertas={todasAbiertas} onToggle={toggle} onCopiar={copiar} />
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                        </motion.div>
+                            ))}
+                            <PanelDecision d={d} botones={botonesDe(d)} titulos={titulos} onDecidir={decidir}
+                                nota={[nota, copiado && `${copiado} copiado`].filter(Boolean).join(' · ')} />
+                        </>
                     )}
                 </div>
-
-                {/* Barra de decisión, fija abajo: el veredicto se pone sin scrollear.
-                    Deja libre el costado derecho, donde flota el botón global de
-                    reportar un problema. */}
-                {data && (
-                    <footer className="flex-none border-t border-white/10 bg-[#020617]/95 px-5 py-2.5 pr-[156px] sm:px-6 sm:pr-[168px]">
-                        {bajaAbierta ? (
-                            <div className="flex flex-wrap items-center justify-end gap-3">
-                                <span className="text-[14.5px] font-bold text-white/70">Motivo de la baja de {d.nombre}:</span>
-                                <input
-                                    type="text"
-                                    autoFocus
-                                    value={motivo}
-                                    onChange={(e) => setMotivo(e.target.value)}
-                                    placeholder="Por qué se fue…"
-                                    className="h-11 min-w-[240px] flex-1 rounded-xl border border-white/[.38] bg-black/30 px-4 text-[14.5px] text-white outline-none focus:border-[#5B7CFF]"
-                                />
-                                <button
-                                    type="button"
-                                    disabled={motivo.trim().length < 4}
-                                    onClick={() => decidir('baja', motivo.trim())}
-                                    className="h-11 rounded-xl border border-[#4C2227] px-5 text-[14px] font-black transition-all disabled:opacity-50"
-                                    style={motivo.trim().length >= 4
-                                        ? { background: '#E85C4A', color: '#1B0808' }
-                                        : { background: 'transparent', color: '#E85C4A' }}
-                                >
-                                    Confirmar baja
-                                </button>
-                                <button type="button" onClick={() => { setBajaAbierta(false); setMotivo(''); }} className="px-1 text-[14px] font-bold text-white/50 hover:text-white">
-                                    Cancelar
-                                </button>
-                            </div>
-                        ) : (
-                            <div className="flex flex-wrap items-center justify-end gap-2.5">
-                                {estadoTexto && (
-                                    <span className="mr-auto min-w-0 truncate text-[13.5px] font-semibold text-white/45">{estadoTexto}</span>
-                                )}
-                                {botones.map((a) => {
-                                    const activo = d.estado === a.id;
-                                    return (
-                                        <motion.button
-                                            key={a.id}
-                                            type="button"
-                                            onClick={() => (a.id === 'baja' && !activo ? setBajaAbierta(true) : decidir(a.id))}
-                                            whileHover={{ y: -2 }}
-                                            whileTap={{ scale: 0.95 }}
-                                            transition={{ duration: 0.12 }}
-                                            className="flex h-10 items-center gap-2.5 rounded-xl border px-5 text-[14.5px] font-bold"
-                                            style={{
-                                                borderColor: a.bd,
-                                                background: activo ? a.fg : a.bg,
-                                                color: activo ? '#0B0F26' : a.fg,
-                                            }}
-                                            title={activo ? 'Tocar otra vez lo deshace' : a.label}
-                                        >
-                                            <a.icon size={18} /> {a.label}
-                                        </motion.button>
-                                    );
-                                })}
-                            </div>
-                        )}
-                    </footer>
-                )}
             </motion.div>
         </motion.div>
     );

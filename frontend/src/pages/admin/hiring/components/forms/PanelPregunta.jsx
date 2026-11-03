@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import {
-    ArrowUp, ArrowDown, Copy, Trash2, Ban, BadgeCheck, GripVertical, X, Plus, Minus, Info,
+    ArrowUp, ArrowDown, Copy, Trash2, Ban, BadgeCheck, GripVertical, X, Plus, Info,
     CircleDot, ListChecks, Search, Type, Mail, AlignLeft, Hash, DollarSign, Phone, Link2, Hand,
 } from 'lucide-react';
 import { Aura, IconButton, Select, Switch, TextArea } from '../../../../../components/standard';
 import { Chip } from '../Piezas';
-import { FIJAS, TIPOS, conOpciones, notasDe, tipoDe, tipoVisible } from '../../lib/formularios';
+import { FIJAS, TIPOS, conOpciones, notasDe, pesoDe, tipoDe, tipoVisible } from '../../lib/formularios';
+import PuntajePregunta, { PtsOpcion } from './PuntajePregunta';
 
 // El panel de la derecha del editor: todo lo de la pregunta elegida (tipo,
 // texto, ayuda, opciones, si es obligatoria y su lugar).
@@ -66,18 +67,16 @@ const Opciones = ({ q, onCambiar }) => {
                     let cls = o.ko ? ' tl-op--ko' : o.necesaria ? ' tl-op--nec' : o.correcta ? ' tl-op--ok' : '';
                     if (arrastrando === j) cls += ' is-arrastrando';
                     else if (sobre === j && arrastrando !== null) cls += arrastrando < j ? ' is-destino-abajo' : ' is-destino';
-                    let extra = <span />;
-                    if (q.puntua) {
-                        extra = (
-                            <span className="tl-op-pts" role="group" aria-label="Puntos">
-                                <button type="button" disabled={!(o.pts > 0)} aria-label="Menos puntos" onClick={() => set(j, { pts: Math.max(0, (o.pts || 0) - 1) })}><Minus size={12} /></button>
-                                <b>{o.pts || 0}</b>
-                                <button type="button" disabled={(o.pts || 0) >= 10} aria-label="Más puntos" onClick={() => set(j, { pts: Math.min(10, (o.pts || 0) + 1) })}><Plus size={12} /></button>
-                            </span>
-                        );
-                    } else if (o.correcta) extra = <Chip c="var(--success)" chico>Correcta</Chip>;
-                    else if (o.reexplica) extra = <Chip c="var(--warning)" chico>Reexplica</Chip>;
-                    else if (o.bloquea) extra = <Chip c="var(--warning)" chico>Bloquea</Chip>;
+                    let chip = null;
+                    if (o.correcta) chip = <Chip c="var(--success)" chico>Correcta</Chip>;
+                    else if (o.reexplica) chip = <Chip c="var(--warning)" chico>Reexplica</Chip>;
+                    else if (o.bloquea) chip = <Chip c="var(--warning)" chico>Bloquea</Chip>;
+                    const extra = (
+                        <span className="tl-op-extra">
+                            {chip}
+                            {pesoDe(q) > 0 && <PtsOpcion o={o} onCambiar={(c) => set(j, c)} />}
+                        </span>
+                    );
                     return (
                         <div key={j} className={`tl-op${cls}`} draggable={asa === j}
                             onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; setArrastrando(j); }}
@@ -228,6 +227,7 @@ const PanelPregunta = ({ q, num, primera, ultima, depende, onCambiar, onTipo, on
                 </Campo>
             )}
             {conOpciones(q.tipo) && <Opciones q={q} onCambiar={onCambiar} />}
+            {!fija && <PuntajePregunta q={q} onCambiar={onCambiar} />}
             {(notasDe(q).length > 0 || depende.length > 0) && (
                 <ul className="tl-ed-notas">
                     {notasDe(q).map((t) => <li key={t}><Info size={14} aria-hidden="true" /><span>{t}</span></li>)}

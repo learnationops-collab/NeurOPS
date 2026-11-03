@@ -130,3 +130,15 @@
 .talent .tl-ed-bloque-in{height:26px;min-width:0;width:220px;max-width:100%;padding:0 8px;border-radius:8px;font-size:11px;font-weight:900;
   letter-spacing:.12em;text-transform:uppercase;color:var(--text-on-surface);background:var(--bg-input);
   border:1px solid color-mix(in srgb,var(--ed-rosa) 55%,var(--border-main));outline:none}
+
+/* Puntaje: puntos por opción e importancia de la pregunta en el score */
+.talent .tl-op-extra{display:inline-flex;align-items:center;gap:6px}
+.talent .tl-ed-puntaje{display:grid;gap:10px;padding:14px 16px;border-radius:16px;background:color-mix(in srgb,var(--mat-1) 70%,transparent);
+  border:1px solid var(--border-subtle)}
+.talent .tl-ed-puntaje.is-activo{border-color:color-mix(in srgb,var(--info) 30%,var(--border-subtle));background:color-mix(in srgb,var(--info) 5%,transparent)}
+.talent .tl-ed-puntaje.is-activo .tl-ed-etq{color:var(--info)}
+.talent .tl-ed-puntaje-cab{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.talent .tl-ed-puntaje small{font-size:12px;font-weight:600;color:var(--text-muted)}
+.talent .tl-ed-tramos{display:grid;gap:8px;justify-items:start}
+.talent .tl-ed-tramo{display:flex;align-items:center;gap:10px;font-size:12px;font-weight:700;color:var(--text-muted)}
+.talent .tl-ed-tramo input{width:110px}
