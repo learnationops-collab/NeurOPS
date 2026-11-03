@@ -1,17 +1,18 @@
 import React, { useState } from 'react';
 import {
-    ChevronDown, ArrowUp, ArrowDown, Copy, Trash2, Ban, X, Plus, Minus, Info,
+    ChevronDown, ArrowUp, ArrowDown, Copy, Trash2, Ban, X, Plus, Minus, Info, GripVertical, RotateCcw,
 } from 'lucide-react';
 import { Chip } from '../Piezas';
 import {
-    FIJAS, TIPOS, conOpciones, duplicar, mover, notasDe, preguntaNueva, tipoDe,
+    FIJAS, TIPOS, conOpciones, dependientes, duplicar, mover, notasDe, preguntaNueva, soltar, tipoDe,
 } from '../../lib/formularios';
 
 // Las preguntas de un formulario, agrupadas por bloque como las ve la
 // postulante. Cada una se prende o apaga desde su cabecera y, abierta, deja
 // editar el texto, la ayuda, las opciones (cuál es excluyente, cuántos puntos
-// suma) y su lugar en el formulario. Las originales no se borran ni cambian de
-// tipo: el panel las lee por su id. Las nuevas sí.
+// suma) y su lugar en el formulario (flechas o arrastrando desde el asa). Las
+// originales no cambian de tipo (el panel las lee por su id), pero se pueden
+// borrar, menos el nombre, y se recuperan desde el final de la lista.
 
 const Interruptor = ({ on, onClick, etiqueta, disabled, title }) => (
     <button type="button" role="switch" aria-checked={on} aria-label={etiqueta} title={title || etiqueta}
@@ -72,16 +73,21 @@ const Opciones = ({ q, onCambiar }) => {
     );
 };
 
-const Pregunta = ({ q, num, abierta, onAbrir, onCambiar, onMover, onDuplicar, onBorrar, primera, ultima, tasaBrl }) => {
+const Pregunta = ({ q, num, abierta, onAbrir, onCambiar, onMover, onDuplicar, onBorrar, primera, ultima, tasaBrl, depende, arrastre }) => {
     const on = q.on !== false;
     const req = q.req !== false;
     const fija = FIJAS.has(q.id);
+    let motivoNoBorra = '';
+    if (fija) motivoNoBorra = 'Sin el nombre no se guarda la postulación';
+    else if (depende.length) motivoNoBorra = `De esta depende «${depende[0].t || depende[0].id}»: borrá o cambiá esa primero`;
     const kos = (q.o || []).filter((o) => o.ko).length;
     const tp = tipoDe(q.tipo);
 
     return (
-        <article className={`tl-pq${abierta ? ' tl-pq--abierta' : ''}${on ? '' : ' tl-pq--off'}`}>
+        <article className={`tl-pq${abierta ? ' tl-pq--abierta' : ''}${on ? '' : ' tl-pq--off'}${arrastre.clase}`}
+            draggable={!abierta} {...arrastre.eventos}>
             <div className="tl-pq-cab">
+                <GripVertical className="tl-pq-asa" size={16} aria-hidden="true" />
                 <button type="button" className="tl-pq-abrir" onClick={onAbrir} aria-expanded={abierta}>
                     <span className="tl-pq-num">{num || '–'}</span>
                     <span className="tl-pq-tit">{q.t || 'Pregunta sin título'}</span>
@@ -120,9 +126,8 @@ const Pregunta = ({ q, num, abierta, onAbrir, onCambiar, onMover, onDuplicar, on
                             <button type="button" className="ibtn ibtn--sm" aria-label="Subir" disabled={primera} onClick={() => onMover(-1)}><ArrowUp /></button>
                             <button type="button" className="ibtn ibtn--sm" aria-label="Bajar" disabled={ultima} onClick={() => onMover(1)}><ArrowDown /></button>
                             <button type="button" className="ibtn ibtn--sm" aria-label="Duplicar" title="Duplicar" onClick={onDuplicar}><Copy /></button>
-                            {!q.base && (
-                                <button type="button" className="ibtn ibtn--sm ibtn--peligro" aria-label="Eliminar" title="Eliminar" onClick={onBorrar}><Trash2 /></button>
-                            )}
+                            <button type="button" className="ibtn ibtn--sm ibtn--peligro" aria-label="Eliminar" disabled={Boolean(motivoNoBorra)}
+                                title={motivoNoBorra || 'Eliminar'} onClick={onBorrar}><Trash2 /></button>
                         </div>
                     </div>
 
@@ -161,8 +166,27 @@ const Pregunta = ({ q, num, abierta, onAbrir, onCambiar, onMover, onDuplicar, on
     );
 };
 
-const EditorPreguntas = ({ preguntas, tasaBrl, onCambiar }) => {
+const EditorPreguntas = ({ preguntas, originales, tasaBrl, onCambiar }) => {
     const [sel, setSel] = useState(null);
+    const [arrastrando, setArrastrando] = useState(null);
+    const [sobre, setSobre] = useState(null);
+
+    const arrastreDe = (id) => ({
+        clase: arrastrando === id ? ' is-arrastrando' : sobre === id && arrastrando ? ' is-destino' : '',
+        eventos: {
+            onDragStart: (e) => { e.dataTransfer.effectAllowed = 'move'; setArrastrando(id); },
+            onDragEnd: () => { setArrastrando(null); setSobre(null); },
+            onDragOver: (e) => { if (!arrastrando) return; e.preventDefault(); if (sobre !== id) setSobre(id); },
+            onDrop: (e) => {
+                e.preventDefault();
+                if (arrastrando) onCambiar(soltar(preguntas, arrastrando, id));
+                setArrastrando(null); setSobre(null);
+            },
+        },
+    });
+
+    const ids = new Set(preguntas.map((q) => q.id));
+    const borradas = originales.filter((q) => !ids.has(q.id));
 
     const set = (id, cambio) => onCambiar(preguntas.map((q) => (q.id === id ? { ...q, ...cambio } : q)));
 
@@ -205,6 +229,8 @@ const EditorPreguntas = ({ preguntas, tasaBrl, onCambiar }) => {
                                     primera={i === 0}
                                     ultima={i === preguntas.length - 1}
                                     tasaBrl={tasaBrl}
+                                    depende={dependientes(preguntas, q.id)}
+                                    arrastre={arrastreDe(q.id)}
                                     onAbrir={() => setSel(sel === q.id ? null : q.id)}
                                     onCambiar={(cambio) => set(q.id, cambio)}
                                     onMover={(d) => onCambiar(mover(preguntas, q.id, d))}
@@ -230,6 +256,21 @@ const EditorPreguntas = ({ preguntas, tasaBrl, onCambiar }) => {
                 <span className="tl-fe-mas-ico"><Plus size={18} /></span>
                 <span><b>Agregar pregunta</b><em>Se suma al final, en el bloque Extra</em></span>
             </button>
+            {borradas.length > 0 && (
+                <div style={{ display: 'grid', gap: 8 }}>
+                    <div className="tl-bloque-cab">
+                        <span className="tl-rotulo">Originales eliminadas</span>
+                        <b>{borradas.length}</b>
+                    </div>
+                    {borradas.map((q) => (
+                        <button key={q.id} type="button" className="tl-fe-mas" title="Vuelve al final de la lista"
+                            onClick={() => onCambiar([...preguntas, q])}>
+                            <span className="tl-fe-mas-ico"><RotateCcw size={16} /></span>
+                            <span><b>{q.t || q.id}</b><em>Recuperar · {q.bloque}</em></span>
+                        </button>
+                    ))}
+                </div>
+            )}
         </>
     );
 };

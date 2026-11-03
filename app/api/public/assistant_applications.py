@@ -18,7 +18,7 @@ from flask import request, jsonify
 
 from app import db
 from app.models import AssistantApplication, HiringConfig, HiringForm
-from app.models.assistant_application import pais_limpio
+from app.models.assistant_application import pais_de_whatsapp, pais_limpio
 from app.api.public import bp
 from app.services.limite_intentos import limitar
 from app.services import hiring_forms
@@ -263,6 +263,9 @@ def crear_assistant_application():
             _set_si_presente(app_row, campo, valor)
         for campo_form, columna in ALIAS.items():
             _set_si_presente(app_row, columna, _texto(data.get(campo_form), CAMPOS[columna]))
+        # Sin pregunta de país (borrada o apagada), el del código del WhatsApp.
+        if not app_row.pais:
+            app_row.pais = pais_de_whatsapp(app_row.whatsapp)
 
         # Solo se prenden, nunca se apagan: un request viejo (completo=False)
         # no debe borrar una postulación que otro más nuevo ya marcó terminada,

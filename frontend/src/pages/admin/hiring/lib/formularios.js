@@ -1,7 +1,8 @@
 // Helpers puros del editor de formularios de Talent (ver components/forms/).
 // Las preguntas tienen el mismo esquema que el PREGUNTAS del formulario público
 // (institute-site, vacante-assistant/formulario) más `on` (si se muestra) y
-// `base` (si es una de las originales, que el backend lee por su id).
+// `base` (si es una de las originales, que el backend lee por su id; se puede
+// borrar, menos el nombre, y el score la toma como apagada).
 
 export const TIPOS = [
     { k: 'radio', n: 'Una opción' },
@@ -84,6 +85,21 @@ export const mover = (preguntas, id, delta) => {
     return copia;
 };
 
+/** Suelta la pregunta `id` en el lugar de `destinoId` (arrastrar): queda antes
+ * si sube y después si baja, y pasa al bloque de la pregunta donde cayó. */
+export const soltar = (preguntas, id, destinoId) => {
+    const i = preguntas.findIndex((q) => q.id === id);
+    const j = preguntas.findIndex((q) => q.id === destinoId);
+    if (i < 0 || j < 0 || i === j) return preguntas;
+    const copia = [...preguntas];
+    const [q] = copia.splice(i, 1);
+    copia.splice(j, 0, { ...q, bloque: preguntas[j].bloque });
+    return copia;
+};
+
+/** Las preguntas que dependen de `id` (su condición `si` la nombra): sin ella no aparecerían. */
+export const dependientes = (preguntas, id) => preguntas.filter((q) => q.si && q.si.id === id);
+
 /** Notas que explican lo que hace una pregunta más allá de su texto. */
 export const notasDe = (q, tasaBrl) => {
     const n = [];
@@ -98,10 +114,10 @@ export const notasDe = (q, tasaBrl) => {
     if (q.ref === 'brl') n.push(`Si vive en Brasil, debajo muestra el equivalente en reales con el cambio de Configuración${tasaBrl ? ` (${String(tasaBrl).replace('.', ',')})` : ''}.`);
     if (q.puntua) n.push('Cada opción suma puntos; el techo de IA de la tabla sale de la opción más alta que marca.');
     if (q.mail) n.push('Valida que sea un correo.');
-    if (q.tipo === 'tel') n.push('El código de país se completa solo según el país elegido.');
+    if (q.tipo === 'tel') n.push('Pide el código de país con un selector que arranca en el país detectado (o el que eligió, si se pregunta). Sin la pregunta de país, el país sale de ese código.');
     if (q.tipo === 'buscable') n.push('La lista cambia según el país: provincias, estados o estados de Venezuela.');
     if (q.tipo === 'intro') n.push('Pantalla de bienvenida: hay que marcar las recomendaciones para empezar.');
-    if (q.base && !FIJAS.has(q.id)) n.push('Pregunta original: el panel la lee por su id, así que su tipo no se cambia. Se puede apagar.');
-    if (FIJAS.has(q.id)) n.push('Sin el nombre no se puede guardar la postulación: esta pregunta no se apaga.');
+    if (q.base && !FIJAS.has(q.id)) n.push('Pregunta original: el panel la lee por su id, así que su tipo no se cambia. Se puede apagar o eliminar, y se recupera desde el final de la lista.');
+    if (FIJAS.has(q.id)) n.push('Sin el nombre no se puede guardar la postulación: esta pregunta no se apaga ni se elimina.');
     return n;
 };

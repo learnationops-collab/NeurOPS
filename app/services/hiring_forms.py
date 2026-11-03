@@ -11,8 +11,9 @@ que lee sus preguntas de la API): mismas claves, mismos textos y mismas opciones
     `valor`, `en` o `valores`; ver `cumple_condicion`);
   · la equivalencia en reales de `remuneracion` va en `ref: 'brl'` (la tasa sale
     de la configuración de la búsqueda, ver HiringConfig).
-Cada pregunta suma `on` (si se pregunta) y `base` (una de las originales: se
-puede apagar pero no borrar, porque tiene columna y la usan el score y el panel).
+Cada pregunta suma `on` (si se pregunta) y `base` (una de las originales: tiene
+columna y la usan el score y el panel; se puede apagar o borrar, y una borrada
+cuenta como apagada).
 
 El primer formulario no lo siembra la migración: lo crea `asegurar_semilla()` la
 primera vez que alguien lo pide (los endpoints del editor y el GET público).
@@ -278,14 +279,10 @@ def validar_preguntas(lista):
         if p.get('base') and pid not in IDS_BASE:
             raise PreguntasInvalidas(f'{rotulo}: una pregunta nueva no puede marcarse como base.')
 
-    faltan = [pid for pid in IDS_BASE if pid not in vistos]
-    if faltan:
-        raise PreguntasInvalidas(
-            'No se pueden borrar las preguntas originales del formulario (se pueden apagar): '
-            f'faltan {", ".join(faltan)}.')
-
-    nombre = next(p for p in lista if p['id'] == 'nombre')
-    if nombre.get('on') is False or nombre.get('req') is False:
+    # Las originales se pueden borrar (el score las toma como apagadas, ver
+    # HiringForm._derivados), menos el nombre: sin él no se guarda la postulación.
+    nombre = next((p for p in lista if p['id'] == 'nombre'), None)
+    if nombre is None or nombre.get('on') is False or nombre.get('req') is False:
         raise PreguntasInvalidas('«nombre» tiene que quedar prendida y obligatoria: sin el nombre no se guarda la postulación.')
 
 
@@ -391,6 +388,8 @@ def form_dict(form, respuestas=None, con_preguntas=False):
     }
     if con_preguntas:
         data["preguntas"] = form.preguntas or []
+        # Para que el editor ofrezca volver a sumar las originales que se borraron.
+        data["originales"] = PREGUNTAS_BASE
     return data
 
 

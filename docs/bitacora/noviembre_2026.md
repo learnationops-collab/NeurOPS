@@ -102,3 +102,9 @@
   - Las seis tarjetas: cuatro iguales arriba y las dos del closer (asistencia y conversión) del doble de ancho abajo, con su barra.
   - El embudo de Closing toma el aspecto del de Triage: barras redondeadas más altas, sin cuello entre una y otra y «N de M» bajo cada una (solo con los dos canales; el de Setters no cambia).
 - **2 de Noviembre de 2026 (Close rate general y del período, los dos a la vista)** *([CloseRatesCanales.jsx](../../frontend/src/pages/comercial/components/CloseRatesCanales.jsx), [CierresReales.jsx](../../frontend/src/components/dashboard/CierresReales.jsx))*: en el embudo, cada close rate (total, directas y desde triage) muestra dos columnas: «General» (cierres ÷ asistieron + llamadas anteriores que cerraron) y «Del período» (solo las llamadas de este período, `del_periodo` ÷ asistieron). En la tarjeta Cierre, bajo el close rate real, se suma «Close rate del período» con su cuenta. Solo frontend: los datos ya venían en `cierres.reales`.
+
+- **3 de Noviembre de 2026 (Hiring: preguntas que se arrastran y se borran, WhatsApp con código de país)** *([EditorPreguntas.jsx](../../frontend/src/pages/admin/hiring/components/forms/EditorPreguntas.jsx), [hiring_forms.py](../../app/services/hiring_forms.py), [ADR-W069](../DECISIONS.md))*:
+  - Talent › Forms: cada pregunta se arrastra desde su asa a cualquier lugar (pasa al bloque donde cae).
+  - Se pueden eliminar las preguntas originales (menos el nombre y las que tienen una condicional que depende de ellas); al final de la lista se recuperan. Para el score, una borrada cuenta como apagada.
+  - Sin pregunta de país, el país de la postulación sale del código del WhatsApp (`pais_de_whatsapp`).
+  - Va junto con institute-site: el WhatsApp tiene selector de código de país, que arranca en el país detectado.

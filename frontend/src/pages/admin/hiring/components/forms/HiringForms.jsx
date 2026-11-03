@@ -285,7 +285,7 @@ const Editor = ({ id, modo, onModo, onVolver }) => {
                         </p>
                         <LinkFormulario form={form} onCambio={(slug) => setForm((prev) => ({ ...prev, slug }))} />
                     </section>
-                    <EditorPreguntas preguntas={form.preguntas || []} tasaBrl={tasaBrl} onCambiar={(preguntas) => cambiar({ preguntas })} />
+                    <EditorPreguntas preguntas={form.preguntas || []} originales={form.originales || []} tasaBrl={tasaBrl} onCambiar={(preguntas) => cambiar({ preguntas })} />
                 </>
             )}
         </>
