@@ -284,6 +284,7 @@ export const TABLAS = {
             { key: 'closer', header: 'Closer', width: '1fr' },
             { key: 'pre_call', header: 'Pre call', width: '1fr' },
             { key: 'post_call', header: 'Post call', width: '1.4fr' },
+            { key: 'motivo', header: 'Motivo', width: '1.6fr' },
             { key: 'ver', header: '', width: '0.4fr' },
         ],
         facetas: [

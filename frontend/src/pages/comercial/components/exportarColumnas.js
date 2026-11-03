@@ -85,6 +85,8 @@ export const PARTES_POR_COLUMNA = {
     setter: [{ valor: texto('setter') }],
     programa: [{ valor: texto('programa') }],
     pre_call: [{ valor: etiqueta('pre_call') }],
+    // El motivo de un No show, una cancelación o una reagenda (`motivos_agenda.py`): vacío en el resto.
+    motivo: [{ valor: (f) => f.motivo?.texto || null }],
     // Los días sin reportar van solo donde la celda los muestra: un 0 en una llamada ya reportada
     // diría algo que no es.
     post_call: [

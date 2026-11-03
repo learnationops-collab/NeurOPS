@@ -87,14 +87,18 @@ export const ubicar = (ancla, burbuja) => {
     };
 };
 
-const Tip = ({ texto, titulo }) => {
+/**
+ * `ancla`: otro nodo en lugar del «i» (el chip de estado de Revisar, que muestra su motivo al pasar el
+ * mouse). `pie`: una línea chica debajo del texto (quién lo escribió y cuándo).
+ */
+const Tip = ({ texto, titulo, pie, ancla }) => {
     const [abierto, setAbierto] = useState(false);
     const [pos, setPos] = useState(null);
-    const ancla = useRef(null);
+    const refAncla = useRef(null);
     const burbuja = useRef(null);
 
     const recalcular = useCallback(() => {
-        if (ancla.current && burbuja.current) setPos(ubicar(ancla.current, burbuja.current));
+        if (refAncla.current && burbuja.current) setPos(ubicar(refAncla.current, burbuja.current));
     }, []);
 
     // Cerrar también borra la posición: la medición vieja es de otro scroll y otro tamaño de
@@ -138,19 +142,21 @@ const Tip = ({ texto, titulo }) => {
     };
 
     if (!texto) return null;
-    const etiqueta = `${titulo ? `${titulo}: ` : ''}${texto}`;
+    const etiqueta = `${titulo ? `${titulo}: ` : ''}${texto}${pie ? `. ${pie}` : ''}`;
 
     return (
         <>
-            <span ref={ancla} className="tip" tabIndex={0} role="note" aria-label={etiqueta}
+            <span ref={refAncla} className={`tip${ancla ? ' tip--ancla' : ''}`} tabIndex={0} role="note"
+                aria-label={etiqueta}
                 onMouseEnter={abrir} onMouseLeave={cerrar}
                 onFocus={abrir} onBlur={cerrar}
                 onPointerDown={alternarConDedo}
                 // El "i" de la tabla de programas de Analizar vive DENTRO del botón de la fila,
                 // que navega al drill-down. Sin esto, pedir la explicación te sacaba de la
                 // pantalla antes de poder leerla.
-                onClick={(e) => e.stopPropagation()}>
-                <span className="tip-dot" aria-hidden="true">i</span>
+                // Con un chip de ancla el clic sigue a la fila: abre la ficha, donde está el hilo completo.
+                onClick={ancla ? undefined : (e) => e.stopPropagation()}>
+                {ancla || <span className="tip-dot" aria-hidden="true">i</span>}
             </span>
             {abierto && createPortal(
                 <div className="dc-shell tip-capa">
@@ -165,6 +171,7 @@ const Tip = ({ texto, titulo }) => {
                             : { top: 0, left: 0, visibility: 'hidden' }}>
                         {titulo && <b>{titulo}</b>}
                         {texto}
+                        {pie && <small className="tip-pie">{pie}</small>}
                     </span>
                 </div>,
                 document.body,
