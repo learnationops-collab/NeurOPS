@@ -54,7 +54,7 @@ export function Tarjetas({ m, onVer }) {
             sub: `${m.closer_cerraron} cierres de ${m.closer_asistieron} que asistieron`, color: 'success', ver: 'closer_cerraron' },
     ];
     return (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,300px),1fr))', gap: 16 }}>
             {tarjetas.map((t) => (
                 <div key={t.rotulo} style={{ ...TARJETA, gap: 6, padding: '22px 22px 18px', borderRadius: 28 }}>
                     <div style={resplandor(t.color, '100% 100%')} />
