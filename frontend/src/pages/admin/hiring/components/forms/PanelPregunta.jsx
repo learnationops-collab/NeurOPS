@@ -1,22 +1,30 @@
 import React from 'react';
 import {
     ArrowUp, ArrowDown, Copy, Trash2, Ban, X, Plus, Minus, Info,
-    CircleDot, ListChecks, Search, Type, AlignLeft, Hash, Phone, Link2, Hand,
+    CircleDot, ListChecks, Search, Type, Mail, AlignLeft, Hash, DollarSign, Phone, Link2, Hand,
 } from 'lucide-react';
+import { Aura, IconButton, Select, Switch } from '../../../../../components/standard';
 import { Chip } from '../Piezas';
-import { FIJAS, TIPOS, conOpciones, notasDe } from '../../lib/formularios';
+import { FIJAS, TIPOS, conOpciones, notasDe, tipoDe, tipoVisible } from '../../lib/formularios';
 
 // El panel de la derecha del editor: todo lo de la pregunta elegida (tipo,
 // texto, ayuda, opciones, si es obligatoria y su lugar).
 
 const ICONO_TIPO = {
-    radio: CircleDot, check: ListChecks, buscable: Search, texto: Type, parrafo: AlignLeft,
-    numero: Hash, tel: Phone, link: Link2, intro: Hand,
+    radio: CircleDot, check: ListChecks, buscable: Search, texto: Type, email: Mail, parrafo: AlignLeft,
+    numero: Hash, dinero: DollarSign, tel: Phone, link: Link2, intro: Hand,
 };
 
-export const Interruptor = ({ on, onClick, etiqueta, disabled, title }) => (
-    <button type="button" role="switch" aria-checked={on} aria-label={etiqueta} title={title || etiqueta}
-        className="tl-switch" onClick={onClick} disabled={disabled} />
+const OPCIONES_TIPO = TIPOS.map((t) => {
+    const Ico = ICONO_TIPO[t.k];
+    return { value: t.k, label: t.n, icon: <Ico size={15} /> };
+});
+
+const Campo = ({ etiqueta, children, className = '' }) => (
+    <div className={`tl-ed-campo ${className}`}>
+        <span className="tl-ed-etq">{etiqueta}</span>
+        {children}
+    </div>
 );
 
 const Opciones = ({ q, onCambiar }) => {
@@ -25,8 +33,7 @@ const Opciones = ({ q, onCambiar }) => {
     const ops = (q.o || []).map((o) => (typeof o === 'string' ? { t: o } : o));
     const set = (j, cambio) => onCambiar({ o: ops.map((o, k) => (k === j ? { ...o, ...cambio } : o)) });
     return (
-        <>
-            <p className="tl-lbl-q">Opciones</p>
+        <Campo etiqueta="Opciones">
             <div className="tl-ops">
                 {ops.map((o, j) => {
                     const letra = String.fromCharCode(65 + j);
@@ -67,7 +74,7 @@ const Opciones = ({ q, onCambiar }) => {
                     <Plus size={14} /> Opción
                 </button>
             </div>
-        </>
+        </Campo>
     );
 };
 
@@ -81,7 +88,7 @@ const Limites = ({ q, onCambiar }) => {
     const al = q.ko_min != null && q.ko_max != null && q.ko_min > q.ko_max;
     return (
         <div className={`tl-ed-limites${q.ko_min != null || q.ko_max != null ? ' is-activo' : ''}`}>
-            <p className="tl-lbl-q"><Ban size={12} aria-hidden="true" /> Límites excluyentes</p>
+            <span className="tl-ed-etq"><Ban size={12} aria-hidden="true" /> Límites excluyentes</span>
             <div className="tl-ed-limites-campos">
                 <label>
                     <span>Descarta si es menor a</span>
@@ -110,80 +117,83 @@ const PanelPregunta = ({ q, num, primera, ultima, tasaBrl, depende, onCambiar, o
     if (fija) motivoNoBorra = 'Sin el nombre no se guarda la postulación';
     else if (depende.length) motivoNoBorra = `De esta depende «${depende[0].t || depende[0].id}»: borrá o cambiá esa primero`;
 
+    const visible = tipoVisible(q);
+    const Ico = ICONO_TIPO[visible] || Type;
+
     return (
         <div className="tl-ed-panel-in" key={q.id}>
+            <Aura soft size="card" colors={['var(--brand-secondary)', 'var(--brand-primary)', 'var(--brand-navy)']} />
             <header className="tl-ed-cab">
-                <span className="tl-ed-num">{num || '–'}</span>
+                <span className="tl-ed-num">{num || <Ico size={18} aria-hidden="true" />}</span>
                 <div className="tl-ed-cab-txt">
-                    <small>{q.bloque || 'Extra'}{on ? '' : ' · apagada'}</small>
                     <h3>{q.t || 'Pregunta sin título'}</h3>
+                    <p>{q.bloque || 'Extra'} · {tipoDe(visible).n}{on ? '' : ' · apagada'}</p>
                 </div>
                 <div className="tl-ed-acc">
-                    <button type="button" className="ibtn ibtn--sm" aria-label="Subir" title="Subir" disabled={primera} onClick={() => onMover(-1)}><ArrowUp /></button>
-                    <button type="button" className="ibtn ibtn--sm" aria-label="Bajar" title="Bajar" disabled={ultima} onClick={() => onMover(1)}><ArrowDown /></button>
-                    <button type="button" className="ibtn ibtn--sm" aria-label="Duplicar" title="Duplicar" onClick={onDuplicar}><Copy /></button>
-                    <button type="button" className="ibtn ibtn--sm ibtn--peligro" aria-label="Eliminar" disabled={Boolean(motivoNoBorra)}
-                        title={motivoNoBorra || 'Eliminar'} onClick={onBorrar}><Trash2 /></button>
+                    <IconButton size="sm" icon={<ArrowUp size={15} />} label="Subir" title="Subir" disabled={primera} onClick={() => onMover(-1)} />
+                    <IconButton size="sm" icon={<ArrowDown size={15} />} label="Bajar" title="Bajar" disabled={ultima} onClick={() => onMover(1)} />
+                    <IconButton size="sm" icon={<Copy size={15} />} label="Duplicar" title="Duplicar" onClick={onDuplicar} />
+                    <IconButton size="sm" danger icon={<Trash2 size={15} />} label="Eliminar" disabled={Boolean(motivoNoBorra)}
+                        title={motivoNoBorra || 'Eliminar'} onClick={onBorrar} />
                 </div>
             </header>
 
-            <div className="tl-ed-sws">
-                <span className="tl-sw">
-                    <Interruptor on={on} etiqueta="Activa" disabled={fija} onClick={() => onCambiar({ on: !on })}
-                        title={fija ? 'Esta pregunta no se apaga' : undefined} />
-                    {on ? 'Activa en el formulario' : 'Apagada'}
-                </span>
-                {q.tipo !== 'intro' && (
-                    <span className="tl-sw">
-                        <Interruptor on={req} etiqueta="Obligatoria" disabled={fija} onClick={() => onCambiar({ req: !req })} />
-                        Obligatoria
-                    </span>
-                )}
+            <div className="tl-ed-ajustes">
+                <Campo etiqueta="Tipo de respuesta" className="tl-ed-campo--tipo">
+                    <Select label="Tipo de respuesta" value={visible} options={OPCIONES_TIPO} disabled={fija}
+                        title={fija ? 'El nombre es siempre texto corto' : undefined}
+                        onChange={(t) => t !== visible && onTipo(t)} />
+                </Campo>
+                <div className="tl-ed-sws">
+                    <label className="tl-ed-sw">
+                        <Switch checked={on} label="Activa" disabled={fija} onChange={() => onCambiar({ on: !on })}
+                            title={fija ? 'Esta pregunta no se apaga' : undefined} />
+                        Activa
+                    </label>
+                    {q.tipo !== 'intro' && (
+                        <label className="tl-ed-sw">
+                            <Switch checked={req} label="Obligatoria" disabled={fija} onChange={() => onCambiar({ req: !req })} />
+                            Obligatoria
+                        </label>
+                    )}
+                </div>
             </div>
 
-            <p className="tl-lbl-q">Tipo de respuesta</p>
-            <div className="tl-ed-tipos" role="radiogroup" aria-label="Tipo de respuesta">
-                {TIPOS.map((t) => {
-                    const Ico = ICONO_TIPO[t.k];
-                    return (
-                        <button key={t.k} type="button" role="radio" aria-checked={q.tipo === t.k} className="tl-ed-tipo"
-                            disabled={fija && q.tipo !== t.k} onClick={() => q.tipo !== t.k && onTipo(t.k)}>
-                            <Ico size={17} aria-hidden="true" /><span>{t.n}</span>
-                        </button>
-                    );
-                })}
-            </div>
-
-            <p className="tl-lbl-q">Pregunta</p>
-            <textarea className="tl-area" rows={2} maxLength={300} placeholder="Escribí la pregunta" value={q.t || ''}
-                onChange={(e) => onCambiar({ t: e.target.value })} />
+            <Campo etiqueta="Pregunta">
+                <textarea className="tl-area tl-ed-tit" rows={2} maxLength={300} placeholder="Escribí la pregunta" value={q.t || ''}
+                    onChange={(e) => onCambiar({ t: e.target.value })} />
+            </Campo>
             {Object.keys(q.t_pais || {}).map((pais) => (
-                <React.Fragment key={pais}>
-                    <p className="tl-lbl-q">Si vive en {pais}</p>
+                <Campo key={pais} etiqueta={`Si vive en ${pais}`}>
                     <input className="tl-input tl-input--sm" maxLength={300} value={q.t_pais[pais] || ''}
                         onChange={(e) => onCambiar({ t_pais: { ...q.t_pais, [pais]: e.target.value } })} />
-                </React.Fragment>
+                </Campo>
             ))}
-            <p className="tl-lbl-q">Texto de ayuda</p>
-            <textarea className="tl-area" rows={2} maxLength={600} placeholder="Opcional" style={{ fontWeight: 600, fontSize: 14 }}
-                value={q.h || ''} onChange={(e) => onCambiar({ h: e.target.value })} />
-            {q.tipo === 'numero' && (
+            <Campo etiqueta="Texto de ayuda">
+                <textarea className="tl-area" rows={2} maxLength={600} placeholder="Opcional"
+                    value={q.h || ''} onChange={(e) => onCambiar({ h: e.target.value })} />
+            </Campo>
+            {(visible === 'numero' || visible === 'dinero') && (
                 <>
-                    <p className="tl-lbl-q">Unidad</p>
-                    <input className="tl-input tl-input--sm" maxLength={40} placeholder="Ej.: USD por mes" value={q.unidad || ''}
-                        onChange={(e) => onCambiar({ unidad: e.target.value })} />
+                    <Campo etiqueta={visible === 'dinero' ? 'Moneda y período' : 'Unidad'}>
+                        <input className="tl-input tl-input--sm" maxLength={40} placeholder={visible === 'dinero' ? 'Ej.: USD por mes' : 'Ej.: años'}
+                            value={q.unidad || ''} onChange={(e) => onCambiar({ unidad: e.target.value })} />
+                    </Campo>
                     <Limites q={q} onCambiar={onCambiar} />
                 </>
             )}
             {q.tipo === 'parrafo' && (
-                <>
-                    <p className="tl-lbl-q">Máximo de caracteres</p>
+                <Campo etiqueta="Máximo de caracteres">
                     <input className="tl-input tl-input--sm" type="number" min="50" max="3000" step="50" style={{ width: 160 }}
                         value={q.largo || 500} onChange={(e) => onCambiar({ largo: Number(e.target.value) || 500 })} />
-                </>
+                </Campo>
             )}
             {conOpciones(q.tipo) && <Opciones q={q} onCambiar={onCambiar} />}
-            {notasDe(q, tasaBrl).map((t) => <p key={t} className="tl-nota-q"><Info size={15} /><span>{t}</span></p>)}
+            {notasDe(q, tasaBrl).length > 0 && (
+                <ul className="tl-ed-notas">
+                    {notasDe(q, tasaBrl).map((t) => <li key={t}><Info size={14} aria-hidden="true" /><span>{t}</span></li>)}
+                </ul>
+            )}
         </div>
     );
 };

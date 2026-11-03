@@ -9,14 +9,27 @@ export const TIPOS = [
     { k: 'check', n: 'Varias opciones' },
     { k: 'buscable', n: 'Lista con buscador' },
     { k: 'texto', n: 'Texto corto' },
+    { k: 'email', n: 'Correo electrónico' },
     { k: 'parrafo', n: 'Párrafo' },
     { k: 'numero', n: 'Número' },
+    { k: 'dinero', n: 'Dinero' },
     { k: 'tel', n: 'Teléfono' },
     { k: 'link', n: 'Link' },
     { k: 'intro', n: 'Bienvenida' },
 ];
 
 export const tipoDe = (k) => TIPOS.find((t) => t.k === k) || TIPOS[0];
+
+// «Correo electrónico» y «Dinero» se guardan como texto con `mail` y número con
+// `dinero`: el formulario público y el backend ya saben dibujarlos y validarlos.
+const GUARDADO_COMO = { email: ['texto', { mail: true }], dinero: ['numero', { dinero: true }] };
+
+/** El tipo que ve quien edita (`email`, `dinero` o el guardado). */
+export const tipoVisible = (q) => {
+    if (q.tipo === 'texto' && q.mail) return 'email';
+    if (q.tipo === 'numero' && (q.dinero || q.ref === 'brl')) return 'dinero';
+    return q.tipo;
+};
 export const conOpciones = (tipo) => tipo === 'radio' || tipo === 'check';
 
 // Las que el panel necesita sí o sí: sin nombre el backend no guarda la postulación.
@@ -90,20 +103,24 @@ export const mover = (preguntas, id, delta) => {
 
 // Claves que solo tienen sentido en ciertos tipos: al cambiar de tipo se sacan.
 const SOLO_EN = {
-    mail: ['texto'], unidad: ['numero'], min: ['numero'], max: ['numero'], ref: ['numero'],
-    ko_min: ['numero'], ko_max: ['numero'],
+    mail: ['email'], dinero: ['dinero'], ref: ['dinero'], unidad: ['numero', 'dinero'], min: ['numero', 'dinero'], max: ['numero', 'dinero'],
+    ko_min: ['numero', 'dinero'], ko_max: ['numero', 'dinero'],
     largo: ['parrafo'], puntua: ['radio', 'check'], reqs: ['intro'],
 };
 
-/** Cambia el tipo de `q`. Una original pasa a ser nueva (otro id, `base: false`):
+/** Cambia el tipo visible de `q`. Si cambia el tipo guardado, una original pasa a ser nueva (otro id, `base: false`):
  * el backend guarda su respuesta en `respuestas_extra` y la original cuenta como
  * borrada (se recupera desde el final). Las condicionales que la nombraban la siguen.
  * Devuelve la lista y el id con que quedó. */
-export const cambiarTipo = (preguntas, q, tipo) => {
+export const cambiarTipo = (preguntas, q, visible) => {
+    const [tipo, marcas] = GUARDADO_COMO[visible] || [visible, {}];
     const nueva = { ...q, tipo };
-    Object.entries(SOLO_EN).forEach(([k, tipos]) => { if (!tipos.includes(tipo)) delete nueva[k]; });
+    Object.entries(SOLO_EN).forEach(([k, tipos]) => { if (!tipos.includes(visible)) delete nueva[k]; });
+    Object.assign(nueva, marcas);
+    if (visible === 'dinero' && !nueva.unidad) nueva.unidad = 'USD por mes';
     if (conOpciones(tipo) && !(nueva.o || []).length) nueva.o = [{ t: 'Opción A' }, { t: 'Opción B' }];
-    if (!q.base) return { lista: preguntas.map((x) => (x.id === q.id ? nueva : x)), id: q.id };
+    // Mismo tipo guardado (texto ↔ correo, número ↔ dinero): la respuesta sigue en su lugar.
+    if (!q.base || q.tipo === tipo) return { lista: preguntas.map((x) => (x.id === q.id ? nueva : x)), id: q.id };
     nueva.id = idNuevo(preguntas, q.id.slice(0, 30));
     nueva.base = false;
     const lista = preguntas.map((x) => {

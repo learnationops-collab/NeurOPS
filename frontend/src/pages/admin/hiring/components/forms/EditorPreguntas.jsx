@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Ban, GitBranch, GripVertical, Plus, RotateCcw } from 'lucide-react';
-import PanelPregunta, { Interruptor } from './PanelPregunta';
+import PanelPregunta from './PanelPregunta';
+import { Switch } from '../../../../../components/standard';
 import {
-    FIJAS, cambiarTipo, dependientes, duplicar, mover, preguntaNueva, soltar, tieneExcluyente, tipoDe,
+    FIJAS, cambiarTipo, dependientes, duplicar, mover, preguntaNueva, soltar, tieneExcluyente, tipoDe, tipoVisible,
 } from '../../lib/formularios';
 import './editorPreguntas.css';
 
@@ -21,13 +22,13 @@ const Fila = ({ q, num, elegida, onElegir, onCambiar, arrastre }) => {
             <button type="button" className="tl-ed-fila-btn" onClick={onElegir} aria-current={elegida || undefined}>
                 <span className="tl-ed-fila-num">{num || '–'}</span>
                 <span className="tl-ed-fila-tit">{q.t || 'Pregunta sin título'}</span>
-                <span className="tl-ed-fila-tipo">{tipoDe(q.tipo).n}</span>
+                <span className="tl-ed-fila-tipo">{tipoDe(tipoVisible(q)).n}</span>
                 {ko && <Ban className="tl-ed-marca tl-ed-marca--ko" size={13} aria-label="Con excluyentes" />}
                 {q.si && <GitBranch className="tl-ed-marca" size={13} aria-label="Condicional" />}
             </button>
-            <Interruptor on={on} etiqueta="Pregunta activa" disabled={fija}
+            <Switch checked={on} label="Pregunta activa" disabled={fija}
                 title={fija ? 'Esta pregunta no se apaga' : on ? 'Activa: aparece en el formulario' : 'Apagada: no aparece'}
-                onClick={() => onCambiar({ on: !on })} />
+                onChange={() => onCambiar({ on: !on })} />
         </div>
     );
 };

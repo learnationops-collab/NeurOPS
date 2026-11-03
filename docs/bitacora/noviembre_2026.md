@@ -116,3 +116,7 @@
 - **3 de Noviembre de 2026 (Hiring: límites excluyentes en las preguntas numéricas)** *([PanelPregunta.jsx](../../frontend/src/pages/admin/hiring/components/forms/PanelPregunta.jsx), [hiring_form.py](../../app/models/hiring_form.py), [ADR-W072](../DECISIONS.md))*:
   - Una pregunta de tipo número (expectativa salarial, edad…) tiene «Descarta si es menor a / mayor a». Fuera del rango, la postulante va a la pantalla de descarte y el panel la marca como cortada por el formulario.
   - Va junto con institute-site, que aplica el rango en el formulario.
+- **3 de Noviembre de 2026 (Hiring: pulido del editor de preguntas)** *([PanelPregunta.jsx](../../frontend/src/pages/admin/hiring/components/forms/PanelPregunta.jsx), [editorPreguntas.css](../../frontend/src/pages/admin/hiring/components/forms/editorPreguntas.css), [ADR-W073](../DECISIONS.md))*:
+  - Tipos «Correo electrónico» y «Dinero». El tipo se elige en un desplegable con íconos.
+  - «Activa» y «Obligatoria» junto al tipo; el panel con aura de marca, campos con espaciado parejo y notas sin recuadro.
+  - La fila elegida se marca con un tono suave en lugar del borde rosa; el foco se ve solo con teclado y en rosa, sin los recuadros azules.

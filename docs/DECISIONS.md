@@ -587,3 +587,11 @@
 - **Decisión:** claves `ko_min` y `ko_max` (enteros, opcionales) en las preguntas de tipo número. El editor las muestra como «Descarta si es menor a / mayor a». El formulario público, fuera del rango, va a la pantalla de descarte con la respuesta como `motivo_descarte`. El backend lo reconoce como corte del formulario (`HiringForm.rangos_excluyentes`, `AssistantApplication._fuera_de_rango` en `auto_ko` y `descarte_vigente`) y la cuenta de excluyentes lo incluye. `validar_preguntas` exige enteros sin signo y mínimo ≤ máximo.
 - **Qué se pierde:** el rango no reemplaza al presupuesto de Configuración (`presupuesto_min`/`max`): son datos aparte y hay que cargar los dos si se quiere lo mismo.
 - **Consecuencias:** cambiar el límite recalcula quién queda cortado (como sacarle la marca a una opción). Sin migración.
+
+## ADR-W073: Tipos «Correo electrónico» y «Dinero» en el editor de Hiring, y el tipo como desplegable
+
+- **Fecha:** 2026-11-03 · **Subsistema:** Hiring (Talent › Forms) · **Estado:** implementado.
+- **Contexto:** Mario quiere reconocer de un vistazo las preguntas de correo y de plata; las fichas de tipo ocupaban mucho y se cortaban («Lista con b…»).
+- **Decisión:** el editor ofrece `email` y `dinero` como tipos visibles, pero se guardan como `texto` + `mail: true` y `numero` + `dinero: true` (`tipoVisible`, `cambiarTipo` en lib/formularios.js); `ref: 'brl'` también se lee como dinero. Pasar de texto a correo o de número a dinero no cambia el tipo guardado, así que una original no pierde su columna. El tipo se elige con el `Select` estándar (con íconos); los interruptores pasan a `Switch` estándar y el panel usa `Aura`.
+- **Qué se pierde:** nada en el formulario público ni en el backend, que siguen viendo texto y número.
+- **Consecuencias:** sin migración. Un tipo nuevo que necesite otro dibujo en el formulario público sí tiene que sumarse en institute-site y en `TIPOS` del backend.
