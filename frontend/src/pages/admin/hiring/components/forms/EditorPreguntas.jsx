@@ -3,7 +3,7 @@ import { Ban, GitBranch, GripVertical, Pencil, Plus, RotateCcw } from 'lucide-re
 import PanelPregunta from './PanelPregunta';
 import { Switch } from '../../../../../components/standard';
 import {
-    FIJAS, cambiarTipo, dependientes, duplicar, mover, preguntaNueva, soltar, tieneExcluyente, tipoDe, tipoVisible,
+    FIJAS, borrar, cambiarTipo, dependientes, duplicar, mover, preguntaNueva, soltar, tieneExcluyente, tipoDe, tipoVisible,
 } from '../../lib/formularios';
 import './editorPreguntas.css';
 
@@ -59,7 +59,7 @@ const NombreBloque = ({ nombre, onRenombrar }) => {
     );
 };
 
-const EditorPreguntas = ({ preguntas, originales, tasaBrl, onCambiar }) => {
+const EditorPreguntas = ({ preguntas, originales, onCambiar }) => {
     const [sel, setSel] = useState(preguntas[0]?.id || null);
     const [arrastrando, setArrastrando] = useState(null);
     const [sobre, setSobre] = useState(null);
@@ -160,7 +160,6 @@ const EditorPreguntas = ({ preguntas, originales, tasaBrl, onCambiar }) => {
                         num={numeros[q.id]}
                         primera={i === 0}
                         ultima={i === preguntas.length - 1}
-                        tasaBrl={tasaBrl}
                         depende={dependientes(preguntas, q.id)}
                         onCambiar={(cambio) => set(q.id, cambio)}
                         onTipo={(tipo) => {
@@ -178,7 +177,7 @@ const EditorPreguntas = ({ preguntas, originales, tasaBrl, onCambiar }) => {
                         }}
                         onBorrar={() => {
                             const vecina = preguntas[i + 1] || preguntas[i - 1];
-                            onCambiar(preguntas.filter((x) => x.id !== q.id));
+                            onCambiar(borrar(preguntas, q.id));
                             setSel(vecina ? vecina.id : null);
                         }}
                     />

@@ -133,3 +133,7 @@
   - Clic en el nombre del bloque en la lista (Experiencia, Idiomas…) para cambiarlo; se aplica a las preguntas de ese tramo y es lo que la postulante ve arriba de cada pregunta. Hasta 60 caracteres (lo valida el backend).
 - **3 de Noviembre de 2026 (Hiring: sin variantes de texto por país)** *([PanelPregunta.jsx](../../frontend/src/pages/admin/hiring/components/forms/PanelPregunta.jsx), [hiring_forms.py](../../app/services/hiring_forms.py))*:
   - El editor ya no muestra «Si vive en Brasil»; la API pública no manda `t_pais`/`h_pais` (las guardadas quedan sin efecto) y el formulario de institute-site usa siempre el mismo texto para todos.
+- **3 de Noviembre de 2026 (Hiring: arreglos del editor y sin reales)** *([EditorPreguntas.jsx](../../frontend/src/pages/admin/hiring/components/forms/EditorPreguntas.jsx), [formularios.js](../../frontend/src/pages/admin/hiring/lib/formularios.js))*:
+  - Con títulos largos la lista se ensanchaba por debajo del panel (pista de grilla sin `minmax(0,1fr)`): arreglado.
+  - Una pregunta de la que depende otra ya se puede eliminar: las que dependían quedan apagadas y sin condición, y el panel lo avisa antes.
+  - Fuera el equivalente en reales: la API no publica `ref` y el formulario de institute-site no lo muestra; el editor ya no pide la tasa.

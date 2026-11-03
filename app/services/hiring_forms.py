@@ -7,8 +7,6 @@ que lee sus preguntas de la API): mismas claves, mismos textos y mismas opciones
 `bloquea`, `nota`)—. Allá ya es JSON puro:
   · la condición de una pregunta va en `si: {id, es}` (también `igual`,
     `valor`, `en` o `valores`; ver `cumple_condicion`);
-  · la equivalencia en reales de `remuneracion` va en `ref: 'brl'` (la tasa sale
-    de la configuración de la búsqueda, ver HiringConfig).
 Cada pregunta suma `on` (si se pregunta) y `base` (una de las originales: tiene
 columna y la usan el score y el panel; se puede apagar o borrar, y una borrada
 cuenta como apagada).
@@ -102,7 +100,7 @@ _PREGUNTAS = [
     {'id': 'remuneracion', 'bloque': 'Remuneración', 'tipo': 'numero', 'req': True, 'unidad': 'USD por mes',
      't': '¿Cuánto pedís por mes?',
      'h': 'Pon tu remuneración mensual en dólares pretendida por un trabajo de 4 horas diarias.',
-     'ph': '300', 'ref': 'brl'},
+     'ph': '300', 'dinero': True},
 
     # Bloque 4 · Experiencia
     {'id': 'experiencia', 'bloque': 'Experiencia', 'tipo': 'radio', 'req': True, 't': '¿Cuántos años de experiencia tenés?',
@@ -221,8 +219,9 @@ MAX_OPCIONES = 20
 MAX_BYTES = 200_000
 # Claves que el editor agrega y el formulario público no necesita.
 CLAVES_DEL_EDITOR = ('on', 'base')
-# Variantes del texto por país (`t_pais`, `h_pais`): ya no se usan; las guardadas no se publican.
-CLAVES_RETIRADAS = ('t_pais', 'h_pais')
+# Variantes del texto por país (`t_pais`, `h_pais`) y equivalente en reales (`ref`):
+# ya no se usan; las guardadas no se publican.
+CLAVES_RETIRADAS = ('t_pais', 'h_pais', 'ref')
 
 
 class PreguntasInvalidas(ValueError):

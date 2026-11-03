@@ -153,13 +153,14 @@ const Limites = ({ q, onCambiar }) => {
     );
 };
 
-const PanelPregunta = ({ q, num, primera, ultima, tasaBrl, depende, onCambiar, onTipo, onMover, onDuplicar, onBorrar }) => {
+const PanelPregunta = ({ q, num, primera, ultima, depende, onCambiar, onTipo, onMover, onDuplicar, onBorrar }) => {
     const on = q.on !== false;
     const req = q.req !== false;
     const fija = FIJAS.has(q.id);
-    let motivoNoBorra = '';
-    if (fija) motivoNoBorra = 'Sin el nombre no se guarda la postulación';
-    else if (depende.length) motivoNoBorra = `De esta depende «${depende[0].t || depende[0].id}»: borrá o cambiá esa primero`;
+    const motivoNoBorra = fija ? 'Sin el nombre no se guarda la postulación' : '';
+    const avisoBorrar = depende.length
+        ? `Eliminar (${depende.map((x) => `«${x.t || x.id}»`).join(', ')} depende de esta y queda apagada)`
+        : 'Eliminar';
 
     const visible = tipoVisible(q);
     const Ico = ICONO_TIPO[visible] || Type;
@@ -178,7 +179,7 @@ const PanelPregunta = ({ q, num, primera, ultima, tasaBrl, depende, onCambiar, o
                     <IconButton size="sm" icon={<ArrowDown size={15} />} label="Bajar" title="Bajar" disabled={ultima} onClick={() => onMover(1)} />
                     <IconButton size="sm" icon={<Copy size={15} />} label="Duplicar" title="Duplicar" onClick={onDuplicar} />
                     <IconButton size="sm" danger icon={<Trash2 size={15} />} label="Eliminar" disabled={Boolean(motivoNoBorra)}
-                        title={motivoNoBorra || 'Eliminar'} onClick={onBorrar} />
+                        title={motivoNoBorra || avisoBorrar} onClick={onBorrar} />
                 </div>
             </header>
 
@@ -227,9 +228,12 @@ const PanelPregunta = ({ q, num, primera, ultima, tasaBrl, depende, onCambiar, o
                 </Campo>
             )}
             {conOpciones(q.tipo) && <Opciones q={q} onCambiar={onCambiar} />}
-            {notasDe(q, tasaBrl).length > 0 && (
+            {(notasDe(q).length > 0 || depende.length > 0) && (
                 <ul className="tl-ed-notas">
-                    {notasDe(q, tasaBrl).map((t) => <li key={t}><Info size={14} aria-hidden="true" /><span>{t}</span></li>)}
+                    {notasDe(q).map((t) => <li key={t}><Info size={14} aria-hidden="true" /><span>{t}</span></li>)}
+                    {depende.map((x) => (
+                        <li key={x.id}><Info size={14} aria-hidden="true" /><span>«{x.t || x.id}» aparece según esta respuesta. Si eliminás esta pregunta, esa queda apagada.</span></li>
+                    ))}
                 </ul>
             )}
         </div>

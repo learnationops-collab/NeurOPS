@@ -2,8 +2,10 @@
 
 .talent .tl-ed{--ed-rosa:var(--brand-secondary);--ed-borde:color-mix(in srgb,var(--brand-secondary) 22%,var(--border-subtle));
   display:grid;grid-template-columns:minmax(300px,400px) minmax(0,1fr);gap:var(--s5);align-items:start;margin-top:var(--s8)}
-.talent .tl-ed-lista{display:grid;gap:var(--s4);min-width:0}
-.talent .tl-ed-bloque{display:grid;gap:6px}
+/* minmax(0,1fr): sin esto un título largo (nowrap) ensancha la lista por debajo del panel. */
+.talent .tl-ed-lista{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--s4);min-width:0}
+.talent .tl-ed-bloque{display:grid;grid-template-columns:minmax(0,1fr);gap:6px;min-width:0}
+.talent .tl-ed-fila{min-width:0}
 .talent .tl-ed-bloque .tl-bloque-cab{padding:0 4px 2px}
 
 /* Foco: solo con teclado y en el tono de la marca (el azul del navegador se veía como un recuadro). */

@@ -146,11 +146,21 @@ export const soltar = (preguntas, id, destinoId) => {
     return copia;
 };
 
+/** Borra `id`. Las que dependían de ella (su `si` la nombraba) quedan apagadas y sin
+ * condición: sin la pregunta de la que dependen no aparecerían nunca. */
+export const borrar = (preguntas, id) => preguntas
+    .filter((q) => q.id !== id)
+    .map((q) => {
+        if (!q.si || q.si.id !== id) return q;
+        const { si, ...resto } = q;
+        return { ...resto, on: false };
+    });
+
 /** Las preguntas que dependen de `id` (su condición `si` la nombra): sin ella no aparecerían. */
 export const dependientes = (preguntas, id) => preguntas.filter((q) => q.si && q.si.id === id);
 
 /** Notas que explican lo que hace una pregunta más allá de su texto. */
-export const notasDe = (q, tasaBrl) => {
+export const notasDe = (q) => {
     const n = [];
     if (q.pre === 'sueldo') n.push('Antes de esta pregunta aparece la pantalla «Cómo funciona la remuneración». Si responde mal, vuelve a esa pantalla.');
     if (q.si) {
@@ -160,7 +170,6 @@ export const notasDe = (q, tasaBrl) => {
             ? `Condicional: aparece solo si en «${q.si.id}» responde «${texto}».`
             : `Condicional: aparece solo si «${q.si.id}» tiene respuesta.`);
     }
-    if (q.ref === 'brl') n.push(`Si vive en Brasil, debajo muestra el equivalente en reales con el cambio de Configuración${tasaBrl ? ` (${String(tasaBrl).replace('.', ',')})` : ''}.`);
     if (q.puntua) n.push('Cada opción suma puntos; el techo de IA de la tabla sale de la opción más alta que marca.');
     if (q.mail) n.push('Valida que sea un correo.');
     if (q.tipo === 'tel') n.push('Pide el código de país con un selector que arranca en el país detectado (o el que eligió, si se pregunta). Sin la pregunta de país, el país sale de ese código.');
