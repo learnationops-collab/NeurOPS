@@ -35,11 +35,24 @@ describe('ficha de solo lectura', () => {
     it('todos los permisos en false menos la nota, que queda como la dio el servidor', () => {
         expect(enSoloLectura(fichaPrecall).permisos).toEqual({
             confirmar: false, reportar: false, cobrar: false, reasignar: false, comentar: true,
-            eliminar: false, eliminar_lead: false, editar_datos: false, triar: false, pasar_triage: false,
+            eliminar: false, eliminar_lead: false, eliminar_lead_con_plata: false, editar_datos: false, triar: false,
+            pasar_triage: false,
         });
         // Sin permisos del servidor, la ficha se abriría editable: acá quedan todos en false.
         expect(leerEstado(enSoloLectura(fichaIncompleta)).puedeEditar).toBe(false);
         expect(enSoloLectura(null)).toBeNull();
+    });
+
+    it('eliminar un lead de prueba queda como lo dio el servidor y no saca la ficha de solo lectura', () => {
+        const ficha = { ...fichaPrecall, permisos: { ...fichaPrecall.permisos, eliminar_lead: true, eliminar_lead_con_plata: true } };
+        const vista = enSoloLectura(ficha);
+
+        expect(vista.permisos.eliminar_lead).toBe(true);
+        expect(vista.permisos.eliminar_lead_con_plata).toBe(true);
+        expect(vista.permisos.confirmar).toBe(false);
+        // Quien solo puede eso (el director de marketing) sigue viendo la ficha para mirar.
+        const soloEso = { ...ficha, permisos: { eliminar_lead: true, eliminar_lead_con_plata: true } };
+        expect(leerEstado(enSoloLectura(soloEso)).puedeEditar).toBe(false);
     });
 
     it('la confirmación se ve, pero sin ninguna acción a mano', async () => {
