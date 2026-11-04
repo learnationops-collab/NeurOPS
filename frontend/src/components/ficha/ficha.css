@@ -600,3 +600,18 @@
 .dc-shell .fi-fathom > .fi-fathom-aviso,
 .dc-shell .fi-fathom > .fi-motivo{flex-basis:100%}
 .dc-shell .fi-fathom-aviso{color:var(--warning);line-height:1.4}
+
+/* Segmento del lead junto al nombre (`piezas/SegmentoLead.jsx`): un círculo del color del segmento con su letra. */
+.dc-shell .fi-cab-nombre-seg{display:flex;align-items:center;flex-wrap:wrap;gap:var(--s3);min-width:0}
+.dc-shell .fi-segl-caja{position:relative;display:inline-flex;flex:none}
+.dc-shell .fi-segl-btn{display:inline-grid;place-items:center;padding:0;border:0;background:transparent;
+  border-radius:50%;cursor:pointer;transition:transform .15s}
+.dc-shell .fi-segl-btn:hover{transform:scale(1.08)}
+.dc-shell .fi-segl-btn:focus-visible{box-shadow:var(--focus-ring)}
+.dc-shell .fi-segl-c{display:inline-grid;place-items:center;width:32px;height:32px;border-radius:50%;flex:none;
+  font-size:15px;font-weight:800;line-height:1;color:#0b1030;box-shadow:0 0 0 3px color-mix(in srgb, var(--text-on-surface, #fff) 12%, transparent)}
+.dc-shell .fi-segl-c--chico{width:22px;height:22px;font-size:11px;box-shadow:none}
+.dc-shell .fi-segl-c--sin{background:transparent;color:var(--text-muted, #94a3b8);
+  border:2px dashed color-mix(in srgb, var(--text-on-surface, #fff) 35%, transparent);box-shadow:none}
+.dc-shell .fi-segl-op{display:inline-flex;align-items:center;gap:var(--s3)}
+.dc-shell .fi-segl-menu{min-width:210px;padding:var(--s2);gap:2px}

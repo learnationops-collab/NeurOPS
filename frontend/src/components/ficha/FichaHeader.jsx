@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { CalendarClock, Check, ChevronDown, ChevronRight, ClipboardCopy, Contact, Copy, Gauge, GraduationCap, Megaphone, Pencil, Phone, User, Video, X } from 'lucide-react';
+import { CalendarClock, Check, ChevronDown, ChevronRight, ClipboardCopy, Contact, Copy, GraduationCap, Megaphone, Pencil, Phone, User, Video, X } from 'lucide-react';
 import { IconButton } from '../standard';
 import IdentidadesPersona from './piezas/IdentidadesPersona';
 import useMovimiento from './piezas/useMovimiento';
@@ -14,6 +14,7 @@ import { mensajeDeError } from './fichaApi';
 import { CAMPOS_DATOS, cambiosDe, valoresIniciales } from './datosCliente';
 import { esDeFathom } from './fathom';
 import { gruposDeFuente } from './fuentes';
+import SegmentoLead from './piezas/SegmentoLead';
 import Desplegable from './historial/Desplegable';
 
 /**
@@ -345,7 +346,14 @@ const FichaHeader = ({ ficha, onAccion, onCerrar, puedeEditar = true }) => {
                         {errorDe('nombre') && <ErrorDeCampo id="fi-error-nombre" texto={errorDe('nombre')} />}
                     </motion.span>
                 ) : (
-                    <h2 className="t-h2">{id.nombre || 'Lead sin nombre'}</h2>
+                    <div className="fi-cab-nombre-seg">
+                        <h2 className="t-h2">{id.nombre || 'Lead sin nombre'}</h2>
+                        {/* Junto al nombre y siempre (también «Sin segmento»): una sexta columna de datos
+                            quedaba sola en la segunda fila (04/11/2026). */}
+                        <SegmentoLead segmento={id.segmento} puntos={id.segmento_puntos} manual={id.segmento_manual}
+                            puedeCambiar={puedeCorregir && !!id.appointment_id}
+                            onCambiar={(segmento) => onAccion?.('cambiar_segmento', { segmento })} />
+                    </div>
                 )}
                 <div className="fi-cab-acciones">
                     {editando ? (
@@ -527,12 +535,7 @@ const FichaHeader = ({ ficha, onAccion, onCerrar, puedeEditar = true }) => {
                     </Dato>
 
                     <Dato rotulo="Fuente" icono={Megaphone} valor={fuente} orden={4} />
-                    {id.segmento && (
-                        <Dato rotulo="Segmento" icono={Gauge} orden={5}
-                            valor={id.segmento_puntos != null
-                                ? `${id.segmento} · ${Number(id.segmento_puntos) > 0 ? '+' : ''}${Number(id.segmento_puntos).toLocaleString('es-AR', { maximumFractionDigits: 1 })} pts`
-                                : id.segmento} />
-                    )}
+
                 </div>
             )}
 

@@ -13,6 +13,7 @@ from flask_login import current_user
 from app import db
 from app.api.ficha import bp, sin_permiso
 from app.services import ficha_acciones_service as acciones
+from app.services import ficha_segmento_service
 from app.services.ficha_lead_service import permisos_de
 
 
@@ -264,6 +265,12 @@ def datos_del_lead(appt_id):
     rechazando lo que esa ruta guarda mal callada: ver `ficha_acciones_service.editar_datos`.
     """
     return _ejecutar(appt_id, 'editar_datos', acciones.editar_datos)
+
+
+@bp.route('/<int:appt_id>/segmento', methods=['PATCH'])
+def segmento(appt_id):
+    """Cambia a mano el segmento A/B/C/D del lead (de toda la persona). Con el permiso de corregir sus datos."""
+    return _ejecutar(appt_id, 'editar_datos', ficha_segmento_service.cambiar_segmento)
 
 
 @bp.route('/<int:appt_id>/pago', methods=['POST'])

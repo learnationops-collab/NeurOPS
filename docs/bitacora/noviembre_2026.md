@@ -203,3 +203,11 @@
 - **4 de Noviembre de 2026 (País del lead en Dirección comercial y Marketing)** *([paises_lectura.py](../../app/services/paises_lectura.py), [paises_comercial.py](../../app/services/paises_comercial.py), [PanelPaises.jsx](../../frontend/src/pages/comercial/components/PanelPaises.jsx), [BarraPais.jsx](../../frontend/src/pages/comercial/components/BarraPais.jsx), [ADR-W089](../DECISIONS.md))*:
   - Filtro «País» en Analizar y Revisar (KPIs, Segmentos y listas) y panel «Por país» con agendas, show up, ventas y cash de cada uno; tocar un país lo filtra. El país sale del código del WhatsApp.
   - En Marketing, Todos › Segmentos se puede agrupar por País.
+- **4 de Noviembre de 2026 (Segmento del lead visible y editable en la ficha)** *([ficha_segmento_service.py](../../app/services/ficha_segmento_service.py), [SegmentoLead.jsx](../../frontend/src/components/ficha/piezas/SegmentoLead.jsx), [ADR-W090](../DECISIONS.md))*:
+  - La cabecera de la ficha muestra el segmento junto al nombre (también «Sin segmento») y se cambia con un menú; el cambio vale para toda la persona, queda marcado «manual» y anotado en la bitácora.
+  - En el filtro «País» del dashboard comercial, «Ver todos» ahora cierra el menú.
+- **4 de Noviembre de 2026 (Ajustes de país, Otras y el segmento de la ficha)** *([paises_lectura.py](../../app/services/paises_lectura.py), [segmentos_marketing_service.py](../../app/services/segmentos_marketing_service.py), [OrigenDeOtras.jsx](../../frontend/src/pages/admin/marketing/OrigenDeOtras.jsx), [SegmentoLead.jsx](../../frontend/src/components/ficha/piezas/SegmentoLead.jsx))*:
+  - Segmento de la ficha: un círculo del color del segmento con su letra junto al nombre (punteado sin segmento); ya no desordena la línea de examen, llamada, closer, teléfono y fuente.
+  - Marketing › Otras: se quitó «% de Otras» y se muestra «Con resultado», para que el show up (asistieron ÷ con resultado) se entienda: 5 agendas, 4 con resultado, 4 asistieron, 100%.
+  - Marketing › Segmentos por país: los 352 leads de Workshop se repetían en cada país; ahora van una sola vez junto al número de grupos.
+  - País: Renan Aguilera (+504) quedaba «Sin país» porque Honduras no estaba en la lista del formulario de agendas; se suman Guatemala, El Salvador, Honduras, Nicaragua, Cuba, Portugal, Italia y República Dominicana.
