@@ -428,7 +428,7 @@ const MisAgendas = ({ onResumen, onVerDatos }) => {
                         </>
                     )}
 
-                    {tipo !== 'ventas' && delMes.length === 0 && ventas.faltan === 0 && (
+                    {delMes.length === 0 && (tipo === 'agendas' || (tipo === 'todo' && ventas.faltan === 0)) && (
                         <div ref={premioRef} tabIndex={-1} className="ma-premio-foco">
                             <Premio ref={llamadoRef} festejo={festejo} hoy={resumen.hoy} racha={resumen.racha} mes={mes}
                                 llamado={siguiente
