@@ -118,7 +118,15 @@ const Celda = ({ fila, col }) => {
                     title={`No suma: la venta está ${(fila.estado?.label || 'sin completar').toLowerCase()}`}>
                     {fmt.money(fila.monto)}
                 </span>
-            ) : <span className="celda celda--num">{fmt.money(fila.monto)}</span>;
+            ) : (
+                <span className="celda celda--num">
+                    {fila.aviso_conteo && (
+                        <span className="aviso-conteo" role="img" aria-label={fila.aviso_conteo} title={fila.aviso_conteo}
+                            style={{ color: 'var(--warning)', marginRight: 4, cursor: 'help' }}>⚠</span>
+                    )}
+                    {fmt.money(fila.monto)}
+                </span>
+            );
         // Solo en la tabla de quien opera (ver `defDe` en `tablasDef.js`): el estado de la venta y,
         // debajo, si no tiene agenda, que es lo que se viene a corregir con «Atribuir a una agenda».
         case 'estado_venta':
