@@ -35,12 +35,15 @@ ROLES_SOLO_LECTURA = ('director_marketing',)
 def _solo_roles_con_acceso():
     if current_user.role not in ROLES_CON_ACCESO:
         return jsonify({'message': 'Forbidden'}), 403
-    if current_user.role in ROLES_SOLO_LECTURA and request.method not in ('GET', 'HEAD', 'OPTIONS'):
+    # Su única escritura: eliminar un lead de prueba (los registros de prueba de Marketing, 03/11/2026).
+    if (current_user.role in ROLES_SOLO_LECTURA and request.method not in ('GET', 'HEAD', 'OPTIONS')
+            and request.endpoint != 'ficha_api.eliminar_lead'):
         return jsonify({'message': 'Tu rol solo puede ver la ficha del lead.'}), 403
 
 
 # Los permisos cuyo nombre no se lee como un verbo en la frase del 403.
-_EN_PALABRAS = {'editar_datos': 'corregir los datos del cliente'}
+_EN_PALABRAS = {'editar_datos': 'corregir los datos del cliente',
+               'eliminar_lead_con_plata': 'eliminar un lead que tiene pagos o ventas'}
 
 
 def sin_permiso(accion):

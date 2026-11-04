@@ -435,15 +435,34 @@ def eliminar(appt_id):
         return jsonify({'message': str(e)}), 400
 
 
-@bp.route('/<int:appt_id>/lead', methods=['DELETE'])
-def eliminar_lead(appt_id):
-    """Elimina el lead entero (cliente, agendas y lo que cuelga de él): para los de prueba, solo sin plata."""
+@bp.route('/<int:appt_id>/lead/borrado', methods=['GET'])
+def resumen_de_borrado(appt_id):
+    """Lo que se borraría al eliminar este lead (agendas, pagos, ventas, cuotas, suscripciones) y si quien pregunta
+    puede borrarlo con plata: es lo que muestra la confirmación."""
     from app.services import lead_prueba_service
     appt, error = _agenda_y_permiso(appt_id, 'eliminar_lead')
     if error:
         return error
+    if not appt.client:
+        return jsonify({'message': 'Esta agenda no tiene un lead que eliminar.'}), 400
+    datos = lead_prueba_service.resumen(appt.client)
+    datos['puede_con_plata'] = permisos_de(current_user, appt)['eliminar_lead_con_plata']
+    return jsonify(datos), 200
+
+
+@bp.route('/<int:appt_id>/lead', methods=['DELETE'])
+def eliminar_lead(appt_id):
+    """Elimina el lead entero (cliente, agendas y lo que cuelga de él): para los de prueba. Con plata solo si se
+    pide `?con_plata=1` y el rol puede (`eliminar_lead_con_plata`); una suscripción lo frena siempre."""
+    from app.services import lead_prueba_service
+    appt, error = _agenda_y_permiso(appt_id, 'eliminar_lead')
+    if error:
+        return error
+    con_plata = request.args.get('con_plata') in ('1', 'true')
+    if con_plata and not permisos_de(current_user, appt)['eliminar_lead_con_plata']:
+        return sin_permiso('eliminar_lead_con_plata')
     try:
-        return jsonify(lead_prueba_service.eliminar(appt, current_user)), 200
+        return jsonify(lead_prueba_service.eliminar(appt, current_user, con_plata=con_plata)), 200
     except lead_prueba_service.ErrorDeLead as e:
         return jsonify({'message': str(e)}), 400
 

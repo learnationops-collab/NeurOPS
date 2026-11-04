@@ -425,8 +425,11 @@ def permisos_de(usuario, appt=None):
         'reportar': direccion or rol in ('closer', 'triage'),
         'cobrar': direccion or rol == 'closer',
         'eliminar': direccion or rol == 'closer',
-        # El lead entero con todas sus agendas (los de prueba): solo la dirección y solo sin plata ni suscripción.
-        'eliminar_lead': direccion,
+        # El lead entero con todas sus agendas (los de prueba): la dirección, el director de marketing, los closers y
+        # triage (03/11/2026). Con plata (pagos, cuotas, ventas) solo la dirección y el de marketing; una suscripción
+        # frena a todos.
+        'eliminar_lead': direccion or rol in ('director_marketing', 'closer', 'triage'),
+        'eliminar_lead_con_plata': direccion or rol == 'director_marketing',
         'editar_datos': direccion or rol in ('closer', 'triage'),
         'reasignar': direccion or rol == 'closer',
         # El director de marketing mira la ficha desde sus listas y no escribe en ella (`ROLES_SOLO_LECTURA`).

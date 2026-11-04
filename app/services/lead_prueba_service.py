@@ -31,48 +31,95 @@ def _plural(n, uno, varios):
     return f'{n} {uno if n == 1 else varios}'
 
 
-def bloqueos(cliente):
-    """Los motivos por los que este lead NO es de prueba (tiene plata o suscripción). Vacío = se puede borrar."""
+def _plata(cliente):
+    """Lo que tiene el lead con plata: `{pagos, ventas, planes, suscripciones}`, cada uno con sus filas."""
     uuid = cliente.person_uuid
     agendas = [a.id for a in Appointment.query.filter_by(client_id=cliente.id).all()]
+    return {
+        'pagos': FinancialSale.query.filter(or_(
+            FinancialSale.client_id == cliente.id,
+            *([FinancialSale.person_uuid == uuid, FinancialSale.payer_person_uuid == uuid] if uuid else []),
+        )).order_by(FinancialSale.date).all(),
+        'ventas': Sale.query.filter(or_(Sale.client_id == cliente.id,
+                                        *([Sale.person_uuid == uuid] if uuid else []))).all(),
+        'planes': InstallmentPlan.query.filter(or_(
+            InstallmentPlan.client_id == cliente.id,
+            *([InstallmentPlan.appointment_id.in_(agendas)] if agendas else []),
+        )).all(),
+        'suscripciones': Subscription.query.filter_by(client_id=cliente.id).all(),
+    }
 
-    pagos = FinancialSale.query.filter(or_(
-        FinancialSale.client_id == cliente.id,
-        *([FinancialSale.person_uuid == uuid, FinancialSale.payer_person_uuid == uuid] if uuid else []),
-    )).count()
-    ventas = Sale.query.filter(or_(Sale.client_id == cliente.id, *([Sale.person_uuid == uuid] if uuid else []))).count()
-    planes = InstallmentPlan.query.filter(or_(
-        InstallmentPlan.client_id == cliente.id,
-        *([InstallmentPlan.appointment_id.in_(agendas)] if agendas else []),
-    )).count()
-    suscripciones = Subscription.query.filter_by(client_id=cliente.id).count()
 
+def bloqueos(cliente):
+    """Los motivos por los que este lead NO es de prueba (tiene plata o suscripción). Vacío = se puede borrar."""
+    plata = _plata(cliente)
     motivos = []
-    if pagos:
-        motivos.append(_plural(pagos, 'pago registrado', 'pagos registrados'))
-    if ventas:
-        motivos.append(_plural(ventas, 'venta', 'ventas'))
-    if planes:
-        motivos.append(_plural(planes, 'plan de cuotas', 'planes de cuotas'))
-    if suscripciones:
-        motivos.append(_plural(suscripciones, 'suscripción', 'suscripciones'))
+    if plata['pagos']:
+        motivos.append(_plural(len(plata['pagos']), 'pago registrado', 'pagos registrados'))
+    if plata['ventas']:
+        motivos.append(_plural(len(plata['ventas']), 'venta', 'ventas'))
+    if plata['planes']:
+        motivos.append(_plural(len(plata['planes']), 'plan de cuotas', 'planes de cuotas'))
+    if plata['suscripciones']:
+        motivos.append(_plural(len(plata['suscripciones']), 'suscripción', 'suscripciones'))
     return motivos
 
 
-def eliminar(appt, usuario):
-    """Borra el lead de `appt` con todas sus agendas. Devuelve lo que se borró, para la bitácora y el aviso."""
+def resumen(cliente):
+    """Lo que se borraría con este lead, para la confirmación: lo que cuelga de él y si tiene plata."""
+    plata = _plata(cliente)
+    uuid = cliente.person_uuid
+    return {
+        'nombre': cliente.full_name,
+        'agendas': Appointment.query.filter_by(client_id=cliente.id).count(),
+        'conversaciones': Conversation.query.filter_by(person_uuid=uuid).count() if uuid else 0,
+        'pagos': [{'id': p.id, 'monto': round(float(p.monto or 0), 2), 'fecha': p.date.isoformat() if p.date else None,
+                   'tipo': p.tipo_pago or None, 'medio': p.metodo_pago or None} for p in plata['pagos']],
+        'ventas': len(plata['ventas']),
+        'planes': len(plata['planes']),
+        'suscripciones': len(plata['suscripciones']),
+        'con_plata': bool(plata['pagos'] or plata['ventas'] or plata['planes']),
+    }
+
+
+def _borrar_plata(plata):
+    """Pagos (con su exclusión de la hoja), cuotas y ventas del lead, en ese orden. Sin commit."""
+    from app.services.ficha_pagos_service import _excluir_de_la_hoja
+
+    for plan in plata['planes']:
+        db.session.delete(plan)
+    for pago in plata['pagos']:
+        _excluir_de_la_hoja(pago)
+        db.session.delete(pago)
+    for venta in plata['ventas']:
+        db.session.delete(venta)
+    db.session.flush()
+
+
+def eliminar(appt, usuario, con_plata=False):
+    """Borra el lead de `appt` con todas sus agendas. Devuelve lo que se borró, para la bitácora y el aviso.
+
+    `con_plata`: borra también sus pagos, cuotas y ventas (un lead de prueba con un cobro falso). Una suscripción
+    sigue frenando: antes hay que cerrar su acceso en la Academia."""
     cliente = appt.client
     if not cliente:
         raise ErrorDeLead('Esta agenda no tiene un lead que eliminar.')
-    motivos = bloqueos(cliente)
-    if motivos:
-        raise ErrorDeLead('Este lead tiene ' + ' y '.join(motivos) + ': con plata o suscripción no es de prueba y no se '
-                          'elimina por acá. Se puede borrar solo su agenda desde el Historial.')
+    plata = _plata(cliente)
+    if plata['suscripciones']:
+        raise ErrorDeLead('Este lead tiene ' + _plural(len(plata['suscripciones']), 'suscripción', 'suscripciones')
+                          + ': antes hay que cerrar su acceso en la Academia. Se puede borrar solo su agenda desde el Historial.')
+    if (plata['pagos'] or plata['ventas'] or plata['planes']) and not con_plata:
+        raise ErrorDeLead('Este lead tiene ' + ' y '.join(bloqueos(cliente)) + ': con plata no se elimina sin confirmar '
+                          'que es de prueba. Se puede borrar solo su agenda desde el Historial.')
 
     cliente_id, uuid, nombre = cliente.id, cliente.person_uuid, cliente.full_name
     agendas = Appointment.query.filter_by(client_id=cliente_id).all()
     cuenta = {'agendas': len(agendas)}
     try:
+        if con_plata:
+            # Antes que las agendas: el plan de cuotas cuelga de una de ellas y frenaría su borrado.
+            cuenta.update(pagos=len(plata['pagos']), ventas=len(plata['ventas']), cuotas=len(plata['planes']))
+            _borrar_plata(plata)
         for agenda in agendas:
             # Borra el evento de Google, desvincula las respuestas de la encuesta y se lleva el registro de eventos.
             ok, error = BookingService.eliminar_agenda(agenda)
