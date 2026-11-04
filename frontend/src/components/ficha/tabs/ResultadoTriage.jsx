@@ -110,9 +110,11 @@ export default function ResultadoTriage({ ficha, onAccion, irA = null, puedeEdit
     setGuardando(true);
     setError(null);
     try {
-      await onAccion('reportar_triage', payload(r));
-      setGuardado({ filas: filas(r, contexto), titulo: r.res === 'reagenda' ? 'Sesión reagendada'
-        : vende(r) ? 'Venta del low ticket registrada' : 'Llamada reportada' });
+      const respuesta = await onAccion('reportar_triage', payload(r));
+      // El servidor vuelve a leer la agenda después de guardar y manda `verificado`: se dice en el título.
+      const verificada = respuesta?.verificado ? ' · verificada en el servidor' : '';
+      setGuardado({ filas: filas(r, contexto), titulo: (r.res === 'reagenda' ? 'Sesión reagendada'
+        : vende(r) ? 'Venta del low ticket registrada' : 'Llamada reportada') + verificada });
     } catch (err) {
       setError(mensajeDeError(err));
     } finally {

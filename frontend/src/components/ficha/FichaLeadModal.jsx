@@ -5,6 +5,7 @@ import FichaHeader from './FichaHeader';
 import FichaTabs from './FichaTabs';
 import { Aviso, diaLegible, useMovimiento } from './piezas';
 import NotaEnTooltip from './piezas/NotaEnTooltip';
+import BarraGuardado from './piezas/BarraGuardado';
 import { Hueso } from '../huesos/Huesos';
 import { enSoloLectura, leerEstado } from './estadoFicha';
 import { ejecutarAccion, ejecutarConsulta, mensajeDeError, obtenerFicha } from './fichaApi';
@@ -202,6 +203,8 @@ const FichaLeadModal = ({
     const [cargando, setCargando] = useState(true);
     const [error, setError] = useState(null);
     const [aviso, setAviso] = useState(null);
+    // La hora de la última lectura de la ficha desde el servidor: lo que se ve es lo que la base tiene.
+    const [leidaEn, setLeidaEn] = useState(null);
     // Se vende una vez: con la venta ya registrada, volver a Resultado no arranca otra.
     const [venderAlAbrir, setVenderAlAbrir] = useState(abrirEnVenta);
     // Igual con el seguimiento: una vez reportado, Resultado vuelve a leer el de la agenda.
@@ -231,6 +234,7 @@ const FichaLeadModal = ({
             // Una recarga que llega después de otra más nueva traería datos viejos.
             if (!vigente()) return null;
             setFicha(soloLectura ? enSoloLectura(datos) : datos);
+            setLeidaEn(new Date());
             return datos;
         } catch (err) {
             if (err?.code === 'ERR_CANCELED' || !vigente()) return null;
@@ -403,6 +407,7 @@ const FichaLeadModal = ({
                     role={pestana ? 'tabpanel' : undefined}
                     aria-labelledby={pestana ? `fi-tab-${pestana}` : undefined}>
                     <div style={{ display: 'grid', gap: 'var(--s3)' }}>
+                        {ficha && !soloLectura && estado.puedeEditar && <BarraGuardado leidaEn={leidaEn} onVerificar={() => cargar()} />}
                         {aviso && (
                             <Aviso tono={aviso.tono} titulo={aviso.texto} onCerrar={() => setAviso(null)} />
                         )}
