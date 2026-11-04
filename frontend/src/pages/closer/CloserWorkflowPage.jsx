@@ -36,6 +36,7 @@ import TriageMetricas from '../triage/components/TriageMetricas';
 import TriageAbandonos from '../triage/components/TriageAbandonos';
 import CompartidosConmigo, { useCompartidos } from '../../components/compartidos/CompartidosConmigo';
 import ProcrastinarModal from './components/ProcrastinarModal';
+import ResumenDelDia from './components/ResumenDelDia';
 import YaTieneAgenda from './components/YaTieneAgenda';
 import EliminarLead from './components/EliminarLead';
 import { localInputsToUtcIso, parseUtcIso, splitLocalDateTime, localToday, localDateFromNow, formatCountdown, formatAgendaDateTime, viewerTimezoneLabel } from '../../utils/datetime';
@@ -1760,6 +1761,72 @@ const CloserWorkflowPage = () => {
         paginaRef.current?.scrollTo({ top: 0 });
     };
 
+    // Resumen previo al envío (04/11/2026): qué se hizo y qué quedó sin resultado, con salto a la lista.
+    const [resumenAbierto, setResumenAbierto] = useState(false);
+    const [resumenDatos, setResumenDatos] = useState(null);
+    const [resumenCargando, setResumenCargando] = useState(false);
+    const abrirResumenDelDia = async () => {
+        if (backlogBlocksReport && pendingPreviousDays && pendingPreviousDays.total > 0) {
+            toast.error('Tenés tareas pendientes de días anteriores — resolvelas antes de enviar el reporte.');
+            return;
+        }
+        if (reportSlots.trim() === '') {
+            toast.error('Ingresá los slots disponibles del día — es el único dato que no se calcula solo.');
+            return;
+        }
+        setResumenAbierto(true);
+        setResumenCargando(true);
+        try {
+            const res = await api.get('/closer/deck/daily-report/summary', { params: diaElegido ? { date: diaElegido } : {} });
+            setResumenDatos(res.data);
+        } catch (err) {
+            resincronizarDia(err);
+            setResumenAbierto(false);
+            toast.error(err.response?.data?.error || 'No se pudo armar el resumen del día');
+        } finally {
+            setResumenCargando(false);
+        }
+    };
+    const enviarReporte = async () => {
+        setSendingReport(true);
+        try {
+            // Hoy va sin fecha (el backend sabe cuál es el hoy del closer).
+            const res = await api.post('/closer/deck/daily-report', {
+                date: diaElegido || undefined,
+                slots: parseInt(reportSlots) || 0,
+                reflections: { victory: reflection.win, opportunity: reflection.fix }
+            });
+            setReportSent(true);
+            setReportSentAt(new Date().toISOString());
+            setResumenAbierto(false);
+            const enviadoAyer = !!res.data?.late;
+            if (!enviadoAyer) setTodayReportSent(true);
+            // El de ayer ya está: se apagan el aviso y el punto del dock.
+            if (enviadoAyer) setEstadoDeAyer(prev => (prev ? { ...prev, sent: true, unreported: false } : prev));
+            toast.success(enviadoAyer
+                ? `Reporte de ayer (${etiquetaDia(res.data?.date || reportDate, { largo: true })}) enviado con éxito`
+                : 'Reporte del día enviado con éxito');
+        } catch (err) {
+            if (err.response?.status === 409 && err.response?.data?.pending_previous_days) {
+                setPendingPreviousDays(err.response.data.pending_previous_days);
+                setResumenAbierto(false);
+            }
+            // Fuera de la ventana hoy/ayer (pestaña abierta desde anteayer): se vuelve a hoy.
+            resincronizarDia(err);
+            toast.error(err.response?.data?.error || "Error al enviar el reporte del día");
+        } finally {
+            setSendingReport(false);
+        }
+    };
+    // «Corregir»: la lista de Mi cartera con las agendas del día que siguen en Pendiente.
+    const corregirDesdeResumen = () => {
+        setResumenAbierto(false);
+        setActiveView('cartera');
+        setSearchParams({ p: 'custom', d: reportDate, h: reportDate, t: 'agendas',
+            f: JSON.stringify({ post_call: 'Pendiente' }), ft: String(Date.now()) });
+        paginaRef.current?.scrollTo({ top: 0 });
+    };
+
     return (
         <div ref={paginaRef} className={`h-screen overflow-y-auto bg-v6 text-slate-100 flex flex-col custom-scrollbar${activeView === 'inbox' && (activeStep === 'confirmations' || activeStep === 'calls') ? ' clarity-v6' : ''}`}
             style={{ paddingBottom: 'calc(132px + env(safe-area-inset-bottom, 0px))' }}>
@@ -2621,43 +2688,7 @@ const CloserWorkflowPage = () => {
                         <button
                             disabled={sendingReport || (backlogBlocksReport && pendingPreviousDays && pendingPreviousDays.total > 0)}
                             title={backlogBlocksReport && pendingPreviousDays && pendingPreviousDays.total > 0 ? 'Resolvé el trabajo atrasado de días anteriores antes de poder enviar' : undefined}
-                            onClick={async () => {
-                                if (backlogBlocksReport && pendingPreviousDays && pendingPreviousDays.total > 0) {
-                                    toast.error('Tenés tareas pendientes de días anteriores — resolvelas antes de enviar el reporte.');
-                                    return;
-                                }
-                                if (reportSlots.trim() === '') {
-                                    toast.error('Ingresá los slots disponibles del día — es el único dato que no se calcula solo.');
-                                    return;
-                                }
-                                setSendingReport(true);
-                                try {
-                                    // Hoy va sin fecha (el backend sabe cuál es el hoy del closer).
-                                    const res = await api.post('/closer/deck/daily-report', {
-                                        date: diaElegido || undefined,
-                                        slots: parseInt(reportSlots) || 0,
-                                        reflections: { victory: reflection.win, opportunity: reflection.fix }
-                                    });
-                                    setReportSent(true);
-                                    setReportSentAt(new Date().toISOString());
-                                    const enviadoAyer = !!res.data?.late;
-                                    if (!enviadoAyer) setTodayReportSent(true);
-                                    // El de ayer ya está: se apagan el aviso y el punto del dock.
-                                    if (enviadoAyer) setEstadoDeAyer(prev => (prev ? { ...prev, sent: true, unreported: false } : prev));
-                                    toast.success(enviadoAyer
-                                        ? `Reporte de ayer (${etiquetaDia(res.data?.date || reportDate, { largo: true })}) enviado con éxito`
-                                        : 'Reporte del día enviado con éxito');
-                                } catch (err) {
-                                    if (err.response?.status === 409 && err.response?.data?.pending_previous_days) {
-                                        setPendingPreviousDays(err.response.data.pending_previous_days);
-                                    }
-                                    // Fuera de la ventana hoy/ayer (pestaña abierta desde anteayer): se vuelve a hoy.
-                                    resincronizarDia(err);
-                                    toast.error(err.response?.data?.error || "Error al enviar el reporte del día");
-                                } finally {
-                                    setSendingReport(false);
-                                }
-                            }}
+                            onClick={abrirResumenDelDia}
                             className="h-[52px] px-8 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black uppercase text-[11px] tracking-widest rounded-full transition-all cursor-pointer flex items-center gap-2"
                             style={{ background: 'var(--v6-gradb)', boxShadow: '0 10px 15px -3px color-mix(in srgb, var(--ln-brand-2, #1323c6) 35%, transparent)' }}
                         >
@@ -2719,6 +2750,15 @@ const CloserWorkflowPage = () => {
                     <DashboardComercial embebido seccionFija="analizar"
                         onIrASeccion={() => irASeccion('cartera')} />
                 )}
+
+            {resumenAbierto && (
+                <ResumenDelDia dia={reportDate} datos={resumenDatos} cargando={resumenCargando}
+                    enviando={sendingReport} reenvio={reportSent}
+                    onSeguir={() => setResumenAbierto(false)}
+                    onCorregir={corregirDesdeResumen}
+                    onVerAtrasadas={() => { setResumenAbierto(false); setActiveView('inbox'); }}
+                    onEnviar={enviarReporte} />
+            )}
 
             {/* Fijo abajo. Dentro de un `.dc-shell` porque de ahí cuelgan sus estilos; el resto de
                 la página NO va adentro: el reset de botones del shell le borraría el Tailwind. */}

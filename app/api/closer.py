@@ -1828,6 +1828,25 @@ def get_daily_report_status():
     }), 200
 
 
+@bp.route('/deck/daily-report/summary', methods=['GET'])
+@login_required
+def get_daily_report_summary():
+    """Lo que se hizo ese día y las agendas que quedaron sin resultado: el resumen previo al envío
+    del reporte del día (`app/services/cierre_dia_service.py`). Hoy o ayer, como el reporte."""
+    if current_user.role not in ['closer', 'triage', 'admin']:
+        return jsonify({"message": "Forbidden"}), 403
+    day_local, _hoy, error = _dia_reportable(current_user, request.args.get('date'))
+    if error:
+        return error
+    from app.services.cierre_dia_service import resumen_del_dia
+    try:
+        resumen = resumen_del_dia(current_user, day_local)
+        resumen['pending_previous_days'] = CloserService.get_previous_days_pending(current_user.id, day_local)
+    except Exception as e:
+        return error_interno(e, 'Error al armar el resumen del día')
+    return jsonify(resumen), 200
+
+
 @bp.route('/deck/daily-report', methods=['POST'])
 @login_required
 def send_daily_report():
