@@ -320,7 +320,7 @@ def _cash_por_dia(filas_ventas, start, end):
 
 
 def bloque_closers(start, end, closer_id=None, closer_nombre=None, con_reales=True, segmento=None,
-                   sin_excluidos=False):
+                   sin_excluidos=False, paises=None):
     """Todos los números de Analizar para closers, de un período. Se llama dos veces (período y
     período comparado) para sacar los deltas sin duplicar ninguna fórmula.
 
@@ -338,6 +338,10 @@ def bloque_closers(start, end, closer_id=None, closer_nombre=None, con_reales=Tr
     if segmento:
         from app.services.segmentos_comercial import filtrar
         agendas, ventas = filtrar(agendas, segmento), filtrar(ventas, segmento)
+    if paises:
+        # El país del lead (`paises_lectura`): como el segmento, acota agendas y cobros.
+        from app.services import paises_lectura
+        agendas, ventas = paises_lectura.filtrar(agendas, paises), paises_lectura.filtrar(ventas, paises)
     tot_a = ComercialService.totales_agendas(agendas)
     tot_v = ComercialService.totales_ventas(ventas)
     estados = estados_de(agendas)
@@ -771,7 +775,7 @@ def _deltas(actual, previo, modos):
     return salida
 
 
-def resumen(rol, start, end, prev_start=None, prev_end=None, miembro_id=None, segmento=None):
+def resumen(rol, start, end, prev_start=None, prev_end=None, miembro_id=None, segmento=None, paises=None):
     """Todo lo que muestra la pestaña Analizar → Dashboard, con sus deltas."""
     miembro = User.query.get(miembro_id) if miembro_id else None
     nombre = miembro.username if miembro else None
@@ -780,6 +784,8 @@ def resumen(rol, start, end, prev_start=None, prev_end=None, miembro_id=None, se
     # El reporte diario del setter (ManyChat) no tiene segmento: el filtro es del closer.
     if segmento and rol == ROL_CLOSERS:
         kwargs['segmento'] = segmento
+    if paises and rol == ROL_CLOSERS:
+        kwargs['paises'] = paises
 
     actual = bloque(start, end, **kwargs)
     previo = bloque(prev_start, prev_end, **kwargs) if prev_start else None

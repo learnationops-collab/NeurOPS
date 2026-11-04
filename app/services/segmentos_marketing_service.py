@@ -24,6 +24,7 @@ import time
 from app import db
 from app.models import Conversation
 from app.services import anuncios_service, conteo_agendas_service, fuentes_registros_service, fuentes_service
+from app.services import paises_lectura
 from app.services import segmentos_cortes as cortes
 from app.services.closer_name_service import resolver_nombre_closer
 from app.services.fuentes_service import dividir
@@ -44,8 +45,8 @@ CAMPOS = ('leads', 'agendas', 'reportadas', 'show_up', 'ventas', 'new_cash', 'ca
 DERIVADAS = ('pct_show_up', 'pct_lead_agenda', 'pct_cierre', 'ticket', 'pct_cash')
 FUENTES_TODAS = conteo_agendas_service.FUENTES
 ETIQUETA_FUENTE = {'setting': 'Setting', 'workshop': 'Workshop', 'otras': 'Otras'}
-CORTES = ('fuente', 'origen', 'closer', 'ninguno')
-ETIQUETA_CORTE = {'fuente': 'Fuente', 'origen': 'Origen', 'closer': 'Closer', 'ninguno': 'Sin agrupar'}
+CORTES = ('fuente', 'origen', 'closer', 'pais', 'ninguno')
+ETIQUETA_CORTE = {'fuente': 'Fuente', 'origen': 'Origen', 'closer': 'Closer', 'pais': 'País', 'ninguno': 'Sin agrupar'}
 # Lo que NO se puede partir por segmento (gasto de Meta: no conoce al lead).
 SIN_SEGMENTO_POSIBLE = ('gasto',)
 TODO = 'todo'
@@ -62,7 +63,7 @@ PERTENECE = {
     'leads': lambda h: h['t'] == 'lead',
 }
 _CLAVE_DE = {'fuente': lambda h: h['fuente'], 'origen': lambda h: h['origen'], 'closer': lambda h: h['closer'],
-             'ninguno': lambda h: TODO}
+             'pais': lambda h: h['pais'], 'ninguno': lambda h: TODO}
 
 
 # --- Los hechos --------------------------------------------------------------------------------------
@@ -89,10 +90,11 @@ def _leads_de_setting(desde, hasta):
     entradas = [e for e in anuncios_service.entradas_del_periodo(desde_dt, hasta_dt, anuncios_service._clave_de_cada_anuncio())
                 if e['clave'] not in archivadas]
     segmento = de_conversaciones({e['lead_id'] for e in entradas})
+    pais = paises_lectura.de_conversaciones({e['lead_id'] for e in entradas})
     setter = _setters_de({e['lead_id'] for e in entradas})
     return [{'t': 'lead', 'id': f"{e['lead_id']}-{e['clave'] or 'sin'}", 'fuente': 'setting',
              'origen': (setter.get(e['lead_id']) or '').strip() or 'Sin identificar', 'closer': None,
-             'seg': segmento.get(e['lead_id'], SIN)} for e in entradas]
+             'seg': segmento.get(e['lead_id'], SIN), 'pais': pais.get(e['lead_id'], paises_lectura.SIN)} for e in entradas]
 
 
 _MEMORIA = {}   # {(desde, hasta): (cuándo, resultado)}: cambiar de corte o de filtro no rehace la cuenta de 3 s
@@ -121,16 +123,19 @@ def _hechos(desde, hasta):
 
     personas = conteo_agendas_service.personas(desde, hasta, 'alta')
     de_agenda = de_agendas_del_libro(p['agenda_id'] for p in personas)
+    pais_de_agenda = paises_lectura.de_agendas_del_libro(p['agenda_id'] for p in personas)
     salida = [{'t': 'agenda', 'id': str(p['agenda_id']), 'fuente': p['fuente'], 'origen': conteo_agendas_service.origen_de_agenda(p['fuente'], p['origen']),
                'closer': resolver_nombre_closer(p['closer']), 'asistio': bool(p['asistio']),
-               'con_resultado': bool(p['con_resultado']), 'seg': de_agenda[p['agenda_id']]} for p in personas]
+               'con_resultado': bool(p['con_resultado']), 'seg': de_agenda[p['agenda_id']],
+               'pais': pais_de_agenda[p['agenda_id']]} for p in personas]
 
     de_cobro = de_cobros(cobros)
+    pais_de_cobro = paises_lectura.de_cobros(cobros)
     for cobro, c in zip(cobros, fuentes_service._cobros_para_sumar(cobros, claves)):
         fuente = fuentes_service.fuente_de_cobro(c['por_clave'], c['balde']) or 'otras'
         salida.append({'t': 'cobro', 'id': str(cobro.id), 'fuente': fuente, 'origen': _origen_de_cobro(fuente, c),
                        'closer': resolver_nombre_closer(cobro.email_vendedor), 'monto': c['monto'],
-                       'es_venta': c['es_venta'], 'seg': de_cobro[cobro.id]})
+                       'es_venta': c['es_venta'], 'seg': de_cobro[cobro.id], 'pais': pais_de_cobro[cobro.id]})
     salida.extend(_leads_de_setting(desde, hasta))
     return salida, fuentes_service._leads_de_workshop(desde, hasta)
 
@@ -183,7 +188,8 @@ def _tabla(corte, clave, hs, elegidos, clics):
     total = fila(None, elegidas)
     if corte != 'closer' and ambito == {'workshop'}:
         total['leads'] = None if parcial else clics
-    etiqueta = {'fuente': ETIQUETA_FUENTE.get(clave, clave), 'ninguno': 'Todo lo filtrado'}.get(corte, clave)
+    etiqueta = {'fuente': ETIQUETA_FUENTE.get(clave, clave), 'ninguno': 'Todo lo filtrado',
+                'pais': paises_lectura.ETIQUETAS.get(clave, clave)}.get(corte, clave)
     return {'key': clave, 'label': etiqueta, 'filas': filas,
             'total': {'segmento': None, 'label': 'Total del filtro' if parcial else 'Total', **_derivadas(total, todo)}}
 

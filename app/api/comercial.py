@@ -22,7 +22,7 @@ from app.models.user import ROLE_ADMIN, ROLE_CLOSER, ROLE_DIRECTOR_COMERCIAL, RO
 from app.services import comercial_analitica as analitica
 from app.services import comercial_no_cerradas
 from app.services import comercial_reporte as reporte
-from app.services import segmentos_comercial, segmentos_lectura
+from app.services import paises_comercial, paises_lectura, segmentos_comercial, segmentos_lectura
 from app.services import comercial_simulador as simulador
 from app.services.booking_service import BookingService
 from app.services.comercial_service import (
@@ -136,6 +136,7 @@ def contexto():
         'periodos': PERIODOS,
         'comparaciones': COMPARACIONES,
         'estados': {'pre_call': PRE_CALL, 'post_call': POST_CALL},
+        'paises': paises_lectura.lista(),
     }), 200
 
 
@@ -146,8 +147,19 @@ def resumen():
     start, end, prev_start, prev_end = _rangos()
     # `segmento` (A, B, C, D, sin; varios por coma): el Analizar del closer sobre esos leads solamente.
     datos = analitica.resumen(rol, start, end, prev_start, prev_end, miembro_id,
-                              segmento=segmentos_lectura.parsear(request.args.get('segmento')))
+                              segmento=segmentos_lectura.parsear(request.args.get('segmento')),
+                              paises=paises_lectura.parsear(request.args.get('pais')))
     return jsonify({**datos, 'dates': _fechas(start, end, prev_start, prev_end)}), 200
+
+
+@bp.route('/paises', methods=['GET'])
+def paises():
+    """Analizar › Por país: las agendas, el show up, las ventas y el cash del período por el país del lead
+    (`paises_comercial`). Mismo alcance que el resumen (`alcance_de`); `?segmento=A,B` lo acota a esos segmentos."""
+    rol, miembro_id, _ = _alcance()
+    start, end, _prev_start, _prev_end = _rangos()
+    datos = paises_comercial.panel(rol, start, end, miembro_id, segmentos_lectura.parsear(request.args.get('segmento')))
+    return jsonify({**datos, 'dates': _fechas(start, end, None, None)}), 200
 
 
 @bp.route('/segmentos', methods=['GET'])
@@ -160,7 +172,8 @@ def segmentos():
     # `corte` (closer|setter|fuente|origen) parte cada segmento por eso; el VS del header (`compare`) trae el período comparado.
     previo = (prev_start, prev_end) if prev_start else None
     datos = segmentos_comercial.panel(rol, start, end, miembro_id, segmentos_lectura.parsear(request.args.get('segmento')),
-                                      request.args.get('corte', 'ninguno'), previo)
+                                      request.args.get('corte', 'ninguno'), previo,
+                                      paises_lectura.parsear(request.args.get('pais')))
     return jsonify({**datos, 'dates': _fechas(start, end, prev_start, prev_end)}), 200
 
 
@@ -177,7 +190,8 @@ def segmentos_registros():
     try:
         datos = segmentos_comercial.registros(rol, start, end, miembro_id, request.args.get('metrica', ''),
                                               request.args.get('segmento', ''), request.args.get('corte', 'ninguno'),
-                                              request.args.get('grupo') if 'grupo' in request.args else None)
+                                              request.args.get('grupo') if 'grupo' in request.args else None,
+                                              paises_lectura.parsear(request.args.get('pais')))
     except ValueError as error:
         return jsonify({'error': str(error)}), 400
     return jsonify(datos), 200
@@ -322,6 +336,12 @@ def tabla():
         elegidos = segmentos_lectura.parsear(request.args.get('segmento'))
         filas = segmentos_comercial.filtrar(filas, elegidos)
         if elegidos:
+            totales = ComercialService.totales_ventas(filas) if cual == 'ventas' else ComercialService.totales_agendas(filas)
+    # Lo mismo con el país del lead (`?pais=CL,MX`, 04/11/2026): las filas llevan `pais` y los totales se rehacen.
+    if cual in ('agendas', 'generadas', 'ventas'):
+        paises_elegidos = paises_lectura.parsear(request.args.get('pais'))
+        filas = paises_lectura.filtrar(filas, paises_elegidos)
+        if paises_elegidos:
             totales = ComercialService.totales_ventas(filas) if cual == 'ventas' else ComercialService.totales_agendas(filas)
     return jsonify({'tabla': cual, 'rol': rol, 'filas': filas, 'totales': totales,
                     'dates': _fechas(start, end, None, None)}), 200

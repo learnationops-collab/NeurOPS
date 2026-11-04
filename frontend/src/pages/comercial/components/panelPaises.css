@@ -1,0 +1,25 @@
+/* Tabla del panel «Por país» (Analizar). Una sola grilla para la cabecera y las filas, así las columnas
+   quedan alineadas; los números van a la derecha, el país a la izquierda. */
+.pp-tabla { display: flex; flex-direction: column; }
+.pp-fila {
+    display: grid;
+    grid-template-columns: var(--pp-cols);
+    column-gap: 10px;
+    align-items: center;
+    width: 100%;
+    padding: 9px 12px;
+    text-align: left;
+    background: transparent;
+    border: 0;
+    border-bottom: 1px solid color-mix(in srgb, currentColor 10%, transparent);
+    color: inherit;
+    font: inherit;
+    font-size: 13.5px;
+}
+.pp-fila > .num { text-align: right; white-space: nowrap; }
+.pp-cab { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; opacity: .6; border-bottom-width: 1px; }
+button.pp-fila { cursor: pointer; }
+button.pp-fila:hover { background: color-mix(in srgb, currentColor 6%, transparent); }
+button.pp-fila[aria-pressed="true"] { background: color-mix(in srgb, var(--brand, #ff3fa4) 14%, transparent); }
+.pp-total { font-weight: 600; border-bottom: 0; }
+.pp-fila small { opacity: .6; font-weight: 400; }
