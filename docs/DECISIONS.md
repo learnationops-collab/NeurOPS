@@ -796,7 +796,7 @@
 - **Qué se pierde:** un reporte que se guardó a medias antes de este cambio no se repara solo: se completa volviendo a reportar la llamada. «Verificar guardado» no reenvía nada (no hay borradores que enviar), solo lee y muestra la base.
 - **Consecuencias:** sin migración. Un fallo en la nota al closer ya no deja la llamada pendiente: queda reportada y el error se muestra.
 
-## ADR-W097: Una persona, una palabra clave para todos sus pagos y para sus agendas anteriores
+## ADR-W099: Una persona, una palabra clave para todos sus pagos y para sus agendas anteriores
 
 - **Fecha:** 2026-11-04 · **Subsistema:** Marketing / Setter · **Estado:** implementada. Pedido de Kerwin: «si una persona ya tiene una palabra clave, tiene que ser la misma para todo (seña, parcial) y las agendas deberían atribuirse ya con ella».
 - **Contexto:** la palabra clave de un pago era la de la última interacción hasta la fecha de ese pago. Laura Orellana pagó una seña el 20/07 (antes de escribir la palabra) y un parcial el 27/07: la seña salía «Sin palabra clave» y el parcial «simulacro 100», aunque es la misma persona.
