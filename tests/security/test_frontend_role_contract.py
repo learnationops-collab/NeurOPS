@@ -20,7 +20,13 @@ ROLES_REALES = {'admin', 'operator', 'closer', 'setter', 'triage', 'director_com
 # Nombres que App.jsx menciona en algun ProtectedRoute pero que no son un rol de la app (nadie los tiene).
 ROLES_INEXISTENTES_EN_EL_FRONTEND = {'marketer'}
 
+# El triage trabaja en la misma pantalla que el closer (`/triage/deck` monta `CloserWorkflowPage`, 02/11/2026), asi que
+# el analisis le atribuye lo mismo que al closer: sus excepciones valen tambien para el.
+_COMO_EL_CLOSER = 'El triage usa la pantalla del closer (`/triage/deck`). '
+
 _MOTIVO_OPERAR_VENTAS = {
+    'triage': _COMO_EL_CLOSER + 'Las acciones de Operaciones sobre las ventas (atribuir, reenviar el webhook, editarlas) '
+              'no se le dibujan (`puede_operar` es solo admin y operador).',
     'closer': 'Corregir las ventas de todo el equipo (su estado, su closer, su agenda) es de Operaciones: en '
               'el Revisar del closer las acciones de Operaciones no se dibujan (`puede_operar`) y sus '
               'ventas se corrigen desde la ficha.',
@@ -47,6 +53,7 @@ EXCEPCIONES = {
                   'lotes contra el limite de la Academia; ni siquiera ve las tablas Clientes y Ventas.',
         'operator': 'Operaciones ve el dashboard embebido solo en Revisar (sus Registros, 10/10/2026): el '
                     'boton del lote es de la direccion (`puede_reportar`) y no se le muestra.',
+        'triage': _COMO_EL_CLOSER + 'El boton del lote es de la direccion (`puede_reportar`) y no se le muestra.',
     },
     # Payroll es una seccion del mismo dashboard (08/10/2026) y solo se dibuja con «ver finanzas»
     # (`puede_ver_finanzas`: admin o direccion comercial con el permiso). La nomina de todo el equipo no
@@ -58,6 +65,7 @@ EXCEPCIONES = {
                   'del equipo no es informacion para un setter.',
         'operator': 'Operaciones monta el dashboard solo en Revisar (sus Registros, 10/10/2026); Payroll es de '
                     'Finances, con «ver finanzas», y no se le muestra.',
+        'triage': _COMO_EL_CLOSER + 'La seccion Payroll es de Finances, con «ver finanzas», y no se le muestra.',
     } for ruta in (('GET', '/api/public/financial-sales/payroll'),
                    # «Excluir ventas» de la barra de Payroll: saca una venta de la nomina de todos.
                    ('POST', '/api/public/financial-sales/<int:sale_id>/toggle-payroll-exclusion'))},
@@ -66,15 +74,16 @@ EXCEPCIONES = {
     # con el dashboard comercial, que tambien es "Mis datos" y "Mi cartera" de closers y setters, pero se
     # dibujan solo para quien opera los registros (`puede_operar`: admin y operador).
     **{ruta: {rol: _MOTIVO_OPERAR_VENTAS[rol] for rol in roles} for ruta, roles in (
-        (('GET', '/api/public/financial-sales'), ('closer', 'setter')),
-        (('PUT', '/api/public/financial-sales/<int:sale_id>'), ('closer', 'setter')),
-        (('POST', '/api/public/financial-sales/<int:sale_id>/resend-webhook'), ('closer', 'setter')),
+        (('GET', '/api/public/financial-sales'), ('closer', 'setter', 'triage')),
+        (('PUT', '/api/public/financial-sales/<int:sale_id>'), ('closer', 'setter', 'triage')),
+        (('POST', '/api/public/financial-sales/<int:sale_id>/resend-webhook'), ('closer', 'setter', 'triage')),
         (('GET', '/api/public/financial-agendas'), ('closer', 'setter')),
-        (('POST', '/api/public/financial-agendas/atribucion'), ('closer', 'setter')),
+        (('POST', '/api/public/financial-agendas/atribucion'), ('closer', 'setter', 'triage')),
         (('PUT', '/api/public/financial-agendas/<int:agenda_id>'), ('closer', 'setter')),
-        # Cada uno ya puede leer la lista de su propio rol: lo que se le niega es la del otro.
-        (('GET', '/api/public/active-closers'), ('setter',)),
-        (('GET', '/api/public/active-setters'), ('closer',)),
+        # Cada uno ya puede leer la lista de su propio rol: lo que se le niega es la del otro. El triage no tiene
+        # ninguna de las dos: solo las pide el modal de atribucion, que es de Operaciones.
+        (('GET', '/api/public/active-closers'), ('setter', 'triage')),
+        (('GET', '/api/public/active-setters'), ('closer', 'triage')),
     )},
 }
 
@@ -175,9 +184,10 @@ import pytest  # noqa: E402
 
 from app.api.ficha import ROLES_CON_ACCESO  # noqa: E402
 
-# Los cinco roles que trabajan un lead entran; los tres que no tocan el circuito comercial, no.
-# Operaciones entra desde el 10/10/2026: corrige los registros desde Revisar.
-ROLES_FUERA_DE_LA_FICHA = ('director_marketing', 'hiring')
+# Los roles que trabajan un lead entran; los que no tocan el circuito comercial, no.
+# Operaciones entra desde el 10/10/2026: corrige los registros desde Revisar. El director de marketing entra
+# desde el 03/11/2026 SOLO a leer (ver `ROLES_SOLO_LECTURA` y el test de abajo).
+ROLES_FUERA_DE_LA_FICHA = ('hiring',)
 
 
 def _rutas_de_la_ficha(app):
@@ -267,13 +277,50 @@ def test_los_roles_de_fuera_del_circuito_comercial_no_leen_el_lead(client, db, m
     assert r.status_code == 403, rol
 
 
+def test_el_director_de_marketing_lee_la_ficha_y_no_escribe_salvo_eliminar_un_lead(client, db, make_user,
+                                                                              auth_headers, lead_de_prueba):
+    usuario = make_user(role='director_marketing', username='dm_ficha', email='dm_ficha@ficha.test')
+    cabeceras = auth_headers(usuario)
+
+    leer = client.get(f'/api/ficha/lead?appointment_id={lead_de_prueba.id}', headers=cabeceras)
+    assert leer.status_code == 200
+    assert leer.get_json()['permisos']['comentar'] is False
+    assert client.get(f'/api/ficha/{lead_de_prueba.id}/lead/borrado', headers=cabeceras).status_code == 200
+
+    # Ninguna otra escritura le responde: la guardia del blueprint las corta antes de cualquier permiso.
+    for metodo, sufijo in (('POST', '/nota'), ('PATCH', '/confirmacion'), ('POST', '/resultado'), ('POST', '/pago'),
+                           ('PATCH', '/datos'), ('DELETE', '')):
+        r = client.open(f'/api/ficha/{lead_de_prueba.id}{sufijo}', method=metodo, json={}, headers=cabeceras)
+        assert r.status_code == 403, f'{metodo} {sufijo}: {r.status_code}'
+
+    # Su unica escritura: eliminar un lead de prueba (sin plata el lead de la fixture se va).
+    assert client.delete(f'/api/ficha/{lead_de_prueba.id}/lead', headers=cabeceras).status_code == 200
+
+
+@pytest.mark.parametrize('rol', ['triage', 'closer'])
+def test_triage_y_closer_eliminan_un_lead_sin_plata_pero_no_con_plata(client, db, make_user, auth_headers, rol,
+                                                                     lead_de_prueba):
+    usuario = make_user(role=rol, username=f'del_{rol}', email=f'del_{rol}@ficha.test')
+    cabeceras = auth_headers(usuario)
+
+    # Con plata exigen el permiso aparte, que solo tienen la direccion y el director de marketing.
+    assert client.delete(f'/api/ficha/{lead_de_prueba.id}/lead?con_plata=1', headers=cabeceras).status_code == 403
+    assert client.delete(f'/api/ficha/{lead_de_prueba.id}/lead', headers=cabeceras).status_code == 200
+
+
+def test_un_setter_no_elimina_un_lead(client, db, make_user, auth_headers, lead_de_prueba):
+    usuario = make_user(role='setter', username='del_setter', email='del_setter@ficha.test')
+
+    assert client.delete(f'/api/ficha/{lead_de_prueba.id}/lead', headers=auth_headers(usuario)).status_code == 403
+
+
 # (metodo, ruta, permiso) -> el codigo que tiene que dar cada rol. 400 significa "el rol pasa la
 # guardia de permiso y el payload vacio es lo que lo rechaza": lo que se fija es que NO sea 403.
 ESCRITURAS = [
     ('PATCH', '/confirmacion', {'admin': 400, 'director_comercial': 400, 'closer': 400,
                                 'triage': 400, 'setter': 403}),
     ('POST', '/resultado', {'admin': 400, 'director_comercial': 400, 'closer': 400,
-                            'triage': 403, 'setter': 403}),
+                            'triage': 400, 'setter': 403}),
     ('PUT', '/plan-cuotas', {'admin': 400, 'director_comercial': 400, 'closer': 400,
                              'triage': 403, 'setter': 403}),
     ('POST', '/nota', {'admin': 400, 'director_comercial': 400, 'closer': 400,
@@ -281,15 +328,15 @@ ESCRITURAS = [
     # Los datos del cliente los corrige la direccion o CUALQUIER closer (decision del usuario del
     # 5/08/2026): el `closer` de este test no es el de la agenda y pasa igual.
     ('PATCH', '/datos', {'admin': 400, 'director_comercial': 400, 'closer': 400,
-                         'triage': 403, 'setter': 403}),
+                         'triage': 400, 'setter': 403}),
     # Corregir la fecha, la fuente o el closer de una agenda es reportar, como su estado.
     ('PATCH', '/agenda', {'admin': 400, 'director_comercial': 400, 'closer': 400,
-                          'triage': 403, 'setter': 403}),
+                          'triage': 400, 'setter': 403}),
     # Agendar el seguimiento de una agenda desde el historial también es reportar.
     ('PUT', '/seguimiento', {'admin': 400, 'director_comercial': 400, 'closer': 400,
-                             'triage': 403, 'setter': 403}),
+                             'triage': 400, 'setter': 403}),
     ('PATCH', '/seguimiento', {'admin': 400, 'director_comercial': 400, 'closer': 400,
-                               'triage': 403, 'setter': 403}),
+                               'triage': 400, 'setter': 403}),
     # Cargar un pago a mano desde el historial es cobrar, como el plan de cuotas.
     ('POST', '/pago', {'admin': 400, 'director_comercial': 400, 'closer': 400,
                        'triage': 403, 'setter': 403}),
@@ -301,15 +348,15 @@ ESCRITURAS = [
     # Crear y borrar el resto del historial (pedido del 29/09/2026). El lead de prueba no tiene
     # seguimiento ni plan, asi que quien puede recibe el 400 de «no hay nada que borrar».
     ('DELETE', '/seguimiento', {'admin': 400, 'director_comercial': 400, 'closer': 400,
-                                'triage': 403, 'setter': 403}),
+                                'triage': 400, 'setter': 403}),
     ('DELETE', '/plan-cuotas', {'admin': 400, 'director_comercial': 400, 'closer': 400,
                                 'triage': 403, 'setter': 403}),
     ('POST', '/evento', {'admin': 400, 'director_comercial': 400, 'closer': 400,
-                         'triage': 403, 'setter': 403}),
+                         'triage': 400, 'setter': 403}),
     # Agregar la objeción de una llamada que no cerró desde el historial (09/10/2026) es reportar.
     # Con el cuerpo vacío quien puede recibe el 400 de «Falta la objeción».
     ('POST', '/objecion', {'admin': 400, 'director_comercial': 400, 'closer': 400,
-                           'triage': 403, 'setter': 403}),
+                           'triage': 400, 'setter': 403}),
     # Revertir una baja es cobrar, como darla. El lead de prueba no esta de baja: quien puede
     # recibe el 400 de «no esta dado de baja».
     ('POST', '/revertir-baja', {'admin': 400, 'director_comercial': 400, 'closer': 400,
