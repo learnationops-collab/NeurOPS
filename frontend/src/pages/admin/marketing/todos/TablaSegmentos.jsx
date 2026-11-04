@@ -2,7 +2,7 @@ import { Tip } from '../../../comercial/components/Shared';
 import { CifraConCuenta } from '../../../../components/standard';
 import Diferencia from './Diferencia';
 import { TITULO_DE } from './comparacion';
-import { COLOR_SEGMENTO, pctDe, tipoDeDiferencia, tonoDeTasa, valorDe } from './segmentos';
+import { COLOR_SEGMENTO, esCero, filaSinDatos, numero, pctDe, tipoDeDiferencia, tonoDeTasa, valorDe } from './segmentos';
 
 /**
  * La tabla de UN grupo (una fuente, un closer, un origen…): una fila por segmento y la del total, con las cifras del
@@ -14,8 +14,11 @@ import { COLOR_SEGMENTO, pctDe, tipoDeDiferencia, tonoDeTasa, valorDe } from './
  *
  * Una cifra sin dato (los leads de Workshop por segmento: son clics anónimos; los de un closer: un lead no tiene closer)
  * se ve «—» y no abre nada.
+ *
+ * Lectura rápida (04/11/2026): los segmentos sin nada en ninguna columna no se dibujan (un pie dice cuántos) y cada número
+ * lleva el color de su segmento, más fuerte cuanto más alto es frente al resto de su columna; el cero se apaga.
  */
-const Celda = ({ columna, fila, referencia, moneda, abrir }) => {
+const Celda = ({ columna, fila, referencia, moneda, abrir, maximo = 0, color = null }) => {
     const pct = pctDe(columna, fila);
     const tono = tonoDeTasa(columna, fila, referencia);
     const sinDato = fila[columna.key] === null || fila[columna.key] === undefined;
@@ -28,8 +31,11 @@ const Celda = ({ columna, fila, referencia, moneda, abrir }) => {
         a: { t: valorDe({ key: 'new_cash', dinero: true }, fila, moneda), m: 'new_cash', titulo: TITULO_DE.new_cash },
         b: { t: `${fila.ventas} ventas`, m: 'ventas', titulo: TITULO_DE.ventas },
     } : null;
+    const quieta = esCero(fila[columna.key]);
+    const intensidad = maximo > 0 ? Math.sqrt(Math.min(1, numero(fila[columna.key]) / maximo)) : 0;
+    const clase = quieta ? 'sg-celda--cero' : (color ? 'sg-celda--calor' : '');
     return (
-        <div className="sg-celda">
+        <div className={`sg-celda sg-celda--llena ${clase}`.trim()} style={quieta || !color ? undefined : { '--sg-i': intensidad.toFixed(3), '--sg-c': color }}>
             <CifraConCuenta cuenta={delTicket} metrica={sinDato ? null : columna.lista} titulo={TITULO_DE[columna.lista]}
                 onVer={sinDato ? null : abrir} className="t-body num td-fuerte">
                 {valorDe(columna, fila, moneda)}
@@ -51,7 +57,7 @@ const Celda = ({ columna, fila, referencia, moneda, abrir }) => {
     );
 };
 
-const Fila = ({ fila, columnas, plantilla, color, referencia, moneda, onVer, total = false }) => {
+const Fila = ({ fila, columnas, plantilla, color, referencia, moneda, onVer, maximos = {}, total = false }) => {
     const abrir = (metrica, titulo, previo = false) => onVer(metrica, titulo, fila.segmento ?? '', total ? '' : fila.label, previo);
     return (
         <div className={`sg-fila${total ? ' sg-fila--total' : ''}`} style={plantilla} role="row">
@@ -60,7 +66,8 @@ const Fila = ({ fila, columnas, plantilla, color, referencia, moneda, onVer, tot
                 <span className="t-body td-fuerte">{fila.label}</span>
             </div>
             {columnas.map((c) => (
-                <Celda key={c.key} columna={c} fila={fila} referencia={referencia} moneda={moneda} abrir={abrir} />
+                <Celda key={c.key} columna={c} fila={fila} referencia={referencia} moneda={moneda} abrir={abrir}
+                    maximo={maximos[c.key] || 0} color={total ? null : color} />
             ))}
         </div>
     );
@@ -70,6 +77,11 @@ const TablaSegmentos = ({ grupo, color, columnas, moneda, onVer, nota = null, pl
     const plantilla = { gridTemplateColumns: `minmax(130px,1.1fr) repeat(${columnas.length},minmax(96px,1fr))`,
         minWidth: `${130 + columnas.length * 100}px` };
     const Envoltorio = plano ? 'div' : 'section';
+    const claves = columnas.map((c) => c.key);
+    const filas = grupo.filas.filter((f) => !filaSinDatos(f, claves));
+    const ocultos = grupo.filas.length - filas.length;
+    // El más alto de cada columna entre los segmentos que se ven: con eso se gradúa el color.
+    const maximos = Object.fromEntries(claves.map((k) => [k, Math.max(0, ...filas.map((f) => numero(f[k])))]));
     return (
         <Envoltorio className={plano ? 'sg-plano' : 'panel sg-panel'} aria-label={`${grupo.label} por segmento`}>
             {!plano && (
@@ -87,12 +99,17 @@ const TablaSegmentos = ({ grupo, color, columnas, moneda, onVer, nota = null, pl
                         <span key={c.key} role="columnheader">{c.label} <Tip texto={c.ayuda} titulo={c.label} /></span>
                     ))}
                 </div>
-                {grupo.filas.map((f) => (
+                {filas.map((f) => (
                     <Fila key={f.segmento} fila={f} columnas={columnas} plantilla={plantilla} color={COLOR_SEGMENTO[f.segmento]}
-                        referencia={grupo.total} moneda={moneda} onVer={onVer} />
+                        referencia={grupo.total} moneda={moneda} onVer={onVer} maximos={maximos} />
                 ))}
                 <Fila fila={grupo.total} columnas={columnas} plantilla={plantilla} referencia={null} moneda={moneda} onVer={onVer} total />
             </div>
+            {ocultos > 0 && (
+                <p className="sg-ocultos t-eyebrow mut">
+                    {ocultos === 1 ? '1 segmento sin datos oculto' : `${ocultos} segmentos sin datos ocultos`}
+                </p>
+            )}
             {nota && <p className="t-cap mut">{nota}</p>}
         </Envoltorio>
     );

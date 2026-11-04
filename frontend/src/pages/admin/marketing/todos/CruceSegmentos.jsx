@@ -1,7 +1,7 @@
 import { CifraConCuenta } from '../../../../components/standard';
 import { formatear } from '../anuncios/metricas';
 import Diferencia from './Diferencia';
-import { COLOR_SEGMENTO } from './segmentos';
+import { COLOR_SEGMENTO, esCero, grupoSinDatos, numero } from './segmentos';
 
 /**
  * El cruce grupo × segmento de UNA cifra (Kerwin, 28/10/2026): una fila por closer, fuente, origen o setter y una
@@ -19,9 +19,6 @@ import { COLOR_SEGMENTO } from './segmentos';
  */
 const tipoDe = (campo) => (campo.dinero ? 'money' : 'num');
 
-const esCero = (v) => v === null || v === undefined || !Number(v);
-const numero = (v) => (esCero(v) ? 0 : Number(v));
-const grupoVacio = (g, campo) => [g.total, ...g.filas].every((f) => esCero(f[campo.key]) && esCero(f.previo?.[campo.key]));
 
 const Celda = ({ fila, campo, grupo, moneda, onVer, segmento, maximo = 0, color }) => {
     const valor = fila[campo.key];
@@ -49,7 +46,7 @@ const Celda = ({ fila, campo, grupo, moneda, onVer, segmento, maximo = 0, color 
 const CruceSegmentos = ({ grupos, campo, campos, onCampo, moneda, color, onVer, orden, onOrden, onQuitar = null, plano = false }) => {
     if (!grupos.length) return null;
     const segmentos = grupos[0].filas.map((f) => ({ key: f.segmento, label: f.label }));
-    const visibles = grupos.filter((g) => !grupoVacio(g, campo));
+    const visibles = grupos.filter((g) => !grupoSinDatos(g, [campo.key]));
     const ocultos = grupos.length - visibles.length;
     // El más alto de las celdas de segmento y el más alto de los totales: cada columna se compara con los suyos.
     const maxSegmento = Math.max(0, ...visibles.flatMap((g) => g.filas.map((f) => numero(f[campo.key]))));

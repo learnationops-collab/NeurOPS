@@ -2,7 +2,7 @@ import { Accordion } from '../../../../components/standard';
 import { Columnas, Grupos } from './ControlesSegmentos';
 import CruceSegmentos from './CruceSegmentos';
 import TablaSegmentos from './TablaSegmentos';
-import { COLUMNAS_SEGMENTO, valorDe } from './segmentos';
+import { COLUMNAS_SEGMENTO, grupoSinDatos, valorDe } from './segmentos';
 
 /**
  * Los bloques de «Segmentos» (Kerwin, 29/10/2026): cada uno es un desplegable del `Accordion`, y la vista los arma
@@ -64,13 +64,17 @@ const tablaDe = (ctx) => (g, i) => ({
 });
 
 const tablas = (ctx) => {
-    const items = ctx.grupos.map(tablaDe(ctx));
+    // Un grupo sin nada en las columnas que se ven no se dibuja (04/11/2026); el pie dice cuántos son.
+    const claves = ctx.columnas.map((c) => c.key);
+    const conDatos = ctx.grupos.filter((g) => !grupoSinDatos(g, claves));
+    const ocultos = ctx.grupos.length - conDatos.length;
+    const items = conDatos.map(tablaDe(ctx));
     if (items.length <= MAX_SUELTAS) return items;
     return {
         key: 'tablas', title: 'Tabla por grupo',
         meta: (
             <span className="sg-meta">
-                <span><b className="num">{items.length}</b> grupos</span>
+                <span><b className="num">{items.length}</b> grupos{ocultos ? ` (${ocultos} sin datos ocultos)` : ''}</span>
                 {ctx.corte === 'pais' && ctx.leadsTotal != null && <span><b className="num">{ctx.leadsTotal.toLocaleString('es-AR')}</b> leads</span>}
             </span>
         ),

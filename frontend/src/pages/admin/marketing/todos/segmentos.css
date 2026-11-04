@@ -21,6 +21,8 @@
 .dc-shell .sg-celda--calor .td-fuerte{color:color-mix(in srgb,var(--sg-c) calc(62% + var(--sg-i) * 38%),var(--text-on-surface));font-weight:800}
 .dc-shell .sg-celda--cero .td-fuerte{color:var(--text-muted);font-weight:500;opacity:.38}
 .dc-shell .sg-vacio{margin:0;padding:var(--s4)}
+/* En la tabla de un grupo las celdas llenan su columna y su fila, así el color forma un mapa parejo. */
+.dc-shell .sg-celda--llena{justify-self:stretch;align-self:stretch;margin:-5px -3px;padding:6px 10px;justify-content:center}
 .dc-shell .sg-ocultos{margin:var(--s2) 0 0}
 .dc-shell .sg-celda > .td-cc-cifra{width:auto;flex:none;text-align:left}
 .dc-shell .sg-pct{color:var(--text-muted)}

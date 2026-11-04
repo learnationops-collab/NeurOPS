@@ -9,6 +9,14 @@ import { formatear } from '../anuncios/metricas';
  * Colores de cada segmento: los de la ficha del lead (A verde, B azul, C ámbar, D magenta); «sin segmento»
  * es un grupo más, en gris: son las agendas viejas de Calendly/n8n y quienes no llenaron el formulario.
  */
+// Lectura rápida (04/11/2026): lo que no tiene nada no se dibuja y los números llevan el color de su segmento.
+export const esCero = (v) => v === null || v === undefined || !Number(v);
+export const numero = (v) => (esCero(v) ? 0 : Number(v));
+/** Una fila (segmento o total) sin nada en las columnas dadas, ni en el período comparado. */
+export const filaSinDatos = (fila, claves) => claves.every((k) => esCero(fila?.[k]) && esCero(fila?.previo?.[k]));
+/** Un grupo con todas sus filas sin datos: no hace falta verlo. */
+export const grupoSinDatos = (grupo, claves) => [grupo.total, ...grupo.filas].every((f) => filaSinDatos(f, claves));
+
 export const COLOR_SEGMENTO = {
     A: 'var(--success)', B: 'var(--info)', C: 'var(--warning)', D: 'var(--brand-secondary)', sin: 'var(--text-muted)',
 };
