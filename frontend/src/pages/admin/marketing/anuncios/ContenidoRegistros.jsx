@@ -33,7 +33,7 @@ export const columnaDe = (c, moneda) => ({
 
 const ContenidoRegistros = ({ fuente, metrica, desde, hasta, moneda, base, segmento = undefined, origen = undefined, cargar = null }) => {
     const [estado, setEstado] = useState({ datos: null, error: null });
-    const { abrir, modal } = useFichaDeFila();
+    const { abrir, modal, sinBorrados, onEliminar } = useFichaDeFila();
     useEffect(() => {
         const control = new AbortController();
         (cargar ? cargar({ signal: control.signal })
@@ -44,8 +44,8 @@ const ContenidoRegistros = ({ fuente, metrica, desde, hasta, moneda, base, segme
     }, [fuente, metrica, desde, hasta, base, segmento, origen, cargar]);
 
     const { datos, error } = estado;
-    const columnas = useMemo(() => (datos ? [...datos.columnas.map((c) => columnaDe(c, moneda)), ...columnaVer(datos.filas)] : []),
-        [datos, moneda]);
+    const columnas = useMemo(() => (datos ? [...datos.columnas.map((c) => columnaDe(c, moneda)), ...columnaVer(datos.filas, onEliminar)] : []),
+        [datos, moneda, onEliminar]);
 
     if (error) return <EmptyState title={error} />;
     if (!datos) {
@@ -58,7 +58,7 @@ const ContenidoRegistros = ({ fuente, metrica, desde, hasta, moneda, base, segme
     return (
         <>
             <p className="t-body td-fuerte" style={{ margin: '0 0 var(--s3)' }}>{datos.resumen}</p>
-            <ListaConfigurable columnas={columnas} filas={datos.filas} clave={(f) => f.id}
+            <ListaConfigurable columnas={columnas} filas={sinBorrados(datos.filas)} clave={(f) => f.id}
                 claveGuardado={`mk_registros_${fuente}_${metrica}${base === 'reunion' ? '_reunion' : ''}${segmento === undefined ? '' : '_seg'}`}
                 buscar={textoDeFila} buscarPlaceholder="Buscar en la lista"
                 onAbrirFila={abrir} puedeAbrirFila={tieneFicha}

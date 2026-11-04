@@ -12,7 +12,7 @@ import { columnaVer, textoDeFila, tieneFicha, useFichaDeFila } from '../../marke
  */
 const ContenidoRegistrosTaller = ({ ids, metrica, esperado = null }) => {
     const [estado, setEstado] = useState({ datos: null, error: null });
-    const { abrir, modal } = useFichaDeFila();
+    const { abrir, modal, sinBorrados, onEliminar } = useFichaDeFila();
     const clave = ids.join(',');
     useEffect(() => {
         const control = new AbortController();
@@ -28,7 +28,8 @@ const ContenidoRegistrosTaller = ({ ids, metrica, esperado = null }) => {
     }, [clave, metrica]);
 
     const { datos, error } = estado;
-    const columnas = useMemo(() => (datos ? [...datos.columnas.map((c) => columnaDe(c, 'USD')), ...columnaVer(datos.filas)] : []), [datos]);
+    const columnas = useMemo(() => (datos ? [...datos.columnas.map((c) => columnaDe(c, 'USD')), ...columnaVer(datos.filas, onEliminar)] : []),
+        [datos, onEliminar]);
     if (error) return <EmptyState title={error} />;
     if (!datos) {
         return (
@@ -47,7 +48,7 @@ const ContenidoRegistrosTaller = ({ ids, metrica, esperado = null }) => {
                     los últimos cambios. Esta lista es de hoy y se actualiza con «Actualizar» en cada taller.
                 </p>
             )}
-            <ListaConfigurable columnas={columnas} filas={datos.filas} clave={(f) => f.id}
+            <ListaConfigurable columnas={columnas} filas={sinBorrados(datos.filas)} clave={(f) => f.id}
                 claveGuardado={`wr_registros_${metrica}`} buscar={textoDeFila}
                 onAbrirFila={abrir} puedeAbrirFila={tieneFicha}
                 buscarPlaceholder="Buscar en la lista" vacio="Ninguna fila suma a esta cifra en esta selección." />

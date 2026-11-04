@@ -117,14 +117,24 @@ describe('ModalAgendasTaller', () => {
         expect(screen.queryByRole('dialog', { name: 'Ficha' })).not.toBeInTheDocument();
     });
 
-    it('el director de marketing ve la lista pero su rol no abre la ficha', async () => {
-        useAuth.mockReturnValue({ user: { role: 'director_marketing' } });
+    it('un rol sin ficha (setter) ve la lista pero no la abre', async () => {
+        useAuth.mockReturnValue({ user: { role: 'setter' } });
         abrirModal();
 
         await userEvent.click(await screen.findByRole('button', { name: /Abrir Ana Pérez/ }));
 
         expect(toast).toHaveBeenCalledWith(expect.stringMatching(/Tu rol no abre la ficha/));
         expect(screen.queryByRole('dialog', { name: 'Ficha' })).not.toBeInTheDocument();
+    });
+
+    it('el director de marketing abre la ficha del lead', async () => {
+        useAuth.mockReturnValue({ user: { role: 'director_marketing' } });
+        abrirModal();
+
+        await userEvent.click(await screen.findByRole('button', { name: /Abrir Ana Pérez/ }));
+
+        expect(toast).not.toHaveBeenCalled();
+        expect(await screen.findByRole('dialog', { name: 'Ficha' })).toBeInTheDocument();
     });
 
     it('avisa si el número del taller no coincide con la lista', async () => {
