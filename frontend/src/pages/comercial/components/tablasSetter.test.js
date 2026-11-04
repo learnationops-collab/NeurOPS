@@ -21,7 +21,7 @@ describe('tablas del Revisar del setter', () => {
         expect(defDeTabla('generadas', 'setters', false)).toBe(TABLAS.generadas);
         expect(defDeTabla('agendas', 'closers', true)).toBe(TABLAS.agendas);
         expect(defDeTabla('ventas', 'closers', true)).toBe(TABLAS.ventas);
-        expect(TABLAS_POR_ROL.setters).toEqual(['leads', 'generadas']);
+        expect(TABLAS_POR_ROL.setters).toEqual(['leads', 'generadas', 'ventas']);
     });
 
     it('cada pestaña abre una tabla que existe, con la clave de siempre', () => {

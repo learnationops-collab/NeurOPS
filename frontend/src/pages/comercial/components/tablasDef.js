@@ -226,6 +226,15 @@ export const fuenteDe = (fila) => fila.procedencia?.label ?? null;
  */
 export const rotuloDetalleFuente = (fuente, detalle) => `${fuente} · ${detalle}`;
 
+/**
+ * El setter de una venta (04/11/2026): el de su fuente cuando entró por Setting (el mismo de «Ingresos por fuente»: «Setting ·
+ * Elias»); el resto de las fuentes (Workshop, VSL, Fulfillment…) no tiene setter. Es lo que deja agrupar y filtrar las ventas por setter.
+ */
+export const SIN_SETTER = 'Sin setter';
+export const setterDeVenta = (fila) => (fila.procedencia?.key === 'setting'
+    ? (fila.procedencia_detalle?.label || 'Sin identificar')
+    : SIN_SETTER);
+
 const detalleFuenteDe = (fila) => (fila.procedencia && fila.procedencia_detalle
     ? rotuloDetalleFuente(fila.procedencia.label, fila.procedencia_detalle.label)
     : null);
@@ -356,6 +365,7 @@ export const TABLAS = {
             // opciones dentro de otra, y existe para que un renglón del detalle de la tarjeta tenga
             // a dónde llevar.
             { key: 'fuente', label: 'Fuente', de: fuenteDe },
+            { key: 'setter', label: 'Setter', de: setterDeVenta },
             { key: 'fuente_detalle', label: 'Detalle de la fuente', de: detalleFuenteDe, oculta: true },
             FACETA_SEGMENTO,
             // El estado de la seña lo agrega el backend a la fila (`sena_estado`): en qué terminó
@@ -377,6 +387,7 @@ export const TABLAS = {
         ],
         agrupables: [
             { key: 'closer', label: 'Closer', de: (f) => f.closer },
+            { key: 'setter', label: 'Setter', de: setterDeVenta },
             { key: 'programa', label: 'Programa', de: (f) => f.programa },
             { key: 'tipo_pago', label: 'Tipo de pago', de: (f) => f.tipo_pago.label },
             // El subtotal de cada grupo es el monto de esa fuente en la tarjeta: los mismos cobros,
@@ -592,7 +603,8 @@ export const TABLAS_POR_ROL = {
     // cinco que NO se acota al período (ver `ComercialService.clientes`), y va tercera porque se
     // consulta cuando hay que cobrar, no cuando se revisa el día.
     closers: ['agendas', 'ventas', 'clientes'],
-    setters: ['leads', 'generadas'],
+    // Ventas con Setters (04/11/2026): las cobradas del equipo de setting, con su fuente (la dirección las veía solo en Closers).
+    setters: ['leads', 'generadas', 'ventas'],
 };
 
 /**
