@@ -217,3 +217,6 @@
 - **4 de Noviembre de 2026 (Palabras clave: leads, agendas y ventas por conjunto de Meta)** *([anuncios_atribucion_service.py](../../app/services/anuncios_atribucion_service.py), [anuncios_service.py](../../app/services/anuncios_service.py), [metricas.js](../../frontend/src/pages/admin/marketing/anuncios/metricas.js), [ADR-W091](../DECISIONS.md))*:
   - El conjunto «Winners | Guía Gratis | MX+PE» mostraba gasto y ceros porque la palabra clave corre en cuatro conjuntos y todo lo demás iba al principal. Ahora las personas cuyo DM trae el anuncio de Meta se cuentan en el conjunto de ese anuncio (36 leads de GUIA GRATIS y 30 de GUIA PERU pasan a Winners en la base de prueba).
   - Lo que no trae anuncio queda en el conjunto principal; los totales de la tabla no cambian, y un pie lo explica.
+- **4 de Noviembre de 2026 (Finanzas: pestaña Cobros)** *([Cobros.jsx](../../frontend/src/pages/comercial/components/finanzas/Cobros.jsx), [finance_cobros.py](../../app/api/public/finance_cobros.py), [ADR-W092](../DECISIONS.md))*:
+  - Nueva pestaña Cobros en Finanzas: cada cobro del período con cliente, tipo de pago, procesador, bruto, neto y comisión. El neto lleva `*` si todavía es estimado.
+  - Filtro por closer, buscador, totales (cobros, bruto, neto, comisiones) y descarga en CSV de lo filtrado, para cotejar con las transferencias reales.
