@@ -66,7 +66,23 @@ export const useVentasSinPalabra = (anunciosIniciales) => {
         }
     };
 
-    return { datos, anuncios, asignar, faltan: datos?.pendientes?.length ?? 0 };
+    /** El cliente es del workshop, no de un DM: sus pagos dejan de ser de Setting y salen de las dos listas. */
+    const pasarAWorkshop = async (grupo) => {
+        try {
+            await api.post('/setter/palabras-clave/ventas/workshop', { grupo: grupo.grupo });
+            setDatos((d) => ({
+                ...d,
+                pendientes: d.pendientes.filter((g) => g.grupo !== grupo.grupo),
+                completadas: d.completadas.filter((g) => g.grupo !== grupo.grupo),
+                resumen: { ...d.resumen, clientes: Math.max(0, d.resumen.clientes - (d.pendientes.some((g) => g.grupo === grupo.grupo) ? 1 : 0)) },
+            }));
+            return { ok: true, aviso: `${grupo.cliente} pasó a Workshop.` };
+        } catch (err) {
+            return { error: err?.response?.data?.error || 'No se pudo pasar a Workshop: probá de nuevo.' };
+        }
+    };
+
+    return { datos, anuncios, asignar, pasarAWorkshop, faltan: datos?.pendientes?.length ?? 0 };
 };
 
 export default useVentasSinPalabra;

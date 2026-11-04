@@ -331,3 +331,7 @@
   background:transparent;color:inherit;font:inherit;font-size:13px;cursor:pointer}
 .mis-agendas .ma-tipo.on{background:color-mix(in srgb,var(--brand-secondary) 18%,transparent);border-color:color-mix(in srgb,var(--brand-secondary) 55%,transparent)}
 .mis-agendas .ma-tipo:focus-visible{outline:2px solid color-mix(in srgb,var(--brand-secondary) 55%,transparent);outline-offset:2px}
+
+/* «Es de Workshop» en la tarjeta de una venta (04/11/2026) */
+.mis-agendas .mv-workshop-btn{align-self:flex-start}
+.mis-agendas .mv-workshop{margin:0;font-size:12px;color:var(--text-muted)}
