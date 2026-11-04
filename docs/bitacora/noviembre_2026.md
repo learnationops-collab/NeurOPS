@@ -211,3 +211,6 @@
   - Marketing › Otras: se quitó «% de Otras» y se muestra «Con resultado», para que el show up (asistieron ÷ con resultado) se entienda: 5 agendas, 4 con resultado, 4 asistieron, 100%.
   - Marketing › Segmentos por país: los 352 leads de Workshop se repetían en cada país; ahora van una sola vez junto al número de grupos.
   - País: Renan Aguilera (+504) quedaba «Sin país» porque Honduras no estaba en la lista del formulario de agendas; se suman Guatemala, El Salvador, Honduras, Nicaragua, Cuba, Portugal, Italia y República Dominicana.
+- **4 de Noviembre de 2026 (Revisar: Ventas en Setters y agrupar las ventas por setter)** *([tablasDef.js](../../frontend/src/pages/comercial/components/tablasDef.js))*:
+  - Con el switch en Setters, Revisar suma la pestaña «Ventas» (las cobradas del equipo, con su fuente) junto a Leads entrantes y Agendas generadas.
+  - La tabla de Ventas (en Setters y en Closers) se puede agrupar y filtrar por «Setter»: el de la fuente del cobro cuando entró por Setting («Setting · Elias»); el resto de las fuentes queda en «Sin setter». En la base de prueba: Elias 20 cobros ($8.239), Paula 6 ($875) y Sin setter 16 ($4.512).
