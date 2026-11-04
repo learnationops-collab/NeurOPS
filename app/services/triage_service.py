@@ -13,6 +13,7 @@ propio es cómo se reporta la llamada, y por eso vive acá y no en el árbol del
 
 Una agenda es de triage cuando su `closer_id` es una cuenta con el rol `triage`.
 """
+import logging
 from datetime import date, datetime
 
 import pytz
@@ -23,6 +24,8 @@ from app.services import triage_pases
 from app.services.user_time_service import zona_del_negocio
 
 CALIFICACIONES = ('calificado', 'descalificado')
+logger = logging.getLogger(__name__)
+
 PROGRAMA_LOW_TICKET = 'LT'
 LOW_TICKET = ('no_pitch', 'cerrado', 'no_cerrado', 'seguimiento', 'descartado')
 PITCHEADO = ('cerrado', 'no_cerrado', 'seguimiento', 'descartado')
@@ -191,21 +194,31 @@ def reportar(appt, datos, usuario):
 
     # Volver a reportar una llamada ya reportada es válido (corregir el estado), pero pasarla otra vez
     # al closer crearía una segunda agenda de closing: esa se mueve desde su propia ficha.
-    if calificacion == 'calificado' and Appointment.query.filter_by(agenda_triage_id=appt.id).first():
+    # Si el pase existe pero la agenda quedó sin calificar (un guardado que se cortó a medias), se
+    # adopta ese pase en vez de dar error: así el reporte se completa y el lead no queda pendiente.
+    pase_previo = (Appointment.query.filter_by(agenda_triage_id=appt.id).order_by(Appointment.id.desc()).first()
+                   if calificacion == 'calificado' else None)
+    if pase_previo and appt.triage_calificacion == 'calificado':
         raise _error('Este lead ya pasó al closer: cambiá su llamada desde la agenda de closing.')
     # El pase primero: si el horario del closer está ocupado, no queda nada reportado a medias.
-    closing = _pasar_al_closer(appt, datos, usuario) if calificacion == 'calificado' else None
+    closing = pase_previo or (_pasar_al_closer(appt, datos, usuario) if calificacion == 'calificado' else None)
     # Lo mismo con la venta del low ticket: si no se registra, no queda reportada como cerrada.
     avisos = _vender_low_ticket(appt, venta, usuario) if vende else []
 
-    acciones.resultado(appt, {'resultado': datos['asistencia'], 'nota': nota}, usuario)
+    # La calificación y el low ticket se escriben ANTES de `acciones.resultado`, que hace su propio commit:
+    # así el resultado y la calificación se guardan juntos y nunca queda «asistió» sin calificar.
     appt.triage_calificacion = calificacion
     if calificacion == 'calificado':
-        _nota_para_closer(appt, closing, datos['nota_para_closer'].strip(), usuario)
         appt.triage_low_ticket = None
+    elif calificacion == 'descalificado':
+        appt.triage_low_ticket = datos['low_ticket']
+    acciones.resultado(appt, {'resultado': datos['asistencia'], 'nota': nota}, usuario)
+    if calificacion == 'calificado':
+        _nota_para_closer(appt, closing, datos['nota_para_closer'].strip(), usuario)
     elif calificacion == 'descalificado':
         _aplicar_low_ticket(appt, datos['low_ticket'], datos)
     db.session.commit()
+    verificado = _verificar(appt, datos['asistencia'], calificacion)
 
     if calificacion == 'calificado':
         _log(appt, usuario, f'{usuario.username} calificó al lead (+500 USD) y lo pasó a '
@@ -213,7 +226,22 @@ def reportar(appt, datos, usuario):
     elif calificacion == 'descalificado':
         _log(appt, usuario, f'{usuario.username} lo descalificó económicamente: '
                             f'{_LOW_TICKET_TEXTO[appt.triage_low_ticket]}.')
-    return {**bloque(appt), 'avisos': avisos, 'vendio': vende}
+    return {**bloque(appt), 'avisos': avisos, 'vendio': vende, 'verificado': verificado}
+
+
+def _verificar(appt, asistencia, calificacion):
+    """Vuelve a leer la agenda de la base y comprueba que lo reportado quedó guardado. Si no coincide,
+    avisa en vez de dejar creer que se guardó. Devuelve lo que quedó, con la hora del servidor."""
+    db.session.refresh(appt)
+    guardado = (appt.closer_result or '').strip().lower()
+    esperado = {'asistio': 'show up', 'no_show': 'no show'}.get(asistencia, 'cancel')
+    resultado_ok = guardado.startswith(esperado) if esperado == 'cancel' else guardado == esperado
+    if not resultado_ok or (appt.triage_calificacion or None) != calificacion:
+        logger.error(f'triage: la agenda {appt.id} no quedó como se reportó '
+                     f'(resultado={appt.closer_result!r}, calificación={appt.triage_calificacion!r})')
+        raise _error('El reporte no quedó guardado. Abrí la ficha de nuevo, revisá el estado y volvé a guardar.')
+    return {'asistencia': appt.closer_result, 'calificacion': appt.triage_calificacion,
+            'guardado_en': datetime.utcnow().isoformat() + 'Z'}
 
 
 def _reagendar(appt, datos, usuario):
@@ -302,14 +330,17 @@ def bloque(appt):
 # --- Métricas ---------------------------------------------------------------------------------
 
 def _vacias():
-    return {k: 0 for k in ('agendas', 'asistencias', 'no_show', 'canceladas', 'sin_reporte',
+    return {k: 0 for k in ('agendas', 'asistencias', 'no_show', 'canceladas', 'sin_reporte', 'por_ocurrir',
                            'calificados', 'descalificados', 'pitch_low_ticket', 'no_pitch', 'cerrado',
                            'no_cerrado', 'seguimiento', 'descartado',
-                           'pasaron', 'closer_asistieron', 'closer_cerraron')}
+                           'pasaron', 'closer_asistieron', 'closer_cerraron', 'closer_no_asistieron',
+                           'closer_pendientes', 'closer_senas', 'closer_cobrado')}
 
 
-def _sumar(m, a, pase):
-    """Suma la agenda de triage `a` en `m`. `pase`: su agenda de closing (`triage_pases`) o None."""
+def _sumar(m, a, pase, ahora=None):
+    """Suma la agenda de triage `a` en `m`. `pase`: su agenda de closing (`triage_pases`) o None.
+    `ahora` (UTC naive) parte las llamadas sin resultado en «sin reportar» (ya pasaron) y «por ocurrir»."""
+    ahora = ahora or datetime.utcnow()
     m['agendas'] += 1
     resultado = (a.closer_result or '').strip().lower()
     previo = (a.result or '').strip().lower()
@@ -317,6 +348,10 @@ def _sumar(m, a, pase):
         m['pasaron'] += 1
         m['closer_asistieron'] += 1 if pase['asistio'] else 0
         m['closer_cerraron'] += 1 if pase['cerro'] else 0
+        m['closer_no_asistieron'] += 1 if pase.get('estado') == 'no_asistio' else 0
+        m['closer_pendientes'] += 1 if pase.get('estado') in ('pendiente', 'sin_reporte') else 0
+        m['closer_senas'] += 1 if pase.get('sena') else 0
+        m['closer_cobrado'] = round(m['closer_cobrado'] + pase.get('cobrado', 0), 2)
     if resultado == 'show up':
         m['asistencias'] += 1
     elif resultado == 'no show':
@@ -324,7 +359,7 @@ def _sumar(m, a, pase):
     elif resultado.startswith('cancel') or previo.startswith('cancel'):
         m['canceladas'] += 1
     elif resultado in ('', 'pendiente'):
-        m['sin_reporte'] += 1
+        m['por_ocurrir' if a.start_time > ahora else 'sin_reporte'] += 1
     if a.triage_calificacion == 'calificado':
         m['calificados'] += 1
     elif a.triage_calificacion == 'descalificado':
@@ -388,11 +423,12 @@ def metricas(desde, hasta, solo=None, zona=None, segmentos=None):
     pases = triage_pases.pases_de(agendas)
 
     total, por_id, por_dia = _vacias(), {p.id: _vacias() for p in personas}, {}
+    ahora = datetime.utcnow()
     for a in agendas:
         pase = pases.get(a.id)
-        _sumar(total, a, pase)
-        _sumar(por_id[a.closer_id], a, pase)
-        _sumar(por_dia.setdefault((_dia(a, zona), a.closer_id), _vacias()), a, pase)
+        _sumar(total, a, pase, ahora)
+        _sumar(por_id[a.closer_id], a, pase, ahora)
+        _sumar(por_dia.setdefault((_dia(a, zona), a.closer_id), _vacias()), a, pase, ahora)
     from app.agendas_v2 import abandonos
 
     return {
@@ -416,10 +452,14 @@ def _por_closer(agendas, pases):
             continue
         f = filas.setdefault((a.closer_id, pase['closer_id']), {
             'triage_id': a.closer_id, 'closer_id': pase['closer_id'], 'closer': pase['closer'],
-            'pasaron': 0, 'asistieron': 0, 'cerraron': 0})
+            'pasaron': 0, 'asistieron': 0, 'cerraron': 0, 'senas': 0, 'cobrado': 0.0,
+            'no_asistieron': 0})
         f['pasaron'] += 1
         f['asistieron'] += 1 if pase['asistio'] else 0
         f['cerraron'] += 1 if pase['cerro'] else 0
+        f['no_asistieron'] += 1 if pase.get('estado') == 'no_asistio' else 0
+        f['senas'] += 1 if pase.get('sena') else 0
+        f['cobrado'] = round(f['cobrado'] + pase.get('cobrado', 0), 2)
     return sorted(filas.values(), key=lambda f: (f['closer'], f['triage_id']))
 
 
@@ -428,7 +468,7 @@ def _leads(agendas, pases):
     y la del closer). Las notas salen del log en una sola consulta."""
     from app.models import LeadEventLog
 
-    notas = {}
+    notas, ahora = {}, datetime.utcnow()
     for e in (LeadEventLog.query.filter(LeadEventLog.origen == 'appointment',
                                         LeadEventLog.origen_id.in_([a.id for a in agendas] or [0]),
                                         LeadEventLog.action_type.in_(('nota_llamada', 'nota_para_closer')))
@@ -436,7 +476,7 @@ def _leads(agendas, pases):
         notas[(e.origen_id, e.action_type)] = e.description
     return [{
         'id': a.id, 'cliente': a.client.full_name if a.client else None, 'client_id': a.client_id,
-        'hora': _iso(a.start_time), 'triage': a.closer.username if a.closer else None,
+        'hora': _iso(a.start_time), 'ya_paso': bool(a.start_time and a.start_time <= ahora), 'triage': a.closer.username if a.closer else None,
         'asistencia': a.closer_result, 'closing': pases.get(a.id),
         'calificacion': a.triage_calificacion, 'low_ticket': a.triage_low_ticket,
         'fecha_seguimiento': a.fecha_seguimiento,

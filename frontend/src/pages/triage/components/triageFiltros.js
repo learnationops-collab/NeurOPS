@@ -11,10 +11,17 @@ const lowTicketEs = (estado) => (l) => descalificado(l) && l.low_ticket === esta
 export const FILTROS = {
     agendas: { titulo: 'Agendas', coincide: () => true },
     asistencias: { titulo: 'Asistieron', coincide: (l) => asistencia(l) === 'show up' },
+    // La base del % de asistencia: llamadas que ya tienen resultado (asistió o no show).
+    con_resultado: { titulo: 'Llamadas con resultado', coincide: (l) => ['show up', 'no show'].includes(asistencia(l)) },
+    sin_reporte: { titulo: 'Sin reportar (ya pasaron)', coincide: (l) => ['', 'pendiente'].includes(asistencia(l)) && !!l.ya_paso },
+    por_ocurrir: { titulo: 'Aún no ocurrieron', coincide: (l) => ['', 'pendiente'].includes(asistencia(l)) && !l.ya_paso },
     calificados: { titulo: 'Calificados', coincide: (l) => l.calificacion === 'calificado' },
     pasaron: { titulo: 'Pasaron a closing', coincide: (l) => !!l.closing },
     closer_asistieron: { titulo: 'Asistieron al closer', coincide: (l) => !!l.closing?.asistio },
     closer_cerraron: { titulo: 'Cerraron con el closer', coincide: (l) => !!l.closing?.cerro },
+    closer_no_asistieron: { titulo: 'No asistieron al closer', coincide: (l) => l.closing?.estado === 'no_asistio' },
+    closer_pendientes: { titulo: 'Pendientes de llamada con el closer', coincide: (l) => ['pendiente', 'sin_reporte'].includes(l.closing?.estado) },
+    closer_senas: { titulo: 'Señas con el closer', coincide: (l) => !!l.closing?.sena },
     descalificados: { titulo: 'Descalificados', coincide: descalificado },
     pitch: { titulo: 'Presentaciones del low ticket', coincide: (l) => descalificado(l) && PITCHEADO.includes(l.low_ticket) },
     cerrado: { titulo: 'Cierres del low ticket', coincide: lowTicketEs('cerrado') },
@@ -24,11 +31,11 @@ export const FILTROS = {
 };
 
 // `cl:<id del closer>:<pasaron|asistieron|cerraron>`: la misma lista acotada a un closer (tabla «Por closer»).
-const DEL_CLOSER = { pasaron: 'pasaron', asistieron: 'closer_asistieron', cerraron: 'closer_cerraron' };
+const DEL_CLOSER = { pasaron: 'pasaron', asistieron: 'closer_asistieron', cerraron: 'closer_cerraron', senas: 'closer_senas' };
 
 /** El filtro de una clave (`{ titulo, coincide }`) o null. `nombreCloser` pone su nombre en el título de `cl:`. */
 export function filtroDe(clave, nombreCloser = null) {
-    const c = /^cl:(\d+):(pasaron|asistieron|cerraron)$/.exec(clave || '');
+    const c = /^cl:(\d+):(pasaron|asistieron|cerraron|senas)$/.exec(clave || '');
     if (!c) return FILTROS[clave] || null;
     const base = FILTROS[DEL_CLOSER[c[2]]];
     return {
