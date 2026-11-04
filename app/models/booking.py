@@ -43,6 +43,13 @@ class Appointment(ConPersona, ConSegmento, db.Model):
     # El anuncio que el setter eligió para esta agenda en «Mis agendas» (18/10/2026): manda sobre
     # ManyChat para Marketing y la bandeja, así una palabra clave equivocada se puede cambiar.
     anuncio_id = db.Column(db.Integer, db.ForeignKey('ads.id'), nullable=True)
+    # El origen guardado de la agenda (ADR-W101, `origen_service`): la conversación de la que salió y su palabra
+    # clave (en `keyword`), o el taller de Workshop. `atribucion` dice cómo se supo; vacío = todavía sin fijar.
+    conversation_id = db.Column(db.Integer, db.ForeignKey('conversations.id', ondelete='SET NULL'),
+                                nullable=True, index=True)
+    workshop_event_id = db.Column(db.Integer, db.ForeignKey('workshop_events.id', ondelete='SET NULL'),
+                                  nullable=True, index=True)
+    atribucion = db.Column(db.String(20), nullable=True)
     examen = db.Column(db.String(255), nullable=True)
     fecha_seguimiento = db.Column(db.String(255), nullable=True)
     fecha_seguimiento_cobro = db.Column(db.String(255), nullable=True)

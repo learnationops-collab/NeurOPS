@@ -168,6 +168,7 @@ def _elegir(agendas, anuncio):
     for a in agendas:
         a.keyword = anuncio.keyword or anuncio.name
         a.anuncio_id = anuncio.id
+        a.atribucion = 'setter'  # el origen guardado (ADR-W101): lo eligió una persona, no se recalcula
 
 
 def _guardar():

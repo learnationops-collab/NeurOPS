@@ -6,6 +6,7 @@ from app.models import db
 from flask_login import current_user
 from app.services import agenda_contacto_service
 from app.services import conversaciones_service
+from app.services import origen_service
 from app.services.commission_service import cash_neto
 from app.services.identity_service import normalize_ig
 from . import bp
@@ -225,6 +226,9 @@ def get_unattributed_leads():
 
                 if closest and closest.ad_id:
                     has_attribution = True
+            # Una venta que vino de un taller ya tiene origen, aunque no tenga anuncio de Instagram (ADR-W101).
+            if not has_attribution and sale.sale is not None:
+                has_attribution = origen_service.origen_de_venta(sale.sale)['tipo'] == 'workshop'
 
             if not has_attribution:
                 closer = (sale.raw_data or {}).get('vendedor') or (sale.raw_data or {}).get('closer') or sale.email_vendedor or 'Sin asignar'

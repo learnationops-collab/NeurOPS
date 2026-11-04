@@ -99,3 +99,16 @@ El segmento de un lead lo calcula y guarda Thalamus (`segmento_service`, columna
 > **04/11/2026:** los anuncios de guía por DM de la campaña «LM Funnel» van a OBTENER GUIA, no al país del conjunto (ADR-W093).
 
 > **02/11/2026:** las cifras de Cash (Cobrado, New Cash, Cash total) y los ROAS van en neto, con la comisión real del pago o el promedio de su plataforma (ver ADR-W061).
+
+## Origen guardado de agendas y ventas (ADR-W101)
+
+`origen_service` guarda de dónde salió cada agenda; Marketing lo lee primero y usa la regla de siempre solo si todavía no se fijó.
+
+| Dónde | Qué guarda |
+|---|---|
+| `appointments.atribucion` | cómo se supo: `link` (link de agenda de la conversación, a futuro), `setter` (lo eligió en Mis agendas), `conversacion` (regla de Marketing), `legado` (palabra de ManyChat), `workshop`, `ninguna` |
+| `appointments.conversation_id` / `keyword` | la conversación y su palabra clave (Setting) |
+| `appointments.workshop_event_id` | el taller: el último hasta el alta de la agenda (o su reunión, si fue antes) |
+| `sales.appointment_id` | la agenda de la venta nueva: la última reunión de la persona hasta la venta (+1 día) |
+
+Renovación y upsell heredan el origen de la primera venta nueva de la persona (`origen_de_venta`). Pagos y suscripción cuelgan de la venta. Lo nuevo se fija cada 10 min (scheduler, `fijar_pendientes`, últimos 7 días; `ninguna` se reintenta en ese plazo); lo viejo con `scripts/backfill_origenes.py`.

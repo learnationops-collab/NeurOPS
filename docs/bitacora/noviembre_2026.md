@@ -260,3 +260,6 @@
   - Cada número lleva el color de su segmento, más fuerte cuanto más alto es frente al resto de su columna, y el cero se apaga: queda un mapa de calor parejo, como el del cruce.
 - **4 de Noviembre de 2026 (Marketing: sin «Leads entrantes» cuando no tiene segmento)** *([SegmentosVista.jsx](../../frontend/src/pages/admin/marketing/todos/SegmentosVista.jsx))*
   - Al agrupar por país o por closer los leads no se parten por segmento: la cifra «Leads entrantes» ya no se ofrece en el cruce ni se dibuja su columna de «—» en las tablas. Vale para cualquier cifra sin dato en ningún grupo; los leads de Workshop (que sí traen total) se mantienen.
+- **4 de Noviembre de 2026 (Marketing: el origen de cada agenda queda guardado y la venta lo hereda)** *([origen_service.py](../../app/services/origen_service.py), [backfill_origenes.py](../../scripts/backfill_origenes.py), [ADR-W101](../DECISIONS.md))*
+  - Cada agenda guarda su conversación y palabra clave (Setting) o su taller (Workshop), y cómo se supo. La venta nueva apunta a su agenda; renovación y upsell heredan el origen de la primera venta nueva de la persona. Se fija cada 10 min para lo nuevo y con el backfill para lo viejo.
+  - Marketing lee primero lo guardado y la regla de siempre queda de respaldo. La bandeja «Sin anuncio» deja de listar ventas que vinieron de un taller.
