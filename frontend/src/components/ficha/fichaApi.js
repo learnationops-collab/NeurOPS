@@ -90,6 +90,8 @@ const RUTAS = {
     // Los datos del cliente (nombre, teléfono, correo, instagram) y el examen de la agenda,
     // corregidos en el lugar desde la cabecera. Viaja solo lo que cambió.
     editar_datos: (appt, p) => api.patch(`/ficha/${appt}/datos`, p),
+    // El segmento A/B/C/D, cambiado a mano en la cabecera (de toda la persona). `{ segmento: 'B' | null }`.
+    cambiar_segmento: (appt, p) => api.patch(`/ficha/${appt}/segmento`, p),
     // Las dos del historial. `estado_agenda` corrige el pre/post call de CUALQUIER agenda del
     // cliente, no solo la que la ficha tiene abierta: el id viaja en la URL (ver `onAccion`).
     estado_agenda: (appt, p) => api.patch(`/ficha/${appt}/estado`, p),

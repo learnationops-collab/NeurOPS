@@ -73,7 +73,7 @@ const BarraPais = ({ vista, paises = [], elegidos, onElegir }) => {
                             ))}
                             {elegidos.length > 0 && (
                                 <div className="menu-pie">
-                                    <button type="button" className="link-btn" onClick={() => onElegir([])}>Ver todos</button>
+                                    <button type="button" className="link-btn" onClick={() => { onElegir([]); setAbierto(false); }}>Ver todos</button>
                                 </div>
                             )}
                         </div>

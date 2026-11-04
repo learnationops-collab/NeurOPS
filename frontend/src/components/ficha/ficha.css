@@ -600,3 +600,13 @@
 .dc-shell .fi-fathom > .fi-fathom-aviso,
 .dc-shell .fi-fathom > .fi-motivo{flex-basis:100%}
 .dc-shell .fi-fathom-aviso{color:var(--warning);line-height:1.4}
+
+/* Segmento del lead en la cabecera (`piezas/SegmentoLead.jsx`). */
+.dc-shell .fi-cab-nombre-seg{display:flex;align-items:center;flex-wrap:wrap;gap:var(--s3);min-width:0}
+.dc-shell .fi-segl-caja{position:relative;display:inline-flex}
+.dc-shell .fi-segl{display:inline-flex;align-items:center;gap:var(--s2);min-width:0}
+.dc-shell .fi-segl--editable{padding:2px 8px;border-radius:999px;border:1px solid var(--border-control);
+  background:transparent;color:inherit;cursor:pointer}
+.dc-shell .fi-segl--editable:hover{background:var(--bg-element-hover)}
+.dc-shell .fi-segl-punto{width:8px;height:8px;border-radius:50%;flex:none}
+.dc-shell .fi-segl-menu{min-width:210px;padding:var(--s2);gap:2px}

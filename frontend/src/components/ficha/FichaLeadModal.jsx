@@ -78,6 +78,7 @@ export const conAccesoDeLaBaja = (base, r) => {
 };
 
 const MENSAJES = {
+    cambiar_segmento: 'Segmento cambiado.',
     etapa_confirmacion: 'Etapa guardada.',
     como_viene: 'Estado del lead guardado.',
     dolores: 'Dolores guardados.',
