@@ -45,6 +45,7 @@ from app.services.commission_service import cash_neto
 from app.services.cruce_conversaciones import Cruce
 from app.services.identity_service import normalize_ig
 # Partido en módulos (regla de las 500 líneas): se re-exporta todo para que `anuncios_service.X` siga igual.
+from app.services import anuncios_atribucion_service
 from app.services.anuncios_claves_service import (  # noqa: F401
     CLAVES_QUE_NO_SON, LARGO_MAXIMO, TANDA, _clave_de_cada_anuncio, _en_tandas, _interacciones, _por_persona,
     _respondio, _vigente, anuncio_de_clave, anuncio_de_keyword, claves_conocidas, es_keyword_valida,
@@ -104,7 +105,7 @@ def entradas_del_periodo(desde_dt, hasta_dt, clave_de_anuncio):
     lead_ids = {lid for (lid,) in db.session.query(LeadAnswer.conversation_id).filter(
         LeadAnswer.created_at >= desde_dt, LeadAnswer.created_at <= hasta_dt).distinct()}
     descalificados = calificacion_service.descalificados()
-    for grupo in _por_persona(lead_ids, clave_de_anuncio).values():
+    for persona, grupo in _por_persona(lead_ids, clave_de_anuncio).items():
         filas = grupo['filas']
         tope = max((descalificados[lid] for lid in grupo['leads'] if lid in descalificados), default=None)
         primera, calificacion, respondio = {}, {}, set()
@@ -117,34 +118,42 @@ def entradas_del_periodo(desde_dt, hasta_dt, clave_de_anuncio):
         for clave, cuando in primera.items():
             if not (desde_dt <= cuando <= hasta_dt):
                 continue
-            yield {'lead_id': grupo['leads'][0], 'clave': clave, 'cuando': cuando, 'respondio': clave in respondio,
+            yield {'lead_id': grupo['leads'][0], 'persona': persona, 'clave': clave, 'cuando': cuando, 'respondio': clave in respondio,
                    'calificacion': calificacion_service.efectiva(calificacion.get(clave), cuando, tope)}
 
 
-def _entrantes(desde_dt, hasta_dt, clave_de_anuncio):
+def _entrantes(desde_dt, hasta_dt, clave_de_anuncio, atribucion=None):
     """{clave: {'entrantes', 'calificados', 'descalificados', 'en_conversacion',
-    'dias': {fecha: [entrantes, calificados, descalificados, en conversación]}}}
-    y la cantidad de personas cuya conversación no tiene ninguna palabra clave (clave None)."""
+    'dias': {fecha: [entrantes, calificados, descalificados, en conversación]},
+    'por_grupo': {(campaña, conjunto): Counter}}}
+    `por_grupo`: lo de esa palabra clave que se sabe de qué conjunto vino (`anuncios_atribucion_service`)."""
+    atribucion = atribucion or {}
     por_clave = defaultdict(lambda: {'entrantes': 0, 'calificados': 0, 'descalificados': 0,
-                                     'en_conversacion': 0, 'dias': defaultdict(lambda: [0, 0, 0, 0])})
+                                     'en_conversacion': 0, 'dias': defaultdict(lambda: [0, 0, 0, 0]),
+                                     'por_grupo': defaultdict(Counter)})
     for e in entradas_del_periodo(desde_dt, hasta_dt, clave_de_anuncio):
         fila = por_clave[e['clave']]
         dia = fila['dias'][e['cuando'].date().isoformat()]
+        propia = fila['por_grupo'][atribucion[(e['persona'], e['clave'])]] if (e['persona'], e['clave']) in atribucion else Counter()
         fila['entrantes'] += 1
+        propia['entrantes'] += 1
         dia[0] += 1
         if e['calificacion'] == 'true':
             fila['calificados'] += 1
+            propia['calificados'] += 1
             dia[1] += 1
         elif e['calificacion'] == 'false':
             fila['descalificados'] += 1
+            propia['descalificados'] += 1
             dia[2] += 1
         elif e['respondio']:
             fila['en_conversacion'] += 1
+            propia['en_conversacion'] += 1
             dia[3] += 1
     return por_clave
 
 
-def _agendas(desde_dt, hasta_dt, clave_de_anuncio):
+def _agendas(desde_dt, hasta_dt, clave_de_anuncio, atribucion=None):
     """({clave: {'agendas', 'dias'}}, sin_atribuir): una agenda por persona y palabra clave.
 
     El anuncio que eligió el setter en «Mis agendas» (`Appointment.anuncio_id`, 18/10/2026) manda sobre
@@ -157,7 +166,8 @@ def _agendas(desde_dt, hasta_dt, clave_de_anuncio):
     atribuidor = _Atribuidor({normalize_ig(f.instagram) for f in filas}, clave_de_anuncio,
                              {f.full_name for f in filas}, {f.person_uuid for f in filas})
 
-    por_clave = defaultdict(lambda: {'agendas': 0, 'dias': Counter()})
+    atribucion = atribucion or {}
+    por_clave = defaultdict(lambda: {'agendas': 0, 'dias': Counter(), 'por_grupo': defaultdict(Counter)})
     vistas, sin_atribuir = set(), 0
     for f in sorted(filas, key=lambda f: (f.created_at, f.id)):
         clave = clave_de_anuncio.get(f.anuncio_id) if f.anuncio_id else None
@@ -171,6 +181,9 @@ def _agendas(desde_dt, hasta_dt, clave_de_anuncio):
         vistas.add(persona)
         por_clave[clave]['agendas'] += 1
         por_clave[clave]['dias'][f.created_at.date().isoformat()] += 1
+        grupo = atribucion.get((f.person_uuid, clave))
+        if grupo:
+            por_clave[clave]['por_grupo'][grupo]['agendas'] += 1
     return por_clave, sin_atribuir
 
 
@@ -210,7 +223,7 @@ def claves_de_cobros(cobros, clave_de_anuncio=None, cliente_de=None):
             for cobro in cobros}
 
 
-def _ventas(desde_dt, hasta_dt, clave_de_anuncio):
+def _ventas(desde_dt, hasta_dt, clave_de_anuncio, atribucion=None):
     """({clave: {'ventas', 'cobrado', 'new_cash', 'personas'}}, sin_atribuir, cobros, sin_clave, claves): ventas nuevas (completo o
     split) y todo lo cobrado (también cuotas y señas) de las personas que llegaron por esa palabra
     clave; además todos los cobros del período, los que no llegaron a ninguna y
@@ -220,7 +233,10 @@ def _ventas(desde_dt, hasta_dt, clave_de_anuncio):
               if venta_completada(v)]
     cliente_de = clientes_de_ventas(cobros)
     claves = claves_de_cobros(cobros, clave_de_anuncio, cliente_de)
-    por_clave = defaultdict(lambda: {'ventas': 0, 'cobrado': 0.0, 'new_cash': 0.0, 'personas': set()})
+    atribucion = atribucion or {}
+    por_clave = defaultdict(lambda: {'ventas': 0, 'cobrado': 0.0, 'new_cash': 0.0, 'personas': set(),
+                                     'por_grupo': defaultdict(Counter)})
+    personas_por_grupo = defaultdict(set)
     sin_atribuir, sin_clave = 0, []
     for cobro in cobros:
         es_venta = ComercialService.clasificar_venta(cobro)[2]
@@ -235,6 +251,17 @@ def _ventas(desde_dt, hasta_dt, clave_de_anuncio):
             por_clave[clave]['ventas'] += 1
             por_clave[clave]['new_cash'] += neto
             por_clave[clave]['personas'].add(cliente_de.get(cobro.id) or f'cobro-{cobro.id}')
+        grupo = atribucion.get((cobro.person_uuid, clave))
+        if grupo:
+            propia = por_clave[clave]['por_grupo'][grupo]
+            propia['cobrado'] += neto
+            if es_venta:
+                propia['ventas'] += 1
+                propia['new_cash'] += neto
+                persona = cliente_de.get(cobro.id) or f'cobro-{cobro.id}'
+                if persona not in personas_por_grupo[(clave, grupo)]:
+                    personas_por_grupo[(clave, grupo)].add(persona)
+                    propia['clientes_nuevos'] += 1
     return por_clave, sin_atribuir, cobros, sin_clave, claves
 
 
@@ -291,6 +318,24 @@ def _gasto(desde, hasta, clave_de_anuncio):
     return por_clave, sin_clave, moneda
 
 
+_CIFRAS_MOVIDAS = ('entrantes', 'calificados', 'descalificados', 'en_conversacion', 'agendas', 'ventas',
+                   'clientes_nuevos', 'cobrado', 'new_cash')
+
+
+def _movidas(principal, origen, *partes):
+    """[[campaña, conjunto, {cifra: n}]] de lo que se sabe que vino de un conjunto distinto del principal de la fila: la pantalla
+    lo suma a ese conjunto y se lo resta al principal. Una agrupación a mano manda sobre esto: todo va al conjunto elegido."""
+    if origen == 'manual':
+        return []
+    por_grupo = defaultdict(Counter)
+    for parte in partes:
+        for grupo, cifras in ((parte or {}).get('por_grupo') or {}).items():
+            if grupo != principal:
+                por_grupo[grupo].update(cifras)
+    return [[c, j, {k: (round(cifras[k], 2) if k in ('cobrado', 'new_cash') else int(cifras[k]))
+                    for k in _CIFRAS_MOVIDAS if cifras[k]}] for (c, j), cifras in por_grupo.items()]
+
+
 def metricas(base):
     """Completa una fila (o los totales) con los porcentajes, los costos, el ticket y el ROAS: las cuentas son
     las de `marketing_formulas` (las mismas de las fuentes y de la pantalla). Un costo sin denominador (o sin
@@ -328,10 +373,13 @@ def tablero(desde, hasta, base=None, segmento=None):
     desde_dt, hasta_dt = _limites(desde, hasta)
     clave_de_anuncio = _clave_de_cada_anuncio()
 
-    entrantes = _entrantes(desde_dt, hasta_dt, clave_de_anuncio)
-    agendas, agendas_sin_atribuir = _agendas(desde_dt, hasta_dt, clave_de_anuncio)
+    # De qué conjunto de Meta vino cada persona, cuando el DM trae el anuncio: mueve sus cifras de la fila principal de
+    # la palabra clave al conjunto de ese anuncio (`anuncios_atribucion_service`).
+    atribucion = anuncios_atribucion_service.por_persona()
+    entrantes = _entrantes(desde_dt, hasta_dt, clave_de_anuncio, atribucion)
+    agendas, agendas_sin_atribuir = _agendas(desde_dt, hasta_dt, clave_de_anuncio, atribucion)
     ventas, ventas_sin_atribuir, cobros, _sin_clave, claves_de_cobro = _ventas(
-        desde_dt, hasta_dt, clave_de_anuncio)
+        desde_dt, hasta_dt, clave_de_anuncio, atribucion)
     gasto, gasto_sin_clave, moneda = _gasto(desde, hasta, clave_de_anuncio)
 
     anuncios_por_clave = defaultdict(list)
@@ -363,6 +411,7 @@ def tablero(desde, hasta, base=None, segmento=None):
             dias[fecha][3] = n
         gasto_total = sum(g.values())
         campana, conjunto, origen, reparto = _agrupacion(vigente, grupos_de_meta.get(clave), conjuntos, gasto_total)
+        movidas = _movidas((campana, conjunto), origen, e, a, v)
         filas.append(metricas({
             'clave': clave,
             'nombre': ((vigente.keyword or vigente.name) if vigente else escrituras.get(clave, clave))
@@ -388,6 +437,7 @@ def tablero(desde, hasta, base=None, segmento=None):
             'conjunto': conjunto,
             'agrupacion': origen,
             'gasto_por_grupo': reparto,
+            'atribuido_por_grupo': movidas,
             'dias': {fecha: valores for fecha, valores in sorted(dias.items())},
         }))
     filas.sort(key=lambda f: (f['clave'] is None, -f['entrantes'], -f['gasto'], f['nombre']))

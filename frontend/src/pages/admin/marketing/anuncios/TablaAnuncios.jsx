@@ -394,6 +394,13 @@ const TablaAnuncios = ({ datos, onArchivar, onAgrupar, irAMeta, estadoMeta = nul
                 </CajaDeTabla>
                 )}
 
+                {nivel !== 'anuncios' && datos.filas.some((f) => f.atribuido_por_grupo?.length) && (
+                    <p className="t-cap mut40 mk-pie">
+                        Una palabra clave que corre en varios conjuntos: sus leads, agendas y ventas van al conjunto del anuncio del que vino el DM.
+                        Los que no traen anuncio (comentarios, orgánico) quedan en el conjunto principal de la palabra clave.
+                    </p>
+                )}
+
                 {(datos.sin_atribuir?.gasto_meta > 0 || datos.sin_atribuir?.agendas > 0) && (
                     <p className="t-cap mut40 mk-pie">
                         {datos.sin_atribuir.gasto_meta > 0 && (

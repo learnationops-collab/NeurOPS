@@ -213,9 +213,12 @@ export const serieDe = (filas, desde, hasta) => {
 
 /**
  * Los tres niveles de la tabla, como en Meta. Una palabra clave tiene UNA campaña y UN conjunto (el backend
- * dice de dónde salen: a mano, Meta o la carga vieja); sus leads, agendas y ventas van enteros a ese grupo, y
+ * dice de dónde salen: a mano, Meta o la carga vieja); sus leads, agendas y ventas van a ese grupo, y
  * su gasto se reparte según `gasto_por_grupo` (los anuncios de Meta de una misma palabra clave pueden estar en
  * campañas distintas).
+ *
+ * Salvo lo que se sabe de qué conjunto vino (el DM trae el anuncio de Meta, 04/11/2026): `atribuido_por_grupo`
+ * lo pasa del grupo principal al conjunto de ese anuncio. La suma de la palabra clave no cambia.
  */
 export const NIVELES = [
     { key: 'campanas', label: 'Campañas' },
@@ -251,6 +254,7 @@ export const agruparFilas = (filas, nivel) => {
     };
     filas.forEach((f) => {
         const g = grupo(f.campana, f.conjunto);
+        const principal = g;
         SUMADAS_POR_GRUPO.forEach((k) => { g[k] += Number(f[k]) || 0; });
         g.palabras.add(claveDeAnuncio(f));
         if (f.conjunto) g.conjuntos.add(f.conjunto);
@@ -264,6 +268,16 @@ export const agruparFilas = (filas, nivel) => {
             const destino = grupo(c, j);
             destino.gasto += Number(monto) || 0;
             if (monto) destino.medido = true;
+        });
+        (f.atribuido_por_grupo || []).forEach(([c, j, cifras]) => {
+            const destino = grupo(c, j);
+            SUMADAS_POR_GRUPO.forEach((k) => {
+                const n = Number(cifras[k]) || 0;
+                destino[k] += n;
+                principal[k] -= n;
+            });
+            destino.medido = true;
+            destino.palabras.add(claveDeAnuncio(f));
         });
     });
     return [...grupos.values()].map((g) => completar({
