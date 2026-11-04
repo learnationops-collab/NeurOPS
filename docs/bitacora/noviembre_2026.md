@@ -191,3 +191,7 @@
   - La Momentum deja después el margen del closer, igual que las del link, y ya no se puede reservar pegada a otra llamada ni encima de una que empezó antes: se mira que los horarios se pisen, no solo que empiecen a la misma hora.
   - Los horarios que se le ofrecen a la Academia para la Momentum ya respetan el margen de las llamadas de Work.
   - La llamada cargada a mano, cuando no sale de otra agenda, dura y deja el margen de la sesión de quien atiende.
+- **3 de Noviembre de 2026 (Marketing: eliminar leads de prueba con su pago y modo Completa)** *([lead_prueba_service.py](../../app/services/lead_prueba_service.py), [ModalEliminarLead.jsx](../../frontend/src/components/ficha/piezas/ModalEliminarLead.jsx), [VerRegistros.jsx](../../frontend/src/components/standard/VerRegistros.jsx))*:
+  - Tacho en cada fila de agenda de las listas de cifras y papelera en la ficha: la confirmación dice qué se borra; si el lead tiene pago o venta de prueba, ofrece «Eliminar lead, pago y venta» (dirección y director de marketing). Pueden eliminar la dirección, el director de marketing, los closers y triage; una suscripción lo frena.
+  - Las listas de registros tienen un tercer modo, «Completa», a pantalla completa (se recuerda).
+  - La ventana de agendas de un taller también abre la ficha al director de marketing.
