@@ -174,7 +174,9 @@ def _tabla(corte, clave, hs, elegidos, clics):
     parcial = elegidos is not None
     por_seg = cortes.separar(hs, lambda h: h['seg'])
     todo = _sumar(hs)['cash_total']
-    leads_de_setting = corte != 'closer' and ambito <= {'setting'}
+    # Por país los leads no se reparten: los de Workshop son clics anónimos (el mismo total en cada país) y los de
+    # Setting van una sola vez arriba (`leads_total`), no en cada grupo.
+    leads_de_setting = corte not in ('closer', 'pais') and ambito <= {'setting'}
 
     def fila(seg, grupo):
         f = _sumar(grupo)
@@ -186,7 +188,7 @@ def _tabla(corte, clave, hs, elegidos, clics):
              for s in ORDEN if elegidos is None or s in elegidos]
     elegidas = [h for h in hs if elegidos is None or h['seg'] in elegidos]
     total = fila(None, elegidas)
-    if corte != 'closer' and ambito == {'workshop'}:
+    if corte not in ('closer', 'pais') and ambito == {'workshop'}:
         total['leads'] = None if parcial else clics
     etiqueta = {'fuente': ETIQUETA_FUENTE.get(clave, clave), 'ninguno': 'Todo lo filtrado',
                 'pais': paises_lectura.ETIQUETAS.get(clave, clave)}.get(corte, clave)
@@ -233,7 +235,9 @@ def vista(desde, hasta, corte='fuente', fuentes=None, segmentos=None, comparar=N
         grupos = cortes.unir_comparacion(grupos, [_tabla(corte, k, sep_p.get(k, []), elegidos, previo[1]) for k in orden],
                                          CAMPOS + DERIVADAS)
     cuentas = {s: sum(1 for h in _en_juego(hs, corte, fuentes) if h['t'] == 'agenda' and h['seg'] == s) for s in ORDEN}
-    return {'corte': corte, 'cortes': [{'key': k, 'label': ETIQUETA_CORTE[k]} for k in CORTES],
+    # Los leads del período de las fuentes elegidas, una sola vez: los de Setting (entradas por palabra clave) y, de Workshop, los clics.
+    leads_total = sum(1 for h in hs if h['t'] == 'lead' and h['fuente'] in fuentes) + (clics if 'workshop' in fuentes else 0)
+    return {'corte': corte, 'leads_total': leads_total, 'cortes': [{'key': k, 'label': ETIQUETA_CORTE[k]} for k in CORTES],
             'fuentes': [{'key': f, 'label': ETIQUETA_FUENTE[f]} for f in fuentes], 'segmentos': lista(), 'cuentas': cuentas,
             'grupos': grupos,
             'comparacion': {'desde': comparar[0].isoformat(), 'hasta': comparar[1].isoformat()} if comparar else None}

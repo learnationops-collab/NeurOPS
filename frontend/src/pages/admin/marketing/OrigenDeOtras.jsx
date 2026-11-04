@@ -25,7 +25,9 @@ const Fila = ({ fila, abrir, total = false }) => {
             <CifraConCuenta metrica="agendas" titulo={TITULO.agendas} onVer={ver('agendas')} className="t-body num td-fuerte">
                 {fila.agendas}
             </CifraConCuenta>
-            <span className="t-body num mut">{total ? '100%' : `${fila.pct_agendas}%`}</span>
+            <CifraConCuenta metrica="reportadas" titulo={TITULO.reportadas} onVer={ver('reportadas')} className="t-body num">
+                {fila.reportadas ?? 0}
+            </CifraConCuenta>
             <CifraConCuenta metrica="show_up" titulo={TITULO.show_up} onVer={ver('show_up')} className="t-body num">
                 {fila.show_up}
             </CifraConCuenta>
@@ -55,7 +57,9 @@ const OrigenDeOtras = ({ otras, abrir, desde, hasta, moneda, base, segmento = un
                         <div className="ot-fila ot-fila--cab" role="row">
                             <span className="t-eyebrow mut" role="columnheader">Origen</span>
                             <span className="t-eyebrow mut" role="columnheader">Agendas</span>
-                            <span className="t-eyebrow mut" role="columnheader">% de Otras</span>
+                            <span className="t-eyebrow mut" role="columnheader">
+                                Con resultado <Tip texto="Las agendas que ya tienen un resultado reportado. El show up se mide sobre estas." titulo="Con resultado" />
+                            </span>
                             <span className="t-eyebrow mut" role="columnheader">Asistieron</span>
                             <span className="t-eyebrow mut" role="columnheader">
                                 Show up <Tip texto="Asistieron ÷ citas con resultado." titulo="Show up" />

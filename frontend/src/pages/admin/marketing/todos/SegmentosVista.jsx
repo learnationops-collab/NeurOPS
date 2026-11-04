@@ -111,7 +111,7 @@ const SegmentosVista = ({ rango, version, params, cambiar, onReintentar }) => {
 
     // Los bloques son una lista (`bloquesSegmentos.jsx`); acá solo se les pasa lo calculado.
     const items = itemsDe({
-        corte, grupos, todosLosGrupos: datos.grupos, quitados, onQuitados: cambiarQuitados, onQuitar: (key) => cambiarQuitados([...quitados, key]),
+        corte, leadsTotal: datos.leads_total, grupos, todosLosGrupos: datos.grupos, quitados, onQuitados: cambiarQuitados, onQuitar: (key) => cambiarQuitados([...quitados, key]),
         columnas, ocultas, onOcultas: (lista) => poner({ ocultas: lista }), moneda: datos.moneda,
         campo, campos: COLUMNAS_CRUCE, onCampo: (key) => poner({ campo: key }), orden, onOrden: ordenar,
         onVerTabla: verDeTabla, onVerCruce: verDeCruce,

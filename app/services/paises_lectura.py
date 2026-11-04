@@ -13,8 +13,17 @@ from app.agendas_v2.nucleo.catalogos import PAISES
 from app.models import Client, Person
 
 SIN = 'sin'
-ETIQUETAS = {**{p['c']: p['n'] for p in PAISES}, SIN: 'Sin país'}
-_POR_LARGO = sorted(PAISES, key=lambda p: -len(p['d']))
+# Países que el formulario de agendas no ofrece pero de los que llegan WhatsApps (Renan Aguilera, +504 Honduras,
+# quedaba «Sin país»). Mismos códigos que `PAIS_DE_CODIGO` de las postulaciones; se suman a los del formulario.
+EXTRAS = [
+    {'c': 'GT', 'n': 'Guatemala', 'd': '+502'}, {'c': 'SV', 'n': 'El Salvador', 'd': '+503'},
+    {'c': 'HN', 'n': 'Honduras', 'd': '+504'}, {'c': 'NI', 'n': 'Nicaragua', 'd': '+505'},
+    {'c': 'CU', 'n': 'Cuba', 'd': '+53'}, {'c': 'PT', 'n': 'Portugal', 'd': '+351'},
+    {'c': 'IT', 'n': 'Italia', 'd': '+39'}, {'c': 'DO', 'n': 'República Dominicana', 'd': '+1809'},
+]
+_PAISES_TODOS = [{'c': p['c'], 'n': p['n'], 'd': p['d']} for p in PAISES] + EXTRAS
+ETIQUETAS = {**{p['c']: p['n'] for p in _PAISES_TODOS}, SIN: 'Sin país'}
+_POR_LARGO = sorted(_PAISES_TODOS, key=lambda p: -len(p['d']))
 TANDA = 500
 
 

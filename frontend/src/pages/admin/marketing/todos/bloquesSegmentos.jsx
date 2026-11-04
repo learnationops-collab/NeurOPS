@@ -17,9 +17,10 @@ const CORTAS = { leads: 'leads', agendas: 'agendas', ventas: 'ventas', new_cash:
 const NOTA_WORKSHOP = 'Los leads de Workshop son clics al grupo de WhatsApp: no traen formulario, así que no se parten por segmento.';
 
 /** Lo que se lee con el desplegable cerrado: las cifras del total del grupo (solo las columnas que se ven). */
-const Resumen = ({ grupo, columnas, moneda }) => (
+const Resumen = ({ grupo, columnas, moneda, corte }) => (
     <span className="sg-meta">
-        {columnas.filter((c) => CORTAS[c.key]).map((c) => (
+        {/* Por país los leads van una sola vez, arriba (`Tabla por grupo`): no en cada país. */}
+        {columnas.filter((c) => CORTAS[c.key] && !(corte === 'pais' && c.key === 'leads')).map((c) => (
             <span key={c.key}><b className="num">{valorDe(c, grupo.total, moneda)}</b> {CORTAS[c.key]}</span>
         ))}
     </span>
@@ -55,7 +56,7 @@ const MAX_SUELTAS = 4;
 
 const tablaDe = (ctx) => (g, i) => ({
     key: `tabla:${g.key}`, title: g.label, color: COLOR[g.key] || 'var(--brand-secondary)', open: ctx.grupos.length === 1 || (!cruce(ctx) && i === 0),
-    meta: <Resumen grupo={g} columnas={ctx.columnas} moneda={ctx.moneda} />,
+    meta: <Resumen grupo={g} columnas={ctx.columnas} moneda={ctx.moneda} corte={ctx.corte} />,
     children: () => (
         <TablaSegmentos plano grupo={g} columnas={ctx.columnas} moneda={ctx.moneda} onVer={ctx.onVerTabla(g)}
             nota={ctx.corte === 'fuente' && g.key === 'workshop' ? NOTA_WORKSHOP : null} />
@@ -66,7 +67,13 @@ const tablas = (ctx) => {
     const items = ctx.grupos.map(tablaDe(ctx));
     if (items.length <= MAX_SUELTAS) return items;
     return {
-        key: 'tablas', title: 'Tabla por grupo', meta: <span className="sg-meta"><span><b className="num">{items.length}</b> grupos</span></span>,
+        key: 'tablas', title: 'Tabla por grupo',
+        meta: (
+            <span className="sg-meta">
+                <span><b className="num">{items.length}</b> grupos</span>
+                {ctx.corte === 'pais' && ctx.leadsTotal != null && <span><b className="num">{ctx.leadsTotal.toLocaleString('es-AR')}</b> leads</span>}
+            </span>
+        ),
         children: () => <Accordion items={items.map((it) => ({ ...it, open: false }))} />,
     };
 };
