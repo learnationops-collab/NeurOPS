@@ -69,15 +69,18 @@ export const pestanaPorDefecto = (ficha) => {
 const PERMISOS = ['confirmar', 'reportar', 'cobrar', 'reasignar', 'comentar', 'eliminar', 'eliminar_lead', 'editar_datos', 'triar', 'pasar_triage'];
 
 /** Si el rol no puede tocar nada, el panel se muestra en solo lectura. */
+// Eliminar el lead no edita la ficha: quien solo puede eso (el director de marketing) la ve en solo lectura.
+const NO_EDITAN = ['eliminar_lead', 'eliminar_lead_con_plata'];
+
 export const puedeEditarFicha = (ficha) => {
     const permisos = ficha?.permisos;
     if (!permisos) return true;
-    return PERMISOS.some(k => permisos[k] === true);
+    return PERMISOS.some(k => !NO_EDITAN.includes(k) && permisos[k] === true);
 };
 
 /**
- * La ficha para MIRAR: todos los permisos en `false` salvo `comentar`, que queda como lo dio el
- * servidor. La pide quien abre la ficha desde una lista de solo lectura —el Revisar del setter
+ * La ficha para MIRAR: todos los permisos en `false` salvo `comentar` y el borrado de leads de prueba
+ * (`eliminar_lead*`), que quedan como los dio el servidor. La pide quien abre la ficha desde una lista de solo lectura —el Revisar del setter
  * (10/10/2026: «ninguna acción de edición ni de borrado»)— aunque el rol pueda hacer algo en otra
  * pantalla (el setter confirma sus propias agendas). Una nota al equipo no edita el lead.
  *
@@ -85,7 +88,11 @@ export const puedeEditarFicha = (ficha) => {
  * la ficha se abriría editable.
  */
 export const enSoloLectura = (ficha) => (ficha
-    ? { ...ficha, permisos: Object.fromEntries(PERMISOS.map(k => [k, k === 'comentar' && ficha.permisos?.comentar === true])) }
+    ? {
+        ...ficha,
+        permisos: Object.fromEntries([...PERMISOS, 'eliminar_lead_con_plata']
+            .map(k => [k, (k === 'comentar' || NO_EDITAN.includes(k)) && ficha.permisos?.[k] === true])),
+    }
     : ficha);
 
 /** Lo que el cascarón necesita de `estado`, en un solo objeto y sin `undefined`. */

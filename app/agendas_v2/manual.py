@@ -74,6 +74,11 @@ def armar_payload(cliente, closer, usuario, via, anterior=None, fuente=None):
     base = (anterior.agenda_payload or {}) if anterior is not None else {}
     payload = {k: base[k] for k in HEREDADOS if base.get(k) is not None}
     payload.setdefault('evento_nombre', 'Llamada')
+    if 'duracion_min' not in payload or 'margen_min' not in payload:
+        # Lo que no se hereda sale de la sesión de quien atiende: dura y deja el margen que en Thalamus.
+        from app.agendas_v2.a_triage import sesion_propia_de
+        for k, v in (sesion_propia_de(closer) or {}).items():
+            payload.setdefault(k, v)
     payload.setdefault('duracion_min', DURACION_MIN)
     payload.setdefault('prioridad_nombre', cliente.grupo or None)
     lead_previo = base.get('lead') or {}

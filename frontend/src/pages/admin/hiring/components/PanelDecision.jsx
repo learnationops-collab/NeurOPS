@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Aura } from '../../../../components/standard';
 import { MODALIDAD } from '../lib/escalas';
 import { VEREDICTO } from './comun';
-import { decoBloque } from './SeccionesFicha';
+import { decoBloque, titular } from './SeccionesFicha';
 
 // El panel fijo de la derecha de la ficha: el score con su desglose por sección,
 // los datos del perfil y los botones de decisión.
@@ -69,14 +69,15 @@ const PanelDecision = ({ d, botones, titulos, onDecidir, nota }) => {
             <div className="tl-fi-score">
                 <Aura size="card" colors={['var(--success)', 'var(--info)', 'var(--brand-secondary)']} />
                 <div className="tl-fi-score-cab">
-                    <div><span>Score</span><strong>{d.score == null ? '—' : score}</strong></div>
+                    <span>Score</span>
                     <span className="tl-fi-estado" style={{ color: veredicto.fg, background: veredicto.bg, borderColor: veredicto.bd }}>
                         {veredicto.label}
                     </span>
                 </div>
+                <strong className="tl-fi-score-num">{d.score == null ? '—' : score}</strong>
                 {grupos.map((g, i) => (
                     <div key={g.bloque} className="tl-fi-fila" style={{ '--c': decoBloque(g.bloque, titulos.indexOf(g.bloque)).color, '--i': i }}>
-                        <div><span title={g.bloque}>{g.bloque}</span><b>{+g.puntos.toFixed(1)} de {g.maximo}</b></div>
+                        <div><span title={titular(g.bloque)}>{titular(g.bloque)}</span><b>{+g.puntos.toFixed(1)}<small> de {g.maximo}</small></b></div>
                         <span className="tl-fi-barra"><i style={{ width: `${Math.round(g.ratio * 100)}%` }} /></span>
                     </div>
                 ))}

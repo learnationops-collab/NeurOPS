@@ -2,7 +2,8 @@
    monta en un portal a `body`: de ahí salen los tokens y los botones `.btn`.
 
    Va por encima del velo de la ficha (z-index 90): se abre DESDE la ficha y tiene que taparla. */
-.dc-shell.confirma-velo{z-index:110;align-items:center}
+/* 180: también por encima de la ficha abierta desde una lista (sale a body en z 175, ver `useFichaDeFila`). */
+.dc-shell.confirma-velo{z-index:180;align-items:center}
 
 .dc-shell .confirma{position:relative;width:min(420px,100%);display:flex;flex-direction:column;
   gap:var(--s3);padding:var(--s6);background:var(--bg-surface);border:1px solid var(--border-main);

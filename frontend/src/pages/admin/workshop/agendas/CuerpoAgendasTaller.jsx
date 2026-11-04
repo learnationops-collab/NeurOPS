@@ -14,7 +14,8 @@ import './agendas.css';
  * panel «ver registros» del Resumen. `onFicha(abierta)` avisa si hay una ficha abierta (la ventana no se cierra
  * con Escape mientras tanto).
  */
-const ROLES_CON_FICHA = ['admin', 'operator'];
+// El director de marketing abre la ficha desde el 03/11/2026 (solo la lee: ver `ROLES_SOLO_LECTURA` en `app/api/ficha`).
+const ROLES_CON_FICHA = ['admin', 'operator', 'director_marketing'];
 const SIN_FUNCION = () => {};
 
 const plural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;

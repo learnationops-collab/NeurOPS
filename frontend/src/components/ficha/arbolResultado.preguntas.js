@@ -250,10 +250,12 @@ export const PREGUNTAS = [
     clave: 'que_registra', hito: 'cierre', campo: 'registro', tipo: 'opciones',
     enunciado: '¿Qué estás registrando?',
     opciones: (r, c) => [
-      { valor: 'venta', label: 'Una venta nueva', sub: 'Compra un programa, lo renueva o suma otro', tono: 'success' },
+      { valor: 'venta', label: 'Una venta nueva, renovación o upsell', sub: 'Compra un programa, lo renueva o pasa a otro', tono: 'success' },
       {
         valor: 'pago', label: 'Un pago de algo que ya compró', tono: 'info',
-        sub: c.programaCliente ? `Una cuota o parte del saldo de ${c.programaCliente}` : 'Una cuota o parte de lo que debe',
+        // Mario (31/10) cargó un upsell por acá y quedó como cuota: el sub lo aclara.
+        sub: (c.programaCliente ? `Una cuota o parte del saldo de ${c.programaCliente}` : 'Una cuota o parte de lo que debe')
+          + '. Si renueva o pasa a otro programa, es venta nueva.',
       },
     ],
     cuando: (r) => r.venta_directa === true,

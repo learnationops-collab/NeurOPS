@@ -9,8 +9,13 @@ bloqueando). Una Momentum de la Academia también va por encima de las C/D (api/
 para que la reagende. Un C o D no desplaza a nadie, y una agenda sin segmento no se desplaza.
 """
 
+import logging
 import time
 from datetime import datetime, timedelta, timezone
+
+from app import db
+
+logger = logging.getLogger(__name__)
 
 
 QUE_DESPLAZAN = ('A', 'B')
@@ -128,22 +133,46 @@ def que_pisa(huecos, inicio, fin):
 
 
 def marcar(appt, ids):
-    """La agenda `appt` (de un lead A/B o una Momentum) tomó el horario de esas agendas C/D: quedan marcadas y
-    el closer y los admins reciben un aviso para reagendarlas. No hace commit."""
+    """La agenda `appt` (de un lead A/B o una Momentum) tomó el horario de esas agendas C/D: quedan marcadas.
+    No hace commit. Después del commit, pasar_al_triage."""
     from app.models import Appointment
-    from app.services import avisos_service, lead_log_service
 
     for a in Appointment.query.filter(Appointment.id.in_(list(ids))).all():
         a.desplazada_por_id = appt.id
-        cuando = a.start_time.strftime('%d/%m/%Y %H:%M')
+
+
+def _motivo(a, appt):
+    nuevo = (appt.client.full_name if appt.client else None) or 'un lead'
+    que = 'su Momentum' if appt.origin == 'Momentum' else f'segmento {appt.segmento or "?"}'
+    return f'El horario del {a.start_time.strftime("%d/%m/%Y %H:%M")} UTC con {a.closer.username if a.closer else "el closer"} lo tomó {nuevo} ({que}).'
+
+
+def pasar_al_triage(appt):
+    """Las C/D que desplazó `appt` pasan al triage (a_triage.pasar): a la triage libre a esa hora, que la
+    conserva, o a la de menos carga, que la reagenda. Si no se puede (no hay triage), sigue con el closer y
+    a él y a los admins les llega el aviso para reagendarla. Hace commit; un error no frena la agenda nueva."""
+    from app.agendas_v2 import a_triage
+    from app.models import Appointment
+    from app.services import avisos_service, lead_log_service
+
+    for a in Appointment.query.filter(Appointment.desplazada_por_id == appt.id).all():
+        motivo = _motivo(a, appt)
+        try:
+            a_triage.pasar(a, None, motivo=motivo)
+            continue
+        except ValueError as e:
+            db.session.rollback()
+            logger.warning(f'[DESPLAZAR] La agenda #{a.id} no pasó al triage: {e}')
+        except Exception as e:  # noqa: BLE001  (Google o la base: la agenda nueva ya quedó)
+            db.session.rollback()
+            logger.error(f'[DESPLAZAR] No se pudo pasar la agenda #{a.id} al triage: {e}')
+            continue
         nombre = (a.client.full_name if a.client else None) or 'un lead'
-        nuevo = (appt.client.full_name if appt.client else None) or 'un lead'
-        que = 'su Momentum' if appt.origin == 'Momentum' else f'segmento {appt.segmento or "?"}'
-        texto = (f'El horario del {cuando} UTC lo tomó {nuevo} ({que}). '
-                 f'Esta agenda (segmento {a.segmento}) sigue en pie: hay que reagendarla.')
-        lead_log_service.nota(texto, a.closer_id, appt=a)
+        lead_log_service.nota(f'{motivo} Esta agenda (segmento {a.segmento}) sigue en pie: hay que reagendarla.',
+                              a.closer_id, appt=a)
         avisos_service.avisar(
             'agenda_desplazada', *avisos_service.destino(['admin'], [a.closer_id]), 'Agenda para reagendar',
-            f'La agenda de {nombre} ({a.segmento}) del {cuando} UTC quedó desplazada por {nuevo}: reagendala.',
+            f'{motivo} La agenda de {nombre} ({a.segmento}) sigue en pie: reagendala.',
             'appointment', a.id, person_uuid=a.person_uuid,
         )
+        db.session.commit()

@@ -1,0 +1,126 @@
+/* ============================================================================
+   LEARNATION TALENT EN EL TELÉFONO (03/11/2026)
+
+   Aparte de `talent.css` (que ya pasa las 500 líneas) y de `fichaPostulacion.css`
+   (la ficha de escritorio). Se importa después de los dos, y los selectores llevan
+   un nivel más (`.dc-shell.talent`, `.tl-fi`) para ganarles sin `!important`.
+
+   Lo que cambia en un teléfono:
+   - Dock: ocupa el ancho, solo íconos, sin el sticky de la sesión que tapaba
+     secciones. Entran las seis secciones, el orbe y la sesión sin scrollear.
+   - Cabecera del Inbox: buscador y filtro en una fila, pestañas debajo.
+   - Próxima a revisar: score al lado del nombre y «Abrir postulación» ancho.
+   - Ficha: arriba el score, el desglose y el perfil (la pretensión); después las
+     secciones; los botones de decisión quedan fijos abajo.
+   ============================================================================ */
+
+/* ---------- Dock ----------
+   Como la barra de pestañas de iOS: ícono grande arriba y el nombre chico debajo, en
+   todas las secciones (no solo la activa). La activa se tiñe del color de marca. */
+@media (max-width:640px){
+  .dc-shell.talent .dock{left:6px;right:6px;width:auto;max-width:none;margin-inline:0;
+    bottom:calc(6px + env(safe-area-inset-bottom,0px));padding:6px;gap:2px;border-radius:30px}
+  .dc-shell.talent .dock-nav{flex:1 1 auto;min-width:0;gap:0}
+  .dc-shell.talent .dock .dock-item{flex:1 1 0;min-width:0;height:62px;padding:0;gap:4px;
+    flex-direction:column;justify-content:center;color:var(--text-muted)}
+  .dc-shell.talent .dock .dock-item svg{width:25px;height:25px;stroke-width:1.75}
+  .dc-shell.talent .dock .dock-item .dock-label{display:block;margin:0;font-size:9.5px;font-weight:600;letter-spacing:-.01em;line-height:1}
+  .dc-shell.talent .dock .dock-item .dock-num,
+  .dc-shell.talent .dock .dock-item .dock-pronto{display:none}
+  .dc-shell.talent .dock .dock-item[aria-current="page"]{color:var(--brand-secondary)}
+  .dc-shell.talent .dock .dock-item[aria-current="page"] .dock-label{font-weight:800}
+  .dc-shell.talent .dock .dock-item .dock-marca{position:absolute;top:5px;left:calc(50% + 6px);margin:0;
+    height:16px;font-size:9.5px;box-shadow:0 0 0 2px var(--bg-surface)}
+  /* Las cuentas de tres cifras se montaban sobre la sección de al lado: solo la de la activa. */
+  .dc-shell.talent .dock .dock-item:not([aria-current="page"]) .dock-marca--cuenta{display:none}
+  .dc-shell.talent .dock-ind{border-radius:22px}
+  .dc-shell.talent .dock .dock-despues{position:static;padding-left:0;margin-left:0;background:none;gap:0}
+  .dc-shell.talent .dock-sep{height:30px;margin:0 3px}
+  .dc-shell.talent .dock-fijada{width:44px;height:62px}
+  .dc-shell.talent .tl-orb{width:50px;height:62px;border-radius:22px}
+  .dc-shell.talent .tl-orb svg{width:44px;height:44px}
+  .dc-shell.talent .dock-sesion{width:48px;height:62px;border-radius:22px}
+  .dc-shell.talent .dock-sesion .avatar{width:38px;height:38px}
+  .dc-shell.talent .dock-sesion-aviso{top:6px;right:0}
+}
+@media (max-width:374px){
+  .dc-shell.talent .dock .dock-item .dock-label{font-size:8.5px;letter-spacing:-.02em}
+  .dc-shell.talent .dock .dock-item svg{width:23px;height:23px}
+}
+
+/* ---------- Cabecera y Próxima a revisar ---------- */
+@media (max-width:640px){
+  .dc-shell.talent .tl-tope{gap:var(--s3);margin-bottom:var(--s4)}
+  .dc-shell.talent .tl-marca .t-h1{font-size:28px}
+  .dc-shell.talent .tl-tope-der{flex-wrap:wrap;gap:var(--s2)}
+  /* El filtro sube a la fila del buscador y las pestañas bajan a una fila propia. */
+  .dc-shell.talent .tl-controles{display:contents}
+  .dc-shell.talent .tl-tope-der .busca{order:1;flex:1 1 0;min-width:0;height:44px}
+  .dc-shell.talent .busca kbd{display:none}
+  .dc-shell.talent .tl-vista-btn{order:2;width:44px;height:44px}
+  .dc-shell.talent .tl-tope-der .tabs{order:3;flex:1 1 100%;max-width:100%}
+  .dc-shell.talent .tl-tope-der .tab{height:34px;padding:0 12px;font-size:13px}
+
+  .dc-shell.talent .tl-foco{padding:var(--s4);grid-template-columns:minmax(0,1fr) auto;align-items:start}
+  .dc-shell.talent .tl-foco-id .tl-avatar{width:38px;height:38px;border-radius:12px;font-size:15px}
+  .dc-shell.talent .tl-foco-score{justify-items:end;text-align:right}
+  .dc-shell.talent .tl-foco-score .tl-cifra{font-size:32px}
+  .dc-shell.talent .tl-foco-razones .chip{height:24px;padding:0 9px;font-size:10px}
+  .dc-shell.talent .tl-foco-acc{width:100%}
+  .dc-shell.talent .tl-foco-acc .btn--cta{flex:1 1 auto}
+  /* El avance sobra en el teléfono: la cuenta de pendientes ya está en el dock y en las pestañas. */
+  .dc-shell.talent .tl-avance{display:none}
+  .dc-shell.talent .tl-vacio{justify-items:center;text-align:center;padding:var(--s8) var(--s4)}
+}
+
+/* ---------- Ficha de la postulación ---------- */
+@media (max-width:760px){
+  /* Cabecera: el nombre arriba con las flechas y el cerrar a la derecha; el contacto
+     en una fila que se desliza de costado. */
+  .tl-fi .tl-fi-cab{gap:10px;padding:14px 16px 12px}
+  .tl-fi .tl-fi-quien,
+  .tl-fi .tl-fi-cab > .tl-fi-nombre{flex:1 1 100%;min-height:38px;padding-right:126px;gap:10px}
+  .tl-fi .tl-fi-cab > .tl-fi-nombre{line-height:38px}
+  .tl-fi .tl-fi-nombre{font-size:21px}
+  .tl-fi .tl-fi-pais{height:26px;padding:0 6px;font-size:0;gap:0}
+  .tl-fi .tl-fi-acc{flex:1 1 100%;flex-wrap:nowrap;justify-content:flex-start;gap:8px;overflow-x:auto;
+    margin:0 -16px;padding:0 16px;scrollbar-width:none}
+  .tl-fi .tl-fi-acc::-webkit-scrollbar{display:none}
+  .tl-fi .tl-fi-sep{display:none}
+  .tl-fi .tl-fi-capsula{flex:none;height:38px;max-width:none;padding-left:12px}
+  /* Desde el teléfono lo primero que se toca es el WhatsApp. */
+  .tl-fi .tl-fi-capsula:has(.tl-fi-capsula-logo){order:-1}
+  .tl-fi .tl-fi-capsula > span{font-size:13px}
+  .tl-fi .tl-fi-capsula .tl-fi-ibtn{width:32px;height:32px}
+  .tl-fi .tl-fi-cv{flex:none;height:38px;padding:0 14px;font-size:11px}
+  .tl-fi .tl-fi-nav{position:absolute;top:14px;right:62px;padding:1px}
+  .tl-fi .tl-fi-nav .tl-fi-ibtn{width:34px;height:34px}
+  .tl-fi .tl-fi-nav b{display:none}
+  .tl-fi .tl-fi-acc > .tl-fi-ibtn--borde{position:absolute;top:14px;right:16px;width:38px;height:38px}
+
+  /* Cuerpo: una sola columna. El panel de decisión se desarma (`display:contents`)
+     para repartir sus piezas: score y perfil arriba, botones al final y fijos. */
+  .tl-fi .tl-fi-cuerpo{display:flex;flex-direction:column;gap:14px;padding:14px 14px 0}
+  .tl-fi .tl-fi-dec{display:contents}
+  .tl-fi .tl-fi-dec > .tl-fi-etq{display:none}
+  .tl-fi .tl-fi-aviso{order:-3}
+  .tl-fi .tl-fi-score{order:-2}
+  .tl-fi .tl-fi-perfil{order:-1;padding:10px 12px 4px;border-radius:18px;background:var(--bg-element);border:1px solid var(--border-main)}
+  .tl-fi .tl-fi-col{gap:14px}
+  .tl-fi .tl-fi-col > .tl-fi-sec:last-child{flex:none}
+  .tl-fi .tl-fi-botones{order:10;position:sticky;bottom:0;z-index:5;margin:auto -14px 0;
+    grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;
+    padding:12px 14px calc(12px + env(safe-area-inset-bottom,0px));
+    background:color-mix(in srgb,#05082D 88%,transparent);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
+    border-top:1px solid var(--border-main)}
+  .tl-fi .tl-fi-botones > .tl-fi-nota,
+  .tl-fi .tl-fi-botones > .tl-fi-baja{grid-column:1 / -1}
+  .tl-fi .tl-fi-btn{height:44px;padding:0 6px;font-size:10.5px;font-weight:800;letter-spacing:.06em;line-height:1.15;white-space:normal;text-align:center}
+  .tl-fi .tl-fi-btn svg{display:none}
+
+  .tl-fi .tl-fi-sec{padding:14px 16px 6px;border-radius:20px}
+  .tl-fi .tl-fi-sec-cab{gap:12px;padding-bottom:10px}
+  .tl-fi .tl-fi-tile{width:36px;height:36px;border-radius:11px}
+  .tl-fi .tl-fi-sec-tit{font-size:17px}
+  .tl-fi .tl-fi-valor{font-size:14.5px}
+}

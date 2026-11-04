@@ -876,9 +876,13 @@ def reasignar(appt, datos, usuario):
     if appt.closer_id == nuevo.id:
         raise ErrorDeAccion('Este lead ya es de ese closer.')
 
+    from app.services import sale_service
+
     anterior = appt.closer.username if appt.closer else 'sin asignar'
+    ventas = sale_service.pasar_ventas_de_closer(appt.person_uuid, appt.closer, nuevo)
     appt.closer_id = nuevo.id
-    lead_log_service.nota(f'Lead reasignado de {anterior} a {nuevo.username} (por {usuario.username}).',
+    con_ventas = f' Pasan también sus ventas ({", ".join(s.program_code or "?" for s in ventas)}).' if ventas else ''
+    lead_log_service.nota(f'Lead reasignado de {anterior} a {nuevo.username} (por {usuario.username}).{con_ventas}',
                           usuario, appt=appt)
     db.session.commit()
     return {'id': appt.id, 'closer_id': nuevo.id, 'closer_name': nuevo.username}

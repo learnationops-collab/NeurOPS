@@ -153,8 +153,9 @@ def _payload_con_lead(appt):
     return payload
 
 
-def pasar(appt, usuario, ahora=None):
-    """Le pasa la agenda a la triage elegida y mueve su evento de Google. Devuelve lo que muestra la ficha."""
+def pasar(appt, usuario, ahora=None, motivo=None):
+    """Le pasa la agenda a la triage elegida y mueve su evento de Google. Devuelve lo que muestra la ficha.
+    `motivo`: la pasa Work y no una persona (`usuario` None), con ese porqué (una C/D desplazada, desplazar.py)."""
     from app.services.booking_service import BookingService
     from app.services.google_service import GoogleService
 
@@ -171,12 +172,21 @@ def pasar(appt, usuario, ahora=None):
     appt.google_event_id = None
     appt.agenda_payload = _payload_con_lead(appt)
     reagendar = '' if libre else ' No tenía ese horario libre: hay que reagendarla.'
-    lead_log_service.nota(f'Pasada al triage: de {anterior} a {triage.username} (por {usuario.username}).{reagendar}',
-                          usuario, appt=appt)
     nombre = (appt.client.full_name if appt.client else None) or 'un lead'
-    avisos_service.avisar('agenda_nueva', 'user', triage.id, f'Agenda del triage: {nombre}',
-                          f'{anterior} te pasó la agenda de {nombre} del {appt.start_time.strftime("%d/%m/%Y %H:%M")} UTC.'
-                          + reagendar, 'appointment', appt.id, person_uuid=appt.person_uuid)
+    cuando = appt.start_time.strftime('%d/%m/%Y %H:%M')
+    if motivo:
+        # Con la triage libre a esa hora no hay nada que reagendar: se le saca la marca de desplazada.
+        if libre:
+            appt.desplazada_por_id = None
+        nota = f'{motivo} Pasa al triage: de {anterior} a {triage.username}.{reagendar}'
+        tipo, asunto = 'agenda_desplazada', f'Agenda del triage: {nombre}' if libre else f'Agenda para reagendar: {nombre}'
+        texto = f'{motivo} Te llega la agenda de {nombre} del {cuando} UTC.{reagendar}'
+    else:
+        nota = f'Pasada al triage: de {anterior} a {triage.username} (por {usuario.username}).{reagendar}'
+        tipo, asunto = 'agenda_nueva', f'Agenda del triage: {nombre}'
+        texto = f'{anterior} te pasó la agenda de {nombre} del {cuando} UTC.{reagendar}'
+    lead_log_service.nota(nota, usuario, appt=appt)
+    avisos_service.avisar(tipo, 'user', triage.id, asunto, texto, 'appointment', appt.id, person_uuid=appt.person_uuid)
     db.session.commit()
     BookingService.sync_appointment_to_financial_agenda(appt)
     db.session.commit()

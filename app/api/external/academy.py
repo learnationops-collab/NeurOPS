@@ -472,6 +472,59 @@ def academy_subscriptions():
                     "tipos": subscription_service.tipos_de_prorroga()}), 200
 
 
+# Las llamadas de venta que la Scale en vivo lee para conocer al alumno antes de la sesión: lo más
+# reciente primero, sin las que no tienen nada escrito.
+LLAMADAS_MAXIMO = 5
+
+
+def _respuestas_de_la_agenda(appt):
+    """Lo que el lead respondió al agendar: el formulario de Agendas 2.0 o, en las viejas, la encuesta."""
+    respuestas = (appt.agenda_payload or {}).get('respuestas') or []
+    if respuestas:
+        return [{"pregunta": r.get('pregunta'), "respuesta": r.get('respuesta')} for r in respuestas
+                if r.get('respuesta') not in (None, '')]
+    return [{"pregunta": sa.question.text if sa.question else None, "respuesta": sa.answer}
+            for sa in appt.survey_answers if sa.answer not in (None, '')]
+
+
+@bp.route('/calls', methods=['GET'])
+@require_academy_token
+def academy_student_calls():
+    """Las llamadas de venta de un alumno (Scale en vivo de la Academia, 29/10/2026): fecha, closer,
+    resultado, examen, las notas del closer y del setter, el link de la grabación y lo que respondió
+    al agendar. La Academia las usa para precargar la sesión y para que Learnito arme sus problemas.
+
+    Query: `work_uuid`, `work_client_id` o `email`. 404 si Work no tiene cliente para el alumno.
+    """
+    from app.models import Appointment
+
+    cliente = cliente_del_alumno(request.args.to_dict())
+    if not cliente:
+        return jsonify({"success": False, "error": "No existe ningún cliente con ese uuid, id o email"}), 404
+    citas = (Appointment.query.filter_by(client_id=cliente.id)
+             .order_by(Appointment.start_time.desc().nullslast(), Appointment.id.desc()).all())
+    llamadas = []
+    for a in citas:
+        respuestas = _respuestas_de_la_agenda(a)
+        if not (a.closer_notes or a.setter_notes or a.examen or a.fathom_url or respuestas):
+            continue
+        llamadas.append({
+            "id": a.id,
+            "fecha": a.start_time.isoformat() if a.start_time else None,
+            "closer": a.closer.username if a.closer else None,
+            "resultado": a.closer_result or a.result,
+            "examen": a.examen,
+            "closer_notes": a.closer_notes,
+            "setter_notes": a.setter_notes,
+            "fathom_url": a.fathom_url,
+            "respuestas": respuestas,
+        })
+        if len(llamadas) == LLAMADAS_MAXIMO:
+            break
+    return jsonify({"success": True, "client": {"id": cliente.id, "full_name": cliente.full_name},
+                    "calls": llamadas}), 200
+
+
 @bp.route('/subscriptions/prorroga', methods=['POST'])
 @require_academy_token
 def academy_prorroga():

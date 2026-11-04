@@ -205,6 +205,22 @@ def fecha_de_ingreso(client):
     return fechas_de_ingreso([client]).get(client.id) if client else None
 
 
+def pasar_ventas_de_closer(person_uuid, anterior, nuevo):
+    """Al reasignar un lead (ADR-W081), sus ventas activas que eran del closer `anterior` pasan a `nuevo`:
+    «Mis ventas», su deuda y sus clientes. Los pagos no se tocan (cada uno sigue con quien lo cobró). No hace
+    commit; devuelve las ventas movidas."""
+    from app.services.closer_service import CloserService
+
+    if not person_uuid or anterior is None or not nuevo.email:
+        return []
+    suyos = {e.strip().lower() for e in CloserService._resolve_sale_identifiers(anterior) if e}
+    ventas = [s for s in Sale.query.filter(Sale.person_uuid == person_uuid, Sale.status == 'active').all()
+              if (s.closer_email or '').strip().lower() in suyos]
+    for s in ventas:
+        s.closer_email = nuevo.email
+    return ventas
+
+
 def fijar_total(client, total, programa=None, solo_si_falta=False):
     """El total acordado (frente L, docs/plan_personas.md; antes `Client.total_amount`): va al
     `agreed_total` de la venta 'new' vigente de su persona. Sin venta no se guarda en ningún lado

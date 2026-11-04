@@ -40,20 +40,8 @@ const Foco = ({ p, pesos, onAbrir, onPesos }) => {
         return () => { vigente = false; };
     }, [p?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    if (!p) {
-        return (
-            <section className="tl-foco caja" aria-label="Próxima a revisar">
-                <Humo colores={HUMO_MARCA} tarjeta />
-                <div className="tl-foco-id">
-                    <span className="tl-vacio-ico"><Check size={22} /></span>
-                    <div>
-                        <p className="tl-rotulo">Al día</p>
-                        <h2 className="t-h3">No queda nadie completo por revisar</h2>
-                    </div>
-                </div>
-            </section>
-        );
-    }
+    // Sin nadie por revisar no hay tarjeta: el aviso animado de la lista ya lo dice.
+    if (!p) return null;
 
     const razones = Object.entries(criterios || {})
         .filter(([id]) => id.startsWith('sec:') || (pesos[id] || 0) > 0)

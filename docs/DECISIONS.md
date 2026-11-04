@@ -651,3 +651,59 @@
 - **Decisión:** el backend le pone `ficha` (`{appointment_id}`, `{client_id}` o `{person_uuid}`) a cada fila de una persona (`app/services/ficha_de_fila.py`); sin cliente o sin persona la fila no se abre. En la lista, la fila se toca (flecha al final) y la ficha sale encima con `soloLectura`; Escape o cerrar vuelven a la lista. `director_marketing` entra a `/api/ficha` solo con GET (`ROLES_SOLO_LECTURA`: cualquier otro método responde 403), no comenta y su lectura de un cliente sin agenda no le ancla una (`anclar=False`). `admin` abre la misma ficha con solo lectura desde el frontend.
 - **Qué se pierde:** desde Marketing no se corrige nada del lead; para eso está la dirección comercial. Las filas que no son personas (campañas, gasto por anuncio, la tabla por anuncio) siguen sin abrirse.
 - **Consecuencias:** sin migración. Las listas hacen una consulta más a `clients` por carga. Dar acceso de escritura a otro rol de marketing exige tocar `ROLES_SOLO_LECTURA` y `permisos_de`.
+
+## ADR-W081: Reasignar un lead también pasa sus ventas al closer nuevo
+
+- **Fecha:** 2026-11-03 · **Subsistema:** Ficha del lead / ventas (`ficha_acciones_service.reasignar`, `sale_service.pasar_ventas_de_closer`) · **Estado:** implementado.
+- **Contexto:** Jean Carlo se reasignó a David Hernandez (venta de Mario, sept.) y a José Manuel Oliva (venta de Gabriel) para cobrarles las cuotas. Reasignar cambiaba solo el closer de la agenda: la venta seguía con `closer_email` del anterior, y a Jean no le aparecían en «Mis ventas», ni en su deuda ni como clientes suyos. Los cobros sí le contaban, porque se atribuyen por pago (`email_vendedor`).
+- **Decisión:** al reasignar desde la ficha, las ventas activas de la persona que eran del closer anterior (sus identificadores de `_resolve_sale_identifiers`) pasan al closer nuevo (`closer_email` = su correo). La nota de la bitácora dice qué ventas pasaron. Los pagos no se tocan: cada uno sigue con quien lo cobró. Santi eligió esto frente a una «cartera» que dejara la venta con quien la cerró.
+- **Qué se pierde:** el closer que cerró la venta la pierde de su historial y de su «Mis ventas»; lo que ya cobró sigue a su nombre.
+- **Consecuencias:** las ventas de David Hernandez (391) y José Manuel Oliva (557) se pasaron a mano en producción. Editar la agenda desde el historial (`ficha_agendas_service.editar_agenda`) y el endpoint viejo `PATCH /appointments/<id>/reassign` siguen cambiando solo la agenda.
+
+## ADR-W082: La agenda C/D desplazada por un A/B pasa sola al triage
+
+- **Fecha:** 2026-10-31 · **Subsistema:** Agendas 2.0 (`desplazar.py`, `a_triage.py`) · **Estado:** implementado.
+- **Contexto:** cuando un lead A/B (o una Momentum) toma el horario de una C/D, la C/D quedaba con el closer marcada «Reagendar: horario tomado», con aviso al closer y a los admins. Pero con el ruteo por dinero los C/D son del triage, y la triage no se enteraba.
+- **Decisión:** después de guardar la agenda nueva, cada C/D desplazada pasa por el mismo «Pasar a triage» de la ficha (`a_triage.pasar`, con `motivo` y sin usuario). Va a la triage libre a esa hora, que la conserva sin la marca de desplazada, o a la de menos carga, que la recibe marcada para reagendar. Su evento se borra del Google del closer y al lead le llega la invitación de la triage. El aviso a la triage es `agenda_desplazada`. Si no hay triage disponible, se vuelve a lo de antes: queda con el closer y el aviso va al closer y a los admins.
+- **Qué se pierde:** el closer ya no decide qué hacer con la C/D que le desplazaron; sale de su mazo.
+- **Consecuencias:** un error al pasarla (Google, base) se registra y no frena la agenda nueva, y esa C/D queda marcada con el closer pero sin aviso.
+
+## ADR-W083: El upsell reemplaza la suscripción vieja y da su acceso entero
+
+- **Fecha:** 2026-10-31 · **Subsistema:** Suscripciones (`subscription_service`) · **Estado:** implementado.
+- **Contexto:** con el upsell AL→RR de Melissa Quezada, la suscripción de AL seguía vigente al lado de la de RR, y el plan de cuotas del upsell le recortaba el acceso a RR hasta la próxima cuota más la gracia (07/12 en vez de 27/02). Santi: «en caso de upsell la antigua suscripción se reemplaza por la nueva, extendida».
+- **Decisión:** el pago que abre una venta `upsell` (`al_ubicar_pago` → `_reemplazar_por_upsell`) termina el día del upsell las suscripciones vigentes de otros productos de la persona (evento `correccion`, «Reemplazada por el upsell a X»), y la nueva arranca con sus 120 días. `ajustar_por_plan` no toca una suscripción cuya venta es un upsell: el plan de cuotas no la acorta ni la estira.
+- **Qué se pierde:** un alumno con upsell en cuotas mantiene el acceso aunque se atrase; el control queda en la cola de cobro, no en el vencimiento. Los días que le quedaban del producto viejo no se suman al nuevo.
+- **Consecuencias:** el caso de Melissa se arregló a mano (AL hasta el 30/10, RR hasta el 27/02/2027). Los upsells anteriores no se recorren.
+
+## ADR-W084: El interno sin dinero va al triage; solo el estudiante va a la página de gracias
+
+- **Fecha:** 2026-11-02 · **Subsistema:** Agendas 2.0 (formulario «Sesión de Aceleración») · **Estado:** implementado.
+- **Contexto:** la regla `mk-academy` manda a «gracias por postularte» al que eligió «Soy estudiante o estoy en mi internado» y no invierte. Mitzia Vazquez (interna, «podría conseguir ayuda») salió como «No calificó» y Mario esperaba que pasara al triage. Santi: «si es estudiante no pasa, si es interno sí». Con una sola opción para los dos, la regla no podía separarlos.
+- **Decisión:** la opción `og8xclet205` pasa a ser «Soy estudiante» y se suma `og-internado` («Estoy en mi internado»), con la misma nota (0) y los mismos puntos de segmento (-3: no hay datos propios del interno). `mk-academy` queda igual, así que solo agarra al estudiante; el interno sin dinero cae en `sin-dinero` → triage. Se guardó solo la pregunta Etapa (`guardar_doc(parcial=True)`), y `scripts/segmentos_formulario.py` y `backfill_segmentos.py` conocen la opción nueva.
+- **Qué se pierde:** las respuestas viejas con `og8xclet205` (estudiantes e internos mezclados) se leen ahora como «Estudiante»; no hay forma de separarlas.
+- **Consecuencias:** rige para los formularios que se respondan desde ahora. Mitzia y otros internos que ya quedaron como «No calificó» no se recalculan: hay que pasarlos a mano.
+
+## ADR-W085: El lead que pasa del triage sube de segmento (C→A, D→B)
+
+- **Fecha:** 2026-11-03 · **Subsistema:** Agendas 2.0 / Triage · **Estado:** implementado.
+- **Contexto:** Jean Carlo tenía a Astolfo (D, pasado del triage) y a Cristina (C, pasada por Dari) el 04/11 a las 23:30. La agenda de closing copiaba el segmento C/D de la del triage, y su evento se creaba antes de grabar `agenda_triage_id`: nacía «Disponible» en Google como cualquier C/D (ADR-W082), el control de choques lo leía como borrado y dejó agendar encima. Las reagendas no llevan `agenda_triage_id`, así que una pasada y reagendada volvía a ser desplazable. Santi: «si es D pasa a B y si es C pasa a A».
+- **Decisión:** `triage_service._pasar_al_closer` manda en el payload de la agenda de closing `segmento_lead` con C→A y D→B (`_segmento_al_pasar`). `segmento_service` lo escribe antes de que nazca el evento, que nace ocupado, y la reagenda lo hereda. `scripts/subir_segmento_pases.py` corrigió las 5 agendas futuras ya pasadas (segmento y evento de Google a ocupado).
+- **Qué se pierde:** la agenda de closing ya no muestra el segmento con el que entró el lead; ese queda en la agenda del triage (`agenda_triage_id`).
+- **Consecuencias:** en los tableros por segmento, los pases cuentan como A/B en closing. El segmento del cliente no cambia.
+
+## ADR-W086: Un solo criterio de margen y de choque para todas las agendas
+
+- **Fecha:** 2026-11-03 · **Subsistema:** Agendas 2.0 (Momentum, carga manual) · **Estado:** implementado.
+- **Contexto:** el equipo pidió 15 minutos libres entre llamadas. El link de Thalamus guarda en cada agenda el margen del closer (`margen_min`) y mira si los bloques (sesión + margen) se pisan. La Momentum (`/agenda/reservas` en modo ventas) no guardaba margen y solo rechazaba otra agenda que empezara a la misma hora; sus horarios usaban el margen que mandaba la Academia y no veían el margen de las agendas de Work (en Google figura solo la sesión). La carga manual sin agenda previa nacía sin margen. Santi: «ganamos unicidad de criterios para agendas».
+- **Decisión:** `app/agendas_v2/momentum.py` aplica a la Momentum el criterio de Thalamus: el margen es el de la Sesión de Aceleración del closer, queda guardado en la agenda, y tanto `/horarios` como la reserva miran las agendas vigentes de Work con su margen (las C/D que la Momentum puede tomar no cuentan). La reserva bloquea al closer mientras verifica. `manual.armar_payload` completa la duración y el margen que no hereda con la sesión de quien atiende (`sesion_propia_de`).
+- **Qué se pierde:** el margen que manda la Academia para una Momentum ya no se usa; manda el del closer en Team.
+- **Consecuencias:** rige para las agendas que se creen desde ahora; las que ya están no se recalculan. Los eventos que el closer pone a mano en Google siguen bloqueando solo su duración, sin margen.
+
+## ADR-W087: Eliminar leads de prueba desde las listas de Marketing y la ficha, también con su pago y venta de prueba
+
+- **Fecha:** 2026-11-03 · **Subsistema:** Ficha del lead, Marketing y listas de registros · **Estado:** implementado.
+- **Contexto:** los registros de prueba («Kerwin Test», «Learnation Test»…) ensucian las cifras de Marketing y solo se podían borrar desde la ficha y solo la dirección, y nunca si tenían un pago, aunque el pago también fuera falso.
+- **Decisión:** `eliminar_lead` lo tienen la dirección, el director de marketing, los closers y triage. Un lead con pagos, cuotas o ventas se elimina solo con `?con_plata=1` y solo por `eliminar_lead_con_plata` (la dirección y el director de marketing): se borran sus pagos (con la exclusión de la hoja), cuotas y ventas antes que las agendas (`lead_prueba_service`). Una suscripción frena a todos hasta cerrar el acceso en la Academia. Antes de borrar, `GET /api/ficha/<agenda>/lead/borrado` devuelve lo que se borraría y la confirmación (`ModalEliminarLead`) lo lista, con el botón «Eliminar lead, pago y venta». Las filas de agenda de las listas llevan un tacho; la papelera de la cabecera de la ficha usa la misma confirmación. El director de marketing sigue en solo lectura salvo ese DELETE. `VerRegistros` suma el modo «Completa» (pantalla completa) junto a Lateral y Central.
+- **Qué se pierde:** un cobro borrado así no se recupera y Finanzas, comisiones y nómina dejan de contarlo; queda en el log del servidor quién lo hizo. Los leads sin agenda (cobros, entradas por palabra clave) no tienen tacho.
+- **Consecuencias:** sin migración. La confirmación de `ModalConfirmacion` sube a z-index 180 para quedar sobre la ficha abierta desde una lista. Si algo falla a mitad de un borrado con plata, lo ya borrado no se deshace.

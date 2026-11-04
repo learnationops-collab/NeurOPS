@@ -388,7 +388,7 @@ const FichaHeader = ({ ficha, onAccion, onCerrar, puedeEditar = true }) => {
                                     <Pencil size={16} />
                                 </button>
                             )}
-                            <BorrarLead ficha={ficha} puedeEditar={puedeEditar} onAccion={onAccion} />
+                            <BorrarLead ficha={ficha} onAccion={onAccion} />
                         </>
                     )}
                     <button type="button" className="ibtn" aria-label="Cerrar" onClick={onCerrar}>

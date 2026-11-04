@@ -163,3 +163,35 @@
 - **3 de Noviembre de 2026 (Pruebas: se arreglan las desactualizadas de la ficha, Marketing y Workshop)**:
   - 46 pruebas del frontend de la ficha, 17 de Marketing, 8 de Workshop y 23 del servidor (ficha, triage, motivos y contrato) vuelven a pasar; ninguna reveló un bug de la app. Quedan en verde 622 de vitest y 434 de pytest en esas carpetas.
   - La regla de pendientes del flujo de trabajo deja de mandar a `pendientes_santi.md`: lo resoluble se resuelve y lo abierto va a Leadership.
+- **3 de Noviembre de 2026 (Reasignar un lead le pasa también sus ventas)** *([ficha_acciones_service.py](../../app/services/ficha_acciones_service.py), [sale_service.py](../../app/services/sale_service.py), [ADR-W081](../DECISIONS.md))*:
+  - Al reasignar el closer desde la ficha, las ventas activas del lead que eran del closer anterior pasan al nuevo: le aparecen en «Mis ventas», en su deuda y en sus clientes. Los pagos siguen con quien los cobró.
+  - La nota de la bitácora del lead dice qué ventas pasaron.
+  - Se pasaron a mano a Jean Carlo las ventas de David Hernandez (era de Mario) y José Manuel Oliva (era de Gabriel), que él ya se había reasignado.
+- **3 de Noviembre de 2026 (Cargar un upsell: la opción se ve y el aviso ya no lo desaconseja)** *([arbolResultado.preguntas.js](../../frontend/src/components/ficha/arbolResultado.preguntas.js), [sales_consistency_service.py](../../app/services/sales_consistency_service.py))*:
+  - «¿Qué estás registrando?» dice «Una venta nueva, renovación o upsell», y «Un pago de algo que ya compró» aclara que si renueva o pasa a otro programa es venta nueva. Mario había cargado un upsell como cuota por ese camino.
+  - El aviso de «¿Cómo paga?» ya no dice «no corresponde Upsell» cuando el alumno no compró el programa nuevo: alcanza con que haya comprado cualquier otro. La renovación sigue pidiendo una venta del mismo programa.
+- **2 de Noviembre de 2026 (El interno sin dinero va al triage)** *([segmentos_formulario.py](../../scripts/segmentos_formulario.py), [backfill_segmentos.py](../../scripts/backfill_segmentos.py), [ADR-W084](../DECISIONS.md))*:
+  - En el formulario «Sesión de Aceleración», «Soy estudiante o estoy en mi internado» se separa en «Soy estudiante» y «Estoy en mi internado». Solo el estudiante sin dinero va a la página de gracias; el interno sin dinero va al triage (caso Mitzia Vazquez). El formulario vivo ya estaba guardado; los internos que quedaron como «No calificó» antes se pasan a mano.
+- **3 de Noviembre de 2026 (Hiring: pulido del diseño de la ficha)** *([SeccionesFicha.jsx](../../frontend/src/pages/admin/hiring/components/SeccionesFicha.jsx), [IconosSeccion.jsx](../../frontend/src/pages/admin/hiring/components/IconosSeccion.jsx), [PanelDecision.jsx](../../frontend/src/pages/admin/hiring/components/PanelDecision.jsx))*:
+  - Cada sección muestra solo su título, más grande y en tipo oración («Inteligencia artificial»), sin bajada. Preguntas en letra fina y respuestas en semibold.
+  - El score ya no se corta en el panel (la tarjeta se encogía); número más grande y desglose con los nombres de sección en tipo oración.
+  - Íconos propios duotono para Excluyentes, Deseables, Inteligencia artificial y Cualitativo, con el trazo que se dibuja al abrir.
+- **3 de Noviembre de 2026 (Talent en el teléfono)** *([talentMovil.css](../../frontend/src/pages/admin/hiring/talentMovil.css))*:
+  - Dock: ocupa el ancho de la pantalla y muestra solo íconos; entran las seis secciones, el orbe y la sesión sin que la sesión tape secciones.
+  - Inbox: buscador y filtro en una fila, pestañas debajo; en «Próxima a revisar» el score va al lado del nombre y «Abrir postulación» ocupa el ancho.
+  - Ficha: arriba el score con el desglose (excluyentes, deseables, IA…) y el perfil con la pretensión; después las secciones; los botones de decisión quedan fijos abajo. Nombre, flechas y cerrar en una fila; el contacto (WhatsApp, correo, CV) en otra que se desliza.
+- **3 de Noviembre de 2026 (Talent en el teléfono, segunda vuelta)** *([talentMovil.css](../../frontend/src/pages/admin/hiring/talentMovil.css), [AlDia.jsx](../../frontend/src/pages/admin/hiring/components/AlDia.jsx))*:
+  - Dock como la barra de iOS: más alto, íconos grandes de trazo fino y el nombre de cada sección debajo; la activa en rosa y con su cuenta.
+  - Inbox: Online es la primera pestaña y la que se abre; Híbridos aparece solo si hay alguna. En el teléfono no se muestra «Avance de la revisión».
+  - Sin nadie por revisar ya no se repite el aviso (la tarjeta «Al día» y «Revisaste todas las online»): queda uno solo, con un check animado.
+- **3 de Noviembre de 2026 (El lead que pasa del triage sube de segmento y ya no se le agenda encima)** *([triage_service.py](../../app/services/triage_service.py), [subir_segmento_pases.py](../../scripts/subir_segmento_pases.py), [ADR-W085](../DECISIONS.md))*:
+  - Al pasar al closer, el segmento de la agenda de closing sube: C→A y D→B. Antes se copiaba el C/D y el evento nacía «Disponible» en Google, así que el pase de otro lead podía caer en el mismo horario (Astolfo y Cristina con Jean Carlo el 04/11 a las 23:30).
+  - Se corrigieron las 5 agendas futuras de Jean Carlo que ya habían pasado del triage: segmento subido y evento de Google ocupado.
+- **3 de Noviembre de 2026 (Margen de 15 minutos también en las Momentum y en la carga manual)** *([momentum.py](../../app/agendas_v2/momentum.py), [agenda.py](../../app/api/external/agenda.py), [manual.py](../../app/agendas_v2/manual.py), [ADR-W086](../DECISIONS.md))*:
+  - La Momentum deja después el margen del closer, igual que las del link, y ya no se puede reservar pegada a otra llamada ni encima de una que empezó antes: se mira que los horarios se pisen, no solo que empiecen a la misma hora.
+  - Los horarios que se le ofrecen a la Academia para la Momentum ya respetan el margen de las llamadas de Work.
+  - La llamada cargada a mano, cuando no sale de otra agenda, dura y deja el margen de la sesión de quien atiende.
+- **3 de Noviembre de 2026 (Marketing: eliminar leads de prueba con su pago y modo Completa)** *([lead_prueba_service.py](../../app/services/lead_prueba_service.py), [ModalEliminarLead.jsx](../../frontend/src/components/ficha/piezas/ModalEliminarLead.jsx), [VerRegistros.jsx](../../frontend/src/components/standard/VerRegistros.jsx))*:
+  - Tacho en cada fila de agenda de las listas de cifras y papelera en la ficha: la confirmación dice qué se borra; si el lead tiene pago o venta de prueba, ofrece «Eliminar lead, pago y venta» (dirección y director de marketing). Pueden eliminar la dirección, el director de marketing, los closers y triage; una suscripción lo frena.
+  - Las listas de registros tienen un tercer modo, «Completa», a pantalla completa (se recuerda).
+  - La ventana de agendas de un taller también abre la ficha al director de marketing.

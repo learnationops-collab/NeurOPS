@@ -81,8 +81,9 @@ const RUTAS = {
     // La misma puerta que `eliminar`, apuntada a una agenda del historial y no al lead entero:
     // la ficha sigue abierta en la agenda que le quede al cliente (ver FichaLeadModal).
     eliminar_agenda: (appt) => api.delete(`/ficha/${appt}`),
-    // El lead entero (cliente, todas sus agendas y lo que cuelga de él): los de prueba. Solo la dirección y sin pagos.
-    eliminar_lead: (appt) => api.delete(`/ficha/${appt}/lead`),
+    // El lead entero (cliente, todas sus agendas y lo que cuelga de él): los de prueba. Con pagos o ventas solo si se
+    // pide `con_plata` y el rol puede (dirección y director de marketing).
+    eliminar_lead: (appt, p) => api.delete(`/ficha/${appt}/lead`, p?.con_plata ? { params: { con_plata: 1 } } : undefined),
     reasignar_closer: (appt, p) => api.patch(`/ficha/${appt}/closer`, p),
     // A la del triage libre a esa hora; el evento de Google pasa a su calendario.
     pasar_a_triage: (appt) => api.post(`/ficha/${appt}/pasar-a-triage`),
@@ -154,6 +155,8 @@ const CONSULTAS = {
     // Cómo le va al alumno en la Academia. No viaja en `GET /ficha/lead` porque es una llamada a
     // otro sistema: si fallara, se caería la ficha entera en vez de una pestaña.
     fulfillment: (appt) => api.get(`/ficha/${appt}/fulfillment`),
+    // Lo que se borraría al eliminar el lead (agendas, pagos, ventas, cuotas) para la confirmación.
+    resumen_borrado: (appt) => api.get(`/ficha/${appt}/lead/borrado`),
     // Las ventas de la persona con su total, lo cobrado, el saldo y sus pagos (`ventas_service`).
     ventas: (appt) => api.get(`/ficha/${appt}/ventas`),
     // Cómo viene pagando el cliente el programa que se le está vendiendo (`{params: {programa}}`):

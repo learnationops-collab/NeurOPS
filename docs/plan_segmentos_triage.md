@@ -42,7 +42,8 @@ Formulario «Sesión de Aceleración» (`sched_formularios.id = dg6gukz9emx`). S
 
 | Opción | id | Puntos hoy | Puntos nuevos |
 |---|---|---|---|
-| Soy estudiante o estoy en mi internado | `og8xclet205` | — | **0** |
+| Soy estudiante (hasta el 02/11/2026: «o estoy en mi internado») | `og8xclet205` | — | **0** |
+| Estoy en mi internado (desde el 02/11/2026, ADR-W084) | `og-internado` | — | **0** |
 | Estoy en mi Servicio Rural / Social | `og8xclf4go4` | — | **6** |
 | Soy médico general | `og94zlvu9m2` | 6 | **6** |
 | Soy Residente | `og9azfspw7e` | 9 | **3** |

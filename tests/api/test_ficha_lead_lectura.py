@@ -100,7 +100,7 @@ def test_la_direccion_puede_todo_incluido_borrar(client, db, lead, equipo, auth_
 
     # `pasar_triage`: la llamada de la fixture es de mañana y sigue sin reportar.
     assert permisos == {'confirmar': True, 'reportar': True, 'cobrar': True, 'eliminar': True,
-                        'eliminar_lead': True, 'editar_datos': True, 'reasignar': True, 'comentar': True,
+                        'eliminar_lead': True, 'eliminar_lead_con_plata': True, 'editar_datos': True, 'reasignar': True, 'comentar': True,
                         'triar': False, 'pasar_triage': True}
 
 
