@@ -117,8 +117,12 @@ class MetricasEquipo:
         total_shows = m['completed'] + m['no_show'] # Asistencias reales + faltas
         
         # Financials
-        cash_collected = sum(float(v.monto or 0) for v in cobros)
-        average_ticket = (cash_collected / sales_count) if sales_count > 0 else 0.0
+        from app.services.commission_service import cash_neto
+        cash_collected = sum(cash_neto(v) for v in cobros)  # neto de la comisión de la pasarela (04/11/2026)
+        cash_bruto = sum(float(v.monto or 0) for v in cobros)
+        # El ticket se ve en bruto (precio de venta) y en neto (04/11/2026).
+        average_ticket = (cash_bruto / sales_count) if sales_count > 0 else 0.0
+        average_ticket_neto = (cash_collected / sales_count) if sales_count > 0 else 0.0
 
         kpis = {
             'closing_rate': safe_div(sales_count, m['completed']), 
@@ -141,7 +145,8 @@ class MetricasEquipo:
             'sales': sales_count,
             'financials': {
                 'cash_collected': float(cash_collected),
-                'average_ticket': float(average_ticket)
+                'average_ticket': float(average_ticket),
+                'average_ticket_neto': float(average_ticket_neto)
             },
             'kpis': kpis
         }

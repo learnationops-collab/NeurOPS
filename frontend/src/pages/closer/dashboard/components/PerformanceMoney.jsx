@@ -19,7 +19,9 @@ const CASH_KEYS = [
    que Deuda por cobrar y Programas vendidos se quedan acá. Exportada aparte para que
    PerformanceFunnel la importe y la renderice donde corresponde ahora. */
 export const CashMixCard = ({ cashMix, irA }) => {
-    const total = Object.values(cashMix).reduce((a, b) => a + (b?.cash || 0), 0) || 1;
+    // Neto de la comisión de la pasarela (04/11/2026), como el KPI «Cash collected · neto».
+    const neto = (b) => b?.cash_neto ?? b?.cash ?? 0;
+    const total = Object.values(cashMix).reduce((a, b) => a + neto(b), 0) || 1;
     return (
         <Card variant="surface" padding="p-6">
             <h3 className="text-xs font-black uppercase tracking-widest text-base flex items-center gap-2 mb-5">
@@ -29,7 +31,7 @@ export const CashMixCard = ({ cashMix, irA }) => {
             <div className="space-y-3.5">
                 {CASH_KEYS.map(k => {
                     const bucket = cashMix[k.key] || { cash: 0, count: 0 };
-                    const v = bucket.cash || 0;
+                    const v = neto(bucket);
                     const n = bucket.count || 0;
                     const q = Math.round((v / total) * 100);
                     if (!v && !n && k.key === 'otros') return null;
@@ -56,7 +58,7 @@ export const CashMixCard = ({ cashMix, irA }) => {
                 })}
             </div>
             <div className="flex justify-between text-[13px] font-black border-t border-base mt-4 pt-3">
-                <span>Cash total</span><span>{money(total)}</span>
+                <span>Cash total neto</span><span>{money(total)}</span>
             </div>
         </Card>
     );
