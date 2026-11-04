@@ -25,7 +25,7 @@ from itsdangerous import BadSignature, URLSafeTimedSerializer
 from sqlalchemy import func
 
 from app import db
-from app.agendas_v2 import desplazar, servicio
+from app.agendas_v2 import desplazar, momentum, servicio
 from app.agendas_v2.modelos import SchedPerfil
 from app.agendas_v2.nucleo.disponibilidad import agenda_opt, ahora_ms, se_solapa, slots_persona
 from app.api.external import bp
@@ -525,6 +525,8 @@ def agenda_horarios():
     antel, dias = _entero(datos.get('antel_min', 0), 0, 30 * 24 * 60), _entero(datos.get('dias', 21), 1, 60)
     if horario is None or None in (dur, margen, antel, dias):
         return _error('Datos inválidos (horario, duracion, margen, antel_min o dias)', 400)
+    if ventas:
+        margen = momentum.margen_de(u)  # el del closer, como en Thalamus
 
     ahora = ahora_ms()
     desde, hasta = ahora - 3600000, ahora + (dias + 2) * DIA_MS
@@ -532,10 +534,14 @@ def agenda_horarios():
         franjas = GoogleService.franjas_ocupadas(u.id, servicio.ms_a_dt(desde), servicio.ms_a_dt(hasta))
     else:
         franjas = servicio._franjas_google(u.id, desde, hasta)
-    if ventas and franjas:
-        # Una Momentum va por encima de las C/D: su horario cuenta como libre (desplazar.py).
-        franjas = desplazar.restar(franjas, desplazar.libres({u.id: u.id}, ahora).get(u.id, []))
+    # Una Momentum va por encima de las C/D: su horario cuenta como libre (desplazar.py).
+    libres = desplazar.libres({u.id: u.id}, ahora).get(u.id, []) if ventas else []
+    if franjas and libres:
+        franjas = desplazar.restar(franjas, libres)
     ocupado = _franjas_ocupadas(datos.get('ocupado')) + [{'inicio': a, 'fin': b} for a, b in franjas or []]
+    if ventas:
+        # Sus agendas de Work con el margen que dejan después (en Google figura solo la sesión).
+        ocupado += momentum.ocupado_en_work(u, desde, franjas, libres)
     o = agenda_opt({
         'reservas': {'modo': 'dias', 'n': dias, 'tipo': 'corridos', 'desde': '', 'hasta': ''},
         'antel': {'n': antel, 'u': 'min'},
@@ -619,17 +625,19 @@ def _reservar_momentum(u, datos, inicio, inicio_dt, dur):
         return _error('Falta el email del alumno', 400)
     cliente = cliente_por_email(email) or BookingService.find_or_create_client(
         nombre=(invitado.get('nombre') or '').strip() or 'Alumno', email=email, instagram=None, phone=None)
-    choca = Appointment.query.filter(
-        Appointment.closer_id == u.id, Appointment.start_time == inicio_dt, Appointment.closer_processed.is_(False),
-        db.or_(Appointment.result.is_(None), Appointment.result.notin_(['Cancelada', 'Reprogramada']))).first()
-    if choca:
+    margen = momentum.margen_de(u)
+    fin = inicio + (dur + margen) * 60000
+    libres = desplazar.libres({u.id: u.id}, ahora_ms()).get(u.id, [])
+    if momentum.choca(u, inicio, fin, libres):
+        db.session.rollback()
         return _error('ocupado', 409)
     titulo = str(datos.get('titulo') or 'Momentum')[:200]
     # Las C/D que pisa: la Momentum va por encima y al closer se le avisa para reagendarlas (desplazar.py).
-    desplazadas = desplazar.que_pisa(desplazar.libres({u.id: u.id}, ahora_ms()).get(u.id, []), inicio, inicio + dur * 60000)
+    desplazadas = desplazar.que_pisa(libres, inicio, fin)
     appt = Appointment(closer_id=u.id, client_id=cliente.id, start_time=inicio_dt, origin=ORIGEN_MOMENTUM,
                        last_stage='Nueva', closer_result='Pendiente',
                        agenda_payload={'academia': dict(datos.get('academia') or {}), 'duracion_min': dur,
+                                       'margen_min': margen,
                                        'titulo': titulo, 'lead': {'nombre': invitado.get('nombre'), 'email': email}})
     db.session.add(appt)
     db.session.flush()

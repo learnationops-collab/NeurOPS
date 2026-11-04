@@ -691,3 +691,11 @@
 - **Decisión:** `triage_service._pasar_al_closer` manda en el payload de la agenda de closing `segmento_lead` con C→A y D→B (`_segmento_al_pasar`). `segmento_service` lo escribe antes de que nazca el evento, que nace ocupado, y la reagenda lo hereda. `scripts/subir_segmento_pases.py` corrigió las 5 agendas futuras ya pasadas (segmento y evento de Google a ocupado).
 - **Qué se pierde:** la agenda de closing ya no muestra el segmento con el que entró el lead; ese queda en la agenda del triage (`agenda_triage_id`).
 - **Consecuencias:** en los tableros por segmento, los pases cuentan como A/B en closing. El segmento del cliente no cambia.
+
+## ADR-W086: Un solo criterio de margen y de choque para todas las agendas
+
+- **Fecha:** 2026-11-03 · **Subsistema:** Agendas 2.0 (Momentum, carga manual) · **Estado:** implementado.
+- **Contexto:** el equipo pidió 15 minutos libres entre llamadas. El link de Thalamus guarda en cada agenda el margen del closer (`margen_min`) y mira si los bloques (sesión + margen) se pisan. La Momentum (`/agenda/reservas` en modo ventas) no guardaba margen y solo rechazaba otra agenda que empezara a la misma hora; sus horarios usaban el margen que mandaba la Academia y no veían el margen de las agendas de Work (en Google figura solo la sesión). La carga manual sin agenda previa nacía sin margen. Santi: «ganamos unicidad de criterios para agendas».
+- **Decisión:** `app/agendas_v2/momentum.py` aplica a la Momentum el criterio de Thalamus: el margen es el de la Sesión de Aceleración del closer, queda guardado en la agenda, y tanto `/horarios` como la reserva miran las agendas vigentes de Work con su margen (las C/D que la Momentum puede tomar no cuentan). La reserva bloquea al closer mientras verifica. `manual.armar_payload` completa la duración y el margen que no hereda con la sesión de quien atiende (`sesion_propia_de`).
+- **Qué se pierde:** el margen que manda la Academia para una Momentum ya no se usa; manda el del closer en Team.
+- **Consecuencias:** rige para las agendas que se creen desde ahora; las que ya están no se recalculan. Los eventos que el closer pone a mano en Google siguen bloqueando solo su duración, sin margen.

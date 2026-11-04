@@ -187,3 +187,7 @@
 - **3 de Noviembre de 2026 (El lead que pasa del triage sube de segmento y ya no se le agenda encima)** *([triage_service.py](../../app/services/triage_service.py), [subir_segmento_pases.py](../../scripts/subir_segmento_pases.py), [ADR-W085](../DECISIONS.md))*:
   - Al pasar al closer, el segmento de la agenda de closing sube: C→A y D→B. Antes se copiaba el C/D y el evento nacía «Disponible» en Google, así que el pase de otro lead podía caer en el mismo horario (Astolfo y Cristina con Jean Carlo el 04/11 a las 23:30).
   - Se corrigieron las 5 agendas futuras de Jean Carlo que ya habían pasado del triage: segmento subido y evento de Google ocupado.
+- **3 de Noviembre de 2026 (Margen de 15 minutos también en las Momentum y en la carga manual)** *([momentum.py](../../app/agendas_v2/momentum.py), [agenda.py](../../app/api/external/agenda.py), [manual.py](../../app/agendas_v2/manual.py), [ADR-W086](../DECISIONS.md))*:
+  - La Momentum deja después el margen del closer, igual que las del link, y ya no se puede reservar pegada a otra llamada ni encima de una que empezó antes: se mira que los horarios se pisen, no solo que empiecen a la misma hora.
+  - Los horarios que se le ofrecen a la Academia para la Momentum ya respetan el margen de las llamadas de Work.
+  - La llamada cargada a mano, cuando no sale de otra agenda, dura y deja el margen de la sesión de quien atiende.
