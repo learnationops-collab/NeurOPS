@@ -231,3 +231,5 @@
 - **4 de Noviembre de 2026 (Todo en neto: Dirección comercial, closer, setter y admin)** *([ADR-W095](../DECISIONS.md), [comercial_analitica.py](../../app/services/comercial_analitica.py), [Revisar.jsx](../../frontend/src/pages/comercial/components/Revisar.jsx))*
   - Ingresos por fuente, Revisar › Ventas, los desgloses del Analizar, Variabilidad, Países, Reportar, el ranking, la composición del cash del closer y los widgets del panel admin muestran el cash en neto. El ticket promedio se ve en bruto y en neto.
   - Un ⚠ junto al monto de Revisar › Ventas avisa cuando Marketing y la lista no cuentan un pago igual (Setting sin palabra clave, o con palabra clave pero de otra fuente).
+- **4 de Noviembre de 2026 (Marketing: la venta hereda la palabra clave de la agenda)** *([anuncios_service.py](../../app/services/anuncios_service.py), [ADR-W096](../DECISIONS.md))*
+  - Si ManyChat y el Inbox no encuentran la palabra clave de una venta, toma la que el setter ya le puso a la agenda del mismo cliente. Las ventas viejas sin palabra clave que siguen pendientes (24 de Elias, 1 de Paula en producción) se asignan a mano en Mis agendas › Pendientes › Ventas.
