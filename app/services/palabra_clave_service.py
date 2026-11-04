@@ -91,8 +91,12 @@ def _anuncio_de_cada_una(filas):
     def ultima(ids, reunion):
         candidatas = [(creada, ad_id) for lead_id in ids for creada, ad_id in respuestas[lead_id]
                       if creada and (reunion is None or creada <= reunion)]
-        # La más cercana a la reunión, como Marketing: es el anuncio por el que llegó esa vez.
-        return max(candidatas)[1] if candidatas else None
+        # La más cercana a la reunión, como Marketing: es el anuncio por el que llegó esa vez. Sin ninguna hasta
+        # la reunión, la primera que la persona tuvo después (la misma persona, 04/11/2026).
+        if candidatas:
+            return max(candidatas)[1]
+        posteriores = [(creada, ad_id) for lead_id in ids for creada, ad_id in respuestas[lead_id] if creada]
+        return min(posteriores)[1] if posteriores else None
 
     # El anuncio que eligió el setter (`Appointment.anuncio_id`, 18/10/2026) manda sobre ManyChat, como
     # en Marketing: el de esa agenda o, si la fila es otra agenda de la misma persona, el de ella.
