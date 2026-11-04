@@ -502,6 +502,10 @@ _LLAMADO = re.compile(
 _GUIA_POR_DM = re.compile(r'\bDM\b.*\bguia\b|\bguia\b.*\bDM\b', re.I | re.S)
 PREFIJO_GUIA = 'GUIA '
 GUIA_GENERAL = 'OBTENER GUIA'
+# Los anuncios de «LM Funnel» (guía por DM) no piden escribir nada: sus leads entran con la palabra general,
+# aunque el conjunto se llame «Guía Steps» o «Guía Perú» (04/11/2026: $556 en GUIA STEPS con 0 entrantes
+# mientras OBTENER GUIA tenía 838 y $0 de gasto).
+_CAMPANA_GUIA_GENERAL = re.compile(r'^LM FUNNEL', re.I)
 
 
 def _sin_tildes(texto):
@@ -518,6 +522,8 @@ def detectar_clave(texto, nombre, claves, contexto=()):
       2. un tramo del NOMBRE en mayúsculas que ES una palabra clave entera («DM-TA-B | A9-A-H |
          APROBACIÓN»). En el texto no: «la guía de APROBACIÓN médica» es el título de la guía de otro
          embudo, no lo que el lead tiene que escribir;
+      2b. un anuncio de guía por DM de una campaña «LM Funnel»: la general «OBTENER GUIA» (con lo que entran sus
+         leads), sin mirar el país del conjunto;
       3. una palabra clave de varias palabras dentro del texto, del nombre o de `contexto` (el conjunto y
          la campaña): el conjunto «LPF - TA - PSI: Guía Steps» es la palabra clave «Guia Steps»;
       4. un anuncio de guía por DM que no pide escribir nada («Pide gratis al DM la guía…»): la guía del
@@ -535,6 +541,9 @@ def detectar_clave(texto, nombre, claves, contexto=()):
     for corrida in _corridas_en_mayusculas(nombre):
         if corrida in claves:
             return corrida
+    if (GUIA_GENERAL in claves and _GUIA_POR_DM.search(_sin_tildes(texto))
+            and any(_CAMPANA_GUIA_GENERAL.search(c or '') for c in contexto)):
+        return GUIA_GENERAL
     for fuente in (texto, nombre, *contexto):
         normalizada = f" {clave_de(fuente or '') or ''} "
         for clave in ordenadas:
