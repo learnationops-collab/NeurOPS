@@ -241,3 +241,6 @@
 - **4 de Noviembre de 2026 (Setter y Marketing: una palabra clave por persona y ventas por mes)** *([anuncios_service.py](../../app/services/anuncios_service.py), [MisAgendas.jsx](../../frontend/src/pages/setter/agendas/MisAgendas.jsx), [ADR-W099](../DECISIONS.md))*
   - Todos los pagos de una persona llevan la misma palabra clave (la del primero que la tiene): una seña pagada antes de escribir la palabra ya no sale «Sin palabra clave» cuando el parcial sí la tiene. Las agendas anteriores a la primera interacción también la toman.
   - En Mis agendas, las ventas siguen el filtro de mes como las agendas, y cada chip de mes suma las agendas y las ventas que faltan.
+- **4 de Noviembre de 2026 (Finanzas › Cobros: cabecera fija y CSV de octubre cargados)** *([Cobros.jsx](../../frontend/src/pages/comercial/components/finanzas/Cobros.jsx), [finanzas.css](../../frontend/src/pages/comercial/components/finanzas/finanzas.css), [ADR-W100](../DECISIONS.md))*
+  - La cabecera de la tabla queda fija al bajar y cada columna dice qué es debajo del nombre.
+  - Se subieron a producción los CSV de octubre (Stripe, Hotmart y el Hotmart completo desde el 01/10): 31 coinciden, 14 con neto estimado distinto (−$10,08 en total), 2 transferencias por aprobar y Javier Carpintero ($250, Stripe) sin cobro en el CSV.

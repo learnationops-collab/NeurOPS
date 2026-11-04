@@ -803,3 +803,11 @@
 - **Decisión:** (1) si no hay interacción con palabra clave hasta la fecha del pago o de la agenda, se toma la primera que la persona tuvo después (`_Atribuidor._ultima`, y lo mismo en la bandeja del setter, `palabra_clave_service`). (2) Todos los pagos de una persona (o del mismo cliente) reciben la palabra clave del primero que la tiene (`claves_de_cobros`); la elegida a mano por el setter sigue mandando. (3) Las ventas del setter se ven por mes de pago, con el mismo selector de meses que las agendas: un cliente aparece en cada mes en que pagó y cada chip suma agendas y ventas.
 - **Qué se pierde:** una persona que entró por dos palabras clave distintas a lo largo del tiempo queda con la del primer pago atribuible en todos sus cobros. Marketing atribuye algo más de agendas y ventas a la palabra clave que llegó después.
 - **Consecuencias:** sin migración. En la copia local del 03/11 ya no queda ningún cliente con pagos de palabras distintas, y un cliente más pasó a «completado». Las ventas muy viejas se pueden dejar sin asignar: el selector por mes permite ir mes a mes.
+
+## ADR-W100: La tabla de Cobros tiene la cabecera fija
+
+- **Fecha:** 2026-11-04 · **Subsistema:** Finanzas · **Estado:** implementado. Sigue a ADR-W094.
+- **Contexto:** Con los 48 cobros de octubre, al bajar se perdía qué columna era cada número (neto sistema, neto CSV, diferencia). Mario pidió la cabecera sticky.
+- **Decisión:** La tabla de Cobros scrollea dentro de su caja (`.fz-scroll--fija`, alto de la ventana menos 140 px) con la cabecera `position: sticky` arriba. Cada columna lleva debajo qué es (por ejemplo «Neto CSV · Stripe y Hotmart»). Se cargan todos los cobros, sin paginar; al imprimir la caja se abre entera.
+- **Qué se pierde:** la tabla ya no crece con la página: tiene su propio scroll.
+- **Consecuencias:** solo Cobros usa la caja fija; las otras tablas de Finanzas siguen igual.
