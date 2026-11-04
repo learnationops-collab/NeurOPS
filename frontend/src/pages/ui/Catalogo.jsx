@@ -292,8 +292,8 @@ const SECCIONES = [
     },
     {
         nombre: 'VerRegistros',
-        para: 'La lista que compone una cifra, en un panel lateral o en una ventana central (la persona alterna y se recuerda). Un Kpi con onSelect lo abre; la pantalla pasa el contenido.',
-        props: 'useVerRegistros() → { abrir({ titulo, subtitulo, contenido, acciones }), panel, cerrar } — VerRegistros: titulo · subtitulo · modo: lateral · central · onModo · onClose',
+        para: 'La lista que compone una cifra, en un panel lateral, en una ventana central o en pantalla completa (la persona alterna y se recuerda). Un Kpi con onSelect lo abre; la pantalla pasa el contenido.',
+        props: 'useVerRegistros() → { abrir({ titulo, subtitulo, contenido, acciones }), panel, cerrar } — VerRegistros: titulo · subtitulo · modo: lateral · central · completa · onModo · onClose',
         demo: () => <DemoRegistros />,
     },
     {

@@ -303,17 +303,18 @@
 .ui-kpi__ver{justify-self:end;font-size:11px;font-weight:800;letter-spacing:.04em;color:var(--ui-brand-accent);opacity:.72;transition:opacity .16s}
 .ui-kpi--select:hover .ui-kpi__ver,.ui-kpi--select:focus-visible .ui-kpi__ver{opacity:1}
 
-/* --- VerRegistros: la lista detrás de una cifra, en panel lateral o ventana central ------------ */
+/* --- VerRegistros: la lista detrás de una cifra, en panel lateral, ventana central o pantalla completa ------------ */
 /* El panel lateral no lleva fondo oscuro: la pantalla sigue a la vista. La entrada va con `backwards`
    (no `both`) por lo mismo que el Modal. */
 .ui-reg.ui-reg{display:flex;flex-direction:column;overflow:hidden;padding:0;color:var(--ui-text);background:var(--ui-popover-bg);
   border:1px solid var(--ui-border-main);box-shadow:var(--ui-shadow)}
 .ui-reg.ui-reg--lateral{position:fixed;top:0;right:0;bottom:0;z-index:95;width:min(680px,100vw);border-radius:var(--ui-radius-panel) 0 0 var(--ui-radius-panel);
   border-right:0;animation:ui-reg-in .28s var(--ui-spring) backwards}
+.ui-reg.ui-reg--completa{position:fixed;inset:var(--ui-s2);z-index:95;border-radius:var(--ui-radius-panel)}
 .ui-reg.ui-reg--central{width:min(1120px,100%);height:min(86vh,860px);max-height:none}
 .ui-reg__cuerpo{flex:1;min-height:0;overflow:auto;padding:var(--ui-s4) var(--ui-s6) var(--ui-s6)}
 @keyframes ui-reg-in{from{opacity:0;transform:translateX(28px)}to{opacity:1;transform:none}}
-@media (max-width:640px){.ui-reg.ui-reg--lateral{border-radius:0}.ui-reg__cuerpo{padding:var(--ui-s3) var(--ui-s4) var(--ui-s4)}}
+@media (max-width:640px){.ui-reg.ui-reg--lateral,.ui-reg.ui-reg--completa{border-radius:0}.ui-reg.ui-reg--completa{inset:0}.ui-reg__cuerpo{padding:var(--ui-s3) var(--ui-s4) var(--ui-s4)}}
 @media (prefers-reduced-motion:reduce){.ui-reg.ui-reg--lateral{animation:none}}
 
 /* --- CifraConCuenta: la cifra sola; su cuenta («163 de 2.448 leads») aparece al pasar el mouse o enfocarla --- */

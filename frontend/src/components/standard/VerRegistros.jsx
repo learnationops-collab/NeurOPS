@@ -7,7 +7,7 @@ import clsx from 'clsx';
 import { Modal, ModalHeader, Segmented } from './Controls';
 import './standard.css';
 
-export const MODOS_REGISTROS = ['lateral', 'central'];
+export const MODOS_REGISTROS = ['lateral', 'central', 'completa'];
 const CLAVE_MODO = 'ui_registros_modo';
 
 const leer = () => {
@@ -42,6 +42,12 @@ const Centro = () => (
     </svg>
 );
 
+const Completa = () => (
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+    </svg>
+);
+
 // Dentro de un `.dc-shell` (Revisar, Marketing) la lista usa sus clases: el marco se monta ahí. Si hay una hoja o
 // un modal abierto (su velo es un `.dc-shell.scrim`, z-index 170), se monta en el último velo: así no queda debajo.
 const destino = () => {
@@ -51,17 +57,19 @@ const destino = () => {
 
 /**
  * `titulo` y `subtitulo` dicen qué cifra se abrió y cuánto suma («Agendas · 158 en el período»).
- * `modo` (`lateral` · `central`) y `onModo` los trae `useModoRegistros`; `acciones` va antes del cierre.
+ * `modo` (`lateral` · `central` · `completa`) y `onModo` los trae `useModoRegistros`; `acciones` va antes del cierre.
  */
 export function VerRegistros({ titulo, subtitulo, icono, modo = 'lateral', onModo, onClose, acciones, className, children }) {
     const id = useId();
     const lateral = modo === 'lateral';
+    // El panel lateral y la pantalla completa no son un Modal: cierran ellos con Escape.
+    const propio = lateral || modo === 'completa';
     useEffect(() => {
-        if (!lateral) return undefined; // la ventana central ya cierra con Escape (Modal)
+        if (!propio) return undefined; // la ventana central ya cierra con Escape (Modal)
         const esc = (e) => { if (e.key === 'Escape' && !e.defaultPrevented) { e.preventDefault(); onClose(); } };
         document.addEventListener('keydown', esc);
         return () => document.removeEventListener('keydown', esc);
-    }, [lateral, onClose]);
+    }, [propio, onClose]);
 
     const cabecera = (
         <ModalHeader flush icon={icono} title={titulo} subtitle={subtitulo} titleId={id} onClose={onClose}
@@ -70,13 +78,15 @@ export function VerRegistros({ titulo, subtitulo, icono, modo = 'lateral', onMod
                     options={[
                         { value: 'lateral', label: 'Lateral', icon: <Lado />, props: { title: 'Panel lateral' } },
                         { value: 'central', label: 'Central', icon: <Centro />, props: { title: 'Ventana central' } },
+                        { value: 'completa', label: 'Completa', icon: <Completa />, props: { title: 'Pantalla completa' } },
                     ]} />
             )} />
     );
     const cuerpo = <div className="ui-reg__cuerpo">{acciones}{children}</div>;
 
-    return createPortal(lateral ? (
-        <aside className={clsx('ui-reg', 'ui-reg--lateral', className)} role="dialog" aria-modal="false" aria-labelledby={id}>
+    return createPortal(propio ? (
+        <aside className={clsx('ui-reg', lateral ? 'ui-reg--lateral' : 'ui-reg--completa', className)} role="dialog"
+            aria-modal="false" aria-labelledby={id}>
             {cabecera}
             {cuerpo}
         </aside>
