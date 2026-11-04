@@ -69,3 +69,29 @@ def limites_rango_utc(user, dia_inicio, dia_fin):
 def limites_rango_utc_del_negocio(dia_inicio, dia_fin):
     """`limites_rango_utc` para lo que corre sin usuario: mismo rango, zona del negocio."""
     return limites_rango_utc(None, dia_inicio, dia_fin)
+
+
+def _quien_mira():
+    try:
+        from flask_login import current_user
+        return current_user if current_user and current_user.is_authenticated else None
+    except Exception:  # noqa: BLE001 - fuera de un request no hay current_user
+        return None
+
+
+def hoy_de_quien_mira():
+    """«Hoy» en la zona del usuario del request; sin sesion, el del servidor como siempre."""
+    usuario = _quien_mira()
+    return hoy_del_usuario(usuario) if usuario is not None else datetime.now().date()
+
+
+def limites_rango_de_quien_mira(dia_inicio, dia_fin):
+    """Rango de dias del calendario de QUIEN MIRA (el usuario del request) como UTC naive. Sin
+    sesion (crons, scripts) queda en UTC puro, como antes: ahi no hay a quien preguntarle la zona.
+
+    Los dashboards comparaban `datetime.combine(dia, ...)` contra columnas UTC: una llamada del
+    31/10 a las 20:30 de La Paz (01/11 00:30 UTC) aparecia en «1 al 4 de noviembre»."""
+    usuario = _quien_mira()
+    if usuario is None:
+        return datetime.combine(dia_inicio, time_cls.min), datetime.combine(dia_fin, time_cls.max)
+    return limites_rango_utc(usuario, dia_inicio, dia_fin)

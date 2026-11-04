@@ -124,4 +124,6 @@ class ComercialService(ComercialAgendasMixin, ComercialVentasMixin, ComercialLea
 
     @staticmethod
     def _limites(start, end):
-        return datetime.combine(start, time.min), datetime.combine(end, time.max)
+        # En la zona de quien mira, no en UTC: ver `limites_rango_de_quien_mira`.
+        from app.services.user_time_service import limites_rango_de_quien_mira
+        return limites_rango_de_quien_mira(start, end)

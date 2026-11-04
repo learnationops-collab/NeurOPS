@@ -1574,8 +1574,10 @@ class CloserService:
         siguiente a las 00:00), igual que el filtro que ya usaba get_comprehensive_stats."""
         start_d = CloserService._as_date(start_date)
         end_d = CloserService._as_date(end_date)
-        start_dt = datetime.combine(start_d, time.min) if start_d else None
-        end_dt = datetime.combine(end_d, time.min) + timedelta(days=1) if end_d else None
+        # Los días son los de quien mira (ver `limites_rango_de_quien_mira`), no los de UTC.
+        from app.services.user_time_service import limites_rango_de_quien_mira
+        start_dt = limites_rango_de_quien_mira(start_d, start_d)[0] if start_d else None
+        end_dt = limites_rango_de_quien_mira(end_d, end_d)[0] + timedelta(days=1) if end_d else None
         return start_dt, end_dt
 
     @staticmethod
@@ -1666,18 +1668,10 @@ class CloserService:
         # Reusing parts of get_agenda_stats logic
         base_appt_filter = []
         if closer_id: base_appt_filter.append(Appointment.closer_id == closer_id)
-        if start_date:
-            try:
-                dt_val = datetime.strptime(start_date, '%Y-%m-%d') if isinstance(start_date, str) else datetime.combine(start_date, datetime.min.time())
-                base_appt_filter.append(Appointment.start_time >= dt_val)
-            except ValueError:
-                pass
-        if end_date:
-            try:
-                end_dt = datetime.strptime(end_date, '%Y-%m-%d') if isinstance(end_date, str) else datetime.combine(end_date, datetime.min.time())
-                base_appt_filter.append(Appointment.start_time < (end_dt + timedelta(days=1)))
-            except ValueError:
-                pass
+        if _start_dt:
+            base_appt_filter.append(Appointment.start_time >= _start_dt)
+        if _end_dt:
+            base_appt_filter.append(Appointment.start_time < _end_dt)
 
         pending_count = Appointment.query.filter(*base_appt_filter, or_(Appointment.result == None, Appointment.result == '')).count()
         outcomes_q = db.session.query(Appointment.result, func.count(Appointment.id)).filter(*base_appt_filter, Appointment.result != None, Appointment.result != '').group_by(Appointment.result).all()
@@ -1727,18 +1721,10 @@ class CloserService:
         sales_filters = [
             or_(FinancialSale.estado == 'Completada', FinancialSale.estado == None, FinancialSale.estado == '')
         ]
-        if start_date:
-            try:
-                dt_val = datetime.strptime(start_date, '%Y-%m-%d') if isinstance(start_date, str) else datetime.combine(start_date, datetime.min.time())
-                sales_filters.append(FinancialSale.date >= dt_val)
-            except ValueError:
-                pass
-        if end_date:
-            try:
-                end_dt = datetime.strptime(end_date, '%Y-%m-%d') if isinstance(end_date, str) else datetime.combine(end_date, datetime.min.time())
-                sales_filters.append(FinancialSale.date < (end_dt + timedelta(days=1)))
-            except ValueError:
-                pass
+        if _start_dt:
+            sales_filters.append(FinancialSale.date >= _start_dt)
+        if _end_dt:
+            sales_filters.append(FinancialSale.date < _end_dt)
         if closer_id:
             # `.in_([])` sigue siendo un filtro valido (no matchea nada): a diferencia del `if
             # closer_identifiers:` anterior, esto no se salta el filtro cuando el closer pedido

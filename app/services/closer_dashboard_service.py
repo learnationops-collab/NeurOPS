@@ -40,7 +40,8 @@ class CloserDashboardService:
         """Rango del periodo. `custom` usa las fechas que mando el usuario (rango libre); si
         alguna falta o no parsea, cae al mes en curso como cualquier otro periodo desconocido.
         Las fechas invertidas se dan vuelta en vez de devolver un rango vacio."""
-        today = date.today()
+        from app.services.user_time_service import hoy_de_quien_mira
+        today = hoy_de_quien_mira()
         if period == 'custom':
             start = CloserDashboardService._parse_iso(start_date)
             end = CloserDashboardService._parse_iso(end_date)
@@ -326,8 +327,8 @@ class CloserDashboardService:
         confirmaciones: el embudo venía aproximando «Confirmadas» como `agendas − canceladas −
         reprogramadas`, que no es una confirmación sino "todo lo que no se cayó" (daba 97,9% de
         confirmation rate en agosto contra 55,8% real)."""
-        start_dt = datetime.combine(start, time.min)
-        end_dt = datetime.combine(end, time.max)
+        from app.services.user_time_service import limites_rango_de_quien_mira
+        start_dt, end_dt = limites_rango_de_quien_mira(start, end)
 
         def base():
             q = Appointment.query
@@ -367,8 +368,8 @@ class CloserDashboardService:
         """Performance por fuente (aproximado): agrupa agendas reales por
         Appointment.origin en 4 categorías. No incluye ventas/cash por fuente
         porque no existe un campo de origen en FinancialSale para cruzarlo."""
-        start_dt = datetime.combine(start, time.min)
-        end_dt = datetime.combine(end, time.max)
+        from app.services.user_time_service import limites_rango_de_quien_mira
+        start_dt, end_dt = limites_rango_de_quien_mira(start, end)
         q = Appointment.query.filter(
             Appointment.start_time >= start_dt,
             Appointment.start_time <= end_dt
