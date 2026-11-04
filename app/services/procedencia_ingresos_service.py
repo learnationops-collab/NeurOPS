@@ -200,10 +200,8 @@ def ventas_que_suman(desde, hasta):
             if (v.estado or '').strip().lower() in ESTADOS_QUE_SUMAN]
 
 
-# Con qué monto entra cada pago a su balde. Finanzas reparte el ingreso NETO de la fee de la
-# pasarela, que es su «Ingresos»; el dashboard comercial, el cash BRUTO, que es el número grande de
-# su «Cash collected» (`ComercialService.ventas` redondea cada fila al centavo y suma eso). Cada uno
-# cierra con la cifra que tiene al lado.
+# Con qué monto entra cada pago a su balde. Desde el 04/11/2026 todos reparten el NETO de la fee de
+# la pasarela (Finanzas, el dashboard comercial y Marketing); el bruto queda para quien lo pida.
 BASES = {
     'neto': lambda venta: cash_neto(venta),
     'bruto': lambda venta: round(float(venta.monto or 0.0), 2),

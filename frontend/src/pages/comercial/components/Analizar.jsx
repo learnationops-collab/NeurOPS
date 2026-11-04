@@ -462,7 +462,7 @@ const PanelPagos = ({ bloque, irA }) => {
  * Qué cobro va en qué fuente lo decide el backend con la MISMA atribución que Finanzas ›
  * Procedencia y la columna Fuente de las ventas (`comercial_analitica.ingresos_por_fuente`); acá
  * solo se dibuja. Llegan las cinco siempre, también en cero, y suman exacto el Cash collected del
- * mismo filtro: en bruto, como el número grande de la tarjeta (Finanzas reparte el neto). Se dibujan
+ * mismo filtro, en neto (04/11/2026), como Finanzas. Se dibujan
  * las cinco salvo «Sin procedencia» en cero (pedido del usuario, 09/10/2026): un embudo en cero dice
  * que no trajo nada; que no haya cobros sin procedencia no hace falta decirlo.
  *
@@ -541,8 +541,7 @@ const PanelFuentes = ({ fuentes, irA }) => {
                 ayuda={'De dónde vino el Cash collected del período: el embudo que trajo cada cobro, según '
                     + 'la agenda que lo originó (la misma regla que la columna Fuente de las ventas y '
                     + 'Finanzas › Procedencia). Una cuota cuenta para el embudo de su venta. Suma '
-                    + 'exacto el Cash collected, en bruto: Finanzas reparte lo mismo pero neto de la '
-                    + 'fee de la pasarela.'}>
+                    + 'exacto el Cash collected neto, descontada la comisión de la pasarela.'}>
                 <Tabs valor={vista} onChange={setVista} ops={TABS_FUENTES} aria="Vista de ingresos por fuente" />
             </PanelCab>
         }>
@@ -587,7 +586,7 @@ const PanelFuentes = ({ fuentes, irA }) => {
                             Total
                             <Tip titulo="Total"
                                 texto={'Es el Cash collected de arriba, con el mismo filtro: los mismos cobros '
-                                    + 'y el mismo monto bruto. Cada cobro cuenta una vez, en la fuente de su agenda.'} />
+                                    + 'y el mismo monto neto. Cada cobro cuenta una vez, en la fuente de su agenda.'} />
                         </span>
                         <span className="tdatos-p">{fmt.num(cantidad)}</span>
                         <MetricaClicable irA={irA} destino={DESTINO_PROCEDENCIAS_TOTAL} className="tdatos-n"

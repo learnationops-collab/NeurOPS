@@ -723,12 +723,12 @@ def ingresos_por_fuente(start, end, closer_nombre=None, agendas=None):
 
       · las ventas son las del cash, con el mismo período, los mismos estados y el mismo filtro por
         closer (`ComercialService.ventas_de`, que comparte `vendio` con la tabla Ventas);
-      · la base es el cash BRUTO, la cifra grande de la tarjeta. Finanzas reparte el neto.
+      · la base es el cash NETO (04/11/2026: todas las pantallas van en neto), la misma de Finanzas.
 
     La atribución se calcula sobre las ventas de TODO el período aunque se mire a un closer (ver
     `procedencia_de_ventas`): así un cobro cae en el mismo balde en «Mis datos» y en el equipo."""
     del_periodo, propias = ComercialService.ventas_de(start, end, closer_nombre)
-    return procedencia_de_ventas(propias, contexto=del_periodo, base='bruto', agendas=agendas)
+    return procedencia_de_ventas(propias, contexto=del_periodo, base='neto', agendas=agendas)
 
 
 def fuentes_de(start, end, prev_start=None, prev_end=None, closer_nombre=None):
