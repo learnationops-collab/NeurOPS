@@ -258,3 +258,5 @@
 - **4 de Noviembre de 2026 (Marketing: la «Tabla por grupo» sin ceros y con color)** *([TablaSegmentos.jsx](../../frontend/src/pages/admin/marketing/todos/TablaSegmentos.jsx), [bloquesSegmentos.jsx](../../frontend/src/pages/admin/marketing/todos/bloquesSegmentos.jsx))*
   - Un grupo sin nada en las columnas que se ven (ni en el período comparado) no se dibuja, y dentro de cada grupo tampoco los segmentos sin datos; un pie dice cuántos. «Sin país» con todo en cero ya no ocupa lugar.
   - Cada número lleva el color de su segmento, más fuerte cuanto más alto es frente al resto de su columna, y el cero se apaga: queda un mapa de calor parejo, como el del cruce.
+- **4 de Noviembre de 2026 (Marketing: sin «Leads entrantes» cuando no tiene segmento)** *([SegmentosVista.jsx](../../frontend/src/pages/admin/marketing/todos/SegmentosVista.jsx))*
+  - Al agrupar por país o por closer los leads no se parten por segmento: la cifra «Leads entrantes» ya no se ofrece en el cruce ni se dibuja su columna de «—» en las tablas. Vale para cualquier cifra sin dato en ningún grupo; los leads de Workshop (que sí traen total) se mantienen.

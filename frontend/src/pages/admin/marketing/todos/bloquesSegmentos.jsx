@@ -30,7 +30,7 @@ const ajustes = (ctx) => ({
     key: 'ajustes', title: 'Qué mostrar',
     meta: (
         <span className="sg-meta">
-            <span><b className="num">{ctx.columnas.length}</b> de {COLUMNAS_SEGMENTO.length} columnas</span>
+            <span><b className="num">{ctx.nColumnas ?? ctx.columnas.length}</b> de {COLUMNAS_SEGMENTO.length} columnas</span>
             {ctx.todosLosGrupos.length > 1 && <span><b className="num">{ctx.grupos.length}</b> de {ctx.todosLosGrupos.length} grupos</span>}
         </span>
     ),
