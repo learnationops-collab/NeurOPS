@@ -6,7 +6,7 @@ from app.models import FinancialSale
 from app.services.closer_name_service import resolver_nombre_closer
 from app.services.commission_service import cash_neto
 from app.services.setter_assignment_service import normalizar_nombre
-from app.services.ticket_service import pago_de_fila, ticket_de
+from app.services.ticket_service import pago_de_fila, ticket_de, ticket_y_cuotas
 from app.services.comercial_cruces import clientes_de_ventas
 from app.services.comercial_vocabulario import chip, venta_completada, estado_de_venta
 
@@ -333,4 +333,6 @@ class ComercialVentasMixin:
             'cash': round(cash, 2),
             'cash_neto': round(sum(f['monto_neto'] for f in filas), 2),
             'ticket': ticket_de([pago_de_fila(f) for f in filas])[2],
+            # El mismo ticket con los montos netos de la comisión de la pasarela (04/11/2026: se ven los dos).
+            'ticket_neto': ticket_y_cuotas([pago_de_fila(f, neto=True) for f in filas], monto_de=cash_neto)[0][2],
         }

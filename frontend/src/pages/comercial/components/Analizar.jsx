@@ -879,7 +879,7 @@ const DashboardClosers = ({ bloque, deltas, porCobrar, fuentes, irA, cargarNoCer
                     + 'Las cuotas y las señas no entran.'}
                 delta={deltas.ticket}
                 humo={[v('info'), v('brand-primary'), v('info'), v('brand-navy')]}
-                sub={fmt.plural(bloque.ventas, 'venta nueva', 'ventas nuevas')}
+                sub={`${fmt.plural(bloque.ventas, 'venta nueva', 'ventas nuevas')}${bloque.ticket_neto != null ? ` · neto ${fmt.money(bloque.ticket_neto)}` : ''}`}
                 ver={abrir(irA, D.ticket)} baja="p-cash" />
         </div>
 

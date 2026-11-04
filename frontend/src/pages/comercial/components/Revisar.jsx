@@ -467,7 +467,8 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
             // suman al cash pero no son ventas (igual que `totales_ventas` en el backend).
             const nuevas = cobros.filter(f => f.es_venta);
             const ventas = nuevas.length;
-            const cashVentas = nuevas.reduce((a, f) => a + f.monto, 0); // el ticket sigue en bruto (precio de venta, ADR-W061)
+            const cashVentas = nuevas.reduce((a, f) => a + f.monto, 0); // el ticket se ve en bruto y en neto
+            const cashVentasNeto = nuevas.reduce((a, f) => a + f.monto_neto, 0);
             const deCobros = fmt.plural(cobros.length, 'cobro', 'cobros');
             return [
                 { key: 'cash', label: 'cash neto', valor: fmt.money(Math.round(cash * 100) / 100),
@@ -483,6 +484,7 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                     ayuda: 'Pago completo y split pay. Una seña es una reserva: no cuenta como venta.' },
                 { key: 'ticket', label: 'ticket', color: 'var(--text-on-surface)',
                     valor: fmt.money(ventas ? Math.round((cashVentas / ventas) * 100) / 100 : null),
+                    hint: ventas ? `neto ${fmt.money(Math.round((cashVentasNeto / ventas) * 100) / 100)}` : undefined,
                     ayuda: 'Ticket promedio: lo cobrado en las ventas nuevas dividido por cuántas '
                         + 'fueron. Las cuotas y las señas no entran.' },
                                 itemTotalAcademia(cobros),

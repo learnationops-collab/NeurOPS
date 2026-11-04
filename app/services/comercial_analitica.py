@@ -441,6 +441,7 @@ def bloque_closers(start, end, closer_id=None, closer_nombre=None, con_reales=Tr
         'cash_neto': tot_v['cash_neto'],
         'ventas': tot_v['ventas'],
         'ticket': tot_v['ticket'],
+        'ticket_neto': tot_v['ticket_neto'],
         'comision': round(tot_v['cash_neto'] * CLOSER_RATE, 2),
         'cash_por_dia': dias,
         'mejor_dia': mejor_dia,
