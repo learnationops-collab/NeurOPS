@@ -32,7 +32,12 @@ const Llamada = ({ l, onAbrir }) => {
                 {chip(estado, COLOR_DE_ESTADO[estado])}
                 {extra && chip(extra, 'info')}
                 {l.closing?.asistio && chip('Asistió al closer', 'success')}
+                {l.closing?.estado === 'no_asistio' && chip('No asistió al closer', 'error')}
+                {l.closing?.estado === 'pendiente' && chip(`Pendiente de llamada con ${l.closing.closer}`, 'info')}
+                {l.closing?.estado === 'sin_reporte' && chip(`Sin reporte de ${l.closing.closer}`, 'warning')}
                 {l.closing?.cerro && chip('Cerró', 'success')}
+                {l.closing?.sena && chip('Seña', 'warning')}
+                {l.closing?.cobrado > 0 && chip(`$${Math.round(l.closing.cobrado).toLocaleString('en-US')} cobrados`, 'success')}
                 <span style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
                     {l.nota_para_closer && <button type="button" style={boton} onClick={() => setAbierta((v) => !v)}>{abierta ? 'Ocultar nota' : 'Ver nota'}</button>}
                     {onAbrir && <button type="button" style={boton} onClick={() => onAbrir(l)}>Ver ficha</button>}

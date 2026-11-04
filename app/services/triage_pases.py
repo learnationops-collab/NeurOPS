@@ -4,11 +4,16 @@ El pase es la agenda de closing con `agenda_triage_id` (`triage_service._pasar_a
 reagenda, la vieja queda 'Reagendado' y nace otra fila sin ese enlace: se sigue la cadena hasta la agenda
 en pie, para que una reagenda no cuente como una asistencia perdida.
 
-Asistió = `closer_result` 'Show up'. Cerró = venta de pago completo o split pay (`REAL_SALE_TIPOS`), la misma
+Asistió = `closer_result` 'Show up' (o un estado de la agenda que implique que hubo llamada). `estado` del pase:
+asistio / no_asistio (no show, canceló, descartada) / pendiente (la llamada aún no ocurre o se reagendó sin nueva
+fecha) / sin_reporte (la llamada ya pasó y el closer no la reportó). `sena` y `cobrado` salen de los pagos del lead
+desde la llamada. Cerró = venta de pago completo o split pay (`REAL_SALE_TIPOS`), la misma
 regla del close rate: la seña no es un cierre.
 
 `origen_de` hace el camino inverso para el embudo de Closing: de una agenda de closing, si llegó directa o desde triage.
 """
+from datetime import datetime, timedelta
+
 from sqlalchemy.orm import joinedload
 
 from app.models import Appointment
@@ -40,9 +45,53 @@ def _en_pie(agenda, por_cliente):
     return actual
 
 
+def _estado_del_pase(c, fila, asistio, ahora):
+    """asistio / no_asistio / pendiente / sin_reporte de la agenda de closing `c` (ver el docstring del módulo)."""
+    if asistio:
+        return 'asistio'
+    clave = (fila.get('post_call') or {}).get('key')
+    if clave in ('pendiente', 'reagendo', None):
+        ya_paso = bool(c.start_time and c.start_time <= ahora)
+        return 'sin_reporte' if clave == 'pendiente' and ya_paso else 'pendiente'
+    return 'no_asistio'
+
+
+def _cobrado_de(citas):
+    """`{id de la agenda: monto}` de los pagos de venta o seña de su lead desde el día de la llamada
+    (los de su persona y los atados a su cliente; el mismo margen de un día de `ventas_previas`)."""
+    from app import db
+    from app.models import FinancialSale
+    from app.services.closer_service import REAL_SALE_TIPOS
+    from app.services.sheets_service import SheetsService
+    from app.services.ventas_previas import TOLERANCIA_DIAS, _VIGENTES
+
+    personas = sorted({c.person_uuid for c in citas if c.person_uuid})
+    clientes = sorted({c.client_id for c in citas if c.client_id})
+    pagos = {}
+    columnas = (FinancialSale.id, FinancialSale.person_uuid, FinancialSale.client_id, FinancialSale.tipo_pago,
+                FinancialSale.estado, FinancialSale.date, FinancialSale.monto)
+    for columna, valores in ((FinancialSale.person_uuid, personas), (FinancialSale.client_id, clientes)):
+        for i in range(0, len(valores), _LOTE):
+            for fila in db.session.query(*columnas).filter(columna.in_(valores[i:i + _LOTE])):
+                pagos[fila[0]] = fila
+    tipos = REAL_SALE_TIPOS + ('seña',)
+    salida = {}
+    for c in citas:
+        if not c.start_time:
+            continue
+        limite = c.start_time.date() - timedelta(days=TOLERANCIA_DIAS)
+        salida[c.id] = round(sum(
+            f[6] or 0 for f in pagos.values()
+            if ((c.person_uuid and f[1] == c.person_uuid) or (c.client_id and f[2] == c.client_id))
+            and (f[4] or '').strip().lower() in _VIGENTES and f[5] and f[5].date() >= limite
+            and SheetsService.parse_tipo_pago(f[3])[1] in tipos), 2)
+    return salida
+
+
 def pases_de(agendas_triage):
     """`{id de la agenda de triage: pase}` de las que ya pasaron al closer. Cada pase:
-    `id` (agenda de closing), `closer_id`, `closer`, `fecha`, `asistio`, `cerro`, `venta_tipo`."""
+    `id` (agenda de closing), `closer_id`, `closer`, `fecha`, `asistio`, `estado`, `cerro`, `venta_tipo`,
+    `sena` (dejó una seña, la haya completado o no) y `cobrado` (lo cobrado de ese lead desde la llamada)."""
     from app.services.comercial_service import ComercialService
 
     ids = [a.id for a in agendas_triage]
@@ -58,14 +107,18 @@ def pases_de(agendas_triage):
             por_cliente.setdefault(b.client_id, []).append(b)
     vigentes = {tid: _en_pie(c, por_cliente) for tid, c in por_pase.items()}
     filas = {f['id']: f for f in ComercialService.filas_de_citas(list(vigentes.values()))}
+    cobrado = _cobrado_de(list(vigentes.values()))
+    ahora = datetime.utcnow()
     salida = {}
     for tid, c in vigentes.items():
         fila = filas.get(c.id, {})
+        asistio = (c.closer_result or '').strip().lower() == 'show up' or bool(fila.get('asistio'))
         salida[tid] = {
             'id': c.id, 'closer_id': c.closer_id, 'closer': c.closer.username if c.closer else 'Sin closer',
             'fecha': c.start_time.isoformat() if c.start_time else None,
-            'asistio': (c.closer_result or '').strip().lower() == 'show up',
+            'asistio': asistio, 'estado': _estado_del_pase(c, fila, asistio, ahora),
             'cerro': bool(fila.get('con_venta')), 'venta_tipo': fila.get('venta_tipo'),
+            'sena': bool(fila.get('con_sena')), 'cobrado': cobrado.get(c.id, 0.0),
         }
     return salida
 

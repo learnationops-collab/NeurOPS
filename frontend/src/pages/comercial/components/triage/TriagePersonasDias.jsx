@@ -1,6 +1,6 @@
 // «Por persona» y «Día por día» del Triage Dashboard (diseño de Claude Design, 30/10/2026).
 
-import { iniciales, pct } from './triageDatos';
+import { conResultado, iniciales, pct } from './triageDatos';
 import { ROTULO, TARJETA, Titulo } from './TriagePaneles';
 
 const CAJA = { background: 'rgba(2,6,23,.35)', border: '1px solid var(--border-subtle)' };
@@ -16,7 +16,7 @@ export function PorPersona({ personas, onElegir }) {
             <Titulo texto="Por persona" />
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 12 }}>
                 {personas.map((p) => {
-                    const tasa = Math.round(pct(p.asistencias, p.agendas));
+                    const tasa = Math.round(pct(p.asistencias, conResultado(p)));
                     const color = tasa >= 40 ? 'success' : tasa > 0 ? 'warning' : 'error';
                     const filas = [['Agendas', p.agendas, 'brand-primary'], ['Asistieron', p.asistencias, 'brand-secondary'],
                         ['Calificados', p.calificados, 'success'], ['Asistieron al closer', p.closer_asistieron, 'info'],

@@ -4,7 +4,7 @@
 import { Fragment } from 'react';
 
 import { CifraConCuenta } from '../../../../components/standard';
-import { COLOR_DE_ESTADO, embudoDe, estadosDe, pct, pctTexto } from './triageDatos';
+import { COLOR_DE_ESTADO, conResultado, embudoDe, estadosDe, pct, pctTexto } from './triageDatos';
 import './triageTarjetas.css';
 
 export const TARJETA = {
@@ -17,6 +17,7 @@ const resplandor = (color, posicion, medidas = '260px 180px', pc = 22) => ({
     position: 'absolute', inset: 0, pointerEvents: 'none',
     background: `radial-gradient(${medidas} at ${posicion}, color-mix(in oklab, var(--${color}) ${pc}%, transparent), transparent 70%)`,
 });
+export const dinero = (n) => `$${Math.round(n || 0).toLocaleString('en-US')}`;
 const boton = { background: 'none', border: 0, padding: 0, color: 'inherit', font: 'inherit', textAlign: 'inherit', cursor: 'pointer' };
 
 export const Titulo = ({ texto, lado, children }) => (
@@ -38,22 +39,43 @@ export function Porcentaje({ a, b, onVer }) {
     );
 }
 
+// Una línea de la tarjeta con partes que abren su lista: [[n, texto, clave], ...]. Con cero no hay nada que listar y queda quieta.
+const Partes = ({ partes, onVer }) => (
+    <>{partes.map(([n, texto, clave], i) => (
+        <Fragment key={clave}>
+            {i > 0 && ' · '}
+            {n > 0
+                ? <button type="button" onClick={() => onVer(clave)} style={{ ...boton, textDecoration: 'underline dotted' }}>{n} {texto}</button>
+                : `${n} ${texto}`}
+        </Fragment>
+    ))}</>
+);
+
 /** Las tarjetas de arriba (triage y closing); «Ver registros ›» abre su lista. */
 export function Tarjetas({ m, onVer }) {
-    const agendas = { n: m.agendas, texto: 'agendas', clave: 'agendas', titulo: 'Agendas' };
-    const pasaron = { n: m.pasaron, texto: 'pasaron', clave: 'pasaron', titulo: 'Pasaron a closing' };
+    // El % de asistencia es sobre las llamadas con resultado: las sin reportar y las que aún no ocurren van aparte.
+    const conRes = { n: conResultado(m), texto: 'con resultado', clave: 'con_resultado', titulo: 'Llamadas con resultado' };
+    // Con el closer igual: las pendientes de llamada no restan al % de quienes ya tuvieron la llamada.
+    const closerConRes = { n: m.closer_asistieron + m.closer_no_asistieron, texto: 'con resultado', clave: undefined, titulo: 'Con resultado' };
     const closerAsistieron = { n: m.closer_asistieron, texto: 'asistieron', clave: 'closer_asistieron', titulo: 'Asistieron al closer' };
     const tarjetas = [
         { rotulo: 'AGENDAS', valor: m.agendas, sub: `${m.agendas} ${m.agendas === 1 ? 'llamada' : 'llamadas'} en el período`, color: 'info', ver: 'agendas' },
-        { rotulo: 'ASISTENCIA', valor: <Porcentaje onVer={onVer} a={{ n: m.asistencias, texto: 'asistieron', clave: 'asistencias', titulo: 'Asistieron' }} b={agendas} />,
-            sub: `${m.asistencias} asistieron · ${m.no_show} no show · ${m.canceladas} canceló`, color: 'success', ver: 'asistencias' },
+        { rotulo: 'ASISTENCIA', valor: <Porcentaje onVer={onVer} a={{ n: m.asistencias, texto: 'asistieron', clave: 'asistencias', titulo: 'Asistieron' }} b={conRes} />,
+            sub: <Partes onVer={onVer} partes={[[m.asistencias, 'asistieron', 'asistencias'], [m.no_show, 'no show', 'st:No se presentó'], [m.canceladas, 'canceló', 'st:Canceló']]} />,
+            sub2: m.sin_reporte || m.por_ocurrir
+                ? <Partes onVer={onVer} partes={[[m.sin_reporte, 'sin reportar', 'sin_reporte'], [m.por_ocurrir, 'aún no ocurren', 'por_ocurrir']]} /> : null,
+            color: 'success', ver: 'asistencias' },
         { rotulo: 'CALIFICADOS', valor: pctTexto(m.calificados, m.asistencias), sub: `${m.calificados} pasados al closer · ${m.closer_asistieron} ya asistieron con él`, color: 'brand-secondary', ver: 'calificados' },
         { rotulo: 'CIERRES LOW TICKET', valor: pctTexto(m.cerrado, m.pitch_low_ticket), sub: `${m.cerrado} de ${m.pitch_low_ticket} presentaciones`, color: 'error', ver: 'cerrado' },
-        { rotulo: 'ASISTENCIA AL CLOSER', valor: <Porcentaje onVer={onVer} a={closerAsistieron} b={pasaron} />, ancha: true, barra: pct(m.closer_asistieron, m.pasaron),
-            sub: `${m.closer_asistieron} de ${m.pasaron} que pasaron a closing`, color: 'info', ver: 'closer_asistieron' },
+        { rotulo: 'ASISTENCIA AL CLOSER', valor: <Porcentaje onVer={onVer} a={closerAsistieron} b={closerConRes} />, ancha: true, barra: pct(m.closer_asistieron, closerConRes.n),
+            sub: <Partes onVer={onVer} partes={[[m.closer_asistieron, 'asistieron', 'closer_asistieron'], [m.closer_no_asistieron, 'no asistieron', 'closer_no_asistieron']]} />,
+            sub2: <>de {m.pasaron} que pasaron a closing{m.closer_pendientes > 0 && <> · <Partes onVer={onVer} partes={[[m.closer_pendientes, 'pendientes de llamada', 'closer_pendientes']]} /></>}</>,
+            color: 'info', ver: 'closer_asistieron' },
         { rotulo: 'CONVERSIÓN CON EL CLOSER', valor: <Porcentaje onVer={onVer} a={{ n: m.closer_cerraron, texto: 'cerraron', clave: 'closer_cerraron', titulo: 'Cerraron con el closer' }} b={closerAsistieron} />,
             ancha: true, barra: pct(m.closer_cerraron, m.closer_asistieron),
-            sub: `${m.closer_cerraron} cierres de ${m.closer_asistieron} que asistieron`, color: 'success', ver: 'closer_cerraron' },
+            sub: `${m.closer_cerraron} cierres de ${m.closer_asistieron} que asistieron`,
+            sub2: <><Partes onVer={onVer} partes={[[m.closer_senas, 'señas', 'closer_senas']]} /> · {dinero(m.closer_cobrado)} cobrados</>,
+            color: 'success', ver: 'closer_cerraron' },
     ];
     return (
         <div className="tg-kpis">
@@ -63,6 +85,7 @@ export function Tarjetas({ m, onVer }) {
                     <small style={{ ...ROTULO, position: 'relative' }}>{t.rotulo}</small>
                     <span style={{ position: 'relative', fontSize: 40, fontWeight: 900, lineHeight: 1.1, color: `var(--${t.color})` }}>{t.valor}</span>
                     <span style={{ position: 'relative', fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.4 }}>{t.sub}</span>
+                    {t.sub2 && <span style={{ position: 'relative', fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.4 }}>{t.sub2}</span>}
                     {t.ancha && (
                         <span style={{ position: 'relative', display: 'block', height: 6, borderRadius: 6, marginTop: 4, background: 'rgba(255,255,255,.08)' }}>
                             <span style={{ display: 'block', height: 6, borderRadius: 6, width: `${Math.min(100, t.barra)}%`, background: `var(--${t.color})` }} />
@@ -91,7 +114,7 @@ export function Estados({ m, onVer }) {
                 <div style={{ width: 150, height: 150, flexShrink: 0, borderRadius: '50%', background: `conic-gradient(${tramos.join(', ')})`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <div style={{ width: 108, height: 108, borderRadius: '50%', background: 'var(--ink)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
-                        <span style={{ fontSize: 30, fontWeight: 900, lineHeight: 1 }}>{Math.round(pct(m.asistencias, m.agendas))}%</span>
+                        <span style={{ fontSize: 30, fontWeight: 900, lineHeight: 1 }}>{Math.round(pct(m.asistencias, conResultado(m)))}%</span>
                         <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>asistieron</span>
                     </div>
                 </div>
