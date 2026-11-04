@@ -131,7 +131,7 @@ def dia_del_equipo(fecha=None):
     return {
         'fecha': dia.isoformat(),
         'closers': {'agendas': tot_a['agendas'], 'asistieron': tot_a['asistieron'],
-                    'ventas': tot_a['ventas'], 'cash': tot_v['cash']},
+                    'ventas': tot_a['ventas'], 'cash': tot_v['cash_neto']},  # neto (04/11/2026)
         'setters': {'leads': tot_l['leads'], 'mensajes': tot_l['mensajes'],
                     'respuesta': tot_l['respuesta'], 'agendas': tot_l['agendas']},
         'personas': personas,
@@ -142,7 +142,7 @@ def dia_del_equipo(fecha=None):
 def _sugerencias(agendas, ventas, personas):
     """Como máximo dos sugerencias por lista, sacadas de los datos del día. No se inventan: si no
     pasó nada que sugerir, la lista viene vacía y el director escribe lo suyo."""
-    victorias = ['Cerró {} · ${:,.0f}'.format(v['cliente'], v['monto'])
+    victorias = ['Cerró {} · ${:,.0f}'.format(v['cliente'], v['monto_neto'])
                  for v in ventas if v['es_venta']][:2]
     mejoras = ['No show sin confirmar · {}'.format(f['cliente']) for f in agendas
                if f['post_call']['key'] == 'no_show' and f['pre_call']['key'] == 'sin_confirmar'][:2]

@@ -340,7 +340,7 @@ const PasoDia = ({ dia, revisadas, onRevisar, irAPersona }) => {
                         ['Agendas', fmt.num(dia.closers.agendas)],
                         ['Show up', fmt.num(dia.closers.asistieron), 'var(--success)'],
                         ['Ventas', fmt.num(dia.closers.ventas), 'var(--brand-secondary)'],
-                        ['Cash', fmt.money(dia.closers.cash)],
+                        ['Cash neto', fmt.money(dia.closers.cash)],
                     ]} />
                 </section>
                 <section className="panel panel--fino">

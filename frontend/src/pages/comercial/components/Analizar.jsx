@@ -406,7 +406,7 @@ const PanelPagos = ({ bloque, irA }) => {
     return (
         <Panel cab={
             <PanelCab titulo="Payment types"
-                ayuda={`De dónde vienen los ${fmt.money(total)} del período según la forma de pago. `
+                ayuda={`De dónde vienen los ${fmt.money(total)} netos del período según la forma de pago. `
                     + 'Cada fila cuenta COBROS, no ventas: un Split Pay son dos cobros de la misma '
                     + 'venta, y los depósitos son señas que todavía no son una venta.'}>
                 <span className="t-cap mut40 num">{fmt.plural(cobros, 'cobro', 'cobros')}</span>
@@ -622,7 +622,7 @@ const PanelProgramas = ({ bloque, irA }) => {
     return (
         <Panel cab={
             <PanelCab titulo="Programas"
-                ayuda={'Collected es lo que cobró cada programa y con qué ticket. Payments abre esa '
+                ayuda={'Collected es lo que cobró cada programa, neto de la comisión, y con qué ticket. Payments abre esa '
                     + 'misma plata por forma de pago: el monto grande y debajo cuántos cobros lo '
                     + 'componen, que no son lo mismo que las ventas.'}>
                 <Tabs valor={vista} onChange={setVista} aria="Vista de programas"
@@ -745,7 +745,7 @@ const PanelSenas = ({ senas, irA }) => {
         {
             l: 'desbloqueado', valor: fmt.money(senas.desbloqueado), color: v('text-on-surface'),
             destino: D.senas_desbloqueado,
-            help: 'Cash cobrado en las ventas que arrancaron con una seña. Es el argumento para '
+            help: 'Cash neto cobrado en las ventas que arrancaron con una seña. Es el argumento para '
                 + 'seguir pidiéndolas.',
         },
     ];
