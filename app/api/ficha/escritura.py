@@ -457,6 +457,46 @@ def resumen_de_borrado(appt_id):
     return jsonify(datos), 200
 
 
+def _cliente_y_permiso(client_id):
+    """(cliente, respuesta_de_error) para borrar un lead por su cliente: sirve a los que no tienen ninguna agenda."""
+    from app.models import Client
+    cliente = db.session.get(Client, client_id)
+    if not cliente:
+        return None, (jsonify({'message': 'Lead no encontrado'}), 404)
+    if not permisos_de(current_user, None)['eliminar_lead']:
+        return None, sin_permiso('eliminar_lead')
+    return cliente, None
+
+
+@bp.route('/cliente/<int:client_id>/lead/borrado', methods=['GET'])
+def resumen_de_borrado_cliente(client_id):
+    """Lo mismo que `resumen_de_borrado`, para un lead sin agenda (se pide por su cliente)."""
+    from app.services import lead_prueba_service
+    cliente, error = _cliente_y_permiso(client_id)
+    if error:
+        return error
+    datos = lead_prueba_service.resumen(cliente)
+    datos['puede_con_plata'] = permisos_de(current_user, None)['eliminar_lead_con_plata']
+    return jsonify(datos), 200
+
+
+@bp.route('/cliente/<int:client_id>/lead', methods=['DELETE'])
+def eliminar_lead_cliente(client_id):
+    """Elimina el lead entero por su cliente: el de prueba que solo está en el libro de agendas y no tiene ninguna
+    agenda propia (Kerwin, 04/11/2026: «intenté eliminarlo y no pasa nada»)."""
+    from app.services import lead_prueba_service
+    cliente, error = _cliente_y_permiso(client_id)
+    if error:
+        return error
+    con_plata = request.args.get('con_plata') in ('1', 'true')
+    if con_plata and not permisos_de(current_user, None)['eliminar_lead_con_plata']:
+        return sin_permiso('eliminar_lead_con_plata')
+    try:
+        return jsonify(lead_prueba_service.eliminar_cliente(cliente, current_user, con_plata=con_plata)), 200
+    except lead_prueba_service.ErrorDeLead as e:
+        return jsonify({'message': str(e)}), 400
+
+
 @bp.route('/<int:appt_id>/lead', methods=['DELETE'])
 def eliminar_lead(appt_id):
     """Elimina el lead entero (cliente, agendas y lo que cuelga de él): para los de prueba. Con plata solo si se

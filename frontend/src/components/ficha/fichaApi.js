@@ -84,6 +84,8 @@ const RUTAS = {
     // El lead entero (cliente, todas sus agendas y lo que cuelga de él): los de prueba. Con pagos o ventas solo si se
     // pide `con_plata` y el rol puede (dirección y director de marketing).
     eliminar_lead: (appt, p) => api.delete(`/ficha/${appt}/lead`, p?.con_plata ? { params: { con_plata: 1 } } : undefined),
+    // Lo mismo para un lead sin ninguna agenda (solo está en el libro): se pide por su cliente, no por una agenda.
+    eliminar_lead_cliente: (clienteId, p) => api.delete(`/ficha/cliente/${clienteId}/lead`, p?.con_plata ? { params: { con_plata: 1 } } : undefined),
     reasignar_closer: (appt, p) => api.patch(`/ficha/${appt}/closer`, p),
     // A la del triage libre a esa hora; el evento de Google pasa a su calendario.
     pasar_a_triage: (appt) => api.post(`/ficha/${appt}/pasar-a-triage`),
@@ -159,6 +161,7 @@ const CONSULTAS = {
     fulfillment: (appt) => api.get(`/ficha/${appt}/fulfillment`),
     // Lo que se borraría al eliminar el lead (agendas, pagos, ventas, cuotas) para la confirmación.
     resumen_borrado: (appt) => api.get(`/ficha/${appt}/lead/borrado`),
+    resumen_borrado_cliente: (clienteId) => api.get(`/ficha/cliente/${clienteId}/lead/borrado`),
     // Las ventas de la persona con su total, lo cobrado, el saldo y sus pagos (`ventas_service`).
     ventas: (appt) => api.get(`/ficha/${appt}/ventas`),
     // Cómo viene pagando el cliente el programa que se le está vendiendo (`{params: {programa}}`):
@@ -177,7 +180,7 @@ export const ACCIONES = Object.keys(RUTAS);
 export const ejecutarAccion = (nombre, appointmentId, payload = {}) => {
     const fn = RUTAS[nombre];
     if (!fn) throw new Error(`Acción de ficha desconocida: ${nombre}`);
-    if (appointmentId == null) throw new Error(`La acción "${nombre}" necesita una agenda`);
+    if (appointmentId == null) throw new Error(`La acción "${nombre}" necesita una agenda o un cliente`);
     return Promise.resolve(fn(appointmentId, payload)).then(r => r?.data ?? null);
 };
 
@@ -185,7 +188,7 @@ export const ejecutarAccion = (nombre, appointmentId, payload = {}) => {
 export const ejecutarConsulta = (nombre, appointmentId, config = {}) => {
     const fn = CONSULTAS[nombre];
     if (!fn) throw new Error(`Consulta de ficha desconocida: ${nombre}`);
-    if (appointmentId == null) throw new Error(`La consulta "${nombre}" necesita una agenda`);
+    if (appointmentId == null) throw new Error(`La consulta "${nombre}" necesita una agenda o un cliente`);
     return Promise.resolve(fn(appointmentId, config)).then(r => r?.data ?? null);
 };
 

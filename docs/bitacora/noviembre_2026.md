@@ -247,3 +247,9 @@
 - **4 de Noviembre de 2026 (Marketing: el cruce por segmento sin ceros y con colores)** *([CruceSegmentos.jsx](../../frontend/src/pages/admin/marketing/todos/CruceSegmentos.jsx), [segmentos.css](../../frontend/src/pages/admin/marketing/todos/segmentos.css))*
   - Los grupos sin nada en la cifra elegida (ni en el período comparado) no se dibujan; un pie dice cuántos son. Si no queda ninguno, avisa.
   - Cada número lleva el color de su segmento (A verde, B azul, C ámbar, D magenta, sin segmento gris, total magenta) con más fuerza cuanto más alto es frente al resto de su columna, y el cero se apaga. También lo ve el panel de Segmentos del Analizar.
+- **4 de Noviembre de 2026 (Países: República Dominicana y el teléfono del cliente)** *([paises_lectura.py](../../app/services/paises_lectura.py))*
+  - Un WhatsApp dominicano llega a veces sin el «1» (`+829 470 1148`) y quedaba en «Sin país»: ahora los códigos de área 809, 829 y 849 son República Dominicana con o sin el «1».
+  - Si el teléfono de la persona no se reconoce o no existe, se prueba con el de su cliente antes de dejarla en «Sin país».
+- **4 de Noviembre de 2026 (Eliminar un lead de prueba que no tiene agenda)** *([escritura.py](../../app/api/ficha/escritura.py), [lead_prueba_service.py](../../app/services/lead_prueba_service.py), [BorrarLead.jsx](../../frontend/src/components/ficha/piezas/BorrarLead.jsx))*
+  - Un lead que solo está en el libro de agendas (como Kerwin Quintero: 16 agendas del libro y ninguna propia) no tenía cómo eliminarse: la papelera y el tacho de las listas necesitaban una agenda. Ahora se elimina por su cliente (`DELETE /ficha/cliente/<id>/lead`, con su resumen previo), con los mismos permisos y bloqueos (pagos, ventas y suscripciones).
+  - Las filas de las listas de Marketing que solo traen la persona ahora también traen su cliente, y por eso muestran el tacho.

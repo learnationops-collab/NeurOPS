@@ -97,11 +97,16 @@ def _borrar_plata(plata):
 
 
 def eliminar(appt, usuario, con_plata=False):
-    """Borra el lead de `appt` con todas sus agendas. Devuelve lo que se borró, para la bitácora y el aviso.
+    """Borra el lead de `appt` con todas sus agendas. Devuelve lo que se borró, para la bitácora y el aviso."""
+    return eliminar_cliente(appt.client, usuario, con_plata=con_plata)
+
+
+def eliminar_cliente(cliente, usuario, con_plata=False):
+    """Borra el lead `cliente` con todas sus agendas (puede no tener ninguna: un lead que solo está en el libro de
+    agendas, como el de una clase de prueba). Devuelve lo que se borró, para la bitácora y el aviso.
 
     `con_plata`: borra también sus pagos, cuotas y ventas (un lead de prueba con un cobro falso). Una suscripción
     sigue frenando: antes hay que cerrar su acceso en la Academia."""
-    cliente = appt.client
     if not cliente:
         raise ErrorDeLead('Esta agenda no tiene un lead que eliminar.')
     plata = _plata(cliente)
