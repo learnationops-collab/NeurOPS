@@ -93,3 +93,6 @@ export const borrarCarga = (id) => api.delete(`/public/finance/conciliacion/carg
 export const corregirVenta = (id, cambios) => api.put(`/public/finance/conciliacion/ventas/${id}`, cambios).then(datos);
 export const marcarRevisada = (clave, revisada, extra = {}) => api.post('/public/finance/conciliacion/revisiones',
     { clave, revisada, ...extra }).then(datos);
+
+// Finanzas › Cobros (04/11/2026): cada cobro del período con su bruto y su neto.
+export const getCobros = (periodo) => api.get('/public/finance/cobros', { params: delPeriodo(periodo) }).then(datos);

@@ -8,6 +8,7 @@ import { esFresco, guardarCache, leerCache } from '../../../../services/cacheDeV
 import * as apiFz from './finanzasApi';
 import Procedencia from './Procedencia';
 import Diferencias from './Diferencias';
+import Cobros from './Cobros';
 
 /**
  * Sección Finanzas del dashboard comercial (desde el 08/10/2026; antes /admin/finance).
@@ -15,7 +16,7 @@ import Diferencias from './Diferencias';
  * Las cinco vistas son las mismas de siempre y van en la barra de pestañas de arriba, como las de
  * Analizar: Resumen, Medios de pago, Anuncios, Nómina y Software. Cada vista pide lo suyo al abrirse.
  * Desde el 09/10/2026 hay una sexta, Diferencias: los CSV de Stripe y Hotmart contra lo reportado
- * (`Diferencias.jsx`).
+ * (`Diferencias.jsx`). Desde el 04/11/2026, Cobros: cada cobro con su bruto y su neto (`Cobros.jsx`).
  *
  * El período lo elige la píldora de la derecha (`MenuPeriodoFinanzas`) y queda guardado en el
  * navegador: un mes o, desde el 08/10/2026, un rango personalizado. Cada vista recibe `periodo` =
@@ -31,6 +32,7 @@ export const TABS_FINANZAS = [
     { key: 'nomina', label: 'Nómina' },
     { key: 'software', label: 'Software' },
     { key: 'diferencias', label: 'Diferencias' },
+    { key: 'cobros', label: 'Cobros' },
 ];
 
 const v = (tono) => `var(--${tono})`;
@@ -868,7 +870,7 @@ const Software = ({ periodo }) => {
 // ------------------------------------------------------------------------------------------------
 
 const VISTAS = {
-    resumen: Resumen, medios: MediosDePago, anuncios: Anuncios, nomina: Nomina, software: Software, diferencias: Diferencias,
+    resumen: Resumen, medios: MediosDePago, anuncios: Anuncios, nomina: Nomina, software: Software, diferencias: Diferencias, cobros: Cobros,
 };
 
 /** `periodo` = {desde, hasta, mes}: ver el docstring de arriba y `periodoDe` en comun.jsx. */
