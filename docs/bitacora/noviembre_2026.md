@@ -222,3 +222,7 @@
   - Filtro por closer, buscador, totales (cobros, bruto, neto, comisiones) y descarga en CSV de lo filtrado, para cotejar con las transferencias reales.
 - **4 de Noviembre de 2026 (Marketing: gasto de «LM Funnel» en OBTENER GUIA)** *([meta_ads_service.py](../../app/services/meta_ads_service.py))*
   - Los anuncios «Pide gratis al DM la guía…» de la campaña LM Funnel ya no van a GUIA STEPS, GUIA PERU ni GUIA GRATIS según el conjunto: su gasto va a OBTENER GUIA, que es con lo que entran sus leads (ADR-W093).
+- **4 de Noviembre de 2026 (Finanzas › Cobros: cotejo contra los CSV)** *([Cobros.jsx](../../frontend/src/pages/comercial/components/finanzas/Cobros.jsx), [finance_cobros.py](../../app/api/public/finance_cobros.py), [ADR-W094](../DECISIONS.md))*:
+  - Cada cobro muestra el neto del sistema, el neto según los CSV de Stripe y Hotmart y la diferencia, con su estado: coincide, neto distinto, otra pasarela, no está en el CSV, transferencia.
+  - Las transferencias tienen un botón Aprobar que queda guardado. Los cobros de los CSV sin venta en el sistema aparecen como «Sin reportar».
+  - Botón «Subir CSV» en la misma pestaña, filtro por estado y KPIs neto sistema, neto CSV, diferencia y para revisar. Se sacan las comisiones de las pasarelas.
