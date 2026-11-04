@@ -25,6 +25,9 @@ _PAISES_TODOS = [{'c': p['c'], 'n': p['n'], 'd': p['d']} for p in PAISES] + EXTR
 ETIQUETAS = {**{p['c']: p['n'] for p in _PAISES_TODOS}, SIN: 'Sin país'}
 _POR_LARGO = sorted(_PAISES_TODOS, key=lambda p: -len(p['d']))
 TANDA = 500
+# República Dominicana comparte el +1 con Estados Unidos: la reconocen sus tres códigos de área, con o sin el «1»
+# («+829 470 1148» llega sin él, como lo escribe el lead).
+_AREAS_DO = ('809', '829', '849')
 
 
 def de_numero(numero):
@@ -37,6 +40,8 @@ def de_numero(numero):
     con_mas = crudo.startswith('+') or crudo.startswith('00')
     if crudo.startswith('00'):
         digitos = digitos[2:]
+    if (len(digitos) == 10 and digitos[:3] in _AREAS_DO) or (len(digitos) == 11 and digitos[0] == '1' and digitos[1:4] in _AREAS_DO):
+        return 'DO'
     for p in _POR_LARGO:
         codigo = p['d'].lstrip('+')
         if not digitos.startswith(codigo):
@@ -66,12 +71,21 @@ def _tandas(valores):
 
 
 def de_personas(uuids):
-    """{person_uuid: país} de las personas cuyo teléfono se reconoce."""
+    """{person_uuid: país} de las personas cuyo teléfono se reconoce. Si el de la persona no se reconoce (o no tiene), se
+    prueba con el de sus clientes (04/11/2026: «ahí está su número de teléfono»)."""
     salida = {}
+    pendientes = set()
     for tanda in _tandas({u for u in uuids if u}):
         for puuid, tel in db.session.query(Person.uuid, Person.phone).filter(Person.uuid.in_(tanda)):
             pais = de_numero(tel)
             if pais:
+                salida[puuid] = pais
+            else:
+                pendientes.add(puuid)
+    for tanda in _tandas(pendientes):
+        for puuid, tel in db.session.query(Client.person_uuid, Client.phone).filter(Client.person_uuid.in_(tanda)):
+            pais = de_numero(tel)
+            if pais and puuid not in salida:
                 salida[puuid] = pais
     return salida
 
