@@ -72,6 +72,18 @@ def _agendas_del_setter(venta, desde, hasta):
     return [a for a in unicas.values() if fuente_valida(a.nombre)]
 
 
+def pasar_a_workshop(venta):
+    """Pasa el cobro de Setting a Workshop (04/11/2026, Elias: «Alvaro es de workshop»): la fuente de la agenda que lo
+    originó queda en «workshop» y el cobro pierde su setter. Sin commit. Devuelve los ids de las agendas cambiadas."""
+    from app.services.fuente_service import FUENTE_WORKSHOP_VIVO
+
+    agendas = _agendas_del_setter(venta, None, None)
+    for agenda in agendas:
+        agenda.nombre = FUENTE_WORKSHOP_VIVO
+    venta.setter = None
+    return [a.id for a in agendas]
+
+
 def cambiar_atribucion(venta, closer_id=None, setter_id=None, desde=None, hasta=None):
     """Pone el closer y/o el setter elegidos (ids de usuario) y confirma. Valida las dos personas
     antes de tocar nada: un setter que no existe no deja a medias el cambio de closer.

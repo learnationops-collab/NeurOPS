@@ -72,6 +72,21 @@ def ventas_sin_palabra_clave():
     return jsonify(ventas_servicio.ventas(current_user)), 200
 
 
+@bp.route('/palabras-clave/ventas/workshop', methods=['POST'])
+@role_required(ROLE_SETTER)
+def pasar_ventas_a_workshop():
+    """Body: {"grupo": ...}. El cliente es del workshop, no de un DM: sus pagos dejan de ser de Setting."""
+    grupo = (request.get_json(silent=True) or {}).get('grupo')
+    valido = isinstance(grupo, str) and (
+        (grupo[:1] in ('c', 'v') and grupo[1:].isdigit()) or (grupo[:1] == 'p' and len(grupo) == 37))
+    if not valido:
+        return jsonify({'error': 'Falta el cliente.'}), 400
+    try:
+        return jsonify(ventas_servicio.pasar_a_workshop(current_user, grupo)), 200
+    except servicio.ErrorDePalabraClave as error:
+        return jsonify({'error': str(error)}), error.estado
+
+
 @bp.route('/palabras-clave/ventas', methods=['POST'])
 @role_required(ROLE_SETTER)
 def asignar_palabra_clave_a_ventas():

@@ -22,6 +22,7 @@ clave equivocada se cambia eligiendo otra, también en un cliente que ya aparec�
 (Kerwin: «debería haber forma de cambiar la palabra clave si es incorrecta»). Un cobro sin cliente
 recibe, como una agenda, la respuesta con el anuncio en su conversación de ManyChat.
 """
+import logging
 from collections import defaultdict
 from datetime import datetime, time, timedelta
 
@@ -33,6 +34,8 @@ from app.services.comercial_service import ComercialService, clientes_de_ventas,
 from app.services.palabra_clave_service import (
     ACCION, DESDE, ErrorDePalabraClave, _texto_del_registro, anuncio_de_palabra, normalizar_ig, responder_con_anuncio,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def _grupo(cobro, cliente_de):
@@ -109,6 +112,27 @@ def ventas(setter):
     monto = round(sum(f['monto'] for g in pendientes for f in g['pagos'] if not f['palabra_clave']), 2)
     return {'pendientes': pendientes, 'completadas': completadas,
             'resumen': {'clientes': len(pendientes), 'monto': monto}}
+
+
+def pasar_a_workshop(setter, grupo):
+    """El cliente no vino por un DM sino por el workshop: sus pagos dejan de ser de Setting y pasan a Workshop (la agenda
+    que los originó queda con esa fuente). Solo los de este setter. Hace commit."""
+    from app.services.atribucion_venta_service import pasar_a_workshop as mover
+
+    suyos, cliente_de, _ = _del_setter(setter)
+    pagos = [c for c in suyos if _grupo(c, cliente_de) == grupo]
+    if not pagos:
+        raise ErrorDePalabraClave('Estas ventas no son tuyas.', 403)
+    try:
+        for pago in pagos:
+            mover(pago)
+        db.session.commit()
+    except Exception as e:  # noqa: BLE001 — se informa y no se deja a medias
+        db.session.rollback()
+        logger.error(f'No se pudo pasar a Workshop las ventas de {grupo}: {e}')
+        raise ErrorDePalabraClave('No se pudo guardar: probá de nuevo.', 500) from None
+    logger.warning(f'{setter.username} pasó a Workshop {len(pagos)} pago(s) de {grupo}')
+    return {'grupo': grupo, 'pagos': len(pagos)}
 
 
 def asignar(setter, grupo, ad_id=None, palabra=None, instagram=None):

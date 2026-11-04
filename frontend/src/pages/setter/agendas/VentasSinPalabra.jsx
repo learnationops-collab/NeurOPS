@@ -16,7 +16,7 @@ import { ventasDelMes } from './meses';
 
 /** Las ventas que faltan, por cliente. Al asignar, la tarjeta se va y el foco pasa a la siguiente. */
 export const VentasPendientes = ({ ventas, mes = null, conVacio = false }) => {
-    const { datos, anuncios, asignar } = ventas;
+    const { datos, anuncios, asignar, pasarAWorkshop } = ventas;
     const [aviso, setAviso] = useState('');
     const tarjetas = useRef(new Map());
     if (!datos) return null;
@@ -32,6 +32,12 @@ export const VentasPendientes = ({ ventas, mes = null, conVacio = false }) => {
             setAviso(r.aviso);
             if (r.siguiente) requestAnimationFrame(() => tarjetas.current.get(r.siguiente)?.focus());
         }
+        return r;
+    };
+
+    const alPasarAWorkshop = async (grupo) => {
+        const r = await pasarAWorkshop(grupo);
+        if (r.ok) setAviso(r.aviso);
         return r;
     };
 
@@ -52,6 +58,7 @@ export const VentasPendientes = ({ ventas, mes = null, conVacio = false }) => {
                     <AnimatePresence initial={false}>
                         {pendientes.map((g, i) => (
                             <TarjetaVenta key={g.grupo} grupo={g} orden={i} anuncios={anuncios} onAsignar={alAsignar}
+                                onWorkshop={alPasarAWorkshop}
                                 ref={(el) => { if (el) tarjetas.current.set(g.grupo, el); else tarjetas.current.delete(g.grupo); }} />
                         ))}
                     </AnimatePresence>

@@ -17,7 +17,7 @@ export const dinero = (v) => DINERO.format(v || 0);
 export const diaDelPago = (iso) => (iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(2, 4)}` : '—');
 
 // `onCancelar`: la tarjeta abierta para CAMBIAR la palabra clave de un cliente que ya tenía (18/10/2026).
-const TarjetaVenta = forwardRef(({ grupo, anuncios, onAsignar, onCancelar, orden = 0 }, ref) => {
+const TarjetaVenta = forwardRef(({ grupo, anuncios, onAsignar, onCancelar, onWorkshop, orden = 0 }, ref) => {
     const reducir = useReducedMotion();
     const [elegido, setElegido] = useState(null);
     const [editandoIg, setEditandoIg] = useState(!grupo.instagram);
@@ -43,6 +43,14 @@ const TarjetaVenta = forwardRef(({ grupo, anuncios, onAsignar, onCancelar, orden
                 requestAnimationFrame(() => buscadorRef.current?.focus());
             }
         }
+    };
+
+    // «Es de Workshop»: el cliente no vino por un DM; pide confirmar en la misma tarjeta (no se deshace desde acá).
+    const [confirmandoWorkshop, setConfirmandoWorkshop] = useState(false);
+    const pasarAWorkshop = async () => {
+        setEnviando(true);
+        const r = await onWorkshop(grupo);
+        if (r?.error) { setEnviando(false); setConfirmandoWorkshop(false); setError(r.error); }
     };
 
     const n = grupo.pagos.length;
@@ -97,6 +105,19 @@ const TarjetaVenta = forwardRef(({ grupo, anuncios, onAsignar, onCancelar, orden
                         Cancelar
                     </button>
                 )}
+                {onWorkshop && !onCancelar && (confirmandoWorkshop ? (
+                    <p className="mv-workshop" role="group" aria-label="Confirmar que es de Workshop">
+                        Pasa a Workshop y sale de tus ventas.{' '}
+                        <button type="button" className="ma-ig-cambiar" disabled={enviando} onClick={pasarAWorkshop}>Sí, es de Workshop</button>
+                        {' · '}
+                        <button type="button" className="ma-ig-cambiar" disabled={enviando} onClick={() => setConfirmandoWorkshop(false)}>No</button>
+                    </p>
+                ) : (
+                    <button type="button" className="ma-ig-cambiar mv-workshop-btn" disabled={enviando}
+                        onClick={() => setConfirmandoWorkshop(true)}>
+                        Es de Workshop
+                    </button>
+                ))}
                 {error && <p className="ma-error" role="alert">{error}</p>}
             </div>
         </motion.li>
