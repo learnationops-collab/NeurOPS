@@ -101,19 +101,25 @@ const SegmentosVista = ({ rango, version, params, cambiar, onReintentar }) => {
             nombre: segmento === '' ? (delFiltro ? 'filtro' : 'todos los segmentos') : nombre });
     };
 
-    const columnas = COLUMNAS_SEGMENTO.filter((c) => !ocultas.includes(c.key));
+    const elegidas = COLUMNAS_SEGMENTO.filter((c) => !ocultas.includes(c.key));
     // Los grupos que Kerwin sacó del análisis (28/10/2026) no se dibujan; se recuerdan por corte.
     const quitados = quitadosDe(guardado, corte);
     const grupos = gruposVisibles(datos.grupos, quitados);
     const cambiarQuitados = (lista) => poner(conQuitados(guardado, corte, lista));
-    const campo = COLUMNAS_CRUCE.find((c) => c.key === campoKey) || COLUMNAS_CRUCE[1];
+    // Una cifra que ningún segmento ni total trae (los leads por país o por closer: no tienen segmento) no se ofrece: las
+    // tablas no dibujan una columna de «—» y el cruce no la pone entre sus cifras (04/11/2026).
+    const conDato = (c) => grupos.some((g) => [g.total, ...g.filas].some((f) => f[c.key] !== null && f[c.key] !== undefined));
+    const columnas = elegidas.filter(conDato);
+    const camposDelCruce = COLUMNAS_CRUCE.filter(conDato);
+    const campo = camposDelCruce.find((c) => c.key === campoKey) || camposDelCruce.find((c) => c.key === INICIAL.campo)
+        || camposDelCruce[0] || COLUMNAS_CRUCE[1];
     const ordenar = (col) => poner({ orden: { col, dir: orden.col === col && orden.dir === 'desc' ? 'asc' : 'desc' } });
 
     // Los bloques son una lista (`bloquesSegmentos.jsx`); acá solo se les pasa lo calculado.
     const items = itemsDe({
         corte, leadsTotal: datos.leads_total, grupos, todosLosGrupos: datos.grupos, quitados, onQuitados: cambiarQuitados, onQuitar: (key) => cambiarQuitados([...quitados, key]),
-        columnas, ocultas, onOcultas: (lista) => poner({ ocultas: lista }), moneda: datos.moneda,
-        campo, campos: COLUMNAS_CRUCE, onCampo: (key) => poner({ campo: key }), orden, onOrden: ordenar,
+        columnas, nColumnas: elegidas.length, ocultas, onOcultas: (lista) => poner({ ocultas: lista }), moneda: datos.moneda,
+        campo, campos: camposDelCruce, onCampo: (key) => poner({ campo: key }), orden, onOrden: ordenar,
         onVerTabla: verDeTabla, onVerCruce: verDeCruce,
     });
 
