@@ -461,23 +461,23 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
             // igual que `totales_ventas` en el backend. Así ningún número de la dirección se mueve.
             const cobros = lista.filter(ventaSuma);
             const fuera = lista.length - cobros.length;
-            const cash = cobros.reduce((a, f) => a + f.monto, 0);
+            // Todo en neto (04/11/2026): lo cobrado menos la comisión de la pasarela.
+            const cash = cobros.reduce((a, f) => a + f.monto_neto, 0);
             // El ticket promedia solo lo cobrado en las ventas nuevas: las cuotas y las señas
             // suman al cash pero no son ventas (igual que `totales_ventas` en el backend).
             const nuevas = cobros.filter(f => f.es_venta);
             const ventas = nuevas.length;
-            const cashVentas = nuevas.reduce((a, f) => a + f.monto, 0);
-            const neto = cobros.reduce((a, f) => a + f.monto_neto, 0);
+            const cashVentas = nuevas.reduce((a, f) => a + f.monto, 0); // el ticket sigue en bruto (precio de venta, ADR-W061)
             const deCobros = fmt.plural(cobros.length, 'cobro', 'cobros');
             return [
-                { key: 'cash', label: 'cash', valor: fmt.money(Math.round(cash * 100) / 100),
+                { key: 'cash', label: 'cash neto', valor: fmt.money(Math.round(cash * 100) / 100),
                     color: 'var(--text-on-surface)',
                     // Con no completadas a la vista, la bajada dice cuántas quedaron afuera: si no, la
                     // lista mostraría más filas que cobros cuenta la tira, sin explicación.
                     hint: fuera ? `${deCobros} · ${fmt.num(fuera)} no ${fuera === 1 ? 'suma' : 'suman'}` : deCobros,
-                    ayuda: fuera ? 'Lo cobrado en las ventas completadas de la lista. Las no completadas '
+                    ayuda: fuera ? 'Lo cobrado, neto de la comisión de la pasarela, en las ventas completadas de la lista. Las no completadas '
                         + '(pendientes, reembolsadas, canceladas) se ven para corregirlas, pero no son cash.'
-                        : 'Todo lo cobrado en la lista: ventas, cuotas y señas.' },
+                        : 'Todo lo cobrado en la lista, neto de la comisión de la pasarela: ventas, cuotas y señas.' },
                 { key: 'ventas', label: segun(ventas, 'venta', 'ventas'), valor: fmt.num(ventas),
                     color: 'var(--brand-secondary)',
                     ayuda: 'Pago completo y split pay. Una seña es una reserva: no cuenta como venta.' },
@@ -485,9 +485,7 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                     valor: fmt.money(ventas ? Math.round((cashVentas / ventas) * 100) / 100 : null),
                     ayuda: 'Ticket promedio: lo cobrado en las ventas nuevas dividido por cuántas '
                         + 'fueron. Las cuotas y las señas no entran.' },
-                { key: 'neto', label: 'cash neto', valor: fmt.money(Math.round(neto * 100) / 100),
-                    color: 'var(--success)', ayuda: 'El cash sin los fees de la pasarela de pago.' },
-                itemTotalAcademia(cobros),
+                                itemTotalAcademia(cobros),
             ].filter(Boolean);
         }
 

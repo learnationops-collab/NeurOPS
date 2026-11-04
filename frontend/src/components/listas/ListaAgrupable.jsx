@@ -91,7 +91,7 @@ const CuerpoGrupo = ({ filas, renderFilas, renderPie }) => {
     );
 };
 
-const ListaAgrupable = ({ filas, dimension, renderFilas, renderPie, formatoMonto,
+const ListaAgrupable = ({ filas, dimension, renderFilas, renderPie, formatoMonto, campoMonto,
     elegidos: elegidosDeAfuera, onElegir }) => {
     // Lo que el usuario eligió a mano, clave del grupo → abierto. Lo que no está acá toma el valor
     // por defecto (cerrado, salvo el grupo único). Si quien usa la lista lo pasa, manda el suyo;
@@ -106,7 +106,7 @@ const ListaAgrupable = ({ filas, dimension, renderFilas, renderPie, formatoMonto
 
     // Memorizados: cada grupo abierto pagina su arreglo `filas` por identidad, y recalcularlos en
     // cada render lo devolvería a la primera tanda cada vez que se abre o cierra OTRO grupo.
-    const grupos = useMemo(() => agruparPor(filas, dimension), [filas, dimension]);
+    const grupos = useMemo(() => agruparPor(filas, dimension, campoMonto ? { campoMonto } : undefined), [filas, dimension, campoMonto]);
     // `dimension.abierta`: la dimensión pide arrancar abierta (la de «Persona»: cada grupo son las llamadas de un lead).
     const porDefecto = grupos.length === 1 || dimension?.abierta === true;
     const estaAbierto = (clave) => (elegidos.has(clave) ? elegidos.get(clave) : porDefecto);

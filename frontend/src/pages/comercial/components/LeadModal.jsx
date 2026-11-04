@@ -164,8 +164,8 @@ const LeadModal = ({ fila, estados, puedeCorregir, duplicadaDe, onCorregir, onMa
                         valor={esVenta ? fila.programa
                             : `${cuandoDe(fila).dia} · ${cuandoDe(fila).hora}`}
                         color="var(--text-on-surface)" />
-                    <Meta label={esVenta ? 'Cobrado' : 'Ingresó'}
-                        valor={esVenta ? fmt.money(fila.monto) : cuandoDe(fila, 'creada').dia}
+                    <Meta label={esVenta ? 'Cobrado neto' : 'Ingresó'}
+                        valor={esVenta ? fmt.money(fila.monto_neto ?? fila.monto) : cuandoDe(fila, 'creada').dia}
                         color={esVenta ? 'var(--success)' : 'var(--text-muted)'} />
                 </div>
 

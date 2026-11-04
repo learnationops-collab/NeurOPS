@@ -116,7 +116,7 @@ const Celda = ({ fila, col }) => {
             return fila.completada === false ? (
                 <span className="celda celda--num mut40" style={{ textDecoration: 'line-through' }}
                     title={`No suma: la venta está ${(fila.estado?.label || 'sin completar').toLowerCase()}`}>
-                    {fmt.money(fila.monto)}
+                    {fmt.money(fila.monto_neto ?? fila.monto)}
                 </span>
             ) : (
                 <span className="celda celda--num">
@@ -124,7 +124,7 @@ const Celda = ({ fila, col }) => {
                         <span className="aviso-conteo" role="img" aria-label={fila.aviso_conteo} title={fila.aviso_conteo}
                             style={{ color: 'var(--warning)', marginRight: 4, cursor: 'help' }}>⚠</span>
                     )}
-                    {fmt.money(fila.monto)}
+                    {fmt.money(fila.monto_neto ?? fila.monto)}
                 </span>
             );
         // Solo en la tabla de quien opera (ver `defDe` en `tablasDef.js`): el estado de la venta y,
@@ -583,7 +583,7 @@ const RevisarLista = ({ def, visibles, plantilla, onAbrirFila, dimension, modo, 
                         con la tira de arriba aunque el grupo esté cerrado, y lo que va llegando al
                         bajar dentro de un grupo abierto son sus filas. */}
                     <ListaAgrupable filas={visibles} dimension={dimension} renderFilas={renderFilas}
-                        renderPie={renderPie} formatoMonto={fmt.money}
+                        renderPie={renderPie} formatoMonto={fmt.money} campoMonto="monto_neto"
                         elegidos={gruposElegidos} onElegir={onElegirGrupo} />
                 </>
             );
