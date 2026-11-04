@@ -244,3 +244,6 @@
 - **4 de Noviembre de 2026 (Finanzas › Cobros: cabecera fija y CSV de octubre cargados)** *([Cobros.jsx](../../frontend/src/pages/comercial/components/finanzas/Cobros.jsx), [finanzas.css](../../frontend/src/pages/comercial/components/finanzas/finanzas.css), [ADR-W100](../DECISIONS.md))*
   - La cabecera de la tabla queda fija al bajar y cada columna dice qué es debajo del nombre.
   - Se subieron a producción los CSV de octubre (Stripe, Hotmart y el Hotmart completo desde el 01/10): 31 coinciden, 14 con neto estimado distinto (−$10,08 en total), 2 transferencias por aprobar y Javier Carpintero ($250, Stripe) sin cobro en el CSV.
+- **4 de Noviembre de 2026 (Marketing: el cruce por segmento sin ceros y con colores)** *([CruceSegmentos.jsx](../../frontend/src/pages/admin/marketing/todos/CruceSegmentos.jsx), [segmentos.css](../../frontend/src/pages/admin/marketing/todos/segmentos.css))*
+  - Los grupos sin nada en la cifra elegida (ni en el período comparado) no se dibujan; un pie dice cuántos son. Si no queda ninguno, avisa.
+  - Cada número lleva el color de su segmento (A verde, B azul, C ámbar, D magenta, sin segmento gris, total magenta) con más fuerza cuanto más alto es frente al resto de su columna, y el cero se apaga. También lo ve el panel de Segmentos del Analizar.
