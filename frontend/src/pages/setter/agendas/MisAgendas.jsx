@@ -11,7 +11,7 @@ import ListaCompletadas from './ListaCompletadas';
 import SetterUnclaimedAgendas from './SetterUnclaimedAgendas';
 import { VentasPendientes, VentasCompletadas } from './VentasSinPalabra';
 import { useVentasSinPalabra } from './useVentasSinPalabra';
-import { mesCorto, mesSiguiente, mesesConCuenta, nombreDeMes, tituloDeMes } from './meses';
+import { mesCorto, mesSiguiente, mesesConCuenta, nombreDeMes, tituloDeMes, ventasDelMes } from './meses';
 import './misAgendas.css';
 
 /**
@@ -121,7 +121,9 @@ const MisAgendas = ({ onResumen, onVerDatos }) => {
     const resumen = datos?.resumen || { pendientes: 0, hoy: 0, racha: 0 };
     const pendientes = useMemo(() => datos?.pendientes || [], [datos]);
     // Las pendientes de cada mes se cuentan con la lista que se ve: el selector baja en el momento.
-    const meses = useMemo(() => mesesConCuenta(datos?.resumen, pendientes), [datos, pendientes]);
+    const ventasPendientes = ventas.datos?.pendientes;
+    const meses = useMemo(() => mesesConCuenta(datos?.resumen, pendientes, ventasPendientes || []),
+        [datos, pendientes, ventasPendientes]);
     // Sin meses (un backend anterior) la lista va entera, como antes.
     const porMes = meses.length > 0;
     const infoMes = porMes
@@ -130,6 +132,9 @@ const MisAgendas = ({ onResumen, onVerDatos }) => {
     const mes = infoMes?.mes || null;
     mesRef.current = mes;
     const delMes = porMes ? pendientes.filter(a => a.mes === mes) : pendientes;
+    // Las ventas siguen el mismo filtro de mes: un cliente sale en cada mes en que pagó (04/11/2026).
+    const ventasMes = useMemo(() => ventasDelMes(ventasPendientes || [], porMes ? mes : null),
+        [ventasPendientes, porMes, mes]);
     const completadas = useMemo(() => datos?.completadas || [], [datos]);
     const hechasDelMes = porMes ? completadas.filter(a => a.mes === mes) : completadas;
     const siguiente = porMes ? mesSiguiente(meses, mes) : null;
@@ -314,7 +319,7 @@ const MisAgendas = ({ onResumen, onVerDatos }) => {
             {datos && porMes && (
                 <nav className="ma-meses" aria-label="Meses">
                     <h2 className="ma-mes-titulo">
-                        {tituloDeMes(mes)} <span className="num">· {delMes.length}</span>
+                        {tituloDeMes(mes)} <span className="num">· {delMes.length + ventasMes.length}</span>
                     </h2>
                     {meses.length > 1 && (
                         <div className="ma-meses-chips">
@@ -322,10 +327,10 @@ const MisAgendas = ({ onResumen, onVerDatos }) => {
                                 const activo = m.mes === mes;
                                 return (
                                     <button key={m.mes} type="button" aria-pressed={activo}
-                                        aria-label={`${tituloDeMes(m.mes)}, ${m.pendientes ? `${m.pendientes} sin palabra clave` : 'completo'}`}
-                                        className={`ma-mes${activo ? ' on' : ''}${m.pendientes ? '' : ' completo'}`}
-                                        title={m.pendientes
-                                            ? `${tituloDeMes(m.mes)}: ${m.pendientes} de ${m.total} sin palabra clave`
+                                        aria-label={`${tituloDeMes(m.mes)}, ${m.pendientes + m.ventas ? `${m.pendientes + m.ventas} sin palabra clave` : 'completo'}`}
+                                        className={`ma-mes${activo ? ' on' : ''}${m.pendientes + m.ventas ? '' : ' completo'}`}
+                                        title={m.pendientes + m.ventas
+                                            ? `${tituloDeMes(m.mes)}: ${m.pendientes} agendas y ${m.ventas} ventas sin palabra clave`
                                             : `${tituloDeMes(m.mes)}: completo`}
                                         onClick={() => irAlMes(m.mes)}>
                                         {/* La píldora del elegido se desliza de un mes al otro. */}
@@ -334,8 +339,8 @@ const MisAgendas = ({ onResumen, onVerDatos }) => {
                                                 transition={reducir ? { duration: 0 } : { type: 'spring', stiffness: 420, damping: 34 }} />
                                         )}
                                         <span className="ma-mes-n">{mesCorto(m.mes)}</span>
-                                        {m.pendientes
-                                            ? <b className="num">{m.pendientes}</b>
+                                        {m.pendientes + m.ventas
+                                            ? <b className="num">{m.pendientes + m.ventas}</b>
                                             : <Check size={13} strokeWidth={2.6} aria-hidden="true" />}
                                     </button>
                                 );
@@ -363,7 +368,7 @@ const MisAgendas = ({ onResumen, onVerDatos }) => {
                     onKeyDown={teclaEnPestanas}>
                     {PESTANAS.map(p => {
                         const activa = p.id === pestana;
-                        const n = p.id === 'pendientes' ? delMes.length + ventas.faltan : hechasDelMes.length;
+                        const n = p.id === 'pendientes' ? delMes.length + ventasMes.length : hechasDelMes.length;
                         return (
                             <button key={p.id} type="button" role="tab" id={`ma-tab-${p.id}`}
                                 ref={(el) => { pestanasRef.current[p.id] = el; }}
@@ -387,17 +392,17 @@ const MisAgendas = ({ onResumen, onVerDatos }) => {
                 <div className="ma-panel" role="tabpanel" id="ma-panel-completadas" aria-labelledby="ma-tab-completadas"
                     tabIndex={0}>
                     <ListaCompletadas agendas={hechasDelMes} mes={mes} anuncios={datos.anuncios} onCambiar={cambiar} />
-                    <VentasCompletadas ventas={ventas} />
+                    <VentasCompletadas ventas={ventas} mes={porMes ? mes : null} />
                 </div>
             )}
 
             {datos && pestana === 'pendientes' && (
                 <div className="ma-panel" role="tabpanel" id="ma-panel-pendientes" aria-labelledby="ma-tab-pendientes">
                     {/* Agendas y ventas en la misma bandeja: el selector deja ver solo una de las dos. */}
-                    {ventas.faltan > 0 && (
+                    {ventasMes.length > 0 && (
                         <div className="ma-tipos" role="group" aria-label="Qué te falta">
-                            {[['todo', 'Todo', delMes.length + ventas.faltan], ['agendas', 'Agendas', delMes.length],
-                                ['ventas', 'Ventas', ventas.faltan]].map(([id, rotulo, n]) => (
+                            {[['todo', 'Todo', delMes.length + ventasMes.length], ['agendas', 'Agendas', delMes.length],
+                                ['ventas', 'Ventas', ventasMes.length]].map(([id, rotulo, n]) => (
                                 <button key={id} type="button" aria-pressed={tipo === id}
                                     className={`ma-tipo${tipo === id ? ' on' : ''}`} onClick={() => setTipo(id)}>
                                     {rotulo} <b className="num">{n}</b>
@@ -428,7 +433,7 @@ const MisAgendas = ({ onResumen, onVerDatos }) => {
                         </>
                     )}
 
-                    {delMes.length === 0 && (tipo === 'agendas' || (tipo === 'todo' && ventas.faltan === 0)) && (
+                    {delMes.length === 0 && (tipo === 'agendas' || (tipo === 'todo' && ventasMes.length === 0)) && (
                         <div ref={premioRef} tabIndex={-1} className="ma-premio-foco">
                             <Premio ref={llamadoRef} festejo={festejo} hoy={resumen.hoy} racha={resumen.racha} mes={mes}
                                 llamado={siguiente
@@ -438,7 +443,7 @@ const MisAgendas = ({ onResumen, onVerDatos }) => {
                         </div>
                     )}
 
-                    {tipo !== 'agendas' && <VentasPendientes ventas={ventas} />}
+                    {tipo !== 'agendas' && <VentasPendientes ventas={ventas} mes={porMes ? mes : null} />}
                 </div>
             )}
 

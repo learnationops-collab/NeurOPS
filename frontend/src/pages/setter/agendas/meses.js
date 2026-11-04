@@ -30,13 +30,29 @@ export const mesCorto = (clave) => tituloDeMes(clave).slice(0, 3);
  * momento en que una tarjeta se va, sin esperar al backend. Se quedan los que tienen agendas y el
  * mes actual (aunque esté vacío: es donde abre la pantalla); un mes sin ninguna no dice nada.
  */
-export const mesesConCuenta = (resumen, pendientes = []) => {
+export const mesesConCuenta = (resumen, pendientes = [], ventas = []) => {
     const cuenta = new Map();
     pendientes.forEach(a => cuenta.set(a.mes, (cuenta.get(a.mes) || 0) + 1));
-    return (resumen?.meses || [])
-        .map(m => ({ ...m, pendientes: cuenta.get(m.mes) || 0 }))
-        .filter(m => m.total > 0 || m.pendientes > 0 || m.mes === resumen?.mes_actual);
+    // Las ventas sin palabra clave por mes de pago (04/11/2026): un cliente cuenta en cada mes en que pagó.
+    const deVentas = new Map();
+    ventas.forEach(g => mesesDeLasVentas(g).forEach(m => deVentas.set(m, (deVentas.get(m) || 0) + 1)));
+    const base = (resumen?.meses || []).map(m => ({ ...m, pendientes: cuenta.get(m.mes) || 0, ventas: deVentas.get(m.mes) || 0 }));
+    // Un mes con ventas pero sin agendas también tiene su chip.
+    const sueltos = [...deVentas.keys()].filter(m => !base.some(b => b.mes === m))
+        .map(m => ({ mes: m, total: 0, pendientes: 0, ventas: deVentas.get(m) }));
+    return [...base, ...sueltos]
+        .sort((a, b) => (a.mes < b.mes ? 1 : -1))
+        .filter(m => m.total > 0 || m.pendientes > 0 || m.ventas > 0 || m.mes === resumen?.mes_actual);
 };
+
+/** Los meses ('2026-10') en que un cliente de ventas tiene algún pago. */
+export const mesesDeLasVentas = (grupo) => [...new Set((grupo?.pagos || [])
+    .map(p => String(p.fecha || '').slice(0, 7)).filter(Boolean))];
+
+/** Los clientes de `grupos` con algún pago en `mes`; sin mes (null), todos. */
+export const ventasDelMes = (grupos = [], mes = null) => (mes
+    ? grupos.filter(g => mesesDeLasVentas(g).includes(mes))
+    : grupos);
 
 /**
  * El mes que sigue después de vaciar `actual`: el más cercano hacia atrás que todavía tiene
