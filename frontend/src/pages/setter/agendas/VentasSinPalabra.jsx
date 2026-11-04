@@ -4,6 +4,7 @@ import { Check, ChevronDown } from 'lucide-react';
 import { Tip } from '../../comercial/components/Shared';
 import TarjetaVenta, { dinero } from './TarjetaVenta';
 import { useVentasSinPalabra } from './useVentasSinPalabra';
+import { ventasDelMes } from './meses';
 
 /**
  * Las ventas de los leads del setter y su palabra clave (Kerwin, 17/10/2026: «esas ventas deben aparecer
@@ -14,13 +15,16 @@ import { useVentasSinPalabra } from './useVentasSinPalabra';
  */
 
 /** Las ventas que faltan, por cliente. Al asignar, la tarjeta se va y el foco pasa a la siguiente. */
-export const VentasPendientes = ({ ventas, conVacio = false }) => {
+export const VentasPendientes = ({ ventas, mes = null, conVacio = false }) => {
     const { datos, anuncios, asignar } = ventas;
     const [aviso, setAviso] = useState('');
     const tarjetas = useRef(new Map());
     if (!datos) return null;
-    const { pendientes, resumen } = datos;
+    // Las del mes elegido (04/11/2026): un cliente sale en cada mes en que pagó.
+    const pendientes = ventasDelMes(datos.pendientes, mes);
     if (!pendientes.length && !conVacio) return null;
+    const sinAnuncio = pendientes.reduce((t, g) => t + g.pagos.filter((p) => !p.palabra_clave)
+        .reduce((s, p) => s + p.monto, 0), 0);
 
     const alAsignar = async (grupo, anuncio, instagram) => {
         const r = await asignar(grupo, anuncio, instagram);
@@ -39,7 +43,7 @@ export const VentasPendientes = ({ ventas, conVacio = false }) => {
                 </h2>
                 <Tip titulo="Ventas sin palabra clave"
                     texto="Ventas de tus leads que Marketing no sabe de qué anuncio vinieron." />
-                {resumen.monto > 0 && <span className="mv-monto num">{dinero(resumen.monto)} sin anuncio</span>}
+                {sinAnuncio > 0 && <span className="mv-monto num">{dinero(sinAnuncio)} sin anuncio</span>}
             </div>
             <span className="sr" aria-live="polite">{aviso}</span>
 
@@ -53,14 +57,14 @@ export const VentasPendientes = ({ ventas, conVacio = false }) => {
                     </AnimatePresence>
                 </ul>
             ) : (
-                <p className="mv-vacio"><Check size={16} aria-hidden="true" />Todas tus ventas tienen su palabra clave.</p>
+                <p className="mv-vacio"><Check size={16} aria-hidden="true" />{mes ? 'Las ventas de este mes tienen su palabra clave.' : 'Todas tus ventas tienen su palabra clave.'}</p>
             )}
         </section>
     );
 };
 
 /** Los clientes que ya tienen palabra clave, plegados; «Cambiar» abre la tarjeta del cliente (18/10/2026). */
-export const VentasCompletadas = ({ ventas }) => {
+export const VentasCompletadas = ({ ventas, mes = null }) => {
     const { datos, anuncios, asignar } = ventas;
     const [verHechas, setVerHechas] = useState(false);
     const [cambiando, setCambiando] = useState(null);
@@ -68,8 +72,8 @@ export const VentasCompletadas = ({ ventas }) => {
     const cambioRef = useRef(null);
     // Al abrir el cambio, el foco va a su buscador: se escribe la palabra clave nueva y Enter.
     useEffect(() => { if (cambiando) cambioRef.current?.focus(); }, [cambiando]);
-    if (!datos || !datos.completadas.length) return null;
-    const { completadas } = datos;
+    const completadas = datos ? ventasDelMes(datos.completadas, mes) : [];
+    if (!completadas.length) return null;
 
     const alCambiar = async (grupo, anuncio, instagram) => {
         const r = await asignar(grupo, anuncio, instagram);

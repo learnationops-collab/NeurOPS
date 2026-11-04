@@ -79,12 +79,19 @@ class _Atribuidor:
         self.interacciones = _interacciones(self.cruce.lead_ids(), clave_de_anuncio)
 
     def _ultima(self, lead_ids, tope):
-        mejor = None
+        mejor, primera = None, None
         for lead_id in lead_ids:
             for creada, clave, *_ in self.interacciones.get(lead_id, ()):
-                if clave and (tope is None or creada <= tope) and (mejor is None or creada > mejor[0]):
+                if not clave:
+                    continue
+                if primera is None or creada < primera[0]:
+                    primera = (creada, clave)
+                if (tope is None or creada <= tope) and (mejor is None or creada > mejor[0]):
                     mejor = (creada, clave)
-        return mejor[1] if mejor else None
+        # Si hasta `tope` no había ninguna, la primera que la persona tuvo después: es la misma persona, y
+        # una seña pagada antes de escribir la palabra clave es de ese mismo anuncio (04/11/2026).
+        elegida = mejor or primera
+        return elegida[1] if elegida else None
 
     def clave(self, ig, tope, nombre=None, persona=None):
         for lead_ids in self.cruce.candidatos(ig, nombre, persona):
@@ -228,10 +235,21 @@ def claves_de_cobros(cobros, clave_de_anuncio=None, cliente_de=None):
             if clave_de_anuncio.get(ad_id):
                 de_la_agenda[cid] = clave_de_anuncio[ad_id]
 
-    return {cobro.id: elegida.get(cliente_de.get(cobro.id)) or next(
-                (c for ig in igs_de(cobro) or [None] if (c := atribuidor.clave(ig, cobro.date, nombre_de(cobro), cobro.person_uuid))), None)
-            or de_la_agenda.get(cliente_de.get(cobro.id))
-            for cobro in cobros}
+    claves = {cobro.id: elegida.get(cliente_de.get(cobro.id)) or next(
+                  (c for ig in igs_de(cobro) or [None] if (c := atribuidor.clave(ig, cobro.date, nombre_de(cobro), cobro.person_uuid))), None)
+              or de_la_agenda.get(cliente_de.get(cobro.id))
+              for cobro in cobros}
+
+    # Una persona, una palabra clave para TODOS sus pagos (Kerwin, 04/11/2026): la del primero que la tiene.
+    def persona_de(cobro):
+        return cobro.person_uuid or (f'c{cliente_de[cobro.id]}' if cliente_de.get(cobro.id) else None)
+
+    primera_de = {}
+    for cobro in sorted(cobros, key=lambda c: (c.date or datetime.min, c.id)):
+        persona = persona_de(cobro)
+        if persona and claves[cobro.id] and persona not in primera_de:
+            primera_de[persona] = claves[cobro.id]
+    return {cobro.id: primera_de.get(persona_de(cobro)) or claves[cobro.id] for cobro in cobros}
 
 
 def _ventas(desde_dt, hasta_dt, clave_de_anuncio, atribucion=None):
