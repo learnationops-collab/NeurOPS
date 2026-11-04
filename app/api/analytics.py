@@ -49,8 +49,8 @@ def get_widget_data():
         }
     elif metric == 'cash_collect':
         result = {
-            "value": kpis['financials']['income'],
-            "label": "Cash Collect",
+            "value": kpis['financials']['cash_collected'],  # neto de la fee de la pasarela (04/11/2026)
+            "label": "Cash Collect neto",
             "unit": "$"
         }
     else:

@@ -342,7 +342,7 @@ export const TABLAS = {
             { key: 'cliente', header: 'Cliente', width: '1.9fr' },
             { key: 'programa', header: 'Programa', width: '1.3fr' },
             { key: 'tipo_pago', header: 'Pago', width: '1.1fr' },
-            { key: 'monto', header: 'Monto', width: '1fr', orden: (f) => f.monto, ordenLabel: 'Monto' },
+            { key: 'monto', header: 'Monto neto', width: '1fr', orden: (f) => f.monto_neto ?? f.monto, ordenLabel: 'Monto neto' },
             { key: 'closer', header: 'Closer', width: '0.9fr' },
             COL_VER,
         ],
@@ -391,7 +391,7 @@ export const TABLAS = {
             { key: 'programa', label: 'Programa', de: (f) => f.programa },
             { key: 'tipo_pago', label: 'Tipo de pago', de: (f) => f.tipo_pago.label },
             // El subtotal de cada grupo es el monto de esa fuente en la tarjeta: los mismos cobros,
-            // en bruto.
+            // en neto.
             { key: 'fuente', label: 'Fuente', de: fuenteDe },
             AGRUPABLE_ACADEMIA,
         ],
@@ -557,7 +557,7 @@ const VENTAS_PARA_OPERAR = {
         { key: 'cliente', header: 'Cliente', width: '1.7fr' },
         { key: 'programa', header: 'Programa', width: '1.2fr' },
         { key: 'tipo_pago', header: 'Pago', width: '1fr' },
-        { key: 'monto', header: 'Monto', width: '0.9fr', orden: (f) => f.monto, ordenLabel: 'Monto' },
+        { key: 'monto', header: 'Monto neto', width: '0.9fr', orden: (f) => f.monto_neto ?? f.monto, ordenLabel: 'Monto neto' },
         { key: 'closer', header: 'Closer', width: '0.9fr' },
         { key: 'estado_venta', header: 'Estado', width: '1fr' },
         COL_VER,

@@ -53,7 +53,7 @@ const PanelPaises = ({ filtros, rol, elegidos, onElegir, version = 0 }) => {
                         <span role="columnheader" className="num">Asistieron</span>
                         <span role="columnheader" className="num">Show up</span>
                         <span role="columnheader" className="num">Ventas</span>
-                        {texto.cash && <span role="columnheader" className="num">Cash</span>}
+                        {texto.cash && <span role="columnheader" className="num">Cash neto</span>}
                     </div>
                     {filas.map((f) => (
                         <button key={f.pais} type="button" role="row" className="pp-fila" aria-pressed={elegidos.includes(f.pais)}

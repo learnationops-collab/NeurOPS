@@ -9,7 +9,8 @@ import { agregarAnuncio } from './BuscadorAnuncio';
 import Premio from './Premio';
 import ListaCompletadas from './ListaCompletadas';
 import SetterUnclaimedAgendas from './SetterUnclaimedAgendas';
-import VentasSinPalabra from './VentasSinPalabra';
+import { VentasPendientes, VentasCompletadas } from './VentasSinPalabra';
+import { useVentasSinPalabra } from './useVentasSinPalabra';
 import { mesCorto, mesSiguiente, mesesConCuenta, nombreDeMes, tituloDeMes } from './meses';
 import './misAgendas.css';
 
@@ -69,8 +70,12 @@ const MisAgendas = ({ onResumen, onVerDatos }) => {
     const [sinDueno, setSinDueno] = useState(() => leerCache('setter:sin-dueno')?.datos || []);
     // El mes que eligió en el selector; sin elegir, el actual.
     const [mesElegido, setMesElegido] = useState(null);
-    // 'pendientes' (la bandeja) o 'completadas' (las del mes que ya tienen palabra clave).
+    // 'pendientes' (la bandeja), 'completadas' (las del mes que ya tienen palabra clave) o 'ventas'.
     const [pestana, setPestana] = useState('pendientes');
+    // Las ventas de sus leads sin palabra clave: van en Pendientes junto a las agendas (04/11/2026) y, ya
+    // asignadas, en Completadas. `tipo` filtra Pendientes: 'todo', 'agendas' o 'ventas'.
+    const ventas = useVentasSinPalabra(datos?.anuncios);
+    const [tipo, setTipo] = useState('todo');
     const pestanasRef = useRef({});
     const tarjetas = useRef(new Map());
     const premioRef = useRef(null);
@@ -358,7 +363,7 @@ const MisAgendas = ({ onResumen, onVerDatos }) => {
                     onKeyDown={teclaEnPestanas}>
                     {PESTANAS.map(p => {
                         const activa = p.id === pestana;
-                        const n = p.id === 'pendientes' ? delMes.length : hechasDelMes.length;
+                        const n = p.id === 'pendientes' ? delMes.length + ventas.faltan : hechasDelMes.length;
                         return (
                             <button key={p.id} type="button" role="tab" id={`ma-tab-${p.id}`}
                                 ref={(el) => { pestanasRef.current[p.id] = el; }}
@@ -382,12 +387,25 @@ const MisAgendas = ({ onResumen, onVerDatos }) => {
                 <div className="ma-panel" role="tabpanel" id="ma-panel-completadas" aria-labelledby="ma-tab-completadas"
                     tabIndex={0}>
                     <ListaCompletadas agendas={hechasDelMes} mes={mes} anuncios={datos.anuncios} onCambiar={cambiar} />
+                    <VentasCompletadas ventas={ventas} />
                 </div>
             )}
 
             {datos && pestana === 'pendientes' && (
                 <div className="ma-panel" role="tabpanel" id="ma-panel-pendientes" aria-labelledby="ma-tab-pendientes">
-                    {delMes.length > 0 && (
+                    {/* Agendas y ventas en la misma bandeja: el selector deja ver solo una de las dos. */}
+                    {ventas.faltan > 0 && (
+                        <div className="ma-tipos" role="group" aria-label="Qué te falta">
+                            {[['todo', 'Todo', delMes.length + ventas.faltan], ['agendas', 'Agendas', delMes.length],
+                                ['ventas', 'Ventas', ventas.faltan]].map(([id, rotulo, n]) => (
+                                <button key={id} type="button" aria-pressed={tipo === id}
+                                    className={`ma-tipo${tipo === id ? ' on' : ''}`} onClick={() => setTipo(id)}>
+                                    {rotulo} <b className="num">{n}</b>
+                                </button>
+                            ))}
+                        </div>
+                    )}
+                    {tipo !== 'ventas' && delMes.length > 0 && (
                         <>
                             <p className="ma-ayuda" aria-hidden="true">
                                 <span className="tecla">↑</span><span className="tecla">↓</span> elegir
@@ -410,7 +428,7 @@ const MisAgendas = ({ onResumen, onVerDatos }) => {
                         </>
                     )}
 
-                    {delMes.length === 0 && (
+                    {delMes.length === 0 && (tipo === 'agendas' || (tipo === 'todo' && ventas.faltan === 0)) && (
                         <div ref={premioRef} tabIndex={-1} className="ma-premio-foco">
                             <Premio ref={llamadoRef} festejo={festejo} hoy={resumen.hoy} racha={resumen.racha} mes={mes}
                                 llamado={siguiente
@@ -419,11 +437,10 @@ const MisAgendas = ({ onResumen, onVerDatos }) => {
                                 onVerDatos={onVerDatos} />
                         </div>
                     )}
+
+                    {tipo !== 'agendas' && <VentasPendientes ventas={ventas} />}
                 </div>
             )}
-
-            {/* Las ventas de sus leads sin palabra clave, por cliente (17/10/2026). */}
-            {datos && <VentasSinPalabra anuncios={datos.anuncios} />}
 
             <SetterUnclaimedAgendas agendas={sinDueno} onResuelta={alResolverSinDueno} />
         </div>

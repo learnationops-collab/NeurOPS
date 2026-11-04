@@ -244,8 +244,10 @@ def pago_de_venta(venta, tipo):
     return claves_de_venta(venta), venta.date, venta.monto, clase_de_tipo(tipo)
 
 
-def pago_de_fila(fila):
-    """El pago de una fila de la tabla Ventas (`ComercialService._fila_venta`)."""
+def pago_de_fila(fila, neto=False):
+    """El pago de una fila de la tabla Ventas (`ComercialService._fila_venta`). `neto`: con el monto neto de
+    la comisión de la pasarela (`monto_neto`) en vez del bruto (el ticket neto, 04/11/2026)."""
+    monto = fila.get('monto_neto', fila.get('monto')) if neto else fila.get('monto')
     return (claves_de_cliente(fila.get('client_id'), fila.get('email'), fila.get('ig'), fila.get('cliente'),
                               fila.get('person_uuid')),
-            fila.get('fecha'), fila.get('monto'), clase_de_tipo((fila.get('tipo_pago') or {}).get('key')))
+            fila.get('fecha'), monto, clase_de_tipo((fila.get('tipo_pago') or {}).get('key')))

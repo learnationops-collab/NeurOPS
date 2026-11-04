@@ -28,6 +28,7 @@ from datetime import datetime, time, timedelta
 from app import db
 from app.models import Ad, Appointment, Client, FinancialSale, LeadEventLog
 from app.services.anuncios_service import anuncio_de_clave, claves_de_cobros
+from app.services.commission_service import cash_neto
 from app.services.comercial_service import ComercialService, clientes_de_ventas, es_agenda_del_setter, venta_completada
 from app.services.palabra_clave_service import (
     ACCION, DESDE, ErrorDePalabraClave, _texto_del_registro, anuncio_de_palabra, normalizar_ig, responder_con_anuncio,
@@ -82,7 +83,7 @@ def ventas(setter):
             'fecha': p.date.isoformat() if p.date else None,
             'tipo': (p.tipo_pago or '').strip() or None,
             'programa': ComercialService.clasificar_venta(p)[0],
-            'monto': round(float(p.monto or 0), 2),
+            'monto': round(cash_neto(p), 2),  # neto de la comisión de la pasarela (04/11/2026)
             'palabra_clave': _nombre_de_clave(claves.get(p.id), nombres),
         } for p in pagos]
         fila = {

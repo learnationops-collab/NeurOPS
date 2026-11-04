@@ -406,7 +406,7 @@ const PanelPagos = ({ bloque, irA }) => {
     return (
         <Panel cab={
             <PanelCab titulo="Payment types"
-                ayuda={`De dónde vienen los ${fmt.money(total)} del período según la forma de pago. `
+                ayuda={`De dónde vienen los ${fmt.money(total)} netos del período según la forma de pago. `
                     + 'Cada fila cuenta COBROS, no ventas: un Split Pay son dos cobros de la misma '
                     + 'venta, y los depósitos son señas que todavía no son una venta.'}>
                 <span className="t-cap mut40 num">{fmt.plural(cobros, 'cobro', 'cobros')}</span>
@@ -462,7 +462,7 @@ const PanelPagos = ({ bloque, irA }) => {
  * Qué cobro va en qué fuente lo decide el backend con la MISMA atribución que Finanzas ›
  * Procedencia y la columna Fuente de las ventas (`comercial_analitica.ingresos_por_fuente`); acá
  * solo se dibuja. Llegan las cinco siempre, también en cero, y suman exacto el Cash collected del
- * mismo filtro: en bruto, como el número grande de la tarjeta (Finanzas reparte el neto). Se dibujan
+ * mismo filtro, en neto (04/11/2026), como Finanzas. Se dibujan
  * las cinco salvo «Sin procedencia» en cero (pedido del usuario, 09/10/2026): un embudo en cero dice
  * que no trajo nada; que no haya cobros sin procedencia no hace falta decirlo.
  *
@@ -541,8 +541,7 @@ const PanelFuentes = ({ fuentes, irA }) => {
                 ayuda={'De dónde vino el Cash collected del período: el embudo que trajo cada cobro, según '
                     + 'la agenda que lo originó (la misma regla que la columna Fuente de las ventas y '
                     + 'Finanzas › Procedencia). Una cuota cuenta para el embudo de su venta. Suma '
-                    + 'exacto el Cash collected, en bruto: Finanzas reparte lo mismo pero neto de la '
-                    + 'fee de la pasarela.'}>
+                    + 'exacto el Cash collected neto, descontada la comisión de la pasarela.'}>
                 <Tabs valor={vista} onChange={setVista} ops={TABS_FUENTES} aria="Vista de ingresos por fuente" />
             </PanelCab>
         }>
@@ -587,7 +586,7 @@ const PanelFuentes = ({ fuentes, irA }) => {
                             Total
                             <Tip titulo="Total"
                                 texto={'Es el Cash collected de arriba, con el mismo filtro: los mismos cobros '
-                                    + 'y el mismo monto bruto. Cada cobro cuenta una vez, en la fuente de su agenda.'} />
+                                    + 'y el mismo monto neto. Cada cobro cuenta una vez, en la fuente de su agenda.'} />
                         </span>
                         <span className="tdatos-p">{fmt.num(cantidad)}</span>
                         <MetricaClicable irA={irA} destino={DESTINO_PROCEDENCIAS_TOTAL} className="tdatos-n"
@@ -623,7 +622,7 @@ const PanelProgramas = ({ bloque, irA }) => {
     return (
         <Panel cab={
             <PanelCab titulo="Programas"
-                ayuda={'Collected es lo que cobró cada programa y con qué ticket. Payments abre esa '
+                ayuda={'Collected es lo que cobró cada programa, neto de la comisión, y con qué ticket. Payments abre esa '
                     + 'misma plata por forma de pago: el monto grande y debajo cuántos cobros lo '
                     + 'componen, que no son lo mismo que las ventas.'}>
                 <Tabs valor={vista} onChange={setVista} aria="Vista de programas"
@@ -746,7 +745,7 @@ const PanelSenas = ({ senas, irA }) => {
         {
             l: 'desbloqueado', valor: fmt.money(senas.desbloqueado), color: v('text-on-surface'),
             destino: D.senas_desbloqueado,
-            help: 'Cash cobrado en las ventas que arrancaron con una seña. Es el argumento para '
+            help: 'Cash neto cobrado en las ventas que arrancaron con una seña. Es el argumento para '
                 + 'seguir pidiéndolas.',
         },
     ];
@@ -880,7 +879,7 @@ const DashboardClosers = ({ bloque, deltas, porCobrar, fuentes, irA, cargarNoCer
                     + 'Las cuotas y las señas no entran.'}
                 delta={deltas.ticket}
                 humo={[v('info'), v('brand-primary'), v('info'), v('brand-navy')]}
-                sub={fmt.plural(bloque.ventas, 'venta nueva', 'ventas nuevas')}
+                sub={`${fmt.plural(bloque.ventas, 'venta nueva', 'ventas nuevas')}${bloque.ticket_neto != null ? ` · neto ${fmt.money(bloque.ticket_neto)}` : ''}`}
                 ver={abrir(irA, D.ticket)} baja="p-cash" />
         </div>
 

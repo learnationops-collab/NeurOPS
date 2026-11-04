@@ -218,8 +218,19 @@ def claves_de_cobros(cobros, clave_de_anuncio=None, cliente_de=None):
     sueltos = [c for c in cobros if cliente_de.get(c.id) not in elegida]
     atribuidor = _Atribuidor({ig for c in sueltos for ig in igs_de(c)}, clave_de_anuncio,
                              {nombre_de(c) for c in sueltos}, {c.person_uuid for c in sueltos})
+
+    # Si ManyChat/Inbox no encuentra nada, la venta hereda la palabra clave que el setter ya le puso a la agenda
+    # del mismo cliente (`Appointment.anuncio_id`, 04/11/2026): es el mismo lead y el setter ya decidió el anuncio.
+    de_la_agenda = {}
+    for tanda in _en_tandas({cid for c in sueltos if (cid := cliente_de.get(c.id))}):
+        for cid, ad_id in db.session.query(Appointment.client_id, Appointment.anuncio_id).filter(
+                Appointment.client_id.in_(tanda), Appointment.anuncio_id.isnot(None)).order_by(Appointment.created_at):
+            if clave_de_anuncio.get(ad_id):
+                de_la_agenda[cid] = clave_de_anuncio[ad_id]
+
     return {cobro.id: elegida.get(cliente_de.get(cobro.id)) or next(
                 (c for ig in igs_de(cobro) or [None] if (c := atribuidor.clave(ig, cobro.date, nombre_de(cobro), cobro.person_uuid))), None)
+            or de_la_agenda.get(cliente_de.get(cobro.id))
             for cobro in cobros}
 
 

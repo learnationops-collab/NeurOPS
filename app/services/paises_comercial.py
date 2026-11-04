@@ -17,7 +17,7 @@ def _cuenta(agendas, cobros):
     return {
         'agendas': len(agendas), 'realizadas': realizadas, 'asistieron': asistieron,
         'show_up': pct(asistieron, realizadas), 'ventas': ventas, 'cierre': pct(ventas, asistieron),
-        'cash': round(sum(f['monto'] for f in cobros), 2),
+        'cash': round(sum(f['monto_neto'] for f in cobros), 2),  # neto (04/11/2026)
     }
 
 

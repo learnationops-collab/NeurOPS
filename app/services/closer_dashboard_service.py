@@ -471,7 +471,9 @@ class CloserDashboardService:
             'senas': {
                 'count': dep['count'],
                 'cash': round(dep['cash'], 2),
+                'cash_neto': round(dep.get('cash_neto', dep['cash']), 2),
                 'ticket_promedio': round(dep['cash'] / dep['count'], 2) if dep['count'] else 0,
+                'ticket_promedio_neto': round(dep.get('cash_neto', dep['cash']) / dep['count'], 2) if dep['count'] else 0,
                 'por_presentacion': pct.get('offer_to_deposit', 0),
                 'por_llamada': pct.get('deposit_rate_llamada', 0),
                 'presentaciones': presentaciones,
@@ -496,15 +498,19 @@ class CloserDashboardService:
             'cash_mix': {
                 'nuevas_ventas': {
                     'cash': round(sales['pif']['cash'] + sales['split']['cash'], 2),
+                    'cash_neto': round(sales['pif']['cash_neto'] + sales['split']['cash_neto'], 2),
                     'count': sales['pif']['count'] + sales['split']['count']
                 },
-                'cobro_cuotas': {'cash': round(sales['installment']['cash'], 2), 'count': sales['installment']['count']},
-                'senas': {'cash': round(sales['deposit']['cash'], 2), 'count': sales['deposit']['count']},
+                'cobro_cuotas': {'cash': round(sales['installment']['cash'], 2), 'cash_neto': round(sales['installment']['cash_neto'], 2),
+                                  'count': sales['installment']['count']},
+                'senas': {'cash': round(sales['deposit']['cash'], 2), 'cash_neto': round(sales['deposit']['cash_neto'], 2),
+                          'count': sales['deposit']['count']},
                 'upsell_renovacion': {
                     'cash': round(sales['upsell']['cash'] + sales['renovacion']['cash'], 2),
+                    'cash_neto': round(sales['upsell']['cash_neto'] + sales['renovacion']['cash_neto'], 2),
                     'count': sales['upsell']['count'] + sales['renovacion']['count']
                 },
-                'otros': {'cash': round(sales.get('otros', {}).get('cash', 0), 2), 'count': sales.get('otros', {}).get('count', 0)}
+                'otros': {'cash': round(sales.get('otros', {}).get('cash', 0), 2), 'cash_neto': round(sales.get('otros', {}).get('cash_neto', 0), 2), 'count': sales.get('otros', {}).get('count', 0)}
             },
             'programas': sales['program_tickets'],
             'actividad': {

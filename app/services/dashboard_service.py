@@ -170,7 +170,7 @@ class DashboardService(BaseService):
         rev_dict, sales_dict = {}, {}
         for v in admin_cobros.cobros(start_dt, end_dt, closer_ids, program_ids):
             dia = str(v.date.date())
-            rev_dict[dia] = rev_dict.get(dia, 0.0) + float(v.monto or 0)
+            rev_dict[dia] = rev_dict.get(dia, 0.0) + admin_cobros.neto(v)  # neto (04/11/2026)
             if admin_cobros.programa_de_cobro(v)[2]:
                 sales_dict[dia] = sales_dict.get(dia, 0) + 1
 

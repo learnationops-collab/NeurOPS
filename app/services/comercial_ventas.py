@@ -6,7 +6,7 @@ from app.models import FinancialSale
 from app.services.closer_name_service import resolver_nombre_closer
 from app.services.commission_service import cash_neto
 from app.services.setter_assignment_service import normalizar_nombre
-from app.services.ticket_service import pago_de_fila, ticket_de
+from app.services.ticket_service import pago_de_fila, ticket_de, ticket_y_cuotas
 from app.services.comercial_cruces import clientes_de_ventas
 from app.services.comercial_vocabulario import chip, venta_completada, estado_de_venta
 
@@ -276,12 +276,28 @@ class ComercialVentasMixin:
 
         if procedencias is None:
             procedencias = procedencia_por_venta(propias, contexto=del_periodo, agendas=agendas)
+        from app.services.anuncios_service import claves_de_cobros
+
         baldes = {p['key']: {'key': p['key'], 'label': p['label'], 'tone': p['tone']} for p in PROCEDENCIAS}
+        claves = claves_de_cobros(propias)
         for venta_id in (v.id for v in propias):
             balde, sub, rotulo = procedencias[venta_id]
             fila = filas_por_id[venta_id]
             fila['procedencia'] = dict(baldes[balde])
             fila['procedencia_detalle'] = {'key': sub, 'label': rotulo} if sub else None
+            fila['aviso_conteo'] = ComercialVentasMixin._aviso_de_conteo(balde, baldes[balde]['label'], claves.get(venta_id))
+
+    @staticmethod
+    def _aviso_de_conteo(balde, rotulo_balde, clave):
+        """Por qué un cobro no suma igual en Marketing y en esta lista (04/11/2026): un cobro de Setting sin
+        palabra clave no suma a ningún anuncio, y uno con palabra clave que aquí es de otra fuente lo cuenta
+        Marketing como Setting. None si las dos pantallas lo cuentan igual."""
+        if balde == 'setting' and not clave:
+            return ('Es de Setting, pero no tiene palabra clave: no suma a ningún anuncio. '
+                    'El setter la asigna en Mis agendas › Pendientes.')
+        if clave and balde != 'setting':
+            return f'Marketing lo cuenta en Setting por su palabra clave ({clave}); aquí cuenta como {rotulo_balde}.'
+        return None
 
     @staticmethod
     def _con_academia(filas):
@@ -317,4 +333,6 @@ class ComercialVentasMixin:
             'cash': round(cash, 2),
             'cash_neto': round(sum(f['monto_neto'] for f in filas), 2),
             'ticket': ticket_de([pago_de_fila(f) for f in filas])[2],
+            # El mismo ticket con los montos netos de la comisión de la pasarela (04/11/2026: se ven los dos).
+            'ticket_neto': ticket_y_cuotas([pago_de_fila(f, neto=True) for f in filas], monto_de=cash_neto)[0][2],
         }

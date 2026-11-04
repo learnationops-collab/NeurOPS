@@ -19,7 +19,7 @@ from app.services.comercial_service import (
     chip, pct,
 )
 from app.services import descalificados_service, setter_analitica
-from app.services.commission_service import CLOSER_RATE
+from app.services.commission_service import CLOSER_RATE, cash_neto
 from app.services.procedencia_ingresos_service import agendas_para_atribuir, procedencia_de_ventas
 from app.services.senas_conversion import claves_de_fila, conversion_de, pagos_posteriores
 from app.services.ticket_service import pago_de_fila, primeras_cuotas, sin_cuotas, ticket_promedio
@@ -46,8 +46,8 @@ DELTAS_POR_CANAL = {'entrantes': 'pct', 'cualificacion': 'pts', 'apertura': 'pts
 # distingue las que se totalizan para el equipo (cash, ventas) de las tasas, que no se suman.
 METRICAS = {
     ROL_CLOSERS: [
-        {'key': 'cash', 'label': 'Cash collected', 'formato': 'money', 'suma': True,
-         'desc': 'Todo lo cobrado en el período: ventas nuevas, cuotas y señas.'},
+        {'key': 'cash', 'label': 'Cash neto', 'formato': 'money', 'suma': True,
+         'desc': 'Todo lo cobrado en el período, neto de la comisión de la pasarela: ventas nuevas, cuotas y señas.'},
         {'key': 'show_up', 'label': 'Show up', 'formato': 'pct', 'suma': False,
          'desc': 'De las llamadas con resultado, cuántas asistieron.'},
         # Las cuatro lecturas del cierre (pedido del 24/10/2026: «hay distintos close rate»). La clave
@@ -198,7 +198,7 @@ def senas_de(filas_ventas):
         return vacio
 
     clasificadas = clasificar_senas(senas)
-    cobrado = sum(f['monto'] for f in senas)
+    cobrado = sum(f['monto_neto'] for f in senas)  # neto (04/11/2026)
     grupos = {'completo': 0, 'parcial': 0, 'espera': 0, 'caida': 0}
     desbloqueado, ya_contadas = 0.0, set()
     for f in senas:
@@ -207,7 +207,7 @@ def senas_de(filas_ventas):
         venta = dato['venta']
         if venta and venta.id not in ya_contadas:
             ya_contadas.add(venta.id)
-            desbloqueado += float(venta.monto or 0.0)
+            desbloqueado += cash_neto(venta)
 
     convertidas = grupos['completo'] + grupos['parcial']
     return {
@@ -309,7 +309,7 @@ def _cash_por_dia(filas_ventas, start, end):
     por_dia = {}
     for f in filas_ventas:
         if f['fecha']:
-            por_dia[f['fecha'][:10]] = por_dia.get(f['fecha'][:10], 0.0) + f['monto']
+            por_dia[f['fecha'][:10]] = por_dia.get(f['fecha'][:10], 0.0) + f['monto_neto']
     dias, cursor = [], start
     while cursor <= end:
         clave = cursor.isoformat()
@@ -359,18 +359,18 @@ def bloque_closers(start, end, closer_id=None, closer_nombre=None, con_reales=Tr
     for f in ventas:
         bucket = por_tipo.setdefault(f['tipo_pago']['key'], {'ventas': 0, 'cash': 0.0})
         bucket['ventas'] += 1
-        bucket['cash'] += f['monto']
+        bucket['cash'] += f['monto_neto']  # neto (04/11/2026)
 
         p = programas.setdefault(f['programa'], {'filas': 0, 'cash': 0.0, 'ventas': 0, 'pagos': [],
                                                  'por_tipo': {}})
         p['filas'] += 1
-        p['cash'] += f['monto']
+        p['cash'] += f['monto_neto']
         p['pagos'].append(pago_de_fila(f))
         if f['es_venta']:
             p['ventas'] += 1
         t = p['por_tipo'].setdefault(f['tipo_pago']['key'], {'ventas': 0, 'cash': 0.0})
         t['ventas'] += 1
-        t['cash'] += f['monto']
+        t['cash'] += f['monto_neto']
 
     # La primera cuota de cada venta, una sola consulta para todos los programas (`ticket_service`)
     cuotas = primeras_cuotas(sin_cuotas([pago_de_fila(f) for f in ventas]))
@@ -441,6 +441,7 @@ def bloque_closers(start, end, closer_id=None, closer_nombre=None, con_reales=Tr
         'cash_neto': tot_v['cash_neto'],
         'ventas': tot_v['ventas'],
         'ticket': tot_v['ticket'],
+        'ticket_neto': tot_v['ticket_neto'],
         'comision': round(tot_v['cash_neto'] * CLOSER_RATE, 2),
         'cash_por_dia': dias,
         'mejor_dia': mejor_dia,
@@ -634,7 +635,7 @@ def _series_closers_de_filas(dias, agendas, ventas, fijas=None):
     """Las series del closer sobre filas ya leídas: así el desglose por persona reparte las mismas
     filas sin volver a consultar. `fijas`: `{'ventas': [...], 'programas': [...]}`, las categorías del
     equipo (ver `_por_categoria`)."""
-    monto = lambda f: f['monto']  # noqa: E731
+    monto = lambda f: f['monto_neto']  # noqa: E731  (neto desde el 04/11/2026)
 
     es_venta = lambda f: f['es_venta']  # noqa: E731
     es_cuota = lambda f: f['tipo_pago']['key'] == 'cuota'  # noqa: E731
@@ -647,8 +648,8 @@ def _series_closers_de_filas(dias, agendas, ventas, fijas=None):
     otros = _serie(dias, ventas, _dia_de_venta, monto, es_otro)
 
     return [
-        {'key': 'cash', 'label': 'Cash cobrado', 'unidad': '$', 'tone': 'brand-secondary',
-         'help': 'Lo cobrado cada día. Los días en cero son días sin cobranza, no días sin '
+        {'key': 'cash', 'label': 'Cash cobrado neto', 'unidad': '$', 'tone': 'brand-secondary',
+         'help': 'Lo cobrado cada día, neto de la comisión de la pasarela. Los días en cero son días sin cobranza, no días sin '
                  'trabajo. Aislá por tipo para ver de dónde viene cada pico.',
          'series': [
              _sub('Todo', 'brand-secondary', _serie(dias, ventas, _dia_de_venta, monto)),
@@ -723,12 +724,12 @@ def ingresos_por_fuente(start, end, closer_nombre=None, agendas=None):
 
       · las ventas son las del cash, con el mismo período, los mismos estados y el mismo filtro por
         closer (`ComercialService.ventas_de`, que comparte `vendio` con la tabla Ventas);
-      · la base es el cash BRUTO, la cifra grande de la tarjeta. Finanzas reparte el neto.
+      · la base es el cash NETO (04/11/2026: todas las pantallas van en neto), la misma de Finanzas.
 
     La atribución se calcula sobre las ventas de TODO el período aunque se mire a un closer (ver
     `procedencia_de_ventas`): así un cobro cae en el mismo balde en «Mis datos» y en el equipo."""
     del_periodo, propias = ComercialService.ventas_de(start, end, closer_nombre)
-    return procedencia_de_ventas(propias, contexto=del_periodo, base='bruto', agendas=agendas)
+    return procedencia_de_ventas(propias, contexto=del_periodo, base='neto', agendas=agendas)
 
 
 def fuentes_de(start, end, prev_start=None, prev_end=None, closer_nombre=None):
@@ -824,7 +825,7 @@ def _fila_comparativa(rol, bloque):
     completo = next((p for p in bloque['payment_types'] if p['key'] == 'completo'), None)
     residency = next((p for p in bloque['programas'] if p['programa'] == 'Residency Roadmap'), None)
     return {
-        'cash': bloque['cash'], 'show_up': bloque['show_up'], 'close_rate': bloque['close_rate'],
+        'cash': bloque['cash_neto'], 'show_up': bloque['show_up'], 'close_rate': bloque['close_rate'],
         'ticket': bloque['ticket'], 'comision': bloque['comision'], 'agendas': bloque['agendas'],
         'ventas': bloque['ventas'],
         'close_presentacion': bloque['close_presentacion'],

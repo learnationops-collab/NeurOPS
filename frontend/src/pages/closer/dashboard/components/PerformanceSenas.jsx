@@ -58,8 +58,8 @@ const PerformanceSenas = ({ senas, irA }) => {
                         note="Una seña es una reserva, no una venta — por eso no entra en el close rate ni en el ticket promedio." />
                 </h3>
                 <div className="grid grid-cols-2 gap-3">
-                    <Stat metric="senas_count" label="Señas del período" value={senas.count} note={`${money(senas.cash)} cobrados`} color="#F59E0B" irA={irA} />
-                    <Stat metric="senas_ticket" label="Seña promedio" value={money(senas.ticket_promedio)} note="monto de reserva" irA={irA} />
+                    <Stat metric="senas_count" label="Señas del período" value={senas.count} note={`${money(senas.cash_neto ?? senas.cash)} cobrados netos`} color="#F59E0B" irA={irA} />
+                    <Stat metric="senas_ticket" label="Seña promedio" value={money(senas.ticket_promedio)} note={`monto de reserva · neto ${money(senas.ticket_promedio_neto ?? senas.ticket_promedio)}`} irA={irA} />
                     <Stat metric="senas_por_presentacion" label="Por presentación" value={`${senas.por_presentacion}%`} note={`sobre ${senas.presentaciones} presentaciones`} color="#A78BFA" irA={irA} />
                     <Stat metric="senas_por_llamada" label="Por llamada" value={`${senas.por_llamada}%`} note={`sobre ${senas.asistencias} asistencias`} color="#60A5FA" irA={irA} />
                 </div>

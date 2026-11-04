@@ -136,8 +136,8 @@ export const DESTINOS_CLOSER = {
  * Ventas. `fuente` y `detalle` son los rótulos que manda el backend en la tarjeta, que son los
  * mismos que trae cada fila de la tabla (las dos salen de `procedencia_por_venta`).
  *
- * Sin `aviso`: cierra con el número. La tarjeta suma cobros en bruto y la tabla lista cobros —no
- * ventas— con su monto bruto, del mismo período y la misma persona; la tira de totales dice ese
+ * Sin `aviso`: cierra con el número. La tarjeta suma cobros en neto y la tabla lista cobros —no
+ * ventas— con su monto neto, del mismo período y la misma persona; la tira de totales dice ese
  * cash y esos cobros.
  */
 export const destinoProcedencia = (fuente, detalle = null) => {
