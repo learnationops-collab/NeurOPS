@@ -14,7 +14,9 @@ import ModalEliminarLead from './ModalEliminarLead';
 const BorrarLead = ({ ficha, onAccion }) => {
     const [abierto, setAbierto] = useState(false);
     const agendaId = ficha?.identidad?.appointment_id;
-    if (ficha?.permisos?.eliminar_lead !== true || !agendaId) return null;
+    // Un lead que solo está en el libro de agendas no tiene ninguna: se elimina por su cliente.
+    const clienteId = ficha?.identidad?.client_id;
+    if (ficha?.permisos?.eliminar_lead !== true || (!agendaId && !clienteId)) return null;
     const nombre = ficha?.identidad?.nombre || 'Este lead';
     return (
         <>
@@ -24,8 +26,11 @@ const BorrarLead = ({ ficha, onAccion }) => {
                 <Trash2 />
             </button>
             {abierto && (
-                <ModalEliminarLead agendaId={agendaId} nombre={nombre} onCerrar={() => setAbierto(false)}
-                    eliminar={(conPlata) => onAccion?.('eliminar_lead', conPlata ? { con_plata: true } : {})} />
+                <ModalEliminarLead agendaId={agendaId || null} clienteId={agendaId ? null : clienteId} nombre={nombre}
+                    onCerrar={() => setAbierto(false)}
+                    eliminar={(conPlata) => (agendaId
+                        ? onAccion?.('eliminar_lead', conPlata ? { con_plata: true } : {})
+                        : onAccion?.('eliminar_lead_cliente', conPlata ? { con_plata: true } : {}, clienteId))} />
             )}
         </>
     );

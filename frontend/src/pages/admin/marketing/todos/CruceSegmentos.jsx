@@ -13,16 +13,26 @@ import { COLOR_SEGMENTO } from './segmentos';
  *
  * `onVer({ grupo, campo, segmento, nombre, previo })`: el segmento '' es el total del grupo. `plano`: sin su propia tarjeta
  * (dentro de otro panel, el de Analizar).
+ *
+ * Lectura rápida (04/11/2026): los grupos sin nada en esta cifra (ni en el período comparado) no se dibujan y un pie dice cuántos
+ * son; cada número lleva el color de su segmento con más fuerza cuanto mayor es frente al resto, y los ceros quedan apagados.
  */
 const tipoDe = (campo) => (campo.dinero ? 'money' : 'num');
 
-const Celda = ({ fila, campo, grupo, moneda, onVer, segmento }) => {
+const esCero = (v) => v === null || v === undefined || !Number(v);
+const numero = (v) => (esCero(v) ? 0 : Number(v));
+const grupoVacio = (g, campo) => [g.total, ...g.filas].every((f) => esCero(f[campo.key]) && esCero(f.previo?.[campo.key]));
+
+const Celda = ({ fila, campo, grupo, moneda, onVer, segmento, maximo = 0, color }) => {
     const valor = fila[campo.key];
     const abrir = (previo) => () => onVer({ grupo, campo, segmento, nombre: fila.label, previo });
     const sinDato = valor === null || valor === undefined;
-    const quieta = sinDato || !valor;
+    const quieta = esCero(valor);
+    // La raíz reparte mejor los colores cuando un valor grande se lleva casi todo el máximo.
+    const intensidad = maximo > 0 ? Math.sqrt(Math.min(1, numero(valor) / maximo)) : 0;
     return (
-        <div className="sg-celda">
+        <div className={`sg-celda ${quieta ? 'sg-celda--cero' : 'sg-celda--calor'}`}
+            style={quieta ? undefined : { '--sg-i': intensidad.toFixed(3), '--sg-c': color }}>
             <CifraConCuenta metrica={quieta ? null : campo.lista} titulo={campo.label}
                 onVer={quieta ? null : (m, t) => onVer({ grupo, campo: { ...campo, lista: m, label: t }, segmento, nombre: fila.label })}
                 className="t-body num td-fuerte">
@@ -39,11 +49,16 @@ const Celda = ({ fila, campo, grupo, moneda, onVer, segmento }) => {
 const CruceSegmentos = ({ grupos, campo, campos, onCampo, moneda, color, onVer, orden, onOrden, onQuitar = null, plano = false }) => {
     if (!grupos.length) return null;
     const segmentos = grupos[0].filas.map((f) => ({ key: f.segmento, label: f.label }));
+    const visibles = grupos.filter((g) => !grupoVacio(g, campo));
+    const ocultos = grupos.length - visibles.length;
+    // El más alto de las celdas de segmento y el más alto de los totales: cada columna se compara con los suyos.
+    const maxSegmento = Math.max(0, ...visibles.flatMap((g) => g.filas.map((f) => numero(f[campo.key]))));
+    const maxTotal = Math.max(0, ...visibles.map((g) => numero(g.total[campo.key])));
     const valorDe = (g, col) => (col === 'nombre' ? g.label.toLowerCase()
         : (col === 'total' ? g.total : g.filas.find((f) => f.segmento === col))?.[campo.key] ?? null);
     const signo = orden.dir === 'asc' ? 1 : -1;
     // Sin dato siempre al final, suba o baje el orden; los empates conservan el orden que traen.
-    const filas = [...grupos].sort((a, b) => {
+    const filas = [...visibles].sort((a, b) => {
         const va = valorDe(a, orden.col);
         const vb = valorDe(b, orden.col);
         if (va === null || vb === null) return va === vb ? 0 : (va === null ? 1 : -1);
@@ -82,6 +97,7 @@ const CruceSegmentos = ({ grupos, campo, campos, onCampo, moneda, color, onVer, 
                     {segmentos.map((s) => <span key={s.key} role="presentation">{encabezado(s.key, s.label, COLOR_SEGMENTO[s.key])}</span>)}
                     {encabezado('total', 'Total')}
                 </div>
+                {!filas.length && <p className="sg-vacio t-body mut">Sin datos en esta cifra para el período.</p>}
                 {filas.map((g) => (
                     <div key={g.key} className="sg-fila" style={plantilla} role="row">
                         <div className="sg-nombre" role="rowheader">
@@ -92,12 +108,19 @@ const CruceSegmentos = ({ grupos, campo, campos, onCampo, moneda, color, onVer, 
                             )}
                         </div>
                         {g.filas.map((f) => (
-                            <Celda key={f.segmento} fila={f} campo={campo} grupo={g} moneda={moneda} onVer={onVer} segmento={f.segmento} />
+                            <Celda key={f.segmento} fila={f} campo={campo} grupo={g} moneda={moneda} onVer={onVer} segmento={f.segmento}
+                                maximo={maxSegmento} color={COLOR_SEGMENTO[f.segmento]} />
                         ))}
-                        <Celda fila={g.total} campo={campo} grupo={g} moneda={moneda} onVer={onVer} segmento="" />
+                        <Celda fila={g.total} campo={campo} grupo={g} moneda={moneda} onVer={onVer} segmento=""
+                            maximo={maxTotal} color="var(--brand-secondary)" />
                     </div>
                 ))}
             </div>
+            {ocultos > 0 && (
+                <p className="sg-ocultos t-eyebrow mut">
+                    {ocultos === 1 ? '1 grupo sin datos oculto' : `${ocultos} grupos sin datos ocultos`}
+                </p>
+            )}
         </Envoltorio>
     );
 };

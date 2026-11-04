@@ -21,17 +21,18 @@ const Fila = ({ izquierda, derecha, fuerte = false }) => (
     </span>
 );
 
-const ModalEliminarLead = ({ agendaId, nombre, eliminar, onCerrar }) => {
+const ModalEliminarLead = ({ agendaId = null, clienteId = null, nombre, eliminar, onCerrar }) => {
     const [resumen, setResumen] = useState(null);
     const [error, setError] = useState(null);
 
     useEffect(() => {
         let vivo = true;
-        ejecutarConsulta('resumen_borrado', agendaId)
+        // Un lead sin agenda (solo en el libro) se lee por su cliente.
+        ejecutarConsulta(agendaId ? 'resumen_borrado' : 'resumen_borrado_cliente', agendaId ?? clienteId)
             .then((datos) => { if (vivo) setResumen(datos); })
             .catch((e) => { if (vivo) setError(mensajeDeError(e)); });
         return () => { vivo = false; };
-    }, [agendaId]);
+    }, [agendaId, clienteId]);
 
     const conPlata = !!resumen?.con_plata;
     const confirmar = conPlata ? 'Eliminar lead, pago y venta' : 'Eliminar lead';

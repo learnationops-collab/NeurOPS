@@ -31,6 +31,10 @@ const A_REVISAR = (f) => ['neto_distinto', 'otra_pasarela', 'sin_csv', 'sin_repo
 const FILTROS = [['todas', 'Todas'], ['revisar', 'Para revisar'], ...Object.entries(ESTADOS).map(([k, e]) => [k, e.label])];
 const COLS = { '--cols': '54px minmax(170px,1.5fr) minmax(90px,.8fr) minmax(90px,.8fr) 96px 104px 104px 96px minmax(150px,1fr)', '--min': '1080px' };
 
+const CABECERA = [['Fecha', 'del cobro'], ['Cliente', 'y closer'], ['Tipo de pago', 'cargado'], ['Procesador', 'reportado'],
+    ['Bruto', 'lo cargado', true], ['Neto sistema', 'la plataforma', true], ['Neto CSV', 'Stripe y Hotmart', true],
+    ['Diferencia', 'sistema − CSV', true], ['Estado', 'del cruce']];
+
 const normal = (t) => String(t ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase();
 const fechaCorta = (iso) => (iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}` : '—');
 const suma = (filas, campo) => Math.round(filas.reduce((a, f) => a + (f[campo] || 0), 0) * 100) / 100;
@@ -232,12 +236,12 @@ const Cobros = ({ periodo }) => {
                     <Segmented chico opciones={FILTROS.map(([key, label]) => ({ key, label, cuenta: cuenta(key) }))}
                         valor={estado} onChange={setEstado} ariaLabel="Estado del cotejo" />
                 </div>
-                <div className="fz-scroll">
+                <div className="fz-scroll fz-scroll--fija">
                     <div className="fz-tabla" style={COLS}>
                         <div className="fz-cab">
-                            <span>Fecha</span><span>Cliente</span><span>Tipo de pago</span><span>Procesador</span>
-                            <span className="fz-der">Bruto</span><span className="fz-der">Neto sistema</span>
-                            <span className="fz-der">Neto CSV</span><span className="fz-der">Diferencia</span><span>Estado</span>
+                            {CABECERA.map(([nombre, que, der]) => (
+                                <span key={nombre} className={`fz-cab2${der ? ' fz-der' : ''}`}>{nombre}<small>{que}</small></span>
+                            ))}
                         </div>
                         {filas.map(f => (
                             <FilaCobro key={f.id} f={f} abierta={abierta === f.id}

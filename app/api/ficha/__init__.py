@@ -37,7 +37,7 @@ def _solo_roles_con_acceso():
         return jsonify({'message': 'Forbidden'}), 403
     # Su única escritura: eliminar un lead de prueba (los registros de prueba de Marketing, 03/11/2026).
     if (current_user.role in ROLES_SOLO_LECTURA and request.method not in ('GET', 'HEAD', 'OPTIONS')
-            and request.endpoint != 'ficha_api.eliminar_lead'):
+            and request.endpoint not in ('ficha_api.eliminar_lead', 'ficha_api.eliminar_lead_cliente')):
         return jsonify({'message': 'Tu rol solo puede ver la ficha del lead.'}), 403
 
 

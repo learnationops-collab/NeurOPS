@@ -15,7 +15,13 @@
 .dc-shell .sg-fila--cab{padding-block:0}
 .dc-shell .sg-fila--total{border-top:1px solid var(--border-subtle);border-radius:0;margin-top:var(--s2)}
 .dc-shell .sg-nombre{display:flex;align-items:center;gap:var(--s2);min-width:0}
-.dc-shell .sg-celda{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:0}
+.dc-shell .sg-celda{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:0;border-radius:10px;padding:5px 10px;margin:-5px -10px;justify-self:start;min-width:48px}
+/* Mapa de calor (04/11/2026): cada número en el color de su segmento, más fuerte cuanto más alto; el cero se apaga. */
+.dc-shell .sg-celda--calor{background:color-mix(in srgb,var(--sg-c) calc(5% + var(--sg-i) * 20%),transparent)}
+.dc-shell .sg-celda--calor .td-fuerte{color:color-mix(in srgb,var(--sg-c) calc(62% + var(--sg-i) * 38%),var(--text-on-surface));font-weight:800}
+.dc-shell .sg-celda--cero .td-fuerte{color:var(--text-muted);font-weight:500;opacity:.38}
+.dc-shell .sg-vacio{margin:0;padding:var(--s4)}
+.dc-shell .sg-ocultos{margin:var(--s2) 0 0}
 .dc-shell .sg-celda > .td-cc-cifra{width:auto;flex:none;text-align:left}
 .dc-shell .sg-pct{color:var(--text-muted)}
 .dc-shell .sg-pct .td-cc{color:inherit;font-weight:700}

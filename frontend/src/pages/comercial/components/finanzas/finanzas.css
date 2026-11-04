@@ -327,3 +327,12 @@
 .dc-shell .fz-dif-otra-carga{opacity:.6}
 @media (max-width:760px){.dc-shell .fz-dif-lados{grid-template-columns:minmax(0,1fr)}}
 @media (prefers-reduced-motion:reduce){.dc-shell .fz-dif-elegir{animation:none}}
+
+/* Cobros (ADR-W100): la tabla scrollea en su caja con la cabecera fija arriba, de dos líneas
+   (nombre y qué es), para no perder qué columna es cada número al bajar entre todos los cobros. */
+.dc-shell .fz-scroll--fija{max-height:calc(100vh - 140px);overflow:auto}
+.dc-shell .fz-scroll--fija .fz-cab{position:sticky;top:0;z-index:3;background:var(--bg-flotante);min-height:46px}
+.dc-shell .fz-cab > span.fz-cab2{display:grid;gap:2px;align-content:center}
+.dc-shell .fz-cab2 small{font-size:10.5px;font-weight:500;letter-spacing:0;text-transform:none;color:var(--text-muted)}
+.dc-shell .fz-cab > span.fz-cab2.fz-der{justify-items:end;text-align:right}
+@media print{.dc-shell .fz-scroll--fija{max-height:none;overflow:visible}}
