@@ -203,3 +203,6 @@
 - **4 de Noviembre de 2026 (País del lead en Dirección comercial y Marketing)** *([paises_lectura.py](../../app/services/paises_lectura.py), [paises_comercial.py](../../app/services/paises_comercial.py), [PanelPaises.jsx](../../frontend/src/pages/comercial/components/PanelPaises.jsx), [BarraPais.jsx](../../frontend/src/pages/comercial/components/BarraPais.jsx), [ADR-W089](../DECISIONS.md))*:
   - Filtro «País» en Analizar y Revisar (KPIs, Segmentos y listas) y panel «Por país» con agendas, show up, ventas y cash de cada uno; tocar un país lo filtra. El país sale del código del WhatsApp.
   - En Marketing, Todos › Segmentos se puede agrupar por País.
+- **4 de Noviembre de 2026 (Segmento del lead visible y editable en la ficha)** *([ficha_segmento_service.py](../../app/services/ficha_segmento_service.py), [SegmentoLead.jsx](../../frontend/src/components/ficha/piezas/SegmentoLead.jsx), [ADR-W090](../DECISIONS.md))*:
+  - La cabecera de la ficha muestra el segmento junto al nombre (también «Sin segmento») y se cambia con un menú; el cambio vale para toda la persona, queda marcado «manual» y anotado en la bitácora.
+  - En el filtro «País» del dashboard comercial, «Ver todos» ahora cierra el menú.
