@@ -40,7 +40,7 @@ const PESTANAS = [
     { key: 'workshop', label: 'Workshop' },
     { key: 'otras', label: 'Otras' },
 ];
-const CORTES_VALIDOS = ['fuente', 'origen', 'closer', 'ninguno'];
+const CORTES_VALIDOS = ['fuente', 'origen', 'closer', 'pais', 'ninguno'];
 const COLUMNAS_CRUCE = COLUMNAS_SEGMENTO.filter((c) => c.key !== 'ticket');
 const INICIAL = { fuente: 'todos', corte: 'fuente', campo: 'agendas', ocultas: [], quitados: {}, abiertos: null, orden: { col: 'total', dir: 'desc' } };
 const normalizar = (m) => ({

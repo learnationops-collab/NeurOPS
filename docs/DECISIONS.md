@@ -707,3 +707,19 @@
 - **Decisión:** `eliminar_lead` lo tienen la dirección, el director de marketing, los closers y triage. Un lead con pagos, cuotas o ventas se elimina solo con `?con_plata=1` y solo por `eliminar_lead_con_plata` (la dirección y el director de marketing): se borran sus pagos (con la exclusión de la hoja), cuotas y ventas antes que las agendas (`lead_prueba_service`). Una suscripción frena a todos hasta cerrar el acceso en la Academia. Antes de borrar, `GET /api/ficha/<agenda>/lead/borrado` devuelve lo que se borraría y la confirmación (`ModalEliminarLead`) lo lista, con el botón «Eliminar lead, pago y venta». Las filas de agenda de las listas llevan un tacho; la papelera de la cabecera de la ficha usa la misma confirmación. El director de marketing sigue en solo lectura salvo ese DELETE. `VerRegistros` suma el modo «Completa» (pantalla completa) junto a Lateral y Central.
 - **Qué se pierde:** un cobro borrado así no se recupera y Finanzas, comisiones y nómina dejan de contarlo; queda en el log del servidor quién lo hizo. Los leads sin agenda (cobros, entradas por palabra clave) no tienen tacho.
 - **Consecuencias:** sin migración. La confirmación de `ModalConfirmacion` sube a z-index 180 para quedar sobre la ficha abierta desde una lista. Si algo falla a mitad de un borrado con plata, lo ya borrado no se deshace.
+
+## ADR-W088: Resumen del día antes de enviar el reporte del closer
+
+- **Fecha:** 2026-11-04 · **Subsistema:** Closer › Cerrar el día · **Estado:** implementado.
+- **Contexto:** los closers mandaban el reporte del día y después aparecían agendas sin reportar o de nuevo en Pendiente, y el reporte ya estaba en Discord. Nada les mostraba, justo al enviar, qué quedaba por arreglar.
+- **Decisión:** «Enviar reporte del día» abre un resumen (`ResumenDelDia`, `GET /api/closer/deck/daily-report/summary`): agendas del día, con resultado, asistieron, ventas, las agendas del día sin resultado (con la marca de las que el closer guardó ese día y siguen en Pendiente) y las tareas atrasadas. «Corregir» lleva a Mi cartera con el día y el estado Pendiente ya filtrados; «Enviar igual» manda el reporte. Las cifras salen de las mismas filas que Mi cartera (`cierre_dia_service`), así que la lista de «Corregir» suma lo que dice el resumen.
+- **Qué se pierde:** un clic más para enviar. No bloquea el envío aunque queden agendas sin resultado (decisión de Kerwin: avisar y dejar enviar); el bloqueo por atraso de días anteriores sigue con su toggle.
+- **Consecuencias:** sin migración. No explica por qué una agenda vuelve a Pendiente: solo la hace visible antes de enviar.
+
+## ADR-W089: País del lead en Dirección comercial y Marketing
+
+- **Fecha:** 2026-11-04 · **Subsistema:** Dashboard comercial y Marketing · **Estado:** implementado.
+- **Contexto:** Kerwin pidió ver el rendimiento por país para decidir a cuál apuntar. El país no se guarda en el cliente ni en la agenda.
+- **Decisión:** el país se lee del código del WhatsApp (`paises_lectura`: `Person.phone`, si no `Client.phone`, con la lista de países del formulario de agendas); sin teléfono o con código desconocido es «Sin país». Dirección comercial: filtro «País» (`pa` en la URL, se recuerda por usuario) que acota los KPIs del closer, Segmentos y las listas de Revisar, y el panel «Por país» (`/api/comercial/paises`), que siempre muestra todos y al tocar un país lo filtra. Marketing: «País» como corte de Todos › Segmentos (`segmentos_marketing_service`), con las mismas cifras por segmento.
+- **Qué se pierde:** un número sin código de país reconocible cae en «Sin país»; el reporte diario del setter, las Comparativas, Variabilidad y la tabla de palabras clave de Marketing no se parten por país. Meta no se parte por país: el gasto por país queda pendiente.
+- **Consecuencias:** sin migración. Si más adelante se guarda el país del formulario, `paises_lectura` es el único lugar que cambia.

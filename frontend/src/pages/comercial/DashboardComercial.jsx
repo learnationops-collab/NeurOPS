@@ -30,6 +30,8 @@ import RangoFechas, { mesEnCurso, rangoAnterior, rangoDe, textoRango } from './c
 import SegmentosPanel from './components/SegmentosPanel';
 import TriageDireccion from './components/TriageDireccion';
 import BarraSegmento, { segmentoDeLaVista } from './components/BarraSegmento';
+import BarraPais, { paisDeLaVista } from './components/BarraPais';
+import PanelPaises from './components/PanelPaises';
 import useEstadoGuardado from '../../hooks/useEstadoGuardado';
 import { leerCache } from '../../services/cacheDeVistas';
 import { corregirAgenda, eliminarAgenda as eliminarAgendaApi, getComparativas, getContexto, getResumen, getTabla, getVariabilidad, marcarAgendaDuplicada } from './comercialApi';
@@ -220,6 +222,10 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     const segmentoUrl = params.get('seg') || '';
     const elegidosSeg = useMemo(() => segmentoUrl.split(',').filter(s => ['A', 'B', 'C', 'D', 'sin'].includes(s)), [segmentoUrl]);
     const segmento = elegidosSeg.join(',');
+    // El filtro de país (`pa=CL,MX`, 04/11/2026): el país del lead sale de su WhatsApp (`paises_lectura`).
+    const paisUrl = params.get('pa') || '';
+    const elegidosPais = useMemo(() => paisUrl.split(',').filter(Boolean), [paisUrl]);
+    const pais = elegidosPais.join(',');
 
     const [tab, setTab] = useState('dashboard');
     // Finanzas se mira por mes o por un rango personalizado (queda el último elegido; las vistas
@@ -308,7 +314,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     }, [params, setParams]);
 
     // El filtro de segmento se recuerda por usuario: sin `seg` en el link, en Analizar y Revisar se vuelve al de la última vez.
-    const [segGuardado, guardarSeg] = useEstadoGuardado('cm_segmento', { seg: '' });
+    const [segGuardado, guardarSeg] = useEstadoGuardado('cm_segmento', { seg: '', pa: '' });
     const segRestaurado = useRef(false);
     useEffect(() => {
         if (!segRestaurado.current) {
@@ -318,9 +324,23 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                 return;
             }
         }
-        guardarSeg({ seg: segmento });
+        guardarSeg({ seg: segmento, pa: pais });
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [segmento]);
+
+    // El de país se recuerda igual: sin `pa` en el link, se vuelve al de la última vez.
+    const paisRestaurado = useRef(false);
+    useEffect(() => {
+        if (!paisRestaurado.current) {
+            paisRestaurado.current = true;
+            if (!pais && segGuardado.pa && ['analizar', 'revisar'].includes(seccion)) {
+                set({ pa: segGuardado.pa });
+                return;
+            }
+        }
+        guardarSeg({ seg: segmento, pa: pais });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [pais]);
 
     // Cada bloque espera solo SU pedido y, si falla, ofrece reintentar (ver `usePedidos`).
     const { pedir, pedirCacheado, fallas } = usePedidos();
@@ -348,8 +368,8 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
 
     const filtros = useMemo(
         () => ({ period, compare, rol, miembroId, desde: rango?.desde, hasta: rango?.hasta,
-            vsDesde: rangoVs?.desde, vsHasta: rangoVs?.hasta, segmento }),
-        [period, compare, rol, miembroId, rango?.desde, rango?.hasta, rangoVs?.desde, rangoVs?.hasta, segmento]);
+            vsDesde: rangoVs?.desde, vsHasta: rangoVs?.hasta, segmento, pais }),
+        [period, compare, rol, miembroId, rango?.desde, rango?.hasta, rangoVs?.desde, rangoVs?.hasta, segmento, pais]);
 
     const seccionActual = SECCIONES.find(s => s.id === seccion) || SECCIONES[0];
 
@@ -825,6 +845,11 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                     <BarraSegmento vista={segmentoDeLaVista({ seccion, tab, rol, tabla: tablaActual, triage: vistaTriage })} elegidos={elegidosSeg}
                         onElegir={(lista) => set({ seg: lista.join(',') })} />
                 )}
+                {!esperaFechas && (
+                    <BarraPais vista={paisDeLaVista({ seccion, tab, rol, tabla: tablaActual, triage: vistaTriage })}
+                        paises={contexto?.paises || []} elegidos={elegidosPais}
+                        onElegir={(lista) => set({ pa: lista.join(',') })} />
+                )}
                 <div className="vista">
                     {/* Sin las dos fechas no se pide nada: se piden acá, en vez de mostrar los
                         datos de otro rango bajo la etiqueta "Personalizado". */}
@@ -847,6 +872,10 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                     {!esperaFechas && !vistaTriage && seccion === 'analizar' && tab === 'dashboard' && ['closers', 'setters'].includes(rol) && (
                         <SegmentosPanel filtros={filtros} rol={rol} elegidos={elegidosSeg}
                             onElegir={(lista) => set({ seg: lista.join(',') })} />
+                    )}
+                    {!esperaFechas && !vistaTriage && seccion === 'analizar' && tab === 'dashboard' && ['closers', 'setters'].includes(rol) && (
+                        <PanelPaises filtros={filtros} rol={rol} elegidos={elegidosPais}
+                            onElegir={(lista) => set({ pa: lista.join(',') })} />
                     )}
                     {!esperaFechas && !vistaTriage && seccion === 'analizar' && tab === 'comparativas' && contexto.puede_comparar && (
                         // Un closer ve a sus compañeros pero no puede abrir sus listas (el backend

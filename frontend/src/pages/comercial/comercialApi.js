@@ -9,9 +9,10 @@ import api from '../../services/api';
  */
 
 /** Parámetros del header que comparten casi todos los endpoints. */
-export const filtrosQuery = ({ period, compare, miembroId, rol, desde, hasta, vsDesde, vsHasta, segmento }) => {
+export const filtrosQuery = ({ period, compare, miembroId, rol, desde, hasta, vsDesde, vsHasta, segmento, pais }) => {
     const params = { period, compare, rol };
     if (segmento) params.segmento = segmento;
+    if (pais) params.pais = pais;
     if (miembroId) params.miembro_id = miembroId;
     if (period === 'custom') {
         params.start_date = desde;
@@ -23,6 +24,10 @@ export const filtrosQuery = ({ period, compare, miembroId, rol, desde, hasta, vs
     }
     return params;
 };
+
+/** Agendas, show up, ventas y cash del período por país del lead. Siempre todos los países: el filtro `pais` no se manda. */
+export const getPaises = (filtros, config = {}) =>
+    api.get('/comercial/paises', { params: filtrosQuery({ ...filtros, pais: null }), ...config }).then(r => r.data);
 
 export const getContexto = () => api.get('/comercial/contexto').then(r => r.data);
 
