@@ -195,3 +195,9 @@
   - Jean Carlo no podía registrar la venta de Eugenia González: el buscador abría la agenda de triage de Dari («Show up» sin venta, seguimiento sin fecha) y Resultado mostraba el reporte de triage. Ahora quien no es triage no cae en una agenda de triage si el lead tiene otra.
   - Un pago cargado con «Agregar pago» sobre una agenda de triage queda a nombre de quien lo carga, no del triage.
   - La venta de Eugenia (RR parcial, USD 500) se pasó de Dari a Jean Carlo.
+- **5 de Noviembre de 2026 (Ninguna llamada del closer cae encima de otra, y el link del setter lleva su nombre)** *([manual.py](../../app/agendas_v2/manual.py), [public/__init__.py](../../app/api/public/__init__.py), [booking_espejo.py](../../app/services/booking_espejo.py), [MisLinks.jsx](../../frontend/src/pages/setter/MisLinks.jsx), [ADR-W103](../DECISIONS.md))*:
+  - Las «Sesión diagnóstica» encimadas de Jean Carlo eran pases del triage de antes del 03/11 (ADR-W085); desde entonces no hay agendas vigentes encimadas en ningún closer.
+  - El link viejo `/book/<evento>` ya no reserva un horario que se cruza con otra llamada del closer (con su margen) o con su Google Calendar; antes solo frenaba la misma hora exacta.
+  - Mover la hora o el closer de una llamada futura desde la ficha, el mazo, el triage o el panel de admin también se frena si cae encima de otra.
+  - Si el tablero de agendas trae una llamada que cae encima de otra del closer, no se le crea la cita y admin recibe un aviso; la fila del tablero queda.
+  - Los links de agendamiento de Paula y Elias dicen su nombre («Paula · Sesión de Aceleración») en lugar de «Setting».

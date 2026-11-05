@@ -164,6 +164,14 @@ class BookingEspejoMixin:
                 closer_processed = False
                 setter_processed = False
             
+        choca = BookingEspejoMixin._choca_con_otra_llamada(agenda, closer_user, appt, result, closer_processed)
+        if choca and not appt:
+            # La fila sigue en el tablero (no se pierde nada); la llamada no se le crea encima de otra
+            # al closer: admin la reasigna o la mueve desde el tablero (ADR-W103).
+            print(f"[SYNC WARNING] Agenda {agenda.id}: {closer_user.username} ya tiene otra llamada a esa hora. "
+                  "No se crea la cita.")
+            db.session.commit()  # el aviso a admin (y suelta el bloqueo del closer)
+            return None
         if not appt:
             appt = Appointment(
                 closer_id=closer_user.id,
@@ -194,6 +202,45 @@ class BookingEspejoMixin:
             db.session.rollback()
             print(f"[SYNC ERROR] No se pudo guardar el Appointment: {e}")
             return None
+
+    @staticmethod
+    def _choca_con_otra_llamada(agenda, closer_user, appt, result, closer_processed):
+        """¿La fila del tablero pone al closer encima de otra llamada vigente suya (con su margen)? Se mira
+        solo una llamada futura y vigente que nace o cambia de hora o de closer, con el chequeo de la base
+        de las agendas (`servicio._bloquear_y_verificar`). Google no se mira: la agenda que llega por el
+        tablero (n8n, Calendly) suele tener ya su evento ahí y chocaría consigo misma. Si choca, avisa a
+        admin una vez por fila. Una cita que ya existe se actualiza igual (el tablero manda); la que no
+        existe no se crea (`sync_financial_agenda_to_appointment`)."""
+        from app.agendas_v2 import manual, operacion, servicio
+        from app.models import Notification
+        from app.services import avisos_service
+
+        if (closer_processed or (result or '') in operacion.RESULTADOS_NO_VIGENTES or not agenda.date
+                or agenda.date < datetime.utcnow()):
+            return False
+        if appt is not None and appt.closer_id == closer_user.id and appt.start_time == agenda.date:
+            return False
+        if appt is not None:
+            bloque = servicio._bloque_min(appt)
+        else:
+            sesion = manual.sesion_del_closer(closer_user)
+            bloque = int(sesion['duracion_min']) + int(sesion.get('margen_min') or 0)
+        ini = servicio.dt_a_ms(agenda.date)
+        _, choca, _ = servicio._bloquear_y_verificar(closer_user.id, ini, ini + bloque * 60000, None,
+                                                     libres_ids=(appt.id,) if appt is not None else ())
+        if not choca:
+            return False
+        ya_avisado = Notification.query.filter_by(tipo='agenda_choca', origen='agenda', origen_id=agenda.id).first()
+        if not ya_avisado:
+            contacto = agenda.contacto()
+            avisos_service.avisar(
+                'agenda_choca', 'rol', 'admin', 'Agenda del tablero encima de otra llamada',
+                f"La agenda de {contacto['lead'] or agenda.nombre or 'un lead'} del "
+                f"{agenda.date.strftime('%d/%m/%Y %H:%M')} UTC cae encima de otra llamada de "
+                f"{closer_user.username}. " + ('No se le creó la cita: reasignala o movela desde el tablero.'
+                                               if appt is None else 'Se movió igual: revisá cuál reagendar.'),
+                'agenda', agenda.id)
+        return True
 
     @staticmethod
     def filtros_de_agenda_del_cliente(client):

@@ -165,6 +165,28 @@ def verificar_horario(closer_id, inicio, payload, propia=None):
     return [i for i in fuera_de_google if propia is None or i != propia.id]
 
 
+def verificar_movida(appt, closer_id, inicio, ahora=None):
+    """verificar_horario para una agenda que ya existe y cambia de hora o de closer sin crear otra (la
+    ficha, el mazo, el triage, el panel de admin): mira el horario nuevo con la duración y el margen que
+    ya tiene. Una agenda cancelada o reprogramada, o que queda en el pasado, no ocupa el horario de
+    nadie: no se mira. Lanza AgendaManualError('ocupado'). Llamar ANTES de cambiar nada."""
+    ahora = ahora or datetime.utcnow()
+    if inicio is None or not closer_id or inicio < ahora or (appt.result or '') in operacion.RESULTADOS_NO_VIGENTES:
+        return []
+    closer_id = int(closer_id)
+    payload = {'duracion_min': servicio._duracion_min(appt),
+               'margen_min': int((appt.agenda_payload or {}).get('margen_min') or 0)}
+    return verificar_horario(closer_id, inicio, payload, propia=appt if closer_id == appt.closer_id else None)
+
+
+def sesion_del_closer(closer):
+    """{'duracion_min', 'margen_min'} de la sesión de quien atiende (Team), o los 60 minutos sin margen
+    de siempre si no está en Team: lo que ocupa una agenda que no trae payload."""
+    from app.agendas_v2.a_triage import sesion_propia_de
+
+    return (sesion_propia_de(closer) if closer is not None else None) or {'duracion_min': DURACION_MIN, 'margen_min': 0}
+
+
 def agendar(cliente, closer, inicio, usuario, via, fuente=None, decision=None, anterior=None, ahora=None,
             sesion=None):
     """Crea la agenda de `cliente` con `closer` a las `inicio` (UTC sin zona), y después crea el evento

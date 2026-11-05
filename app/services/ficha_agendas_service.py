@@ -232,6 +232,12 @@ def editar_agenda(appt, datos, usuario, *, desde='el historial de la ficha'):
             nombre = otra.client.full_name if otra.client else 'otro lead'
             raise ErrorDeAccion(f'{closer.username} ya tiene una llamada sin resolver con '
                                 f'{nombre} a esa misma hora.')
+        # Una llamada futura no cae encima de otra (con su margen) ni de su Google (ADR-W103).
+        from app.agendas_v2 import manual
+        try:
+            manual.verificar_movida(appt, closer.id, inicio)
+        except manual.AgendaManualError as e:
+            raise ErrorDeAccion(e.mensaje, 'fecha' if cambia_fecha else 'closer_id') from None
 
     espejo = espejo_en_el_tablero(appt)
     zona = zona_del_usuario(usuario)

@@ -8,6 +8,10 @@ export const copiar = async (url) => {
     try { await navigator.clipboard.writeText(url); toast.success('Link copiado'); } catch { window.prompt('Copiá tu link:', url); }
 };
 
+// El link va con el nombre del setter, no con el del funnel: el de setting se llama «Setting» para todos
+// y Paula y Elias veían «Setting · …» en lugar del suyo (05/11/2026).
+export const rotuloDeLink = (l) => `${l.setter || l.funnel} · ${l.evento}`;
+
 /**
  * Los links de agendamiento del setter (Agendas 2.0, uno por evento de cada funnel de setting) a la vista
  * en el encabezado de su espacio, en cualquier sección: antes vivían solo en el menú del avatar y no los
@@ -29,10 +33,10 @@ const MisLinks = () => {
         <div className="setter-links" role="group" aria-label="Tus links de agendamiento">
             {links.map((l) => (
                 <button key={l.ruta} type="button" className="pastilla pastilla--sm setter-link"
-                    title={`Copiar tu link de ${l.funnel} · ${l.evento}`}
+                    title={`Copiar tu link de ${rotuloDeLink(l)}`}
                     onClick={() => copiar(window.location.origin + l.ruta)}>
                     <Link2 size={14} />
-                    <span className="setter-link-t">{links.length > 1 ? `${l.funnel} · ${l.evento}` : 'Tu link de agendamiento'}</span>
+                    <span className="setter-link-t">{links.length > 1 ? rotuloDeLink(l) : 'Tu link de agendamiento'}</span>
                     <Copy size={13} />
                 </button>
             ))}

@@ -721,7 +721,9 @@ def test_el_setter_ve_sus_links(client, setting, cuentas, auth_headers):
     assert r.status_code == 200
     codigo = servicio.codigo_setter(cuentas['juan'].id)
     ruta = f'/agendas-v2/agenda/setting/llamada?o={codigo}'
-    assert r.get_json()['links'] == [{'funnel': 'Setting directo', 'evento': 'Llamada', 'ruta': ruta}]
+    # Rotulado con su nombre: el funnel de setting es el mismo para todos los setters.
+    assert r.get_json()['links'] == [{'funnel': 'Setting directo', 'evento': 'Llamada',
+                                      'setter': cuentas['juan'].username, 'ruta': ruta}]
     assert client.get('/api/setter/agendas-links', headers=auth_headers(cuentas['ana'])).status_code == 403
 
 

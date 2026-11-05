@@ -30,6 +30,8 @@ TIPOS = {
     'google_desconectado': {'rotulo': 'Google Calendar desconectado', 'canales': ['centro'], 'obligatorio': True},
     'closer_sin_resolver': {'rotulo': 'Agenda con un closer que no existe', 'canales': ['centro'],
                             'obligatorio': False},
+    'agenda_choca': {'rotulo': 'Agenda del tablero encima de otra llamada del closer', 'canales': ['centro'],
+                     'obligatorio': True},
 }
 TARGETS = ('user', 'rol', 'grupo')
 # Lo que la campanita mira hacia atrás: un aviso de hace más de tres meses ya no se va a leer.

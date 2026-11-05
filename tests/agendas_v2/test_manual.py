@@ -228,3 +228,99 @@ def test_una_reagenda_desde_neurops_no_cuenta_dos_veces_en_stats(client, db, ana
 
     (lead,) = servicio.estadisticas(ahora=MS(datetime(2026, 10, 19, 12, 0)))
     assert lead['inicio'] == MS(datetime(2026, 10, 22, 15, 0)) and not lead['cancelada']
+
+
+# --- Los demás caminos que agendan o mueven una llamada usan el mismo chequeo (ADR-W103) ---------
+
+
+def _llamada_de_carla(db, closer, cuando=MARTES_15, **campos):
+    cliente = Client(full_name='Carla', email=f'carla{Client.query.count()}@mail.com')
+    db.session.add(cliente)
+    db.session.flush()
+    appt = Appointment(client_id=cliente.id, closer_id=closer.id, start_time=cuando, origin='workshop', **campos)
+    db.session.add(appt)
+    db.session.commit()
+    return appt
+
+
+@pytest.fixture()
+def evento_web(db, ana):
+    from app.models import Event
+
+    ev = Event(name='Funnel viejo', utm_source='funnel-viejo')
+    ev.closers.append(ana)
+    db.session.add(ev)
+    db.session.commit()
+    return ev
+
+
+def _reservar_web(client, evento, cuando, **extra):
+    return client.post('/api/public/book', json={
+        'email': 'nuevo@mail.com', 'name': 'Nuevo Lead', 'event_id': evento.id,
+        'timestamp': MS(cuando) / 1000, **extra})
+
+
+def test_el_link_viejo_rechaza_un_horario_que_se_cruza_aunque_no_empiece_a_la_misma_hora(client, db, ana, evento_web):
+    _llamada_de_carla(db, ana)
+
+    for extra in ({}, {'closer_id': ana.id}):
+        r = _reservar_web(client, evento_web, datetime(2026, 10, 20, 15, 30), **extra)
+        assert r.status_code == 400, r.get_json()
+    assert Appointment.query.count() == 1
+
+
+def test_el_link_viejo_rechaza_lo_ocupado_en_su_google(client, ana, evento_web, google):
+    google['ocupado'][ana.id] = [(MS(MARTES_15) - 30 * 60000, MS(MARTES_15) + 30 * 60000)]
+
+    assert _reservar_web(client, evento_web, MARTES_15).status_code == 400
+    assert Appointment.query.count() == 0
+
+
+def test_el_link_viejo_reserva_un_horario_libre(client, db, ana, evento_web):
+    _llamada_de_carla(db, ana)
+
+    r = _reservar_web(client, evento_web, datetime(2026, 10, 20, 16, 0))
+
+    assert r.status_code == 201, r.get_json()
+    assert Appointment.query.count() == 2
+
+
+def test_mover_la_llamada_encima_de_otra_se_rechaza_sin_tocarla(client, db, ana, auth_headers):
+    _llamada_de_carla(db, ana)
+    otra = _llamada_de_carla(db, ana, cuando=datetime(2026, 10, 21, 15, 0))
+
+    r = client.patch(f'/api/closer/appointments/{otra.id}', json={'start_time': '2026-10-20T15:30:00Z'},
+                     headers=auth_headers(ana))
+
+    assert r.status_code == 409 and r.get_json()['codigo'] == 'ocupado'
+    assert db.session.get(Appointment, otra.id).start_time == datetime(2026, 10, 21, 15, 0)
+
+
+def test_una_llamada_vieja_se_corrige_de_hora_sin_mirar_choques(client, db, ana, auth_headers):
+    # Lo que ya pasó no ocupa el horario de nadie: corregir una fecha vieja no se frena.
+    _llamada_de_carla(db, ana, cuando=datetime(2026, 10, 10, 15, 0))
+    otra = _llamada_de_carla(db, ana, cuando=datetime(2026, 10, 11, 15, 0))
+
+    r = client.patch(f'/api/closer/appointments/{otra.id}', json={'start_time': '2026-10-10T15:30:00Z'},
+                     headers=auth_headers(ana))
+
+    assert r.status_code == 200
+
+
+def test_el_tablero_no_le_crea_al_closer_una_llamada_encima_de_otra_y_avisa(db, ana):
+    from app.models import FinancialAgenda, Notification
+    from app.services.booking_service import BookingService
+
+    _llamada_de_carla(db, ana)
+    fila = FinancialAgenda(nombre='Lucía', closer='ana', date=datetime(2026, 10, 20, 15, 30), estado='Agendado')
+    db.session.add(fila)
+    db.session.commit()
+
+    assert BookingService.sync_financial_agenda_to_appointment(fila) is None
+    db.session.rollback()  # el aviso ya quedó guardado
+    assert BookingService.sync_financial_agenda_to_appointment(fila) is None
+
+    assert Appointment.query.count() == 1
+    assert db.session.get(FinancialAgenda, fila.id) is not None  # la fila del tablero queda
+    (aviso,) = Notification.query.filter_by(tipo='agenda_choca').all()  # un solo aviso por fila
+    assert aviso.origen_id == fila.id

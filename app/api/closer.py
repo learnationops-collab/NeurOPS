@@ -601,9 +601,16 @@ def update_appointment(id):
     if 'start_time' in data:
         try:
             # Format usually comes as ISO from frontend
-            appt.start_time = datetime.fromisoformat(data['start_time'].replace('Z', ''))
+            nuevo_inicio = datetime.fromisoformat(data['start_time'].replace('Z', ''))
         except ValueError:
             return jsonify({"error": "Invalid date format"}), 400
+        # No cae encima de otra llamada del closer (con su margen) ni de su Google (ADR-W103).
+        from app.agendas_v2 import manual
+        try:
+            manual.verificar_movida(appt, appt.closer_id, nuevo_inicio)
+        except manual.AgendaManualError as e:
+            return jsonify({"error": e.mensaje, "codigo": e.codigo}), 409
+        appt.start_time = nuevo_inicio
 
     db.session.commit()
 
@@ -646,6 +653,12 @@ def reassign_appointment(id):
 
     if appt.closer_id == new_closer.id:
         return jsonify({"error": "Este lead ya pertenece a ese closer"}), 400
+    # Si la llamada todavía no pasó, no cae encima de otra del closer nuevo (ADR-W103).
+    from app.agendas_v2 import manual
+    try:
+        manual.verificar_movida(appt, new_closer.id, appt.start_time)
+    except manual.AgendaManualError as e:
+        return jsonify({"error": e.mensaje, "codigo": e.codigo}), 409
 
     old_closer_name = appt.closer.username if appt.closer else 'sin asignar'
     appt.closer_id = new_closer.id

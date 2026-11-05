@@ -365,6 +365,12 @@ def _mover_la_llamada(appt, inicio, usuario):
     anterior = appt.start_time
     if anterior == inicio:
         return
+    # No cae encima de otra llamada del closer (con su margen) ni de su Google (ADR-W103).
+    from app.agendas_v2 import manual
+    try:
+        manual.verificar_movida(appt, appt.closer_id, inicio)
+    except manual.AgendaManualError as e:
+        raise ErrorDeAccion(e.mensaje, 'fecha') from None
     appt.start_time = inicio
     antes = anterior.strftime('%d/%m/%Y %H:%M') if anterior else 'sin fecha'
     BookingService.log_lead_event(appt.id, usuario.id, 'reschedule',
@@ -875,6 +881,12 @@ def reasignar(appt, datos, usuario):
     nuevo = closer_activo(datos.get('closer_id'))
     if appt.closer_id == nuevo.id:
         raise ErrorDeAccion('Este lead ya es de ese closer.')
+    # Si la llamada todavía no pasó, no cae encima de otra del closer nuevo (ADR-W103).
+    from app.agendas_v2 import manual
+    try:
+        manual.verificar_movida(appt, nuevo.id, appt.start_time)
+    except manual.AgendaManualError as e:
+        raise ErrorDeAccion(e.mensaje, 'closer_id') from None
 
     from app.services import sale_service
 

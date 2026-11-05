@@ -1112,7 +1112,8 @@ def _setter_de(d, funnel, origen):
 
 def links_de_setter(user):
     """Los links de agendamiento de un setter: uno por evento publicado y activo de cada funnel de
-    setting activo en el que trabaja. [{funnel, evento, ruta}] con la ruta relativa al sitio."""
+    setting activo en el que trabaja. [{funnel, evento, setter, ruta}] con la ruta relativa al sitio.
+    `setter`: su nombre, que es lo que rotula el link (el funnel de setting se llama «Setting» para todos)."""
     d = colecciones()
     codigo = codigo_setter(user.id)
     links = []
@@ -1121,7 +1122,7 @@ def links_de_setter(user):
             continue
         for e in d['eventos']:
             if e.get('funnel') == f['id'] and e.get('activo') is not False and version_publicada(e):
-                links.append({'funnel': f['nombre'], 'evento': e['nombre'],
+                links.append({'funnel': f['nombre'], 'evento': e['nombre'], 'setter': user.username,
                               'ruta': f'/agendas-v2/agenda/{f["slug"]}/{e["slug"]}?o={codigo}'})
     return links
 

@@ -645,9 +645,17 @@ def manage_db_agendas():
         if not id:
             return jsonify({"error": "Falta el id de la agenda"}), 400
         a = Appointment.query.get_or_404(id)
+        if 'start_time' in data:
+            inicio = datetime.fromisoformat(data['start_time'].replace('Z', ''))
+            # No cae encima de otra llamada del closer (con su margen) ni de su Google (ADR-W103).
+            from app.agendas_v2 import manual
+            try:
+                manual.verificar_movida(a, a.closer_id, inicio)
+            except manual.AgendaManualError as e:
+                return jsonify({"error": e.mensaje, "codigo": e.codigo}), 409
         if 'status' in data: a.result = data['status']
         if 'origin' in data: a.origin = data['origin']
-        if 'start_time' in data: a.start_time = datetime.fromisoformat(data['start_time'].replace('Z', ''))
+        if 'start_time' in data: a.start_time = inicio
         db.session.commit()
         return jsonify({"message": "Agenda actualizada"}), 200
 

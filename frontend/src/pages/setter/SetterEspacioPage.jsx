@@ -18,7 +18,7 @@ import { REVISAR_DEL_SETTER } from '../comercial/components/tablasSetter';
 import '../comercial/comercial.css';
 import './setterEspacio.css';
 import MisAgendas from './agendas/MisAgendas';
-import MisLinks, { copiar } from './MisLinks';
+import MisLinks, { copiar, rotuloDeLink } from './MisLinks';
 import { marcaDelDock } from './agendas/meses';
 import ReporteDiario from './reporte/ReporteDiario';
 import Historial from './reporte/Historial';
@@ -324,7 +324,7 @@ const cargarMisLinks = async () => {
     return [
         ...deAgendas.map((l) => ({
             id: l.ruta,
-            label: `${l.funnel} · ${l.evento}`,
+            label: rotuloDeLink(l),
             onClick: () => copiar(window.location.origin + l.ruta),
         })),
         ...deEventos.flatMap(g => (g.links || []).map((l) => ({

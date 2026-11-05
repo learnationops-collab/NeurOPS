@@ -397,7 +397,7 @@ describe('SetterEspacioPage · la sesión en el dock', () => {
         // links de los eventos viejos (/book/<slug>): siguen al alcance, en el mismo panel.
         api.get.mockImplementation((ruta) => Promise.resolve({
             data: ruta === '/setter/agendas-links'
-                ? { links: [{ funnel: 'Setting', evento: 'Llamada', ruta: '/agendas-v2/agenda/setting/llamada?o=ana' }] }
+                ? { links: [{ funnel: 'Setting', evento: 'Llamada', setter: 'Ana Setter', ruta: '/agendas-v2/agenda/setting/llamada?o=ana' }] }
                 : ruta === '/setter/booking-link'
                     ? [{ id: 1, name: 'Grupo viejo', links: [{ id: 9, name: 'Evento viejo', url: 'https://x.test/book/viejo' }] }]
                     : { total: 0 },
@@ -407,7 +407,8 @@ describe('SetterEspacioPage · la sesión en el dock', () => {
 
         await act(async () => { fireEvent.click(screen.getByRole('menuitem', { name: 'Mis links de agendamiento' })); });
 
-        expect(screen.getByRole('menuitem', { name: 'Setting · Llamada' })).toBeInTheDocument();
+        // Con el nombre del setter, no el del funnel de setting (que es el mismo para todos).
+        expect(screen.getByRole('menuitem', { name: 'Ana Setter · Llamada' })).toBeInTheDocument();
         expect(screen.getByRole('menuitem', { name: 'Grupo viejo · Evento viejo' })).toBeInTheDocument();
     });
 });

@@ -199,6 +199,22 @@ def get_public_slots():
     all_slots.sort(key=lambda x: x['ts'])
     return jsonify(all_slots), 200
 
+def _libre_para(closer_id, inicio):
+    """Si el closer está libre a esa hora, los ids de sus agendas que ya no están en su Google (no frenan);
+    None si choca. Es el mismo chequeo que la carga manual y el link de Thalamus (manual.verificar_horario,
+    ADR-W103): sus agendas vigentes con su margen y su Google Calendar, con la duración y el margen de su
+    sesión en Team. Antes este link solo rechazaba otra agenda que empezara a la misma hora."""
+    from app.agendas_v2 import manual
+
+    closer = db.session.get(User, closer_id)
+    if closer is None:
+        return None
+    try:
+        return manual.verificar_horario(closer_id, inicio, manual.sesion_del_closer(closer))
+    except manual.AgendaManualError:
+        return None
+
+
 @bp.route('/public/book', methods=['POST'])
 @limitar('book', 30, 10 * 60)
 def book_appointment():
@@ -262,15 +278,22 @@ def book_appointment():
         appt = None
 
         if closer_id:
-            appt = BookingService.create_appointment(client.id, int(closer_id), start_time, origin='Funnel Web', setter_id=setter_id)
+            ignorar = _libre_para(int(closer_id), start_time)
+            if ignorar is not None:
+                appt = BookingService.create_appointment(client.id, int(closer_id), start_time, origin='Funnel Web',
+                                                         setter_id=setter_id, ignorar_ids=ignorar)
         else:
             # Pick any closer that has this slot available and no conflict
             # Use event-assigned closers if defined, fallback to all closers
             target_closers = event.closers if event.closers else User.query.filter_by(role='closer').all()
-            for c in target_closers:
-                appt = BookingService.create_appointment(client.id, c.id, start_time, origin='Funnel Web', setter_id=setter_id)
+            for c_id in [c.id for c in target_closers]:
+                ignorar = _libre_para(c_id, start_time)
+                if ignorar is None:
+                    continue
+                appt = BookingService.create_appointment(client.id, c_id, start_time, origin='Funnel Web',
+                                                         setter_id=setter_id, ignorar_ids=ignorar)
                 if appt:
-                    closer_id = c.id
+                    closer_id = c_id
                     break
             
         if not appt:
