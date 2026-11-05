@@ -141,7 +141,9 @@ def comisiones_del_rango(desde=None, hasta=None):
             "tipo_pago": s.tipo_pago,
             "closer": final_closer,
             "setter": final_setter,
-            "is_excluded_from_payroll": s.is_excluded_from_payroll or False
+            "is_excluded_from_payroll": s.is_excluded_from_payroll or False,
+            # Se paga igual, marcado (ADR-W106): verified | pending (sin comprobante) | unverified.
+            "verificacion": s.transaction_status or 'pending',
         }
         completadas.append((s, sale_data))
         excluida = sale_data["is_excluded_from_payroll"]
@@ -192,6 +194,7 @@ def comisiones_del_rango(desde=None, hasta=None):
             "porcentaje_comision": porcentaje_de(suyas[0]) if len(suyas) == 1 else None,
             "comision_total": round(sum(comision[p] for p in suyas), 2),
             "total_ventas": sum(contadas[p] for p in suyas),
+            "sin_verificar": resumen_sin_verificar(ventas_de[clave]),
         }
         if len(suyas) > 1:
             datos["desglose"] = {CONCEPTOS[grupo]: {
@@ -208,6 +211,13 @@ def comisiones_del_rango(desde=None, hasta=None):
     nomina["totales"] = {"cash_neto": round(cash["neto"], 2), "cash_bruto": round(cash["bruto"], 2),
                          "ventas": cash["ventas"]}
     return nomina
+
+
+def resumen_sin_verificar(filas):
+    """Lo que se paga sin pago verificado (ADR-W106): cuántas ventas y cuánta comisión, sin las excluidas."""
+    pendientes = [f for f in filas if f.get("verificacion") != 'verified' and not f.get("is_excluded_from_payroll")]
+    return {"ventas": len(pendientes), "comision": round(sum(f.get("comision") or 0 for f in pendientes), 2),
+            "no_cuadran": sum(1 for f in pendientes if f.get("verificacion") == 'unverified')}
 
 
 # --- El sueldo base (08/10/2026) ------------------------------------------------------------------

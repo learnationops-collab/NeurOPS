@@ -278,3 +278,7 @@
   - Jean Carlo no podía registrar la venta de Eugenia González: el buscador abría la agenda de triage de Dari («Show up» sin venta, seguimiento sin fecha) y Resultado mostraba el reporte de triage. Ahora quien no es triage no cae en una agenda de triage si el lead tiene otra.
   - Un pago cargado con «Agregar pago» sobre una agenda de triage queda a nombre de quien lo carga, no del triage.
   - La venta de Eugenia (RR parcial, USD 500) se pasó de Dari a Jean Carlo.
+- **5 de Noviembre de 2026 (Cada pago se verifica con su comprobante)** *([comprobantes/](../../app/services/comprobantes/), [comprobantes.py](../../app/api/ficha/comprobantes.py), [ADR-W106](../DECISIONS.md))*:
+  - El closer sube el comprobante del pago (imagen, PDF o CSV) al registrar la venta o después, desde Pagos en la ficha. Learnito lo lee y el pago queda verificado o no, con el motivo.
+  - Diferencias: al subir el CSV de Stripe o Hotmart, lo que coincide queda verificado con el neto de la pasarela.
+  - La nómina paga igual, pero marca lo no verificado; el closer ve el estado en cada pago, en Mis ventas, en el detalle de la venta y en su comisión del mes.

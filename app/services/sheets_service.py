@@ -135,6 +135,8 @@ class SheetsService:
         # para que el frontend pueda encadenar otra llamada sobre este mismo cliente (ej. dar
         # acceso a la Academia) sin tener que resolverlo de nuevo del lado del cliente.
         result_client_id = None
+        # El pago creado: la ficha le cuelga el comprobante (`comprobantes`) con este id.
+        result_pago_id = None
         if tabla == "Ventas_DB":
             try:
                 from app.models.financial import FinancialSale
@@ -237,6 +239,7 @@ class SheetsService:
                 sale.inicio_acceso = inicio_acceso  # tampoco: desde cuándo corre la suscripción que abre
                 db.session.add(sale)
                 db.session.commit()
+                result_pago_id = sale.id
                 logger.info("[SHEETS POST] Venta registrada exitosamente en base de datos local.")
 
                 # La venta de este pago la ubica `sale_service` al guardar; si la abrió este pago,
@@ -321,14 +324,14 @@ class SheetsService:
             response = requests.post(SheetsService.BASE_URL, json=body, timeout=30)
 
             if response.status_code in (200, 201, 302):
-                return {"status": "success", "message": "Venta registrada localmente y en Google Sheets", "warning": inconsistency_warning, "client_id": result_client_id}
+                return {"status": "success", "message": "Venta registrada localmente y en Google Sheets", "warning": inconsistency_warning, "client_id": result_client_id, "pago_id": result_pago_id}
 
             logger.error(f"[SHEETS POST] Error en respuesta: {response.status_code} - {response.text}")
-            return {"status": "success", "message": "Venta registrada localmente, pero falló el envío a Google Sheets.", "warning": inconsistency_warning, "client_id": result_client_id}
+            return {"status": "success", "message": "Venta registrada localmente, pero falló el envío a Google Sheets.", "warning": inconsistency_warning, "client_id": result_client_id, "pago_id": result_pago_id}
 
         except Exception as e:
             logger.error(f"[SHEETS POST] Excepción during POST ({tabla}): {str(e)}")
-            return {"status": "success", "message": "Venta registrada localmente. Google Sheets inaccesible.", "warning": inconsistency_warning, "client_id": result_client_id}
+            return {"status": "success", "message": "Venta registrada localmente. Google Sheets inaccesible.", "warning": inconsistency_warning, "client_id": result_client_id, "pago_id": result_pago_id}
 
     # LT: el low ticket de 100 USD por mes, solo contenido (academy ADR-199).
     PROGRAM_KEYWORDS = {'RR': 'roadmap', 'AL': 'learner', 'SI': 'iniciative', 'LT': 'low ticket'}

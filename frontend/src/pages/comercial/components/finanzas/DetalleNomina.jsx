@@ -1,5 +1,6 @@
 import React from 'react';
 import { dinero } from './comun';
+import { lineaSinVerificar, rotuloVerificacion } from './verificacion';
 
 /**
  * El detalle de ventas de cada persona, solo para el PDF de Payroll (08/10/2026). En pantalla las
@@ -65,7 +66,10 @@ const TablaPersona = ({ persona, datos }) => {
                             return (
                                 <tr key={venta.id} className={excluida ? 'fz-excluida' : undefined}>
                                     <td className="num">{fecha(venta.date)}</td>
-                                    <td className="fz-tachable">{venta.nombre_cliente}</td>
+                                    <td className="fz-tachable">
+                                        {venta.nombre_cliente}
+                                        {rotuloVerificacion(venta) && <small> · {rotuloVerificacion(venta)}</small>}
+                                    </td>
                                     <td>{venta.tipo_pago}</td>
                                     <td>{venta.metodo_pago}</td>
                                     {extra && <td>{extra.de(venta)}</td>}
@@ -81,6 +85,7 @@ const TablaPersona = ({ persona, datos }) => {
                             <td colSpan={extra ? 6 : 5}>
                                 {datos.total_ventas} {datos.total_ventas === 1 ? 'venta suma' : 'ventas suman'}
                                 {excluidas ? ` · ${excluidas} ${excluidas === 1 ? 'excluida' : 'excluidas'}` : ''}
+                                {lineaSinVerificar(datos, dinero) ? ` · ${lineaSinVerificar(datos, dinero)}` : ''}
                             </td>
                             <td className="fz-der num">{dinero(neto)}</td>
                             <td className="fz-der num">{dinero(datos.comision_total)}</td>

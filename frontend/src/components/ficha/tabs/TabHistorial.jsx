@@ -440,7 +440,7 @@ const Seguimientos = ({ seguimientos, agendas, vocabulario, puedeEditar, onAccio
  * Acciones, que declara la venta y dispara lo que una venta implica. Lo de acá corrige el registro
  * —la venta y lo que cuenta la deuda— y nada más.
  */
-const Pagos = ({ pagos, ventas = [], programaDelCliente, vocabulario, puedeEditar, onAccion }) => {
+const Pagos = ({ pagos, ventas = [], programaDelCliente, vocabulario, puedeEditar, agendaId, onAccion }) => {
     const medios = vocabulario?.medios_pago_venta || [];
     const programas = vocabulario?.programas || [];
     const tipos = vocabulario?.tipos_pago_venta || [];
@@ -455,7 +455,10 @@ const Pagos = ({ pagos, ventas = [], programaDelCliente, vocabulario, puedeEdita
                     // Sin el id de su venta no hay a dónde mandar la corrección (datos viejos).
                     puedeEditar={puedeEditar && p.id != null}
                     onCorregir={(cambios) => onAccion?.('corregir_pago', { pago_id: p.id, ...cambios })}
-                    onBorrar={() => onAccion?.('borrar_pago', { pago_id: p.id })} />
+                    onBorrar={() => onAccion?.('borrar_pago', { pago_id: p.id })}
+                    agendaId={agendaId}
+                    onSubirComprobante={(archivo) => onAccion?.('subir_comprobante', { pago_id: p.id, archivo })}
+                    onQuitarComprobante={(id) => onAccion?.('quitar_comprobante', { pago_id: p.id, comprobante_id: id })} />
             )) : <Vacio texto="Todavía no entró ningún pago." />}
             {puedeEditar && (
                 <AgregarPago pagos={pagos} programaDelCliente={programaDelCliente} medios={medios}
@@ -669,7 +672,8 @@ const TabHistorial = ({ ficha, onAccion, puedeEditar = true, seccionAbierta = nu
                         : 'Sin pagos'}>
                     {/* Mismo permiso que el resto del cobro: es la misma ruta de cobrar. */}
                     <Pagos pagos={pagos} ventas={cobro.ventas || []} programaDelCliente={cobro.programa_code}
-                        vocabulario={ficha?.vocabulario} puedeEditar={puedeCobrar} onAccion={onAccion} />
+                        vocabulario={ficha?.vocabulario} puedeEditar={puedeCobrar}
+                        agendaId={ficha?.identidad?.appointment_id} onAccion={onAccion} />
                 </SeccionColapsable>
             </div>
 
