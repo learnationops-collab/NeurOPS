@@ -24,6 +24,7 @@ CATEGORIAS = {
 
 # Probadas contra las 810 notas del Drive de santiago@ (05/11/2026). La primera que coincide gana.
 PALABRAS = (
+    ('sales', re.compile(r'\[plan\]', re.I)),
     ('interview', re.compile(r'entrevista|reclutamiento|hiring|interview', re.I)),
     ('student', re.compile(r'scale session|consultor[ií]a|consulting session|ns session|exam session|tesis|'
                            r'hall of fame|sesi[oó]n privada|acompañamiento', re.I)),
