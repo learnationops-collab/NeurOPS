@@ -137,7 +137,7 @@ def _vencer(motivo):
         'google_desconectado', *avisos_service.destino(['admin']),
         'Notas de Meet desconectadas',
         'Google dejó de aceptar la conexión con el Drive de team@. Hasta que se vuelva a conectar '
-        '(Agendamiento › Configuración › Notas de Meet) no entran notas nuevas.',
+        '(Operaciones › Integraciones) no entran notas nuevas.',
     )
     db.session.commit()
 

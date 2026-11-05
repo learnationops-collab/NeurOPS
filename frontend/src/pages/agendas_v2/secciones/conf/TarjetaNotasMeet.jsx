@@ -1,4 +1,4 @@
-// Notas de Meet (solo admin): Work lee las notas de Gemini del Drive de team@ y las cuelga de cada agenda.
+// Notas de Meet (Operaciones › Integraciones): Work lee las notas de Gemini del Drive de team@ y las cuelga de cada agenda.
 // La cuenta la conecta quien tenga team@, con un link firmado que se genera acá (app/api/notas_meet.py).
 
 import { useEffect, useState } from 'react';

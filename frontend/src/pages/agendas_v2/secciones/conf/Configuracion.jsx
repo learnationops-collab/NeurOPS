@@ -11,7 +11,6 @@ import { ui } from '../../ui/estadoUi';
 import { almacen, useUi } from '../../data/hooks';
 import { DatosCuenta, TarjetaCalendar, TarjetaDisponibilidad, TarjetaWhatsapp } from './cuenta';
 import TabEquipo from './TabEquipo';
-import TarjetaNotasMeet from './TarjetaNotasMeet';
 import TabApariencia from '../../../../temas/TabApariencia';
 import { IconButton, ModalHeader, Segmented } from '../../../../components/standard';
 import { useEnPantalla } from '../../../../components/ui/useEnPantalla';
@@ -63,7 +62,6 @@ export default function Configuracion() {
     const [visAbierto, setVisAbierto] = useState(false);
     const [volver] = useState(() => document.activeElement);
     const tab = conf && TABS.some(t => t[0] === conf.tab) ? conf.tab : 'datos';
-    const esAdmin = ['admin', 'operator'].includes(user?.role);
 
     const cerrar = () => {
         almacen.flush();
@@ -76,7 +74,7 @@ export default function Configuracion() {
 
     let cuerpo;
     if (tab === 'disponibilidad') cuerpo = <TarjetaDisponibilidad />;
-    else if (tab === 'integraciones') cuerpo = <><TarjetaCalendar volver="agendamiento" /><TarjetaWhatsapp />{esAdmin && <TarjetaNotasMeet />}</>;
+    else if (tab === 'integraciones') cuerpo = <><TarjetaCalendar volver="agendamiento" /><TarjetaWhatsapp /></>;
     else if (tab === 'equipo') cuerpo = <TabEquipo />;
     else if (tab === 'apariencia') cuerpo = <TabApariencia />;
     else cuerpo = <DatosCuenta user={user} />;
