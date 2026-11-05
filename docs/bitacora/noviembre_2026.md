@@ -274,3 +274,7 @@
   - Cada nota tiene categoría: venta, sesión con estudiante, reunión del equipo, entrevista u otra. Work la pone solo y la tarjeta «Categorías de las reuniones» la cambia por reunión recurrente, para todas sus notas y las que vengan (migración `8c3e1f5a7b92`).
   - Se entienden los títulos de 2025 y las horas en «CST», y los calendarios de grupo ya no cuentan como invitados.
   - La API de la Academia filtra por categoría, serie y cuenta, y puede cambiar la categoría de una serie o de una nota.
+- **5 de Noviembre de 2026 (El closer ya no cae en la agenda de triage al buscar un lead)** *([closer_followup_service.py](../../app/services/closer_followup_service.py), [ficha_pagos_service.py](../../app/services/ficha_pagos_service.py), [ADR-W105](../DECISIONS.md))*:
+  - Jean Carlo no podía registrar la venta de Eugenia González: el buscador abría la agenda de triage de Dari («Show up» sin venta, seguimiento sin fecha) y Resultado mostraba el reporte de triage. Ahora quien no es triage no cae en una agenda de triage si el lead tiene otra.
+  - Un pago cargado con «Agregar pago» sobre una agenda de triage queda a nombre de quien lo carga, no del triage.
+  - La venta de Eugenia (RR parcial, USD 500) se pasó de Dari a Jean Carlo.

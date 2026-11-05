@@ -845,3 +845,11 @@
   - El parseo entiende el formato de título de 2025 («Notas de Gemini: X, fecha»), la zona por sigla («CST», de la cuenta de Mario) y saca de los invitados los calendarios de grupo (`@group.calendar.google.com`).
 - **Qué se pierde:** las palabras del título son una heurística: una serie nueva con un nombre raro cae en «otra» o en «equipo» hasta que alguien la categoriza. Las reglas viven en la integración, no en una tabla: no tienen historial de quién las cambió.
 - **Consecuencias:** migración `8c3e1f5a7b92` (`account_email`, `series`, `category`, `category_manual`; las notas que ya estaban quedan con la cuenta que había). `GET /notas/estado` cambia de forma: los datos de cada cuenta van en `cuentas` (la Academia todavía no lo consumía). `sincronizar.reprocesar()` recalcula fecha, serie, invitados y categoría de lo guardado sin ir a Google.
+
+## ADR-W105: El buscador del closer no abre la agenda de triage, y un pago sobre ella no es del triage
+
+- **Fecha:** 2026-11-05 · **Subsistema:** Ficha del lead (buscador del mazo, Pagos del historial) · **Estado:** implementado.
+- **Contexto:** Jean Carlo no pudo registrar la venta de Eugenia González desde su agenda. El buscador (`GET /closer/leads/<id>/stage`) elige el seguimiento pendiente con la fecha más vieja, y la agenda de triage de Dari («Show up» sin venta) contaba como seguimiento «tomada» sin fecha, así que salía primera. La ficha abría esa agenda, Resultado mostraba el reporte de triage, que un closer no puede usar, y la venta terminó cargada por «Agregar pago» del historial a nombre de Dari, porque ese camino atribuye el pago al closer de la agenda.
+- **Decisión:** `get_client_lead_stage(con_triage=...)` deja afuera las agendas de triage para quien no tiene el rol triage, salvo que el lead no tenga otra. `ficha_pagos_service.crear` atribuye a quien lo carga un pago cargado sobre una agenda de triage. La venta de Eugenia se pasó a mano a Jean Carlo.
+- **Qué se pierde:** nada para el closer. Un usuario con el rol triage sigue viendo sus agendas de triage desde el buscador.
+- **Consecuencias:** ningún otro camino de la ficha cambia. Si alguien abre a propósito la agenda de triage desde otro lado, Resultado sigue mostrando el reporte de triage.

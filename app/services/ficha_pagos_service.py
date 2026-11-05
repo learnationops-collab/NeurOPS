@@ -218,7 +218,9 @@ def crear(appt, datos, usuario):
     sale_id = _venta_elegida(datos.get('sale_id'), appt.client.id, codigo)
 
     cliente = appt.client
-    vendedor = appt.closer.email if appt.closer else usuario.email
+    # El triage no cobra: un pago cargado sobre su agenda es de quien lo carga, no suyo.
+    from app.services.triage_service import es_de_triage
+    vendedor = appt.closer.email if appt.closer and not es_de_triage(appt) else usuario.email
     # El pago es de la persona del cliente; su mail es el de pago si tiene uno distinto, si no el
     # principal (docs/plan_personas.md).
     from app.services import person_service
