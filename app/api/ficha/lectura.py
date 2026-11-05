@@ -237,6 +237,32 @@ def estado_venta(appt_id):
     return jsonify(estado), 200
 
 
+@bp.route('/notas-meet', methods=['GET'])
+def notas_meet():
+    """`GET /api/ficha/notas-meet?appointment_id=<id>` o `?client_id=<id>`: las notas de Gemini de las
+    reuniones del lead (app/services/notas_meet/), la más nueva primero. Mismo permiso que la bitácora."""
+    from sqlalchemy import or_
+
+    from app.models import Appointment, Client, MeetingNote
+
+    appointment_id, client_id = _entero('appointment_id'), _entero('client_id')
+    if not appointment_id and not client_id:
+        return jsonify({'message': 'Falta appointment_id o client_id'}), 400
+    appt = db.session.get(Appointment, appointment_id) if appointment_id else None
+    client = appt.client if appt else (db.session.get(Client, client_id) if client_id else None)
+    if not client or not puede_abrir(current_user, appointment_id=appointment_id, client_id=client_id):
+        return jsonify({'message': 'Lead no encontrado'}), 404
+    agendas = [a.id for a in Appointment.query.filter_by(client_id=client.id).with_entities(Appointment.id)]
+    filtros = [MeetingNote.appointment_id.in_(agendas)] if agendas else []
+    if client.person_uuid:
+        filtros.append(MeetingNote.person_uuid == client.person_uuid)
+    if not filtros:
+        return jsonify({'notas': []}), 200
+    notas = (MeetingNote.query.filter(or_(*filtros))
+             .order_by(MeetingNote.meeting_at.desc().nullslast()).limit(50).all())
+    return jsonify({'notas': [n.to_dict(con_contenido=True) for n in notas]}), 200
+
+
 @bp.route('/vocabulario', methods=['GET'])
 def vocabulario():
     """Los vocabularios sueltos, sin un lead.

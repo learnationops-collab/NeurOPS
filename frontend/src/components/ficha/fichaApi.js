@@ -38,6 +38,12 @@ export const obtenerComentariosAcademia = ({ appointmentId = null, clientId = nu
     return api.get('/ficha/comentarios-academia', { params, signal, timeout: 60000 }).then(r => r.data);
 };
 
+/** Las notas de Gemini de las reuniones de Meet con el lead (`GET /ficha/notas-meet`), para Reuniones. */
+export const obtenerNotasMeet = ({ appointmentId = null, clientId = null, signal } = {}) => {
+    const params = appointmentId != null ? { appointment_id: appointmentId } : { client_id: clientId };
+    return api.get('/ficha/notas-meet', { params, signal, timeout: 60000 }).then(r => r.data);
+};
+
 /** Avance, seguimiento del equipo y uso del alumno (`GET /ficha/seguimiento-academia`), para Fulfillment. */
 export const obtenerSeguimientoAcademia = ({ appointmentId = null, clientId = null, signal } = {}) => {
     const params = appointmentId != null ? { appointment_id: appointmentId } : { client_id: clientId };

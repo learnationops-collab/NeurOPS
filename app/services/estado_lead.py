@@ -18,7 +18,7 @@ from app.services.lead_cobro_service import UMBRAL_DEUDA
 # Identificadores de pestaña, en el orden en que se muestran. El frontend obedece este orden.
 # 'ful' (Fulfillment: cómo le va al alumno en la Academia) va pegada a 'acciones' porque las dos
 # son post-venta: una cobra y la otra entrega.
-PESTANAS = ('conf', 'resultado', 'acciones', 'ful', 'hist', 'bita', 'form', 'com')
+PESTANAS = ('conf', 'resultado', 'acciones', 'ful', 'hist', 'bita', 'meet', 'form', 'com')
 
 # Estados de `derivar_estado` que significan "la llamada todavía no ocurrió".
 _PRE_CALL = ('por_confirmar', 'confirmada')
@@ -136,6 +136,8 @@ def resolver_estado(estado_agenda=None, etapa_confirmacion=None, tiene_venta=Fal
         'hist': True,
         # Bitácora: todo lo del lead por tramos, de la conversación a la Academia (23/10/2026).
         'bita': True,
+        # Reuniones: las notas de Gemini de sus sesiones de Meet (app/services/notas_meet/, 04/11/2026).
+        'meet': True,
         'form': True,
         'com': True,
     }
