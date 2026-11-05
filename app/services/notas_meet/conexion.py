@@ -75,22 +75,25 @@ def _firmador():
     return URLSafeTimedSerializer(current_app.config['SECRET_KEY'], salt=SAL)
 
 
-def link_para_conectar():
-    firma = _firmador().dumps({'t': int(time.time())})
-    return request.host_url.rstrip('/') + '/google/notas/conectar/' + firma
+def link_para_conectar(academia=None):
+    """`academia`: ruta de la Academia a la que se vuelve después de conectar (si no, una página de Work)."""
+    datos = {'t': int(time.time())}
+    if academia:
+        datos['a'] = academia
+    return request.host_url.rstrip('/') + '/google/notas/conectar/' + _firmador().dumps(datos)
 
 
 def leer_firma(firma):
-    """None si la firma es válida y no se usó; si no, el motivo para mostrar."""
+    """(motivo, datos): motivo None si la firma es válida y no se usó; si no, el texto para mostrar."""
     from itsdangerous import BadSignature
 
     try:
         datos = _firmador().loads(firma, max_age=VIGENCIA_LINK_S)
     except BadSignature:  # también la vencida
-        return 'El link para conectar venció. Pedí uno nuevo.'
+        return 'El link para conectar venció. Pedí uno nuevo.', {}
     if (_config().get('conectada_ts') or 0) >= datos.get('t', 0):
-        return 'Este link ya se usó. Pedí uno nuevo.'
-    return None
+        return 'Este link ya se usó. Pedí uno nuevo.', datos
+    return None, datos
 
 
 # --- Token ----------------------------------------------------------------------------------------

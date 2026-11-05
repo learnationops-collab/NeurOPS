@@ -49,6 +49,7 @@ class MeetingNote(ConPersona, db.Model):
             'recording_url': self.recording_url,
             'doc_url': self.doc_url,
             'summary': self.summary,
+            'calendar_event_id': self.calendar_event_id,
             'appointment_id': self.appointment_id,
             'person_uuid': self.person_uuid,
         }

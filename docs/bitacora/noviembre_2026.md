@@ -267,3 +267,5 @@
   - Operaciones suma la sección «Integraciones»: «Conectar con Google» conecta el Drive de la cuenta (o un link para que otra persona conecte la suya). Permiso `drive.readonly`: con `drive.meet.readonly` Google lista las notas pero no deja abrirlas.
   - Cada 15 minutos se bajan los Docs «Notas de Gemini» nuevos o editados a la tabla `meeting_notes` (migración `50726ef2bc21`) y se cuelgan de la agenda por el evento de Calendar o por el email del invitado. «Leer ahora» corre en segundo plano.
   - La ficha del lead suma la pestaña «Reuniones» con el resumen, la nota completa y los links al Doc y a la grabación.
+- **5 de Noviembre de 2026 (API de notas de Meet para la Academia)** *([notas_meet.py](../../app/api/external/notas_meet.py), [agendas_v2_api.md](../agendas_v2_api.md), [ADR-W103](../DECISIONS.md))*
+  - `/api/external/academy/notas`, con el token de la Academia: estado de la conexión, link para conectar el Drive que vuelve a la Academia, lectura en segundo plano, lista de notas filtrable por evento de la reserva, email del alumno, título, tipo y fechas, y cada nota con su contenido completo.
