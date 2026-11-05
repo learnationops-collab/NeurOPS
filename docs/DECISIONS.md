@@ -699,3 +699,11 @@
 - **Decisión:** `app/agendas_v2/momentum.py` aplica a la Momentum el criterio de Thalamus: el margen es el de la Sesión de Aceleración del closer, queda guardado en la agenda, y tanto `/horarios` como la reserva miran las agendas vigentes de Work con su margen (las C/D que la Momentum puede tomar no cuentan). La reserva bloquea al closer mientras verifica. `manual.armar_payload` completa la duración y el margen que no hereda con la sesión de quien atiende (`sesion_propia_de`).
 - **Qué se pierde:** el margen que manda la Academia para una Momentum ya no se usa; manda el del closer en Team.
 - **Consecuencias:** rige para las agendas que se creen desde ahora; las que ya están no se recalculan. Los eventos que el closer pone a mano en Google siguen bloqueando solo su duración, sin margen.
+
+## ADR-W089: El buscador del closer no abre la agenda de triage, y un pago sobre ella no es del triage
+
+- **Fecha:** 2026-11-05 · **Subsistema:** Ficha del lead (buscador del mazo, Pagos del historial) · **Estado:** implementado.
+- **Contexto:** Jean Carlo no pudo registrar la venta de Eugenia González desde su agenda. El buscador (`GET /closer/leads/<id>/stage`) elige el seguimiento pendiente con la fecha más vieja, y la agenda de triage de Dari («Show up» sin venta) contaba como seguimiento «tomada» sin fecha, así que salía primera. La ficha abría esa agenda, Resultado mostraba el reporte de triage, que un closer no puede usar, y la venta terminó cargada por «Agregar pago» del historial a nombre de Dari, porque ese camino atribuye el pago al closer de la agenda.
+- **Decisión:** `get_client_lead_stage(con_triage=...)` deja afuera las agendas de triage para quien no tiene el rol triage, salvo que el lead no tenga otra. `ficha_pagos_service.crear` atribuye a quien lo carga un pago cargado sobre una agenda de triage. La venta de Eugenia se pasó a mano a Jean Carlo.
+- **Qué se pierde:** nada para el closer. Un usuario con el rol triage sigue viendo sus agendas de triage desde el buscador.
+- **Consecuencias:** ningún otro camino de la ficha cambia. Si alguien abre a propósito la agenda de triage desde otro lado, Resultado sigue mostrando el reporte de triage.

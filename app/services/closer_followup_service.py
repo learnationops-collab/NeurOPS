@@ -843,7 +843,7 @@ class CloserFollowUpService:
         return CloserFollowUpService._sort_by_urgency(items)
 
     @staticmethod
-    def get_client_lead_stage(client_id):
+    def get_client_lead_stage(client_id, con_triage=True):
         """Clasifica en qué etapa está un lead para que la búsqueda global del closer abra el
         modal correspondiente (en vez del resumen genérico del cliente): 'cerrada' (ya compró
         algo — seguimiento de cobranza/renovación/upsell), 'confirm' (tiene agenda(s) futura(s)
@@ -890,6 +890,11 @@ class CloserFollowUpService:
         appts = Appointment.query.filter_by(client_id=client_id).order_by(Appointment.start_time.desc()).all()
         if not appts:
             return {'stage': 'none', 'client_id': client_id}
+        # Quien no es triage no cae en una agenda de triage si hay otra: su «Show up» sin venta contaba
+        # como seguimiento sin fecha, salía primero y la ficha abría el reporte de triage (ADR-W089).
+        if not con_triage:
+            from app.services.triage_service import es_de_triage
+            appts = [a for a in appts if not es_de_triage(a)] or appts
 
         now = datetime.utcnow()
         pending = [a for a in appts if not a.closer_processed and (a.closer_result or '').strip().lower() in ('', 'pendiente', '2da call')]

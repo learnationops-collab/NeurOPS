@@ -302,7 +302,7 @@ def get_lead_stage(client_id):
         return jsonify({"message": "Forbidden"}), 403
 
     from app.services.closer_followup_service import CloserFollowUpService
-    result = CloserFollowUpService.get_client_lead_stage(client_id)
+    result = CloserFollowUpService.get_client_lead_stage(client_id, con_triage=current_user.tiene_rol('triage'))
     if result is None:
         return jsonify({"message": "Cliente no encontrado"}), 404
     # La persona del cliente (docs/plan_personas.md, Etapa 2a), para que el frontend la identifique.

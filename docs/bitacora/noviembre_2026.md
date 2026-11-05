@@ -191,3 +191,7 @@
   - La Momentum deja después el margen del closer, igual que las del link, y ya no se puede reservar pegada a otra llamada ni encima de una que empezó antes: se mira que los horarios se pisen, no solo que empiecen a la misma hora.
   - Los horarios que se le ofrecen a la Academia para la Momentum ya respetan el margen de las llamadas de Work.
   - La llamada cargada a mano, cuando no sale de otra agenda, dura y deja el margen de la sesión de quien atiende.
+- **5 de Noviembre de 2026 (El closer ya no cae en la agenda de triage al buscar un lead)** *([closer_followup_service.py](../../app/services/closer_followup_service.py), [ficha_pagos_service.py](../../app/services/ficha_pagos_service.py), [ADR-W089](../DECISIONS.md))*:
+  - Jean Carlo no podía registrar la venta de Eugenia González: el buscador abría la agenda de triage de Dari («Show up» sin venta, seguimiento sin fecha) y Resultado mostraba el reporte de triage. Ahora quien no es triage no cae en una agenda de triage si el lead tiene otra.
+  - Un pago cargado con «Agregar pago» sobre una agenda de triage queda a nombre de quien lo carga, no del triage.
+  - La venta de Eugenia (RR parcial, USD 500) se pasó de Dari a Jean Carlo.
