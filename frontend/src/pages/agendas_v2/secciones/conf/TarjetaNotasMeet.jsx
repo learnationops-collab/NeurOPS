@@ -28,9 +28,8 @@ export default function TarjetaNotasMeet() {
     const conectar = () => correr(async () => { window.location.assign((await api.post('/notas-meet/link')).data.link + '?volver=1'); });
     const copiar = () => navigator.clipboard?.writeText(link.link).then(() => setMsg({ aviso: 'Link copiado.' }));
     const leerAhora = () => correr(async () => {
-        const r = await api.post('/notas-meet/sincronizar');
-        setMsg({ aviso: `Listo: ${r.data.guardadas} notas nuevas o actualizadas.` });
-        await leer();
+        await api.post('/notas-meet/sincronizar');
+        setMsg({ aviso: 'Leyendo el Drive. La primera vez tarda unos minutos: volvé a entrar y vas a ver las notas.' });
     });
     const desconectar = () => correr(async () => {
         await api.post('/notas-meet/desconectar');

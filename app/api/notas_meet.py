@@ -5,6 +5,7 @@
 - Las notas de un lead se leen por la ficha (`GET /api/ficha/notas-meet`, app/api/ficha/lectura.py).
 """
 import logging
+import threading
 
 from flask import Blueprint, current_app, jsonify, redirect, request, session
 from flask_login import current_user
@@ -40,15 +41,21 @@ def link():
 @bp.route('/api/notas-meet/sincronizar', methods=['POST'])
 @admin_required
 def sincronizar_ahora():
+    # En segundo plano: la primera lectura baja cientos de Docs y no entra en el tiempo de un request.
     completa = bool((request.get_json(silent=True) or {}).get('completa'))
-    try:
-        resultado = sincronizar.sincronizar(completa=completa)
-    except Exception as e:  # noqa: BLE001  (el detalle queda en ultimo_error y en el log)
-        logger.error(f'[NOTAS_MEET] Falló la lectura manual: {e}')
-        return jsonify({'error': 'Google rechazó la lectura del Drive. Mirá el estado de la conexión.'}), 502
-    if resultado is None:
-        return jsonify({'error': 'team@ no está conectada.'}), 409
-    return jsonify(resultado), 200
+    if not conexion.estado()['conectada']:
+        return jsonify({'error': 'No hay ninguna cuenta conectada.'}), 409
+    app = current_app._get_current_object()
+
+    def correr():
+        with app.app_context():
+            try:
+                logger.info(f'[NOTAS_MEET] Lectura manual: {sincronizar.sincronizar(completa=completa)}')
+            except Exception as e:  # noqa: BLE001  (el detalle queda en ultimo_error y en el log)
+                logger.error(f'[NOTAS_MEET] Falló la lectura manual: {e}')
+
+    threading.Thread(target=correr, daemon=True).start()
+    return jsonify({'en_curso': True}), 202
 
 
 @bp.route('/api/notas-meet/desconectar', methods=['POST'])
