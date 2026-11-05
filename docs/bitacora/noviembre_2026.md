@@ -269,3 +269,8 @@
   - La ficha del lead suma la pestaña «Reuniones» con el resumen, la nota completa y los links al Doc y a la grabación.
 - **5 de Noviembre de 2026 (API de notas de Meet para la Academia)** *([notas_meet.py](../../app/api/external/notas_meet.py), [agendas_v2_api.md](../agendas_v2_api.md), [ADR-W103](../DECISIONS.md))*
   - `/api/external/academy/notas`, con el token de la Academia: estado de la conexión, link para conectar el Drive que vuelve a la Academia, lectura en segundo plano, lista de notas filtrable por evento de la reserva, email del alumno, título, tipo y fechas, y cada nota con su contenido completo.
+- **5 de Noviembre de 2026 (Notas de Meet: varias cuentas y categorías)** *([categorias.py](../../app/services/notas_meet/categorias.py), [conexion.py](../../app/services/notas_meet/conexion.py), [TarjetaCategoriasMeet.jsx](../../frontend/src/pages/agendas_v2/secciones/conf/TarjetaCategoriasMeet.jsx), [ADR-W104](../DECISIONS.md))*
+  - Integraciones conecta varias cuentas de Google a la vez (santiago@, team@, mario@…): «Conectar otra cuenta» deja elegir cuál, cada una muestra sus notas y su última lectura y se desconecta sola. Una reunión que está en dos Drives queda una vez.
+  - Cada nota tiene categoría: venta, sesión con estudiante, reunión del equipo, entrevista u otra. Work la pone solo y la tarjeta «Categorías de las reuniones» la cambia por reunión recurrente, para todas sus notas y las que vengan (migración `8c3e1f5a7b92`).
+  - Se entienden los títulos de 2025 y las horas en «CST», y los calendarios de grupo ya no cuentan como invitados.
+  - La API de la Academia filtra por categoría, serie y cuenta, y puede cambiar la categoría de una serie o de una nota.

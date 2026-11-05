@@ -1,13 +1,34 @@
-// Notas de Meet (Operaciones › Integraciones): Work lee las notas de Gemini del Drive de team@ y las cuelga de cada agenda.
-// La cuenta la conecta quien tenga team@, con un link firmado que se genera acá (app/api/notas_meet.py).
+// Notas de Meet (Operaciones › Integraciones): las cuentas de Google de cuyos Drives Work lee las notas de
+// Gemini. Varias a la vez: se suman con «Conectar cuenta de Google» (Google pregunta cuál) o con un link
+// firmado para quien tenga la otra cuenta (app/api/notas_meet.py).
 
 import { useEffect, useState } from 'react';
 import api from '../../../../services/api';
 import { Icono } from '../../ui/base';
-import { Button, FieldError, InputGroup } from '../../../../components/standard';
+import { Button, ConfirmDelete, FieldError, InputGroup } from '../../../../components/standard';
 import { Estado, Mensajes, Tarjeta } from './cuenta';
 
-const fecha = (iso) => (iso ? new Date(iso).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' }) : 'todavía no');
+const fecha = (iso) => (iso ? new Date(iso).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' }) : 'leyendo por primera vez');
+
+function FilaCuenta({ c, ocupado, onQuitar }) {
+    const [confirmar, setConfirmar] = useState(false);
+    return (
+        <>
+            <div className="cu-fila">
+                <p className="t-sm" style={{ flex: '1 1 220px' }}>
+                    <b>{c.email}</b> · {c.notas} notas · última lectura: {fecha(c.ultima_lectura)}
+                </p>
+                {!c.conectada && <Estado ok={false} no="Vencida: volvé a conectarla" />}
+                <Button variant="danger" disabled={ocupado} onClick={() => setConfirmar(true)}>Desconectar</Button>
+            </div>
+            {confirmar && (
+                <ConfirmDelete name={c.email} confirmLabel="Desconectar" detail="Sus notas quedan; dejan de entrar las nuevas."
+                    onCancel={() => setConfirmar(false)} onConfirm={() => { setConfirmar(false); onQuitar(c.email); }} />
+            )}
+            {c.ultimo_error && <FieldError role="note">Último error de Google ({c.email}): {c.ultimo_error}</FieldError>}
+        </>
+    );
+}
 
 export default function TarjetaNotasMeet() {
     const [st, setSt] = useState(null);
@@ -15,7 +36,7 @@ export default function TarjetaNotasMeet() {
     const [msg, setMsg] = useState({});
     const [ocupado, setOcupado] = useState(false);
 
-    const leer = () => api.get('/notas-meet/estado').then(r => setSt(r.data)).catch(() => setSt({ conectada: false }));
+    const leer = () => api.get('/notas-meet/estado').then(r => setSt(r.data)).catch(() => setSt({ conectada: false, cuentas: [] }));
     useEffect(() => { leer(); }, []);
 
     const correr = async (fn) => {
@@ -24,49 +45,44 @@ export default function TarjetaNotasMeet() {
         try { await fn(); } catch (e) { setMsg({ error: e.response?.data?.error || 'Algo falló. Probá de nuevo.' }); } finally { setOcupado(false); }
     };
     const generar = () => correr(async () => { setLink((await api.post('/notas-meet/link')).data); });
-    // La cuenta de Google de este navegador: va directo y vuelve acá.
+    // Con la sesión de Google de este navegador: Google pregunta qué cuenta y vuelve acá.
     const conectar = () => correr(async () => { window.location.assign((await api.post('/notas-meet/link')).data.link + '?volver=1'); });
     const copiar = () => navigator.clipboard?.writeText(link.link).then(() => setMsg({ aviso: 'Link copiado.' }));
     const leerAhora = () => correr(async () => {
         await api.post('/notas-meet/sincronizar');
-        setMsg({ aviso: 'Leyendo el Drive. La primera vez tarda unos minutos: volvé a entrar y vas a ver las notas.' });
+        setMsg({ aviso: 'Leyendo los Drives. Una cuenta nueva tarda unos minutos la primera vez.' });
     });
-    const desconectar = () => correr(async () => {
-        await api.post('/notas-meet/desconectar');
-        setLink(null);
+    const quitar = (email) => correr(async () => {
+        await api.post('/notas-meet/desconectar', { email });
         await leer();
     });
 
-    const conectada = !!st?.conectada;
+    const cuentas = st?.cuentas || [];
     return (
         <Tarjeta icono="video" titulo="Notas de Meet"
-            texto="Work lee cada 15 minutos las notas que Gemini deja en el Drive de la cuenta conectada y las muestra en la ficha del lead."
-            estado={st && <Estado ok={conectada} si="Conectada" no={st.vencida ? 'Vencida' : 'Sin conectar'} />}>
-            {!st ? <p className="t-sm mut">Cargando…</p> : conectada ? (
-                <div className="cu-fila">
-                    <p className="t-sm" style={{ flex: '1 1 220px' }}>
-                        {st.email || 'Cuenta conectada'} · {st.notas} notas ({st.vinculadas} con su agenda) · última lectura: {fecha(st.ultima_lectura)}
-                    </p>
-                    <Button variant="primary" icon={<Icono n="rotar" />} disabled={ocupado} onClick={leerAhora}>Leer ahora</Button>
-                    <Button variant="danger" disabled={ocupado} onClick={desconectar}>Desconectar</Button>
-                </div>
-            ) : (
-                <div className="cu-fila">
-                    <p className="t-sm mut" style={{ flex: '1 1 220px' }}>
-                        {st.vencida ? 'Google dejó de aceptar la conexión. ' : ''}
-                        Conectá tu cuenta de Google, o generá un link para que otra persona conecte la suya (vence en 24 horas).
-                    </p>
-                    <Button variant="primary" icon={<Icono n="link" />} disabled={ocupado} onClick={conectar}>Conectar con Google</Button>
-                    <Button disabled={ocupado} onClick={generar}>Link para otra cuenta</Button>
+            texto="Work lee cada 15 minutos las notas que Gemini deja en el Drive de cada cuenta conectada. Si la misma reunión está en dos cuentas, queda una sola nota."
+            estado={st && <Estado ok={!!st.conectada} si={`${cuentas.length} ${cuentas.length === 1 ? 'cuenta' : 'cuentas'}`} no="Sin conectar" />}>
+            {!st ? <p className="t-sm mut">Cargando…</p> : (
+                <>
+                    {cuentas.map(c => <FilaCuenta key={c.email} c={c} ocupado={ocupado} onQuitar={quitar} />)}
+                    {cuentas.length > 0 && (
+                        <p className="t-sm mut">{st.notas} notas en total ({st.vinculadas} con su agenda de venta).</p>
+                    )}
+                    <div className="cu-fila">
+                        <Button variant="primary" icon={<Icono n="plus" />} disabled={ocupado} onClick={conectar}>
+                            {cuentas.length ? 'Conectar otra cuenta' : 'Conectar cuenta de Google'}
+                        </Button>
+                        <Button disabled={ocupado} onClick={generar}>Link para otra persona</Button>
+                        {st.conectada && <Button icon={<Icono n="rotar" />} disabled={ocupado} onClick={leerAhora}>Leer ahora</Button>}
+                    </div>
                     {link && (
                         <InputGroup prefix={<Icono n="link" />}>
                             <input readOnly value={link.link} aria-label="Link para conectar otra cuenta" onFocus={e => e.target.select()} />
                             <Button icon={<Icono n="copiar" />} onClick={copiar}>Copiar</Button>
                         </InputGroup>
                     )}
-                </div>
+                </>
             )}
-            {st?.ultimo_error && <FieldError role="note">Último error de Google: {st.ultimo_error}</FieldError>}
             <Mensajes error={msg.error} aviso={msg.aviso} />
         </Tarjeta>
     );

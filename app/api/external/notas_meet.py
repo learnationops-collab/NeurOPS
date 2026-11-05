@@ -16,7 +16,7 @@ from app.api.external import bp
 from app.api.google_calendar import _RUTA_INTERNA
 from app.decorators import require_academy_token
 from app.models import MeetingNote
-from app.services.notas_meet import conexion, sincronizar
+from app.services.notas_meet import categorias, conexion, series, sincronizar
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +71,8 @@ def notas_sincronizar():
 @require_academy_token
 def notas_listar():
     """Filtros (todos opcionales y combinables): `event_id` (el de la reserva), `email` (invitado),
-    `q` (en el título), `tipo` (el `kind`: lo que va antes de «:» en el título del evento), `desde`/`hasta`
+    `q` (en el título), `tipo` (el `kind`: lo que va antes de «:» en el título del evento), `categoria`
+    (sales|student|team|interview|other), `serie`, `cuenta` (de qué Drive salió), `desde`/`hasta`
     (fecha de la reunión), `limite`, `offset`.
     Sin el contenido completo: ese va en GET /notas/<id>."""
     a = request.args
@@ -91,6 +92,12 @@ def notas_listar():
         consulta = consulta.filter(MeetingNote.title.ilike(f"%{a['q'].strip()}%"))
     if a.get('tipo'):
         consulta = consulta.filter(MeetingNote.kind == a['tipo'])
+    if a.get('categoria'):
+        consulta = consulta.filter(MeetingNote.category == a['categoria'])
+    if a.get('serie'):
+        consulta = consulta.filter(MeetingNote.series == a['serie'])
+    if a.get('cuenta'):
+        consulta = consulta.filter(MeetingNote.account_email == a['cuenta'].strip().lower())
     if desde:
         consulta = consulta.filter(MeetingNote.meeting_at >= desde)
     if hasta:
@@ -100,6 +107,39 @@ def notas_listar():
     notas = (consulta.order_by(MeetingNote.meeting_at.desc().nullslast(), MeetingNote.id.desc())
              .offset(offset).limit(limite).all())
     return jsonify({'total': total, 'notas': [n.to_dict() for n in notas]}), 200
+
+
+@bp.route('/notas/series', methods=['GET'])
+@require_academy_token
+def notas_series():
+    return jsonify({'series': series.listar(), 'categorias': categorias.CATEGORIAS}), 200
+
+
+@bp.route('/notas/series', methods=['PUT'])
+@require_academy_token
+def notas_elegir_serie():
+    """`{serie, categoria}`: la categoría de todas las notas de la serie (también las que vengan). null la
+    devuelve a la automática."""
+    d = request.get_json(silent=True) or {}
+    try:
+        cambiadas = series.elegir(d.get('serie'), d.get('categoria'))
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    return jsonify({'ok': True, 'cambiadas': cambiadas}), 200
+
+
+@bp.route('/notas/<int:nota_id>', methods=['PATCH'])
+@require_academy_token
+def notas_elegir_categoria(nota_id):
+    """`{categoria}` para esta nota sola (le gana a la de su serie); null la devuelve a la automática."""
+    nota = MeetingNote.query.get(nota_id)
+    if not nota:
+        return jsonify({'error': 'no_existe'}), 404
+    try:
+        series.elegir_nota(nota, (request.get_json(silent=True) or {}).get('categoria'))
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    return jsonify(nota.to_dict()), 200
 
 
 @bp.route('/notas/<int:nota_id>', methods=['GET'])

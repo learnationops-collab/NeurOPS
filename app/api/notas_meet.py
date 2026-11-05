@@ -1,7 +1,7 @@
-"""Notas de Meet (app/services/notas_meet/): conectar el Drive de team@, su estado y las notas de un lead.
+"""Notas de Meet (app/services/notas_meet/): conectar Drives (varias cuentas), su estado y las categorías.
 
-- /api/notas-meet/*: la configuración, solo admin.
-- /google/notas/conectar/<firma>: el link firmado que abre quien tiene la cuenta de team@ (sin sesión de Work).
+- /api/notas-meet/*: Operaciones › Integraciones (admin u operador).
+- /google/notas/conectar/<firma>: el link firmado que abre quien tiene la cuenta (sin sesión de Work).
 - Las notas de un lead se leen por la ficha (`GET /api/ficha/notas-meet`, app/api/ficha/lectura.py).
 """
 import logging
@@ -13,7 +13,7 @@ from flask_login import current_user
 
 from app.decorators import admin_required
 from app.services.google_service import GoogleService
-from app.services.notas_meet import conexion, sincronizar
+from app.services.notas_meet import categorias, conexion, series, sincronizar
 
 logger = logging.getLogger(__name__)
 
@@ -62,8 +62,28 @@ def sincronizar_ahora():
 @bp.route('/api/notas-meet/desconectar', methods=['POST'])
 @admin_required
 def desconectar():
-    conexion.desconectar()
+    email = (request.get_json(silent=True) or {}).get('email')
+    if not email or not conexion.desconectar(email):
+        return jsonify({'error': 'Esa cuenta no está conectada.'}), 404
     return jsonify({'ok': True}), 200
+
+
+@bp.route('/api/notas-meet/series', methods=['GET'])
+@admin_required
+def listar_series():
+    return jsonify({'series': series.listar(), 'categorias': categorias.CATEGORIAS}), 200
+
+
+@bp.route('/api/notas-meet/series', methods=['PUT'])
+@admin_required
+def elegir_serie():
+    """`{serie, categoria}`; categoria null vuelve a la automática."""
+    d = request.get_json(silent=True) or {}
+    try:
+        cambiadas = series.elegir(d.get('serie'), d.get('categoria'))
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    return jsonify({'ok': True, 'cambiadas': cambiadas}), 200
 
 
 @bp.route('/google/notas/conectar/<firma>', methods=['GET'])
@@ -75,7 +95,8 @@ def conectar(firma):
         return _pagina(motivo, 400)
     redirect_uri = GoogleService.redirect_uri()
     flow = GoogleService.get_flow(redirect_uri, scopes=conexion.SCOPES)
-    auth_url, state = flow.authorization_url(access_type='offline', prompt='consent')
+    # select_account: que Google pregunte la cuenta aunque el navegador ya tenga una (para sumar otra).
+    auth_url, state = flow.authorization_url(access_type='offline', prompt='consent select_account')
     session['google_oauth_state'] = state
     session['google_redirect_uri'] = redirect_uri
     session.pop('google_oauth_proposito', None)
