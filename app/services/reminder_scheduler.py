@@ -147,8 +147,8 @@ def start_scheduler(app):
                 if not soy_lider(CLAVE_DEL_SCHEDULER):
                     return
                 r = sincronizar()
-                if r and r.get('guardadas'):
-                    logger.info(f"[ReminderScheduler] Notas de Meet traídas del Drive de team@: {r}")
+                if r and any(isinstance(v, dict) and v.get('guardadas') for v in r.values()):
+                    logger.info(f"[ReminderScheduler] Notas de Meet traídas de los Drives conectados: {r}")
             except Exception as e:
                 logger.error(f"[ReminderScheduler] Error trayendo las notas de Meet: {e}")
 

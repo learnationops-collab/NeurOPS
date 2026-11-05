@@ -2,6 +2,8 @@
 
 Título: «Sesión diagnóstica: Ana y Dari González.: 2026/11/03 20:08 GMT-03:00 - Notas de Gemini».
 Las reuniones sin evento se titulan «La reunión se inició a las 2026/11/03 23:06 GMT-03:00 - …».
+Las de 2025 venían al revés: «Notas de Gemini: Setters, 2025/05/13 12:27 GMT-03:00». Algunas cuentas
+(la de Mario) ponen la zona por nombre: «… 2026/07/28 11:00 CST - Notas de Gemini».
 El link al evento (`calendar/event?eid=…`) es base64 de «<id del evento> <calendario abreviado>».
 """
 import base64
@@ -9,10 +11,16 @@ import re
 from datetime import datetime, timedelta, timezone
 from urllib.parse import unquote
 
-_TITULO = re.compile(
-    r'^(?P<asunto>.*?)[\s:]*(?P<fecha>\d{4}/\d{2}/\d{2} \d{2}:\d{2}) GMT(?P<zona>[+-]\d{2}:?\d{2})?'
-    r'\s*-\s*(?:Notas de Gemini|Notes by Gemini)\s*$')
+_FECHA = r'(?P<fecha>\d{4}/\d{2}/\d{2} \d{2}:\d{2})(?: (?:GMT(?P<zona>[+-]\d{2}:?\d{2})?|(?P<sigla>[A-Z]{2,5})))?'
+_TITULO = re.compile(r'^(?P<asunto>.*?)[\s:\-,]*' + _FECHA + r'\s*-\s*(?:Notas de Gemini|Notes by Gemini)\s*$')
+_TITULO_VIEJO = re.compile(r'^(?:Notas de Gemini|Notes by Gemini)(?::| de la reunión que inició a las)?\s*'
+                           r'(?P<asunto>.*?)[\s,]*' + _FECHA + r'\s*$')
+# Las siglas que aparecen en los Docs; la que no esté queda en la hora local.
+_SIGLAS = {'CST': '-06:00', 'CDT': '-05:00', 'EST': '-05:00', 'EDT': '-04:00', 'PST': '-08:00',
+           'PDT': '-07:00', 'ART': '-03:00', 'UTC': '+00:00', 'GMT': '+00:00'}
 _SIN_EVENTO = re.compile(r'^(la reunión se inició a las|meeting started)', re.I)
+# Los calendarios y salas que Calendar suma como invitados: no son personas.
+_NO_PERSONA = ('@group.calendar.google.com', '@resource.calendar.google.com')
 _EID = re.compile(r'calendar\.google\.com/calendar/(?:u/\d+/)?(?:r/)?event\?(?:[^)\s]*&)?eid=([A-Za-z0-9_\-%=]+)')
 _EMAIL = re.compile(r'[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}')
 _GRABACION = re.compile(r'\[(?:Grabación|Recording)\]\((https://drive\.google\.com/[^)\s]+)\)')
@@ -23,14 +31,15 @@ _TITULOS_RESUMEN = ('resumen', 'summary')
 
 def titulo(nombre):
     """{asunto, kind, meeting_at (UTC naive)} del nombre del Doc. Lo que no se entiende queda None."""
-    m = _TITULO.match(nombre or '')
+    m = _TITULO.match(nombre or '') or _TITULO_VIEJO.match(nombre or '')
     if not m:
         return {'asunto': None, 'kind': None, 'meeting_at': None}
-    asunto = m.group('asunto').strip(' :.') or None
+    asunto = m.group('asunto').strip(' :.-,') or None
     if asunto and _SIN_EVENTO.match(asunto):
         asunto = None
     kind = asunto.split(':', 1)[0].strip() if asunto and ':' in asunto else None
-    return {'asunto': asunto, 'kind': kind, 'meeting_at': _utc(m.group('fecha'), m.group('zona'))}
+    zona = m.group('zona') or _SIGLAS.get(m.group('sigla') or '')
+    return {'asunto': asunto, 'kind': kind, 'meeting_at': _utc(m.group('fecha'), zona)}
 
 
 def _utc(fecha, zona):
@@ -74,7 +83,7 @@ def invitados(texto, propios=()):
     vistos = []
     for email in _EMAIL.findall(cabecera):
         email = email.lower()
-        if email not in vistos and not any(email.endswith(p) for p in propios):
+        if email not in vistos and not any(email.endswith(p) for p in (*propios, *_NO_PERSONA)):
             vistos.append(email)
     return vistos
 
@@ -82,6 +91,17 @@ def invitados(texto, propios=()):
 def grabacion(texto):
     m = _GRABACION.search(texto or '')
     return m.group(1) if m else None
+
+
+def serie(asunto, kind):
+    """La reunión recurrente a la que pertenece la nota, para categorizar todas juntas: el `kind` («Scale
+    Session») o, si no hay, el asunto sin emojis ni signos sueltos («Educational Team»)."""
+    base = kind or asunto
+    if not base:
+        return None
+    limpio = re.sub(r'[^\w\s&|\[\]().,/+-]', '', base)
+    limpio = re.sub(r'\s+', ' ', limpio).strip(' -|:.,')
+    return limpio[:200] or None
 
 
 def resumen(texto):

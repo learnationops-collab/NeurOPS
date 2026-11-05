@@ -1,8 +1,10 @@
 """Las notas de Gemini de una reunión de Meet, leídas del Drive de team@ (app/services/notas_meet/).
 
-Una fila por Doc «… - Notas de Gemini». Se vincula a la agenda por el evento de Calendar que el Doc trae
+Una fila por Doc «… - Notas de Gemini» (si el mismo Doc está en dos cuentas conectadas, queda una sola,
+de la primera que lo leyó). Se vincula a la agenda por el evento de Calendar que el Doc trae
 en su link (o, si no, por el invitado y la hora) y, por la agenda o por el email del invitado, a la persona.
-Las reuniones internas (fulfillment, grupales) quedan sin agenda ni persona.
+Las reuniones internas (fulfillment, grupales) quedan sin agenda ni persona. La categoría la pone
+app/services/notas_meet/categorias.py.
 """
 from datetime import datetime
 
@@ -30,6 +32,13 @@ class MeetingNote(ConPersona, db.Model):
     # Cómo se vinculó la agenda: 'evento' o 'invitado'.
     link_method = db.Column(db.String(10), nullable=True)
     drive_modified_at = db.Column(db.DateTime, nullable=True)
+    # La cuenta conectada de cuyo Drive salió.
+    account_email = db.Column(db.String(255), nullable=True, index=True)
+    # La reunión recurrente («Educational Team», «Scale Session»): su categoría se elige una vez para todas.
+    series = db.Column(db.String(200), nullable=True, index=True)
+    # sales | student | team | interview | other (categorias.CATEGORIAS).
+    category = db.Column(db.String(20), nullable=True, index=True)
+    category_manual = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -44,6 +53,10 @@ class MeetingNote(ConPersona, db.Model):
             'id': self.id,
             'title': self.title,
             'kind': self.kind,
+            'series': self.series,
+            'category': self.category,
+            'category_manual': bool(self.category_manual),
+            'account_email': self.account_email,
             'meeting_at': self.meeting_at.isoformat() + 'Z' if self.meeting_at else None,
             'guests': self.guests or [],
             'recording_url': self.recording_url,

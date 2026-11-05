@@ -1,8 +1,10 @@
-"""Trae al día las notas de Gemini del Drive de team@ y las cuelga de su agenda y de su persona.
+"""Trae al día las notas de Gemini de los Drives conectados, las cuelga de su agenda y de su persona y les
+pone categoría (categorias.py).
 
-Corre cada MINUTOS desde el scheduler (app/services/reminder_scheduler.py) y a mano desde la configuración.
-Lee los Docs modificados desde la última vuelta (menos MARGEN: Gemini sigue editando el Doc un rato
-después de la reunión); la primera vez, o con `completa`, todos. Un Doc que no cambió no se vuelve a bajar.
+Corre cada MINUTOS desde el scheduler (app/services/reminder_scheduler.py) y a mano desde Integraciones.
+De cada cuenta lee los Docs modificados desde su última vuelta (menos MARGEN: Gemini sigue editando el Doc
+un rato después de la reunión); la primera vez, o con `completa`, todos. Un Doc que no cambió no se vuelve a
+bajar, y uno que ya entró por otra cuenta tampoco.
 """
 import logging
 from datetime import datetime, timedelta
@@ -13,7 +15,7 @@ from sqlalchemy import func, or_
 
 from app import db
 from app.models import Appointment, Client, MeetingNote, User
-from app.services.notas_meet import conexion, parseo
+from app.services.notas_meet import categorias, conexion, parseo
 
 logger = logging.getLogger(__name__)
 
@@ -94,34 +96,56 @@ def _vincular(nota):
             nota.person_uuid = cliente.person_uuid
 
 
-def _guardar(archivo, texto, equipo):
-    nota = MeetingNote.query.filter_by(drive_file_id=archivo['id']).first()
-    if nota is None:
-        nota = MeetingNote(drive_file_id=archivo['id'])
-        db.session.add(nota)
-    t = parseo.titulo(archivo['name'])
-    nota.title = (t['asunto'] or archivo['name'])[:500]
-    nota.kind, nota.meeting_at = t['kind'], t['meeting_at']
+def _completar(nota, nombre, texto, equipo, reglas):
+    """Todo lo que sale del nombre y del texto del Doc, la agenda, la persona y la categoría."""
+    t = parseo.titulo(nombre)
+    nota.title = (t['asunto'] or nombre)[:500]
+    nota.kind, nota.meeting_at = t['kind'], t['meeting_at'] or nota.meeting_at
+    nota.series = parseo.serie(t['asunto'], t['kind'])
     nota.calendar_event_id, nota.calendar_ref = parseo.evento(texto)
     nota.guests = [e for e in parseo.invitados(texto, DOMINIOS_PROPIOS) if e not in equipo]
+    _vincular(nota)
+    categorias.clasificar(nota, reglas)
+
+
+def _guardar(archivo, texto, equipo, reglas, email):
+    nota = MeetingNote.query.filter_by(drive_file_id=archivo['id']).first()
+    if nota is None:
+        nota = MeetingNote(drive_file_id=archivo['id'], account_email=email)
+        db.session.add(nota)
     nota.recording_url = parseo.grabacion(texto)
     nota.summary = parseo.resumen(texto)
     nota.content = parseo.contenido(texto)
     nota.drive_modified_at = _fecha_drive(archivo['modifiedTime'])
-    _vincular(nota)
+    _completar(nota, archivo['name'], texto, equipo, reglas)
     return nota
 
 
 def sincronizar(completa=False):
-    """{leidas, guardadas, errores} o None si team@ no está conectada."""
-    creds = conexion.credenciales()
-    if not creds:
+    """{email: {leidas, guardadas, errores} o el error} de cada cuenta conectada, más `revinculadas`.
+    None si no hay ninguna conectada."""
+    emails = [e for e, c in conexion.cuentas().items() if conexion._conectada(c)]
+    if not emails:
         return None
+    resultado = {}
+    for email in emails:
+        try:
+            resultado[email] = _sincronizar_cuenta(email, completa)
+        except HttpError as e:  # una cuenta rota no frena a las demás
+            resultado[email] = f'error: {e}'
+    resultado['revinculadas'] = revincular()
+    return resultado
+
+
+def _sincronizar_cuenta(email, completa):
+    creds = conexion.credenciales(email)
+    if not creds:
+        return 'vencida'
     inicio = datetime.utcnow()
-    ultima = conexion.estado().get('ultima_lectura')
+    ultima = conexion.cuentas().get(email, {}).get('ultima_lectura')
     desde = None if completa or not ultima else _fecha_drive(ultima) - MARGEN
     drive = build('drive', 'v3', credentials=creds, cache_discovery=False)
-    equipo = _emails_del_equipo()
+    equipo, reglas = _emails_del_equipo(), conexion.reglas()
     leidas = guardadas = errores = 0
     try:
         for archivo in _listar(drive, desde):
@@ -130,20 +154,46 @@ def sincronizar(completa=False):
             if previa and previa.drive_modified_at and previa.drive_modified_at >= _fecha_drive(archivo['modifiedTime']):
                 continue
             try:
-                _guardar(archivo, _exportar(drive, archivo['id']), equipo)
+                _guardar(archivo, _exportar(drive, archivo['id']), equipo, reglas, email)
                 db.session.commit()
                 guardadas += 1
             except Exception as e:  # noqa: BLE001  (un Doc roto no frena al resto)
                 db.session.rollback()
                 errores += 1
-                logger.error(f"[NOTAS_MEET] No se pudo guardar el Doc {archivo['id']}: {e}")
+                logger.error(f"[NOTAS_MEET] No se pudo guardar el Doc {archivo['id']} ({email}): {e}")
     except HttpError as e:
-        logger.error(f'[NOTAS_MEET] Google rechazó la lectura del Drive: {e}')
-        conexion.anotar_error(str(e))
+        logger.error(f'[NOTAS_MEET] Google rechazó la lectura del Drive de {email}: {e}')
+        conexion.anotar_error(email, str(e))
         raise
-    conexion.marcar_lectura(inicio)
-    vinculadas = revincular()
-    return {'leidas': leidas, 'guardadas': guardadas, 'errores': errores, 'revinculadas': vinculadas}
+    conexion.marcar_lectura(email, inicio)
+    return {'leidas': leidas, 'guardadas': guardadas, 'errores': errores}
+
+
+def reclasificar(serie=None):
+    """Vuelve a categorizar (todas o las de una serie) después de cambiar una regla. Devuelve cuántas cambiaron."""
+    reglas = conexion.reglas()
+    consulta = MeetingNote.query.filter_by(category_manual=False)
+    if serie:
+        consulta = consulta.filter_by(series=serie)
+    n = sum(categorias.clasificar(nota, reglas) for nota in consulta.all())
+    db.session.commit()
+    return n
+
+
+def reprocesar():
+    """Vuelve a sacar fecha, serie, invitados, agenda y categoría de lo que ya está guardado, sin ir a Google.
+    Para cuando cambia el parseo. El título original solo se tiene si no se había entendido (quedó entero)."""
+    equipo, reglas = _emails_del_equipo(), conexion.reglas()
+    n = 0
+    for nota in MeetingNote.query.all():
+        entero = not nota.meeting_at or parseo.titulo(nota.title)['meeting_at']
+        nombre = nota.title if entero else f"{nota.title}: {nota.meeting_at:%Y/%m/%d %H:%M} GMT+00:00 - Notas de Gemini"
+        _completar(nota, nombre, nota.content or '', equipo, reglas)
+        n += 1
+        if n % 200 == 0:
+            db.session.commit()
+    db.session.commit()
+    return n
 
 
 def revincular(dias=REVINCULAR_DIAS):
@@ -156,6 +206,8 @@ def revincular(dias=REVINCULAR_DIAS):
                                              MeetingNote.person_uuid.is_(None))).all():
         antes = (nota.appointment_id, nota.person_uuid)
         _vincular(nota)
-        n += antes != (nota.appointment_id, nota.person_uuid)
+        if antes != (nota.appointment_id, nota.person_uuid):
+            categorias.clasificar(nota, conexion.reglas())
+            n += 1
     db.session.commit()
     return n

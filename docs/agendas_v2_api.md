@@ -140,18 +140,22 @@ Thalamus como **servicio** para las sesiones del programa que agenda el equipo d
 
 ## API de notas de Meet para la Academia: `/api/external/academy/notas`
 
-Las notas que Gemini deja en el Drive conectado (`app/services/notas_meet/`, ADR-W102), consultadas desde la Academia (código en `app/api/external/notas_meet.py`). Work las baja cada 15 minutos a `meeting_notes`; esta API solo lee de ahí. Hay una sola cuenta conectada para todo Work (la de team@, la misma que el equipo usa para sus calendarios); conectarla desde la Academia reemplaza la que haya.
+Las notas que Gemini deja en el Drive conectado (`app/services/notas_meet/`, ADR-W102), consultadas desde la Academia (código en `app/api/external/notas_meet.py`). Work las baja cada 15 minutos a `meeting_notes` desde **todas las cuentas conectadas** (santiago@, team@, mario@…; ADR-W104). Conectar una cuenta nueva la suma; conectar una que ya estaba la reemplaza. Si la misma reunión está en dos Drives, queda una sola nota.
 
 **Auth:** `Authorization: Bearer ACADEMY_INBOUND_API_TOKEN` (el mismo de `/agenda`).
 
 | Método y ruta | Cuerpo / query | Respuesta |
 | :--- | :--- | :--- |
-| `GET /notas/estado` | – | `{conectada, vencida, email, conectada_en, ultima_lectura, ultimo_error, notas, vinculadas}` |
+| `GET /notas/estado` | – | `{conectada, notas, vinculadas, cuentas: [{email, conectada, vencida, conectada_en, ultima_lectura, ultimo_error, notas}]}` |
 | `POST /notas/conectar` | `{volver}` (ruta de la Academia) | `{url}` |
 | `POST /notas/sincronizar` | – | 202 `{en_curso}` (409 `no_conectada`) |
-| `GET /notas` | `event_id`, `email`, `q`, `tipo`, `desde`, `hasta`, `limite` (≤100, 50), `offset` | `{total, notas: [nota]}` |
+| `GET /notas` | `event_id`, `email`, `q`, `tipo`, `categoria`, `serie`, `cuenta`, `desde`, `hasta`, `limite` (≤100, 50), `offset` | `{total, notas: [nota]}` |
 | `GET /notas/<id>` | – | nota + `content` |
+| `PATCH /notas/<id>` | `{categoria}` (null: vuelve a la automática) | nota |
+| `GET /notas/series` | – | `{series: [{serie, notas, ultima, categorias: {cat: n}, regla}], categorias: {clave: nombre}}` |
+| `PUT /notas/series` | `{serie, categoria}` (null: vuelve a la automática) | `{ok, cambiadas}` |
 
-- **Nota:** `{id, title, kind, meeting_at (ISO UTC), guests: [emails], recording_url, doc_url, summary, calendar_event_id, appointment_id, person_uuid}`. `guests` son los invitados de afuera: sin los emails de usuarios de Work ni los de `@thelearnation.com` / `@neurocogniciones.com`. `kind` es lo que va antes de «:» en el título del evento. `content` es la nota entera en markdown, sin el pie de Google.
+- **Nota:** `{id, title, kind, series, category, category_manual, account_email, meeting_at (ISO UTC), guests: [emails], recording_url, doc_url, summary, calendar_event_id, appointment_id, person_uuid}`. `guests` son los invitados de afuera: sin los emails de usuarios de Work ni los de `@thelearnation.com` / `@neurocogniciones.com`. `kind` es lo que va antes de «:» en el título del evento. `content` es la nota entera en markdown, sin el pie de Google.
+- **Categorías:** `sales` (venta), `student` (sesión con estudiante), `team` (reunión del equipo), `interview` (entrevista), `other`. Work las pone solo (`app/services/notas_meet/categorias.py`). `series` es la reunión recurrente («Educational Team», «Scale Session»): elegir la categoría de una serie (`PUT /notas/series`) vale para todas sus notas y las que vengan; `PATCH /notas/<id>` cambia una sola y le gana a la de su serie. Lo mismo se hace desde Work en Operaciones › Integraciones. Sesiones con estudiantes: `GET /notas?categoria=student`; reuniones del equipo: `categoria=team`.
 - **Cruzar con una sesión:** `GET /notas?event_id=<event_id>`, con el que devolvió `POST /agenda/reservas` o `/agenda/reuniones` (en una serie, el de cada ocurrencia lleva `_<fecha>` al final). Por alumno: `email`. `desde`/`hasta` aceptan `YYYY-MM-DD` (incluye el día entero) o ISO con hora.
 - **Conectar:** la URL es `/google/notas/conectar/<firma>`, vence a las 24 h y sirve una vez. Pide `drive.readonly` (con `drive.meet.readonly` Google lista las notas de Gemini pero no deja exportarlas). Vuelve a `ACADEMY_URL` + `volver?notas=ok|cancelado|error`. Después de conectar, la primera lectura baja todo en segundo plano.
