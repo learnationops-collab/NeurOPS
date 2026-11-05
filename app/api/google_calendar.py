@@ -201,9 +201,10 @@ def callback():
     conectar = session.pop('google_conectar', None)
     if conectar:
         return _vuelta_a_la_academia(conectar, state, redirect_uri)
-    if session.pop('google_notas', None):
+    notas = session.pop('google_notas', None)
+    if notas:
         from app.api.notas_meet import vuelta_de_google
-        return vuelta_de_google(state, redirect_uri)
+        return vuelta_de_google(state, redirect_uri, volver=notas == 'volver')
     if not current_user.is_authenticated:
         return 'Tu sesión se cerró mientras conectabas Google. Volvé a entrar y probá de nuevo.', 401
     if request.args.get('error'):  # el usuario canceló en la pantalla de Google

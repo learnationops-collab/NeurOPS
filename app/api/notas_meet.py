@@ -7,6 +7,7 @@
 import logging
 
 from flask import Blueprint, current_app, jsonify, redirect, request, session
+from flask_login import current_user
 
 from app.decorators import admin_required
 from app.services.google_service import GoogleService
@@ -69,11 +70,15 @@ def conectar(firma):
     session['google_redirect_uri'] = redirect_uri
     session.pop('google_oauth_proposito', None)
     session.pop('google_conectar', None)
-    session['google_notas'] = True
+    # Desde el botón «Conectar con Google» (sesión de Work abierta) se vuelve a Integraciones.
+    session['google_notas'] = 'volver' if request.args.get('volver') and current_user.is_authenticated else True
     return redirect(auth_url)
 
 
-def vuelta_de_google(state, redirect_uri):
+VOLVER = '/ops/dashboard?step=integraciones'
+
+
+def vuelta_de_google(state, redirect_uri, volver=False):
     """La vuelta de /google/callback cuando lo que se conectaba era el Drive de team@."""
     if request.args.get('error'):
         return _pagina('Se canceló la conexión. Podés volver a abrir el link para intentarlo de nuevo.')
@@ -86,4 +91,6 @@ def vuelta_de_google(state, redirect_uri):
         current_app.logger.warning(f'[NOTAS_MEET] No se pudo conectar el Drive: {e}')
         return _pagina('No se pudo conectar. Revisá que hayas aceptado el permiso de Drive y probá de nuevo.', 400)
     email = conexion.guardar_credenciales(flow.credentials)
+    if volver:
+        return redirect(VOLVER)
     return _pagina(f'Listo: Work ya lee las notas de Meet de {email or "esa cuenta"}. Podés cerrar esta pestaña.')

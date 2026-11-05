@@ -24,6 +24,8 @@ export default function TarjetaNotasMeet() {
         try { await fn(); } catch (e) { setMsg({ error: e.response?.data?.error || 'Algo falló. Probá de nuevo.' }); } finally { setOcupado(false); }
     };
     const generar = () => correr(async () => { setLink((await api.post('/notas-meet/link')).data); });
+    // La cuenta de Google de este navegador: va directo y vuelve acá.
+    const conectar = () => correr(async () => { window.location.assign((await api.post('/notas-meet/link')).data.link + '?volver=1'); });
     const copiar = () => navigator.clipboard?.writeText(link.link).then(() => setMsg({ aviso: 'Link copiado.' }));
     const leerAhora = () => correr(async () => {
         const r = await api.post('/notas-meet/sincronizar');
@@ -39,7 +41,7 @@ export default function TarjetaNotasMeet() {
     const conectada = !!st?.conectada;
     return (
         <Tarjeta icono="video" titulo="Notas de Meet"
-            texto="Las notas que Gemini toma en cada sesión quedan en el Drive de team@. Work las lee cada 15 minutos y las muestra en la ficha del lead."
+            texto="Work lee cada 15 minutos las notas que Gemini deja en el Drive de la cuenta conectada y las muestra en la ficha del lead."
             estado={st && <Estado ok={conectada} si="Conectada" no={st.vencida ? 'Vencida' : 'Sin conectar'} />}>
             {!st ? <p className="t-sm mut">Cargando…</p> : conectada ? (
                 <div className="cu-fila">
@@ -53,12 +55,13 @@ export default function TarjetaNotasMeet() {
                 <div className="cu-fila">
                     <p className="t-sm mut" style={{ flex: '1 1 220px' }}>
                         {st.vencida ? 'Google dejó de aceptar la conexión. ' : ''}
-                        Generá un link y pasáselo a quien tenga la cuenta team@: lo abre, elige team@ y acepta. Vence en 24 horas.
+                        Conectá tu cuenta de Google, o generá un link para que otra persona conecte la suya (vence en 24 horas).
                     </p>
-                    <Button variant="primary" icon={<Icono n="link" />} disabled={ocupado} onClick={generar}>Generar link</Button>
+                    <Button variant="primary" icon={<Icono n="link" />} disabled={ocupado} onClick={conectar}>Conectar con Google</Button>
+                    <Button disabled={ocupado} onClick={generar}>Link para otra cuenta</Button>
                     {link && (
                         <InputGroup prefix={<Icono n="link" />}>
-                            <input readOnly value={link.link} aria-label="Link para conectar team@" onFocus={e => e.target.select()} />
+                            <input readOnly value={link.link} aria-label="Link para conectar otra cuenta" onFocus={e => e.target.select()} />
                             <Button icon={<Icono n="copiar" />} onClick={copiar}>Copiar</Button>
                         </InputGroup>
                     )}
