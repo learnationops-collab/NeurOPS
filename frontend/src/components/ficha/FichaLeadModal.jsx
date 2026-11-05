@@ -13,6 +13,7 @@ import TabConfirmacion from './tabs/TabConfirmacion';
 import TabFulfillment from './tabs/TabFulfillment';
 import TabHistorial from './tabs/TabHistorial';
 import TabBitacora from './tabs/TabBitacora';
+import TabReuniones from './tabs/TabReuniones';
 import TabFormulario from './tabs/TabFormulario';
 import TabComunicacion from './tabs/TabComunicacion';
 import ResultadoTriage from './tabs/ResultadoTriage';
@@ -371,6 +372,7 @@ const FichaLeadModal = ({
             case 'ful': return <TabFulfillment {...props} />;
             case 'hist': return <TabHistorial {...props} seccionAbierta={seccionInicial} />;
             case 'bita': return <TabBitacora {...props} />;
+            case 'meet': return <TabReuniones {...props} />;
             case 'form': return <TabFormulario {...props} />;
             case 'com': return <TabComunicacion {...props} />;
             default: return null;

@@ -128,14 +128,44 @@ def start_scheduler(app):
             except Exception as e:
                 logger.error(f"[ReminderScheduler] Error avisando leads que no terminaron de agendar: {e}")
 
+    def _origenes():
+        with app.app_context():
+            from app.services import origen_service
+            try:
+                if not soy_lider(CLAVE_DEL_SCHEDULER):
+                    return
+                r = origen_service.fijar_pendientes()
+                if r['agendas'] or r['ventas']:
+                    logger.info(f"[ReminderScheduler] Origen guardado de agendas y ventas: {r}")
+            except Exception as e:
+                logger.error(f"[ReminderScheduler] Error guardando el origen de agendas y ventas: {e}")
+
+    def _notas_meet():
+        with app.app_context():
+            from app.services.notas_meet.sincronizar import sincronizar
+            try:
+                if not soy_lider(CLAVE_DEL_SCHEDULER):
+                    return
+                r = sincronizar()
+                if r and r.get('guardadas'):
+                    logger.info(f"[ReminderScheduler] Notas de Meet traídas del Drive de team@: {r}")
+            except Exception as e:
+                logger.error(f"[ReminderScheduler] Error trayendo las notas de Meet: {e}")
+
     from datetime import datetime, timedelta
 
     from app.agendas_v2.movidas import MINUTOS as MOVIDAS_MINUTOS
+    from app.services.origen_service import MINUTOS as ORIGENES_MINUTOS
+    from app.services.notas_meet.sincronizar import MINUTOS as NOTAS_MEET_MINUTOS
     _scheduler = BackgroundScheduler(daemon=True)
+    _scheduler.add_job(_origenes, 'interval', minutes=ORIGENES_MINUTOS,
+                       id='origenes', next_run_time=datetime.now() + timedelta(minutes=6))
     _scheduler.add_job(_movidas, 'interval', minutes=MOVIDAS_MINUTOS,
                        id='agendas_movidas_en_google', next_run_time=datetime.now() + timedelta(minutes=4))
     _scheduler.add_job(_abandonos, 'interval', minutes=1,
                        id='agendas_abandonos', next_run_time=datetime.now() + timedelta(minutes=2))
+    _scheduler.add_job(_notas_meet, 'interval', minutes=NOTAS_MEET_MINUTOS,
+                       id='notas_meet', next_run_time=datetime.now() + timedelta(minutes=5))
     _scheduler.add_job(_senas, 'interval', minutes=AVANCE_INTERVAL_MINUTES,
                        id='senas_sin_seguir', next_run_time=datetime.now() + timedelta(minutes=3))
     if con_avisos:

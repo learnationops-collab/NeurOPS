@@ -1,0 +1,10 @@
+/* Pestaña Reuniones: las notas de Gemini de cada sesión de Meet. */
+.fi-meet { display: grid; gap: var(--s3); padding-top: var(--s3); }
+.fi-meet-links { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s3); }
+.fi-meet-links a { display: inline-flex; align-items: center; gap: 4px; }
+.fi-meet-resumen { white-space: pre-line; }
+.fi-meet-todo > summary { cursor: pointer; }
+.fi-meet-md { display: grid; gap: var(--s2); padding-top: var(--s3); }
+.fi-meet-md h4 { margin-top: var(--s3); }
+.fi-meet-md ul { margin: 0; padding-left: 1.2em; display: grid; gap: var(--s1); }
+.fi-meet-md hr { border: 0; border-top: 1px solid var(--line, rgba(127, 127, 127, .25)); margin: var(--s1) 0; }

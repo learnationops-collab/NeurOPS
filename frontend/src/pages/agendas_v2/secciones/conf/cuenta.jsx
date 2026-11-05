@@ -14,14 +14,14 @@ import { EditorSesiones } from '../team/Sesiones';
 import FotoCuenta from './FotoCuenta';
 import { Button, Chip, FieldError, InputGroup, Panel, Switch } from '../../../../components/standard';
 
-function Estado({ ok, si, no }) {
+export function Estado({ ok, si, no }) {
     return ok
         ? <Chip color="var(--success)" icon={<Icono n="check" />}>{si}</Chip>
         : <Chip color="var(--warning)" icon={<Icono n="alerta" />}>{no}</Chip>;
 }
 
 // Tarjeta de un ajuste: ícono, título, para qué sirve y su estado.
-function Tarjeta({ icono, titulo, texto, estado, children }) {
+export function Tarjeta({ icono, titulo, texto, estado, children }) {
     return (
         <Panel as="section" className="cu-tarjeta">
             <header className="cu-cab">
@@ -34,7 +34,7 @@ function Tarjeta({ icono, titulo, texto, estado, children }) {
     );
 }
 
-function Mensajes({ error, aviso }) {
+export function Mensajes({ error, aviso }) {
     return (
         <>
             {error && <FieldError>{error}</FieldError>}

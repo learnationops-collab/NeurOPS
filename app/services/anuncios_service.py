@@ -42,7 +42,8 @@ from app.models.marketing import clave_de_palabra as clave_de  # noqa: F401  (lo
 from app.services.comercial_service import ComercialService, clientes_de_ventas, no_es_marcador, venta_completada
 from app.services import calificacion_service, fuentes_service, marketing_formulas as formulas
 from app.services.commission_service import cash_neto
-from app.services.cruce_conversaciones import Cruce
+from app.services.anuncios_atribuidor import _Atribuidor  # noqa: F401  (otros lo importan desde acá)
+from app.services.origen_service import clave_guardada, claves_guardadas
 from app.services.identity_service import normalize_ig
 # Partido en módulos (regla de las 500 líneas): se re-exporta todo para que `anuncios_service.X` siga igual.
 from app.services import anuncios_atribucion_service
@@ -65,40 +66,6 @@ def _meta_ads():
 def _limites(desde, hasta):
     return datetime.combine(desde, time.min), datetime.combine(hasta, time.max)
 
-
-class _Atribuidor:
-    """Le busca a una agenda o a una venta la palabra clave por la que llegó la persona: la de su
-    última interacción de ManyChat hasta `tope` (la reunión o el pago).
-
-    La conversación se busca con `cruce_conversaciones.Cruce`: primero la de la misma persona
-    (`person_uuid`, plan_personas), después el Instagram exacto, el parecido y el nombre (Kerwin, 15/10/2026: el setter escribe mal el Instagram —«julio_garca» por «juliocgarca»—
-    o pone el nombre en su lugar; 30 de 175 agendas pendientes en staging se resolvían así)."""
-
-    def __init__(self, igs, clave_de_anuncio, nombres=(), personas=()):
-        self.cruce = Cruce(igs, nombres, personas)
-        self.interacciones = _interacciones(self.cruce.lead_ids(), clave_de_anuncio)
-
-    def _ultima(self, lead_ids, tope):
-        mejor, primera = None, None
-        for lead_id in lead_ids:
-            for creada, clave, *_ in self.interacciones.get(lead_id, ()):
-                if not clave:
-                    continue
-                if primera is None or creada < primera[0]:
-                    primera = (creada, clave)
-                if (tope is None or creada <= tope) and (mejor is None or creada > mejor[0]):
-                    mejor = (creada, clave)
-        # Si hasta `tope` no había ninguna, la primera que la persona tuvo después: es la misma persona, y
-        # una seña pagada antes de escribir la palabra clave es de ese mismo anuncio (04/11/2026).
-        elegida = mejor or primera
-        return elegida[1] if elegida else None
-
-    def clave(self, ig, tope, nombre=None, persona=None):
-        for lead_ids in self.cruce.candidatos(ig, nombre, persona):
-            clave = self._ultima(lead_ids, tope)
-            if clave:
-                return clave
-        return None
 
 
 # --- El tablero --------------------------------------------------------------------------------
@@ -167,7 +134,8 @@ def _agendas(desde_dt, hasta_dt, clave_de_anuncio, atribucion=None):
     ManyChat: así se corrige una palabra clave equivocada."""
     filas = db.session.query(Appointment.id, Appointment.client_id, Appointment.start_time,
                              Appointment.created_at, Client.instagram, Client.full_name,
-                             Appointment.anuncio_id, Appointment.person_uuid) \
+                             Appointment.anuncio_id, Appointment.person_uuid, Appointment.keyword,
+                             Appointment.atribucion) \
         .outerjoin(Client, Client.id == Appointment.client_id) \
         .filter(Appointment.created_at >= desde_dt, Appointment.created_at <= hasta_dt, no_es_marcador()).all()
     atribuidor = _Atribuidor({normalize_ig(f.instagram) for f in filas}, clave_de_anuncio,
@@ -178,6 +146,7 @@ def _agendas(desde_dt, hasta_dt, clave_de_anuncio, atribucion=None):
     vistas, sin_atribuir = set(), 0
     for f in sorted(filas, key=lambda f: (f.created_at, f.id)):
         clave = clave_de_anuncio.get(f.anuncio_id) if f.anuncio_id else None
+        clave = clave or clave_guardada(f.atribucion, f.keyword, None, clave_de_anuncio)  # el origen guardado (ADR-W101)
         clave = clave or atribuidor.clave(normalize_ig(f.instagram), f.start_time, f.full_name, f.person_uuid)
         if not clave:
             sin_atribuir += 1
@@ -235,7 +204,9 @@ def claves_de_cobros(cobros, clave_de_anuncio=None, cliente_de=None):
             if clave_de_anuncio.get(ad_id):
                 de_la_agenda[cid] = clave_de_anuncio[ad_id]
 
-    claves = {cobro.id: elegida.get(cliente_de.get(cobro.id)) or next(
+    # La palabra clave guardada en la agenda de su venta (ADR-W101) manda sobre la regla, que queda de respaldo.
+    guardada = claves_guardadas({c.sale_id for c in cobros}, clave_de_anuncio)
+    claves = {cobro.id: elegida.get(cliente_de.get(cobro.id)) or guardada.get(cobro.sale_id) or next(
                   (c for ig in igs_de(cobro) or [None] if (c := atribuidor.clave(ig, cobro.date, nombre_de(cobro), cobro.person_uuid))), None)
               or de_la_agenda.get(cliente_de.get(cobro.id))
               for cobro in cobros}
