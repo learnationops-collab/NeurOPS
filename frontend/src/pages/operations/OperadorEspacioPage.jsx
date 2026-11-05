@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { ClipboardCheck, Database, Ghost, GraduationCap, LifeBuoy, Table2, Users } from 'lucide-react';
+import { ClipboardCheck, Database, Ghost, GraduationCap, LifeBuoy, Plug, Table2, Users } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePlaybook } from '../../contexts/PlaybookContext';
 import { revertImpersonation } from '../../utils/impersonation';
@@ -18,6 +18,7 @@ import DashboardComercial from '../comercial/DashboardComercial';
 import PanelesConservados from '../../components/ui/PanelesConservados';
 import FormsManagementPage from '../shared/FormsManagementPage';
 import CourseEditorPage from './course-editor/CourseEditorPage';
+import PanelIntegraciones from './PanelIntegraciones';
 
 /**
  * El espacio del operador: todo su trabajo en una sola pantalla, con un solo dock.
@@ -54,6 +55,8 @@ const SECCIONES = [
     // «Administración», que se retiró. El triage sigue con su propia pantalla (/triage/formularios).
     { id: 'formularios', label: 'Formularios', Icono: ClipboardCheck },
     { id: 'curso', label: 'Curso', Icono: GraduationCap },
+    // Las cuentas externas de Work (las notas de Meet, 05/11/2026).
+    { id: 'integraciones', label: 'Integraciones', Icono: Plug },
 ];
 
 /** Las secciones que se juntaron en Registros: un link viejo cae en su tabla. */
@@ -168,6 +171,7 @@ const OperadorEspacioPage = () => {
                         // aportaba): necesita su propia superficie.
                         formularios: () => <div className="operador-oscuro"><FormsManagementPage /></div>,
                         curso: () => <CourseEditorPage />,
+                        integraciones: () => <PanelIntegraciones />,
                     }} />
                 {/* El mismo Revisar de la dirección, con su período y sus tablas; trae su propia isla `.dc-shell`. */}
                 {seccion === 'registros' && <DashboardComercial embebido seccionFija="revisar" />}
