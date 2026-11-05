@@ -22,9 +22,11 @@ from app.services.google_service import ERRORES_DE_TOKEN
 logger = logging.getLogger(__name__)
 
 CLAVE = 'notas_meet'
-# Solo lo que creó Meet (notas, transcripciones, grabaciones); el email, para mostrar qué cuenta quedó.
+# drive.readonly y no drive.meet.readonly: las notas las escribe Gemini, no Meet, y con ese scope Google
+# las lista pero no deja exportarlas (appNotAuthorizedToFile, probado el 05/11/2026). El email, para
+# mostrar qué cuenta quedó.
 SCOPES = ['openid', 'https://www.googleapis.com/auth/userinfo.email',
-          'https://www.googleapis.com/auth/drive.meet.readonly']
+          'https://www.googleapis.com/auth/drive.readonly']
 SAL = 'notas-meet'
 VIGENCIA_LINK_S = 24 * 3600
 
@@ -100,7 +102,8 @@ def guardar_credenciales(creds):
         email = info.get('email')
     except Exception as e:  # noqa: BLE001  (sin el email la conexión sirve igual)
         logger.warning(f'[NOTAS_MEET] No se pudo leer el email de la cuenta conectada: {e}')
-    _guardar(token_json=creds.to_json(), email=email, vencida_en=None, ultimo_error=None,
+    # Sin ultima_lectura: la cuenta nueva se lee entera la primera vez.
+    _guardar(token_json=creds.to_json(), email=email, vencida_en=None, ultimo_error=None, ultima_lectura=None,
              conectada_en=datetime.utcnow().isoformat() + 'Z', conectada_ts=int(time.time()))
     return email
 
