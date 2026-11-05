@@ -1,6 +1,6 @@
 """Notas de Meet: tabla `meeting_notes` (las notas de Gemini leídas del Drive de team@)
 
-Revision ID: d5f7a9c1e3b6
+Revision ID: 50726ef2bc21
 Revises: f2b4d6e8a1c3
 Create Date: 2026-11-04
 
@@ -11,7 +11,7 @@ from alembic import op
 import sqlalchemy as sa
 
 
-revision = 'd5f7a9c1e3b6'
+revision = '50726ef2bc21'
 down_revision = 'f2b4d6e8a1c3'
 branch_labels = None
 depends_on = None
