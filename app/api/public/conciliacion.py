@@ -58,16 +58,8 @@ def subir_csv():
         return jsonify({'error': str(e), 'codigo': e.codigo, 'columnas': e.columnas[:40],
                         'archivo': archivo.filename}), 400
     resumen = conciliacion.guardar_carga(leido, archivo.filename, current_user)
-    # El cierre de mes de la verificación de pagos (ADR-W106): lo que coincide queda verificado con
-    # su neto real y lo que no aparece, «No cuadra». Si falla, el CSV igual quedó guardado.
-    if resumen.get('carga'):
-        from app.services.comprobantes import conciliacion as cierre
-        try:
-            resumen['verificacion'] = cierre.aplicar_carga(leido, resumen)
-        except Exception as e:  # noqa: BLE001
-            db.session.rollback()
-            current_app.logger.error(f'[CONCILIACION] No se aplicó la verificación de pagos: {e}')
-            resumen['verificacion'] = None
+    # El CSV es evidencia para auditar, no verifica pagos solo (ADR-W107): eso lo hace Learnito con el
+    # comprobante. `comprobantes.conciliacion.aplicar` queda para cuando se defina el emparejamiento.
     return jsonify(resumen), 201
 
 

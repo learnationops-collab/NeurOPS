@@ -282,3 +282,6 @@
   - El closer sube el comprobante del pago (imagen, PDF o CSV) al registrar la venta o después, desde Pagos en la ficha. Learnito lo lee y el pago queda verificado o no, con el motivo.
   - Diferencias: al subir el CSV de Stripe o Hotmart, lo que coincide queda verificado con el neto de la pasarela.
   - La nómina paga igual, pero marca lo no verificado; el closer ve el estado en cada pago, en Mis ventas, en el detalle de la venta y en su comisión del mes.
+- **5 de Noviembre de 2026 (El CSV de la pasarela queda como evidencia, no verifica solo)** *([conciliacion.py](../../app/api/public/conciliacion.py), [ADR-W107](../DECISIONS.md))*:
+  - Subir un CSV en Diferencias guarda sus filas y no cambia el estado de ningún pago: verificar es de Learnito, con el comprobante.
+  - Se cargaron los CSV de Stripe y Hotmart de enero a octubre (los del cruce del 26/10) y 370 de los 377 pagos verificados quedaron atados a su archivo y su fila; 18 pendientes que coincidían exacto quedaron verificados.

@@ -1,7 +1,9 @@
 """El cierre de mes de la verificación (ADR-W106): el CSV de la pasarela confirma o desmiente los pagos.
 
-Corre al subir un CSV en Finanzas › Diferencias, sobre el rango de fechas que trae el archivo, con el
-mismo emparejamiento de la pestaña (`conciliacion_service.conciliar`):
+HOY NO CORRE (ADR-W107): el CSV que se sube en Finanzas › Diferencias se guarda como evidencia para
+auditar, y quien verifica es Learnito con el comprobante. Se retoma cuando se defina el emparejamiento
+(este trata los montos de Hotmart en moneda local como dólares y la comisión de Stripe como diferencia).
+Aplicaba, sobre el rango de fechas del archivo, el emparejamiento de la pestaña (`conciliacion_service.conciliar`):
 
   · coincide       → el pago queda verificado (si no lo estaba) y su neto pasa a ser el de la pasarela:
                      es el neto real, el que manda para comisiones;
