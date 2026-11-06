@@ -1487,6 +1487,9 @@ def get_closer_deck():
         query = query.filter_by(closer_id=current_user.id)
 
     appointments = query.order_by(Appointment.start_time.asc()).all()
+    if step == 'confirmations':
+        from app.services.agendas_vigentes import una_por_persona
+        appointments = una_por_persona(appointments, datetime.utcnow())
 
     # Las notas nuevas avisan por `avisos_service` (docs/plan_notas_avisos_settings.md): mismo punto.
     from app.services.avisos_service import personas_con_notas_sin_leer
@@ -1588,7 +1591,13 @@ def get_closer_deck_counts():
     query_confirmations = Appointment.query.filter(
         Appointment.start_time >= start_utc,
         Appointment.closer_processed == False,
-        or_(Appointment.closer_result == 'Pendiente', Appointment.closer_result == None, Appointment.closer_result == '')
+        or_(Appointment.closer_result == 'Pendiente', Appointment.closer_result == None, Appointment.closer_result == ''),
+        # Las mismas que el tablero (`/deck?step=confirmations`): sin las canceladas ni reagendadas.
+        or_(
+            Appointment.result.notin_(['Cancelado', 'Cancelada', 'Reagendado', 'Reagendada']),
+            Appointment.result == None,
+            Appointment.result == ''
+        )
     )
     
     query_calls = Appointment.query.filter(
@@ -1622,7 +1631,11 @@ def get_closer_deck_counts():
     # Reportado por el usuario (28/ago/2026): "dice cero de nueve, pero tiene una agenda
     # inconfirmada [ya confirmada]... debería decir uno de nueve".
     from sqlalchemy import func
-    confirmations_done = query_confirmations.filter(func.lower(Appointment.result) == 'confirmado').count()
+    # Lo mismo que muestra el tablero: una tarjeta por persona (agendas_vigentes.una_por_persona).
+    from app.services.agendas_vigentes import una_por_persona
+    pool_confirmaciones = una_por_persona(query_confirmations.order_by(Appointment.start_time.asc()).all(),
+                                          datetime.utcnow())
+    confirmations_done = sum(1 for a in pool_confirmaciones if (a.result or '').strip().lower() == 'confirmado')
 
     # "Reportadas" del día seleccionado: mismo criterio que ya usa el Kanban de "② Reportar"
     # para su columna "Reportadas" (`/deck?step=agendas` + `closer_processed`) — acotado a ESE
@@ -1651,7 +1664,7 @@ def get_closer_deck_counts():
     seguimientos_count = sum(len(v) for v in seg_grouped.values())
 
     return jsonify({
-        "confirmations": query_confirmations.count(),
+        "confirmations": len(pool_confirmaciones),
         "confirmations_done": confirmations_done,
         "calls": query_calls.count(),
         "calls_done": calls_done,
