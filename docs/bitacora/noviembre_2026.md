@@ -290,3 +290,6 @@
   - Ahora, al reagendar desde Triage o Closing, corregir la fecha o el closer, reasignar o editar en el Tablero de Agendas, el evento se mueve a la hora nueva (o se recrea en el calendario del nuevo dueño) y al lead le llega el cambio. Una llamada que ya pasó no se toca.
   - La revisión cada 15 minutos ya no devuelve a la hora vieja una agenda que Work reagendó.
   - El tablero de confirmación muestra a cada persona una vez (la próxima llamada) y el «X de Y confirmados» cuenta lo mismo. La agenda anterior queda en el historial del lead.
+- **6 de Noviembre de 2026 (Un no show descartado sigue contando como no show)** *([ficha_acciones_service.py](../../app/services/ficha_acciones_service.py), [ADR-W109](../DECISIONS.md))*:
+  - En Resultado, «No show» y después «Descartar» guardaba la agenda como «Lead perdido» y el no show no se contaba en el show up ni en el close rate. Ahora queda como No show y el lead sale igual de los seguimientos, con una nota del descarte.
+  - En producción hay 13 agendas que hicieron ese recorrido desde el 08/10 (entre ellas la 7075, del 04/11); se corrigen solo con el visto bueno de Kerwin.
