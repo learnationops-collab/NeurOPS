@@ -307,3 +307,5 @@
   - En Resultado, descartar a un lead que se presentó y no compró (o que canceló) ya no guarda «Lead perdido»: queda como Show up (o Cancelado) y el lead sale de los seguimientos con una nota del descarte. Así cuenta en el show up.
 - **6 de Noviembre de 2026 (Agendas por palabra clave, por persona y por fecha de alta)** *([anuncios_service.py](../../app/services/anuncios_service.py), [ADR-W114](../DECISIONS.md))*:
   - El tablero de Marketing contaba como agenda nueva una cita que se volvía a crear al reagendar, y sumaba a Setting personas del Workshop. Ahora cuenta a cada persona que se agendó por Setting una vez, el día en que se agendó: el 05/11 pasa de 6 a 3 y los últimos 30 días de 149 a 128.
+- **6 de Noviembre de 2026 (Una reagenda no suma agenda del setter)** *([comercial_agendas.py](../../app/services/comercial_agendas.py), [ADR-W115](../DECISIONS.md))*:
+  - Las agendas generadas de los setters ya no cuentan otra vez a una persona que se reagenda: cuenta el día en que se agendó por primera vez. El 05/11 Setting pasa de 5 a 3 (Gerardo y Osvaldo eran del 04/11).
