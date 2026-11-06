@@ -297,3 +297,6 @@
   - Se corrigieron en producción las 13 agendas de No show + Descartar que figuraban como «Lead perdido»: ahora cuentan como No show, cada una con una nota que guarda el valor anterior.
   - En Revisar y en Mis agendas del setter, un no show que el closer descartó (no respondió ningún mensaje) lleva la etiqueta «Descartado» al lado del estado.
   - En Analizar › Estados, el grupo No show dice cuántos fueron descartados y cuántos no.
+- **6 de Noviembre de 2026 (Proyección con tendencia en el Simulador)** *([proyeccion_tendencia.py](../../app/services/proyeccion_tendencia.py), [Tendencia.jsx](../../frontend/src/pages/comercial/components/simulador/Tendencia.jsx), [ADR-W111](../DECISIONS.md))*:
+  - En Simulador › Proyección, el panel «Cómo cierra el mes» proyecta seis cifras (agendas generadas, asistieron, agendas y entrantes de anuncios, ventas y cash de ventas nuevas) con lo que ya pasó, un rango y el mes anterior.
+  - Cada cifra usa el modelo que menos se equivocó en una prueba hacia atrás con 4 semanas reales: ritmo de 30 o 60 días, regresión con día de la semana, con tendencia o el combinado. El botón «Cálculo actual» muestra el ritmo de siempre para comparar.

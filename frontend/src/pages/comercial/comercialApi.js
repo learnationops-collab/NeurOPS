@@ -49,6 +49,10 @@ export const getVariabilidad = (filtros) =>
 export const getSimuladorBase = () =>
     api.get('/comercial/simulador/base').then(r => r.data);
 
+/** Proyección del resto del mes con el modelo que menos se equivocó en la prueba hacia atrás. */
+export const getSimuladorTendencia = () =>
+    api.get('/comercial/simulador/tendencia').then(r => r.data);
+
 /**
  * Las filas de una tabla de Revisar. `operar` (10/10/2026) la pide para operar los registros: en
  * Ventas, el backend suma las no completadas, el estado y la agenda de cada venta. Solo le hace caso

@@ -3,6 +3,7 @@ import { PanelCab, Segmented, fmt } from '../Shared';
 import BandaModo from './BandaModo';
 import Resultados, { DatosCentrales } from './Resultados';
 import GraficoMensual from './GraficoMensual';
+import Tendencia from './Tendencia';
 import { DIAS, HORIZONTES } from './useSimulador';
 
 const LINEAS = [{ key: 'mes', label: 'Ritmo del mes' }, { key: 'dias', label: 'Últimos N días' }];
@@ -49,6 +50,7 @@ const Proyeccion = ({ s }) => {
     return (
         <div className="sim">
             <BandaModo modo="proyeccion" />
+            <Tendencia />
             <section className="panel">
                 <PanelCab titulo="Punto de partida"
                     tip="Con qué ritmo se proyecta y hasta cuándo. La Simulación parte de lo mismo.">
