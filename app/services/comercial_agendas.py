@@ -2,7 +2,7 @@
 de un setter) y sus totales. `ComercialService` hereda de acá; ver `comercial_service.py`.
 """
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from sqlalchemy.orm import joinedload
 
 from app import db
@@ -16,6 +16,9 @@ from app.services.comercial_vocabulario import (
     pct,
 )
 from app.services.ventas_previas import con_venta_posterior
+
+# Una agenda nueva del setter: la persona no tenía otra en estos días (ADR-W115).
+REAGENDA_DIAS = 60
 
 # Estados de la fila que piden motivo (`motivo_estado_service`), por la clave del chip.
 _MOTIVO_DE_POST = {'no_show': 'no_show', 'reagendo': 'reagendado', 'cancelo': 'cancelado'}
@@ -215,7 +218,33 @@ class ComercialAgendasMixin:
         """
         from app.services.comercial_service import ComercialService
         filas = ComercialService.agendas(start, end, setter_id=setter_id, basis=basis, de_setters=True)
+        if basis == 'creacion':
+            filas = ComercialService._sin_reagendas(filas, ComercialService._limites(start, end)[0])
         return ComercialService._una_por_persona(filas)
+
+    @staticmethod
+    def _sin_reagendas(filas, desde, dias=REAGENDA_DIAS):
+        """Saca a las personas que ya tenían agenda antes del período (ADR-W115, 06/11/2026).
+
+        Reagendar crea otra cita, y a veces la sincronización también: con la fecha de creación, esa
+        persona sumaba otra vez el día de la reagenda y dejaba de contar el día en que se agendó (el
+        05/11, Gerardo y Osvaldo, agendados el 04/11). Una persona cuenta el día de su PRIMERA agenda:
+        la cita o la fila del tablero de agendas más vieja de los `dias` anteriores. Más atrás ya es
+        otra vuelta del lead y cuenta como agenda nueva."""
+        from app.models import FinancialAgenda
+        uuids = {f['person_uuid'] for f in filas if f.get('person_uuid')}
+        if not uuids:
+            return filas
+        limite = desde - timedelta(days=dias)
+        antes = set()
+        for tanda in [list(uuids)[i:i + 500] for i in range(0, len(uuids), 500)]:
+            antes |= {u for (u,) in db.session.query(Appointment.person_uuid).filter(
+                Appointment.person_uuid.in_(tanda), Appointment.created_at >= limite,
+                Appointment.created_at < desde, no_es_marcador())}
+            antes |= {u for (u,) in db.session.query(FinancialAgenda.person_uuid).filter(
+                FinancialAgenda.person_uuid.in_(tanda), FinancialAgenda.created_at >= limite,
+                FinancialAgenda.created_at < desde, FinancialAgenda.duplicada_de_id.is_(None))}
+        return [f for f in filas if f.get('person_uuid') not in antes]
 
     @staticmethod
     def _una_por_persona(filas):
