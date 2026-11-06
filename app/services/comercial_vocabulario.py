@@ -171,6 +171,10 @@ ASISTIO = ('asistio', 'venta', 'sena', 'seguimiento', 'segunda_llamada')
 PRESENTO = ('venta', 'sena')
 # Post call con resultado de asistencia: el denominador del show up (ver el docstring del módulo).
 REALIZADAS = ASISTIO + ('no_show',)
+# La base del show up (regla de Mario, 06/11/2026, ADR-W112): una agenda termina en uno de cuatro destinos
+# —se presentó, canceló, reprogramó o no show— y el show up es los presentes sobre las cuatro, por agenda.
+# Descalificadas, archivadas sin reporte y pendientes no tienen destino y quedan afuera.
+BASE_SHOW_UP = ASISTIO + ('no_show', 'cancelo', 'reagendo')
 # Post call con los que una llamada cerró: una venta o una seña. Una llamada con show up que no
 # terminó en ninguno de los dos es una «No cerrada» (panel Cierre, pedido del usuario del
 # 09/10/2026). Se define por lo que NO es —asistió y no cerró— y no listando los estados de "abierta"

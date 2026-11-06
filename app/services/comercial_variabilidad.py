@@ -128,7 +128,7 @@ def _por_persona_closers(dias, agendas, ventas, series_equipo):
         propias_a = [f for f in agendas if f['closer'] == nombre]
         propias_v = [f for f in ventas if f['closer'] == nombre]
         series = ca._series_closers_de_filas(dias, propias_a, propias_v, fijas)
-        realizadas = ca._serie(dias, propias_a, ca._dia_de_agenda, filtro=lambda f: f['realizada'])
+        realizadas = ca._serie(dias, propias_a, ca._dia_de_agenda, filtro=lambda f: f['base_show_up'])
         salida[nombre] = (series, {'showup': realizadas})
     return salida
 
