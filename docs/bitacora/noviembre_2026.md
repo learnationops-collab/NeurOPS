@@ -300,3 +300,6 @@
 - **6 de Noviembre de 2026 (Proyección con tendencia en el Simulador)** *([proyeccion_tendencia.py](../../app/services/proyeccion_tendencia.py), [Tendencia.jsx](../../frontend/src/pages/comercial/components/simulador/Tendencia.jsx), [ADR-W111](../DECISIONS.md))*:
   - En Simulador › Proyección, el panel «Cómo cierra el mes» proyecta seis cifras (agendas generadas, asistieron, agendas y entrantes de anuncios, ventas y cash de ventas nuevas) con lo que ya pasó, un rango y el mes anterior.
   - Cada cifra usa el modelo que menos se equivocó en una prueba hacia atrás con 4 semanas reales: ritmo de 30 o 60 días, regresión con día de la semana, con tendencia o el combinado. El botón «Cálculo actual» muestra el ritmo de siempre para comparar.
+- **6 de Noviembre de 2026 (El show up sigue la regla de Mario)** *([comercial_vocabulario.py](../../app/services/comercial_vocabulario.py), [comercial_agendas.py](../../app/services/comercial_agendas.py), [ADR-W112](../DECISIONS.md))*:
+  - El show up de Analizar (closers y setters), Revisar y Estados es ahora los que se presentaron sobre las agendas que se presentaron, cancelaron, reprogramaron o no se presentaron, contando cada agenda (también la 2ª llamada). Antes dejaba afuera canceladas y reprogramadas y contaba personas.
+  - Octubre: closers 57,0 % → 57,5 %; Juliana baja de 50 % a 30 % por sus 4 cancelaciones.

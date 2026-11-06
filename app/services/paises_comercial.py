@@ -12,11 +12,12 @@ from app.services.comercial_service import ROL_CLOSERS, ROL_SETTERS, ComercialSe
 
 def _cuenta(agendas, cobros):
     realizadas = sum(1 for f in agendas if f['realizada'])
+    base = sum(1 for f in agendas if f['base_show_up'])
     asistieron = sum(1 for f in agendas if f['asistio'])
     ventas = sum(1 for f in agendas if f['post_call']['key'] == 'venta')
     return {
         'agendas': len(agendas), 'realizadas': realizadas, 'asistieron': asistieron,
-        'show_up': pct(asistieron, realizadas), 'ventas': ventas, 'cierre': pct(ventas, asistieron),
+        'show_up': pct(asistieron, base), 'ventas': ventas, 'cierre': pct(ventas, asistieron),
         'cash': round(sum(f['monto_neto'] for f in cobros), 2),  # neto (04/11/2026)
     }
 

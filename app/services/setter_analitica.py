@@ -165,8 +165,8 @@ def despues_de(generadas):
     estados. `generadas` sigue siendo todas: es el cruce del embudo con las agendas reportadas.
 
     Las canceladas y las reagendadas se miden sobre las ocurridas; el show up y el no show, sobre
-    las que ya tienen resultado (`realizadas`), que es el show up de todo el tablero. Las ventas,
-    sobre las que asistieron.
+    los cuatro destinos (presentó, canceló, reprogramó, no show: regla de Mario, ADR-W112), que es el
+    show up de todo el tablero. Las ventas, sobre las que asistieron.
 
     `descalificadas` (23/10/2026) son las que el closer descalificó en la confirmación: están en las
     ocurridas y no tienen caja propia, así que el panel las dice junto a «sin reporte» y «por venir»

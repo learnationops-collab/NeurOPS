@@ -380,13 +380,6 @@ def bloque_closers(start, end, closer_id=None, closer_nombre=None, con_reales=Tr
 
     dias, mejor_dia = _cash_por_dia(ventas, start, end)
 
-    # El show up de la tarjeta es por LEAD, no por llamada (26/10/2026): un lead que asistió a la
-    # 1ª y faltó a la 2ª se presentó. Así las segundas llamadas no inflan la base; cuántas llamadas
-    # fueron de cada tipo lo dice el panel Estados.
-    def persona(f):
-        return ('p', f['person_uuid']) if f.get('person_uuid') else ('c', f['client_id'])
-    leads_realizadas = {persona(f) for f in agendas if f['realizada']}
-    leads_asistieron = {persona(f) for f in agendas if f['asistio']}
     segundas = [f for f in agendas if f.get('tipo_llamada') == 'segunda']
     primeras = [f for f in agendas if f.get('tipo_llamada') != 'segunda']
 
@@ -394,9 +387,9 @@ def bloque_closers(start, end, closer_id=None, closer_nombre=None, con_reales=Tr
         'agendas': tot_a['agendas'],
         'realizadas': tot_a['realizadas'],
         'asistieron': tot_a['asistieron'],
-        'show_up': pct(len(leads_asistieron), len(leads_realizadas)),
-        'leads_realizadas': len(leads_realizadas),
-        'leads_asistieron': len(leads_asistieron),
+        # Por agenda, sobre los cuatro destinos (regla de Mario, ADR-W112): la 2ª llamada se mide igual.
+        'show_up': tot_a['show_up'],
+        'base_show_up': tot_a['base_show_up'],
         # Los estados de las primeras llamadas (y las Momentum) y los de las segundas, aparte.
         'estados_por_llamada': {
             'primera': {'agendas': len(primeras), 'estados': estados_de(primeras)},
@@ -486,8 +479,8 @@ def bloque_closers(start, end, closer_id=None, closer_nombre=None, con_reales=Tr
              'descartadas': descartadas, 'por_canal': partir_por_canal(agendas)},
             # Asistieron y Ventas dicen con qué cuenta se calcula su tasa (28/10/2026): el show up es el de la
             # tarjeta (leads con resultado, no las agendas) y las ventas se miden sobre las presentaciones.
-            {'paso': 'Asistieron', 'n': tot_a['asistieron'], 'show_up': pct(len(leads_asistieron), len(leads_realizadas)),
-             'leads_asistieron': len(leads_asistieron), 'leads_realizadas': len(leads_realizadas),
+            {'paso': 'Asistieron', 'n': tot_a['asistieron'], 'show_up': tot_a['show_up'],
+             'base_show_up': tot_a['base_show_up'],
              'por_canal': partir_por_canal(f for f in agendas if f['asistio'])},
             {'paso': 'Presentaciones', 'n': presentaciones,
              'por_canal': partir_por_canal(f for f in agendas if f['asistio'] and f['presento'])},
@@ -671,10 +664,10 @@ def _series_closers_de_filas(dias, agendas, ventas, fijas=None):
                                     lambda f: f['tipo_pago']['label'], None, CAT_TONOS,
                                     fijas=(fijas or {}).get('ventas'))},
         {'key': 'showup', 'label': 'Show up', 'unidad': '%', 'tone': 'success', 'tipo': 'tasa',
-         'help': 'Qué porcentaje se presentó cada día, sobre las llamadas que ya tuvieron '
-                 'resultado. Los días en cero son días sin llamadas, no días con show up cero.',
+         'help': 'Qué porcentaje se presentó cada día, sobre las agendas que se presentaron, cancelaron, '
+                 'reprogramaron o no se presentaron. Los días en cero son días sin agendas.',
          'vals': _tasa_diaria(dias, agendas, _dia_de_agenda,
-                              lambda f: f['asistio'], lambda f: f['realizada'])},
+                              lambda f: f['asistio'], lambda f: f['base_show_up'])},
         {'key': 'senas', 'label': 'Señas', 'unidad': '', 'tone': 'warning',
          'help': 'Reservas tomadas cada día. Una seña bloquea un cupo hasta que se completa el pago.',
          'vals': _serie(dias, ventas, _dia_de_venta, None, es_sena)},

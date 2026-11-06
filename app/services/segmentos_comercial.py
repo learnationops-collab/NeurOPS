@@ -54,10 +54,11 @@ def _sin_reporte(f):
 
 def _cuenta(filas):
     realizadas = sum(1 for f in filas if f['realizada'])
+    base = sum(1 for f in filas if f['base_show_up'])
     asistieron = sum(1 for f in filas if f['asistio'])
     ventas = sum(1 for f in filas if f['post_call']['key'] == 'venta')
     return {'agendas': len(filas), 'realizadas': realizadas, 'asistieron': asistieron,
-            'show_up': pct(asistieron, realizadas), 'ventas': ventas, 'cierre': pct(ventas, asistieron),
+            'show_up': pct(asistieron, base), 'ventas': ventas, 'cierre': pct(ventas, asistieron),
             'sin_reporte': sum(1 for f in filas if _sin_reporte(f))}
 
 

@@ -12,7 +12,7 @@ from app.services.comercial_cruces import (
     no_es_marcador, es_agenda_del_setter, _limpiar_email, _limpiar_ig, _tipos_por_persona,
 )
 from app.services.comercial_vocabulario import (
-    ASISTIO, PRESENTO, REALIZADAS, CERRO, DESCARTADAS, pre_call_de, post_call_de, cerro_sin_venta, chip,
+    ASISTIO, BASE_SHOW_UP, PRESENTO, REALIZADAS, CERRO, DESCARTADAS, pre_call_de, post_call_de, cerro_sin_venta, chip,
     pct,
 )
 from app.services.ventas_previas import con_venta_posterior
@@ -175,6 +175,7 @@ class ComercialAgendasMixin:
                 # panel Cierre, su lista de «No cerradas» y el filtro de Revisar lean el MISMO dato.
                 'no_cerrada': post in ASISTIO and post not in CERRO,
                 'realizada': post in REALIZADAS,
+                'base_show_up': post in BASE_SHOW_UP,
                 'presento': (post in PRESENTO or bool(a.offer_presented)
                              or cerro_sin_venta(estado, con_venta, con_seguimiento, con_sena=con_sena)),
                 'retraso_dias': retraso,
@@ -267,6 +268,7 @@ class ComercialAgendasMixin:
         está viendo, no sobre todo el período: es el requisito de que los números cierren con el
         filtro aplicado."""
         realizadas = [f for f in filas if f['realizada']]
+        base = [f for f in filas if f['base_show_up']]
         asistieron = [f for f in filas if f['asistio']]
         ventas = [f for f in filas if f['post_call']['key'] == 'venta']
         # Asistieron y dejaron una seña, sin pago completo ni split pay. No son ventas: entran
@@ -281,7 +283,8 @@ class ComercialAgendasMixin:
             'agendas': len(filas),
             'realizadas': len(realizadas),
             'asistieron': len(asistieron),
-            'show_up': pct(len(asistieron), len(realizadas)),
+            'base_show_up': len(base),
+            'show_up': pct(len(asistieron), len(base)),
             'ventas': len(ventas),
             # El desglose de esas ventas (ver `venta_tipo` en `agendas`): suman `ventas` exacto.
             'ventas_completo': sum(1 for f in ventas if f.get('venta_tipo') == 'completo'),
@@ -291,7 +294,7 @@ class ComercialAgendasMixin:
             'close_rate_con_senas': pct(len(ventas) + len(senas), len(asistieron)),
             'seguimiento': len(seguimiento),
             'no_show': len(no_show),
-            'no_show_pct': pct(len(no_show), len(realizadas)),
+            'no_show_pct': pct(len(no_show), len(base)),
             'pendientes': len(pendientes),
             'pendientes_con_retraso': len(con_retraso),
             'retraso_max': max((f['retraso_dias'] for f in con_retraso), default=0),
