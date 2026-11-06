@@ -41,7 +41,8 @@ def traducir(accion, datos):
     deck = datos.get('deck') if isinstance(datos.get('deck'), dict) else {}
     proceso = datos.get('process') if isinstance(datos.get('process'), dict) else {}
     if proceso.get('status') in DESCARTES or clave in ('lead_perdido', 'no_lead'):
-        return {'asistencia': 'asistio' if clave == 'asistio' else None, 'resultado': 'no_sigue'}
+        asistencia = 'asistio' if clave == 'asistio' else 'no_asistio' if clave in ('no_asistio', 'no_show') else None
+        return {'asistencia': asistencia, 'resultado': 'no_sigue'}
     if datos.get('contacto_result') == 'no_paga':
         return {'resultado': 'no_sigue'}
     if clave == 'asistio':

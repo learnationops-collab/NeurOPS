@@ -384,6 +384,17 @@ def _segunda_en_agenda_nueva(datos, usuario):
     return nombre == 'mario buhler' or (usuario.email or '').lower() == 'mario@neurocogniciones.com'
 
 
+def _descartar_sin_pisar(appt, usuario, nota):
+    """El descarte de `process_agenda` ('Lead Perdido') sin tocar `closer_result`: el lead sale de los
+    seguimientos y queda la nota, con `descarte` en el payload para encontrarlo."""
+    from app.services import lead_log_service
+
+    appt.closer_processed = True
+    appt.seguimiento_realizado = True
+    lead_log_service.nota(f"Descartado tras el No Show por {usuario.username}: {nota}", usuario, appt=appt,
+                          payload={'descarte': 'Lead Perdido'})
+
+
 def _resultado_del_arbol(appt, datos, usuario):
     """Reporta la llamada (o el contacto de la cadencia) sin venta, en el orden del mazo.
 
@@ -403,7 +414,12 @@ def _resultado_del_arbol(appt, datos, usuario):
         motivo = motivos_no_cierre.motivo_valido(datos.get('motivo_no_cierre'))
     except motivos_no_cierre.MotivoInvalido as e:
         raise ErrorDeAccion(str(e), 'motivo_no_cierre') from None
-    if descarte and deck:
+    # «No show» y después «Descartar»: la llamada sigue siendo un no show (ADR-W109). Antes el descarte
+    # la pisaba con 'Lead Perdido' y el no show no contaba en el show up ni en el close rate.
+    noshow_descartado = bool(descarte) and descarte['status'] == 'Lead Perdido' and estado_marcado == 'No Show'
+    if noshow_descartado:
+        deck = {**deck, 'result': 'No Show'}
+    elif descarte and deck:
         # El guardado del mazo deja en la bitacora «Estado: …» con el `result` que recibe: sin él
         # un descarte quedaba anotado como «Pendiente». `process_agenda` lo vuelve a poner igual.
         deck.setdefault('result', descarte['status'])
@@ -420,7 +436,9 @@ def _resultado_del_arbol(appt, datos, usuario):
         _process_agenda(appt, usuario, {
             'status': '2da call', 'reschedule_date': nuevo_inicio.isoformat(),
             'note': (datos.get('respuestas') or {}).get('motivo_sin_oferta') or 'Agendada desde la ficha'})
-    if descarte:
+    if noshow_descartado:
+        _descartar_sin_pisar(appt, usuario, descarte['note'])
+    elif descarte:
         _process_agenda(appt, usuario, descarte)
 
     nombre = appt.client.full_name if appt.client and appt.client.full_name else 'el lead'
