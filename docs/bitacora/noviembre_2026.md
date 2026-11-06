@@ -303,3 +303,5 @@
 - **6 de Noviembre de 2026 (El show up sigue la regla de Mario)** *([comercial_vocabulario.py](../../app/services/comercial_vocabulario.py), [comercial_agendas.py](../../app/services/comercial_agendas.py), [ADR-W112](../DECISIONS.md))*:
   - El show up de Analizar (closers y setters), Revisar y Estados es ahora los que se presentaron sobre las agendas que se presentaron, cancelaron, reprogramaron o no se presentaron, contando cada agenda (también la 2ª llamada). Antes dejaba afuera canceladas y reprogramadas y contaba personas.
   - Octubre: closers 57,0 % → 57,5 %; Juliana baja de 50 % a 30 % por sus 4 cancelaciones.
+- **6 de Noviembre de 2026 (Descartar no pisa el destino de la llamada)** *([ficha_acciones_service.py](../../app/services/ficha_acciones_service.py), [ADR-W113](../DECISIONS.md))*:
+  - En Resultado, descartar a un lead que se presentó y no compró (o que canceló) ya no guarda «Lead perdido»: queda como Show up (o Cancelado) y el lead sale de los seguimientos con una nota del descarte. Así cuenta en el show up.
