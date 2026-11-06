@@ -828,12 +828,12 @@ const pasosDe = (funnel, vocabulario, irA) => funnel.map(p => {
         ...partesDe(p.por_canal, def.destino, irA),
         // Agendas: cuántas son vigentes y cuántas descartadas; la segunda cifra abre las descartadas.
         sub: p.descartadas != null ? `${p.vigentes} vigentes + ${p.descartadas} descartadas`
-            : p.show_up != null ? `show up: ${p.leads_asistieron} de ${p.leads_realizadas} leads con resultado`
+            : p.show_up != null ? `show up: ${p.n} de ${p.base_show_up} agendas`
                 : p.presentaciones != null ? `${p.n} de ${p.presentaciones} presentaciones` : undefined,
         irSub: p.descartadas ? abrir(irA, def.destinoDescartadas) : undefined,
-        // El show up del paso es el de la tarjeta de arriba (leads con resultado), no asistieron ÷ agendas.
+        // El show up del paso es el de la tarjeta de arriba: presentes sobre los cuatro destinos (ADR-W112).
         tasa: p.show_up != null ? `${p.show_up}%` : undefined,
-        subTasa: p.show_up != null ? `Show up: ${p.leads_asistieron} de ${p.leads_realizadas} leads con resultado` : undefined,
+        subTasa: p.show_up != null ? `Show up: ${p.n} de ${p.base_show_up} agendas` : undefined,
     };
 });
 
@@ -841,14 +841,11 @@ const DashboardClosers = ({ bloque, deltas, porCobrar, fuentes, irA, cargarNoCer
     <>
         <div className="grid grid--4">
             <Tile label="Show up" valor={fmt.pct(bloque.show_up)} color={v('success')}
-                help={'De los leads cuya llamada ya tuvo un resultado, qué porcentaje se presentó al menos '
-                    + 'una vez (1ª y 2ª llamada juntas). Mide la calidad de la agenda y de la confirmación '
-                    + 'previa, no el cierre. Las canceladas y las reagendadas no entran: esa llamada no ocurrió.'}
+                help={'Se presentaron, sobre las agendas que se presentaron, cancelaron, reprogramaron o no '
+                    + 'se presentaron. Cada agenda cuenta, también la 2ª llamada.'}
                 delta={deltas.show_up}
                 humo={[v('success'), v('info'), v('brand-primary'), v('success')]}
-                cuenta={bloque.leads_realizadas !== undefined
-                    ? { a: String(bloque.leads_asistieron), b: fmt.plural(bloque.leads_realizadas, 'lead', 'leads') }
-                    : { a: String(bloque.asistieron), b: fmt.plural(bloque.realizadas, 'realizada', 'realizadas') }}
+                cuenta={{ a: String(bloque.asistieron), b: fmt.plural(bloque.base_show_up ?? bloque.realizadas, 'agenda', 'agendas') }}
                 ver={abrir(irA, D.show_up)} baja="p-estados" />
             {/* Los dos tiles de tasa llevan al NUMERADOR de su tasa, que es lo que se viene a
                 buscar. La contradiccion que esto genera —arriba la tasa del tile, abajo la misma

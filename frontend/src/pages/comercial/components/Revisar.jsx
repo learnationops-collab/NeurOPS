@@ -550,6 +550,8 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
         }
 
         const realizadas = lista.filter(f => f.realizada).length;
+        // La base del show up: los cuatro destinos (presentó, canceló, reprogramó, no show), ADR-W112.
+        const base = lista.filter(f => f.base_show_up).length;
         const asistieron = lista.filter(f => f.asistio).length;
         const ventas = lista.filter(f => f.post_call.key === 'venta').length;
         const noShow = lista.filter(f => f.post_call.key === 'no_show').length;
@@ -563,16 +565,16 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                 hint: def.pistaDelTotal ? def.pistaDelTotal(lista)
                     : fmt.plural(realizadas, 'realizada', 'realizadas'),
                 ayuda: 'Las agendas de la lista, con los filtros puestos.' },
-            { key: 'show_up', label: 'show up', valor: fmt.pct(pct(asistieron, realizadas)),
-                color: 'var(--success)', hint: de(asistieron, realizadas),
-                ayuda: 'Asistieron, sobre las llamadas con resultado (asistió o no show).' },
+            { key: 'show_up', label: 'show up', valor: fmt.pct(pct(asistieron, base)),
+                color: 'var(--success)', hint: de(asistieron, base),
+                ayuda: 'Se presentaron, sobre las que se presentaron, cancelaron, reprogramaron o no show.' },
             { key: 'close_rate', label: 'close rate', valor: fmt.pct(pct(ventas, asistieron)),
                 color: 'var(--brand-secondary)', hint: de(ventas, asistieron),
                 ayuda: 'Ventas sobre los que asistieron. Una seña no cuenta como venta.' },
             { key: 'seguimiento', label: 'seguimiento', valor: fmt.num(seguimiento), color: 'var(--warning)',
                 ayuda: 'Asistieron y no cerraron: siguen en seguimiento.' },
             { key: 'no_show', label: 'no show', valor: fmt.num(noShow), color: 'var(--error)',
-                hint: realizadas ? `${fmt.pct(pct(noShow, realizadas))} de ${fmt.num(realizadas)}` : null,
+                hint: base ? `${fmt.pct(pct(noShow, base))} de ${fmt.num(base)}` : null,
                 ayuda: 'No se presentaron a la llamada.' },
             { key: 'pendientes', label: segun(pendientes.length, 'pendiente', 'pendientes'),
                 valor: fmt.num(pendientes.length), color: conRetraso ? 'var(--warning)' : 'var(--idle)',

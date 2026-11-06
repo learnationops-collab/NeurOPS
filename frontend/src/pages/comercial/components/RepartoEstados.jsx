@@ -82,13 +82,13 @@ export const agrupar = (estados) => {
 };
 
 /**
- * El show up del centro, con la misma definición que la tarjeta del tablero (`comercial_service`):
- * asistieron / (asistieron + no show). Las canceladas, reprogramadas y las que no pasaron no son
- * llamadas que ocurrieron y no entran en la cuenta.
+ * El show up del centro, con la misma definición que la tarjeta del tablero (regla de Mario, ADR-W112):
+ * se presentaron / (se presentaron + no show + canceladas + reprogramadas). Descalificadas, sin reporte
+ * y las que todavía no pasaron no tienen destino y no entran.
  */
 export const showUpDe = (grupos) => {
     const n = (key) => grupos.find(g => g.key === key)?.n || 0;
-    const realizadas = n('show_up') + n('no_show');
+    const realizadas = n('show_up') + n('no_show') + n('canceladas') + n('reprogramadas');
     return realizadas ? (n('show_up') / realizadas) * 100 : null;
 };
 
