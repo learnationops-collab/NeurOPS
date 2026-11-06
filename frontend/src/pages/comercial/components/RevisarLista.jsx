@@ -10,6 +10,7 @@ import { useEnPantalla } from '../../../components/ui/useEnPantalla';
 import { DIAS_DATO_VIEJO, diasDesde, formatoAcademia, haceCuanto } from './academia';
 import { SIN_PALABRA_CLAVE } from './tablasSetter';
 import { CeldaMotivo, ConMotivo, llevaMotivo } from './MotivoDeEstado';
+import EtiquetaDescartado from '../../../components/shared/EtiquetaDescartado';
 
 /**
  * Cómo se dibujan las filas de Revisar: como tabla o como tarjetas, sueltas o repartidas en grupos.
@@ -93,6 +94,7 @@ const Celda = ({ fila, col }) => {
                     {llevaMotivo(fila, 'post_call')
                         ? <ConMotivo fila={fila} grupo="post_call" chip={<ChipTono chip={fila.post_call} sinTitulo />} />
                         : <ChipTono chip={fila.post_call} />}
+                    <EtiquetaDescartado visible={fila.descartado} />
                     {fila.retraso_dias > 0 && (
                         <span className="celda-sub num"
                             style={{ color: 'var(--error)', fontWeight: 700 }}>
