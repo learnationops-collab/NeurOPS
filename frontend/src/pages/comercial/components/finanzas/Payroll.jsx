@@ -12,6 +12,7 @@ import { useEnPantalla } from '../../../../components/ui/useEnPantalla';
 import RangoFechas, { rangoDe, textoRango } from '../RangoFechas';
 import { Cifron, HUMOS, dinero } from './comun';
 import { esFresco, guardarCache, leerCache } from '../../../../services/cacheDeVistas';
+import { lineaSinVerificar } from './verificacion';
 import * as apiFz from './finanzasApi';
 
 /**
@@ -305,7 +306,7 @@ const lecturaDe = (persona, datos) => {
         transferencias].filter(Boolean);
     }
     return [[`${datos.total_ventas} ${persona.ventas} · neto ${dinero(datos.total_recaudado_neto)}`, base]
-        .filter(Boolean).join(' · '), transferencias].filter(Boolean);
+        .filter(Boolean).join(' · '), transferencias, lineaSinVerificar(datos, dinero)].filter(Boolean);
 };
 
 const Tile = ({ persona, datos, onVer }) => {

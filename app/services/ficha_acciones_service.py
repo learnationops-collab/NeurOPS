@@ -441,6 +441,9 @@ def _resultado_del_arbol(appt, datos, usuario):
         motivos_no_cierre.registrar_motivo(appt, usuario, motivo)
     _guardar_respuestas_del_arbol(appt, datos.get('respuestas'), usuario)
     db.session.commit()
+    if nuevo_inicio and not segunda:
+        from app.agendas_v2 import evento_sigue
+        evento_sigue.seguir(appt)
     return {'id': appt.id, 'closer_result': appt.closer_result, 'referidos': referidos,
             'objecion': bool(objecion),
             'fecha': appt.start_time.isoformat() if appt.start_time else None}
@@ -879,12 +882,15 @@ def reasignar(appt, datos, usuario):
     from app.services import sale_service
 
     anterior = appt.closer.username if appt.closer else 'sin asignar'
+    dueno_anterior_id = appt.closer_id
     ventas = sale_service.pasar_ventas_de_closer(appt.person_uuid, appt.closer, nuevo)
     appt.closer_id = nuevo.id
     con_ventas = f' Pasan también sus ventas ({", ".join(s.program_code or "?" for s in ventas)}).' if ventas else ''
     lead_log_service.nota(f'Lead reasignado de {anterior} a {nuevo.username} (por {usuario.username}).{con_ventas}',
                           usuario, appt=appt)
     db.session.commit()
+    from app.agendas_v2 import evento_sigue
+    evento_sigue.seguir(appt, dueno_anterior_id)
     return {'id': appt.id, 'closer_id': nuevo.id, 'closer_name': nuevo.username}
 
 

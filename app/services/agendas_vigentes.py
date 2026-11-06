@@ -13,6 +13,7 @@ reglas, las mismas para Closing y para Triage, y viven acá para que no diverjan
     veces. Se queda la que ya tiene un resultado (o la primera que se creó).
 
 Las filas no se tocan en la base: solo se dejan de contar. «Persona» es `person_uuid` y, sin él, el cliente.
+El tablero de confirmación usa `una_por_persona`: cada persona se ve una sola vez.
 """
 from sqlalchemy import or_
 
@@ -82,3 +83,26 @@ def vigentes(appts):
     appts = list(appts)
     fuera = sobrantes(appts)
     return [a for a in appts if a.id not in fuera]
+
+
+def una_por_persona(appts, ahora):
+    """El tablero de confirmación muestra a cada persona una vez por dueño. Dos filas vigentes de la misma
+    persona con el mismo closer (una reagenda que dejó atrás la fila vieja, un gemelo cargado por otro lado)
+    se ven como una: la próxima llamada que todavía no pasó; si ya pasaron todas, la más reciente. Una
+    sesión adicional que el lead pidió a propósito (`sesion_adicional_de`) se ve aparte. Conserva el orden."""
+    elegida = {}
+    for a in appts:
+        adicional = bool((a.agenda_payload or {}).get('sesion_adicional_de'))
+        clave = (persona_de(a), a.closer_id, a.id if adicional else None)
+        b = elegida.get(clave)
+        if b is None or _mejor(a, b, ahora):
+            elegida[clave] = a
+    ids = {a.id for a in elegida.values()}
+    return [a for a in appts if a.id in ids]
+
+
+def _mejor(a, b, ahora):
+    a_futura, b_futura = a.start_time >= ahora, b.start_time >= ahora
+    if a_futura != b_futura:
+        return a_futura
+    return a.start_time < b.start_time if a_futura else a.start_time > b.start_time

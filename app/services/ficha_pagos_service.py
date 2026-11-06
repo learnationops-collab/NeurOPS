@@ -218,7 +218,9 @@ def crear(appt, datos, usuario):
     sale_id = _venta_elegida(datos.get('sale_id'), appt.client.id, codigo)
 
     cliente = appt.client
-    vendedor = appt.closer.email if appt.closer else usuario.email
+    # El triage no cobra: un pago cargado sobre su agenda es de quien lo carga, no suyo.
+    from app.services.triage_service import es_de_triage
+    vendedor = appt.closer.email if appt.closer and not es_de_triage(appt) else usuario.email
     # El pago es de la persona del cliente; su mail es el de pago si tiene uno distinto, si no el
     # principal (docs/plan_personas.md).
     from app.services import person_service
@@ -317,9 +319,16 @@ def corregir(appt, datos, usuario, pago_id=None, origen=DESDE_LA_FICHA):
     cambios, bitacora = _aplicar(venta, datos)
     if not cambios:
         return _respuesta(appt, venta, cambios=[])
+    _reevaluar(venta)
     db.session.commit()
     _anotar(appt, usuario, 'pago_corregido', f'corrigió el pago #{venta.id}', '; '.join(bitacora), origen)
     return _respuesta(appt, venta, cambios=sorted(cambios))
+
+
+def _reevaluar(venta):
+    """Un pago corregido se vuelve a comparar con sus comprobantes ya leídos (sin llamar a Claude)."""
+    from app.services.comprobantes import validacion
+    validacion.reevaluar_si_tiene(venta)
 
 
 def _aplicar(venta, datos):
@@ -417,6 +426,7 @@ def corregir_venta(venta, datos, usuario):
             db.session.rollback()
     cambios, _ = _aplicar(venta, datos)
     if cambios:
+        _reevaluar(venta)
         db.session.commit()
     return {'id': venta.id, 'ficha': False, 'cambios': sorted(cambios)}
 

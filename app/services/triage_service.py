@@ -261,6 +261,8 @@ def _reagendar(appt, datos, usuario):
     motivo_estado_service.registrar(appt, usuario, 'Reagendado', nota,
                                     nueva_fecha=_en_la_zona(inicio, zona_del_usuario(usuario)))
     db.session.commit()
+    from app.agendas_v2 import evento_sigue
+    evento_sigue.seguir(appt)
     _log(appt, usuario, f'{usuario.username} reagendó la sesión diagnóstica' + (f': «{nota}».' if nota else '.'))
     return {**bloque(appt), 'avisos': [], 'vendio': False}
 

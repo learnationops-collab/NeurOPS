@@ -58,6 +58,8 @@ def subir_csv():
         return jsonify({'error': str(e), 'codigo': e.codigo, 'columnas': e.columnas[:40],
                         'archivo': archivo.filename}), 400
     resumen = conciliacion.guardar_carga(leido, archivo.filename, current_user)
+    # El CSV es evidencia para auditar, no verifica pagos solo (ADR-W107): eso lo hace Learnito con el
+    # comprobante. `comprobantes.conciliacion.aplicar` queda para cuando se defina el emparejamiento.
     return jsonify(resumen), 201
 
 

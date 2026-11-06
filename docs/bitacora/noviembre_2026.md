@@ -274,3 +274,19 @@
   - Cada nota tiene categoría: venta, sesión con estudiante, reunión del equipo, entrevista u otra. Work la pone solo y la tarjeta «Categorías de las reuniones» la cambia por reunión recurrente, para todas sus notas y las que vengan (migración `8c3e1f5a7b92`).
   - Se entienden los títulos de 2025 y las horas en «CST», y los calendarios de grupo ya no cuentan como invitados.
   - La API de la Academia filtra por categoría, serie y cuenta, y puede cambiar la categoría de una serie o de una nota.
+- **5 de Noviembre de 2026 (El closer ya no cae en la agenda de triage al buscar un lead)** *([closer_followup_service.py](../../app/services/closer_followup_service.py), [ficha_pagos_service.py](../../app/services/ficha_pagos_service.py), [ADR-W105](../DECISIONS.md))*:
+  - Jean Carlo no podía registrar la venta de Eugenia González: el buscador abría la agenda de triage de Dari («Show up» sin venta, seguimiento sin fecha) y Resultado mostraba el reporte de triage. Ahora quien no es triage no cae en una agenda de triage si el lead tiene otra.
+  - Un pago cargado con «Agregar pago» sobre una agenda de triage queda a nombre de quien lo carga, no del triage.
+  - La venta de Eugenia (RR parcial, USD 500) se pasó de Dari a Jean Carlo.
+- **5 de Noviembre de 2026 (Cada pago se verifica con su comprobante)** *([comprobantes/](../../app/services/comprobantes/), [comprobantes.py](../../app/api/ficha/comprobantes.py), [ADR-W106](../DECISIONS.md))*:
+  - El closer sube el comprobante del pago (imagen, PDF o CSV) al registrar la venta o después, desde Pagos en la ficha. Learnito lo lee y el pago queda verificado o no, con el motivo.
+  - Diferencias: al subir el CSV de Stripe o Hotmart, lo que coincide queda verificado con el neto de la pasarela.
+  - La nómina paga igual, pero marca lo no verificado; el closer ve el estado en cada pago, en Mis ventas, en el detalle de la venta y en su comisión del mes.
+- **5 de Noviembre de 2026 (El CSV de la pasarela queda como evidencia, no verifica solo)** *([conciliacion.py](../../app/api/public/conciliacion.py), [ADR-W107](../DECISIONS.md))*:
+  - Subir un CSV en Diferencias guarda sus filas y no cambia el estado de ningún pago: verificar es de Learnito, con el comprobante.
+  - Se cargaron los CSV de Stripe y Hotmart de enero a octubre (los del cruce del 26/10) y 370 de los 377 pagos verificados quedaron atados a su archivo y su fila; 18 pendientes que coincidían exacto quedaron verificados.
+- **5 de Noviembre de 2026 (Reagendar ya no duplica la agenda y el Calendar la sigue)** *([evento_sigue.py](../../app/agendas_v2/evento_sigue.py), [movidas.py](../../app/agendas_v2/movidas.py), [agendas_vigentes.py](../../app/services/agendas_vigentes.py), [ADR-W108](../DECISIONS.md))*:
+  - Dari reagendó a Gerardo Morales desde Resultado y el evento de Google se quedó a la hora vieja; a los 15 minutos Work leyó ese evento como «movido» y devolvió la agenda a la hora vieja con otra fila: dos tarjetas en Confirmado.
+  - Ahora, al reagendar desde Triage o Closing, corregir la fecha o el closer, reasignar o editar en el Tablero de Agendas, el evento se mueve a la hora nueva (o se recrea en el calendario del nuevo dueño) y al lead le llega el cambio. Una llamada que ya pasó no se toca.
+  - La revisión cada 15 minutos ya no devuelve a la hora vieja una agenda que Work reagendó.
+  - El tablero de confirmación muestra a cada persona una vez (la próxima llamada) y el «X de Y confirmados» cuenta lo mismo. La agenda anterior queda en el historial del lead.

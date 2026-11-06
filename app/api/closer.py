@@ -302,7 +302,7 @@ def get_lead_stage(client_id):
         return jsonify({"message": "Forbidden"}), 403
 
     from app.services.closer_followup_service import CloserFollowUpService
-    result = CloserFollowUpService.get_client_lead_stage(client_id)
+    result = CloserFollowUpService.get_client_lead_stage(client_id, con_triage=current_user.tiene_rol('triage'))
     if result is None:
         return jsonify({"message": "Cliente no encontrado"}), 404
     # La persona del cliente (docs/plan_personas.md, Etapa 2a), para que el frontend la identifique.
@@ -606,6 +606,9 @@ def update_appointment(id):
             return jsonify({"error": "Invalid date format"}), 400
 
     db.session.commit()
+    if 'start_time' in data and old_start_time != appt.start_time:
+        from app.agendas_v2 import evento_sigue
+        evento_sigue.seguir(appt)
 
     # Este endpoint reemplaza start_time EN LA MISMA fila (no crea una agenda nueva) sin dejar
     # ningún rastro de la fecha anterior en ningún otro lado — se detectó revisando un caso real
@@ -648,6 +651,7 @@ def reassign_appointment(id):
         return jsonify({"error": "Este lead ya pertenece a ese closer"}), 400
 
     old_closer_name = appt.closer.username if appt.closer else 'sin asignar'
+    old_closer_id = appt.closer_id
     appt.closer_id = new_closer.id
 
     from app.services import lead_log_service
@@ -655,6 +659,8 @@ def reassign_appointment(id):
                           current_user, appt=appt)
 
     db.session.commit()
+    from app.agendas_v2 import evento_sigue
+    evento_sigue.seguir(appt, old_closer_id)
     return jsonify({
         "message": "Lead reasignado con éxito",
         "closer_id": new_closer.id,
@@ -1481,6 +1487,9 @@ def get_closer_deck():
         query = query.filter_by(closer_id=current_user.id)
 
     appointments = query.order_by(Appointment.start_time.asc()).all()
+    if step == 'confirmations':
+        from app.services.agendas_vigentes import una_por_persona
+        appointments = una_por_persona(appointments, datetime.utcnow())
 
     # Las notas nuevas avisan por `avisos_service` (docs/plan_notas_avisos_settings.md): mismo punto.
     from app.services.avisos_service import personas_con_notas_sin_leer
@@ -1582,7 +1591,13 @@ def get_closer_deck_counts():
     query_confirmations = Appointment.query.filter(
         Appointment.start_time >= start_utc,
         Appointment.closer_processed == False,
-        or_(Appointment.closer_result == 'Pendiente', Appointment.closer_result == None, Appointment.closer_result == '')
+        or_(Appointment.closer_result == 'Pendiente', Appointment.closer_result == None, Appointment.closer_result == ''),
+        # Las mismas que el tablero (`/deck?step=confirmations`): sin las canceladas ni reagendadas.
+        or_(
+            Appointment.result.notin_(['Cancelado', 'Cancelada', 'Reagendado', 'Reagendada']),
+            Appointment.result == None,
+            Appointment.result == ''
+        )
     )
     
     query_calls = Appointment.query.filter(
@@ -1616,7 +1631,11 @@ def get_closer_deck_counts():
     # Reportado por el usuario (28/ago/2026): "dice cero de nueve, pero tiene una agenda
     # inconfirmada [ya confirmada]... debería decir uno de nueve".
     from sqlalchemy import func
-    confirmations_done = query_confirmations.filter(func.lower(Appointment.result) == 'confirmado').count()
+    # Lo mismo que muestra el tablero: una tarjeta por persona (agendas_vigentes.una_por_persona).
+    from app.services.agendas_vigentes import una_por_persona
+    pool_confirmaciones = una_por_persona(query_confirmations.order_by(Appointment.start_time.asc()).all(),
+                                          datetime.utcnow())
+    confirmations_done = sum(1 for a in pool_confirmaciones if (a.result or '').strip().lower() == 'confirmado')
 
     # "Reportadas" del día seleccionado: mismo criterio que ya usa el Kanban de "② Reportar"
     # para su columna "Reportadas" (`/deck?step=agendas` + `closer_processed`) — acotado a ESE
@@ -1645,7 +1664,7 @@ def get_closer_deck_counts():
     seguimientos_count = sum(len(v) for v in seg_grouped.values())
 
     return jsonify({
-        "confirmations": query_confirmations.count(),
+        "confirmations": len(pool_confirmaciones),
         "confirmations_done": confirmations_done,
         "calls": query_calls.count(),
         "calls_done": calls_done,

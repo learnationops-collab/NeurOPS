@@ -11,6 +11,7 @@ import CamposPago, {
 import BorrarConConfirmacion from './BorrarConConfirmacion';
 import MotivoDelFallo from './MotivoDelFallo';
 import Desplegable from './Desplegable';
+import VerificacionPago from './VerificacionPago';
 
 /**
  * Una fila de la sección «Pagos» del historial, con su editor en el sitio y su borrado.
@@ -38,7 +39,7 @@ const diaDe = (fecha) => (fecha ? String(fecha).slice(0, 10) : '');
 
 const FilaPago = ({
     pago: p, medios = [], programas = [], tipos = [], transferencias = [], ventas = [], closers = [], puedeEditar = false,
-    onCorregir, onBorrar,
+    agendaId = null, onCorregir, onBorrar, onSubirComprobante, onQuitarComprobante,
 }) => {
     const reducido = useReducedMotion();
     const ids = useId();
@@ -162,6 +163,8 @@ const FilaPago = ({
                             </span>
                         </span>
                     )}
+                    <VerificacionPago verificacion={p.verificacion} agendaId={agendaId} pagoId={p.id}
+                        puedeEditar={puedeEditar} onSubir={onSubirComprobante} onQuitar={onQuitarComprobante} />
                 </span>
                 <span className="fila" style={{ gap: 'var(--s2)', justifyContent: 'flex-end', whiteSpace: 'nowrap' }}>
                     <span className="t-sm num" style={{ fontWeight: 600 }}>{montoExacto(p.monto)}</span>

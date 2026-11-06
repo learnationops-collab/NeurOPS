@@ -256,12 +256,16 @@ def editar_agenda(appt, datos, usuario, *, desde='el historial de la ficha'):
     if cambia_closer:
         anterior = appt.closer.username if appt.closer else 'sin asignar'
         bitacora.append(f'closer {anterior} → {closer.username}')
+        dueno_anterior_id = appt.closer_id
         appt.closer_id = closer.id
         cambios.append('closer')
         if espejo:
             espejo.closer = closer.username
 
     db.session.commit()
+    if cambia_fecha or cambia_closer:
+        from app.agendas_v2 import evento_sigue
+        evento_sigue.seguir(appt, dueno_anterior_id if cambia_closer else None)
 
     from app.services.booking_service import BookingService
     BookingService.log_lead_event(

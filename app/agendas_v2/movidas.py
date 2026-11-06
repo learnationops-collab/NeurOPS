@@ -39,7 +39,7 @@ def _cancelar(appt, estado):
 def sincronizar_movidas(ahora=None):
     """Revisa las agendas vigentes vinculadas a un evento de Google: pasa a la hora nueva las que se
     movieron y cancela las futuras cuyo evento se canceló o se borró. Devuelve cuántas cambió."""
-    from app.agendas_v2 import operacion, trazabilidad
+    from app.agendas_v2 import evento_sigue, operacion, trazabilidad
     from app.agendas_v2.reagenda import seguir_movida
     from app.agendas_v2.trazabilidad import _dt, _ms
     from app.agendas_v2.servicio import _con_calendar
@@ -71,7 +71,12 @@ def sincronizar_movidas(ahora=None):
             try:
                 if estado == 'movido' and traza.get('inicio_nuevo') is not None:
                     inicio = _dt(traza['inicio_nuevo'])
-                    if seguir_movida(a, inicio):
+                    if evento_sigue.quedo_atras(a, inicio):
+                        # El evento quedó en la hora de la que Work movió la agenda: manda Work. Seguirlo
+                        # devolvía la agenda a la hora vieja con otra fila (Gerardo Morales, 05/11/2026).
+                        evento_sigue.seguir(a, ahora=ahora)
+                        logger.warning(f'[MOVIDAS] Agenda #{a.id}: su evento quedó en {inicio}, se lleva a la hora de Work')
+                    elif seguir_movida(a, inicio):
                         cambiadas += 1
                     else:
                         logger.warning(f'[MOVIDAS] Agenda #{a.id} movida en Google a {inicio}, pero a esa hora ya hay otra agenda')

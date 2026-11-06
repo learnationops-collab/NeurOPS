@@ -8,8 +8,10 @@ import pytz
 
 class BookingEspejoMixin:
     @staticmethod
-    def sync_financial_agenda_to_appointment(agenda):
-        """Sincroniza un registro de agenda financiera con la tabla de citas."""
+    def sync_financial_agenda_to_appointment(agenda, seguir_evento=False):
+        """Sincroniza un registro de agenda financiera con la tabla de citas. `seguir_evento`: la fecha o el
+        closer los cambió una persona en el Tablero y el evento de Google los sigue (no el resync masivo,
+        que puede traer datos viejos del espejo)."""
         from app.services.booking_service import BookingService
         if not agenda:
             return None
@@ -164,6 +166,7 @@ class BookingEspejoMixin:
                 closer_processed = False
                 setter_processed = False
             
+        antes = None
         if not appt:
             appt = Appointment(
                 closer_id=closer_user.id,
@@ -178,6 +181,7 @@ class BookingEspejoMixin:
             )
             db.session.add(appt)
         else:
+            antes = (appt.start_time, appt.closer_id)
             appt.closer_id = closer_user.id
             appt.setter_id = setter_id
             appt.start_time = agenda.date
@@ -189,11 +193,15 @@ class BookingEspejoMixin:
             
         try:
             db.session.commit()
-            return appt
         except Exception as e:
             db.session.rollback()
             print(f"[SYNC ERROR] No se pudo guardar el Appointment: {e}")
             return None
+        if seguir_evento and antes and antes != (appt.start_time, appt.closer_id):
+            # El evento de Google sigue a la fecha o al closer nuevos (evento_sigue.py).
+            from app.agendas_v2 import evento_sigue
+            evento_sigue.seguir(appt, antes[1] if antes[1] != appt.closer_id else None)
+        return appt
 
     @staticmethod
     def filtros_de_agenda_del_cliente(client):
