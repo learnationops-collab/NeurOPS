@@ -606,6 +606,9 @@ def update_appointment(id):
             return jsonify({"error": "Invalid date format"}), 400
 
     db.session.commit()
+    if 'start_time' in data and old_start_time != appt.start_time:
+        from app.agendas_v2 import evento_sigue
+        evento_sigue.seguir(appt)
 
     # Este endpoint reemplaza start_time EN LA MISMA fila (no crea una agenda nueva) sin dejar
     # ningún rastro de la fecha anterior en ningún otro lado — se detectó revisando un caso real
@@ -648,6 +651,7 @@ def reassign_appointment(id):
         return jsonify({"error": "Este lead ya pertenece a ese closer"}), 400
 
     old_closer_name = appt.closer.username if appt.closer else 'sin asignar'
+    old_closer_id = appt.closer_id
     appt.closer_id = new_closer.id
 
     from app.services import lead_log_service
@@ -655,6 +659,8 @@ def reassign_appointment(id):
                           current_user, appt=appt)
 
     db.session.commit()
+    from app.agendas_v2 import evento_sigue
+    evento_sigue.seguir(appt, old_closer_id)
     return jsonify({
         "message": "Lead reasignado con éxito",
         "closer_id": new_closer.id,

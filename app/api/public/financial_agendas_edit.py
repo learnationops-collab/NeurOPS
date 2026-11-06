@@ -228,7 +228,8 @@ def update_financial_agenda(agenda_id):
         # Sincronizar la agenda editada
         try:
             from app.services.booking_service import BookingService
-            BookingService.sync_financial_agenda_to_appointment(agenda)
+            BookingService.sync_financial_agenda_to_appointment(
+                agenda, seguir_evento=bool({'date', 'closer'} & set(data)))
         except Exception as sync_err:
             # Si este sync falla, la agenda queda con la fecha nueva y el Appointment con la
             # vieja -- justo el tipo de desfase que se esta corrigiendo. Antes se silenciaba.
