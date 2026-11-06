@@ -209,6 +209,7 @@ def _serializar(filas):
             'closer': f['closer'],
             'canal': _canal(cita),
             'estado': _estado(f),
+            'descartado': bool(f.get('descartado')),
             # El anuncio que ya decía la cita (`keyword`) pero que Marketing no ve: la tarjeta lo
             # ofrece primero.
             'sugerido': sugerido.get((cita.keyword or '').strip()) if cita else None,

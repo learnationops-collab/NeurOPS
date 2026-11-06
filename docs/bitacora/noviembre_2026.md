@@ -293,3 +293,7 @@
 - **6 de Noviembre de 2026 (Un no show descartado sigue contando como no show)** *([ficha_acciones_service.py](../../app/services/ficha_acciones_service.py), [ADR-W109](../DECISIONS.md))*:
   - En Resultado, «No show» y después «Descartar» guardaba la agenda como «Lead perdido» y el no show no se contaba en el show up ni en el close rate. Ahora queda como No show y el lead sale igual de los seguimientos, con una nota del descarte.
   - En producción hay 13 agendas que hicieron ese recorrido desde el 08/10 (entre ellas la 7075, del 04/11); se corrigen solo con el visto bueno de Kerwin.
+- **6 de Noviembre de 2026 (Etiqueta «Descartado» en los no show)** *([noshow_descartado.py](../../app/services/noshow_descartado.py), [EtiquetaDescartado.jsx](../../frontend/src/components/shared/EtiquetaDescartado.jsx), [ADR-W110](../DECISIONS.md))*:
+  - Se corrigieron en producción las 13 agendas de No show + Descartar que figuraban como «Lead perdido»: ahora cuentan como No show, cada una con una nota que guarda el valor anterior.
+  - En Revisar y en Mis agendas del setter, un no show que el closer descartó (no respondió ningún mensaje) lleva la etiqueta «Descartado» al lado del estado.
+  - En Analizar › Estados, el grupo No show dice cuántos fueron descartados y cuántos no.

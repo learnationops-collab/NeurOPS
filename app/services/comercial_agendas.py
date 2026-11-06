@@ -192,6 +192,8 @@ class ComercialAgendasMixin:
                 'canal': canales[a.id],
             })
         _con_motivo(filas)
+        from app.services import noshow_descartado
+        noshow_descartado.marcar(filas, es_no_show=lambda f: f['post_call']['key'] == 'no_show')
         return filas
 
     @staticmethod

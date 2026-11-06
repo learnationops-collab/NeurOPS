@@ -163,6 +163,8 @@ const FilaGrupo = ({ g, i, total, irA, onActivo }) => {
     const ir = g.n ? abrir(irA, destinoDe(g.label, g.estados.map(e => e.filtro))) : undefined;
     const Tag = ir ? 'button' : 'div';
     const detalle = g.estados.map(e => `${e.label} ${e.n}`).join(' · ');
+    // Los no show que el closer descartó (no respondieron) siguen dentro del no show (ADR-W110).
+    const descartados = g.estados.reduce((a, e) => a + (e.descartados || 0), 0);
     return (
         <Tag className="est-grupo" style={{ '--c': color(g.tone), '--i': i }}
             {...(ir ? {
@@ -180,6 +182,11 @@ const FilaGrupo = ({ g, i, total, irA, onActivo }) => {
             <span className="est-riel" aria-hidden="true">
                 <i style={{ '--ancho': `${g.pct}%` }} />
             </span>
+            {descartados > 0 && (
+                <small className="est-grupo-sub" title="No respondieron ningún mensaje; el closer los descartó.">
+                    {descartados} {descartados === 1 ? 'descartado' : 'descartados'} · {g.n - descartados} sin descartar
+                </small>
+            )}
         </Tag>
     );
 };

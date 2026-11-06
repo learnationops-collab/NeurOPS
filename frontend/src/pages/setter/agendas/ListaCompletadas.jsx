@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Bot, CalendarClock, Check, Instagram, ListChecks, Loader2, Tag } from 'lucide-react';
 import BuscadorAnuncio from './BuscadorAnuncio';
+import EtiquetaDescartado from '../../../components/shared/EtiquetaDescartado';
 import { parseUtcIso } from '../../../utils/datetime';
 import { colorDe, cuandoLegible, iniciales } from './TarjetaAgenda';
 import { nombreDeMes } from './meses';
@@ -83,8 +84,11 @@ const FilaCompletada = ({ agenda, anuncios, onCambiar }) => {
                     </div>
                 </div>
                 {estado?.label && (
-                    <span className="chip ma-estado" style={{ '--c': `var(--${estado.tone || 'idle'})` }}
-                        title={estado.ayuda}>{estado.label}</span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end', rowGap: 4 }}>
+                        <span className="chip ma-estado" style={{ '--c': `var(--${estado.tone || 'idle'})` }}
+                            title={estado.ayuda}>{estado.label}</span>
+                        <EtiquetaDescartado visible={agenda.descartado} />
+                    </span>
                 )}
             </div>
             <div className="ma-hecha-clave">

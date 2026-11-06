@@ -283,9 +283,10 @@ def estados_de(filas_agendas):
     Los estados en cero se omiten — una tabla con siete filas vacías esconde las tres que
     importan.
     """
-    conteo = {}
+    conteo, descartados = {}, 0
     for f in filas_agendas:
         clave = f['post_call']['key']
+        descartados += 1 if clave == 'no_show' and f.get('descartado') else 0
         if clave == 'pendiente':
             clave = SIN_REPORTE['key'] if f['ya_paso'] else POR_OCURRIR['key']
         conteo[clave] = conteo.get(clave, 0) + 1
@@ -300,7 +301,9 @@ def estados_de(filas_agendas):
     # `ayuda` es el tooltip del estado, en los que lo tienen (ver `POST_CALL`).
     return [{'key': e['key'], 'label': e['label'], 'tone': TONO_EN_PANEL.get(e['key'], e['tone']),
              'n': conteo[e['key']], 'filtro': e['label'], 'grupo': GRUPO_DE_ESTADO[e['key']],
-             **({'ayuda': e['ayuda']} if e.get('ayuda') else {})}
+             **({'ayuda': e['ayuda']} if e.get('ayuda') else {}),
+             # Los no show que el closer descartó (no respondieron): siguen dentro del No show (ADR-W110).
+             **({'descartados': descartados} if e['key'] == 'no_show' else {})}
             for e in orden if conteo.get(e['key'])]
 
 
