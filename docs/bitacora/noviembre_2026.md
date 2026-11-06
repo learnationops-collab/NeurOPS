@@ -305,3 +305,5 @@
   - Octubre: closers 57,0 % → 57,5 %; Juliana baja de 50 % a 30 % por sus 4 cancelaciones.
 - **6 de Noviembre de 2026 (Descartar no pisa el destino de la llamada)** *([ficha_acciones_service.py](../../app/services/ficha_acciones_service.py), [ADR-W113](../DECISIONS.md))*:
   - En Resultado, descartar a un lead que se presentó y no compró (o que canceló) ya no guarda «Lead perdido»: queda como Show up (o Cancelado) y el lead sale de los seguimientos con una nota del descarte. Así cuenta en el show up.
+- **6 de Noviembre de 2026 (Agendas por palabra clave, por persona y por fecha de alta)** *([anuncios_service.py](../../app/services/anuncios_service.py), [ADR-W114](../DECISIONS.md))*:
+  - El tablero de Marketing contaba como agenda nueva una cita que se volvía a crear al reagendar, y sumaba a Setting personas del Workshop. Ahora cuenta a cada persona que se agendó por Setting una vez, el día en que se agendó: el 05/11 pasa de 6 a 3 y los últimos 30 días de 149 a 128.

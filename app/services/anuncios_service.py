@@ -128,36 +128,49 @@ def _entrantes(desde_dt, hasta_dt, clave_de_anuncio, atribucion=None):
 
 
 def _agendas(desde_dt, hasta_dt, clave_de_anuncio, atribucion=None):
-    """({clave: {'agendas', 'dias'}}, sin_atribuir): una agenda por persona y palabra clave.
+    """({clave: {'agendas', 'dias'}}, sin_atribuir): las personas que agendaron por Setting, por palabra clave.
 
-    El anuncio que eligió el setter en «Mis agendas» (`Appointment.anuncio_id`, 18/10/2026) manda sobre
-    ManyChat: así se corrige una palabra clave equivocada."""
-    filas = db.session.query(Appointment.id, Appointment.client_id, Appointment.start_time,
-                             Appointment.created_at, Client.instagram, Client.full_name,
-                             Appointment.anuncio_id, Appointment.person_uuid, Appointment.keyword,
-                             Appointment.atribucion) \
-        .outerjoin(Client, Client.id == Appointment.client_id) \
-        .filter(Appointment.created_at >= desde_dt, Appointment.created_at <= hasta_dt, no_es_marcador()).all()
-    atribuidor = _Atribuidor({normalize_ig(f.instagram) for f in filas}, clave_de_anuncio,
-                             {f.full_name for f in filas}, {f.person_uuid for f in filas})
+    Desde el 06/11/2026 (ADR-W114) se cuenta con las MISMAS filas que «Personas con agenda» de Setting
+    (`conteo_agendas_service.personas`, por fecha de alta): una por persona, el día en que se agendó. Antes
+    se contaban las citas por su `created_at`, que se vuelve a crear al reagendar o sincronizar, y una
+    agenda del 04/11 aparecía otra vez el 05/11; y una persona del Workshop que antes había escrito por una
+    palabra clave sumaba en Setting. La palabra clave sale de la cita de esa persona: el anuncio que eligió
+    el setter en «Mis agendas» (`Appointment.anuncio_id`) manda sobre el origen guardado y la conversación.
+    `sin_atribuir`: las de Setting sin palabra clave."""
+    from app.services import conteo_agendas_service
+    personas = [p for p in conteo_agendas_service.personas(desde_dt.date(), hasta_dt.date(), 'alta')
+                if p['fuente'] == 'setting']
+    uuids = {p['person_uuid'] for p in personas if p['person_uuid']}
+    citas = defaultdict(list)
+    for tanda in _en_tandas(uuids):
+        for f in db.session.query(Appointment.id, Appointment.start_time, Appointment.created_at, Client.instagram,
+                                  Client.full_name, Appointment.anuncio_id, Appointment.person_uuid,
+                                  Appointment.keyword, Appointment.atribucion) \
+                .outerjoin(Client, Client.id == Appointment.client_id) \
+                .filter(Appointment.person_uuid.in_(tanda), no_es_marcador()).all():
+            citas[f.person_uuid].append(f)
+    todas = [f for fs in citas.values() for f in fs]
+    atribuidor = _Atribuidor({normalize_ig(f.instagram) for f in todas}, clave_de_anuncio,
+                             {f.full_name for f in todas}, uuids)
+
+    def clave_de(f):
+        clave = clave_de_anuncio.get(f.anuncio_id) if f.anuncio_id else None
+        clave = clave or clave_guardada(f.atribucion, f.keyword, None, clave_de_anuncio)  # el origen guardado (ADR-W101)
+        return clave or atribuidor.clave(normalize_ig(f.instagram), f.start_time, f.full_name, f.person_uuid)
 
     atribucion = atribucion or {}
     por_clave = defaultdict(lambda: {'agendas': 0, 'dias': Counter(), 'por_grupo': defaultdict(Counter)})
-    vistas, sin_atribuir = set(), 0
-    for f in sorted(filas, key=lambda f: (f.created_at, f.id)):
-        clave = clave_de_anuncio.get(f.anuncio_id) if f.anuncio_id else None
-        clave = clave or clave_guardada(f.atribucion, f.keyword, None, clave_de_anuncio)  # el origen guardado (ADR-W101)
-        clave = clave or atribuidor.clave(normalize_ig(f.instagram), f.start_time, f.full_name, f.person_uuid)
+    sin_atribuir = 0
+    for p in personas:
+        # La cita más reciente que diga una palabra clave (la que eligió el setter, si la hay).
+        fs = sorted(citas.get(p['person_uuid'], []), key=lambda f: (f.anuncio_id is not None, f.created_at or datetime.min, f.id), reverse=True)
+        clave = next((c for c in map(clave_de, fs) if c), None)
         if not clave:
             sin_atribuir += 1
             continue
-        persona = (f.client_id or f'agenda-{f.id}', clave)
-        if persona in vistas:
-            continue
-        vistas.add(persona)
         por_clave[clave]['agendas'] += 1
-        por_clave[clave]['dias'][f.created_at.date().isoformat()] += 1
-        grupo = atribucion.get((f.person_uuid, clave))
+        por_clave[clave]['dias'][p['alta']] += 1
+        grupo = atribucion.get((p['person_uuid'], clave))
         if grupo:
             por_clave[clave]['por_grupo'][grupo]['agendas'] += 1
     return por_clave, sin_atribuir
