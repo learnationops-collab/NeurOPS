@@ -204,7 +204,8 @@ def despues_de(generadas):
 
 
 def embudo_de(suma, despues):
-    """Las nueve etapas, cada una con su conversión contra la anterior (`tasa`, None en la primera).
+    """Las nueve etapas, cada una con su conversión contra la anterior (`tasa`, None en la primera;
+    la de Asistieron, contra las generadas que ya ocurrieron).
 
     `suma` es un `sumar` y `despues` un `despues_de`. Las agendas reportadas llevan su reparto por
     canal (`partes`), con lo de los reportes v1 aparte: el mismo número, partido, nunca repartido a
@@ -220,6 +221,11 @@ def embudo_de(suma, despues):
         n = valores[key]
         etapa = {'key': key, 'label': label, 'fuente': fuente, 'n': n,
                  'tasa': pct(n, anterior) if anterior is not None else None}
+        if key == 'asistieron':
+            # Sobre las generadas que ya llegaron a su hora (`ocurridas`): una llamada que todavía no
+            # ocurrió no puede haber asistido, y contarla bajaba el porcentaje (06/11/2026).
+            etapa['tasa'] = pct(n, despues['ocurridas'])
+            etapa['base'] = despues['ocurridas']
         if key == 'agendas':
             etapa['partes'] = [
                 {'key': 'anuncios', 'n': suma['canales']['anuncios']['agendas']},

@@ -20,7 +20,7 @@ export const AYUDA_ETAPA = {
     link: 'A quiénes se les mandó el link de la agenda.',
     agendas: 'Agendas que el setter cargó en su reporte.',
     generadas: 'Agendas reservadas en el sistema, una por persona.',
-    asistieron: 'De las generadas, las que se presentaron.',
+    asistieron: 'De las generadas que ya ocurrieron, las que asistieron.',
     ventas: 'Pago completo o split pay salido de esas agendas.',
 };
 
