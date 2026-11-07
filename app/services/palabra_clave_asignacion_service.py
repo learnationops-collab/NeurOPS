@@ -8,7 +8,7 @@ import uuid
 from sqlalchemy import func
 
 from app import db
-from app.models import Ad, Appointment, LeadEventLog, Conversation, LeadAnswer
+from app.models import Ad, Appointment, Client, LeadEventLog, Conversation, LeadAnswer
 from app.services.comercial_service import es_agenda_del_setter
 
 # El `action_type` del registro que deja cada asignación en el historial del lead. Es también con lo
@@ -142,6 +142,11 @@ def asignar(setter, appointment_id, ad_id, instagram=None, palabra=None, cambiar
         except ValueError as error:  # incluye `DatoDeOtraPersona`
             db.session.rollback()
             raise ErrorDePalabraClave(str(error), 409) from None
+        # Si era el mismo lead duplicado, `corregir` lo unió con el dueño del Instagram y su cliente
+        # pudo quedar fusionado en otro: se vuelve a leer.
+        cliente = db.session.get(Client, cita.client_id) if cita.client_id else None
+        suyas = Appointment.query.filter(es_agenda_del_setter(setter.id),
+                                         Appointment.client_id == cita.client_id).all() if cita.client_id else [cita]
 
     momentos = [m for a in suyas for m in (a.start_time, a.created_at) if m]
     antes_de_todo = min(momentos) - timedelta(minutes=1) if momentos else datetime.utcnow()

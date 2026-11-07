@@ -13,6 +13,7 @@ from .integration import Integration
 from .public_registration import PublicRegistration
 from .financial import FinancialSale, FinancialAgenda, ExcludedSale, TeamMember, MonthlyPayroll, MonthlyPaymentMethodBalance, MonthlySaving
 from .conciliacion import ConciliacionCarga, ConciliacionMovimiento, ConciliacionRevision
+from .liquidez import FinanceLiquidity
 from .triage_report import TriageDailyReport
 from .triage_tracker import TriageTrackerReport
 from .workshop import WorkshopEvent, WorkshopGoals, WorkshopAction

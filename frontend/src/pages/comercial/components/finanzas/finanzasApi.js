@@ -96,3 +96,7 @@ export const marcarRevisada = (clave, revisada, extra = {}) => api.post('/public
 
 // Finanzas › Cobros (04/11/2026): cada cobro del período con su bruto y su neto.
 export const getCobros = (periodo) => api.get('/public/finance/cobros', { params: delPeriodo(periodo) }).then(datos);
+
+// Profit (07/11/2026): la foto de saldos del mes ({accounts, ads_spent, next_income, taken_at} o null).
+export const getLiquidez = (mes) => api.get('/public/finance/liquidez', { params: { month: mes } }).then(datos);
+export const guardarLiquidez = (mes, foto) => api.put('/public/finance/liquidez', { month: mes, ...foto }).then(datos);
