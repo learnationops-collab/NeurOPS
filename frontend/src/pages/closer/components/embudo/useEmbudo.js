@@ -3,7 +3,7 @@ import toast from 'react-hot-toast';
 import api from '../../../../services/api';
 import { guardarCache, leerCache } from '../../../../services/cacheDeVistas';
 
-const CLAVE = 'closer:embudo';
+const CLAVE = 'closer:embudo:v2';
 
 const errorDe = (err, porDefecto) => err?.response?.data?.error || porDefecto;
 
@@ -54,19 +54,6 @@ export default function useEmbudo(refreshKey = 0) {
         }
     }, [ultimo, cargar]);
 
-    const devolver = useCallback(async (tarjeta) => {
-        setOcupado(true);
-        try {
-            await api.post(`/closer/embudo/${tarjeta.id}/devolver`);
-            setUltimo(null);
-            await cargar();
-        } catch (err) {
-            toast.error(errorDe(err, 'No se pudo devolver'));
-        } finally {
-            setOcupado(false);
-        }
-    }, [cargar]);
-
     const guardarDias = useCallback(async (dias) => {
         try {
             await api.put('/closer/embudo/config', { dias });
@@ -78,5 +65,5 @@ export default function useEmbudo(refreshKey = 0) {
         }
     }, [cargar]);
 
-    return { datos, ultimo, ocupado, registrar, deshacer, devolver, guardarDias, olvidarUltimo: () => setUltimo(null) };
+    return { datos, ultimo, ocupado, registrar, deshacer, guardarDias, olvidarUltimo: () => setUltimo(null) };
 }

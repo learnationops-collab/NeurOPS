@@ -330,3 +330,6 @@
   - Arriba de la pestaña Seguir del closer y del triage: una columna por día después de la llamada (Día 1, 2 y 3) y la de los que respondieron. Cada tarjeta se registra con «Respondió» o «No respondió»; si no respondió pasa al día siguiente y después del último vuelve al pool. Lo que nadie registró queda atrasado.
   - Arriba, el siguiente lead a seguir, el porcentaje de hoy resuelto y la tasa de respuesta. Los días los cambia la dirección para todo el equipo. Cada registro queda en el historial del lead y se puede deshacer.
   - Migración `e3a9c5b17d40`: tablas `embudo_config` y `embudo_registros`.
+- **7 de Noviembre de 2026 (Embudo de seguimiento por días desde la llamada, solo en el servidor de prueba)** *([embudo_seguimiento_service.py](../../app/services/embudo_seguimiento_service.py), [FilaEmbudo.jsx](../../frontend/src/pages/closer/components/embudo/FilaEmbudo.jsx), [ADR-W121](../DECISIONS.md))*:
+  - Las columnas son «1 día», «2 días» y «3 días» desde la llamada, con una fila chica por persona (sin la tarjeta alta). Cada fila dice cómo va: pagó, llamada agendada, descartado, seguido hoy o sin seguimiento.
+  - «Registrar» anota el seguimiento de hoy (respondió o no) o abre la ficha para registrar un pago o venta, agendar otra llamada o descartar.

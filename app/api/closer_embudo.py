@@ -49,10 +49,10 @@ def put_embudo_config():
     if not embudo.puede_editar(current_user, _rol_original()):
         return jsonify({'error': 'Solo la dirección cambia los días del embudo'}), 403
     data = request.get_json() or {}
-    fila, error = embudo.guardar_config(data.get('dias'), current_user, data.get('desde'))
+    dias, error = embudo.guardar_config(data.get('dias'), current_user)
     if error:
         return jsonify({'error': error}), 400
-    return jsonify(embudo.config_dict(fila)), 200
+    return jsonify({'dias': dias}), 200
 
 
 @bp.route('/embudo/<int:appt_id>/registrar', methods=['POST'])
@@ -75,20 +75,6 @@ def delete_embudo_registro(reg_id):
     if _prohibido():
         return jsonify({'error': 'Forbidden'}), 403
     error = embudo.deshacer(reg_id, current_user)
-    if error:
-        return jsonify({'error': error}), 400
-    return jsonify({'ok': True}), 200
-
-
-@bp.route('/embudo/<int:appt_id>/devolver', methods=['POST'])
-@login_required
-def post_embudo_devolver(appt_id):
-    if _prohibido():
-        return jsonify({'error': 'Forbidden'}), 403
-    appt, fallo = _cita_propia(appt_id)
-    if fallo:
-        return fallo
-    error = embudo.devolver(appt, current_user)
     if error:
         return jsonify({'error': error}), 400
     return jsonify({'ok': True}), 200
