@@ -24,6 +24,13 @@
 .dc-shell .flj-valor{fill:var(--text-on-surface);font-size:18px;font-weight:900;letter-spacing:-.02em;
   font-variant-numeric:tabular-nums}
 .dc-shell .flj-rotulo{fill:var(--text-muted);font-size:10.5px;font-weight:900;letter-spacing:.08em}
+/* La variación contra el período comparado, bajo el rótulo (y bajo el número en el apilado). */
+.dc-shell .flj-delta{font-size:10.5px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.dc-shell text.flj-delta--sube{fill:var(--success)}
+.dc-shell text.flj-delta--baja{fill:var(--error)}
+.dc-shell small.flj-delta--sube{color:var(--success)}
+.dc-shell small.flj-delta--baja{color:var(--error)}
+.dc-shell .flj-v-n small.flj-delta{display:block;font-size:10px;letter-spacing:0;line-height:1.1}
 
 .dc-shell .flj-etapa--ir{cursor:pointer;outline:none}
 .dc-shell .flj-etapa--ir:hover .flj-rotulo,

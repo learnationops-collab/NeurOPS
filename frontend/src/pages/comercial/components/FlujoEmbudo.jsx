@@ -21,6 +21,8 @@ import './flujo.css';
  *   fuente (del reporte al sistema): ahí la píldora no es una conversión sino cuánto registra el
  *   sistema de lo que se reportó, y se dibuja punteada. Arriba de 100% va en ámbar, como en el
  *   formulario: casi siempre es un número que no cuadra.
+ * - `delta` ({ valor, modo }) es la variación contra el período comparado: va bajo el rótulo, verde si
+ *   sube y roja si baja, con el mismo texto que el badge de los tiles. Opcional.
  * - `ir` hace la etapa cliqueable (el drill-down a su lista).
  * - `ayuda` es la explicación corta de la etapa: sale en la burbuja del tablero (`useTipFlotante`) al
  *   pasar el mouse, enfocar o tocar la barra, el número o el rótulo; las píldoras explican su propia
@@ -38,6 +40,7 @@ const MX = 30;                 // margen lateral: los números de las puntas se 
 const ALTO_MAX = 88;           // alto de la barra más grande
 const ARRIBA = 30;             // lugar para el número arriba de la barra
 const CON_ROTULOS = 26;        // lugar para el rótulo abajo
+const CON_DELTA = 16;          // lugar para la variación bajo el rótulo
 const PILDORA = { alto: 22, ancho: 44 };
 const ANCHO_SUPUESTO = 960;    // sin medida (jsdom, primer cuadro)
 // Lo mínimo que mide una etapa que no está en cero: en un embudo de 494 entrantes a 2 ventas las
@@ -78,6 +81,11 @@ export const useAncho = () => {
 /** Etapa sobre la anterior, en %, o null sin denominador. */
 export const conversion = (n, anterior) => (anterior ? Math.round((n / anterior) * 1000) / 10 : null);
 
+/** «▲ 12%» / «▼ 3 pts», como `Delta` de PiezasAnalizar. */
+const textoDelta = (d) => `${d.valor >= 0 ? '▲' : '▼'} ${Math.abs(d.valor)}${d.modo === 'pts' ? ' pts' : '%'}`;
+const claseDelta = (d) => `flj-delta flj-delta--${d.valor >= 0 ? 'sube' : 'baja'}`;
+const tituloDelta = (e) => `${e.label}: ${textoDelta(e.delta)} vs. el período comparado`;
+
 const textoPildora = (v) => (v === null || v === undefined ? '—' : `${Math.round(v)}%`);
 
 const tituloPildora = (etapa, anterior, v) => (etapa.cruce
@@ -114,7 +122,9 @@ const accion = (etapa) => {
 const Horizontal = ({ etapas, escala, raiz, ancho, rotulos, bandas, color, montado, de }) => {
     const n = etapas.length;
     const { anchoBarra: fb, hueco: fg } = geometria(ancho, n, rotulos);
-    const alto = ARRIBA + ALTO_MAX + (rotulos ? CON_ROTULOS : 6);
+    const conDelta = rotulos && etapas.some(e => e.delta);
+    const alto = ARRIBA + ALTO_MAX + (rotulos ? CON_ROTULOS : 6) + (conDelta ? CON_DELTA : 0);
+    const yRotulo = alto - 8 - (conDelta ? CON_DELTA : 0);
     const cy = ARRIBA + ALTO_MAX / 2;
     const altoDe = (v) => (v > 0 ? Math.max(ALTO_MIN, proporcion(v, escala, raiz) * ALTO_MAX) : 0);
     const x = (i) => MX + i * (fb + fg);
@@ -152,7 +162,12 @@ const Horizontal = ({ etapas, escala, raiz, ancho, rotulos, bandas, color, monta
                             <Cifra tag="tspan" valor={fmt.num(e.n)} />
                         </text>
                         {rotulos && (
-                            <text className="flj-rotulo" x={cx} y={alto - 8} textAnchor="middle">{e.label.toUpperCase()}</text>
+                            <text className="flj-rotulo" x={cx} y={yRotulo} textAnchor="middle">{e.label.toUpperCase()}</text>
+                        )}
+                        {conDelta && e.delta && (
+                            <text className={claseDelta(e.delta)} x={cx} y={alto - 6} textAnchor="middle">
+                                <title>{tituloDelta(e)}</title>{textoDelta(e.delta)}
+                            </text>
                         )}
                     </g>
                 );
@@ -219,7 +234,10 @@ const Vertical = ({ etapas, escala, raiz, bandas, color, montado, de }) => {
                                     )) : <i style={{ flexGrow: 1, background: tramos[0]?.color || e.color || color }} />}
                                 </span>
                             </span>
-                            <Cifra className="flj-v-n num" valor={fmt.num(e.n)} />
+                            <span className="flj-v-n num">
+                                <Cifra valor={fmt.num(e.n)} />
+                                {e.delta && <small className={claseDelta(e.delta)} title={tituloDelta(e)}>{textoDelta(e.delta)}</small>}
+                            </span>
                         </div>
                     </React.Fragment>
                 );

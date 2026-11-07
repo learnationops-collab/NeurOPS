@@ -142,9 +142,10 @@ export const Tile = ({ label, help, valor, color, sub, delta, humo, ver, baja, c
 
 /**
  * Barra gruesa: el conteo entra dentro de la barra si hay lugar, y el botón de la derecha lleva
- * a ese mismo corte en la lista. Es la pieza de los paneles que muestran una tasa sola.
+ * a ese mismo corte en la lista. Es la pieza de los paneles que muestran una tasa sola. `delta`
+ * (opcional) es la variación contra el período comparado, al lado del rótulo.
  */
-export const Gruesa = ({ label, cuenta, help, pct, tone, w, destino, irA, i = 0 }) => {
+export const Gruesa = ({ label, cuenta, help, pct, tone, w, destino, irA, i = 0, delta = null }) => {
     const montado = useMontado();
     const color = v(tone);
     const dentro = (w || 0) >= 22 && cuenta;
@@ -154,6 +155,7 @@ export const Gruesa = ({ label, cuenta, help, pct, tone, w, destino, irA, i = 0 
             <div className="gruesa-cab">
                 <span className="t-rotulo">{label}</span>
                 <Tip texto={help} titulo={label} />
+                <Delta delta={delta} actual={pct} />
             </div>
             <div className="gruesa">
                 <span className="gruesa-pista">
