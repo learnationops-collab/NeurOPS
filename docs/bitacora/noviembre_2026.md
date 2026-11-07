@@ -315,3 +315,5 @@
   - La lista de agendas muestra quién hizo el triage de cada llamada (Dari, Juliana) o «Directa», y se puede filtrar y ordenar por eso.
 - **6 de Noviembre de 2026 (Asistieron del embudo de setting, sin las llamadas por venir)** *([setter_analitica.py](../../app/services/setter_analitica.py))*:
   - En el embudo de Setting, el porcentaje de Asistieron se mide sobre las agendas generadas cuya llamada ya llegó a su hora, no sobre todas: las que todavía no ocurrieron lo bajaban. Noviembre (1 al 6): equipo 36,4 % → 80 %, Elias 30 % → 60 %, Paula 41,7 % → 100 %. Octubre casi no cambia (37,9 % → 38,2 %).
+- **6 de Noviembre de 2026 (Comparaciones en el embudo de setting)** *([DashboardSetters.jsx](../../frontend/src/pages/comercial/components/DashboardSetters.jsx), [comercial_analitica.py](../../app/services/comercial_analitica.py), [ADR-W117](../DECISIONS.md))*:
+  - En Analizar › Setters, cada etapa del embudo de punta a punta muestra cuánto subió o bajó contra el período anterior (también en Anuncios e Inbound), y los paneles Conversión y Después de la agenda llevan las mismas flechas que las tarjetas de arriba.
