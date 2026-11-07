@@ -106,5 +106,24 @@ def corregir(agenda, campo, valor, usuario=None):
         return
     otros = set(person_service.duenos(kind, nuevo)) - {p.uuid}
     if otros:
-        raise DatoDeOtraPersona(f'El {etiqueta} «{valor}» ya es de otra persona: corregilo desde su ficha.')
+        _unir_con_dueno(p, otros, kind, etiqueta, valor, usuario)
+        return
     person_service.hacer_principal(p, kind, valor, usuario, reason='tablero de agendas', corrige=True)
+
+
+def _unir_con_dueno(p, otros, kind, etiqueta, valor, usuario):
+    """El dato corregido ya lo tiene otra persona: es el mismo lead duplicado (p. ej. la conversación del
+    Inbox y la agenda con el Instagram mal tipeado). Si el nombre no lo contradice, la agenda y todo lo de
+    `p` pasan a ella y el dato mal escrito se da de baja. Hace commit (`fusionar`)."""
+    from app.services import person_service
+    from app.services.persona_de_venta import DatoDeOtraPersona
+
+    dueno = person_service.por_uuid(next(iter(otros))) if len(otros) == 1 else None
+    if dueno is None or not person_service.mismo_nombre(p.full_name, dueno.full_name):
+        quien = f' ({dueno.full_name})' if dueno is not None and dueno.full_name else ''
+        raise DatoDeOtraPersona(f'El {etiqueta} «{valor}» ya es de otra persona{quien}: corregilo desde su ficha.')
+    anterior = getattr(p, kind)
+    sobr = person_service.fusionar(dueno.uuid, [p.uuid], f'{etiqueta} corregido en el tablero de agendas', usuario)
+    if anterior and person_service.normalizar(kind, anterior) != person_service.normalizar(kind, valor):
+        person_service.retirar(sobr, kind, anterior, usuario, reason='mal escrito: corregido en el tablero de agendas')
+    db.session.commit()

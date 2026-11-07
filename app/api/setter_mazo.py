@@ -189,13 +189,14 @@ def actualizar_instagram_de_agenda(agenda_id):
     if normalizar(agenda.nombre) != normalizar(current_user.username):
         return jsonify({"error": "Esta agenda no es de tu fuente"}), 403
 
-    client = _cliente_de(agenda)
-    # Corrige también a su persona, que es de donde sale lo que se muestra.
+    # Corrige también a su persona, que es de donde sale lo que se muestra. Si era el mismo lead
+    # duplicado, la une con el dueño del Instagram: el cliente se lee después.
     try:
         agenda_contacto_service.corregir(agenda, 'instagram', nuevo, current_user)
     except ValueError as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 409
+    client = _cliente_de(agenda)
     db.session.add(agenda)
     if client:
         client.instagram = nuevo

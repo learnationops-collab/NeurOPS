@@ -324,3 +324,5 @@
   - Profit usa los saldos de las cuentas cargados con «Saldos» (tabla nueva `finance_liquidity`); lo que se paga después de cargarlos sigue restando.
   - Learnito con el isotipo animado, el widget «Falta pagar» junto al dock y la acción fijable «Copiar lo que falta pagar» en el menú.
   - Migración `c7d1f4a9e2b6`: columnas `status`, `movements` y `sent_at` en `monthly_payroll` y la tabla `finance_liquidity`.
+- **7 de Noviembre de 2026 (Corregir un Instagram que ya tiene el mismo lead)** *([agenda_contacto_service.py](../../app/services/agenda_contacto_service.py), [ADR-W119](../DECISIONS.md))*:
+  - Al corregir el Instagram de una agenda (palabra clave, mazo del setter, Tablero) con uno que ya tiene otra persona del mismo nombre, se unen en una sola y el Instagram mal escrito se da de baja. Antes daba «ya es de otra persona» y no dejaba corregirlo (caso Grecia Rojo, Elias). Con otro nombre sigue frenando y dice de quién es.
