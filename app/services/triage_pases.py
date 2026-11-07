@@ -130,28 +130,26 @@ def _del_triage(a):
 
 
 def _viene_de_triage(cita, previas):
-    """¿La reagenda `cita` (sin enlace propio) cuelga de un pase del triage? Camina hacia atrás por las reagendadas del
-    mismo cliente (la misma cadena que `_en_pie` recorre hacia adelante) hasta dar con un enlace o con una agenda
-    que no es reagenda: ahí termina la cadena y era directa."""
+    """El `agenda_triage_id` del pase del que cuelga la reagenda `cita` (sin enlace propio), o None. Camina hacia atrás
+    por las reagendadas del mismo cliente (la misma cadena que `_en_pie` recorre hacia adelante) hasta dar con un
+    enlace o con una agenda que no es reagenda: ahí termina la cadena y era directa."""
     actual = cita
     while True:
         anteriores = [b for b in previas if b.id < actual.id and _reagendada(b) and not _del_triage(b)]
         if not anteriores:
-            return False
+            return None
         actual = max(anteriores, key=lambda b: b.id)
         if actual.agenda_triage_id:
-            return True
+            return actual.agenda_triage_id
         if not actual.is_rescheduled:
-            return False
+            return None
 
 
-def origen_de(citas):
-    """`{id: 'directa' | 'triage'}` de unas agendas de closing. Desde triage = la agenda que generó el pase
-    (`agenda_triage_id`) o una reagenda suya: al reagendar, la fila nueva no lleva el enlace y sin seguirla las
-    reagendadas pasarían por directas. Directa = todo lo demás, incluidas las agendas de las propias personas de triage.
-    `citas`: cualquier objeto con `id`, `agenda_triage_id`, `is_rescheduled` y `client_id`."""
+def _pase_de(citas):
+    """`{id: agenda_triage_id | None}`: la agenda de triage de la que viene cada agenda de closing (la suya o, en una
+    reagenda, la de su cadena; ver `_viene_de_triage`)."""
     citas = list(citas)
-    salida = {c.id: DESDE_TRIAGE if c.agenda_triage_id else DIRECTA for c in citas}
+    salida = {c.id: c.agenda_triage_id for c in citas}
     sueltas = [c for c in citas if not c.agenda_triage_id and c.is_rescheduled and c.client_id]
     if not sueltas:
         return salida
@@ -162,9 +160,29 @@ def origen_de(citas):
                   .filter(Appointment.client_id.in_(clientes[i:i + _LOTE]))):
             previas.setdefault(b.client_id, []).append(b)
     for c in sueltas:
-        if _viene_de_triage(c, previas.get(c.client_id, [])):
-            salida[c.id] = DESDE_TRIAGE
+        salida[c.id] = _viene_de_triage(c, previas.get(c.client_id, []))
     return salida
+
+
+def origen_de(citas, pases=None):
+    """`{id: 'directa' | 'triage'}` de unas agendas de closing. Desde triage = la agenda que generó el pase
+    (`agenda_triage_id`) o una reagenda suya: al reagendar, la fila nueva no lleva el enlace y sin seguirla las
+    reagendadas pasarían por directas. Directa = todo lo demás, incluidas las agendas de las propias personas de triage.
+    `citas`: cualquier objeto con `id`, `agenda_triage_id`, `is_rescheduled` y `client_id`. `pases`: el `_pase_de` ya
+    calculado, si lo hay."""
+    pases = _pase_de(citas) if pases is None else pases
+    return {cid: DESDE_TRIAGE if tid else DIRECTA for cid, tid in pases.items()}
+
+
+def quien_triage(pases):
+    """`{id: nombre | None}`: quién hizo el triage de cada agenda (la persona de la agenda de triage del pase), de un
+    `_pase_de`. None si llegó directa (06/11/2026: la columna Triage de Revisar)."""
+    ids = sorted({tid for tid in pases.values() if tid})
+    nombres = {}
+    for i in range(0, len(ids), _LOTE):
+        for t in Appointment.query.options(joinedload(Appointment.closer)).filter(Appointment.id.in_(ids[i:i + _LOTE])):
+            nombres[t.id] = t.closer.username if t.closer else 'Sin persona'
+    return {cid: nombres.get(tid) if tid else None for cid, tid in pases.items()}
 
 
 
