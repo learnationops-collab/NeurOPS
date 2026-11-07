@@ -86,6 +86,11 @@ const Celda = ({ fila, col }) => {
                 : <ChipTono chip={fila.pre_call} />;
         case 'motivo':
             return <CeldaMotivo fila={fila} />;
+        // Quién pasó la agenda por triage; una directa va en gris, que no es una persona.
+        case 'triage':
+            return fila.triage
+                ? <span className="celda" title={fila.triage}>{fila.triage}</span>
+                : <span className="celda mut40">Directa</span>;
         case 'post_call':
             // El retraso va DEBAJO del chip de resultado: el chip dice qué pasó y la bajada dice
             // desde cuándo nadie lo carga, que es lo que hay que ir a resolver.

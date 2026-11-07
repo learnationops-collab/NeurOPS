@@ -148,6 +148,8 @@ export const presento = siNo((f) => f.asistio && f.presento);
 // etiqueta de la faceta «Origen» y el rótulo del embudo de Closing, así que vive acá.
 export const CANAL = { directa: 'Directa', triage: 'Desde triage' };
 export const canalDe = (f) => CANAL[f.canal] || CANAL.directa;
+// Quién hizo el triage (Dari, Juliana…) o «Directa» (06/11/2026): la columna y la faceta «Triage».
+export const triageDe = (f) => f.triage || CANAL.directa;
 export const cerro = (f) => (f.asistio ? (f.no_cerrada ? NO : SI) : null);
 export const respondio = siNo((f) => f.respondio);
 export const cualificado = siNo((f) => f.cualificado);
@@ -290,6 +292,7 @@ export const TABLAS = {
             { key: 'fecha', header: 'Reunión', width: '0.9fr' },
             { key: 'cliente', header: 'Cliente', width: '1.7fr' },
             { key: 'fuente', header: 'Fuente', width: '1fr' },
+            { key: 'triage', header: 'Triage', width: '0.8fr', orden: triageDe },
             { key: 'closer', header: 'Closer', width: '1fr' },
             { key: 'pre_call', header: 'Pre call', width: '1fr' },
             { key: 'post_call', header: 'Post call', width: '1.4fr' },
@@ -303,6 +306,7 @@ export const TABLAS = {
             { key: 'closer', label: 'Closer', de: (f) => f.closer },
             { key: 'fuente', label: 'Fuente', de: (f) => f.fuente },
             { key: 'canal', label: 'Origen', de: canalDe },
+            { key: 'triage', label: 'Triage', de: triageDe },
             FACETA_SEGMENTO,
             { key: 'confirmada', label: 'Confirmada', de: fueConfirmada },
             { key: 'asistio', label: 'Asistió', de: asistio },

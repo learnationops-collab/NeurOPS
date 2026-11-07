@@ -122,8 +122,10 @@ class ComercialAgendasMixin:
         # La seña, con la misma regla: una seña de antes de la llamada no es de esta llamada.
         senan = con_sena_posterior([a for a in appts if 'seña' in tipos_de(a)])
 
-        from app.services.triage_pases import origen_de
-        canales = origen_de(appts)
+        from app.services.triage_pases import _pase_de, origen_de, quien_triage
+        pases = _pase_de(appts)
+        canales = origen_de(appts, pases)
+        triages = quien_triage(pases)
 
         hoy = date.today()
         ahora = datetime.utcnow()
@@ -196,6 +198,8 @@ class ComercialAgendasMixin:
                 'tipo_llamada': tipo_de_llamada(a),
                 # 'directa' o 'triage': si la agenda llegó directo al closer o la pasó el triage (02/11/2026).
                 'canal': canales[a.id],
+                # Quién hizo el triage (Dari, Juliana…), o None si llegó directa (06/11/2026).
+                'triage': triages[a.id],
             })
         _con_motivo(filas)
         from app.services import noshow_descartado

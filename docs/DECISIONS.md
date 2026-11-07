@@ -934,3 +934,11 @@
 - **Decisión:** con base de creación, `generadas` saca a las personas (`person_uuid`) que ya tenían una cita o una fila del tablero de agendas en los 60 días anteriores al período (`_sin_reagendas`, `REAGENDA_DIAS`). Dentro del período sigue contando una por persona y por setter (`_una_por_persona`).
 - **Qué se pierde:** una persona cuya primera cita en Work se creó después de su fila del tablero (la sincronizó tarde) no le cuenta al setter ni ese día ni el de la sincronización. Un lead que vuelve después de 60 días cuenta como agenda nueva. La base de reunión no cambia.
 - **Consecuencias:** antes → después en producción, del 07/10 al 05/11: sumando día por día, Elias 71 → 56 y Paula 61 → 48; el mes completo, Elias 66 → 65 y Paula 58 → 56. El show up y las ventas originadas salen de las mismas filas. Sin migración.
+
+## ADR-W116: Revisar › Agendas dice quién hizo el triage
+
+- **Fecha:** 2026-11-06 · **Subsistema:** Revisar › Agendas (`ComercialService.filas_de_citas`, `triage_pases`) · **Estado:** implementado.
+- **Contexto:** la faceta «Origen» separaba las agendas en directas y desde triage, pero no decía quién las pasó. Kerwin pidió una columna para saber si una agenda viene de Dari, de Juliana o es directa.
+- **Decisión:** cada fila de agenda lleva `triage`: la persona de la agenda de triage del pase (`agenda_triage_id`, o el de su cadena si es una reagenda, la misma que ya seguía `origen_de`), o None si llegó directa. Revisar suma la columna «Triage» entre Fuente y Closer y una faceta «Triage» (Dari, Juliana, Directa). La faceta «Origen» queda igual porque el embudo de Closing filtra por ella.
+- **Qué se pierde:** nada. Es una consulta más por tabla (las agendas de triage de los pases, en lotes).
+- **Consecuencias:** las agendas que no vienen de un pase dicen «Directa», también las de las propias personas de triage, como en «Origen». Sin migración.
