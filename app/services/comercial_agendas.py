@@ -15,7 +15,7 @@ from app.services.comercial_vocabulario import (
     ASISTIO, BASE_SHOW_UP, PRESENTO, REALIZADAS, CERRO, DESCARTADAS, pre_call_de, post_call_de, cerro_sin_venta, chip,
     pct,
 )
-from app.services.ventas_previas import con_venta_posterior
+from app.services.ventas_previas import con_sena_posterior, con_venta_posterior
 
 # Una agenda nueva del setter: la persona no tenía otra en estos días (ADR-W115).
 REAGENDA_DIAS = 60
@@ -119,6 +119,8 @@ class ComercialAgendasMixin:
         # las que ya tienen un pago de venta por tipo, que son pocas.
         con_pago = [a for a in appts if any(t in REAL_SALE_TIPOS for t in tipos_de(a))]
         cierran = con_venta_posterior(con_pago)
+        # La seña, con la misma regla: una seña de antes de la llamada no es de esta llamada.
+        senan = con_sena_posterior([a for a in appts if 'seña' in tipos_de(a)])
 
         from app.services.triage_pases import origen_de
         canales = origen_de(appts)
@@ -134,7 +136,7 @@ class ComercialAgendasMixin:
             # cuenta UNA venta aunque el lead tenga las dos (dos programas): manda el pago
             # completo, y así completo + split siempre suma las agendas en "Venta".
             venta_tipo = ('completo' if 'completo' in tipos else 'parcial') if con_venta else None
-            con_sena = 'seña' in tipos
+            con_sena = a.id in senan
             con_seguimiento = bool(a.seguimiento_tipo or a.fecha_seguimiento) and not a.seguimiento_realizado
 
             estado = derivar_estado(a, ahora)

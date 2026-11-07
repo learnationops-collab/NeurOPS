@@ -24,10 +24,12 @@ TOLERANCIA_DIAS = 1
 _VIGENTES = ('', 'completada', 'confirmada')
 
 
-def _ultimas_por_clave(appts):
-    """(por_email, por_ig, por_id, por_persona): la fecha del último pago de venta real de cada clave."""
+def _ultimas_por_clave(appts, tipos=None):
+    """(por_email, por_ig, por_id, por_persona): la fecha del último pago de `tipos` (por defecto,
+    los de venta real) de cada clave."""
     from app.services.closer_service import REAL_SALE_TIPOS
     from app.services.sheets_service import SheetsService
+    tipos = REAL_SALE_TIPOS if tipos is None else tipos
 
     def ultimo(mapa, clave, fecha):
         if clave is not None and fecha and (mapa.get(clave) is None or fecha > mapa[clave]):
@@ -39,7 +41,7 @@ def _ultimas_por_clave(appts):
     for mail, ig, client_id, tipo_pago, estado, fecha in rows:
         if (estado or '').strip().lower() not in _VIGENTES:
             continue
-        if SheetsService.parse_tipo_pago(tipo_pago)[1] not in REAL_SALE_TIPOS:
+        if SheetsService.parse_tipo_pago(tipo_pago)[1] not in tipos:
             continue
         mail_c, ig_c = _limpiar_email(mail), _limpiar_ig(ig)
         ultimo(por_email, mail_c if mail_c in emails else None, fecha)
@@ -52,17 +54,18 @@ def _ultimas_por_clave(appts):
                 FinancialSale.person_uuid, FinancialSale.tipo_pago, FinancialSale.estado,
                 FinancialSale.date).filter(FinancialSale.person_uuid.in_(personas)):
             if ((estado or '').strip().lower() in _VIGENTES
-                    and SheetsService.parse_tipo_pago(tipo_pago)[1] in REAL_SALE_TIPOS):
+                    and SheetsService.parse_tipo_pago(tipo_pago)[1] in tipos):
                 ultimo(por_persona, puuid, fecha)
     return por_email, por_ig, por_id, por_persona
 
 
-def con_venta_posterior(appts):
-    """Los ids de las agendas de `appts` con un pago de venta real del día de la llamada en adelante."""
+def con_venta_posterior(appts, tipos=None):
+    """Los ids de las agendas de `appts` con un pago de `tipos` (por defecto, de venta real) del día de
+    la llamada en adelante."""
     appts = [a for a in appts if a.start_time]
     if not appts:
         return set()
-    por_email, por_ig, por_id, por_persona = _ultimas_por_clave(appts)
+    por_email, por_ig, por_id, por_persona = _ultimas_por_clave(appts, tipos)
     salida = set()
     for a in appts:
         cliente = a.client
@@ -76,3 +79,9 @@ def con_venta_posterior(appts):
         if any(f and f.date() >= limite for f in fechas):
             salida.add(a.id)
     return salida
+
+
+def con_sena_posterior(appts):
+    """Los ids de las agendas con una seña del día de la llamada en adelante (06/11/2026). Una seña
+    vieja no es de esta llamada: la de Ivette ya estaba y en la llamada pagó una cuota."""
+    return con_venta_posterior(appts, tipos=('seña',))
