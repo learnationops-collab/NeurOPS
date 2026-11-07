@@ -942,3 +942,11 @@
 - **Decisión:** cada fila de agenda lleva `triage`: la persona de la agenda de triage del pase (`agenda_triage_id`, o el de su cadena si es una reagenda, la misma que ya seguía `origen_de`), o None si llegó directa. Revisar suma la columna «Triage» entre Fuente y Closer y una faceta «Triage» (Dari, Juliana, Directa). La faceta «Origen» queda igual porque el embudo de Closing filtra por ella.
 - **Qué se pierde:** nada. Es una consulta más por tabla (las agendas de triage de los pases, en lotes).
 - **Consecuencias:** las agendas que no vienen de un pase dicen «Directa», también las de las propias personas de triage, como en «Origen». Sin migración.
+
+## ADR-W117: El embudo de setting compara contra el período anterior
+
+- **Fecha:** 2026-11-06 · **Subsistema:** Analizar › Dashboard con Setters (`DashboardSetters`, `FlujoEmbudo`, `comercial_analitica.resumen`) · **Estado:** implementado.
+- **Contexto:** la dirección comercial veía las flechas contra el período anterior en las tarjetas de arriba, pero no en el embudo de punta a punta ni en los paneles Conversión y Después de la agenda. El backend ya calculaba conversión, de cualificado a agenda, show up, generadas y ventas, y no se mostraban. Kerwin pidió las mismas comparaciones en el embudo.
+- **Decisión:** el resumen de setters suma `deltas.etapas` (cada etapa del embudo, en % contra el período comparado) y, en cada pestaña de canal, `deltas_canales[canal].etapas` para entrantes, cualificados y agendas. `FlujoEmbudo` acepta `delta` por etapa y lo dibuja bajo el rótulo (bajo el número en el apilado). `Gruesa` y las cajas de Después de la agenda muestran el badge `Delta` de las tarjetas. Se agregan `conv_link` y `ocurridas` a los deltas de setters.
+- **Qué se pierde:** nada. Canceladas, reagendadas y no show no llevan flecha: ahí subir es malo y el badge pinta de verde lo que sube.
+- **Consecuencias:** el setter ve lo mismo en «Mis datos» (es el mismo tablero). Los embudos de Workshop y Comparativas no pasan `delta` y no cambian. Sin migración.

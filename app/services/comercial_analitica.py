@@ -32,8 +32,9 @@ DELTAS = {
                   'cash_neto': 'pct', 'ventas': 'pct', 'ticket': 'pct', 'agendas': 'pct', 'comision': 'pct'},
     ROL_SETTERS: {'entrantes': 'pct', 'cualificacion': 'pts', 'apertura': 'pts', 'respuesta_aperturas': 'pts',
                   'agendas': 'pct',
-                  'conversion': 'pts', 'conv_cualificados': 'pts', 'bienvenidas_respuesta': 'pts',
-                  'followups_total': 'pct', 'generadas': 'pct', 'show_up': 'pts', 'ventas_originadas': 'pct'},
+                  'conversion': 'pts', 'conv_cualificados': 'pts', 'conv_link': 'pts', 'bienvenidas_respuesta': 'pts',
+                  'followups_total': 'pct', 'generadas': 'pct', 'ocurridas': 'pct', 'show_up': 'pts',
+                  'ventas_originadas': 'pct'},
 }
 
 # Las que cambian con el canal (pestañas General · Anuncios · Inbound del tablero de setters): las
@@ -772,6 +773,12 @@ def _deltas(actual, previo, modos):
     return salida
 
 
+def _deltas_etapas(actual, previo):
+    """`{key: delta}` de cada etapa del embudo del setter: cuántas hubo contra el período comparado."""
+    antes = {e['key']: e['n'] for e in previo}
+    return {e['key']: d for e in actual if (d := delta(e['n'], antes.get(e['key']), 'pct'))}
+
+
 def resumen(rol, start, end, prev_start=None, prev_end=None, miembro_id=None, segmento=None, paises=None):
     """Todo lo que muestra la pestaña Analizar → Dashboard, con sus deltas."""
     miembro = User.query.get(miembro_id) if miembro_id else None
@@ -803,6 +810,14 @@ def resumen(rol, start, end, prev_start=None, prev_end=None, miembro_id=None, se
         datos['deltas_canales'] = {canal: _deltas(actual['canales'][canal], previo['canales'][canal],
                                                   DELTAS_POR_CANAL)
                                    for canal in setter_analitica.CANALES} if previo else {}
+        if previo:
+            # Las flechas del embudo de punta a punta: por etapa en General y, en cada pestaña de
+            # canal, las tres etapas que el reporte separa por canal.
+            deltas['etapas'] = _deltas_etapas(actual['funnel'], previo['funnel'])
+            for canal in setter_analitica.CANALES:
+                datos['deltas_canales'][canal]['etapas'] = _deltas(
+                    actual['canales'][canal], previo['canales'][canal],
+                    {'entrantes': 'pct', 'cualificados': 'pct', 'agendas': 'pct'})
         datos['comision'] = setter_analitica.comision_de(miembro)
     return datos
 

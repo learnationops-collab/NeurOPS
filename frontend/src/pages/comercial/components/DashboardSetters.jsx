@@ -65,7 +65,7 @@ const PanelCualificacion = ({ r }) => (
     </Panel>
 );
 
-const PanelConversion = ({ r, canal }) => (
+const PanelConversion = ({ r, dr, canal }) => (
     <Panel id="p-conversion" cab={
         <PanelCab titulo="Conversión" ayuda="Las mismas agendas reportadas, medidas desde tres puntos del embudo.">
             <span className="t-cap mut40 num">{fmt.plural(r.agendas, 'agenda', 'agendas')}</span>
@@ -74,15 +74,17 @@ const PanelConversion = ({ r, canal }) => (
         <div className="gruesa--sm ds-barras">
             <Gruesa i={0} label="Conv. final" cuenta={`sobre ${fmt.num(r.entrantes)}`}
                 help="Agendas reportadas sobre entrantes reportados, de punta a punta."
-                pct={fmt.pct(r.conversion)} tone="warning" w={r.conversion} />
+                pct={fmt.pct(r.conversion)} tone="warning" w={r.conversion} delta={dr.conversion} />
             <Gruesa i={1} label="De cualificado a agenda" cuenta={`sobre ${fmt.num(r.cualificados)}`}
                 help="Agendas sobre cualificados, como en el formulario del reporte."
-                pct={fmt.pct(r.conv_cualificados)} tone="info" w={r.conv_cualificados} />
+                pct={fmt.pct(r.conv_cualificados)} tone="info" w={r.conv_cualificados}
+                delta={dr.conv_cualificados} />
             <Gruesa i={2} label="De link a agenda"
                 cuenta={canal ? 'sin separar por canal' : `sobre ${fmt.num(r.link)}`}
                 help={canal ? 'El link es un total del reporte: sin separar por canal.'
                     : 'Agendas sobre los links de agenda enviados.'}
-                pct={fmt.pct(r.conv_link)} tone="success" w={r.conv_link} />
+                pct={fmt.pct(r.conv_link)} tone="success" w={r.conv_link}
+                delta={canal ? null : dr.conv_link} />
         </div>
     </Panel>
 );
@@ -106,12 +108,13 @@ const Leyenda = ({ canal }) => (canal ? (
  * etapas que el reporte separa por canal; dolor, oferta, link y el sistema son uno solo y mezclarlos
  * con un canal daría conversiones de más de 100%.
  */
-const PanelEmbudo = ({ bloque, r, canal, irA }) => {
-    const etapas = canal
+const PanelEmbudo = ({ bloque, r, dr, canal, irA }) => {
+    const conDelta = (e) => ({ ...e, delta: dr.etapas?.[e.key] });
+    const etapas = (canal
         ? [{ key: 'entrantes', label: 'Entrantes', n: r.entrantes, color: COLOR_CANAL[canal] },
             { key: 'cualificados', label: 'Cualificados', n: r.cualificados, color: COLOR_CANAL[canal] },
             { key: 'agendas', label: 'Agendas', n: r.agendas, color: COLOR_CANAL[canal] }]
-        : etapasParaDibujar(bloque.funnel, irA ? (e) => abrir(irA, S[e.key]) : null);
+        : etapasParaDibujar(bloque.funnel, irA ? (e) => abrir(irA, S[e.key]) : null)).map(conDelta);
     const final = puntaAPunta(etapas);
     const primera = etapas[0], ultima = etapas[etapas.length - 1];
     return (
@@ -181,7 +184,7 @@ const PanelSeguimientos = ({ fu, delta, canal }) => {
    DESPUÉS DE LA AGENDA (el sistema)
    ============================================================ */
 
-const Caja = ({ rotulo, ayuda, valor, sub, color, irA, destino, detalle }) => (
+const Caja = ({ rotulo, ayuda, valor, sub, color, irA, destino, detalle, delta = null }) => (
     <div className="ds-caja" style={color ? { '--c': color } : undefined}>
         <span className="ds-caja-cab">
             <span className="t-rotulo">{rotulo}</span>
@@ -193,13 +196,14 @@ const Caja = ({ rotulo, ayuda, valor, sub, color, irA, destino, detalle }) => (
                 <Cifra className="ds-caja-n num" valor={valor} />
             </MetricaClicable>
             {sub && <span className="t-cap mut num ds-caja-sub">{sub}</span>}
+            <Delta delta={delta} actual={valor} />
         </span>
     </div>
 );
 
 const Baja = () => <span className="ds-baja" aria-hidden="true"><ChevronDown size={16} /></span>;
 
-const PanelDespues = ({ b, comision, canal, irA }) => (
+const PanelDespues = ({ b, deltas, comision, canal, irA }) => (
     <Panel id="p-despues" cab={
         <PanelCab titulo="Después de la agenda"
             ayuda={enCanalNo('Del sistema: las agendas generadas, una por persona, y en qué terminaron.', canal)} />
@@ -210,6 +214,7 @@ const PanelDespues = ({ b, comision, canal, irA }) => (
                 Un backend anterior no manda `ocurridas`: ahí, las generadas como antes. */}
             <Caja rotulo="Agendas" valor={fmt.num(b.ocurridas ?? b.generadas)} irA={irA} destino={S.generadas}
                 detalle={`agendas generadas, ${b.generadas}`} color={v('brand-secondary')}
+                delta={b.ocurridas === undefined ? deltas.generadas : deltas.ocurridas}
                 // Las descalificadas (el closer las resolvió al confirmar, 23/10/2026) también explican
                 // por qué los estados no suman las agendas; solo se dicen si las hay.
                 sub={b.ocurridas === undefined ? null
@@ -229,12 +234,14 @@ const PanelDespues = ({ b, comision, canal, irA }) => (
                     ayuda="No se presentaron; el % es sobre las agendas con resultado." />
                 <Caja rotulo="Show up" valor={fmt.num(b.asistieron)} sub={fmt.pct(b.show_up)}
                     irA={irA} destino={S.asistieron} detalle={`show up, ${b.asistieron}`} color={v('success')}
+                    delta={deltas.show_up}
                     ayuda="Asistieron; el % es sobre las agendas con resultado." />
             </div>
             <Baja />
             <div className="ds-despues-fin">
                 <Caja rotulo="Ventas" valor={fmt.num(b.ventas_originadas)} sub={fmt.pct(b.cierre)}
                     irA={irA} destino={S.ventas} detalle={`ventas originadas, ${b.ventas_originadas}`}
+                    delta={deltas.ventas_originadas}
                     color={v('success')} ayuda="Pago completo o split pay; el % es sobre las que asistieron." />
                 <Caja rotulo="Comisión del mes" valor={comision ? fmt.money(comision.commission) : '—'}
                     color={v('success')}
@@ -432,14 +439,14 @@ const DashboardSetters = ({ bloque, deltas = {}, deltasCanales = {}, comision = 
 
             <div className="grid-2">
                 <PanelCualificacion r={r} />
-                <PanelConversion r={r} canal={enCanal} />
+                <PanelConversion r={r} dr={dr} canal={enCanal} />
             </div>
 
-            <PanelEmbudo bloque={bloque} r={r} canal={enCanal} irA={irA} />
+            <PanelEmbudo bloque={bloque} r={r} dr={dr} canal={enCanal} irA={irA} />
 
             <div className="grid-2">
                 <PanelSeguimientos fu={bloque.followups} delta={deltas.followups_total} canal={enCanal} />
-                <PanelDespues b={bloque} comision={comision} canal={enCanal} irA={irA} />
+                <PanelDespues b={bloque} deltas={deltas} comision={comision} canal={enCanal} irA={irA} />
             </div>
 
             <PanelCanales bloque={bloque} canal={enCanal} />
