@@ -326,3 +326,7 @@
   - Migración `c7d1f4a9e2b6`: columnas `status`, `movements` y `sent_at` en `monthly_payroll` y la tabla `finance_liquidity`.
 - **7 de Noviembre de 2026 (Corregir un Instagram que ya tiene el mismo lead)** *([agenda_contacto_service.py](../../app/services/agenda_contacto_service.py), [ADR-W119](../DECISIONS.md))*:
   - Al corregir el Instagram de una agenda (palabra clave, mazo del setter, Tablero) con uno que ya tiene otra persona del mismo nombre, se unen en una sola y el Instagram mal escrito se da de baja. Antes daba «ya es de otra persona» y no dejaba corregirlo (caso Grecia Rojo, Elias). Con otro nombre sigue frenando y dice de quién es.
+- **7 de Noviembre de 2026 (Embudo de seguimiento en Seguir, solo en el servidor de prueba)** *([embudo_seguimiento_service.py](../../app/services/embudo_seguimiento_service.py), [EmbudoSeguimiento.jsx](../../frontend/src/pages/closer/components/embudo/EmbudoSeguimiento.jsx), [ADR-W120](../DECISIONS.md))*:
+  - Arriba de la pestaña Seguir del closer y del triage: una columna por día después de la llamada (Día 1, 2 y 3) y la de los que respondieron. Cada tarjeta se registra con «Respondió» o «No respondió»; si no respondió pasa al día siguiente y después del último vuelve al pool. Lo que nadie registró queda atrasado.
+  - Arriba, el siguiente lead a seguir, el porcentaje de hoy resuelto y la tasa de respuesta. Los días los cambia la dirección para todo el equipo. Cada registro queda en el historial del lead y se puede deshacer.
+  - Migración `e3a9c5b17d40`: tablas `embudo_config` y `embudo_registros`.

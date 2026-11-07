@@ -28,6 +28,7 @@ from .client_merge_log import ClientMergeLog
 from .system_log import SystemLog
 from .person import Person, PersonIdentity, PersonEvent, Conversation, IDENTITY_KINDS, IDENTITY_USOS, PERSON_EVENT_KINDS
 from .academy_snapshot import AcademySnapshot
+from .embudo import EmbudoConfig, EmbudoRegistro
 from .bug_report import BugReport, BugReportMessage, URGENCY_LEVELS, STATUS_VALUES, REPORT_TYPES
 from .job_application import JobApplication, JobApplicationVote, ClarityWeight, CLARITY_CRITERIA, VOTE_VALUES
 from .assistant_application import AssistantApplication, AssistantClarityWeight
@@ -71,5 +72,6 @@ __all__ = [
     'PlaybookRoadmap', 'PlaybookModule', 'PlaybookLesson', 'PlaybookQuestion', 'PlaybookOption',
     'PlaybookLessonProgress', 'PlaybookCompletion', 'QUESTION_TYPES',
     'InstagramWebhookEvento', 'AiUsage', 'IntentoLimitado',
+    'EmbudoConfig', 'EmbudoRegistro',
 ]
 

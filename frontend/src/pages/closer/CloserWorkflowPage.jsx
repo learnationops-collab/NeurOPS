@@ -19,6 +19,7 @@ import TriageFollowUpModal from '../triage/components/TriageFollowUpModal';
 import { abrirSimulacion } from '../../sesion/simulacion';
 import CloserLeadsAudit from './audit/CloserLeadsAudit';
 import SeguimientosPane from './components/SeguimientosPane';
+import EmbudoSeguimiento from './components/embudo/EmbudoSeguimiento';
 import EsqueletoKanban from './components/EsqueletoKanban';
 import EsqueletoSiguientePaso from './components/EsqueletoSiguientePaso';
 import { escalonDe, useVentanaDeEntrada } from '../../components/huesos/Huesos';
@@ -43,6 +44,7 @@ import { localInputsToUtcIso, parseUtcIso, splitLocalDateTime, localToday, local
 import AgendaCountdown from '../../components/shared/AgendaCountdown';
 import FichaLeadModal from '../../components/ficha/FichaLeadModal';
 import { telefonoLegible } from '../../components/ficha/FichaHeader';
+import { inversionCorta, decisionDe, TONO_SEGMENTO, fmtPuntos, inversionDe } from './datosDelLead';
 import ClienteNuevoVenta from './components/ClienteNuevoVenta';
 import DiaDelReporte, { etiquetaDia } from './components/DiaDelReporte';
 import { agendaParaVender, ejecutarAccion, mensajeDeError } from '../../components/ficha/fichaApi';
@@ -77,40 +79,6 @@ const ETAPAS_DEL_TABLERO = [
     { clave: 'contactado', titulo: 'Contactado', lista: 'contactado', fase: 'conversando', clase: 'k2-v6', columna: 1, vacio: '✓ Nadie esperando confirmar' },
     { clave: 'confirmado', titulo: 'Confirmado', lista: 'confirmado', fase: 'confirmado', clase: 'k3-v6', columna: 2, vacio: 'Sin leads confirmados.' },
 ];
-// La inversión del formulario en pocas palabras, para la tarjeta: «Entre $200 y $500 USD.» →
-// «$200–500 USD», «Más de 1000 USD» → «+$1.000 USD» y cualquier forma de «no puedo» → «Sin
-// inversión» (pedido del 23/10/2026). El texto completo queda en el `title`.
-const milesAr = (n) => Number(n).toLocaleString('es-AR');
-const inversionCorta = (txt) => {
-    const t = String(txt || '').trim().replace(/\.$/, '');
-    if (/\b(no\s+(puedo|estoy|tengo|cuento|dispongo)|ninguna|nada|sin\s+(inversi|presupuesto|dinero))/i.test(t)) return { texto: 'Sin inversión', sin: true };
-    const nums = (t.match(/\d[\d.,]*/g) || []).map(x => Number(x.replace(/[.,](?=\d{3}\b)/g, '').replace(',', '.'))).filter(n => n > 0);
-    const usd = /usd|d[oó]lar/i.test(t) ? ' USD' : '';
-    if (nums.length >= 2) return { texto: `$${milesAr(nums[0])}–${milesAr(nums[1])}${usd}` };
-    if (nums.length === 1) {
-        const signo = /m[aá]s\s+de|desde|\+/i.test(t) ? '+' : /menos\s+de|hasta/i.test(t) ? '<' : '';
-        return { texto: `${signo}$${milesAr(nums[0])}${usd}` };
-    }
-    return { texto: t.length > 22 ? `${t.slice(0, 21)}…` : t };
-};
-
-// Si decide solo o necesita a alguien más, sacado del formulario: la pregunta que habla de
-// decidir, de acompañamiento o de quién paga. Sin una pregunta así, no se muestra nada.
-const decisionDe = (a) => {
-    const fd = a.form_data && typeof a.form_data === 'object' ? a.form_data : {};
-    const clave = Object.keys(fd).find(k => /decisi|decid|acompa|qui[eé]n\s+(paga|financ|apoya)|apoyo/i.test(k));
-    const v = clave ? String(fd[clave] ?? '').trim() : '';
-    if (!v) return null;
-    if (/pareja|familia|padre|madre|espos|consult|acompa|otra persona|alguien|junto|no\b/i.test(v)) {
-        return { texto: 'No decisor', solo: false, title: v };
-    }
-    if (/yo\b|solo|sola|m[ií] mism|por mi cuenta|s[ií]\b/i.test(v)) return { texto: 'Decisor', solo: true, title: v };
-    return { texto: v.length > 20 ? `${v.slice(0, 19)}…` : v, solo: null, title: v };
-};
-
-// Color del segmento en la tarjeta: A y B son los que más importan, C y D los que se pueden desplazar.
-const TONO_SEGMENTO = { A: 'var(--cl-success)', B: 'var(--cl-info)', C: 'var(--cl-warning)', D: 'var(--cl-magenta)' };
-const fmtPuntos = (n) => (Number(n) > 0 ? '+' : '') + Number(n).toLocaleString('es-AR', { maximumFractionDigits: 1 });
 const ETAPA_DE_FASE = Object.fromEntries(ETAPAS_DEL_TABLERO.map(e => [e.fase, e.clave]));
 
 // En qué etapa está una cita, con la misma regla que la pestaña Confirmación de la ficha
@@ -1349,22 +1317,6 @@ const CloserWorkflowPage = () => {
         return { atrasadas, hoy, reportadas: reportedTodayCalls };
     }, [filteredAgendas, selectedDate, reportedTodayCalls]);
 
-    // Lo que el lead dijo que puede invertir en el formulario de calificación: la clave `inversion`
-    // del formulario viejo (n8n) o, en uno de Agendas 2.0, la pregunta que habla de invertir. Un
-    // número suelto se muestra como monto; un rango o un texto, tal cual.
-    const inversionDe = (a) => {
-        const fd = a.form_data && typeof a.form_data === 'object' ? a.form_data : {};
-        let v = fd.inversion;
-        if (!v) {
-            const clave = Object.keys(fd).find(k => /invert|inversi|presupuesto/i.test(k));
-            v = clave ? fd[clave] : null;
-        }
-        if (v == null || String(v).trim() === '') return null;
-        const txt = String(v).trim();
-        const n = Number(txt.replace(/[$\s,.]/g, ''));
-        return /^\$?\s*[\d.,]+\s*(usd)?$/i.test(txt) && n > 0 ? `$${n.toLocaleString('es-AR')}` : txt;
-    };
-
     // Sale del tablero al momento; los conteos de arriba se rehacen con el refresco.
     const alEliminarLead = (leadId) => {
         setAgendas(prev => prev.filter(x => x.id !== leadId));
@@ -2339,7 +2291,10 @@ const CloserWorkflowPage = () => {
                             </div>
                         )
                     ) : activeStep === 'seguimientos' ? (
-                        <SeguimientosPane selectedDate={selectedDate} onOpenLead={handleSelectLead} refreshKey={seguimientosRefreshKey} onTopPending={setSeguimientoHero} />
+                        <div className="space-y-6">
+                            <EmbudoSeguimiento refreshKey={seguimientosRefreshKey} onOpenLead={handleSelectLead} />
+                            <SeguimientosPane selectedDate={selectedDate} onOpenLead={handleSelectLead} refreshKey={seguimientosRefreshKey} onTopPending={setSeguimientoHero} />
+                        </div>
                     ) : (
                         /* Renderizado Kanban para Llamadas (v7): mismo lenguaje visual que
                            Confirmaciones (3 columnas, kcard-v6), agrupado por urgencia en vez de por
