@@ -311,3 +311,5 @@
   - Las agendas generadas de los setters ya no cuentan otra vez a una persona que se reagenda: cuenta el día en que se agendó por primera vez. El 05/11 Setting pasa de 5 a 3 (Gerardo y Osvaldo eran del 04/11).
 - **6 de Noviembre de 2026 (Una seña vieja no marca la llamada como Seña)** *([ventas_previas.py](../../app/services/ventas_previas.py), [comercial_agendas.py](../../app/services/comercial_agendas.py))*:
   - En Revisar › Agendas, una llamada queda en «Seña» solo si la seña se pagó del día de la llamada en adelante, igual que una venta. Ivette (seña del 05/05, cuota del 18/05, llamada del 10/07) salía como seña: el filtro pasa de 6 a 5.
+- **6 de Noviembre de 2026 (Columna Triage en Revisar › Agendas)** *([triage_pases.py](../../app/services/triage_pases.py), [tablasDef.js](../../frontend/src/pages/comercial/components/tablasDef.js), [ADR-W116](../DECISIONS.md))*:
+  - La lista de agendas muestra quién hizo el triage de cada llamada (Dari, Juliana) o «Directa», y se puede filtrar y ordenar por eso.
