@@ -313,3 +313,5 @@
   - En Revisar › Agendas, una llamada queda en «Seña» solo si la seña se pagó del día de la llamada en adelante, igual que una venta. Ivette (seña del 05/05, cuota del 18/05, llamada del 10/07) salía como seña: el filtro pasa de 6 a 5.
 - **6 de Noviembre de 2026 (Columna Triage en Revisar › Agendas)** *([triage_pases.py](../../app/services/triage_pases.py), [tablasDef.js](../../frontend/src/pages/comercial/components/tablasDef.js), [ADR-W116](../DECISIONS.md))*:
   - La lista de agendas muestra quién hizo el triage de cada llamada (Dari, Juliana) o «Directa», y se puede filtrar y ordenar por eso.
+- **6 de Noviembre de 2026 (Asistieron del embudo de setting, sin las llamadas por venir)** *([setter_analitica.py](../../app/services/setter_analitica.py))*:
+  - En el embudo de Setting, el porcentaje de Asistieron se mide sobre las agendas generadas cuya llamada ya llegó a su hora, no sobre todas: las que todavía no ocurrieron lo bajaban. Noviembre (1 al 6): equipo 36,4 % → 80 %, Elias 30 % → 60 %, Paula 41,7 % → 100 %. Octubre casi no cambia (37,9 % → 38,2 %).
