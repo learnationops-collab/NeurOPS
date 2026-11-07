@@ -27,8 +27,8 @@ DIAS_POR_DEFECTO = [1, 2, 3]
 DIA_MAXIMO = 14
 RESPONDIO, NO_RESPONDIO = 'respondio', 'no_respondio'
 VENTANA_RESPONDIERON = 7
-# Una llamada sin reportar no entra: todavía está en Reportar.
-SIN_REPORTAR = {'', 'pendiente'}
+# Una llamada sin reportar (o archivada sin reporte) no entra: nadie sabe qué pasó en ella.
+SIN_REPORTAR = {'', 'pendiente', 'archivada sin reporte'}
 ROLES_QUE_EDITAN = ('admin', 'director_comercial')
 
 
