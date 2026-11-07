@@ -355,6 +355,12 @@ class MonthlyPayroll(db.Model):
     payment_method = db.Column(db.String(255), nullable=True)
     is_paid = db.Column(db.Boolean, default=False)
     paid_at = db.Column(db.DateTime, nullable=True)
+    # La app de Finanzas (07/11/2026): pendiente | transito | pagado | revisar; los pagos parciales y
+    # descuentos [{t: 'pago'|'desc', m, n, e}]; y cuándo salió la plata (Profit la resta solo si
+    # salió después de la foto de saldos, ver `FinanceLiquidity`).
+    status = db.Column(db.String(20), nullable=True)
+    movements = db.Column(db.JSON, nullable=True)
+    sent_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     member = db.relationship('TeamMember', backref=db.backref('payroll_payments', lazy='dynamic', cascade="all, delete-orphan"))
@@ -372,6 +378,9 @@ class MonthlyPayroll(db.Model):
             "payment_method": self.payment_method,
             "is_paid": self.is_paid,
             "paid_at": self.paid_at.isoformat() if self.paid_at else None,
+            "status": self.status,
+            "movements": self.movements or [],
+            "sent_at": self.sent_at.isoformat() + 'Z' if self.sent_at else None,
             "created_at": self.created_at.isoformat() if self.created_at else None
         }
 

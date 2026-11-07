@@ -167,7 +167,9 @@ def _item_de_nomina(member, month, fila, auto, transferencias=0.0):
     `transferencias_recibidas` (09/10/2026) es lo que el integrante recibió en su cuenta por
     transferencia de un cliente en el mes: se le descuenta de lo que se le paga (`a_pagar_de_item`),
     no de lo que cuesta (`total_de_item`)."""
-    return {**_valores_de_nomina(member, month, fila, auto),
+    from app.services.nomina_service import clave_de_nomina
+    return {**_valores_de_nomina(member, month, fila, auto), "role": member.role,
+            "clave": clave_de_nomina(member.name),
             "transferencias_recibidas": round(transferencias or 0.0, 2)}
 
 
@@ -186,6 +188,9 @@ def _valores_de_nomina(member, month, fila, auto):
             "payment_method": member.payment_method,
             "is_paid": False,
             "paid_at": None,
+            "status": None,
+            "movements": [],
+            "sent_at": None,
             "created_at": None
         }
     manual = bool(fila.commissions_manual)
@@ -260,6 +265,44 @@ def a_pagar_de_item(item):
     return total_de_item(item) - (item.get('transferencias_recibidas') or 0.0)
 
 
+ESTADOS_DE_PAGO = ('pendiente', 'transito', 'pagado', 'revisar')
+SALE_LA_PLATA = ('transito', 'pagado')
+
+
+def _aplicar_estado_de_pago(fila, data):
+    """El estado del pago de la app de Finanzas (07/11/2026): `status`, `movements` y `sent_at`.
+
+    `sent_at` es cuándo salió la plata: se pone solo al pasar a «en tránsito» o «pagado» desde un
+    estado en que no había salido, y se borra al volver a uno de esos. «Pagado» deja `is_paid` en
+    True, como el tilde de la Nómina. Devuelve el error, o None."""
+    if 'status' in data:
+        estado = data['status']
+        if estado not in ESTADOS_DE_PAGO:
+            return f"«status» tiene que ser uno de {', '.join(ESTADOS_DE_PAGO)}"
+        if estado in SALE_LA_PLATA and fila.status not in SALE_LA_PLATA:
+            fila.sent_at = datetime.utcnow()
+        elif estado not in SALE_LA_PLATA:
+            fila.sent_at = None
+        fila.status = estado
+        if (estado == 'pagado') != bool(fila.is_paid):
+            fila.is_paid = estado == 'pagado'
+            fila.paid_at = datetime.utcnow() if fila.is_paid else None
+    if 'movements' in data:
+        movimientos = data['movements'] or []
+        if not isinstance(movimientos, list) or len(movimientos) > 50:
+            return "«movements» tiene que ser una lista"
+        limpios = []
+        for m in movimientos:
+            try:
+                limpios.append({'t': 'desc' if m.get('t') == 'desc' else 'pago',
+                                'm': round(max(0.0, float(m.get('m') or 0)), 2),
+                                'n': str(m.get('n') or '')[:80], 'e': int(m.get('e') or 0)})
+            except (TypeError, ValueError, AttributeError):
+                return "Un movimiento tiene un monto que no es un número"
+        fila.movements = limpios
+    return None
+
+
 @bp.route('/public/finance/payroll', methods=['GET', 'POST'])
 @login_required
 @finance_admin_required
@@ -311,6 +354,9 @@ def manage_payroll():
     if 'is_paid' in data and bool(data['is_paid']) != bool(fila.is_paid):
         fila.is_paid = bool(data['is_paid'])
         fila.paid_at = datetime.utcnow() if fila.is_paid else None
+    error = _aplicar_estado_de_pago(fila, data)
+    if error:
+        return jsonify({"error": error}), 400
 
     if not fila.commissions_manual:
         fila.commissions = auto  # la última foto del cálculo; la que vale se calcula en vivo
@@ -605,6 +651,7 @@ def comisiones_tasas():
         "mes": mes, "vigente_desde": desde, "tasas": juego, "historial": tasas_service.historial(),
         "personas": {g: [{"clave": c, "nombre": n} for c, n in lista] for g, lista in tasas_service.PERSONAS.items()},
         "programas": list(tasas_service.PROGRAMAS), "fuentes": list(tasas_service.FUENTES),
+        "fabrica": tasas_service.TASAS_DE_FABRICA,
     }), 200
 
 

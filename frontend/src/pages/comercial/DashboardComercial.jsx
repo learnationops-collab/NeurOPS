@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Banknote, Calendar, FileDown, ListX, Percent, CalendarRange, CheckCircle2, Ghost, Inbox, Search, Target, Users, Wallet } from 'lucide-react';
+import { ArrowLeft, Calendar, CalendarRange, CheckCircle2, Ghost, Inbox, Search, Target, Users, Zap } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
@@ -37,9 +37,11 @@ import { leerCache } from '../../services/cacheDeVistas';
 import { corregirAgenda, eliminarAgenda as eliminarAgendaApi, getComparativas, getContexto, getResumen, getTabla, getVariabilidad, marcarAgendaDuplicada } from './comercialApi';
 import { getNoCerradas, sincronizarAcademia as sincronizarAcademiaApi } from './comercialApi';
 import Finanzas, { TABS_FINANZAS } from './components/finanzas/Finanzas';
-import Payroll, { FiltroGrupos, FiltroPersonas, GRUPOS as GRUPOS_DE_NOMINA, MenuPeriodoPayroll, leerGrupos, leerPersonas, rangoPayroll } from './components/finanzas/Payroll';
 import { MenuPeriodoFinanzas, guardarPeriodo, leerPeriodoGuardado, periodoDe } from './components/finanzas/comun';
 import './components/finanzas/finanzas.css';
+import FinanzasApp, { FlujoFalta, IDS_FINANZAS, SECCIONES_FINANZAS, SECCION_REGISTROS, copiarFaltantes } from './components/finanzas/app/FinanzasApp';
+import LearnitoIsotipo from './components/finanzas/app/LearnitoIsotipo';
+import useFinanzasApp from './components/finanzas/app/useFinanzasApp';
 
 /**
  * La ficha unificada se pide por agenda o por cliente, así que una fila la puede abrir solo si
@@ -123,16 +125,17 @@ const SECCIONES = [
     { id: 'simulador', label: 'Simulador', Icono: Target, soloDireccion: true,
         tabs: [{ key: 'proyeccion', label: 'Proyección' }, { key: 'simulacion', label: 'Simulación' }] },
     { id: 'reportar', label: 'Reportar', Icono: Inbox, tabs: [{ key: 'reporte', label: 'Reporte del día' }, { key: 'historial', label: 'Historial' }], soloDireccion: true },
-    // Las dos de plata (08/10/2026, antes /admin/finance y /admin/payroll) son de /finanzas, no del
-    // dock de Comercial (ver `ESPACIOS`). `permiso` en una sección, como en una tab: solo para quien
-    // tiene «ver finanzas» (ver `puede_ver_finanzas` en app/api/comercial.py).
-    { id: 'finanzas', label: 'Finanzas', Icono: Wallet, tabs: TABS_FINANZAS, permiso: 'puede_ver_finanzas' },
-    { id: 'payroll', label: 'Payroll', Icono: Banknote, tabs: [], permiso: 'puede_ver_finanzas' },
+    // Las de plata son de /finanzas, no del dock de Comercial (ver `ESPACIOS`). `permiso` en una
+    // sección, como en una tab: solo para quien tiene «ver finanzas» (ver `puede_ver_finanzas` en
+    // app/api/comercial.py). Desde el 07/11/2026 son la app de Finanzas (Dashboard, Payroll,
+    // Comisiones, Diferencias, Profit) y Registros, con las pestañas que antes eran «Finanzas».
+    ...SECCIONES_FINANZAS.map((s) => ({ ...s, tabs: [], permiso: 'puede_ver_finanzas' })),
+    { ...SECCION_REGISTROS, tabs: TABS_FINANZAS, permiso: 'puede_ver_finanzas' },
 ];
 
 // Las secciones con su propio período: la píldora del tablero (Hoy, 7 días, Este mes…) no aplica.
 // El Simulador tiene su horizonte y su línea base.
-const CON_PERIODO_PROPIO = ['finanzas', 'payroll', 'simulador'];
+const CON_PERIODO_PROPIO = [...IDS_FINANZAS, 'registros', 'simulador'];
 
 /**
  * Espacios: este mismo tablero con solo algunas secciones en el dock. «finanzas» (08/10/2026) es
@@ -142,9 +145,8 @@ const CON_PERIODO_PROPIO = ['finanzas', 'payroll', 'simulador'];
  * separadas: director comercial y finanzas», pedido del 08/10/2026), y un link viejo a una de ellas
  * (`/admin/comercial?s=payroll`) lleva al espacio con el resto de la query.
  */
-const ESPACIOS = { finanzas: ['finanzas', 'payroll'] };
-// Las personas de Payroll cuyas ventas se pueden abrir con `ver` en la URL (ver `verEnNomina`).
-const PERSONAS_DE_NOMINA = GRUPOS_DE_NOMINA.flatMap(g => g.personas);
+// `finanzas` es la sección vieja (hoy Registros): un link a ella sigue llevando al espacio.
+const ESPACIOS = { finanzas: [...IDS_FINANZAS, 'registros', 'finanzas'] };
 const RUTA_DE_ESPACIO = { finanzas: RUTA_FINANZAS };
 const espacioDe = (s) => Object.keys(ESPACIOS).find(e => ESPACIOS[e].includes(s)) || null;
 
@@ -157,7 +159,7 @@ const espacioDe = (s) => Object.keys(ESPACIOS).find(e => ESPACIOS[e].includes(s)
 const BASIS_INICIAL = { generadas: 'creacion' };
 
 // `?s=triage` (el link de cuando era una sección) abre Analizar con el interruptor en Triage (ver `rolPedido`).
-const SECCION_ALIAS = { proyectar: 'simulador', triage: 'analizar' };
+const SECCION_ALIAS = { proyectar: 'simulador', triage: 'analizar', finanzas: 'registros' };
 
 /** En lugar de los datos, mientras a un rango personalizado le falta una fecha: con los campos
  *  ahí mismo, para no tener que ir a buscarlos a la píldora. */
@@ -232,12 +234,10 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     // reciben {desde, hasta, mes}, ver `periodoDe`) y Payroll por un rango libre.
     const [eleccionFinanzas, setEleccionFinanzas] = useState(leerPeriodoGuardado);
     const periodoFinanzas = useMemo(() => periodoDe(eleccionFinanzas), [eleccionFinanzas]);
-    const [rangoNomina, setRangoNomina] = useState(() => rangoPayroll('mes'));
-    // Payroll: qué grupos y qué personas se ven (queda lo último elegido) y sus dos modales.
-    const [gruposNomina, setGruposNomina] = useState(leerGrupos);
-    const [personasNomina, setPersonasNomina] = useState(leerPersonas);
-    const [tasasAbiertas, setTasasAbiertas] = useState(false);
-    const [excluirAbierto, setExcluirAbierto] = useState(false);
+    // La app de Finanzas: sus datos viven acá y no en la vista, así cambiar de sección no los vuelve
+    // a pedir y el dock puede mostrar lo que falta pagar.
+    const enFinanzas = espacio === 'finanzas';
+    const appFinanzas = useFinanzasApp(periodoFinanzas, enFinanzas);
     // La fecha que alguien eligió A MANO en el toggle, por tabla. Sin elección manda `BASIS_INICIAL`.
     const [basisElegida, setBasisElegida] = useState({});
     const [resumen, setResumen] = useState(null);
@@ -511,21 +511,6 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     const irADetalle = embebido && !onIrASeccion ? null : irA;
 
     /**
-     * Payroll: de quién están abiertas las ventas (`ver`, el id de su tile), dentro de /finanzas
-     * (08/10/2026). Antes el tile llevaba a Revisar › Ventas de /admin/comercial, la vista de la
-     * dirección; ahora la lista vive en Payroll (`VentasDePersona`). Va en la URL y SUMA una entrada
-     * al historial (las demás de `set` la reemplazan): el botón atrás del navegador cierra la lista y
-     * vuelve a los tiles, y el link de una persona se comparte.
-     */
-    const verEnNomina = PERSONAS_DE_NOMINA.some(p => p.id === params.get('ver')) ? params.get('ver') : null;
-    const elegirEnNomina = useCallback((id) => {
-        const siguiente = new URLSearchParams(params);
-        if (id) siguiente.set('ver', id);
-        else siguiente.delete('ver');
-        setParams(siguiente);
-    }, [params, setParams]);
-
-    /**
      * Ir a la lista de UNA persona, opcionalmente con el corte de una métrica.
      *
      * La persona se acota con `m` (el backend rearma el alcance) y no con la faceta Closer: así
@@ -640,7 +625,8 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
         && (!s.permiso || contexto[s.permiso])
         && (delEspacio ? delEspacio.includes(s.id) : !espacioDe(s.id)));
     const sinPermiso = !!permisoPedido && !contexto[permisoPedido];
-    const titulo = vistaTriage ? 'Triage'
+    // En la app de Finanzas cada vista trae su título grande: arriba va el nombre del espacio.
+    const titulo = IDS_FINANZAS.includes(seccion) ? 'Finances' : vistaTriage ? 'Triage'
         : contexto.puede_elegir_equipo || delEspacio ? seccionActual.label : `${seccionActual.label} · mis datos`;
     // En un espacio la vuelta a otro lado es el menú del dock (ver `gruposDeSesion`).
     const salida = delEspacio ? null : SALIDA[contexto.yo.rol];
@@ -713,8 +699,20 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
 
     // Comercial y Finances son dos vistas separadas: se pasa de una a la otra con «Cambiar de vista»
     // (el Portal, utils/portal.js).
+    // En /finanzas: Learnito con su isotipo animado y, fijable al dock, copiar lo que falta pagar.
+    const accionesFinanzas = enFinanzas ? [{
+        id: 'fz-faltan', label: 'Copiar lo que falta pagar', Icono: Zap,
+        onClick: async () => {
+            const r = await copiarFaltantes(appFinanzas.personas);
+            if (r === 'ok') toast.success('Pagos que faltan copiados');
+            else if (r === 'nada') toast.success('No falta pagar a nadie');
+            else toast.error('No se pudo copiar');
+        },
+    }] : [];
     const gruposDeSesion = armarMenuSesion({
         user, navigate, logout,
+        acciones: accionesFinanzas,
+        iconoLearnito: enFinanzas ? LearnitoIsotipo : undefined,
         configuracion: { onClick: () => abrirConfiguracion() },
         playbook: { onClick: () => openPlaybook('pending'), pendientes: pendingCount },
     });
@@ -769,13 +767,6 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                     {seccion === 'reportar' && stepper}
                     {/* Los filtros de grupos y personas son de los tiles: con las ventas de una
                         persona abiertas no cambiarían nada de lo que se ve. */}
-                    {seccion === 'payroll' && !sinPermiso && !verEnNomina && (
-                        <FiltroGrupos visibles={gruposNomina} onCambiar={setGruposNomina}
-                            personas={personasNomina} onCambiarPersonas={setPersonasNomina} />
-                    )}
-                    {seccion === 'payroll' && !sinPermiso && !verEnNomina && (
-                        <FiltroPersonas grupos={gruposNomina} elegidas={personasNomina} onCambiar={setPersonasNomina} />
-                    )}
 
                     <div className="barra-der">
                         {contexto.puede_elegir_equipo && seccion === 'analizar' && (
@@ -789,29 +780,10 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
 
                         {/* Con "Personalizado" la píldora dice el rango, y su menú queda abierto
                             con las dos fechas debajo de los períodos. */}
-                        {seccion === 'finanzas' && !sinPermiso && (
+                        {delEspacio && !sinPermiso && (
                             <MenuPeriodoFinanzas eleccion={eleccionFinanzas}
                                 onCambiar={(e) => { setEleccionFinanzas(e); guardarPeriodo(e); }} />
                         )}
-                        {seccion === 'payroll' && !sinPermiso && (
-                            <>
-                                <button type="button" className="pastilla" onClick={() => window.print()}>
-                                    <FileDown size={14} />
-                                    <span>Exportar PDF</span>
-                                </button>
-                                <button type="button" className={`pastilla${excluirAbierto ? ' pastilla--on' : ''}`}
-                                    onClick={() => setExcluirAbierto(true)}>
-                                    <ListX size={14} />
-                                    <span>Excluir ventas</span>
-                                </button>
-                                <button type="button" className={`pastilla${tasasAbiertas ? ' pastilla--on' : ''}`}
-                                    onClick={() => setTasasAbiertas(true)}>
-                                    <Percent size={14} />
-                                    <span>Porcentajes</span>
-                                </button>
-                            </>
-                        )}
-                        {seccion === 'payroll' && !sinPermiso && <MenuPeriodoPayroll rango={rangoNomina} onCambiar={setRangoNomina} />}
 
                         {seccion !== 'reportar' && !CON_PERIODO_PROPIO.includes(seccion) && (
                             <PillMenu icono={<Calendar size={14} />} rotulo="período"
@@ -913,16 +885,14 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                             <div className="vacio-grande">
                                 <span className="vacio-icono"><seccionActual.Icono size={24} /></span>
                                 <h2 className="t-h2">Sin acceso a {seccionActual.label}</h2>
-                                <p className="t-sm mut">Finanzas y Payroll son de admin o dirección comercial con el permiso «ver finanzas».</p>
+                                <p className="t-sm mut">Finanzas es de admin o dirección comercial con el permiso «ver finanzas».</p>
                             </div>
                         </section>
                     )}
-                    {seccion === 'finanzas' && !sinPermiso && <Finanzas tab={tab} periodo={periodoFinanzas} />}
-                    {seccion === 'payroll' && !sinPermiso && (
-                        <Payroll desde={rangoNomina.desde} hasta={rangoNomina.hasta} ver={verEnNomina} onVer={elegirEnNomina}
-                            grupos={gruposNomina} personas={personasNomina} tasasAbiertas={tasasAbiertas}
-                            onCerrarTasas={() => setTasasAbiertas(false)}
-                            excluirAbierto={excluirAbierto} onCerrarExcluir={() => setExcluirAbierto(false)} />
+                    {seccion === 'registros' && !sinPermiso && <Finanzas tab={tab} periodo={periodoFinanzas} />}
+                    {IDS_FINANZAS.includes(seccion) && !sinPermiso && (
+                        <FinanzasApp seccion={seccion} periodo={periodoFinanzas} app={appFinanzas}
+                            onIr={(s) => set({ s })} />
                     )}
                     {seccion === 'simulador' && (
                         <Simulador permitido={!!contexto.puede_reportar} tab={tab} onTab={setTab} />
@@ -964,7 +934,12 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                     <DockSecciones secciones={secciones} activa={seccion}
                         onElegir={(id) => set({ s: id, ver: null })}
                         ariaLabel="Secciones del dashboard comercial" siempreNombres
-                        despues={<MenuSesion nombre={contexto.yo.nombre} rol={rotuloDeRol} grupos={gruposDeSesion} />}
+                        despues={(
+                            <>
+                                {enFinanzas && !sinPermiso && <FlujoFalta personas={appFinanzas.personas} onIr={(s) => set({ s })} />}
+                                <MenuSesion nombre={contexto.yo.nombre} rol={rotuloDeRol} grupos={gruposDeSesion} />
+                            </>
+                        )}
                         antes={contexto.puede_elegir_equipo && !delEspacio && (
                             <div className="dock-rol caja">
                                 <Humo colores={HUMO_DOCK} />

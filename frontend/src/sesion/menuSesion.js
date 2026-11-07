@@ -36,16 +36,17 @@ export const rotuloDeSesion = (user, rotulo = null) =>
  * - playbook: { pendientes } (opcional): los videos pendientes, con la cuenta en «Portal» (el Playbook
  *   está en Cortex).
  * - ir: opciones de navegación propias, después de «Portal» (p. ej. «Volver a Operaciones»).
+ * - iconoLearnito: el ícono de Learnito (en /finanzas, el isotipo animado; en el resto, la chispa).
  */
 // `navigate` ya no hace falta (el Portal se abre encima, sin navegar): las pantallas lo pueden seguir pasando.
 export function armarMenuSesion({
     user, logout,
-    acciones = [], configuracion, playbook = null, ir = [],
+    acciones = [], configuracion, playbook = null, ir = [], iconoLearnito = Sparkles,
 }) {
     const avisos = configuracion?.avisos?.filter(Boolean) || [];
     // Learnito, el copiloto: en todas las pantallas de quien lo puede usar, al final de las acciones.
     const learnito = puedeUsarLearnito(user)
-        ? [{ id: 'learnito', label: 'Learnito', Icono: Sparkles, onClick: abrirLearnito }]
+        ? [{ id: 'learnito', label: 'Learnito', Icono: iconoLearnito, onClick: abrirLearnito }]
         : [];
     return [
         [...acciones, ...learnito],

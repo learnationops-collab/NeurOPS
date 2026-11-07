@@ -365,6 +365,7 @@ from . import lead_roadmap_edit
 from . import finance
 from . import conciliacion
 from . import finance_cobros
+from . import finance_liquidez
 from . import new_clients
 from . import workshop_lead
 from . import landing_session

@@ -90,6 +90,9 @@ def cobros_del_periodo():
     aprobadas = ({r.clave: r for r in ConciliacionRevision.query.filter(ConciliacionRevision.clave.in_(claves))}
                  if claves else {})
 
+    from app.services.procedencia_ingresos_service import procedencia_por_venta
+    # De dónde vino cada cobro (07/11/2026, el Dashboard de Finanzas): el balde de Procedencia.
+    origenes = procedencia_por_venta(ventas)
     filas = []
     for v in ventas:
         fila = ComercialService._fila_venta(v, resolver_nombre_closer(v.email_vendedor), None, contactos.get(v.id))
@@ -98,6 +101,8 @@ def cobros_del_periodo():
             'email': fila['email'], 'programa': fila['programa'], 'tipo_pago': fila['tipo_pago']['label'],
             'procesador': fila['metodo'], 'bruto': fila['monto'], 'neto': fila['monto_neto'],
             'verificado': tiene_comision_real(v), 'closer': fila['closer'] or 'Sin closer',
+            'origen': origenes.get(v.id, ('sin_procedencia', None, None))[0],
+            'origen_detalle': origenes.get(v.id, (None, None, None))[2],
             **_cotejo(v, por_venta.get(v.id), cruce['pasarelas'], aprobadas),
         })
     sin_reportar = [{'clave': f['clave'], 'pasarela': conciliacion.PASARELAS[f['pasarela']], 'fecha': f['fecha'],
