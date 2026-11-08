@@ -335,3 +335,5 @@
   - Cualitativo ocupa sola la columna izquierda (más angosta) y Excluyentes, Deseables e Inteligencia artificial van apilados en la del medio, más ancha. En el teléfono Cualitativo queda después de las otras.
 - **8 de Noviembre de 2026 (Hiring: letra más grande en la ficha)** *([fichaPostulacion.css](../../frontend/src/pages/admin/hiring/components/fichaPostulacion.css))*:
   - Respuestas, preguntas, chips, títulos de sección, desglose del score y perfil, un punto o punto y medio más grandes.
+- **8 de Noviembre de 2026 (Hiring: los textos de Cualitativo más grandes)** *([fichaPostulacion.css](../../frontend/src/pages/admin/hiring/components/fichaPostulacion.css))*:
+  - Las respuestas largas (Experiencia previa, Cualidad diferencial, Persona indicada) pasan de 15 a 17 px, con más interlineado y más blancas.
