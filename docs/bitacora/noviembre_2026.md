@@ -341,3 +341,6 @@
   - Medida en una réplica a 1481 × 725: la ficha se achicaba al 79 % y las respuestas se veían de ~13,6 px. Ahora se achica al 93 % y se ven de ~16 px.
   - En la columna ancha, las respuestas cortas de Excluyentes y Deseables van de a cuatro por renglón; Cualitativo más angosto muestra 5 renglones de cada respuesta antes del «Ver todo».
   - Respuestas a 17 px, chips a 15, preguntas a 14 y títulos a 19; menos margen en cabecera, tarjetas y renglones. El panel del score y el perfil también más grandes.
+- **8 de Noviembre de 2026 (Talent: la más barata primero)** *([vista.js](../../frontend/src/pages/admin/hiring/lib/vista.js), [HiringDashboardPage.jsx](../../frontend/src/pages/admin/hiring/HiringDashboardPage.jsx))*:
+  - Las tablas de Talent (Inbox, Analyze, Winners) arrancan siempre ordenadas por lo que pide, menor primero; a igual pretensión, mejor score. Otro orden elegido dura lo que dura la visita.
+  - «Próxima a revisar» es la que pide menos entre las sin analizar, y las flechas de la ficha siguen ese mismo orden.

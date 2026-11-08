@@ -6,7 +6,7 @@ import { haceTxt, horasDesde, pideNum } from '../lib/vista';
 import { Bandera, ChipModalidad, Inicial } from './Piezas';
 import { porSeccion } from './PanelDecision';
 
-// Arriba del Inbox: la próxima postulación a revisar (la de mejor score entre las
+// Arriba del Inbox: la próxima postulación a revisar (la que pide menos entre las
 // que nadie miró) y el avance de la revisión entera. Las dos tarjetas de la
 // referencia.
 
