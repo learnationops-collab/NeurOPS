@@ -56,7 +56,6 @@ const PanelDecision = ({ d, botones, titulos, onDecidir, nota }) => {
     const grupos = porSeccion(d.puntaje);
     const lugar = [d.provincia, d.pais].filter(Boolean).join(', ');
     const perfil = [
-        d.remuneracion && ['Pretensión', `${d.remuneracion} USD / mes`],
         lugar && ['País', lugar],
         d.edad && ['Edad', `${d.edad} años`],
         d.modalidad && ['Modalidad', MODALIDAD[d.modalidad]?.label],

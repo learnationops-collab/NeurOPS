@@ -2,7 +2,7 @@ import React, { useEffect, useLayoutEffect, useState, useCallback, useRef } from
 import { motion } from 'framer-motion';
 import {
     X, ChevronLeft, ChevronRight, CheckCircle2, XCircle, Clock, Copy, Check,
-    Target, Trash2, Trophy, Star, FileText, AlertTriangle, Mail,
+    Target, Trash2, Trophy, Star, FileText, AlertTriangle, Mail, Wallet,
 } from 'lucide-react';
 import api from '../../../../services/api';
 import { Aura } from '../../../../components/standard';
@@ -297,6 +297,12 @@ const HiringCandidateModal = ({ applicationId, ids, onClose, onNavigate, onDecid
                                 ) : d.whatsapp}
                             </Capsula>
                         )}
+                        {d.remuneracion && (
+                            <span className="tl-fi-pretension" title="Pretensión salarial">
+                                <Wallet size={16} aria-hidden="true" />
+                                <b>{d.remuneracion}</b><small>USD / mes</small>
+                            </span>
+                        )}
                         {cvHref && (
                             <a className="tl-fi-cv" href={cvHref} target="_blank" rel="noreferrer">
                                 <Aura colors={['var(--brand-secondary)', 'var(--brand-primary)', 'var(--brand-secondary)']} />
@@ -313,7 +319,7 @@ const HiringCandidateModal = ({ applicationId, ids, onClose, onNavigate, onDecid
                     </div>
                 </header>
 
-                <div ref={cuerpo} className="tl-fi-cuerpo custom-scrollbar">
+                <div ref={cuerpo} className={`tl-fi-cuerpo custom-scrollbar${columnas.cuali ? ' is-cuali' : ''}`}>
                     {!data && (
                         <div className="tl-fi-vacio" style={fallo ? { color: 'var(--error)' } : undefined}>
                             {fallo ? 'No se pudo cargar la postulación.' : 'Cargando la postulación…'}

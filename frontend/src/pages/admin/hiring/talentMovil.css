@@ -92,6 +92,8 @@
   .tl-fi .tl-fi-capsula:has(.tl-fi-capsula-logo){order:-1}
   .tl-fi .tl-fi-capsula > span{font-size:13px}
   .tl-fi .tl-fi-capsula .tl-fi-ibtn{width:32px;height:32px}
+  .tl-fi .tl-fi-pretension{height:38px;line-height:38px;padding:0 12px}
+  .tl-fi .tl-fi-pretension b{font-size:16px}
   .tl-fi .tl-fi-cv{flex:none;height:38px;padding:0 14px;font-size:11px}
   .tl-fi .tl-fi-nav{position:absolute;top:14px;right:62px;padding:1px}
   .tl-fi .tl-fi-nav .tl-fi-ibtn{width:34px;height:34px}
@@ -107,6 +109,8 @@
   .tl-fi .tl-fi-score{order:-2}
   .tl-fi .tl-fi-perfil{order:-1;padding:10px 12px 4px;border-radius:18px;background:var(--bg-element);border:1px solid var(--border-main)}
   .tl-fi .tl-fi-col{gap:14px}
+  /* En el teléfono el Cualitativo va después de Excluyentes, Deseables e IA. */
+  .tl-fi .tl-fi-cuerpo.is-cuali > .tl-fi-col:first-of-type{order:1}
   .tl-fi .tl-fi-col > .tl-fi-sec:last-child{flex:none}
   .tl-fi .tl-fi-botones{order:10;position:sticky;bottom:0;z-index:5;margin:auto -14px 0;
     grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;

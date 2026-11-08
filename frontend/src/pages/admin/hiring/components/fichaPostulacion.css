@@ -68,6 +68,13 @@
   background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.28) 50%,transparent 65%);transform:translateX(-120%);
   animation:tlFiCv 5s ease-in-out 1.2s infinite}
 .tl-fi-cv:hover{transform:translateY(-1px);box-shadow:0 14px 32px -12px var(--brand-secondary),inset 0 1px 0 rgba(255,255,255,.22)}
+/* La pretensión salarial, a la vista junto al contacto. */
+.tl-fi-pretension{flex:none;display:inline-flex;align-items:baseline;gap:6px;height:40px;padding:0 16px 0 14px;border-radius:999px;white-space:nowrap;
+  color:var(--success);background:color-mix(in srgb,var(--success) 14%,transparent);border:1px solid color-mix(in srgb,var(--success) 45%,transparent);
+  box-shadow:0 8px 22px -14px var(--success);line-height:40px}
+.tl-fi-pretension svg{align-self:center}
+.tl-fi-pretension b{font-size:18px;font-weight:800;letter-spacing:-.01em;color:var(--text-on-surface);font-variant-numeric:tabular-nums}
+.tl-fi-pretension small{font-size:11.5px;font-weight:600}
 .tl-fi-sep{width:1px;height:32px;background:var(--border-main);margin:0 4px}
 .tl-fi-nav{display:flex;align-items:center;gap:4px;padding:2px;border-radius:999px;border:1px solid var(--border-main)}
 .tl-fi-nav b{padding:0 4px;font-size:13px;font-weight:700;color:var(--text-muted);font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -75,6 +82,8 @@
 /* Cuerpo: dos columnas de secciones y el panel de decisión */
 .tl-fi-cuerpo{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 300px;grid-auto-rows:min-content;
   grid-template-rows:auto auto 1fr;gap:14px;padding:14px 28px 16px;overflow:auto}
+/* Cualitativo a la izquierda, más angosto; Excluyentes, Deseables e IA apilados al lado. */
+.tl-fi-cuerpo.is-cuali{grid-template-columns:minmax(0,.72fr) minmax(0,1.28fr) 300px}
 .tl-fi-col{display:flex;flex-direction:column;gap:14px;min-width:0}
 /* Las dos columnas terminan a la misma altura: la última sección de cada una estira. */
 .tl-fi-col > .tl-fi-sec:last-child{flex:1}
@@ -200,14 +209,14 @@
 }
 
 @media (max-width:1180px){
-  .tl-fi-cuerpo{grid-template-columns:minmax(0,1fr) 280px}
+  .tl-fi-cuerpo,.tl-fi-cuerpo.is-cuali{grid-template-columns:minmax(0,1fr) 280px}
   .tl-fi-col + .tl-fi-col{grid-column:1}
   .tl-fi-aviso,.tl-fi-vacio{grid-column:1}
   .tl-fi-dec{grid-column:2;grid-row:1 / span 3}
 }
 @media (max-width:760px){
   .tl-fi-cab{padding:16px}
-  .tl-fi-cuerpo{grid-template-columns:minmax(0,1fr);padding:16px}
+  .tl-fi-cuerpo,.tl-fi-cuerpo.is-cuali{grid-template-columns:minmax(0,1fr);padding:16px}
   .tl-fi-dec{grid-column:1;grid-row:auto}
   .tl-fi-items{grid-template-columns:minmax(0,1fr)}
   .tl-fi-capsula{max-width:100%}

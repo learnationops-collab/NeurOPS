@@ -58,6 +58,15 @@ const altoDe = (s) => 70 + s.preguntas.reduce((n, p) => {
 
 /** Reparte las secciones en dos columnas: cada una va a la más corta, en orden. */
 export const repartir = (secciones) => {
+    // Con sección cualitativa: ella sola a la izquierda (textos largos) y el resto apilado a la derecha.
+    const esCuali = (s) => /cualitativ|criterio|aporte|actitud/.test(
+        String(s.titulo || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase());
+    if (secciones.some(esCuali) && !secciones.every(esCuali)) {
+        const conIndice = secciones.map((s, i) => ({ s, i }));
+        const cols = [conIndice.filter(({ s }) => esCuali(s)), conIndice.filter(({ s }) => !esCuali(s))];
+        cols.cuali = true;
+        return cols;
+    }
     const cols = [[], []];
     const alto = [0, 0];
     secciones.forEach((s, i) => {

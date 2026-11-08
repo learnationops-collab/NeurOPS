@@ -330,3 +330,6 @@
   - Ficha más compacta: cabecera, tarjetas de sección, renglones, chips y botones más bajos; el score va en una línea con su estado y sin el rótulo «Decisión».
   - Si igual no entra (formulario largo o pantalla baja), la ficha se achica en bloque hasta entrar, hasta un 70 %; abrir un «Ver todo» la vuelve a medir. En el teléfono sigue con scroll.
   - Cabecera: el país con su bandera al lado del nombre, íconos de correo y WhatsApp en las cápsulas y el botón «Abrir CV» con el humo de marca.
+- **8 de Noviembre de 2026 (Hiring: ficha con Cualitativo a la izquierda y la pretensión arriba)** *([SeccionesFicha.jsx](../../frontend/src/pages/admin/hiring/components/SeccionesFicha.jsx), [HiringCandidateModal.jsx](../../frontend/src/pages/admin/hiring/components/HiringCandidateModal.jsx), [fichaPostulacion.css](../../frontend/src/pages/admin/hiring/components/fichaPostulacion.css))*:
+  - La pretensión salarial pasa a la cabecera, al lado del WhatsApp, en verde y grande; sale del bloque Perfil.
+  - Cualitativo ocupa sola la columna izquierda (más angosta) y Excluyentes, Deseables e Inteligencia artificial van apilados en la del medio, más ancha. En el teléfono Cualitativo queda después de las otras.
