@@ -326,3 +326,7 @@
   - Migración `c7d1f4a9e2b6`: columnas `status`, `movements` y `sent_at` en `monthly_payroll` y la tabla `finance_liquidity`.
 - **7 de Noviembre de 2026 (Corregir un Instagram que ya tiene el mismo lead)** *([agenda_contacto_service.py](../../app/services/agenda_contacto_service.py), [ADR-W119](../DECISIONS.md))*:
   - Al corregir el Instagram de una agenda (palabra clave, mazo del setter, Tablero) con uno que ya tiene otra persona del mismo nombre, se unen en una sola y el Instagram mal escrito se da de baja. Antes daba «ya es de otra persona» y no dejaba corregirlo (caso Grecia Rojo, Elias). Con otro nombre sigue frenando y dice de quién es.
+- **8 de Noviembre de 2026 (Hiring: la ficha de postulación entra sin scroll)** *([HiringCandidateModal.jsx](../../frontend/src/pages/admin/hiring/components/HiringCandidateModal.jsx), [fichaPostulacion.css](../../frontend/src/pages/admin/hiring/components/fichaPostulacion.css), [PanelDecision.jsx](../../frontend/src/pages/admin/hiring/components/PanelDecision.jsx))*:
+  - Ficha más compacta: cabecera, tarjetas de sección, renglones, chips y botones más bajos; el score va en una línea con su estado y sin el rótulo «Decisión».
+  - Si igual no entra (formulario largo o pantalla baja), la ficha se achica en bloque hasta entrar, hasta un 70 %; abrir un «Ver todo» la vuelve a medir. En el teléfono sigue con scroll.
+  - Cabecera: el país con su bandera al lado del nombre, íconos de correo y WhatsApp en las cápsulas y el botón «Abrir CV» con el humo de marca.
