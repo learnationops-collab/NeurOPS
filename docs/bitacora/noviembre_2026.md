@@ -347,3 +347,6 @@
 - **8 de Noviembre de 2026 (Hiring: las respuestas largas de la ficha se leen de a una)** *([SeccionesFicha.jsx](../../frontend/src/pages/admin/hiring/components/SeccionesFicha.jsx), [fichaPostulacion.css](../../frontend/src/pages/admin/hiring/components/fichaPostulacion.css))*:
   - «Ver todo» abre una sola respuesta a la vez: la abierta pasa a 19,5 px y las otras de la sección quedan en un renglón, apagadas.
   - La columna de Cualitativo ya no decide el alto de la ficha: abrir una respuesta larga no achica el resto; si no entra, se desliza solo esa columna.
+- **8 de Noviembre de 2026 (Talent: Inbox con la pretensión a la vista y solo aprobación y reserva)** *([ResumenInbox.jsx](../../frontend/src/pages/admin/hiring/components/ResumenInbox.jsx), [talent.css](../../frontend/src/pages/admin/hiring/talent.css))*:
+  - «Próxima a revisar» muestra lo que pide grande y en verde, con «La más barata», al lado del score (antes era un chip más).
+  - «Avance de la revisión» pasa a dos anillos: % de aprobación (seleccionadas + finalistas) y % de reserva, sobre las postulaciones con decisión. Cada uno abre su pestaña.
