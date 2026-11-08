@@ -350,3 +350,5 @@
 - **8 de Noviembre de 2026 (Talent: Inbox con la pretensión a la vista y solo aprobación y reserva)** *([ResumenInbox.jsx](../../frontend/src/pages/admin/hiring/components/ResumenInbox.jsx), [talent.css](../../frontend/src/pages/admin/hiring/talent.css))*:
   - «Próxima a revisar» muestra lo que pide grande y en verde, con «La más barata», al lado del score (antes era un chip más).
   - «Avance de la revisión» pasa a dos anillos: % de aprobación (seleccionadas + finalistas) y % de reserva, sobre las postulaciones con decisión. Cada uno abre su pestaña.
+- **8 de Noviembre de 2026 (Hiring: el «Ver todo» de la última respuesta de Cualitativo se cortaba)** *([fichaPostulacion.css](../../frontend/src/pages/admin/hiring/components/fichaPostulacion.css))*:
+  - La tarjeta de Cualitativo se encogía al alto de la columna y cortaba «Persona indicada» y su «Ver todo». Ahora no se encoge (si no entra, se desliza la columna) y cada respuesta cerrada muestra 4 renglones en vez de 5, así en una pantalla de 1481 × 725 entran las tres con su botón.

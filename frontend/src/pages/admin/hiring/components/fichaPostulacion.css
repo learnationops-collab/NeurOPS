@@ -132,7 +132,7 @@
 .tl-fi-valor{margin:0;font-size:17px;font-weight:600;line-height:1.35;text-wrap:pretty;overflow-wrap:anywhere}
 .tl-fi-valor.is-vacio{font-weight:400;color:var(--text-muted-40)}
 .tl-fi-valor--largo{white-space:pre-wrap;font-size:17px;font-weight:400;line-height:1.5;color:color-mix(in srgb,var(--text-on-surface) 95%,transparent)}
-.tl-fi-valor--largo.is-cerrado{display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden}
+.tl-fi-valor--largo.is-cerrado{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
 /* Acordeón: la que se lee, más grande; las otras de la sección, en un renglón y apagadas. */
 .tl-fi-valor--largo.is-abierto{font-size:19.5px;line-height:1.55;color:var(--text-on-surface);animation:tlFiEntra .35s cubic-bezier(.22,1,.36,1)}
 .tl-fi-valor--largo.is-plegado{-webkit-line-clamp:1;opacity:.55}
@@ -217,6 +217,8 @@
    otras y, si la respuesta abierta es muy larga, se desliza sola en vez de achicar toda la ficha. */
 @media (min-width:1181px){
   .tl-fi-cuerpo.is-cuali > .tl-fi-col:first-of-type{height:0;min-height:100%;overflow-y:auto;scrollbar-width:thin}
+  /* La tarjeta estira hasta abajo pero no se encoge: si no entra, se desliza la columna en vez de cortarse. */
+  .tl-fi-cuerpo.is-cuali > .tl-fi-col:first-of-type > .tl-fi-sec{flex:1 0 auto}
 }
 @media (max-width:1180px){
   .tl-fi-cuerpo,.tl-fi-cuerpo.is-cuali{grid-template-columns:minmax(0,1fr) 280px}
