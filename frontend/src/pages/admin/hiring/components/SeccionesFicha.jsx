@@ -148,7 +148,7 @@ export const Seccion = ({ s, i, puntos, abiertas, onToggle, onCopiar }) => {
         <section className="tl-fi-sec" style={{ '--c': color, '--i': i }}>
             <Aura soft size="card" colors={[color, 'var(--brand-primary)']} />
             <header className="tl-fi-sec-cab">
-                <span className="tl-fi-tile"><Icono size={20} aria-hidden="true" /></span>
+                <span className="tl-fi-tile"><Icono size={18} aria-hidden="true" /></span>
                 <h3 className="tl-fi-sec-tit" title={titular(s.titulo)}>{titular(s.titulo)}</h3>
                 <span className="tl-fi-cuenta" style={corta ? { '--c': 'var(--error)' } : undefined}
                     title={corta ? 'Una respuesta corta la postulación' : 'Respondidas sin cortar'}>

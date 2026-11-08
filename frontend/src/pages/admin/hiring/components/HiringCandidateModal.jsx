@@ -1,14 +1,15 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
+import React, { useEffect, useLayoutEffect, useState, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
     X, ChevronLeft, ChevronRight, CheckCircle2, XCircle, Clock, Copy, Check,
-    Target, Trash2, Trophy, Star, FileText, AlertTriangle, MessageCircle,
+    Target, Trash2, Trophy, Star, FileText, AlertTriangle, Mail,
 } from 'lucide-react';
 import api from '../../../../services/api';
 import { Aura } from '../../../../components/standard';
 import { href, soloDigitos } from '../lib/escalas';
 import { Seccion, repartir } from './SeccionesFicha';
 import PanelDecision from './PanelDecision';
+import { Bandera, LOGO_APP } from './Piezas';
 import './fichaPostulacion.css';
 
 // Los siete veredictos que puede poner un revisor. 'baja' pide motivo: es la
@@ -76,8 +77,18 @@ export const dimensionesPanel = (ancho, alto) => {
     return { zoom, width: Math.floor(w / zoom), height: Math.floor(h / zoom) };
 };
 
+// Si igual no entra (formulario largo, pantalla baja), la ficha se achica en
+// bloque hasta que entre sin scroll; por debajo de este mínimo, vuelve el scroll.
+const AJUSTE_MIN = 0.7;
+
 const useDimensionesPanel = () => {
-    const leer = () => (typeof window === 'undefined' ? null : dimensionesPanel(window.innerWidth, window.innerHeight));
+    // En pantallas bajas pero anchas va a pantalla completa, también con medidas
+    // en px para poder achicarla en bloque. En el teléfono, null: ahí se scrollea.
+    const leer = () => {
+        if (typeof window === 'undefined') return null;
+        const { innerWidth: a, innerHeight: h } = window;
+        return dimensionesPanel(a, h) || (a >= 760 ? { zoom: 1, width: a, height: h, completa: true } : null);
+    };
     const [dim, setDim] = useState(leer);
     useEffect(() => {
         const onResize = () => setDim(leer());
@@ -120,8 +131,9 @@ export const Completitud = ({ valor }) => {
 };
 
 // Una cápsula de contacto de la cabecera: el dato y el botón de copiarlo.
-const Capsula = ({ valor, etiqueta, copiado, onCopiar, children }) => (
+const Capsula = ({ valor, etiqueta, icono, copiado, onCopiar, children }) => (
     <div className="tl-fi-capsula">
+        {icono}
         <span title={valor}>{children || valor}</span>
         <button type="button" className={`tl-fi-ibtn${copiado ? ' is-hecho' : ''}`} onClick={() => onCopiar(valor, etiqueta)}
             aria-label={`Copiar ${etiqueta}`} title={copiado ? 'Copiado' : `Copiar ${etiqueta}`}>
@@ -138,6 +150,25 @@ const HiringCandidateModal = ({ applicationId, ids, onClose, onNavigate, onDecid
     const [copiado, setCopiado] = useState(null);
     const cuerpo = useRef(null);
     const dim = useDimensionesPanel();
+    const [ajuste, setAjuste] = useState(1);
+
+    // Cada vez que cambia lo que se ve, se vuelve a medir desde el tamaño normal…
+    useLayoutEffect(() => { setAjuste(1); }, [applicationId, data, abiertas, dim]);
+    // …y mientras el cuerpo desborde, se achica un poco más (antes de pintar, sin parpadeo).
+    useLayoutEffect(() => {
+        const el = cuerpo.current;
+        if (!el || !data || !dim || ajuste <= AJUSTE_MIN) return;
+        if (el.scrollHeight > el.clientHeight + 1) {
+            const paso = Math.max(el.clientHeight / el.scrollHeight, 0.96);
+            setAjuste((a) => Math.max(AJUSTE_MIN, Math.floor(a * paso * 1000) / 1000));
+        }
+    });
+    const zoom = dim ? dim.zoom * ajuste : 1;
+    const medidas = dim && {
+        zoom,
+        width: Math.floor((dim.width * dim.zoom) / zoom),
+        height: Math.floor((dim.height * dim.zoom) / zoom),
+    };
 
     // Al navegar rápido (flechas, auto-avance) puede haber dos pedidos en vuelo:
     // si el de la postulación anterior llega tarde, no debe pisar a la actual —
@@ -242,7 +273,7 @@ const HiringCandidateModal = ({ applicationId, ids, onClose, onNavigate, onDecid
                 aria-modal="true"
                 aria-label={d.nombre ? `Postulación de ${d.nombre}` : 'Postulación'}
                 className={`tl-fi ${dim ? '' : 'h-full w-full'} shadow-2xl [@media(min-width:640px)_and_(min-height:681px)]:rounded-[24px] [@media(min-width:640px)_and_(min-height:681px)]:border [@media(min-width:640px)_and_(min-height:681px)]:border-white/[.15]`}
-                style={dim ? { zoom: dim.zoom, width: dim.width, height: dim.height } : undefined}
+                style={medidas || undefined}
                 onClick={(e) => e.stopPropagation()}
                 initial={{ opacity: 0, y: 10, scale: 0.985 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -250,23 +281,26 @@ const HiringCandidateModal = ({ applicationId, ids, onClose, onNavigate, onDecid
             >
                 <header className="tl-fi-cab">
                     <Aura size="hero" colors={['var(--brand-secondary)', 'var(--brand-primary)', 'var(--info)']} />
-                    <h2 className="tl-fi-nombre" title={d.nombre || undefined}>{d.nombre || (loading ? 'Cargando…' : '—')}</h2>
+                    <div className="tl-fi-quien">
+                        <h2 className="tl-fi-nombre" title={d.nombre || undefined}>{d.nombre || (loading ? 'Cargando…' : '—')}</h2>
+                        {d.pais && (
+                            <span className="tl-fi-pais"><Bandera de={d.pais} grande titulo={d.pais} />{d.pais}</span>
+                        )}
+                    </div>
                     <div className="tl-fi-acc">
-                        {d.email && <Capsula valor={d.email} etiqueta="correo" copiado={copiado === 'correo'} onCopiar={copiar} />}
+                        {d.email && <Capsula valor={d.email} etiqueta="correo" icono={<Mail size={16} className="tl-fi-capsula-ico" aria-hidden="true" />} copiado={copiado === 'correo'} onCopiar={copiar} />}
                         {d.whatsapp && (
-                            <Capsula valor={d.whatsapp} etiqueta="WhatsApp" copiado={copiado === 'WhatsApp'} onCopiar={copiar}>
+                            <Capsula valor={d.whatsapp} etiqueta="WhatsApp" copiado={copiado === 'WhatsApp'} onCopiar={copiar}
+                                icono={<img src={LOGO_APP.whatsapp} alt="" className="tl-fi-capsula-logo" draggable={false} />}>
                                 {digitos ? (
-                                    <a href={`https://wa.me/${digitos}`} target="_blank" rel="noreferrer" title="Abrir WhatsApp">
-                                        <MessageCircle size={14} style={{ display: 'inline', marginRight: 6, verticalAlign: '-2px' }} aria-hidden="true" />
-                                        {d.whatsapp}
-                                    </a>
+                                    <a href={`https://wa.me/${digitos}`} target="_blank" rel="noreferrer" title="Abrir WhatsApp">{d.whatsapp}</a>
                                 ) : d.whatsapp}
                             </Capsula>
                         )}
                         {cvHref && (
                             <a className="tl-fi-cv" href={cvHref} target="_blank" rel="noreferrer">
-                                <Aura soft colors={['var(--brand-secondary)', 'var(--brand-primary)', 'var(--info)']} />
-                                <FileText size={15} aria-hidden="true" /> Abrir CV
+                                <Aura colors={['var(--brand-secondary)', 'var(--brand-primary)', 'var(--brand-secondary)']} />
+                                <FileText size={16} aria-hidden="true" /> Abrir CV
                             </a>
                         )}
                         <span className="tl-fi-sep" aria-hidden="true" />
