@@ -344,3 +344,6 @@
 - **8 de Noviembre de 2026 (Talent: la más barata primero)** *([vista.js](../../frontend/src/pages/admin/hiring/lib/vista.js), [HiringDashboardPage.jsx](../../frontend/src/pages/admin/hiring/HiringDashboardPage.jsx))*:
   - Las tablas de Talent (Inbox, Analyze, Winners) arrancan siempre ordenadas por lo que pide, menor primero; a igual pretensión, mejor score. Otro orden elegido dura lo que dura la visita.
   - «Próxima a revisar» es la que pide menos entre las sin analizar, y las flechas de la ficha siguen ese mismo orden.
+- **8 de Noviembre de 2026 (Hiring: las respuestas largas de la ficha se leen de a una)** *([SeccionesFicha.jsx](../../frontend/src/pages/admin/hiring/components/SeccionesFicha.jsx), [fichaPostulacion.css](../../frontend/src/pages/admin/hiring/components/fichaPostulacion.css))*:
+  - «Ver todo» abre una sola respuesta a la vez: la abierta pasa a 19,5 px y las otras de la sección quedan en un renglón, apagadas.
+  - La columna de Cualitativo ya no decide el alto de la ficha: abrir una respuesta larga no achica el resto; si no entra, se desliza solo esa columna.

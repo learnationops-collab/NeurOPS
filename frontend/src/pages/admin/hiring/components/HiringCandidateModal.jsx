@@ -241,12 +241,8 @@ const HiringCandidateModal = ({ applicationId, ids, onClose, onNavigate, onDecid
         });
     };
 
-    const toggle = (campo) => setAbiertas((prev) => {
-        const next = new Set(prev);
-        if (next.has(campo)) next.delete(campo);
-        else next.add(campo);
-        return next;
-    });
+    // Una sola respuesta abierta a la vez: abrir otra cierra la anterior.
+    const toggle = (campo) => setAbiertas((prev) => (prev.has(campo) ? new Set() : new Set([campo])));
 
     const d = data || {};
     const cvHref = href(d.cv);
