@@ -337,3 +337,7 @@
   - Respuestas, preguntas, chips, títulos de sección, desglose del score y perfil, un punto o punto y medio más grandes.
 - **8 de Noviembre de 2026 (Hiring: los textos de Cualitativo más grandes)** *([fichaPostulacion.css](../../frontend/src/pages/admin/hiring/components/fichaPostulacion.css))*:
   - Las respuestas largas (Experiencia previa, Cualidad diferencial, Persona indicada) pasan de 15 a 17 px, con más interlineado y más blancas.
+- **8 de Noviembre de 2026 (Hiring: ficha con letra más grande que igual entra)** *([fichaPostulacion.css](../../frontend/src/pages/admin/hiring/components/fichaPostulacion.css))*:
+  - Medida en una réplica a 1481 × 725: la ficha se achicaba al 79 % y las respuestas se veían de ~13,6 px. Ahora se achica al 93 % y se ven de ~16 px.
+  - En la columna ancha, las respuestas cortas de Excluyentes y Deseables van de a cuatro por renglón; Cualitativo más angosto muestra 5 renglones de cada respuesta antes del «Ver todo».
+  - Respuestas a 17 px, chips a 15, preguntas a 14 y títulos a 19; menos margen en cabecera, tarjetas y renglones. El panel del score y el perfil también más grandes.

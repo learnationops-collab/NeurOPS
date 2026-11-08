@@ -27,7 +27,7 @@
 
 /* Cabecera */
 .tl-fi-cab{position:relative;isolation:isolate;overflow:hidden;flex:none;display:flex;align-items:center;flex-wrap:wrap;gap:10px 20px;
-  padding:14px 28px;border-bottom:1px solid var(--border-main)}
+  padding:10px 24px;border-bottom:1px solid var(--border-main)}
 .tl-fi-cab > .ui-aura.ui-aura{opacity:.5}
 .tl-fi-quien{min-width:0;flex:1 1 220px;display:flex;align-items:center;gap:14px}
 .tl-fi-nombre{min-width:0;margin:0;font-size:26px;font-weight:800;line-height:1.1;letter-spacing:-.02em;
@@ -81,10 +81,12 @@
 
 /* Cuerpo: dos columnas de secciones y el panel de decisión */
 .tl-fi-cuerpo{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 300px;grid-auto-rows:min-content;
-  grid-template-rows:auto auto 1fr;gap:14px;padding:14px 28px 16px;overflow:auto}
+  grid-template-rows:auto auto 1fr;gap:12px;padding:12px 20px;overflow:auto}
 /* Cualitativo a la izquierda, más angosto; Excluyentes, Deseables e IA apilados al lado. */
-.tl-fi-cuerpo.is-cuali{grid-template-columns:minmax(0,.72fr) minmax(0,1.28fr) 300px}
-.tl-fi-col{display:flex;flex-direction:column;gap:14px;min-width:0}
+.tl-fi-cuerpo.is-cuali{grid-template-columns:minmax(0,.62fr) minmax(0,1.38fr) 280px}
+/* En la columna ancha las respuestas cortas van de a cuatro por renglón. */
+.tl-fi-cuerpo.is-cuali > .tl-fi-col + .tl-fi-col .tl-fi-items{grid-template-columns:repeat(auto-fill,minmax(170px,1fr))}
+.tl-fi-col{display:flex;flex-direction:column;gap:12px;min-width:0}
 /* Las dos columnas terminan a la misma altura: la última sección de cada una estira. */
 .tl-fi-col > .tl-fi-sec:last-child{flex:1}
 .tl-fi-aviso{grid-column:1 / 3;display:flex;align-items:flex-start;gap:10px;padding:12px 16px;border-radius:16px;font-size:13.5px;line-height:1.45;
@@ -94,13 +96,13 @@
 .tl-fi-vacio{grid-column:1 / 3;padding:64px 0;text-align:center;font-size:15px;color:var(--text-muted-40)}
 
 /* Tarjeta de sección */
-.tl-fi-sec{--c:var(--info);position:relative;isolation:isolate;overflow:hidden;padding:12px 20px 6px;border-radius:20px;
+.tl-fi-sec{--c:var(--info);position:relative;isolation:isolate;overflow:hidden;padding:10px 18px 4px;border-radius:20px;
   background:var(--bg-element);border:1px solid var(--border-main);
   animation:tlFiEntra .5s cubic-bezier(.22,1,.36,1) backwards;animation-delay:calc(var(--i, 0) * 60ms)}
 .tl-fi-sec > .ui-aura.ui-aura{opacity:.45}
-.tl-fi-sec-cab{display:flex;align-items:center;gap:12px;padding-bottom:8px}
+.tl-fi-sec-cab{display:flex;align-items:center;gap:12px;padding-bottom:4px}
 /* Ícono de la sección: azulejo con luz arriba y el trazo que se dibuja al entrar. */
-.tl-fi-tile{position:relative;display:grid;place-items:center;flex:none;width:34px;height:34px;border-radius:11px;
+.tl-fi-tile{position:relative;display:grid;place-items:center;flex:none;width:30px;height:30px;border-radius:9px;
   color:#fff;
   background:radial-gradient(120% 90% at 30% 0%,color-mix(in srgb,var(--c) 55%,#fff) 0%,transparent 55%),
     linear-gradient(160deg,var(--c),color-mix(in srgb,var(--c) 55%,#0A0E3D));
@@ -113,24 +115,24 @@
   animation-delay:calc(.25s + var(--i, 0) * 60ms)}
 .tl-fi-ico .relleno{fill:currentColor;fill-opacity:.28;animation-name:tlFiTrazo,tlFiRelleno;animation-duration:.9s,.5s;
   animation-delay:calc(.25s + var(--i, 0) * 60ms),calc(.9s + var(--i, 0) * 60ms)}
-.tl-fi-sec-tit{flex:1;min-width:0;margin:0;font-size:18.5px;font-weight:800;line-height:1.2;letter-spacing:-.02em;
+.tl-fi-sec-tit{flex:1;min-width:0;margin:0;font-size:19px;font-weight:800;line-height:1.2;letter-spacing:-.02em;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tl-fi-cuenta{display:flex;align-items:baseline;gap:1px;flex:none;padding:3px 10px;border-radius:999px;color:var(--c);
   background:color-mix(in srgb,var(--c) 14%,transparent);border:1px solid color-mix(in srgb,var(--c) 34%,transparent)}
 .tl-fi-cuenta b{font-size:14px;font-weight:800;font-variant-numeric:tabular-nums}
 .tl-fi-cuenta span{font-size:12px;font-weight:500;opacity:.75}
 .tl-fi-items{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:20px}
-.tl-fi-item{display:flex;flex-direction:column;gap:4px;min-width:0;padding:7px 0;border-top:1px solid var(--border-subtle)}
+.tl-fi-item{display:flex;flex-direction:column;gap:3px;min-width:0;padding:6px 0;border-top:1px solid var(--border-subtle)}
 .tl-fi-item.is-ancho{grid-column:1 / -1}
-.tl-fi-item-etq{display:flex;align-items:center;gap:8px;min-height:20px;font-size:13px;font-weight:400;color:var(--text-muted)}
+.tl-fi-item-etq{display:flex;align-items:center;gap:8px;min-height:18px;font-size:14px;font-weight:400;color:var(--text-muted)}
 .tl-fi-item-etq > span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* El copiar de una respuesta no agranda el renglón de la etiqueta. */
 .tl-fi-item-etq .tl-fi-ibtn{width:26px;height:26px;margin:-4px -4px -4px 0}
 .tl-fi-pts{margin-left:auto;flex:none;font-size:12px;font-weight:600;color:var(--c);opacity:.85;font-variant-numeric:tabular-nums}
-.tl-fi-valor{margin:0;font-size:15.5px;font-weight:600;line-height:1.35;text-wrap:pretty;overflow-wrap:anywhere}
+.tl-fi-valor{margin:0;font-size:17px;font-weight:600;line-height:1.35;text-wrap:pretty;overflow-wrap:anywhere}
 .tl-fi-valor.is-vacio{font-weight:400;color:var(--text-muted-40)}
 .tl-fi-valor--largo{white-space:pre-wrap;font-size:17px;font-weight:400;line-height:1.5;color:color-mix(in srgb,var(--text-on-surface) 95%,transparent)}
-.tl-fi-valor--largo.is-cerrado{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.tl-fi-valor--largo.is-cerrado{display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden}
 .tl-fi-num{font-size:17px;font-weight:700;font-variant-numeric:tabular-nums}
 .tl-fi-num small{margin-left:6px;font-size:12px;font-weight:600;color:var(--text-muted)}
 .tl-fi-link{color:var(--brand-secondary);font-size:14px;font-weight:600;text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -138,7 +140,7 @@
 .tl-fi-vertodo{display:inline-flex;align-items:center;gap:4px;align-self:flex-start;font-size:14.5px;font-weight:700;color:var(--c)}
 .tl-fi-vertodo:hover{color:var(--text-on-surface)}
 .tl-fi-chips{display:flex;flex-wrap:wrap;gap:5px}
-.tl-fi-chip{display:flex;align-items:center;gap:5px;padding:3px 10px 3px 7px;border-radius:999px;font-size:14px;font-weight:600;line-height:1.25;
+.tl-fi-chip{display:flex;align-items:center;gap:5px;padding:2px 10px 2px 7px;border-radius:999px;font-size:15px;font-weight:600;line-height:1.25;
   background:color-mix(in srgb,var(--c) 14%,transparent);border:1px solid color-mix(in srgb,var(--c) 34%,transparent)}
 .tl-fi-chip svg{flex:none;color:var(--c)}
 /* La respuesta que corta la postulación */
@@ -163,9 +165,9 @@
 .tl-fi-score-etq small{font-size:11.5px;font-weight:400;color:var(--text-muted)}
 .tl-fi-estado{flex:none;padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700;white-space:nowrap;border:1px solid}
 .tl-fi-fila{display:flex;flex-direction:column;gap:5px;padding:7px 0;border-top:1px solid var(--border-subtle)}
-.tl-fi-fila > div{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-size:14px}
+.tl-fi-fila > div{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-size:15px}
 .tl-fi-fila > div span{min-width:0;font-weight:400;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.tl-fi-fila > div b{flex:none;font-size:15.5px;font-weight:700;font-variant-numeric:tabular-nums}
+.tl-fi-fila > div b{flex:none;font-size:17px;font-weight:700;font-variant-numeric:tabular-nums}
 .tl-fi-fila > div b small{font-size:12px;font-weight:400;color:var(--text-muted)}
 .tl-fi-barra{position:relative;height:4px;border-radius:999px;background:var(--bg-input);overflow:hidden}
 .tl-fi-barra i{position:absolute;inset:0 auto 0 0;border-radius:999px;background:var(--c);transform-origin:left;
@@ -175,7 +177,7 @@
   animation-delay:calc(1.6s + var(--i, 0) * .6s)}
 .tl-fi-perfil{display:flex;flex-direction:column}
 .tl-fi-perfil .tl-fi-etq{padding:0 4px 6px}
-.tl-fi-dato{display:flex;justify-content:space-between;gap:12px;padding:7px 4px;border-top:1px solid var(--border-subtle);font-size:14.5px}
+.tl-fi-dato{display:flex;justify-content:space-between;gap:12px;padding:7px 4px;border-top:1px solid var(--border-subtle);font-size:15.5px}
 .tl-fi-dato span{font-weight:400;color:var(--text-muted)}
 .tl-fi-dato b{font-weight:600;text-align:right;font-variant-numeric:tabular-nums}
 /* Abajo queda libre el botón flotante de reportar un problema. */
