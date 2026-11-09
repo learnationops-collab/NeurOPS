@@ -374,3 +374,6 @@
   - Lo central es el % de A, B, C y D: cada grupo es una barra al 100% partida por segmento (con el % adentro) y, debajo y finita, la del período comparado. Cifra a elegir: agendas, asistieron o ventas. Cada tramo abre su lista.
   - Arriba siempre el General: la barra grande y una tarjeta por segmento con su %, cuántas, el cambio en puntos de participación, show up y cierre.
   - Cortes: Closers, Triage, Setters, Fuente, Origen. Las agendas de las personas con rol triage salen de Closers y van a Triage. «Sin agrupar», las tablas y el cruce salieron.
+- **9 de Noviembre de 2026 (Inbox: campaña «Setting Funnel · ROAS MAX» y log de cambios de campañas)** *([campanas.py](../../app/automatizaciones/campanas.py), ADR-W120)*:
+  - Campaña 5 «Setting Funnel · ROAS MAX» (Meta 120249210694070532, flujo «Lead Magnet», reparto 60/40): PROTOCOLO, ACCESO, TRÍADA, VACÍO, DOCUMENTO 25, DOCUMENTO25, y movidas desde Winners (CURSO GRATUITO, APROBACIÓN, QUIERO APLICAR) y LM Funnel (GUÍA STEPS). Atiende DM y comentario.
+  - `aut_campanas.cambios`: cada guardado anota quién, cuándo y qué cambió (palabras y Meta como agregadas/quitadas); `GET /api/inbox/campanas/<id>/cambios`. Migración `e8b2c4d6f1a3`.
