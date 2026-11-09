@@ -104,3 +104,18 @@
     color: color-mix(in srgb, var(--text-on-surface) 78%, transparent); border: 1px solid var(--border-subtle);
     background: color-mix(in srgb, var(--text-on-surface) 5%, transparent); white-space: nowrap; }
 .dc-shell .cc-vs-cab small { font-size: 9px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--text-muted); }
+
+/* Tasa de presentación */
+.dc-shell .cc-pres { display: grid; grid-template-columns: auto minmax(60px, 1fr) auto auto auto; gap: 12px; align-items: center;
+    padding: 10px 14px; border-radius: 14px; border: 1px solid var(--border-subtle);
+    background: color-mix(in srgb, var(--text-on-surface) 3%, transparent); }
+.dc-shell .cc-pres-rot { font-size: 12px; font-weight: 800; color: color-mix(in srgb, var(--text-on-surface) 82%, transparent); }
+.dc-shell .cc-pres-riel { height: 8px; border-radius: 999px; overflow: hidden; background: color-mix(in srgb, var(--text-on-surface) 8%, transparent); }
+.dc-shell .cc-pres-riel i { display: block; height: 100%; width: var(--w); border-radius: 999px; background: var(--warning);
+    animation: ccRiel .9s .2s both cubic-bezier(.2, .8, .2, 1); }
+.dc-shell .cc-pres-n { font-size: 18px; font-weight: 900; color: var(--warning); }
+.dc-shell .cc-pres-frac { font-size: 11px; font-weight: 600; color: var(--text-muted); }
+@media (max-width: 560px) {
+    .dc-shell .cc-pres { grid-template-columns: auto minmax(40px, 1fr) auto auto; }
+    .dc-shell .cc-pres-vs { grid-column: 1 / -1; }
+}

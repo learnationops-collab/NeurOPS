@@ -110,11 +110,27 @@ const Conteo = ({ n, previo, rotulo, tono, onClick, titulo, mejorBaja, vs }) => 
     ) : <div className="cc-conteo" title={titulo}>{cuerpo}</div>;
 };
 
+/** Tasa de presentación: a cuántas llamadas con show up se les presentó la oferta (lo que responde el closer en
+ * el reporte: «¿presentaste la oferta?»). Una barra con la cuenta y la de antes. */
+const Presentacion = ({ celda, previo, vs }) => {
+    if (!celda) return null;
+    return (
+        <div className="cc-pres" title={`Presentaron la oferta en ${celda.num} de ${celda.den} llamadas con show up`}>
+            <span className="cc-pres-rot">Presentación</span>
+            <span className="cc-pres-riel" aria-hidden="true"><i style={{ '--w': `${celda.pct || 0}%` }} /></span>
+            <b className="cc-pres-n num">{pctTexto(celda.pct)}</b>
+            <small className="cc-pres-frac num">{celda.num}/{celda.den}</small>
+            <VsPrevio actual={celda.pct} previo={previo?.pct} texto={pctTexto(previo?.pct)} vs={vs}
+                detalle={previo ? `${previo.num}/${previo.den}` : null} className="cc-pres-vs" />
+        </div>
+    );
+};
+
 /** Una celda de la tabla por canal: la tasa y, debajo, la de antes con su cambio. */
 const CeldaCanal = ({ ahora, antes, clase, titulo }) => (
     <span className="cc-celda" role="cell" title={titulo}>
         <b className={`num ${clase}`}>{pctTexto(ahora)}</b>
-        {antes !== undefined && (
+        {antes != null && (
             <small className="cc-celda-antes num">{pctTexto(antes)} <Delta actual={ahora} previo={antes} /></small>
         )}
     </span>
@@ -165,6 +181,7 @@ const CierreComercial = ({ cierres, previo, previoCanal, vsLabel, porCanal, dest
                     vs={vsLabel} titulo="Asistieron y no compraron ni dejaron seña"
                     onClick={c.no_cerradas?.num ? (onVerNoCerradas || abrirLista(destinos.no_cerradas)) : undefined} />
             </div>
+            <Presentacion celda={c.presentacion} previo={p?.presentacion} vs={vsLabel} />
             <div className="cc-lecturas">
                 <Lectura titulo="Por llamada" unidad="llamadas con show up" irA={irA} vs={vsLabel}
                     ayuda="Sobre todas las llamadas a las que el lead se presentó."

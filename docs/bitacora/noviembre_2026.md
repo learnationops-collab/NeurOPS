@@ -407,3 +407,7 @@
 ### 09/11/2026 — Tiles de arriba con el período comparado
 - Show up, Close rate real, Cash collected y Ticket promedio: arriba a la derecha el cambio relativo (flecha y %) y abajo, junto a los botones, «antes X» discreto. Sale la caja grande de período anterior del Cash. El Ticket muestra el neto.
 - `Tile` suma la prop `antes`; los estilos de la comparación pasan a `vsPrevio.css` (los importa `VsPrevio.jsx`).
+
+### 09/11/2026 — Cierre: tasa de presentación
+- Panel Cierre: nueva fila «Presentación» (llamadas con show up en las que el closer respondió que presentó la oferta ÷ las que asistieron), con barra, cuenta y la del período comparado. En noviembre los closers marcaron «Sí» en las 13 reportadas (100%); en octubre, 77 de 87.
+- Tabla por canal: sin período anterior ya no muestra «— =».
