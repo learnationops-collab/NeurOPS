@@ -2286,14 +2286,15 @@ def update_closer_sale(sale_id):
     webhook_enviado = False
     if data.get('enviar_webhook') in (True, 'true', 'True', 1, '1', 'on'):
         try:
-            from app.services.sheets_service import SheetsService
-            SheetsService._trigger_n8n_webhook(SheetsService.build_sale_webhook_payload(sale))
+            # Reenvía el aviso de la venta a Discord (antes iba a n8n, ADR-W124).
+            from app.services.discord_avisos import venta as aviso_venta
+            aviso_venta.avisar_pago(sale.id)
             webhook_enviado = True
         except Exception as hook_err:
             print(f"[Sale Edit Webhook Error] {hook_err}")
 
     return jsonify({
-        "message": "Venta actualizada" + (" y reenviada a la automatización" if webhook_enviado else ""),
+        "message": "Venta actualizada" + (" y reenviada a Discord" if webhook_enviado else ""),
         "sale": sale.to_dict(),
         "cambios": list(cambios.keys()),
         "webhook_enviado": webhook_enviado

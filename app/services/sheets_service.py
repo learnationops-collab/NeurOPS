@@ -309,15 +309,14 @@ class SheetsService:
                     db.session.rollback()
                     logger.error(f"[SALE SHOW UP Error] {show_err}")
 
-                # Enviar webhook a n8n en segundo plano si está activo
+                # El aviso de la venta a Discord (#wins y #onboardings), salvo que el pedido diga que no (ADR-W121).
+                # Antes iba a n8n; n8n ya no se usa (ADR-W124).
                 enviar_webhook = payload.get('enviar_webhook', True)
                 if enviar_webhook in (True, 'true', 'True', 1, '1', 'on'):
-                    SheetsService._trigger_n8n_webhook(payload, person_uuid=sale.person_uuid)
-                    # El aviso a #onboardings ahora es de Work (n8n ya no lo arma): ADR-W121.
                     from app.services.discord_avisos import venta as aviso_venta
                     aviso_venta.avisar_pago(sale.id, convirtio_sena)
                 else:
-                    logger.info("[N8N WEBHOOK] Envío omitido por petición del usuario/payload.")
+                    logger.info("[VENTA] Aviso a Discord omitido por petición del usuario/payload.")
             except Exception as db_err:
                 db.session.rollback()
                 logger.error(f"[SHEETS POST] Error al guardar venta local: {db_err}")
@@ -601,92 +600,4 @@ class SheetsService:
         except (ValueError, TypeError):
             return 0.0
 
-    @staticmethod
-    def build_sale_webhook_payload(sale):
-        """Payload de n8n armado a partir de una FinancialSale ya guardada. Extraído para que el
-        reenvío desde el panel de admin y la corrección de una venta desde el mazo del closer
-        manden exactamente lo mismo, en vez de dos diccionarios armados a mano que se separan."""
-        from datetime import datetime as _dt
-
-        documento_identidad = ''
-        if sale.raw_data and isinstance(sale.raw_data, dict):
-            documento_identidad = sale.raw_data.get('documento_identidad') or sale.raw_data.get('Documento de identidad') or ''
-        contacto = sale.contacto()
-
-        return {
-            "email_vendedor": sale.email_vendedor or '',
-            "nombre_cliente": contacto['nombre_cliente'] or '',
-            "telefono": contacto['telefono'] or '',
-            "mail_cliente": contacto['mail_cliente'] or '',
-            "tipo_pago": sale.tipo_pago or '',
-            "monto": float(sale.monto or 0.0),
-            "segundo_pago": sale.segundo_pago or '',
-            "metodo_pago": sale.metodo_pago or '',
-            "examen": sale.examen or '',
-            "instagram": contacto['instagram'] or '',
-            "person_uuid": sale.person_uuid or '',
-            "setter": sale.setter or '',
-            "estado": sale.estado or 'Completada',
-            "documento_identidad": documento_identidad,
-            "marca_temporal": sale.marca_temporal or (sale.date.strftime('%d/%m/%Y %H:%M:%S') if sale.date else _dt.utcnow().strftime('%d/%m/%Y %H:%M:%S')),
-            "enviar_webhook": True,
-            "enviar_mensaje": True
-        }
-
-    @staticmethod
-    def _trigger_n8n_webhook(payload, person_uuid=None):
-        # Envia los datos de la venta a n8n de forma asincrona
-        import os
-        import threading
-
-        n8n_url = os.environ.get('N8N_WEBHOOK_URL') or os.environ.get('VENTAS_WEBHOOK')
-        if not n8n_url:
-            logger.info("[N8N WEBHOOK] No se configuró N8N_WEBHOOK_URL o VENTAS_WEBHOOK, omitiendo envío.")
-            return
-
-        # Mapear datos a claves en español y conservar las originales
-        webhook_data = {
-            "Marca temporal": payload.get('marca_temporal'),
-            "Dirección de correo electrónico": payload.get('email_vendedor'),
-            "Nombre": payload.get('nombre_cliente'),
-            "Teléfono": payload.get('telefono'),
-            "Mail": payload.get('mail_cliente'),
-            "Tipo de pago": payload.get('tipo_pago'),
-            "Monto abonado": payload.get('monto'),
-            "Segundo Pago": payload.get('segundo_pago'),
-            "Método de Pago": payload.get('metodo_pago'),
-            "Examen al que se presenta": payload.get('examen'),
-            "Instagram": payload.get('instagram'),
-            "Setter": payload.get('setter'),
-            "Estado": payload.get('estado'),
-            "Documento de identidad": payload.get('documento_identidad'),
-            "enviar_mensaje": payload.get('enviar_mensaje', True),
-
-            "marca_temporal": payload.get('marca_temporal'),
-            "email_vendedor": payload.get('email_vendedor'),
-            "nombre_cliente": payload.get('nombre_cliente'),
-            "telefono": payload.get('telefono'),
-            "mail_cliente": payload.get('mail_cliente'),
-            "tipo_pago": payload.get('tipo_pago'),
-            "monto": payload.get('monto'),
-            "segundo_pago": payload.get('segundo_pago'),
-            "metodo_pago": payload.get('metodo_pago'),
-            "examen": payload.get('examen'),
-            "instagram": payload.get('instagram'),
-            "setter": payload.get('setter'),
-            "estado": payload.get('estado'),
-            "documento_identidad": payload.get('documento_identidad'),
-            "enviar_mensaje": payload.get('enviar_mensaje', True),
-            # El id de la persona en todos los servicios (docs/plan_personas.md).
-            "person_uuid": person_uuid or payload.get('person_uuid') or None
-        }
-
-        def send_request():
-            try:
-                response = requests.post(n8n_url, json=webhook_data, timeout=10)
-                logger.info(f"[N8N WEBHOOK] Datos enviados con éxito a n8n. Estado: {response.status_code}")
-            except Exception as e:
-                logger.error(f"[N8N WEBHOOK] Error al enviar peticion a n8n: {e}")
-
-        threading.Thread(target=send_request, daemon=True).start()
 

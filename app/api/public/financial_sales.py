@@ -773,20 +773,20 @@ def get_financial_sales_payroll():
 
 @bp.route('/public/financial-sales/<int:sale_id>/resend-webhook', methods=['POST'])
 def resend_financial_sale_webhook(sale_id):
-    # Reenvia la venta al webhook de n8n
-    from app.services.sheets_service import SheetsService
+    # Reenvía el aviso de la venta a Discord (antes iba a n8n, ADR-W124). La ruta conserva su nombre.
+    from app.services.discord_avisos import venta as aviso_venta
     from flask import current_app
-    
+
     sale = FinancialSale.query.get(sale_id)
     if not sale:
         return jsonify({"error": "Venta no encontrada"}), 404
-        
+
     try:
-        SheetsService._trigger_n8n_webhook(SheetsService.build_sale_webhook_payload(sale))
-        current_app.logger.info(f"[N8N WEBHOOK RESEND] Reenvio solicitado para venta ID: {sale.id}")
-        return jsonify({"message": "Webhook reenviado a n8n con exito", "status": "success"}), 200
+        aviso_venta.avisar_pago(sale.id)
+        current_app.logger.info(f"[VENTA] Reenvío del aviso pedido para la venta ID: {sale.id}")
+        return jsonify({"message": "Aviso reenviado a Discord", "status": "success"}), 200
     except Exception as e:
-        current_app.logger.error(f"[N8N WEBHOOK RESEND] Error al reenviar: {e}")
+        current_app.logger.error(f"[VENTA] Error al reenviar el aviso: {e}")
         return error_interno(e)
 
 # Tope de filas que se empujan a Google Sheets por lote. La propagacion corre en

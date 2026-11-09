@@ -997,3 +997,11 @@
 - **Decisión (Santiago, 09/11):** Work conecta una cuenta de Google (team@) **solo con `gmail.send`**, en una autorización aparte (sin `include_granted_scopes`): no toca las de Calendar ni las del Drive de las notas de Meet. El token vive en `integrations` (clave `correo`). La Academia manda cada mail como MIME a `POST /api/external/academy/correo` y Work lo envía con `users.messages.send`. Se conecta con un link firmado (24 h, un uso) que abre quien tiene la cuenta.
 - **Qué se pierde:** si la cuenta se desconecta no sale ningún mail de la Academia hasta reconectarla (Work avisa a admin). El remitente es siempre la cuenta conectada. Sin pantalla todavía: el link se genera por consola (`correo.link_para_conectar`).
 - **Consecuencias:** el proyecto de Google Cloud tiene que tener la API de Gmail habilitada. Sin migración.
+
+## ADR-W124: Work deja de usar n8n
+
+- **Fecha:** 2026-11-09 · **Subsistema:** Ventas (`sheets_service.post_to_sheets`, reenvío de la venta) · **Estado:** implementado.
+- **Contexto:** con los avisos de venta en Work (ADR-W121) y el correo por Gmail (ADR-W123), lo único que Work seguía mandando a n8n era el webhook de cada venta (`VENTAS_WEBHOOK`), a un flujo ya apagado. El «Reenviar webhook» de una venta y la corrección desde el mazo también iban ahí.
+- **Decisión (Santiago, 09/11):** se borra el envío a n8n (`_trigger_n8n_webhook`, `build_sale_webhook_payload`). El interruptor de la ficha («Avisar en Discord») y «Reenviar aviso» de una venta mandan de nuevo la tarjeta de Discord de la venta. La ruta `/public/financial-sales/<id>/resend-webhook` conserva su nombre.
+- **Qué se pierde:** nada en uso: los flujos de n8n (New Sales, Mail Academia, New Call y New Call Form) quedan apagados. `VENTAS_WEBHOOK` queda sin leer.
+- **Consecuencias:** sin migración.

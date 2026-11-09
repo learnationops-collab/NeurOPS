@@ -387,3 +387,5 @@
 - **9 de Noviembre de 2026 (Correo: los mails de la Academia salen por Work con Gmail, ADR-W123)** *([correo.py](../../app/services/correo.py))*
   - Conexión aparte de una cuenta de Google solo para enviar (team@), sin contraseña ni verificación en dos pasos, sin tocar Calendar ni las notas de Meet.
   - `POST /api/external/academy/correo`: la Academia manda el mail entero y Work lo envía. Reemplaza al flujo «Mail Academia» de n8n y hace andar «Olvidé mi contraseña».
+- **9 de Noviembre de 2026 (Work deja de usar n8n, ADR-W124)** *([sheets_service.py](../../app/services/sheets_service.py))*
+  - La venta ya no se manda al webhook de n8n. «Reenviar aviso» (antes «Reenviar webhook») y la corrección desde el mazo vuelven a mandar la tarjeta de la venta a Discord. En la ficha, la casilla dice «Avisar en Discord».

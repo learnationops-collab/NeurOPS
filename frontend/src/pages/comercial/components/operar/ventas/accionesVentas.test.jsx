@@ -57,14 +57,14 @@ beforeEach(() => {
 });
 
 describe('Ventas · las acciones de la fila', () => {
-    it('«Atribuir a una agenda» solo en las ventas sin agenda; «Reenviar webhook» en todas', () => {
+    it('«Atribuir a una agenda» solo en las ventas sin agenda; «Reenviar aviso» en todas', () => {
         comoOperador();
         fireEvent.click(screen.getByRole('button', { name: 'Acciones de Ana Gomez' }));
-        expect(opcionesDelMenu()).toEqual(['Reenviar webhook']);
+        expect(opcionesDelMenu()).toEqual(['Reenviar aviso']);
         fireEvent.keyDown(document, { key: 'Escape' });
 
         fireEvent.click(screen.getByRole('button', { name: 'Acciones de Beto Diaz' }));
-        expect(opcionesDelMenu()).toEqual(['Atribuir a una agenda', 'Reenviar webhook']);
+        expect(opcionesDelMenu()).toEqual(['Atribuir a una agenda', 'Reenviar aviso']);
     });
 
     it('sin `operacion` (la dirección, los closers) no hay casillas ni «⋯»', () => {
@@ -73,10 +73,10 @@ describe('Ventas · las acciones de la fila', () => {
         expect(screen.queryByRole('button', { name: /^Acciones de/ })).toBeNull();
     });
 
-    it('reenviar el webhook pide confirmación y manda el id de la venta', async () => {
+    it('reenviar el aviso pide confirmación y manda el id de la venta', async () => {
         comoOperador();
         fireEvent.click(screen.getByRole('button', { name: 'Acciones de Ana Gomez' }));
-        fireEvent.click(screen.getByRole('menuitem', { name: 'Reenviar webhook' }));
+        fireEvent.click(screen.getByRole('menuitem', { name: 'Reenviar aviso' }));
 
         const dialogo = screen.getByRole('alertdialog');
         expect(dialogo).toHaveTextContent('Ana Gomez');
@@ -91,7 +91,7 @@ describe('Ventas · las acciones de la fila', () => {
         reenviarWebhook.mockRejectedValueOnce({ response: { data: { error: 'n8n no respondió' } } });
         comoOperador();
         fireEvent.click(screen.getByRole('button', { name: 'Acciones de Ana Gomez' }));
-        fireEvent.click(screen.getByRole('menuitem', { name: 'Reenviar webhook' }));
+        fireEvent.click(screen.getByRole('menuitem', { name: 'Reenviar aviso' }));
         fireEvent.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Reenviar' }));
 
         expect(await screen.findByRole('alert')).toHaveTextContent('n8n no respondió');
