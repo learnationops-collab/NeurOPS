@@ -181,19 +181,24 @@ def _landings_entre(inicio, fin):
     (/replay/) es otro embudo y queda afuera."""
     from app.api.metrics import EVENTO_CLIC_WHATSAPP, EVENTO_VISITA
 
+    from app.services.utm_etiquetas import codigos_de_workshop, resolver
+
     filas = db.session.query(
-        LandingTracking.utm_campaign,
+        LandingTracking.utm_campaign, LandingTracking.utm_content,
         db.func.count(db.case((db.or_(LandingTracking.evento.is_(None),
                                       LandingTracking.evento == EVENTO_VISITA), 1))),
         db.func.count(db.case((LandingTracking.evento == EVENTO_CLIC_WHATSAPP, 1))),
     ).filter(
         LandingTracking.created_at >= inicio, LandingTracking.created_at < fin,
         LandingTracking.utm_campaign.isnot(None), ~LandingTracking.page_path.like('%/replay%'),
-    ).group_by(LandingTracking.utm_campaign).all()
+    ).group_by(LandingTracking.utm_campaign, LandingTracking.utm_content).all()
+    # Las etiquetas escritas a mano (tc_pe_co) se traducen a la campaña de su anuncio (utm_etiquetas).
+    codigos = codigos_de_workshop()
     resultado = defaultdict(lambda: [0, 0])
-    for campana, visitas, clics in filas:
-        resultado[campana.strip()][0] += visitas
-        resultado[campana.strip()][1] += clics
+    for campana, contenido, visitas, clics in filas:
+        campana = resolver(campana, contenido, codigos)[0]
+        resultado[campana][0] += visitas
+        resultado[campana][1] += clics
     return resultado
 
 

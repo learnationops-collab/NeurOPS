@@ -1016,3 +1016,11 @@
 - **Decisión (Santiago, 09/11):** se borra el envío a n8n (`_trigger_n8n_webhook`, `build_sale_webhook_payload`). El interruptor de la ficha («Avisar en Discord») y «Reenviar aviso» de una venta mandan de nuevo la tarjeta de Discord de la venta. La ruta `/public/financial-sales/<id>/resend-webhook` conserva su nombre.
 - **Qué se pierde:** nada en uso: los flujos de n8n (New Sales, Mail Academia, New Call y New Call Form) quedan apagados. `VENTAS_WEBHOOK` queda sin leer.
 - **Consecuencias:** sin migración.
+
+## ADR-W125: las visitas con UTM escritas a mano se asignan a su anuncio de Workshop por el código del nombre
+
+- **Fecha:** 2026-11-09 · **Subsistema:** Workshop › Tráfico (`app/services/utm_etiquetas.py`, `workshop_trafico`, `workshop_meta_service._landings_entre`) · **Estado:** implementado.
+- **Contexto:** del 27/10 al 09/11 los anuncios TC1 a TC5 llevaban en la dirección `utm_content=tc1_pp_a4` y `utm_campaign=tc_pe_co`, escritos a mano. Work atribuye por el número de Meta (`{{ad.id}}`, `{{campaign.id}}`), así que unas 1.000 visitas y 150 clics al grupo quedaban «sin anuncio». El 09/11 Mario cambió TC1 a `{{ad.id}}`/`{{campaign.id}}`.
+- **Decisión:** una etiqueta que no es número y empieza con letras y dígitos (`tc1_…`) se traduce al anuncio de Workshop cuyo nombre empieza con ese código («TC1 | …»), y la campaña, a la de ese anuncio. Solo si hay un único anuncio con ese código; si no, la etiqueta queda como vino. Los números de Meta no cambian.
+- **Qué se pierde:** si se duplica un anuncio con el mismo código, sus etiquetas viejas dejan de traducirse (quedan «sin anuncio», como antes). `link_in_bio` y otras etiquetas sin código siguen sin anuncio.
+- **Consecuencias:** sin migración. La forma correcta sigue siendo `{{ad.id}}` en «Parámetros de URL» de cada anuncio; esto solo recupera lo que ya entró con etiquetas.

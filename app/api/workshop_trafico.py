@@ -34,6 +34,7 @@ from app.models.user import ROLE_OPERATOR
 from app.api.metrics import EVENTO_CLIC_WHATSAPP, EVENTO_VISITA, EVENTOS_CLIC_CTA, EVENTOS_VALIDOS
 from app.api.workshop import bp
 from app.api.workshop_landing import _rango, _pct
+from app.services.utm_etiquetas import codigos_de_workshop, resolver
 
 PATH_REPLAY = '/replay/'
 
@@ -173,9 +174,10 @@ def trafico_landings():
     por_campana = defaultdict(_nuevo)
     por_anuncio = defaultdict(lambda: {**_nuevo(), 'campana_id': None})
     por_dia = defaultdict(_nuevo)
+    codigos = codigos_de_workshop()
 
     def sumar(path, utm_source, utm_campaign, utm_content, evento, creado):
-        utm_campaign, utm_content = _limpio(utm_campaign), _limpio(utm_content)
+        utm_campaign, utm_content = resolver(utm_campaign, utm_content, codigos)
         clave = _clave_del_evento(evento)
         es_visita = clave == 'visitas'
         fuente = normalizar_fuente(utm_source)
@@ -306,10 +308,13 @@ def visitas_landings():
         LandingTracking.created_at >= desde, LandingTracking.created_at < hasta,
     ).order_by(LandingTracking.created_at.desc(), LandingTracking.id.desc()).limit(limite + 1).all()
 
+    codigos = codigos_de_workshop()
+    resueltos = {v.id: resolver(v.utm_campaign, v.utm_content, codigos) for v in filas}
     de_campana, de_anuncio = nombres_de_meta(
-        {_limpio(v.utm_campaign) for v in filas}, {_limpio(v.utm_content) for v in filas})
+        {c for c, _ in resueltos.values()}, {a for _, a in resueltos.values()})
     visitas = []
     for v in filas:
+        campana, anuncio = resueltos[v.id]
         landing = normalizar_path(v.page_path)
         if landing == PATH_REPLAY:
             continue
@@ -323,8 +328,8 @@ def visitas_landings():
             'utm_medium': v.utm_medium,
             'utm_campaign': _limpio(v.utm_campaign),
             'utm_content': v.utm_content,
-            'campana_nombre': de_campana.get(_limpio(v.utm_campaign)),
-            'anuncio_nombre': de_anuncio.get(_limpio(v.utm_content)),
+            'campana_nombre': de_campana.get(campana),
+            'anuncio_nombre': de_anuncio.get(anuncio),
             'referrer': v.referrer,
             'created_at': v.created_at.isoformat() + 'Z' if v.created_at else None,
         })
