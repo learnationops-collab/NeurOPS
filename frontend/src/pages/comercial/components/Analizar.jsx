@@ -3,6 +3,7 @@ import { ChevronDown, CreditCard, PieChart, Rows } from 'lucide-react';
 import Embudo from './Embudo';
 import CierreComercial from './CierreComercial';
 import PanelCash from './PanelCash';
+import PanelPorCobrar from './PanelPorCobrar';
 import { canalesDe, partesDe } from './embudoCanales';
 // El "i" era una copia local con una prop `der` para forzar el lado a mano. El `Tip` compartido
 // mide y elige el lado que entra, así que la prop desapareció de todas las llamadas.
@@ -694,7 +695,8 @@ const DashboardClosers = ({ bloque, previo, deltas, porCobrar, adquisicion, vsLa
                     + 'que entró en el período comparado.'}
                 humo={[v('brand-secondary'), v('brand-primary'), v('brand-secondary-light'), v('brand-navy')]}
                 sub={previo?.cash_neto != null ? (
-                    <Comparado vs={vsLabel} actual={bloque.cash_neto} previo={previo.cash_neto} f={fmt.money} />
+                    <Comparado vs={vsLabel} actual={bloque.cash_neto} previo={previo.cash_neto} f={fmt.money}
+                        detalle={`${bloque.cash_neto >= previo.cash_neto ? '+' : '−'}${fmt.money(Math.abs(bloque.cash_neto - previo.cash_neto))}`} />
                 ) : undefined}
                 ver={abrir(irA, D.cash)} baja="p-cash" />
             <Tile label="Ticket promedio" valor={fmt.money(bloque.ticket)} color={v('info')}
@@ -715,9 +717,10 @@ const DashboardClosers = ({ bloque, previo, deltas, porCobrar, adquisicion, vsLa
         <div className="grid-2">
             <PanelCierre bloque={bloque} previo={previo} vsLabel={vsLabel} irA={irA} cargarNoCerradas={cargarNoCerradas}
                 onAbrirFila={onAbrirFila} />
-            <PanelCash bloque={bloque} previo={previo} porCobrar={porCobrar}
-                adquisicion={adquisicion} vsLabel={vsLabel} irA={irA} />
+            <PanelCash bloque={bloque} previo={previo} adquisicion={adquisicion} vsLabel={vsLabel} irA={irA} />
         </div>
+
+        {porCobrar && <PanelPorCobrar porCobrar={porCobrar} irA={irA} />}
 
         {/* Las dos maneras de abrir el mismo cash: por forma de pago y por la fuente que lo trajo.
             Sin `fuentes` (un payload viejo en mano mientras llega el nuevo) Payment types vuelve a

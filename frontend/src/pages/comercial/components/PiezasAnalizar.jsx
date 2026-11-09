@@ -37,25 +37,32 @@ export const Delta = ({ delta, actual }) => {
 };
 
 /**
- * La comparación de una cifra contra el período comparado (09/11/2026): «PERÍODO ANTERIOR $7,811 ▼ 57%».
- * `vs` es el rótulo que eligió la persona en el selector de arriba; `modo` 'pts' para tasas (diferencia
- * en puntos); `mejorBaja` para un costo (bajar es verde). Sin `previo` no dibuja nada.
+ * La comparación de una cifra contra el período comparado (09/11/2026). Arriba el rótulo que eligió la
+ * persona en el selector VS («Período anterior», «Mes anterior», las fechas); abajo el valor de entonces,
+ * `detalle` (su cuenta: «4/34», «5 ventas») y la variación RELATIVA con flecha y color: de 11.8% a 6.1% es
+ * ▼ 48%, no 5.7 pts (pedido de Mario). Con `puntos` (tasas) la diferencia en puntos va en el tooltip.
+ * `mejorBaja` para un costo: bajar es verde. Sin `previo` no dibuja nada.
  */
-export const Comparado = ({ vs, actual, previo, f, modo = 'pct', mejorBaja = false }) => {
+export const Comparado = ({ vs, actual, previo, f, detalle = null, puntos = false, mejorBaja = false }) => {
     if (previo === null || previo === undefined || actual === null || actual === undefined) return null;
-    const dif = modo === 'pts' ? Math.round((actual - previo) * 10) / 10
-        : (previo ? Math.round(((actual - previo) / Math.abs(previo)) * 1000) / 10 : null);
-    const sube = dif > 0;
-    const bueno = dif === 0 || dif === null ? null : (sube !== mejorBaja);
+    const rel = previo ? Math.round(((actual - previo) / Math.abs(previo)) * 1000) / 10 : null;
+    const pts = Math.round((actual - previo) * 10) / 10;
+    const sube = actual > previo;
+    const igual = actual === previo;
+    const rot = vs || 'Período comparado';
     return (
-        <span className="cmp" title={`${vs || 'Período comparado'}: ${f(previo)}`}>
-            <small className="cmp-rot">{vs || 'Período comparado'}</small>
-            <b className="cmp-n num">{f(previo)}</b>
-            {dif !== null && dif !== 0 && (
-                <small className="cmp-d num" style={{ '--c': v(bueno ? 'success' : 'error') }}>
-                    {sube ? '▲' : '▼'} {Math.abs(dif)}{modo === 'pts' ? ' pts' : '%'}
-                </small>
-            )}
+        <span className="cmp" title={`${rot}: ${f(previo)}${detalle ? ` (${detalle})` : ''}`
+            + `${puntos && !igual ? ` · ${pts > 0 ? '+' : ''}${pts} pts` : ''}`}>
+            <small className="cmp-rot">{rot}</small>
+            <span className="cmp-fila">
+                <b className="cmp-n num">{f(previo)}</b>
+                {detalle && <small className="cmp-det num">{detalle}</small>}
+                {!igual && rel !== null && (
+                    <small className="cmp-d num" style={{ '--c': v(sube !== mejorBaja ? 'success' : 'error') }}>
+                        {sube ? '▲' : '▼'} {Math.abs(rel)}%
+                    </small>
+                )}
+            </span>
         </span>
     );
 };

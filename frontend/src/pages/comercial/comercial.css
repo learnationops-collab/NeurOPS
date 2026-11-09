@@ -845,11 +845,13 @@
 .dc-shell .kpi-n{font-size:clamp(28px,3vw,36px);line-height:1;font-weight:900;letter-spacing:-.025em;
   font-variant-numeric:tabular-nums}
 .dc-shell .kpi-sub{font-size:11px;font-weight:600;color:var(--text-muted-40);min-width:0}
-/* Comparado (PiezasAnalizar.jsx): «PERÍODO ANTERIOR $7,811 ▼ 57%», una sola pieza para todo el tablero. */
-.dc-shell .cmp{display:inline-flex;align-items:center;flex-wrap:wrap;gap:4px 8px;margin-top:4px;padding:5px 10px 5px 11px;border-radius:12px;background:color-mix(in srgb,var(--text-on-surface) 5%,transparent);border:1px solid color-mix(in srgb,var(--text-on-surface) 10%,transparent);animation:cmpIn .45s .25s both ease-out;max-width:100%}
-.dc-shell .cmp-rot{font-size:9px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted-40);white-space:nowrap}
-.dc-shell .cmp-n{font-size:13px;font-weight:800;letter-spacing:-.01em;color:color-mix(in srgb,var(--text-on-surface) 80%,transparent)}
-.dc-shell .cmp-d{font-size:11px;font-weight:800;color:var(--c);padding:1px 7px;border-radius:999px;background:color-mix(in srgb,var(--c) 14%,transparent);white-space:nowrap}
+/* Comparado (PiezasAnalizar.jsx): rótulo arriba; valor de entonces, su cuenta y la variación relativa abajo. */
+.dc-shell .cmp{display:inline-grid;gap:5px;margin-top:6px;padding:8px 12px;border-radius:14px;max-width:100%;background:color-mix(in srgb,var(--text-on-surface) 8%,transparent);border:1px solid color-mix(in srgb,var(--text-on-surface) 16%,transparent);animation:cmpIn .45s .25s both ease-out}
+.dc-shell .cmp-rot{font-size:9px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dc-shell .cmp-fila{display:flex;align-items:center;flex-wrap:wrap;gap:6px 9px}
+.dc-shell .cmp-n{font-size:15px;font-weight:900;letter-spacing:-.01em;color:var(--text-on-surface)}
+.dc-shell .cmp-det{font-size:12px;font-weight:700;color:color-mix(in srgb,var(--text-on-surface) 72%,transparent)}
+.dc-shell .cmp-d{font-size:12px;font-weight:900;color:color-mix(in srgb,var(--c) 70%,#fff);padding:2px 8px;border-radius:999px;background:color-mix(in srgb,var(--c) 26%,transparent);border:1px solid color-mix(in srgb,var(--c) 45%,transparent);white-space:nowrap}
 @keyframes cmpIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.dc-shell .cmp{animation:none}}
 .dc-shell .kpi-barras{display:grid;gap:var(--s3);margin-top:var(--s2)}
