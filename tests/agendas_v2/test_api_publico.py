@@ -526,7 +526,7 @@ def discord(monkeypatch):
     class Respuesta:
         status_code = 204
 
-    def post(url, json=None, timeout=None, files=None, data=None):
+    def post(url, json=None, timeout=None, files=None, data=None, headers=None):
         cuerpo = json if json is not None else jsonlib.loads(data['payload_json'])
         enviados.append({'url': url, 'json': cuerpo, 'imagen': bool(files)})
         return Respuesta()
@@ -535,7 +535,7 @@ def discord(monkeypatch):
         raise RuntimeError('sin chromium')
 
     monkeypatch.setenv('DISCORD_AGENDAS_WEBHOOK', 'https://discord.test/webhook')
-    monkeypatch.setattr('app.agendas_v2.avisos_discord.requests.post', post)
+    monkeypatch.setattr('app.services.discord_avisos.envio.requests.post', post)
     monkeypatch.setattr('app.services.report_image_service.ReportImageService.generate_agenda_v2_card', sin_chromium)
     return enviados
 
@@ -638,7 +638,7 @@ def test_si_discord_falla_la_agenda_queda(client, armado, monkeypatch):
         raise ConnectionError('discord caido')
 
     monkeypatch.setenv('DISCORD_AGENDAS_WEBHOOK', 'https://discord.test/webhook')
-    monkeypatch.setattr('app.agendas_v2.avisos_discord.requests.post', roto)
+    monkeypatch.setattr('app.services.discord_avisos.envio.requests.post', roto)
     assert _reservar(client).status_code == 201
     assert Appointment.query.count() == 1
 

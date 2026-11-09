@@ -259,7 +259,8 @@ class SheetsService:
                 from app.services.academy_payment_sync import notify_academy_of_payments
                 notify_academy_of_payments([sale])
 
-                # Verificar conversión de seña a venta real
+                # Verificar conversión de seña a venta real (la marca la tarjeta de la venta en Discord)
+                convirtio_sena = False
                 try:
                     from app.services.closer_service import CloserService
                     tipo_pago_val = payload.get('tipo_pago') or ''
@@ -278,7 +279,7 @@ class SheetsService:
                         'program_name': tipo_pago_val.split(' - ')[0] if ' - ' in str(tipo_pago_val) else tipo_pago_val,
                         'financial_sale_id': sale.id
                     }
-                    CloserService.check_and_notify_down_payment_conversion(client_data, sale_data)
+                    convirtio_sena = bool(CloserService.check_and_notify_down_payment_conversion(client_data, sale_data))
                 except Exception as conv_err:
                     logger.error(f"[Down Payment Conversion Sheets Hook Error] {conv_err}")
 
@@ -312,6 +313,9 @@ class SheetsService:
                 enviar_webhook = payload.get('enviar_webhook', True)
                 if enviar_webhook in (True, 'true', 'True', 1, '1', 'on'):
                     SheetsService._trigger_n8n_webhook(payload, person_uuid=sale.person_uuid)
+                    # El aviso a #onboardings ahora es de Work (n8n ya no lo arma): ADR-W121.
+                    from app.services.discord_avisos import venta as aviso_venta
+                    aviso_venta.avisar_pago(sale.id, convirtio_sena)
                 else:
                     logger.info("[N8N WEBHOOK] Envío omitido por petición del usuario/payload.")
             except Exception as db_err:

@@ -60,9 +60,10 @@ def _con_accesos_de_bajas(resultado):
     return resultado
 
 
-def _ejecutar(appt_id, permiso, accion, exito=200, momentum=None):
+def _ejecutar(appt_id, permiso, accion, exito=200, momentum=None, aviso=False):
     """`momentum`: 'resultado' o 'venta' si la acción reporta la llamada; en una Momentum de la
-    Academia, se le avisa el resultado (app/services/momentum_academia.py)."""
+    Academia, se le avisa el resultado (app/services/momentum_academia.py). `aviso`: el resultado de
+    la llamada va a Discord (app/services/discord_avisos/resultado.py)."""
     appt, error = _agenda_y_permiso(appt_id, permiso)
     if error:
         return error
@@ -80,6 +81,10 @@ def _ejecutar(appt_id, permiso, accion, exito=200, momentum=None):
         from app.services import momentum_academia
 
         momentum_academia.avisar(appt, momentum, datos, current_user)
+    if aviso:
+        from app.services.discord_avisos import resultado as aviso_resultado
+
+        aviso_resultado.avisar_resultado(appt, datos, current_user)
     return jsonify(_con_accesos_de_bajas(resultado)), exito
 
 
@@ -92,7 +97,7 @@ def confirmacion(appt_id):
 @bp.route('/<int:appt_id>/resultado', methods=['POST'])
 def resultado(appt_id):
     """El arbol de reporte de la llamada."""
-    return _ejecutar(appt_id, 'reportar', acciones.resultado, momentum='resultado')
+    return _ejecutar(appt_id, 'reportar', acciones.resultado, momentum='resultado', aviso=True)
 
 
 @bp.route('/<int:appt_id>/triage', methods=['POST'])
@@ -100,7 +105,7 @@ def triage(appt_id):
     """El reporte de la llamada de triage: asistencia, calificación, pase al closer y low ticket."""
     from app.services import triage_service
 
-    return _ejecutar(appt_id, 'triar', triage_service.reportar)
+    return _ejecutar(appt_id, 'triar', triage_service.reportar, aviso=True)
 
 
 @bp.route('/<int:appt_id>/fathom', methods=['PATCH'])

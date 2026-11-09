@@ -2010,6 +2010,9 @@ def process_closer_card(appt_id):
     acceso = academy_payment_status.avisar_bajas()
     # Una Momentum de la Academia: su resultado vuelve allá, igual que desde la ficha.
     momentum_academia.avisar(appt, 'mazo', data, current_user)
+    # El resultado de la llamada a Discord, igual que desde la ficha (discord_avisos/resultado.py).
+    from app.services.discord_avisos import resultado as aviso_resultado
+    aviso_resultado.avisar_resultado(appt, data, current_user)
     respuesta = {"message": "Carta procesada con éxito", "id": appt.id}
     if acceso:
         respuesta['acceso_academia'] = acceso

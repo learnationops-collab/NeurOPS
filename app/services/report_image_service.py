@@ -132,6 +132,15 @@ class ReportImageService:
         return ReportImageService._recortar_abajo(buf)
 
     @staticmethod
+    def generate_aviso_card(data):
+        """La tarjeta genérica de los avisos de Discord (app/services/discord_avisos/tarjeta.py)."""
+        filas = -(-len(data.get('tiles') or []) // 2) + -(-len(data.get('cajas') or []) // 2)
+        alto = min(4000, 600 + 100 * filas)
+        datos = {**data, 'fuente_b64': ReportImageService._montserrat_b64()}
+        buf = ReportImageService._render_and_capture('templates/reports/aviso.html', datos, (900, alto), 'aviso')
+        return ReportImageService._recortar_abajo(buf)
+
+    @staticmethod
     def generate_setter_report_card(data):
         return ReportImageService._render_and_capture(
             'templates/reports/setter_report.html',

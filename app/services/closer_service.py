@@ -5,6 +5,7 @@ from app.services.ticket_service import CUOTA, pago_de_venta, primeras_cuotas, t
 from sqlalchemy import and_, func, or_
 from datetime import datetime, time, timedelta, date
 import pytz
+import logging
 
 # Nombre visible de cada programa a partir del código corto que trae `FinancialSale.tipo_pago`
 # ("RR - Parcial", "AL - Completo", ...), tal como lo separa SheetsService.parse_tipo_pago.
@@ -624,15 +625,12 @@ class CloserService:
 
     @staticmethod
     def check_and_notify_down_payment_conversion(client_data, sale_data):
-        """
-        Detecta si la venta es PIF/Split Pay y si el lead tenía una seña previa,
-        enviando notificaciones en Discord.
-        """
+        """True si la venta (PIF, parcial o cuota) convierte una seña previa del lead. Ya no avisa a Discord:
+        lo marca la tarjeta de la venta (app/services/discord_avisos/venta.py)."""
         try:
-            from app.models import FinancialSale, Client, Integration
+            from app.models import FinancialSale, Client
             from sqlalchemy import func, or_
             from datetime import datetime
-            import requests
 
             # 1. Verificar si es PIF o Split Pay
             pay_type = str(sale_data.get('payment_type') or '').lower().strip()
@@ -696,65 +694,11 @@ class CloserService:
             # (Antes había un paso B que buscaba la seña en `Payment`, el espejo de las inscripciones: todo
             # pago del espejo es copia de un `FinancialSale`, así que el paso A ya lo cubre. Etapa 2c.)
 
-            # 4. Enviar notificaciones si se detecta conversión
-            if has_previous_seña:
-                import os
-                
-                wins_webhook_url = os.environ.get('DISCORD_WINS_WEBHOOK')
-                onboarding_webhook_url = os.environ.get('DISCORD_ONBOARDING_WEBHOOK')
-                
-                if not wins_webhook_url:
-                    wins_int = Integration.query.filter_by(key='sale_wins').first()
-                    if wins_int:
-                        wins_webhook_url = wins_int.url_prod if wins_int.active_env == 'prod' else wins_int.url_dev
-                if not onboarding_webhook_url:
-                    onboarding_int = Integration.query.filter_by(key='sale_onboarding').first()
-                    if onboarding_int:
-                        onboarding_webhook_url = onboarding_int.url_prod if onboarding_int.active_env == 'prod' else onboarding_int.url_dev
-                        
-                if not wins_webhook_url and not onboarding_webhook_url:
-                    print("[Discord Conversion Alert] No webhooks configured in environment or database integrations.")
-                    return
-                    
-                client_name = client_data.get('name') or 'Desconocido'
-                closer_name = sale_data.get('closer_name') or 'N/A'
-                program_name = sale_data.get('program_name') or 'N/A'
-                amount = sale_data.get('amount') or 0.0
-                
-                content = (
-                    f"🔥 **¡CONVERSIÓN DE SEÑA A VENTA REAL!** 🔥\n"
-                    f"El lead **{client_name}** ha convertido su seña registrada anteriormente en una venta real.\n\n"
-                    f"• **Tipo de pago:** {sale_data.get('payment_type_friendly', pay_type.title())}\n"
-                    f"• **Monto:** ${amount}\n"
-                    f"• **Closer:** {closer_name}\n"
-                    f"• **Programa:** {program_name}\n"
-                )
-                
-                payload = {
-                    "content": content,
-                    "embeds": [{
-                        "title": "🎉 Conversión Lograda",
-                        "description": f"Seña previa de **{client_name}** convertida con éxito a venta definitiva.",
-                        "color": 16737792, # Naranja/Fuego
-                        "timestamp": datetime.utcnow().isoformat()
-                    }]
-                }
-                
-                if wins_webhook_url:
-                    try:
-                        res = requests.post(wins_webhook_url, json=payload, timeout=10)
-                        print(f"[Discord Conversion Alert Wins] Sent. Status: {res.status_code}")
-                    except Exception as e:
-                        print(f"[Discord Conversion Alert Wins Error] {e}")
-                        
-                if onboarding_webhook_url:
-                    try:
-                        res = requests.post(onboarding_webhook_url, json=payload, timeout=10)
-                        print(f"[Discord Conversion Alert Onboarding] Sent. Status: {res.status_code}")
-                    except Exception as e:
-                        print(f"[Discord Conversion Alert Onboarding Error] {e}")
+            # La conversión ya no se avisa aparte: la tarjeta de la venta la marca (discord_avisos/venta.py).
+            return has_previous_seña
         except Exception as global_err:
-            print(f"[Down Payment Conversion Hook Global Error] {global_err}")
+            logging.getLogger(__name__).error(f'[SEÑA CONVERTIDA] {global_err}')
+            return False
 
     @staticmethod
     def get_sale_metadata(closer_id):

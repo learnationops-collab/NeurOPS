@@ -377,3 +377,8 @@
 - **9 de Noviembre de 2026 (Inbox: campaña «Setting Funnel · ROAS MAX» y log de cambios de campañas)** *([campanas.py](../../app/automatizaciones/campanas.py), ADR-W120)*:
   - Campaña 5 «Setting Funnel · ROAS MAX» (Meta 120249210694070532, flujo «Lead Magnet», reparto 60/40): PROTOCOLO, ACCESO, TRÍADA, VACÍO, DOCUMENTO 25, DOCUMENTO25, y movidas desde Winners (CURSO GRATUITO, APROBACIÓN, QUIERO APLICAR) y LM Funnel (GUÍA STEPS). Atiende DM y comentario.
   - `aut_campanas.cambios`: cada guardado anota quién, cuándo y qué cambió (palabras y Meta como agregadas/quitadas); `GET /api/inbox/campanas/<id>/cambios`. Migración `e8b2c4d6f1a3`.
+- **9 de Noviembre de 2026 (Discord: un solo servicio y todo con imagen; ventas fuera de n8n, ADR-W121)** *([discord_avisos/](../../app/services/discord_avisos/), [aviso.html](../../app/templates/reports/aviso.html))*
+  - Todos los avisos salen por `discord_avisos/envio.py` (webhook o el bot del equipo): en el texto, título, nombre y número para buscar; el resto en la tarjeta. Las agendas se ven igual (sus estilos pasaron a `_tarjeta.html`).
+  - Venta o cobro: tarjeta con monto, programa, método, closer, origen, saldo, plan de cuotas y si convirtió una seña. A #wins siempre y a #onboardings si entra un alumno nuevo. Reemplaza al flujo «New Sales» de n8n.
+  - Resultado de cada llamada (ficha, triage y mazo) a #onboardings: asistió, no asistió, canceló, reagendó o no cerró, con objeción, nota y próximo seguimiento. No repite un mismo resultado.
+  - `POST /api/external/academy/discord/aviso`: la Academia manda por acá Onboarding, reactivación, Momentum, upsell y tours.
