@@ -91,6 +91,26 @@ const Celda = ({ fila, col }) => {
             return fila.triage
                 ? <span className="celda" title={fila.triage}>{fila.triage}</span>
                 : <span className="celda mut40">Directa</span>;
+        // La llamada de triage, vista desde closing: no pasó, o el resultado con el closer y si presentó.
+        case 'closing': {
+            if (!fila.es_triage) return <span className="celda mut40">—</span>;
+            const c = fila.closing;
+            if (!c) {
+                return (
+                    <span className="celda mut40">
+                        {fila.triage_calificacion === 'descalificado' ? 'No califica' : 'No pasó'}
+                    </span>
+                );
+            }
+            return (
+                <span className="celda" title={`${c.closer} · ${c.post_call?.label || 'Pendiente'}${c.presento ? ' · presentó la oferta' : ''}`}>
+                    {c.post_call ? <ChipTono chip={c.post_call} sinTitulo /> : <span className="mut40">Pendiente</span>}
+                    <span className="celda-sub">
+                        {c.closer}{c.asistio ? ` · ${c.presento ? 'presentó' : 'no presentó'}` : ''}
+                    </span>
+                </span>
+            );
+        }
         case 'post_call':
             // El retraso va DEBAJO del chip de resultado: el chip dice qué pasó y la bajada dice
             // desde cuándo nadie lo carga, que es lo que hay que ir a resolver.

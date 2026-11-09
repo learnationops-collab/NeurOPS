@@ -53,8 +53,8 @@ const Partes = ({ partes, onVer }) => (
 
 /** Las tarjetas de arriba (triage y closing); «Ver registros ›» abre su lista. */
 export function Tarjetas({ m, onVer }) {
-    // El % de asistencia es sobre las llamadas con resultado: las sin reportar y las que aún no ocurren van aparte.
-    const conRes = { n: conResultado(m), texto: 'con resultado', clave: 'con_resultado', titulo: 'Llamadas con resultado' };
+    // El % de asistencia es sobre todas las agendas (09/11/2026), igual que la tira de Revisar.
+    const conRes = { n: conResultado(m), texto: 'agendas', clave: 'agendas', titulo: 'Agendas' };
     // Con el closer igual: las pendientes de llamada no restan al % de quienes ya tuvieron la llamada.
     const closerConRes = { n: m.closer_asistieron + m.closer_no_asistieron, texto: 'con resultado', clave: undefined, titulo: 'Con resultado' };
     const closerAsistieron = { n: m.closer_asistieron, texto: 'asistieron', clave: 'closer_asistieron', titulo: 'Asistieron al closer' };

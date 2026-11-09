@@ -119,6 +119,8 @@ def pases_de(agendas_triage):
             'asistio': asistio, 'estado': _estado_del_pase(c, fila, asistio, ahora),
             'cerro': bool(fila.get('con_venta')), 'venta_tipo': fila.get('venta_tipo'),
             'sena': bool(fila.get('con_sena')), 'cobrado': cobrado.get(c.id, 0.0),
+            # El resultado de la llamada de closing tal cual lo muestra Revisar, y si se presentó la oferta.
+            'post_call': fila.get('post_call'), 'presento': bool(fila.get('presento')),
         }
     return salida
 

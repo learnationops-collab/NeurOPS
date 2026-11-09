@@ -150,6 +150,13 @@ export const CANAL = { directa: 'Directa', triage: 'Desde triage' };
 export const canalDe = (f) => CANAL[f.canal] || CANAL.directa;
 // Quién hizo el triage (Dari, Juliana…) o «Directa» (06/11/2026): la columna y la faceta «Triage».
 export const triageDe = (f) => f.triage || CANAL.directa;
+
+// Qué pasó en closing con una llamada de triage (09/11/2026): «No pasó», «No califica» o el post call del closer.
+export const closingDe = (f) => {
+    if (!f.es_triage) return 'Agenda de closing';
+    if (!f.closing) return f.triage_calificacion === 'descalificado' ? 'No califica' : 'No pasó';
+    return `Pasó · ${f.closing.post_call?.label || 'Pendiente'}`;
+};
 export const cerro = (f) => (f.asistio ? (f.no_cerrada ? NO : SI) : null);
 export const respondio = siNo((f) => f.respondio);
 export const cualificado = siNo((f) => f.cualificado);
@@ -295,8 +302,11 @@ export const TABLAS = {
             { key: 'triage', header: 'Triage', width: '0.8fr', orden: triageDe },
             { key: 'closer', header: 'Closer', width: '1fr' },
             { key: 'pre_call', header: 'Pre call', width: '1fr' },
-            { key: 'post_call', header: 'Post call', width: '1.4fr' },
-            { key: 'motivo', header: 'Motivo', width: '1.6fr' },
+            { key: 'post_call', header: 'Post call', width: '1.3fr' },
+            // Solo en las llamadas de triage: si pasó a closing y qué pasó ahí (09/11/2026).
+            { key: 'closing', header: 'Closing', width: '1.4fr', orden: closingDe,
+                ayuda: 'En una llamada de triage: si el lead pasó a closing y, si pasó, el resultado de esa llamada, con quién y si se le presentó la oferta.' },
+            { key: 'motivo', header: 'Motivo', width: '1.3fr' },
             { key: 'ver', header: '', width: '0.4fr' },
         ],
         facetas: [
@@ -307,6 +317,8 @@ export const TABLAS = {
             { key: 'fuente', label: 'Fuente', de: (f) => f.fuente },
             { key: 'canal', label: 'Origen', de: canalDe },
             { key: 'triage', label: 'Triage', de: triageDe },
+            { key: 'closing', label: 'Resultado en closing', de: closingDe,
+                ayuda: () => 'De una llamada de triage: no pasó a closing, o el resultado de la llamada con el closer.' },
             FACETA_SEGMENTO,
             { key: 'confirmada', label: 'Confirmada', de: fueConfirmada },
             { key: 'asistio', label: 'Asistió', de: asistio },

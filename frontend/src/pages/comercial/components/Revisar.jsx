@@ -550,8 +550,13 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
         }
 
         const realizadas = lista.filter(f => f.realizada).length;
-        // La base del show up: los cuatro destinos (ADR-W112) y las sin reportar que ya pasaron (la fila lo trae).
-        const base = lista.filter(f => f.base_show_up).length;
+        // La base del show up de esta tira son TODAS las agendas de la lista (pedido de Mario, 09/11/2026: «de las
+        // 17 agendas, cuántas»): el número tiene que cerrar con el total que se ve al lado.
+        const base = lista.length;
+        // Las llamadas de triage de la lista: cuántas de las que asistieron pasaron a closing.
+        const triage = lista.filter(f => f.es_triage);
+        const triageAsistieron = triage.filter(f => f.asistio).length;
+        const pasaron = triage.filter(f => f.closing).length;
         const asistieron = lista.filter(f => f.asistio).length;
         const ventas = lista.filter(f => f.post_call.key === 'venta').length;
         const noShow = lista.filter(f => f.post_call.key === 'no_show').length;
@@ -567,7 +572,10 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                 ayuda: 'Las agendas de la lista, con los filtros puestos.' },
             { key: 'show_up', label: 'show up', valor: fmt.pct(pct(asistieron, base)),
                 color: 'var(--success)', hint: de(asistieron, base),
-                ayuda: 'Se presentaron, sobre las que se presentaron, cancelaron, reprogramaron o no show.' },
+                ayuda: 'Se presentaron, sobre todas las agendas de la lista.' },
+            ...(triage.length ? [{ key: 'pasaron', label: 'pasó a closing', valor: fmt.pct(pct(pasaron, triageAsistieron)),
+                color: 'var(--info)', hint: `${pasaron} de ${triageAsistieron} que asistieron`,
+                ayuda: 'De las llamadas de triage que asistieron, cuántas pasaron a una llamada de closing.' }] : []),
             { key: 'close_rate', label: 'close rate', valor: fmt.pct(pct(ventas, asistieron)),
                 color: 'var(--brand-secondary)', hint: de(ventas, asistieron),
                 ayuda: 'Ventas sobre los que asistieron. Una seña no cuenta como venta.' },

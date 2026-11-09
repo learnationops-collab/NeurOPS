@@ -447,3 +447,8 @@
 
 ### 09/11/2026 · «APLICAR» y «QUIERO APLICAR» son una sola palabra clave en Marketing
 - El tablero de anuncios cuenta las entradas, agendas, ventas y gasto de «APLICAR» (como guardaba ManyChat hasta el 23/10) dentro de «QUIERO APLICAR» (ADR-W132). En 30 días al 08/11 su ROAS pasa de 0,21 a 1,38; los totales no cambian.
+
+### 09/11/2026 — Revisar y Triage: show up sobre todas las agendas y el resultado en closing
+- Tira de totales de Revisar: el show up y el % de no show se calculan sobre TODAS las agendas de la lista (pedido de Mario: «de las 17, cuántas»). Con llamadas de triage en la lista, una tarjeta más: «pasó a closing», de las que asistieron.
+- Triage Dashboard: el % de asistencia también sobre todas las agendas, para dar lo mismo que Revisar.
+- Revisar › Agendas: columna y faceta «Closing». En una llamada de triage dice si pasó a closing y, si pasó, el post call de la llamada con el closer, quién la tomó y si presentó la oferta (`comercial_agendas._con_closing`, `triage_pases.pases_de` suma `post_call` y `presento`).

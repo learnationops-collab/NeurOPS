@@ -6,8 +6,8 @@ import { filtroDe } from '../../../triage/components/triageFiltros';
 export const pct = (a, b) => (b ? Math.round((a / b) * 1000) / 10 : 0);
 export const pctTexto = (a, b) => (b ? `${Math.round((a / b) * 100)}%` : '—');
 
-/** Llamadas con resultado (asistió o no show): la base del % de asistencia. Las sin reportar y las que aún no ocurren no cuentan. */
-export const conResultado = (m) => m.asistencias + m.no_show;
+/** La base del % de asistencia: todas las agendas (09/11/2026, la misma cuenta que la tira de Revisar). */
+export const conResultado = (m) => m.agendas;
 /** Lo mismo con el closer: asistieron o no asistieron. Las pendientes de llamada no cuentan. */
 export const closerConResultado = (m) => m.closer_asistieron + m.closer_no_asistieron;
 
@@ -47,7 +47,7 @@ export function embudoDe(m) {
     const etapas = [
         { clave: 'AGENDAS', n: m.agendas, color: 'brand-primary', filtro: 'agendas' },
         // Contra las llamadas con resultado: las que aún no ocurren o nadie reportó no son una caída del triage.
-        { clave: 'ASISTIERON', n: m.asistencias, color: 'brand-secondary', de: conResultado(m), nota: `${m.asistencias} de ${conResultado(m)} con resultado`, filtro: 'asistencias', cuello: true },
+        { clave: 'ASISTIERON', n: m.asistencias, color: 'brand-secondary', de: conResultado(m), nota: `${m.asistencias} de ${conResultado(m)} agendas`, filtro: 'asistencias', cuello: true },
         { clave: 'CALIFICADOS', n: m.calificados, color: 'success', de: m.asistencias, nota: `${m.calificados} de ${m.asistencias} asistieron`, filtro: 'calificados', cuello: true },
         // Los que pasaron a closing son los calificados: no se repiten como etapa, el grupo arranca en lo que hizo el closer.
         // Contra los que ya tuvieron la llamada (como la tarjeta): la que todavía no llega no es una caída.

@@ -213,6 +213,7 @@ class ComercialAgendasMixin:
                 # Quién hizo el triage (Dari, Juliana…), o None si llegó directa (06/11/2026).
                 'triage': triages[a.id],
             })
+        _con_closing(appts, filas)
         _con_motivo(filas)
         from app.services import noshow_descartado
         noshow_descartado.marcar(filas, es_no_show=lambda f: f['post_call']['key'] == 'no_show')
@@ -346,6 +347,23 @@ class ComercialAgendasMixin:
             'pendientes_con_retraso': len(con_retraso),
             'retraso_max': max((f['retraso_dias'] for f in con_retraso), default=0),
         }
+
+
+def _con_closing(appts, filas):
+    """A cada llamada de triage le agrega qué pasó después en closing (pedido de Mario, 09/11/2026): `es_triage`,
+    `triage_calificacion` y `closing` (el pase de `triage_pases.pases_de`, o None si no pasó). Las de closing no
+    llaman a esto otra vez: `pases_de` arma sus filas con agendas de closers, que no son de triage."""
+    de_triage = [a for a in appts if a.closer and a.closer.tiene_rol('triage')]
+    if not de_triage:
+        return
+    from app.services.triage_pases import pases_de
+    pases = pases_de(de_triage)
+    calificacion = {a.id: a.triage_calificacion for a in de_triage}
+    for f in filas:
+        if f['id'] in calificacion:
+            f['es_triage'] = True
+            f['triage_calificacion'] = calificacion[f['id']]
+            f['closing'] = pases.get(f['id'])
 
 
 def _lead_de(a):
