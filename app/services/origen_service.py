@@ -26,7 +26,7 @@ from sqlalchemy import or_
 
 from app import db
 from app.models import Appointment, Client, WorkshopEvent
-from app.models.marketing import clave_de_palabra
+from app.models.marketing import clave_de_palabra, clave_de_reporte
 from app.models.sale import Sale
 from app.services.anuncios_atribuidor import _Atribuidor
 from app.services.anuncios_claves_service import _clave_de_cada_anuncio, _en_tandas, es_keyword_valida
@@ -180,7 +180,7 @@ def clave_guardada(atribucion, keyword, anuncio_id, clave_de_anuncio):
     """La palabra clave guardada de una agenda: la del anuncio elegido si tiene, o la de `keyword`."""
     if atribucion not in CON_CLAVE:
         return None
-    return (clave_de_anuncio.get(anuncio_id) if anuncio_id else None) or clave_de_palabra(keyword)
+    return (clave_de_anuncio.get(anuncio_id) if anuncio_id else None) or clave_de_reporte(clave_de_palabra(keyword))
 
 
 def claves_guardadas(sale_ids, clave_de_anuncio):

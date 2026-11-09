@@ -6,7 +6,7 @@ from collections import defaultdict
 
 from app import db
 from app.models import Ad, Conversation, LeadAnswer
-from app.models.marketing import clave_de_palabra as clave_de
+from app.models.marketing import clave_de_palabra as clave_de, clave_de_reporte
 
 # Lo que llega en `keyword` y no es una palabra clave: la marca de la atribución manual (la deja la
 # bandeja del setter, ver `palabra_clave_service.KEYWORD_MANUAL`) y los vacíos de ManyChat.
@@ -75,7 +75,7 @@ def claves_conocidas():
 # --- Lectura: de cada interacción, su palabra clave ---------------------------------------------
 
 def _clave_de_cada_anuncio():
-    return {a.id: (a.clave or clave_de(a.keyword) or clave_de(a.name)) for a in Ad.query.all()}
+    return {a.id: clave_de_reporte(a.clave or clave_de(a.keyword) or clave_de(a.name)) for a in Ad.query.all()}
 
 
 def _en_tandas(valores):
@@ -99,7 +99,7 @@ def _interacciones(lead_ids, clave_de_anuncio):
                 LeadAnswer.id_option, LeadAnswer.created_at).filter(LeadAnswer.conversation_id.in_(tanda)):
             if creada is None:
                 continue
-            clave = clave_de(keyword) if es_keyword_valida(keyword) else None
+            clave = clave_de_reporte(clave_de(keyword)) if es_keyword_valida(keyword) else None
             # El anuncio manda sobre el texto: la bandeja del setter le pone el anuncio a una
             # interacción que ya existía, y ése es el anuncio que eligió.
             if ad_id and clave_de_anuncio.get(ad_id):

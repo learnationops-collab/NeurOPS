@@ -15,6 +15,18 @@ def clave_de_palabra(texto):
     limpio = re.sub(r'[^A-Z0-9]+', ' ', sin_tildes.upper()).strip()
     return limpio[:100] or None
 
+
+# Palabras clave que en los números de Marketing son una sola (ADR-W132): «APLICAR» es como ManyChat
+# guardó hasta el 23/10/2026 a quien comentaba «QUIERO APLICAR»; desde entonces el gasto de esos anuncios
+# va a «QUIERO APLICAR» y las entradas viejas quedaban en otra fila, con ventas y sin gasto. No se toca
+# `clave_de_palabra`: el bot del Inbox la usa para emparejar sus campañas y tiene que seguir igual.
+CLAVES_EQUIVALENTES = {'APLICAR': 'QUIERO APLICAR'}
+
+
+def clave_de_reporte(clave):
+    """La palabra clave con la que se cuenta en Marketing: la misma, o la que la reemplaza."""
+    return CLAVES_EQUIVALENTES.get(clave, clave) if clave else clave
+
 class Campaign(db.Model):
     __tablename__ = 'campaigns'
     id = db.Column(db.Integer, primary_key=True)
