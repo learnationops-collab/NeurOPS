@@ -103,7 +103,7 @@ export const getConstancia = (dias, fecha) =>
 /** Agendas del período por segmento A/B/C/D (el closer, show up y cierre; el setter, sus agendas), cortadas por `corte`
  *  (closer · setter · fuente · origen; sin él, todo junto) y con el VS del header como período comparado. El filtro de
  *  segmento (`filtros.segmento`) lo aplica el backend, también al total. */
-export const getSegmentos = (filtros, config = {}, corte = 'ninguno') =>
+export const getSegmentos = (filtros, config = {}, corte = 'closer') =>
     api.get('/comercial/segmentos', { params: { ...filtrosQuery(filtros), corte }, ...config }).then(r => r.data);
 
 /** La lista detrás de una cifra de `getSegmentos`: `metrica` agendas · realizadas · asistieron · ventas · sin_reporte.

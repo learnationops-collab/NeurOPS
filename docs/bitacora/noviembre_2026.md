@@ -370,3 +370,7 @@
   - `Comparado`: más contraste; la variación es relativa (de 11.8% a 6.1% es ▼ 48%, los puntos quedan en el tooltip) y lleva la cuenta del período comparado: «4/34» en los close rates, las ventas en el ticket, el gasto y los clientes en el CAC, la diferencia en plata en el Cash collected.
   - Por cobrar sale de Cash a un panel propio a lo ancho: total con clientes con saldo y con cuota vencida, barra partida tocable y una tarjeta por parte (monto, medidor y % del total).
   - Lo que abre una lista es una tarjeta-botón con flecha (`Tocable`): Cash collected, ticket promedio, el total y cada parte de Por cobrar.
+- **9 de Noviembre de 2026 (Analizar: Segmentos rehecho, triage aparte de los closers)** *([SegmentosPanel.jsx](../../frontend/src/pages/comercial/components/SegmentosPanel.jsx), [segmentos_comercial.py](../../app/services/segmentos_comercial.py))*:
+  - Lo central es el % de A, B, C y D: cada grupo es una barra al 100% partida por segmento (con el % adentro) y, debajo y finita, la del período comparado. Cifra a elegir: agendas, asistieron o ventas. Cada tramo abre su lista.
+  - Arriba siempre el General: la barra grande y una tarjeta por segmento con su %, cuántas, el cambio en puntos de participación, show up y cierre.
+  - Cortes: Closers, Triage, Setters, Fuente, Origen. Las agendas de las personas con rol triage salen de Closers y van a Triage. «Sin agrupar», las tablas y el cruce salieron.
