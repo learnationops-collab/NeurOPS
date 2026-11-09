@@ -93,11 +93,9 @@ const FilaCanal = ({ canal, d }) => {
                 <i className="cc-canal-v" style={{ '--w': ancho(d.ventas) }} />
                 <i className="cc-canal-s" style={{ '--w': ancho(d.senas) }} />
             </span>
-            <b className="cc-canal-pct num">{solo === null ? '—' : `${solo}%`}</b>
-            <small className="cc-canal-sub num">
-                <span title="Por presentación">{pres === null ? '—' : `${pres}%`}</span>
-                <span className="cc-canal-con" title="Con señas, por llamada">{con === null ? '—' : `${con}%`}</span>
-            </small>
+            <b className="cc-canal-pct num" title="Close rate por llamada">{solo === null ? '—' : `${solo}%`}</b>
+            <b className="cc-canal-v2 num" title="Close rate por presentación">{pres === null ? '—' : `${pres}%`}</b>
+            <b className="cc-canal-v2 cc-canal-con num" title="Ventas + señas, por llamada">{con === null ? '—' : `${con}%`}</b>
         </div>
     );
 };
@@ -131,8 +129,9 @@ const CierreComercial = ({ cierres, porCanal, destinos, irA, onVerNoCerradas }) 
                 <div className="cc-canales" role="group" aria-label="Close rate por canal">
                     <div className="cc-canal cc-canal--cab" aria-hidden="true">
                         <span /><span />
-                        <small>llamada</small>
-                        <small className="cc-canal-sub"><span>present.</span><span className="cc-canal-con">c/ señas</span></small>
+                        <small>Llamada</small>
+                        <small>Present.</small>
+                        <small className="cc-canal-con">+ Señas</small>
                     </div>
                     {CANALES.map(k => porCanal[k.clave] && (
                         <FilaCanal key={k.clave} canal={k} d={porCanal[k.clave]} />

@@ -52,8 +52,13 @@
 
 /* Por canal */
 .dc-shell .cc-canales { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid var(--border-subtle); }
-.dc-shell .cc-canal { display: grid; grid-template-columns: 112px minmax(60px, 1fr) 54px 92px; gap: 10px; align-items: center; }
-.dc-shell .cc-canal--cab small { font-size: 9px; letter-spacing: .12em; text-transform: uppercase; color: var(--text-muted); text-align: right; }
+.dc-shell .cc-canal { display: grid; grid-template-columns: 112px minmax(50px, 1fr) repeat(3, 62px); gap: 10px; align-items: center; }
+.dc-shell .cc-canal--cab { margin-bottom: -2px; }
+.dc-shell .cc-canal--cab small {
+    font-size: 9px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; white-space: nowrap;
+    color: var(--text-muted); text-align: right;
+}
+.dc-shell .cc-canal--cab small.cc-canal-con { color: var(--cc-s); }
 .dc-shell .cc-canal-nombre { display: inline-flex; align-items: center; gap: 7px; font-size: 10px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; color: var(--text-muted); }
 .dc-shell .cc-canal-riel { display: flex; gap: 2px; height: 10px; border-radius: 999px; overflow: hidden;
     background: color-mix(in srgb, var(--text-on-surface) 8%, transparent); }
@@ -61,8 +66,8 @@
 .dc-shell .cc-canal-v { background: var(--c); }
 .dc-shell .cc-canal-s { background: color-mix(in srgb, var(--c) 40%, transparent); }
 .dc-shell .cc-canal-pct { font-size: 16px; font-weight: 800; text-align: right; }
-.dc-shell .cc-canal-sub { display: flex; justify-content: flex-end; gap: 10px; font-size: 12px; font-weight: 600; color: var(--text-muted); }
-.dc-shell .cc-canal-con { color: var(--cc-s); }
+.dc-shell .cc-canal-v2 { font-size: 14px; font-weight: 700; text-align: right; color: color-mix(in srgb, var(--text-on-surface) 65%, transparent); }
+.dc-shell .cc-canal-v2.cc-canal-con { color: var(--cc-s); }
 
 @keyframes ccSube { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @keyframes ccArco { from { stroke-dashoffset: var(--largo); } }
@@ -72,5 +77,5 @@
 @media (max-width: 560px) {
     .dc-shell .cc-n { font-size: 26px; }
     .dc-shell .cc-pct { font-size: 24px; }
-    .dc-shell .cc-canal { grid-template-columns: 90px minmax(40px, 1fr) 48px 84px; gap: 6px; }
+    .dc-shell .cc-canal { grid-template-columns: 84px minmax(24px, 1fr) repeat(3, 48px); gap: 6px; }
 }

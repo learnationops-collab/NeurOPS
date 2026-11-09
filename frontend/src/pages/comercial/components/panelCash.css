@@ -1,0 +1,57 @@
+/* Panel Cash (PanelCash.jsx, 09/11/2026): cash collected con sus días, dos promedios y la deuda partida. */
+.dc-shell .pc-rot {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 900;
+    letter-spacing: .14em; text-transform: uppercase; color: var(--text-muted);
+}
+.dc-shell .pc-vs {
+    display: inline-flex; align-items: baseline; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 700;
+    color: color-mix(in srgb, var(--text-on-surface) 70%, transparent);
+    background: color-mix(in srgb, var(--text-on-surface) 6%, transparent);
+    border: 1px solid color-mix(in srgb, var(--text-on-surface) 10%, transparent);
+}
+
+/* Hero */
+.dc-shell .pc-hero { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 18px; align-items: end; }
+.dc-shell .pc-hero-cifra { display: grid; justify-items: start; gap: 6px; }
+.dc-shell .pc-hero-n { font-size: 40px; line-height: 1; font-weight: 900; letter-spacing: -.035em; color: var(--success); }
+.dc-shell .pc-dias { display: flex; align-items: flex-end; gap: 3px; height: 64px; }
+.dc-shell .pc-dias i {
+    flex: 1; min-width: 3px; border-radius: 4px 4px 2px 2px; height: 0;
+    background: color-mix(in srgb, var(--success) 45%, transparent);
+    transition: height .7s cubic-bezier(.2, .8, .2, 1);
+}
+.dc-shell .pc-dias i.pc-dia-pico { background: var(--success); }
+.dc-shell .pc-dias i.pc-dia-cero { background: color-mix(in srgb, var(--text-on-surface) 10%, transparent); }
+
+/* Promedios */
+.dc-shell .pc-proms { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: var(--s4, 18px); }
+.dc-shell .pc-prom {
+    display: grid; justify-items: start; gap: 6px; padding: 14px; border-radius: 18px;
+    border: 1px solid color-mix(in srgb, var(--c) 28%, transparent);
+    background: radial-gradient(120% 120% at 0% 0%, color-mix(in srgb, var(--c) 16%, transparent), transparent 70%);
+    animation: pcSube .5s both cubic-bezier(.2, .8, .2, 1);
+}
+.dc-shell .pc-prom + .pc-prom { animation-delay: 90ms; }
+.dc-shell .pc-prom-n { font-size: 28px; line-height: 1; font-weight: 900; letter-spacing: -.03em; color: var(--c); }
+.dc-shell .pc-prom-pie { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 11px; font-weight: 600; color: var(--text-muted); }
+
+/* Por cobrar */
+.dc-shell .pc-deuda { display: grid; gap: 12px; margin-top: var(--s4, 18px); padding-top: var(--s4, 18px); border-top: 1px solid var(--border-subtle); }
+.dc-shell .pc-deuda-cab { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.dc-shell .pc-deuda-total { font-size: 22px; font-weight: 900; letter-spacing: -.02em; }
+.dc-shell .pc-deuda-barra { display: flex; gap: 3px; height: 12px; }
+.dc-shell .pc-deuda-barra i { min-width: 6px; border-radius: 999px; transition: flex .9s .2s cubic-bezier(.2, .8, .2, 1); }
+.dc-shell .pc-deuda-items { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.dc-shell .pc-deuda-item { display: grid; justify-items: start; gap: 4px; min-width: 0; }
+.dc-shell .pc-deuda-item .pc-rot > i { width: 8px; height: 8px; border-radius: 3px; background: var(--c); }
+.dc-shell .pc-deuda-n { font-size: 20px; line-height: 1.1; font-weight: 900; letter-spacing: -.02em; color: var(--c); }
+.dc-shell .pc-deuda-item small { font-size: 11px; font-weight: 700; color: var(--text-muted); }
+
+@keyframes pcSube { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .dc-shell .pc-prom { animation: none; } .dc-shell .pc-dias i, .dc-shell .pc-deuda-barra i { transition: none; } }
+
+@media (max-width: 560px) {
+    .dc-shell .pc-hero { grid-template-columns: 1fr; }
+    .dc-shell .pc-hero-n { font-size: 32px; }
+    .dc-shell .pc-deuda-items { grid-template-columns: 1fr; }
+}

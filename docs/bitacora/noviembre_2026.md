@@ -358,3 +358,8 @@
   - Error de datos: el pago es posterior a la 1ª y a la 2ª llamada del lead, y las dos quedaban en «Venta» (dos ventas por un cobro). Ahora la venta va solo en la última llamada con show up del lead; la seña igual, y no cuenta si el lead ya tiene la venta.
   - Panel Cierre: ventas, señas y no cerradas arriba; dos anillos con el close rate por llamada y por presentación (solo ventas) y «con señas» debajo; abajo el close rate de directas y desde triage (`cierres_canal`, mismas reglas).
   - Embudo: arriba el total de agendas y cuánto se lleva cada canal (número y %); sin las líneas de texto bajo las barras; las descartadas como chip. El close rate salió del embudo (se borró `CloseRatesCanales.jsx`).
+- **9 de Noviembre de 2026 (Analizar: panel Cash rehecho, con CAC)** *([PanelCash.jsx](../../frontend/src/pages/comercial/components/PanelCash.jsx), [comercial_analitica.py](../../app/services/comercial_analitica.py))*:
+  - Todo neto: sin fees ni bruto. Arriba el Cash collected con «vs» el período comparado y las barras por día.
+  - Dos promedios: Ticket promedio y CAC (gasto de Meta en Setting y Workshop ÷ clientes nuevos, `datos.adquisicion`; solo con todo el equipo y sin segmento ni país), cada uno con su «vs».
+  - Por cobrar a hoy: una barra partida en vencido, por vencer y sin cronograma, con monto y % de cada uno. Sin la tabla, la torta ni el texto de pie.
+  - Panel Cierre: la tabla de directas / desde triage con una columna por cifra (Llamada, Present., + Señas) y rótulos que ya no se parten.

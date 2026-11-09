@@ -323,6 +323,16 @@ def _cash_por_dia(filas_ventas, start, end):
     return dias, (mejor if mejor and mejor['cash'] > 0 else None)
 
 
+def _adquisicion(start, end, bloque):
+    """`{gasto, clientes, cac}`: lo que Meta gastó en Setting y Workshop ÷ los clientes nuevos."""
+    from app.services.meta_ads_service import gasto_por_embudo
+    gasto = round(sum(f['gasto'] for f in gasto_por_embudo(start, end)
+                      if f['embudo'] in ('setting', 'workshop')), 2)
+    clientes = bloque.get('clientes_nuevos', 0)
+    return {'gasto': gasto, 'clientes': clientes,
+            'cac': round(gasto / clientes, 2) if clientes and gasto else None}
+
+
 def _cierres_por_canal(agendas):
     """`{canal: {asistieron, presentaciones, ventas, senas}}` de las agendas, 'directa' y 'triage'."""
     salida = {c: {'asistieron': 0, 'presentaciones': 0, 'ventas': 0, 'senas': 0} for c in ('directa', 'triage')}
@@ -454,6 +464,8 @@ def bloque_closers(start, end, closer_id=None, closer_nombre=None, con_reales=Tr
         'cash': tot_v['cash'],
         'cash_neto': tot_v['cash_neto'],
         'ventas': tot_v['ventas'],
+        # Personas distintas con una venta nueva: el denominador del CAC (`marketing_formulas`).
+        'clientes_nuevos': len({f['cliente'] for f in ventas if f['es_venta']}),
         'ticket': tot_v['ticket'],
         'ticket_neto': tot_v['ticket_neto'],
         'comision': round(tot_v['cash_neto'] * CLOSER_RATE, 2),
@@ -820,6 +832,11 @@ def resumen(rol, start, end, prev_start=None, prev_end=None, miembro_id=None, se
         datos['por_cobrar'] = por_cobrar_de(miembro_id)
         # Solo con closers, que es donde está el Cash collected con el que cierra.
         datos['fuentes'] = fuentes_de(start, end, prev_start, prev_end, nombre)
+        # CAC (09/11/2026): el gasto de Meta en los embudos que traen ventas ÷ clientes nuevos. Solo
+        # para todo el equipo sin filtros: el gasto no se reparte por closer, segmento ni país.
+        if not miembro_id and not segmento and not paises:
+            datos['adquisicion'] = {'actual': _adquisicion(start, end, actual),
+                                    'previo': _adquisicion(prev_start, prev_end, previo) if previo else None}
     else:
         # Los deltas de cada pestaña de canal (los de General son `deltas`) y la comisión del mes
         # en curso, que se mudó de «Mis agendas» a este tablero (pedido del 10/10/2026). Como
