@@ -80,21 +80,41 @@ const Embudo = ({ pasos, sinCuello = false, sinFinal = false, canales = null, ch
                     <span className="dc-bottleneck">Cuello de botella · {pasos[cuello].paso}</span>
                 )}
             </CardHead>
-            {canales && (
-                <div className="leyenda dc-funnel-canales">
-                    {canales.map(c => (
-                        <span key={c.nombre}>
-                            <i style={{ background: c.color }} />
-                            {c.ir && c.n > 0 ? (
-                                <button type="button" className="dc-funnel-canal" onClick={c.ir}
-                                    title={`Ver las ${c.n} agendas: ${c.nombre.toLowerCase()}`}>
-                                    {c.nombre} · {c.n}
-                                </button>
-                            ) : `${c.nombre} · ${c.n}`}
-                        </span>
-                    ))}
-                </div>
-            )}
+            {canales && (() => {
+                const total = canales.reduce((a, c) => a + c.n, 0);
+                const parte = (n) => (total ? Math.round((n / total) * 100) : 0);
+                return (
+                    <div className="dc-mix">
+                        <div className="dc-mix-total">
+                            <b className="num">{total}</b>
+                            <small>{pasos[0]?.paso.toLowerCase()}</small>
+                        </div>
+                        <div className="dc-mix-cuerpo">
+                            <div className="dc-mix-barra" aria-hidden="true">
+                                {canales.map(c => c.n > 0 && (
+                                    <i key={c.nombre} style={{ flex: montado ? c.n : 0.0001, background: c.color }} />
+                                ))}
+                            </div>
+                            <div className="dc-mix-ley">
+                                {canales.map(c => {
+                                    const cuerpo = (
+                                        <>
+                                            <i style={{ background: c.color }} />
+                                            <span className="dc-mix-nombre">{c.nombre}</span>
+                                            <b className="num">{c.n}</b>
+                                            <small className="num" style={{ color: c.color }}>{parte(c.n)}%</small>
+                                        </>
+                                    );
+                                    return c.ir && c.n > 0 ? (
+                                        <button key={c.nombre} type="button" className="dc-mix-item" onClick={c.ir}
+                                            title={`Ver las ${c.n} agendas: ${c.nombre.toLowerCase()}`}>{cuerpo}</button>
+                                    ) : <span key={c.nombre} className="dc-mix-item">{cuerpo}</span>;
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
             {pasos.map((p, i) => {
                 const pct = i === 0 ? null : pasos[i - 1].n ? ((p.n / pasos[i - 1].n) * 100).toFixed(1) : null;
                 const anchoAqui = montado ? ancho(p.n) : 0;
@@ -115,6 +135,10 @@ const Embudo = ({ pasos, sinCuello = false, sinFinal = false, canales = null, ch
                                     <span className="dc-funnel-label" style={estiloCuello}>{p.paso}</span>
                                 )}
                                 {canales && p.partes && <small className="t-cap mut num">{p.n}</small>}
+                                {p.chip && (
+                                    <button type="button" className="dc-funnel-chip num" onClick={p.chip.ir}
+                                        title={`Ver las ${p.chip.t}`}>{p.chip.t}</button>
+                                )}
                                 {p.ayuda && <Tip texto={p.ayuda} />}
                             </span>
                             <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -125,10 +149,11 @@ const Embudo = ({ pasos, sinCuello = false, sinFinal = false, canales = null, ch
                                             p.irPartes?.[k] ? (
                                                 <button key={k} type="button" className="dc-funnel-parte"
                                                     style={{ flex: n, background: canales[k].color }}
-                                                    title={`Ver las ${n} agendas: ${canales[k].nombre.toLowerCase()}`}
+                                                    title={`${canales[k].nombre}: ${n} de ${p.n} (${Math.round((n / p.n) * 100)}%)`}
                                                     onClick={p.irPartes[k]}>{n}</button>
                                             ) : (
                                                 <span key={k} className="dc-funnel-parte"
+                                                    title={`${canales[k].nombre}: ${n} de ${p.n} (${Math.round((n / p.n) * 100)}%)`}
                                                     style={{ flex: n, background: canales[k].color }}>{n}</span>
                                             )
                                         ))}
@@ -146,15 +171,6 @@ const Embudo = ({ pasos, sinCuello = false, sinFinal = false, canales = null, ch
                                 {p.tasa ? p.tasa : pct === null ? '' : `${pct}%`}
                             </span>
                         </div>
-                        {canales && !p.sub && i > 0 && pasos[i - 1].n > 0 && (
-                            <div className="dc-funnel-row">
-                                <span />
-                                <div style={{ display: 'flex', justifyContent: 'center' }}>
-                                    <span className="t-cap mut num">{p.n} de {pasos[i - 1].n}</span>
-                                </div>
-                                <span />
-                            </div>
-                        )}
                         {p.sub && (
                             <div className="dc-funnel-row">
                                 <span />

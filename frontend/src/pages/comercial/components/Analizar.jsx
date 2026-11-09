@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronDown, CreditCard, PieChart, Rows } from 'lucide-react';
 import Embudo from './Embudo';
-import CloseRatesCanales from './CloseRatesCanales';
+import CierreComercial from './CierreComercial';
 import { canalesDe, partesDe } from './embudoCanales';
 // El "i" era una copia local con una prop `der` para forzar el lado a mano. El `Tip` compartido
 // mide y elige el lado que entra, así que la prop desapareció de todas las llamadas.
@@ -10,7 +10,6 @@ import EsqueletoAnalizar from './EsqueletoAnalizar';
 // La cifra que sube hasta su valor: vive aparte porque la usa también la tira de Revisar.
 import Cifra from './Cifra';
 import MetricaClicable, { abrir } from '../../../components/dashboard/MetricaClicable';
-import MatrizCierres, { LeyendaCierres } from '../../../components/dashboard/MatrizCierres';
 import RepartoEstados from './RepartoEstados';
 import TiraDescalificadas from './TiraDescalificadas';
 import ModalNoCerradas from './ModalNoCerradas';
@@ -226,16 +225,15 @@ const PanelCierre = ({ bloque, irA, cargarNoCerradas, onAbrirFila }) => {
     return (
         <Panel id="p-cierre" cab={
             <PanelCab titulo="Cierre"
-                ayuda={'El close rate cuenta solo pagos completos y split pay: una seña es una reserva, '
-                    + 'no una venta, y va en su propia fila. Cada tarjeta mide lo mismo contra las '
-                    + 'llamadas con show up y contra las presentaciones. Abajo, las no cerradas: las '
-                    + 'que asistieron y no terminaron ni en venta ni en seña.'}>
-                {!vacio && <LeyendaCierres cierres={c} />}
+                ayuda={'El close rate cuenta solo pagos completos y split pay, una venta por lead. El '
+                    + 'anillo azul son las ventas y el rosa las señas, sobre las llamadas con show up y '
+                    + 'sobre las presentaciones. Abajo, el mismo close rate de las agendas directas y de '
+                    + 'las que vienen del triage.'}>
             </PanelCab>
         }>
             {vacio
                 ? <Vacio texto="Ninguna llamada del período tiene todavía un show up cargado." />
-                : <MatrizCierres cierres={c} irA={irA} destinos={DESTINOS_CIERRES} Ayuda={Tip}
+                : <CierreComercial cierres={c} porCanal={bloque.cierres_canal} irA={irA} destinos={DESTINOS_CIERRES}
                     onVerNoCerradas={cargarNoCerradas ? () => setVerNoCerradas(true) : undefined} />}
             {verNoCerradas && cargarNoCerradas && (
                 <ModalNoCerradas cargar={cargarNoCerradas} total={c?.no_cerradas?.num ?? null}
@@ -827,17 +825,14 @@ const pasosDe = (funnel, vocabulario, irA) => funnel.map(p => {
         // El paso partido en agendas directas y desde triage (solo en el embudo de closers).
         ...partesDe(p.por_canal, def.destino, irA),
         // Agendas: cuántas son vigentes y cuántas descartadas; la segunda cifra abre las descartadas.
-        sub: p.descartadas != null ? `${p.vigentes} vigentes + ${p.descartadas} descartadas`
-            : p.show_up != null ? `show up: ${p.n} de ${p.base_show_up} agendas`
-                : p.presentaciones != null ? `${p.n} de ${p.presentaciones} presentaciones` : undefined,
-        irSub: p.descartadas ? abrir(irA, def.destinoDescartadas) : undefined,
+        chip: p.descartadas ? { t: `${p.descartadas} descartadas`, ir: abrir(irA, def.destinoDescartadas) } : undefined,
         // El show up del paso es el de la tarjeta de arriba: presentes sobre los cuatro destinos (ADR-W112).
         tasa: p.show_up != null ? `${p.show_up}%` : undefined,
         subTasa: p.show_up != null ? `Show up: ${p.n} de ${p.base_show_up} agendas` : undefined,
     };
 });
 
-const DashboardClosers = ({ bloque, deltas, porCobrar, fuentes, irA, cargarNoCerradas, onAbrirFila }) => (
+const DashboardClosers = ({ bloque, previo, deltas, porCobrar, fuentes, irA, cargarNoCerradas, onAbrirFila }) => (
     <>
         <div className="grid grid--4">
             <Tile label="Show up" valor={fmt.pct(bloque.show_up)} color={v('success')}
@@ -863,13 +858,20 @@ const DashboardClosers = ({ bloque, deltas, porCobrar, fuentes, irA, cargarNoCer
                 cuenta={bloque.cierres?.reales ? { a: String(bloque.cierres.reales.cierres), b: `${bloque.cierres.reales.base} oportunidades` } : null}
                 sub={bloque.cierres?.reales?.anteriores ? `${fmt.plural(bloque.cierres.reales.anteriores, 'de llamada anterior', 'de llamadas anteriores')}` : undefined}
                 ver={abrir(irA, D.close_rate_real)} baja="p-cierre" />
-            <Tile label="Cash collected · neto" valor={fmt.money(bloque.cash_neto)}
+            {/* Debajo va el monto del período comparado, el que explica el delta (pedido de Mario,
+                09/11/2026). El bruto y la comisión de la pasarela quedan en el panel Cash. */}
+            <Tile label="Cash collected" valor={fmt.money(bloque.cash_neto)}
                 help={'Dinero que entró en el período, descontadas las fees de la pasarela: pagos '
-                    + 'completos, primeras cuotas, cuotas de ventas anteriores y señas. El bruto '
-                    + '(antes de fees) se ve debajo.'}
+                    + 'completos, primeras cuotas, cuotas de ventas anteriores y señas. Debajo, lo '
+                    + 'que entró en el período comparado.'}
                 delta={deltas.cash_neto || deltas.cash}
                 humo={[v('brand-secondary'), v('brand-primary'), v('brand-secondary-light'), v('brand-navy')]}
-                sub={`bruto ${fmt.money(bloque.cash)} · comisión ${fmt.money(bloque.comision)}`}
+                sub={previo?.cash_neto != null ? (
+                    <span className="kpi-previo">
+                        <span className="kpi-previo-lbl">vs</span>
+                        <span className="kpi-previo-n">{fmt.money(previo.cash_neto)}</span>
+                    </span>
+                ) : undefined}
                 ver={abrir(irA, D.cash)} baja="p-cash" />
             <Tile label="Ticket promedio" valor={fmt.money(bloque.ticket)} color={v('info')}
                 help={`Lo cobrado en las ${bloque.ventas} ventas nuevas dividido por cuántas fueron. `
@@ -883,9 +885,7 @@ const DashboardClosers = ({ bloque, deltas, porCobrar, fuentes, irA, cargarNoCer
         <div className="grid-2">
             <PanelEstados bloque={bloque} irA={irA} />
             <Embudo pasos={pasosDe(bloque.funnel, PASOS_CLOSER, irA)} sinFinal
-                canales={canalesDe(bloque.funnel, PASOS_CLOSER.Agendas.destino, irA)}>
-                <CloseRatesCanales reales={bloque.cierres?.reales} irA={irA} />
-            </Embudo>
+                canales={canalesDe(bloque.funnel, PASOS_CLOSER.Agendas.destino, irA)} />
         </div>
 
         <div className="grid-2">
@@ -941,7 +941,7 @@ const Analizar = ({ datos, rol, irA, cargarNoCerradas = null, onAbrirFila = null
     return rol === 'setters'
         ? <DashboardSetters bloque={actual} deltas={deltas} deltasCanales={datos.deltas_canales}
             comision={datos.comision} canal={canal} onCanal={onCanal} irA={irA} />
-        : <DashboardClosers bloque={actual} deltas={deltas} porCobrar={datos.por_cobrar}
+        : <DashboardClosers bloque={actual} previo={datos.previo} deltas={deltas} porCobrar={datos.por_cobrar}
             fuentes={datos.fuentes} irA={irA} cargarNoCerradas={cargarNoCerradas}
             onAbrirFila={onAbrirFila} />;
 };

@@ -323,6 +323,20 @@ def _cash_por_dia(filas_ventas, start, end):
     return dias, (mejor if mejor and mejor['cash'] > 0 else None)
 
 
+def _cierres_por_canal(agendas):
+    """`{canal: {asistieron, presentaciones, ventas, senas}}` de las agendas, 'directa' y 'triage'."""
+    salida = {c: {'asistieron': 0, 'presentaciones': 0, 'ventas': 0, 'senas': 0} for c in ('directa', 'triage')}
+    for f in agendas:
+        c = salida.get(f.get('canal'))
+        if c is None or not f['asistio']:
+            continue
+        c['asistieron'] += 1
+        c['presentaciones'] += 1 if f['presento'] else 0
+        c['ventas'] += 1 if f['post_call']['key'] == 'venta' else 0
+        c['senas'] += 1 if f['post_call']['key'] == 'sena' else 0
+    return salida
+
+
 def bloque_closers(start, end, closer_id=None, closer_nombre=None, con_reales=True, segmento=None,
                    sin_excluidos=False, paises=None):
     """Todos los números de Analizar para closers, de un período. Se llama dos veces (período y
@@ -426,6 +440,9 @@ def bloque_closers(start, end, closer_id=None, closer_nombre=None, con_reales=Tr
                                      presentaciones=presentaciones,
                                      no_cerradas=sum(1 for f in agendas if f['no_cerrada']),
                                      reales=reales),
+        # Las mismas cuentas partidas en agendas directas y desde triage (09/11/2026): el panel Cierre
+        # muestra el close rate de cada canal con la misma regla que el total.
+        'cierres_canal': _cierres_por_canal(agendas),
         # El close rate real, por cobro (ver `cierres_reales`): lo que ve el tile de arriba. El de
         # por llamada (`close_rate`) queda en la matriz de abajo.
         'close_rate_real': reales['pct'] if reales else None,
