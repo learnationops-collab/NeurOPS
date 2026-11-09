@@ -420,3 +420,7 @@
 ### 09/11/2026 — Cartera de Jean Carlo y ventas que se partían al cambiar el programa
 - `sale_service`: reubicar varios pagos en un mismo guardado (cambiar el programa desde la ficha) abría una venta por pago, sin total y a precio de lista. Ahora cuentan los pagos ya guardados que se movieron en ese guardado, y una venta con plan de cuotas y sin cobros recibe el primero (`sales_grouping.decidir`). Caso: Silka Rodríguez figuraba con 3 ventas y 3,200 de deuda en vez de 200.
 - Datos en prod (06–09/11, con el registro del closer): montos, cuotas y fechas de 29 clientes de Jean Carlo; 12 señas inactivas sin cuota vencida; bajas de Carolina Murillo y Jhonatan Cahuin con el acceso a la Academia cortado; foto de la Academia refrescada. Pagos «Desconocido» unidos a su venta en 5 clientes (Alisson Izabal, Lucero Aroquipa, Melany Caballero, Sandra Zhimnay, Angeles Valerio): su deuda bajó de 4,000 a 1,400 entre los cinco.
+
+### 09/11/2026 · Visitas de Workshop con UTM escritas a mano
+- Workshop › Tráfico y el desglose por taller asignan a su anuncio las visitas que llegaron con etiquetas escritas a mano (`utm_content=tc1_pp_a4`, `utm_campaign=tc_pe_co`, TC1 a TC5 desde el 27/10): por el código del nombre del anuncio (`utm_etiquetas`, ADR-W125). Desde el 26/10, TC1 recupera 631 visitas y 115 clics al grupo que figuraban «sin anuncio».
+- TC1 ya manda `{{ad.id}}` y `{{campaign.id}}` en «Parámetros de URL» (cambiado por Mario el 09/11).
