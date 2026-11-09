@@ -1052,3 +1052,11 @@
 - **Decisión:** (1) el punto del mapa y la confianza se leen sobre el q de Benjamini-Hochberg (10%), calculado por método sobre los pares de negocio; (2) Spearman tiene su propio p; (3) ventas, cash, ticket, close rate y ROAS no cuentan los talleres de menos de 30 días; (4) show up de citas = asistentes a la llamada ÷ citas reportadas (sin ese dato, agendas), como el Resumen; (5) se suman los tres pares «por construcción»; (6) un porcentaje de más de 100% se excluye. Cada exclusión sale en los avisos de la pestaña.
 - **Qué se pierde:** menos pares marcados (16 en vez de 31 con la regla vieja), y los talleres del último mes no aportan a las métricas de venta hasta cumplir 30 días. El p sigue siendo la aproximación de Fisher, no una permutación.
 - **Consecuencias:** sin migración. La celda trae `por_metodo` (`p`, `q`, `firme`, `confianza` por método); `p` y `confianza` arriba siguen siendo los de Pearson para lo que ya los leía.
+
+## ADR-W130: las sesiones de la Academia en team@ también salen con las notas automáticas
+
+- **Fecha:** 2026-11-09 · **Subsistema:** Agenda de la Academia (`app/api/external/agenda.py`) · **Estado:** implementado.
+- **Contexto:** las sesiones de fulfillment ya se crean en un calendario de team@ (ADR-W102) y Work ya lee sus notas, pero la nota solo se escribía si alguien la activaba en la reunión: cerca del 60 % de las sesiones tenía nota. Con ADR-W128, Work puede dejar una reunión de team@ con los artefactos automáticos.
+- **Decisión:** al crear (`/agenda/reservas`) o vincular (`/eventos/<id>/vincular`) una sesión de una cuenta que la Academia conectó con team@, Work prende las notas de Gemini, la transcripción y la grabación de su Meet (`meet_config.activar_artefactos`). Las sesiones ya agendadas se configuraron una vez a mano. Las de quien da sesiones con su cuenta propia quedan como estaban.
+- **Qué se pierde:** nada; si Google falla, la sesión se crea igual y queda en el log.
+- **Consecuencias:** las sesiones de team@ se graban siempre (Meet avisa a los participantes) y ocupan Drive de team@. La nota se genera si entra alguien con Gemini.
