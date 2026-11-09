@@ -666,8 +666,8 @@ const DashboardClosers = ({ bloque, previo, deltas, porCobrar, adquisicion, vsLa
     <>
         <div className="grid grid--4">
             <Tile label="Show up" valor={fmt.pct(bloque.show_up)} color={v('success')}
-                help={'Se presentaron, sobre las agendas que se presentaron, cancelaron, reprogramaron o no '
-                    + 'se presentaron. Cada agenda cuenta, también la 2ª llamada.'}
+                help={'Se presentaron, sobre las agendas que ya pasaron: también las sin reportar. '
+                    + 'Las que todavía no llegan no cuentan.'}
                 antes={previo ? { actual: bloque.show_up, previo: previo.show_up, texto: fmt.pct(previo.show_up), vs: vsLabel } : null}
                 humo={[v('success'), v('info'), v('brand-primary'), v('success')]}
                 cuenta={{ a: String(bloque.asistieron), b: fmt.plural(bloque.base_show_up ?? bloque.realizadas, 'agenda', 'agendas') }}

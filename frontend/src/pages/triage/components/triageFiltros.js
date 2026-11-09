@@ -1,5 +1,5 @@
 // Qué leads componen cada número de las métricas del triage: la lista que abre una tarjeta o una barra.
-// Las claves son las de `embudo` y `lowTicket` (TriageMetricas.jsx); las cuentas salen del backend
+// Las claves son las de los paneles del tablero (TriagePaneles.jsx); las cuentas salen del backend
 // (triage_service._sumar) y los criterios de acá tienen que dar el mismo número.
 // Lo que pasó al closing sale de `lead.closing` (triage_pases.py): el pase del lead, o null.
 
@@ -21,6 +21,8 @@ export const FILTROS = {
     closer_cerraron: { titulo: 'Cerraron con el closer', coincide: (l) => !!l.closing?.cerro },
     closer_no_asistieron: { titulo: 'No asistieron al closer', coincide: (l) => l.closing?.estado === 'no_asistio' },
     closer_pendientes: { titulo: 'Pendientes de llamada con el closer', coincide: (l) => ['pendiente', 'sin_reporte'].includes(l.closing?.estado) },
+    closer_sin_reporte: { titulo: 'Con el closer: ya pasaron sin reporte', coincide: (l) => l.closing?.estado === 'sin_reporte' },
+    closer_por_venir: { titulo: 'Con el closer: todavía no llegan', coincide: (l) => l.closing?.estado === 'pendiente' },
     closer_senas: { titulo: 'Señas con el closer', coincide: (l) => !!l.closing?.sena },
     descalificados: { titulo: 'Descalificados', coincide: descalificado },
     pitch: { titulo: 'Presentaciones del low ticket', coincide: (l) => descalificado(l) && PITCHEADO.includes(l.low_ticket) },

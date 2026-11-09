@@ -1024,3 +1024,11 @@
 - **Decisión:** una etiqueta que no es número y empieza con letras y dígitos (`tc1_…`) se traduce al anuncio de Workshop cuyo nombre empieza con ese código («TC1 | …»), y la campaña, a la de ese anuncio. Solo si hay un único anuncio con ese código; si no, la etiqueta queda como vino. Los números de Meta no cambian.
 - **Qué se pierde:** si se duplica un anuncio con el mismo código, sus etiquetas viejas dejan de traducirse (quedan «sin anuncio», como antes). `link_in_bio` y otras etiquetas sin código siguen sin anuncio.
 - **Consecuencias:** sin migración. La forma correcta sigue siendo `{{ad.id}}` en «Parámetros de URL» de cada anuncio; esto solo recupera lo que ya entró con etiquetas.
+
+## ADR-W126: la triage ve el tablero de la dirección y las agendas que no llegaron no cuentan
+
+- **Fecha:** 2026-11-09 · **Subsistema:** Triage (`TriageDireccion`, `triage_alcance`, `/api/triage/metricas`) y show up del closer (`comercial_agendas`) · **Estado:** implementado.
+- **Contexto:** Marlon vio que las triages solo tenían Hoy, 7 y 30 días en Métricas (una pantalla vieja) y que las agendas de mañana o pasado con el closer les aparecían como faltantes: el embudo medía «Asistieron al closer» contra todos los que pasaron, incluidos los que todavía no tienen la llamada. También pidió que en el show up del closer cuenten las agendas cuya hora ya pasó sin reporte, y nunca las que todavía no llegan.
+- **Decisión:** Métricas de la triage es el tablero Triage de Dirección comercial (`DashboardComercial triage`), con los mismos períodos (Este mes, Mes pasado, Personalizado…) y paneles. El backend le manda a la triage su total, sus días, sus pases y sus leads, y en «Por persona» las cifras de todas para compararse («Vos y el equipo», sin leads de las demás). Con el closer, las pendientes de llamada se parten en «sin reportar» y «por venir», y el embudo mide contra las que ya tuvieron resultado. En el show up del closer la base suma las pendientes con `ya_paso`.
+- **Qué se pierde:** la pantalla vieja de Métricas (`TriageMetricas.jsx`). El show up baja mientras haya agendas pasadas sin reporte (medido en prod: equipo de octubre 55,4 % → 54,7 %; noviembre 56,0 % → 53,8 %).
+- **Consecuencias:** la asistencia de la triage sigue como la de la dirección (asistieron sobre asistieron + no show). Sin migración.

@@ -431,3 +431,8 @@
 ### 09/11/2026 · Visitas de Workshop con UTM escritas a mano
 - Workshop › Tráfico y el desglose por taller asignan a su anuncio las visitas que llegaron con etiquetas escritas a mano (`utm_content=tc1_pp_a4`, `utm_campaign=tc_pe_co`, TC1 a TC5 desde el 27/10): por el código del nombre del anuncio (`utm_etiquetas`, ADR-W125). Desde el 26/10, TC1 recupera 631 visitas y 115 clics al grupo que figuraban «sin anuncio».
 - TC1 ya manda `{{ad.id}}` y `{{campaign.id}}` en «Parámetros de URL» (cambiado por Mario el 09/11).
+
+### 09/11/2026 — Triage con el tablero de la dirección y agendas futuras fuera de los porcentajes (pedido de Marlon, ADR-W126)
+- Métricas de la triage es ahora el tablero Triage de Dirección comercial con sus datos: mismos períodos (Hoy, Ayer, 7 y 30 días, Este mes, Mes pasado, Personalizado) y paneles; «Vos y el equipo» muestra las cifras de cada triage, sin los leads de las demás (`triage_alcance.solo_de`). Se retira `TriageMetricas.jsx`.
+- Con el closer, las pendientes de llamada se parten en «sin reportar» y «por venir», y el embudo mide «Asistieron al closer» contra las que ya tuvieron resultado: las de mañana o pasado ya no parecen faltantes.
+- Show up del closer: las agendas que ya pasaron sin reporte entran en la base; las que no llegaron, no. Prod: equipo octubre 55,4 % → 54,7 %, noviembre 56,0 % → 53,8 %.
