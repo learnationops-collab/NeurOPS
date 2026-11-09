@@ -223,8 +223,8 @@ class BookingService(BookingAvisosMixin, BookingIdentidadMixin, BookingEspejoMix
 
             if appt.google_event_id:
                 try:
-                    from app.services.google_service import GoogleService
-                    GoogleService.delete_event(appt.closer_id, appt.google_event_id)
+                    from app.agendas_v2 import organizador
+                    organizador.borrar_evento(appt)
                 except Exception as gcal_err:
                     print(f"[GCal Delete Error] {gcal_err}")
 

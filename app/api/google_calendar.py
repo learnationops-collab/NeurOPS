@@ -91,7 +91,7 @@ def conectar_desde_la_academia(firma):
     session['google_redirect_uri'] = redirect_uri
     session.pop('google_oauth_proposito', None)
     session.pop('google_notas', None)
-    session.pop('google_correo', None)
+    session.pop('google_aparte', None)
     session['google_conectar'] = {'u': usuario.id, 'v': datos.get('v') or '/'}
     return redirect(auth_url)
 
@@ -127,7 +127,7 @@ def login():
     session.pop('google_oauth_proposito', None)  # es conectar el calendario, no entrar con Google
     session.pop('google_conectar', None)  # ni el de una cuenta de la Academia que quedó a medias
     session.pop('google_notas', None)  # ni el Drive de team@ (app/api/notas_meet.py)
-    session.pop('google_correo', None)  # ni el correo (app/api/correo.py)
+    session.pop('google_aparte', None)  # ni el correo o Meet (app/api/google_aparte.py)
     # ?volver=agendamiento: se conecta desde la Configuración de Agendamiento y vuelve ahí. Con una
     # ruta ("/admin/comercial"), vuelve a esa pantalla con la Configuración abierta (sesion/).
     volver = request.args.get('volver')
@@ -203,9 +203,10 @@ def callback():
     conectar = session.pop('google_conectar', None)
     if conectar:
         return _vuelta_a_la_academia(conectar, state, redirect_uri)
-    if session.pop('google_correo', None):
-        from app.api.correo import vuelta_de_google as vuelta_del_correo
-        return vuelta_del_correo(state, redirect_uri)
+    aparte = session.pop('google_aparte', None)
+    if aparte:
+        from app.api.google_aparte import vuelta_de_google as vuelta_aparte
+        return vuelta_aparte(aparte, state, redirect_uri)
     notas = session.pop('google_notas', None)
     if notas:
         from app.api.notas_meet import vuelta_de_google

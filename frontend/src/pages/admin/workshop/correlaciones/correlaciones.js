@@ -26,6 +26,12 @@ export const TIP_LIGADA = 'Se parecen por cómo se calculan, no por lo que pasa 
 /** Valor de la celda según el método elegido (null si no se pudo calcular). */
 export const valorDe = (celda, metodo) => (celda ? celda[metodo] ?? null : null);
 
+/** Confianza del método elegido (cada método trae su propio p, corregido por azar en el backend). */
+export const confianzaDe = (celda, metodo) => celda?.por_metodo?.[metodo]?.confianza ?? celda?.confianza;
+
+/** Si el par resiste la corrección por comparaciones múltiples con el método elegido. */
+export const firmeDe = (celda, metodo) => Boolean(celda?.por_metodo?.[metodo]?.firme);
+
 export const intensidadDe = (r) => {
     if (r == null) return null;
     const a = Math.abs(r);

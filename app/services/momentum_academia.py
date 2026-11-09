@@ -7,8 +7,8 @@ alumno sigue en el programa) y la del cierre (upsell). La Academia las agenda po
 ese reporte a lo que la Academia entiende y se le avisa:
 
 - `asistencia`: asistio | no_asistio | cancelo | reagenda (con `inicio`, ISO UTC);
-- `resultado`: pago (declaró la venta) | pensando (no cerró: sigue en seguimiento) | no_sigue
-  («No va a pagar» o descartado).
+- `resultado`: pago (declaró la venta) | plan (sigue con plan de pago, hoy no paga) | pensando (no cerró:
+  sigue en seguimiento) | no_sigue («No va a pagar», descartado o «No sigue» en el reporte de la Momentum).
 
 El mazo viejo (POST /api/closer/deck/<id>) también avisa (`traducir('mazo', ...)`).
 En la Academia, «no sigue» da de baja el proceso del alumno.
@@ -22,6 +22,7 @@ from flask import current_app
 
 ORIGEN_MOMENTUM = 'Momentum'
 DESCARTES = ('Lead Perdido', 'No Lead')
+SIGUE_A_ACADEMIA = {'pago': 'pago', 'plan': 'plan', 'pensando': 'pensando', 'no': 'no_sigue'}
 
 
 def es_momentum(appt):
@@ -36,7 +37,12 @@ def traducir(accion, datos):
     if accion == 'mazo':
         return _traducir_mazo(datos)
     from app.services.ficha_acciones_service import _no_cerro
+    from app.services.momentum_reporte import sigue_de
 
+    # El reporte de la Momentum dice si sigue (ADR-W129): eso manda sobre la rama del árbol.
+    sigue = sigue_de(datos)
+    if sigue and datos.get('resultado') == 'asistio':
+        return {'asistencia': 'asistio', 'resultado': SIGUE_A_ACADEMIA[sigue]}
     clave = datos.get('resultado')
     deck = datos.get('deck') if isinstance(datos.get('deck'), dict) else {}
     proceso = datos.get('process') if isinstance(datos.get('process'), dict) else {}

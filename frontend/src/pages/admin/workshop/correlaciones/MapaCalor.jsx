@@ -1,10 +1,11 @@
 import React from 'react';
-import { TIP_LIGADA, colorCelda, etiquetaConfianza, formatoR, valorDe } from './correlaciones';
+import { TIP_LIGADA, colorCelda, confianzaDe, etiquetaConfianza, firmeDe, formatoR, valorDe } from './correlaciones';
 
 /**
  * Mapa de calor: cada celda es la correlación entre dos métricas a través de los talleres (verde =
  * suben juntas, rojo = una sube y la otra baja). Una celda es un botón: elige el par para ver la
- * dispersión. El punto ● marca las que, además de n suficiente, no se explican fácil por azar.
+ * dispersión. El punto ● marca las que, con n suficiente, siguen sin explicarse por azar después de
+ * corregir por todos los pares que se comparan a la vez (`firme`, calculado en el backend).
  */
 const MapaCalor = ({ metricas, matriz, metodo, par, onElegir, ligadas }) => (
     <div className="wc-mapa-scroll">
@@ -29,7 +30,7 @@ const MapaCalor = ({ metricas, matriz, metodo, par, onElegir, ligadas }) => (
                             const r = valorDe(celda, metodo);
                             const elegida = par && ((par.a === fila.key && par.b === col.key)
                                 || (par.a === col.key && par.b === fila.key));
-                            const firme = celda?.confianza === 'media' || celda?.confianza === 'alta';
+                            const firme = firmeDe(celda, metodo);
                             return (
                                 <td key={col.key}>
                                     <button
@@ -38,7 +39,7 @@ const MapaCalor = ({ metricas, matriz, metodo, par, onElegir, ligadas }) => (
                                         style={{ '--wc-fondo': colorCelda(r) }}
                                         aria-pressed={!!elegida}
                                         aria-label={`${fila.label} contra ${col.label}: ${formatoR(r)}, ${celda?.n ?? 0} talleres`}
-                                        data-tip={`${fila.label} · ${col.label}|${formatoR(r)} con ${celda?.n ?? 0} talleres. ${etiquetaConfianza(celda?.confianza)}.${ligadas?.has(`${fila.key}|${col.key}`) ? ` ${TIP_LIGADA}` : ''}`}
+                                        data-tip={`${fila.label} · ${col.label}|${formatoR(r)} con ${celda?.n ?? 0} talleres. ${etiquetaConfianza(confianzaDe(celda, metodo))}.${ligadas?.has(`${fila.key}|${col.key}`) ? ` ${TIP_LIGADA}` : ''}`}
                                         onClick={() => onElegir(fila.key, col.key)}
                                     >
                                         {firme && <i aria-hidden="true" className="wc-firme" />}

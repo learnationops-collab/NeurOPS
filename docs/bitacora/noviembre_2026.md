@@ -436,3 +436,16 @@
 - Métricas de la triage es ahora el tablero Triage de Dirección comercial con sus datos: mismos períodos (Hoy, Ayer, 7 y 30 días, Este mes, Mes pasado, Personalizado) y paneles; «Vos y el equipo» muestra las cifras de cada triage, sin los leads de las demás (`triage_alcance.solo_de`). Se retira `TriageMetricas.jsx`.
 - Con el closer, las pendientes de llamada se parten en «sin reportar» y «por venir», y el embudo mide «Asistieron al closer» contra las que ya tuvieron resultado: las de mañana o pasado ya no parecen faltantes.
 - Show up del closer: las agendas que ya pasaron sin reporte entran en la base; las que no llegaron, no. Prod: equipo octubre 55,4 % → 54,7 %, noviembre 56,0 % → 53,8 %.
+- **9 de Noviembre de 2026 (Momentum: las organiza team@, ADR-W127)** *([organizador.py](../../app/agendas_v2/organizador.py))*
+  - La Momentum se crea como team@ en su calendario «Momentum · closers» e invita al alumno y al closer, para que la nota de Gemini quede en el Drive que Work lee. Mover, cancelar y borrar usan la cuenta de team@. Sin team@ conectado, va al calendario del closer como antes.
+- **9 de Noviembre de 2026 (Momentum: notas de Gemini automáticas, ADR-W128)** *([meet_config.py](../../app/services/meet_config.py))*
+  - Al crear la Momentum como team@, la reunión queda con las notas de Gemini, la transcripción y la grabación automáticas (API de Meet). team@ se conecta con ese permiso aparte, como el correo; las dos autorizaciones comparten `google_aparte.py`.
+- **9 de Noviembre de 2026 (Momentum: reporte de si sigue y su plan, ADR-W129)** *([momentum_reporte.py](../../app/services/momentum_reporte.py), [arbolResultado.momentum.js](../../frontend/src/components/ficha/arbolResultado.momentum.js))*
+  - En la ficha de una Momentum, después de «Asistió»: ¿sigue? Pagó (venta), con plan de pago (arma el plan del saldo), lo está pensando o no sigue. Va así a la Academia (resultado nuevo «plan») y a la tarjeta de Discord, con las cuotas.
+  - Si hay nota de Gemini de la llamada, la ficha muestra lo que dice y «Usar en el reporte» lo precarga.
+- **9 de Noviembre de 2026 (Discord: las tarjetas vuelven a salir como imagen)** *([report_image_service.py](../../app/services/report_image_service.py))*
+  - La carpeta de plantillas de Flask es la del frontend, y `{% import "reports/_tarjeta.html" %}` no se encontraba: desde ADR-W121 las tarjetas (agendas, ventas, resultados, avisos de la Academia) salían con el texto de respaldo. El render busca ahora también en `app/templates`.
+
+### 09/11/2026 · Correlaciones de Workshops sin falsos «no es azar»
+- El punto del mapa ahora marca solo los pares que resisten la corrección por todas las comparaciones (16 en vez de 31), y la confianza sale del método elegido (Pearson o Spearman).
+- Ventas, cash, ticket, close rate y ROAS no cuentan los talleres de menos de 30 días; show up de citas usa las citas reportadas, como el Resumen; ventas/ROAS, close rate/cash y close rate/ROAS quedan como «por construcción»; los porcentajes de más de 100% se excluyen y se avisan (ADR-W130).

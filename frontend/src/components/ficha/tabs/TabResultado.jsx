@@ -31,6 +31,8 @@ import PasoSeguimiento from './PasoSeguimiento';
 import TabConfirmacion from './TabConfirmacion';
 import ConfirmarDatos, { confirmables } from './ConfirmarDatos';
 import { useChequeoVenta } from './useChequeoVenta';
+import SugerenciaNota from './SugerenciaNota';
+import { valoresMomentum, camposDeLaNota } from '../arbolResultado.momentum';
 import './resultado.css';
 import {
   estadoInicial, responder, actualizar, volverA, preguntaActual, faltantes,
@@ -195,7 +197,8 @@ export default function TabResultado({
   const [seccion, setSeccion] = useState(null);
   const [modoElegido, setModoElegido] = useState(null);
 
-  const programa = esVenta(respuestas) ? respuestas.programa : null;
+  // El programa de la venta, o el del plan de la Momentum que sigue sin pagar hoy: de él sale lo ya pagado.
+  const programa = esVenta(respuestas) || respuestas.sigue === 'plan' ? respuestas.programa : null;
   const venta = useEstadoVenta(ficha, programa, onConsultar);
 
   const contexto = useMemo(() => {
@@ -223,6 +226,8 @@ export default function TabResultado({
       cuotas: ficha?.cobro?.cuotas || [],
       // El programa que ya compró: es el que paga quien registra un pago.
       programaCliente: ficha?.cobro?.programa_code || null,
+      // Una Momentum de la Academia ('sena' | 'cierre'): pregunta si sigue (ADR-W129).
+      momentum: ficha?.identidad?.momentum || null,
     };
   }, [ficha, venta.estado, venta.cargando, seguimientoPedido, modoElegido]);
 
@@ -367,6 +372,18 @@ export default function TabResultado({
       )}
 
       {progreso && !hecho && <ProgresoVenta progreso={progreso} reducido={reducido} />}
+      {/* La Momentum: lo que dice la nota de Gemini de la llamada, para precargar el reporte (ADR-W129). */}
+      {!hecho && contexto.momentum && contexto.modo === 'llamada' && (
+        <SugerenciaNota
+          tipo={contexto.momentum}
+          onConsultar={onConsultar}
+          onUsar={(nota) => setRespuestas((prev) => {
+            const asistio = responder(prev, 'res', { res: 'asistio' });
+            const conSigue = nota.sigue ? responder(asistio, 'momentum', valoresMomentum(nota.sigue, contexto)) : asistio;
+            return actualizar(conSigue, camposDeLaNota(nota));
+          })}
+        />
+      )}
 
         {/* Las 4 tarjetas grandes son la entrada al reporte de la LLAMADA. En un seguimiento la
             llamada ya se reportó: ahí se entra derecho por «¿qué pasó con este contacto?» (o «con
@@ -692,6 +709,7 @@ function BotonesAtras({ onAnterior, onReiniciar, reducido, disabled = false }) {
 // closer cuando la respuesta ya se deduce (la fecha sugerida de la cadencia de seguimiento, la
 // primera fila vacía de referidos para no arrancar con una lista sin renglones).
 function valoresDeOpcion(pregunta, opcion, contexto, respuestas) {
+  if (pregunta.clave === 'momentum') return valoresMomentum(opcion.valor, contexto);
   const base = { [pregunta.campo]: opcion.valor };
   if (pregunta.clave === 'sig_action' && opcion.valor === 'next') {
     base.fecha_seguimiento = enDias([0, 3, 7, 14][Math.min(3, contexto.intento || 1)]);

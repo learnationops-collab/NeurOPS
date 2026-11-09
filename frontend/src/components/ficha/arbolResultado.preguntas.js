@@ -20,6 +20,8 @@ import {
   esVenta, esNueva, esPago, esCompleto, esRenovacionOUpsell, pagadoAntes, saldoPrevio, saldoVenta, quedaSaldo,
   cuotasPendientes, armaPlan, cantidadCuotas, cronogramaEnTexto, fechaCorta, MAXIMO_CUOTAS,
 } from './arbolResultado.venta';
+import { camposDelPlan, opcionesMomentum as opcionesDeMomentum } from './arbolResultado.momentum';
+export { opcionesMomentum } from './arbolResultado.momentum';
 import { PREGUNTA_TRANSFERENCIA, efectoDeTransferido, esTransferencia } from './transferencia';
 import { MINIMO_MOTIVO, preguntaDeMotivo } from '../../utils/motivoEstado';
 
@@ -206,18 +208,25 @@ export const PREGUNTAS = [
     clave: 'decisor', hito: 'resultado', campo: 'with_decision_maker', tipo: 'opciones',
     enunciado: '¿Estuvo el decisor?',
     opciones: [{ ...si, label: 'Sí, con decisor' }, { ...no, label: 'No, sin decisor' }],
-    cuando: (r, c) => enLlamada(r, c) && r.res === 'asistio',
+    cuando: (r, c) => enLlamada(r, c) && r.res === 'asistio' && !c.momentum,
   },
   { // ← pres (2600): offer_presented
     clave: 'oferta', hito: 'cierre', campo: 'offer_presented', tipo: 'opciones',
     enunciado: '¿Se presentó la oferta?', opciones: [{ ...si, label: 'Sí, se presentó' }, { ...no, label: 'No se presentó' }],
-    cuando: (r, c) => enLlamada(r, c) && r.res === 'asistio',
+    cuando: (r, c) => enLlamada(r, c) && r.res === 'asistio' && !c.momentum,
+  },
+  { // La Momentum de la Academia (ADR-W129): en vez de decisor, oferta y cierre, si el alumno sigue. Cada
+    // opción completa esas tres (TabResultado `valoresDeOpcion`) y el resto del árbol sigue igual.
+    clave: 'momentum', hito: 'cierre', campo: 'sigue', tipo: 'opciones',
+    enunciado: (r, c) => (c.momentum === 'sena' ? '¿Sigue en el programa?' : '¿Hace el upsell?'),
+    opciones: (r, c) => opcionesDeMomentum(c),
+    cuando: (r, c) => enLlamada(r, c) && r.res === 'asistio' && !!c.momentum,
   },
   { // ← venta (2621)
     clave: 'cierre', hito: 'cierre', campo: 'cierre', tipo: 'opciones',
     enunciado: '¿Se cerró la venta?',
     opciones: [{ ...si, label: 'Sí, cerró', sub: 'Registrar el pago' }, { ...no, label: 'No cerró' }],
-    cuando: (r) => r.offer_presented === true,
+    cuando: (r) => r.offer_presented === true && !r.sigue,
   },
   { // Pedido de Kerwin (09/10/2026): un «No cerró» dice por qué, siempre. Queda como la objeción
     // de esta llamada y como nota en Comunicación (`objeciones_service` en el backend, que también
@@ -295,7 +304,7 @@ export const PREGUNTAS = [
   { // ← wizard `program`. En un pago solo si no se sabe qué programa tiene.
     clave: 'programa', hito: 'cierre', campo: 'programa', tipo: 'opciones', enunciado: '¿Qué programa compró?',
     opciones: PROGRAMAS.map((p) => ({ ...p, tono: 'info' })),
-    cuando: (r) => esNueva(r) || (esPago(r) && !r.programa),
+    cuando: (r) => esNueva(r) || ((esPago(r) || r.sigue === 'plan') && !r.programa),
   },
   { // ← wizard `paymentType`, sin Cuota: cobrar una cuota es el camino del pago. `allowed_types`
     // AVISA, no esconde ni bloquea: si el historial del cliente está mal cargado, el closer tiene
@@ -347,22 +356,18 @@ export const PREGUNTAS = [
     clave: 'venta_plan', hito: 'deuda', tipo: 'formulario',
     enunciado: (r, c) => `Te deben ${moneda(saldoVenta(r, c))}. ¿Cómo lo paga?`,
     ayuda: 'Si el mes no tiene ese día, se cobra el último. La última cuota se ajusta sola para que la suma cierre.',
-    campos: (r) => [
-      {
-        campo: 'num_cuotas', label: 'Cantidad de cuotas', tipo: 'contador', requerido: true,
-        minimo: 1, maximo: MAXIMO_CUOTAS, atajos: [2, 3, 4, 6],
-        resumir: (v, x) => `${cantidadCuotas(x)} ${cantidadCuotas(x) === 1 ? 'cuota' : 'cuotas'}`,
-      },
-      {
-        campo: 'installmentMode', label: 'Fechas', tipo: 'opcion', requerido: true, opciones: ['monthly', 'custom'],
-        etiquetas: { monthly: 'Mismo día cada mes', custom: 'Fechas a mano' },
-      },
-      ...(r.installmentMode === 'monthly' ? [{
-        campo: 'dia_de_pago', label: 'Día de pago', tipo: 'dia_mes', requerido: true, resumir: (v) => `El ${v} de cada mes`,
-      }] : []),
-      { campo: 'cuotaMontos', label: 'Cronograma', tipo: 'cronograma', resumir: (v, x, c) => cronogramaEnTexto(x, c) },
-    ],
+    campos: camposDelPlan,
     cuando: armaPlan,
+  },
+  { // Momentum · sigue con plan y hoy no paga: el total y el plan del saldo (se arma con el reporte).
+    clave: 'momentum_plan', hito: 'deuda', tipo: 'formulario',
+    enunciado: (r, c) => `Debe ${moneda(saldoVenta(r, c))}. ¿Cómo lo paga?`,
+    ayuda: (r, c) => (pagadoAntes(c) > 0 ? `Ya pagó ${moneda(pagadoAntes(c))}: se descuenta del total.` : null),
+    campos: (r) => [
+      { campo: 'precio_total', label: 'Total del programa', tipo: 'monto', requerido: true, minimo: 0.01, resumir: enPlata },
+      ...camposDelPlan(r),
+    ],
+    cuando: (r) => r.sigue === 'plan',
   },
   { // Pago · 1: la cuota que paga (se puede adelantar una futura o pagar una vencida) o un pago
     // suelto del saldo. Pagar la ÚLTIMA cuota sin elegirla dejaba la cuota pendiente con la deuda

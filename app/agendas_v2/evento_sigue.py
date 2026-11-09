@@ -50,18 +50,24 @@ def seguir(appt, dueno_anterior_id=None, ahora=None):
 
 
 def _seguir(appt, dueno_evento):
-    from app.agendas_v2 import operacion
+    from app.agendas_v2 import operacion, organizador
     from app.agendas_v2.a_triage import _payload_con_lead
     from app.services import avisos_service
     from app.services.google_service import GoogleService
 
     payload = _payload_con_lead(appt)
-    if appt.google_event_id and dueno_evento == appt.closer_id:
+    # La Momentum que organiza team@ (organizador.py) se mueve con esa cuenta: el closer es invitado. No se
+    # vincula (calendar_evento_id): movidas la buscaría en el calendario del closer y la daría por borrada.
+    organizada = bool(payload.get('organizador'))
+    if organizada:
+        dueno_evento = organizador.dueno(appt)[0]
+    if appt.google_event_id and (organizada or dueno_evento == appt.closer_id):
         fin = appt.start_time + timedelta(minutes=int(payload.get('duracion_min') or 60))
         try:
-            GoogleService.mover_evento(appt.closer_id, appt.google_event_id, appt.start_time, fin,
+            GoogleService.mover_evento(dueno_evento, appt.google_event_id, appt.start_time, fin,
                                        calendar_id=appt.calendar_id)
-            appt.calendar_evento_id, appt.calendar_vinculo = appt.google_event_id, 'propio'
+            if not organizada:
+                appt.calendar_evento_id, appt.calendar_vinculo = appt.google_event_id, 'propio'
             _al_dia(appt)
             db.session.commit()
             return True
@@ -80,6 +86,7 @@ def _seguir(appt, dueno_evento):
             )
     # Un evento ajeno (n8n, Calendly) no se toca, pero se suelta: si no, movidas lo seguiría a la hora vieja.
     _soltar(appt)
+    payload.pop('organizador', None)
     appt.agenda_payload = payload
     db.session.commit()
     creado = operacion.crear_evento(appt, payload.get('evento_nombre') or 'Llamada')

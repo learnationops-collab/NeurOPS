@@ -861,8 +861,8 @@ class CloserService:
                 # Delete GCal
                 if appt.google_event_id:
                     try:
-                        from app.services.google_service import GoogleService
-                        GoogleService.delete_event(appt.closer_id, appt.google_event_id, appt.calendar_id)
+                        from app.agendas_v2 import organizador
+                        organizador.borrar_evento(appt)
                     except Exception as e:
                         print(f"Error deleting GCal event: {e}")
 
@@ -878,8 +878,8 @@ class CloserService:
                     lead_log_service.nota(f"Descalificado por {user_display}: {note}", closer_id, appt=appt)
                 if appt.google_event_id:
                     try:
-                        from app.services.google_service import GoogleService
-                        GoogleService.delete_event(appt.closer_id, appt.google_event_id, appt.calendar_id)
+                        from app.agendas_v2 import organizador
+                        organizador.borrar_evento(appt)
                     except Exception as e:
                         print(f"Error deleting GCal event: {e}")
 
@@ -893,8 +893,8 @@ class CloserService:
                 # Delete GCal
                 if appt.google_event_id:
                     try:
-                        from app.services.google_service import GoogleService
-                        GoogleService.delete_event(appt.closer_id, appt.google_event_id, appt.calendar_id)
+                        from app.agendas_v2 import organizador
+                        organizador.borrar_evento(appt)
                     except Exception as e:
                         print(f"Error deleting old GCal event: {e}")
 
@@ -996,8 +996,8 @@ class CloserService:
                 # Delete GCal
                 if appt.google_event_id:
                     try:
-                        from app.services.google_service import GoogleService
-                        GoogleService.delete_event(appt.closer_id, appt.google_event_id, appt.calendar_id)
+                        from app.agendas_v2 import organizador
+                        organizador.borrar_evento(appt)
                     except Exception as e:
                         print(f"Error deleting GCal event: {e}")
 
@@ -1017,8 +1017,8 @@ class CloserService:
                 # Delete GCal
                 if appt.google_event_id:
                     try:
-                        from app.services.google_service import GoogleService
-                        GoogleService.delete_event(appt.closer_id, appt.google_event_id, appt.calendar_id)
+                        from app.agendas_v2 import organizador
+                        organizador.borrar_evento(appt)
                     except Exception as e:
                         print(f"Error deleting GCal event: {e}")
 

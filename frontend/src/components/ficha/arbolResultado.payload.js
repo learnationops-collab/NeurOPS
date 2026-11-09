@@ -14,7 +14,7 @@
 
 import {
   esVenta, esNueva, esCompleto, esCuota, esRenovacionOUpsell, pagadoAntes, saldoPrevio, quedaSaldo, armaPlan,
-  cobraCuotaExistente, cantidadCuotas, fechasCuotas, montosCuotas,
+  cobraCuotaExistente, cantidadCuotas, fechasCuotas, montosCuotas, saldoVenta,
 } from './arbolResultado.venta';
 import { esTransferencia } from './transferencia';
 import { loadSession } from '../../utils/sessionStore';
@@ -391,7 +391,24 @@ export function construirPayload(respuestas = {}, contexto = {}) {
       process: bloqueProcess(r),
       reagenda: bloqueReagenda(r),
       referidos: bloqueReferidos(r),
+      momentum: bloqueMomentum(r, contexto),
       respuestas: r,
+    },
+  };
+}
+
+/** La Momentum que sigue con plan y hoy no paga: el plan del saldo, que se arma con el reporte (ADR-W129). */
+function bloqueMomentum(r, contexto) {
+  if (r.sigue !== 'plan') return null;
+  return {
+    plan: {
+      programa_code: r.programa || null,
+      total: parseFloat(r.precio_total) || 0,
+      cobrado_hoy: pagadoAntes(contexto),
+      saldo: saldoVenta(r, contexto),
+      num_cuotas: cantidadCuotas(r),
+      fechas: fechasCuotas(r),
+      montos: montosCuotas(r, contexto),
     },
   };
 }
