@@ -124,6 +124,16 @@ def _estado_de_ventas(u):
     }
 
 
+def _notas_automaticas(u, meet):
+    """La sesión que se crea en un calendario de team@ sale con las notas de Gemini, la transcripción y la
+    grabación automáticas, como la Momentum (ADR-W131). Con otra cuenta (la propia de cada uno) no: solo
+    el organizador puede configurarla y Work solo tiene ese permiso para team@."""
+    if meet and (_preferencias(u).get('cuenta') or '').lower() == organizador.cuenta():
+        from app.services import meet_config
+
+        meet_config.activar_artefactos(meet)
+
+
 def _usuario_libre(nombre, email):
     base = re.sub(r'\s+', ' ', (nombre or '').strip())[:56] or email.split('@')[0][:56]
     candidato, n = base, 2
@@ -406,6 +416,7 @@ def agenda_vincular_evento(email, event_id):
         current_app.logger.warning(f'[AGENDA ACADEMIA] No se pudo vincular el evento {event_id} de #{u.id}: {e}')
         return _error('google', 502)
     servicio._google_cache.pop(u.id, None)
+    _notas_automaticas(u, meet)
     return jsonify({'meet': meet}), 200
 
 
@@ -603,6 +614,7 @@ def agenda_reservar():
         current_app.logger.warning(f'[AGENDA ACADEMIA] No se pudo crear el evento de #{u.id}: {e}')
         return _error('google', 502)
     servicio._google_cache.pop(u.id, None)  # lo recién reservado ya cuenta en la próxima consulta
+    _notas_automaticas(u, meet)
     _aviso(u, inicio, datos.get('tz') or u.timezone, aviso.get('sesion'), aviso.get('alumno') or invitado.get('nombre'))
     return jsonify({'event_id': event_id, 'calendar_id': calendar_id, 'meet': meet}), 200
 

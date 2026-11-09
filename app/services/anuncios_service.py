@@ -39,6 +39,7 @@ from app import db
 from app.models import Ad, AdPeriodSpend, AdSet, Appointment, Client, FinancialSale, LeadAnswer
 from app.models import MetaAnuncio, MetaGastoDiario
 from app.models.marketing import clave_de_palabra as clave_de  # noqa: F401  (lo importa meta_ads_service)
+from app.models.marketing import clave_de_reporte
 from app.services.comercial_service import ComercialService, clientes_de_ventas, no_es_marcador, venta_completada
 from app.services import calificacion_service, fuentes_service, marketing_formulas as formulas
 from app.services.commission_service import cash_neto
@@ -292,7 +293,7 @@ def _gasto(desde, hasta, clave_de_anuncio):
             .filter(MetaGastoDiario.fecha >= desde, MetaGastoDiario.fecha <= hasta):
         monedas[moneda] += 1
         if clave and embudo == 'setting':
-            por_clave[clave][fecha.isoformat()] += float(gasto or 0)
+            por_clave[clave_de_reporte(clave)][fecha.isoformat()] += float(gasto or 0)
         else:
             sin_clave += float(gasto or 0)
 

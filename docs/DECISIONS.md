@@ -1063,3 +1063,19 @@
 - **Decisión:** (1) el punto del mapa y la confianza se leen sobre el q de Benjamini-Hochberg (10%), calculado por método sobre los pares de negocio; (2) Spearman tiene su propio p; (3) ventas, cash, ticket, close rate y ROAS no cuentan los talleres de menos de 30 días; (4) show up de citas = asistentes a la llamada ÷ citas reportadas (sin ese dato, agendas), como el Resumen; (5) se suman los tres pares «por construcción»; (6) un porcentaje de más de 100% se excluye. Cada exclusión sale en los avisos de la pestaña.
 - **Qué se pierde:** menos pares marcados (16 en vez de 31 con la regla vieja), y los talleres del último mes no aportan a las métricas de venta hasta cumplir 30 días. El p sigue siendo la aproximación de Fisher, no una permutación.
 - **Consecuencias:** sin migración. La celda trae `por_metodo` (`p`, `q`, `firme`, `confianza` por método); `p` y `confianza` arriba siguen siendo los de Pearson para lo que ya los leía.
+
+## ADR-W131: las sesiones de la Academia en team@ también salen con las notas automáticas
+
+- **Fecha:** 2026-11-09 · **Subsistema:** Agenda de la Academia (`app/api/external/agenda.py`) · **Estado:** implementado.
+- **Contexto:** las sesiones de fulfillment ya se crean en un calendario de team@ (ADR-W102) y Work ya lee sus notas, pero la nota solo se escribía si alguien la activaba en la reunión: cerca del 60 % de las sesiones tenía nota. Con ADR-W128, Work puede dejar una reunión de team@ con los artefactos automáticos.
+- **Decisión:** al crear (`/agenda/reservas`) o vincular (`/eventos/<id>/vincular`) una sesión de una cuenta que la Academia conectó con team@, Work prende las notas de Gemini, la transcripción y la grabación de su Meet (`meet_config.activar_artefactos`). Las sesiones ya agendadas se configuraron una vez a mano. Las de quien da sesiones con su cuenta propia quedan como estaban.
+- **Qué se pierde:** nada; si Google falla, la sesión se crea igual y queda en el log.
+- **Consecuencias:** las sesiones de team@ se graban siempre (Meet avisa a los participantes) y ocupan Drive de team@. La nota se genera si entra alguien con Gemini.
+
+## ADR-W132: en Marketing, «APLICAR» se cuenta como «QUIERO APLICAR»
+
+- **Fecha:** 2026-11-09 · **Subsistema:** Marketing › Anuncios por palabra clave (`clave_de_reporte` en `app/models/marketing.py`; `anuncios_claves_service`, `origen_service.clave_guardada`, `anuncios_service._gasto`) · **Estado:** implementado.
+- **Contexto:** hasta el 23/10 ManyChat guardaba como «APLICAR» a quien comentaba «QUIERO APLICAR» (no existía esa palabra). Al crearse «QUIERO APLICAR», los anuncios de Meta pasaron a esa clave con todo su gasto, y las ~850 entradas viejas siguieron en «APLICAR»: una fila con ventas y sin gasto (07/11, 7 días: $436 de New Cash y $0 de gasto) y otra con gasto y retorno bajo.
+- **Decisión:** al contar (entradas, agendas, ventas, cobrado y gasto) «APLICAR» se lee como «QUIERO APLICAR» (`CLAVES_EQUIVALENTES`). No se tocan datos ni `clave_de_palabra`, que el bot del Inbox usa para emparejar sus campañas.
+- **Qué se pierde:** la fila «APLICAR» deja de verse aparte en el tablero.
+- **Consecuencias:** sin migración. Verificado en producción (solo lectura): con los totales iguales, «QUIERO APLICAR» pasa en 30 días al 08/11 de 97 a 143 entrantes, de 10 a 17 agendas, de 0 a 1 venta y de ROAS 0,21 a 1,38; en octubre, de 0 a 1,88. Otra pareja así se suma al diccionario.
