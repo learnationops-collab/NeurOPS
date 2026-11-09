@@ -66,9 +66,8 @@ def _cuenta(filas):
 
 
 def _de_triage():
-    """Los nombres de las personas con rol triage (activas o no: sus agendas viejas siguen contando)."""
-    from app.models import User
-    return {u.username for u in User.query.all() if u.tiene_rol('triage')}
+    from app.services.triage_service import nombres_de_triage
+    return nombres_de_triage()
 
 
 def _clave_de(corte):

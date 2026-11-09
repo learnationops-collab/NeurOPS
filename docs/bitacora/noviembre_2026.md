@@ -391,3 +391,8 @@
   - La venta ya no se manda al webhook de n8n. «Reenviar aviso» (antes «Reenviar webhook») y la corrección desde el mazo vuelven a mandar la tarjeta de la venta a Discord. En la ficha, la casilla dice «Avisar en Discord».
 - **9 de Noviembre de 2026 (Discord: el triage no se avisa en #onboardings)** *([resultado.py](../../app/services/discord_avisos/resultado.py))*
   - El resultado de una llamada de triage ya no sale a #onboardings (por ninguna ruta: ficha ni mazo). Solo se avisan las llamadas de los closers.
+
+### 09/11/2026 — Analizar sin llamadas de triage y CAC por closer
+- `comercial_analitica._sin_triage`: con «Todo el equipo», el bloque de closers (embudo, estados, show up, close rates, variabilidad, fila Equipo de Comparativas) ya no cuenta las agendas de quienes tienen rol triage; solo las de closing. Elegir una persona sigue mostrando lo suyo.
+- CAC con filtro (persona, segmento o país): el gasto de Meta se reparte por la parte de las agendas de closing del equipo que le tocaron ÷ sus clientes nuevos. Sin CAC para personas de triage.
+- `triage_service.nombres_de_triage`: una sola definición de quién es triage (la usa también Segmentos).

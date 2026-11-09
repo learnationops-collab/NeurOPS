@@ -43,6 +43,12 @@ def es_de_triage(appt):
     return bool(appt and appt.closer and appt.closer.tiene_rol('triage'))
 
 
+def nombres_de_triage():
+    """Los usernames con rol triage (activos o no: sus agendas viejas siguen siendo de triage)."""
+    from app.models import User
+    return {u.username for u in User.query.all() if u.tiene_rol('triage')}
+
+
 def _error(mensaje, campo=None):
     from app.services.ficha_acciones_service import ErrorDeAccion
     return ErrorDeAccion(mensaje, campo)

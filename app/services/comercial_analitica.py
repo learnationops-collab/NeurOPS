@@ -323,13 +323,31 @@ def _cash_por_dia(filas_ventas, start, end):
     return dias, (mejor if mejor and mejor['cash'] > 0 else None)
 
 
-def _adquisicion(start, end, bloque):
-    """`{gasto, clientes, cac}`: lo que Meta gastó en Setting y Workshop ÷ los clientes nuevos."""
+def _sin_triage(agendas, closer_id=None):
+    """Las agendas de closing: sin las llamadas de triage (las de quien tiene rol triage), que tienen otro
+    objetivo y bajaban el close rate del equipo (pedido de Mario, 09/11/2026). Con una persona elegida
+    se respeta lo que se eligió."""
+    if closer_id:
+        return agendas
+    from app.services.triage_service import nombres_de_triage
+    triage = nombres_de_triage()
+    return [f for f in agendas if f['closer'] not in triage]
+
+
+def _adquisicion(start, end, bloque, filtrado=False):
+    """`{gasto, clientes, cac, parte}`: lo que Meta gastó en Setting y Workshop ÷ los clientes nuevos.
+
+    `filtrado` (una persona, segmento o país): el gasto se reparte por las agendas de closing que le tocaron
+    (`parte` = sus agendas ÷ las del equipo), porque el anuncio paga el lead y no al closer."""
     from app.services.meta_ads_service import gasto_por_embudo
-    gasto = round(sum(f['gasto'] for f in gasto_por_embudo(start, end)
-                      if f['embudo'] in ('setting', 'workshop')), 2)
+    gasto = sum(f['gasto'] for f in gasto_por_embudo(start, end) if f['embudo'] in ('setting', 'workshop'))
+    parte = 1.0
+    if filtrado:
+        equipo = len(_sin_triage(ComercialService.agendas(start, end)))
+        parte = (bloque.get('agendas', 0) / equipo) if equipo else 0.0
+    gasto = round(gasto * parte, 2)
     clientes = bloque.get('clientes_nuevos', 0)
-    return {'gasto': gasto, 'clientes': clientes,
+    return {'gasto': gasto, 'clientes': clientes, 'parte': round(parte, 4),
             'cac': round(gasto / clientes, 2) if clientes and gasto else None}
 
 
@@ -357,7 +375,7 @@ def bloque_closers(start, end, closer_id=None, closer_nombre=None, con_reales=Tr
 
     `segmento`: un conjunto de segmentos (A, B, C, D, sin): el bloque se calcula solo con las agendas y los cobros de
     esos leads (`segmentos_comercial`). Lo que no es de un lead (las deudas por cobrar, las fuentes) no se filtra."""
-    agendas = ComercialService.agendas(start, end, closer_id=closer_id)
+    agendas = _sin_triage(ComercialService.agendas(start, end, closer_id=closer_id), closer_id)
     ventas = ComercialService.ventas(start, end, closer_nombre=closer_nombre)
     if sin_excluidos:
         # La fila «Equipo» de las Comparativas: todo el equipo menos quienes no cuentan ahí.
@@ -649,7 +667,7 @@ def variabilidad(rol, start, end, miembro_id=None, prev_start=None, prev_end=Non
 
 def _filas_closers(start, end, closer_id, closer_nombre):
     """(agendas, ventas) del período: las filas de las que salen todas las series del closer."""
-    return (ComercialService.agendas(start, end, closer_id=closer_id),
+    return (_sin_triage(ComercialService.agendas(start, end, closer_id=closer_id), closer_id),
             ComercialService.ventas(start, end, closer_nombre=closer_nombre))
 
 
@@ -832,11 +850,14 @@ def resumen(rol, start, end, prev_start=None, prev_end=None, miembro_id=None, se
         datos['por_cobrar'] = por_cobrar_de(miembro_id)
         # Solo con closers, que es donde está el Cash collected con el que cierra.
         datos['fuentes'] = fuentes_de(start, end, prev_start, prev_end, nombre)
-        # CAC (09/11/2026): el gasto de Meta en los embudos que traen ventas ÷ clientes nuevos. Solo
-        # para todo el equipo sin filtros: el gasto no se reparte por closer, segmento ni país.
-        if not miembro_id and not segmento and not paises:
-            datos['adquisicion'] = {'actual': _adquisicion(start, end, actual),
-                                    'previo': _adquisicion(prev_start, prev_end, previo) if previo else None}
+        # CAC (09/11/2026): el gasto de Meta en los embudos que traen ventas ÷ clientes nuevos.
+        # Con un filtro, la parte del gasto que le toca por sus agendas (ver `_adquisicion`). Una persona de
+        # triage no cierra: sin CAC.
+        filtrado = bool(miembro_id or segmento or paises)
+        if not (miembro and miembro.tiene_rol('triage')):
+            datos['adquisicion'] = {
+                'actual': _adquisicion(start, end, actual, filtrado),
+                'previo': _adquisicion(prev_start, prev_end, previo, filtrado) if previo else None}
     else:
         # Los deltas de cada pestaña de canal (los de General son `deltas`) y la comisión del mes
         # en curso, que se mudó de «Mis agendas» a este tablero (pedido del 10/10/2026). Como

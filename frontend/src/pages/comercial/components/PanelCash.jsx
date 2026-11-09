@@ -10,7 +10,7 @@ import './panelCash.css';
 /**
  * Panel Cash del dashboard comercial (09/11/2026, pedido de Mario): el dinero del período a primera vista,
  * neto de la pasarela. Arriba el Cash collected con sus días; abajo dos promedios, ticket y CAC (gasto de
- * Meta en Setting y Workshop ÷ clientes nuevos, `datos.adquisicion`: solo con todo el equipo y sin filtros).
+ * Meta en Setting y Workshop ÷ clientes nuevos, `datos.adquisicion`; con filtro, su parte del gasto por agendas).
  * Lo que falta cobrar vive en su propio panel (`PanelPorCobrar`): es un saldo, no una cifra del período.
  *
  * Lo que abre una lista es una tarjeta-botón con su flecha, como los conteos de Cierre: se ve antes de tocar.
@@ -77,14 +77,13 @@ const PanelCash = ({ bloque, previo, adquisicion, vsLabel, irA }) => {
                     detallePrevio={previo ? fmt.plural(previo.ventas, 'venta', 'ventas') : null}
                     pie={fmt.plural(bloque.ventas, 'venta', 'ventas')} />
                 <Promedio label="CAC" tone="brand-secondary" vs={vsLabel} mejorBaja
-                    help={cac
-                        ? `Costo por cliente: ${fmt.money(cac.gasto)} de Meta (Setting y Workshop) ÷ `
-                            + `${fmt.plural(cac.clientes, 'cliente nuevo', 'clientes nuevos')}.`
-                        : 'Costo por cliente: gasto de Meta ÷ clientes nuevos. Solo con todo el equipo, sin '
-                            + 'segmento ni país: el gasto no se reparte.'}
+                    help={'Costo por cliente: gasto de Meta (Setting y Workshop) ÷ clientes nuevos.'
+                        + (cac && cac.parte < 1
+                            ? ` Con filtro, el gasto es la parte que le toca por sus agendas: ${Math.round(cac.parte * 100)}% de las del equipo.`
+                            : '')}
                     valor={cac?.cac ?? null} previo={cacPrevio?.cac ?? null}
                     detallePrevio={cacPrevio ? `${fmt.money(cacPrevio.gasto)} · ${cacPrevio.clientes} cl.` : null}
-                    pie={cac ? `${fmt.money(cac.gasto)} en ads · ${fmt.plural(cac.clientes, 'cliente', 'clientes')}` : 'sin filtros'} />
+                    pie={cac ? `${fmt.money(cac.gasto)} en ads${cac.parte < 1 ? ` (${Math.round(cac.parte * 100)}%)` : ''} · ${fmt.plural(cac.clientes, 'cliente', 'clientes')}` : 'sin datos'} />
             </div>
         </Panel>
     );
