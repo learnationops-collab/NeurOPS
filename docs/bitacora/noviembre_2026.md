@@ -413,3 +413,6 @@
 - Tabla por canal: sin período anterior ya no muestra «— =».
 - **9 de Noviembre de 2026 (Academia: la venta pagada de a partes recibe la Momentum de seña)** *([academy_payment_sync.py](../../app/services/academy_payment_sync.py))*
   - El aviso de pago a la Academia lleva `en_cuotas`: seña, parcial o cuota de una venta nueva o upsell (no renovación). La Academia le da la Momentum de seña aunque el alumno ya no sea seña.
+
+### 09/11/2026 — Mis datos del setter dejaba la pantalla en negro
+- `embudoSetter.etapasParaDibujar`: la base de Asistieron llega del backend como número (generadas que ya ocurrieron) y `FlujoEmbudo` esperaba `{ label, n }`; con al menos una llamada pasada la píldora hacía `undefined.toLowerCase()` y se caía toda la pantalla. Ahora se convierte a `{ label: 'Generadas que ya ocurrieron', n }`. Arregla también los embudos de Comparativas.

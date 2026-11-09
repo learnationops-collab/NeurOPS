@@ -30,6 +30,9 @@ export const AYUDA_ETAPA = {
  */
 export const etapasParaDibujar = (etapas, irDe = null) => etapas.map(e => ({
     ...e,
+    // El backend manda la base de Asistieron como número (las generadas que ya ocurrieron) y
+    // FlujoEmbudo espera { label, n }: con el número suelto «Mis datos» se rompía (09/11/2026).
+    base: typeof e.base === 'number' ? { label: 'Generadas que ya ocurrieron', n: e.base } : e.base,
     color: COLOR_FUENTE[e.fuente],
     ayuda: AYUDA_ETAPA[e.key],
     partes: e.partes?.map(p => ({ ...p, color: COLOR_CANAL[p.key] })),
