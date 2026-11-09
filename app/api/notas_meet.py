@@ -101,6 +101,7 @@ def conectar(firma):
     session['google_redirect_uri'] = redirect_uri
     session.pop('google_oauth_proposito', None)
     session.pop('google_conectar', None)
+    session.pop('google_correo', None)
     # A dónde se vuelve: a la Academia (link de su API), a Integraciones (botón «Conectar con Google», con
     # sesión de Work) o a una página suelta (link para otra cuenta).
     if datos.get('a'):

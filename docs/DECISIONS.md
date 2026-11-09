@@ -989,3 +989,11 @@
 - **Decisión:** la ficha del anuncio trae del creativo `thumbnail_url` e `instagram_permalink_url` (`meta_anuncios.miniatura` y `publicacion_url`), también en la sincronización liviana, porque la URL de la miniatura es firmada y vence. En Campañas, conjuntos y anuncios, cada fila de anuncio muestra la miniatura (32 px); al tocarla se abre la publicación en Instagram.
 - **Qué se pierde:** nada. La miniatura es la de 64 px de Meta (no da para verla grande) y se descarta la vista previa embebida (iframe de Meta, que vence a las horas).
 - **Consecuencias:** migración `f3a5c7e9b1d4`. Los anuncios vigentes la traen en la próxima sincronización liviana (al volver a la pestaña Meta Ads); los viejos sin gasto reciente, en una sincronización completa del tramo.
+
+## ADR-W123: el correo de la plataforma sale por la API de Gmail desde Work
+
+- **Fecha:** 2026-11-09 · **Subsistema:** Correo saliente (`app/services/correo.py`, `/google/correo/conectar/<firma>`, `/api/external/academy/correo`) · **Estado:** implementado.
+- **Contexto:** la Academia no tiene correo propio; su bienvenida la mandaba n8n con su Gmail y «Olvidé mi contraseña» no salía. Se saca n8n este mes. El SMTP de Gmail pide contraseña de aplicación y verificación en dos pasos, que no se le puede poner a team@ (la usan varias personas).
+- **Decisión (Santiago, 09/11):** Work conecta una cuenta de Google (team@) **solo con `gmail.send`**, en una autorización aparte (sin `include_granted_scopes`): no toca las de Calendar ni las del Drive de las notas de Meet. El token vive en `integrations` (clave `correo`). La Academia manda cada mail como MIME a `POST /api/external/academy/correo` y Work lo envía con `users.messages.send`. Se conecta con un link firmado (24 h, un uso) que abre quien tiene la cuenta.
+- **Qué se pierde:** si la cuenta se desconecta no sale ningún mail de la Academia hasta reconectarla (Work avisa a admin). El remitente es siempre la cuenta conectada. Sin pantalla todavía: el link se genera por consola (`correo.link_para_conectar`).
+- **Consecuencias:** el proyecto de Google Cloud tiene que tener la API de Gmail habilitada. Sin migración.

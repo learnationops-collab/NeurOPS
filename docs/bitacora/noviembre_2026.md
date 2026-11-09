@@ -384,3 +384,6 @@
   - `POST /api/external/academy/discord/aviso`: la Academia manda por acá Onboarding, reactivación, Momentum, upsell y tours.
 - **9 de Noviembre de 2026 (Meta Ads: miniatura y publicación de cada anuncio)** *([MiniaturaAnuncio.jsx](../../frontend/src/pages/admin/marketing/anuncios/MiniaturaAnuncio.jsx), ADR-W122)*:
   - Cada fila de anuncio en Campañas, conjuntos y anuncios muestra la miniatura del creativo; al tocarla se abre la publicación en Instagram. Migración `f3a5c7e9b1d4`.
+- **9 de Noviembre de 2026 (Correo: los mails de la Academia salen por Work con Gmail, ADR-W123)** *([correo.py](../../app/services/correo.py))*
+  - Conexión aparte de una cuenta de Google solo para enviar (team@), sin contraseña ni verificación en dos pasos, sin tocar Calendar ni las notas de Meet.
+  - `POST /api/external/academy/correo`: la Academia manda el mail entero y Work lo envía. Reemplaza al flujo «Mail Academia» de n8n y hace andar «Olvidé mi contraseña».
