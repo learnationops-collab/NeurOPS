@@ -20,7 +20,7 @@ import {
     DESTINOS_CIERRES, DESTINOS_CLOSER as D, DESTINO_PROCEDENCIAS_TOTAL, PASOS_CLOSER, destinoProcedencia,
 } from './destinos';
 // El tile, la barra gruesa y el panel los comparte el tablero de setters (10/10/2026).
-import { Comparado, Panel, PanelCab, Riel, Tabs, Tile, Vacio, tasa, v } from './PiezasAnalizar';
+import { Panel, PanelCab, Riel, Tabs, Tile, Vacio, tasa, v } from './PiezasAnalizar';
 import DashboardSetters, { VISTAS_CANAL } from './DashboardSetters';
 
 /**
@@ -668,7 +668,7 @@ const DashboardClosers = ({ bloque, previo, deltas, porCobrar, adquisicion, vsLa
             <Tile label="Show up" valor={fmt.pct(bloque.show_up)} color={v('success')}
                 help={'Se presentaron, sobre las agendas que se presentaron, cancelaron, reprogramaron o no '
                     + 'se presentaron. Cada agenda cuenta, también la 2ª llamada.'}
-                delta={deltas.show_up}
+                antes={previo ? { actual: bloque.show_up, previo: previo.show_up, texto: fmt.pct(previo.show_up), vs: vsLabel } : null}
                 humo={[v('success'), v('info'), v('brand-primary'), v('success')]}
                 cuenta={{ a: String(bloque.asistieron), b: fmt.plural(bloque.base_show_up ?? bloque.realizadas, 'agenda', 'agendas') }}
                 ver={abrir(irA, D.show_up)} baja="p-estados" />
@@ -683,7 +683,8 @@ const DashboardClosers = ({ bloque, previo, deltas, porCobrar, adquisicion, vsLa
                     + 'seguimiento, una segunda llamada). Cuenta por cobro, así que una seña del mes '
                     + 'pasado que se paga hoy suma. El close rate por llamada, que mide solo las '
                     + 'llamadas de este período, está en el panel Cierre.'}
-                delta={deltas.close_rate_real}
+                antes={previo ? { actual: bloque.close_rate_real, previo: previo.close_rate_real,
+                    texto: fmt.pct(previo.close_rate_real), vs: vsLabel } : null}
                 humo={[v('error'), v('warning'), v('brand-primary'), v('error')]}
                 cuenta={bloque.cierres?.reales ? { a: String(bloque.cierres.reales.cierres), b: `${bloque.cierres.reales.base} oportunidades` } : null}
                 sub={bloque.cierres?.reales?.anteriores ? `${fmt.plural(bloque.cierres.reales.anteriores, 'de llamada anterior', 'de llamadas anteriores')}` : undefined}
@@ -695,17 +696,15 @@ const DashboardClosers = ({ bloque, previo, deltas, porCobrar, adquisicion, vsLa
                     + 'completos, primeras cuotas, cuotas de ventas anteriores y señas. Debajo, lo '
                     + 'que entró en el período comparado.'}
                 humo={[v('brand-secondary'), v('brand-primary'), v('brand-secondary-light'), v('brand-navy')]}
-                sub={previo?.cash_neto != null ? (
-                    <Comparado vs={vsLabel} actual={bloque.cash_neto} previo={previo.cash_neto} f={fmt.money}
-                        detalle={`${bloque.cash_neto >= previo.cash_neto ? '+' : '−'}${fmt.money(Math.abs(bloque.cash_neto - previo.cash_neto))}`} />
-                ) : undefined}
+                antes={previo ? { actual: bloque.cash_neto, previo: previo.cash_neto, texto: fmt.money(previo.cash_neto), vs: vsLabel } : null}
                 ver={abrir(irA, D.cash)} baja="p-cash" />
-            <Tile label="Ticket promedio" valor={fmt.money(bloque.ticket)} color={v('info')}
-                help={`Lo cobrado en las ${bloque.ventas} ventas nuevas dividido por cuántas fueron. `
+            <Tile label="Ticket promedio" valor={fmt.money(bloque.ticket_neto ?? bloque.ticket)} color={v('info')}
+                help={`Lo cobrado en las ${bloque.ventas} ventas nuevas, neto de la pasarela, dividido por cuántas fueron. `
                     + 'Las cuotas y las señas no entran.'}
-                delta={deltas.ticket}
+                antes={previo ? { actual: bloque.ticket_neto ?? bloque.ticket, previo: previo.ticket_neto ?? previo.ticket,
+                    texto: fmt.money(previo.ticket_neto ?? previo.ticket), vs: vsLabel } : null}
                 humo={[v('info'), v('brand-primary'), v('info'), v('brand-navy')]}
-                sub={`${fmt.plural(bloque.ventas, 'venta nueva', 'ventas nuevas')}${bloque.ticket_neto != null ? ` · neto ${fmt.money(bloque.ticket_neto)}` : ''}`}
+                sub={fmt.plural(bloque.ventas, 'venta nueva', 'ventas nuevas')}
                 ver={abrir(irA, D.ticket)} baja="p-cash" />
         </div>
 

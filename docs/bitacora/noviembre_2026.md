@@ -403,3 +403,7 @@
 ### 09/11/2026 — Cierre: cada cifra con su período comparado
 - Panel Cierre: ventas, señas y no cerradas llevan debajo «antes N» y el cambio en % (verde si mejoró; en no cerradas, bajar es mejorar). Bajo cada anillo, una tabla Ahora / Antes (con su cuenta) / cambio para el close rate solo ventas y con señas. La tabla por canal muestra la tasa de antes y el cambio debajo de cada %. El período se nombra una vez en la cabecera del panel («vs …»).
 - Nueva pieza `VsPrevio.jsx` (`VsPrevio`, `Delta`) con flechas de lucide en vez de ▲▼.
+
+### 09/11/2026 — Tiles de arriba con el período comparado
+- Show up, Close rate real, Cash collected y Ticket promedio: arriba a la derecha el cambio relativo (flecha y %) y abajo, junto a los botones, «antes X» discreto. Sale la caja grande de período anterior del Cash. El Ticket muestra el neto.
+- `Tile` suma la prop `antes`; los estilos de la comparación pasan a `vsPrevio.css` (los importa `VsPrevio.jsx`).

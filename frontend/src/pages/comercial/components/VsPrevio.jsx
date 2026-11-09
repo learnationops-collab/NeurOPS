@@ -1,5 +1,6 @@
 import React from 'react';
 import { ArrowDownRight, ArrowUpRight } from 'lucide-react';
+import './vsPrevio.css';
 
 /**
  * La comparación de una cifra con el período comparado, en una línea (09/11/2026, pedido de Mario: «2 ventas

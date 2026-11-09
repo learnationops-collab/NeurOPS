@@ -99,15 +99,8 @@
     .dc-shell .cc-lecturas { grid-template-columns: 1fr; }
 }
 
-/* Comparación con el período comparado (VsPrevio.jsx): «antes 4» y el chip del cambio. */
+/* La cabecera «vs …» del panel. */
 .dc-shell .cc-vs-cab { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 700;
     color: color-mix(in srgb, var(--text-on-surface) 78%, transparent); border: 1px solid var(--border-subtle);
     background: color-mix(in srgb, var(--text-on-surface) 5%, transparent); white-space: nowrap; }
 .dc-shell .cc-vs-cab small { font-size: 9px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--text-muted); }
-.dc-shell .vsp { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-.dc-shell .vsp-rot { font-size: 10px; font-weight: 700; color: var(--text-muted); }
-.dc-shell .vsp-n { font-size: 13px; font-weight: 800; color: color-mix(in srgb, var(--text-on-surface) 82%, transparent); }
-.dc-shell .vsp-d { display: inline-flex; align-items: center; gap: 1px; padding: 1px 7px 1px 4px; border-radius: 999px; font-size: 11px; font-weight: 900; white-space: nowrap; }
-.dc-shell .vsp-d--bien { color: color-mix(in srgb, var(--success) 70%, #fff); background: color-mix(in srgb, var(--success) 20%, transparent); }
-.dc-shell .vsp-d--mal { color: color-mix(in srgb, var(--error) 65%, #fff); background: color-mix(in srgb, var(--error) 20%, transparent); }
-.dc-shell .vsp-d--igual { color: var(--text-muted); background: color-mix(in srgb, var(--text-on-surface) 8%, transparent); padding: 1px 7px; }
