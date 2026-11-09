@@ -7,13 +7,15 @@ const CAJA = { background: 'rgba(2,6,23,.35)', border: '1px solid var(--border-s
 const COLUMNAS = 'minmax(80px,1.4fr) repeat(5,minmax(0,1fr))';
 const nombreDia = (dia) => new Date(`${dia}T12:00:00`).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
 
-/** Una tarjeta por persona: su % de asistencia y las cuatro cuentas con su barra. Tocarla la elige. */
-export function PorPersona({ personas, onElegir }) {
+/** Una tarjeta por persona: su % de asistencia y las cuatro cuentas con su barra. Tocarla la elige.
+ *  Sin `onElegir` (la triage que se compara) las tarjetas quedan quietas y la suya (`yo`) va marcada. */
+export function PorPersona({ personas, onElegir, yo = null }) {
     if (!personas.length) return null;
     const mayor = Math.max(1, ...personas.map((p) => p.agendas));
+    const Caja = onElegir ? 'button' : 'div';
     return (
         <div style={{ ...TARJETA, gap: 18 }}>
-            <Titulo texto="Por persona" />
+            <Titulo texto={yo == null ? 'Por persona' : 'Vos y el equipo'} />
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 12 }}>
                 {personas.map((p) => {
                     const tasa = Math.round(pct(p.asistencias, conResultado(p)));
@@ -22,13 +24,14 @@ export function PorPersona({ personas, onElegir }) {
                         ['Calificados', p.calificados, 'success'], ['Asistieron al closer', p.closer_asistieron, 'info'],
                         ['Cerraron con el closer', p.closer_cerraron, 'success']];
                     return (
-                        <button key={p.id} type="button" onClick={() => onElegir(String(p.id))}
-                            style={{ ...CAJA, display: 'flex', flexDirection: 'column', gap: 14, padding: 18, borderRadius: 20, color: 'inherit', font: 'inherit', textAlign: 'left', cursor: 'pointer' }}>
+                        <Caja key={p.id} {...(onElegir ? { type: 'button', onClick: () => onElegir(String(p.id)) } : null)}
+                            style={{ ...CAJA, ...(p.id === yo ? { border: '1px solid var(--brand-secondary)' } : null),
+                                display: 'flex', flexDirection: 'column', gap: 14, padding: 18, borderRadius: 20, color: 'inherit', font: 'inherit', textAlign: 'left', cursor: onElegir ? 'pointer' : 'default' }}>
                             <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                                 <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                                     <span style={{ width: 34, height: 34, borderRadius: '50%', background: 'var(--brand-secondary)', color: 'var(--ink)', fontSize: 12, fontWeight: 900,
                                         display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{iniciales(p.nombre)}</span>
-                                    <span style={{ fontSize: 15, fontWeight: 800 }}>{p.nombre}</span>
+                                    <span style={{ fontSize: 15, fontWeight: 800 }}>{p.id === yo ? `${p.nombre} · vos` : p.nombre}</span>
                                 </span>
                                 <span style={{ fontSize: 11, fontWeight: 700, padding: '4px 10px', borderRadius: 999, color: `var(--${color})`,
                                     background: `var(--${color}-surface)`, border: `1px solid var(--${color}-border)` }}>{tasa}% asist.</span>
@@ -46,7 +49,7 @@ export function PorPersona({ personas, onElegir }) {
                             <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                                 {p.descalificados} descalificados · {p.cerrado} de {p.pitch_low_ticket} low ticket
                             </span>
-                        </button>
+                        </Caja>
                     );
                 })}
             </div>

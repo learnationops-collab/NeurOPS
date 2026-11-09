@@ -7,11 +7,11 @@ import { useMemo, useState } from 'react';
 import api from '../../../services/api';
 import { useDatosCacheados } from '../../../services/cacheDeVistas';
 import { EmptyState, FieldError, Skeleton, SkeletonKpi, SkeletonPanel } from '../../../components/standard';
-import { diasDe } from '../../triage/components/TriageMetricas';
 import { filtroDe } from '../../triage/components/triageFiltros';
 import { Abandonos, Embudo, Estados, LowTicket, Tarjetas } from './triage/TriagePaneles';
 import { DiaPorDia, PorPersona } from './triage/TriagePersonasDias';
 import { coloresDe } from './triage/coloresCloser';
+import { diasDe } from './triage/triageDatos';
 import { rangoDePeriodo } from './triage/periodo';
 import PorCloser, { closersDe } from './triage/TriagePorCloser';
 import TriageReporte from './triage/TriageReporte';
@@ -35,7 +35,9 @@ export default function TriageDireccion({ onAbrirFila, period, rango, triageId, 
     const error = falla ? (falla?.response?.data?.message || 'No se pudieron cargar las métricas.') : null;
 
     const personas = datos?.por_persona || [];
-    const elegida = personas.find((p) => String(p.id) === String(triageId));
+    // La triage que mira lo suyo (`yo`, ver triage_alcance.py): el total ya es el de ella y «Por persona» es para compararse.
+    const yo = datos?.yo ?? null;
+    const elegida = yo == null ? personas.find((p) => String(p.id) === String(triageId)) : null;
     const m = elegida || datos?.total;
     const leads = useMemo(() => (datos?.leads || []).filter((l) => !elegida || l.triage === elegida.nombre), [datos, elegida]);
     const verLista = (clave) => {
@@ -52,7 +54,7 @@ export default function TriageDireccion({ onAbrirFila, period, rango, triageId, 
             {error && <FieldError>{error}</FieldError>}
             {!m ? (!error && <Cargando />) : !m.agendas ? (
                 <EmptyState title="Sin llamadas con este filtro">
-                    Las métricas salen de lo que cada triage marca en el lead: asistencia y resultado.
+                    Las métricas salen de lo que se marca en cada lead: asistencia y resultado.
                 </EmptyState>
             ) : (
                 <>
@@ -61,7 +63,8 @@ export default function TriageDireccion({ onAbrirFila, period, rango, triageId, 
                     <PorCloser closers={closers} colores={colores} onVer={verLista} />
                     <div style={FILA}><LowTicket m={m} onVer={verLista} /><Abandonos a={datos.abandonos} /></div>
                     <div style={FILA}>
-                        {!elegida && <PorPersona personas={personas} onElegir={(id) => onElegirPersona?.(String(id))} />}
+                        {!elegida && <PorPersona personas={personas} yo={yo}
+                            onElegir={onElegirPersona ? (id) => onElegirPersona(String(id)) : null} />}
                         <DiaPorDia dias={diasDe(datos.por_dia, elegida?.id)} />
                     </div>
                     <TriageReporte leads={leads} ver={ver} onVer={setVer} onAbrir={abrir}

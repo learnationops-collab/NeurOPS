@@ -8,6 +8,8 @@ export const pctTexto = (a, b) => (b ? `${Math.round((a / b) * 100)}%` : '—');
 
 /** Llamadas con resultado (asistió o no show): la base del % de asistencia. Las sin reportar y las que aún no ocurren no cuentan. */
 export const conResultado = (m) => m.asistencias + m.no_show;
+/** Lo mismo con el closer: asistieron o no asistieron. Las pendientes de llamada no cuentan. */
+export const closerConResultado = (m) => m.closer_asistieron + m.closer_no_asistieron;
 
 /** Las seis etiquetas del estado de una llamada, con el color de su token (`var(--<color>)`). */
 export const ESTADOS = [
@@ -48,7 +50,9 @@ export function embudoDe(m) {
         { clave: 'ASISTIERON', n: m.asistencias, color: 'brand-secondary', de: conResultado(m), nota: `${m.asistencias} de ${conResultado(m)} con resultado`, filtro: 'asistencias', cuello: true },
         { clave: 'CALIFICADOS', n: m.calificados, color: 'success', de: m.asistencias, nota: `${m.calificados} de ${m.asistencias} asistieron`, filtro: 'calificados', cuello: true },
         // Los que pasaron a closing son los calificados: no se repiten como etapa, el grupo arranca en lo que hizo el closer.
-        { clave: 'ASISTIERON AL CLOSER', rotulo: 'ASISTIERON', n: m.closer_asistieron, color: 'brand-secondary', de: m.pasaron, grupo: 'LO QUE PASÓ A CLOSING', nota: `${m.closer_asistieron} de ${m.pasaron} pasaron`, filtro: 'closer_asistieron' },
+        // Contra los que ya tuvieron la llamada (como la tarjeta): la que todavía no llega no es una caída.
+        { clave: 'ASISTIERON AL CLOSER', rotulo: 'ASISTIERON', n: m.closer_asistieron, color: 'brand-secondary', de: closerConResultado(m), grupo: 'LO QUE PASÓ A CLOSING',
+            nota: `${m.closer_asistieron} de ${closerConResultado(m)} con resultado${m.closer_por_venir ? ` · ${m.closer_por_venir} por venir` : ''}`, filtro: 'closer_asistieron' },
         { clave: 'CERRARON', rotulo: 'CERRARON', n: m.closer_cerraron, color: 'success', de: m.closer_asistieron, nota: `${m.closer_cerraron} de ${m.closer_asistieron} asistieron`, filtro: 'closer_cerraron' },
     ];
     const conPaso = etapas.filter((e) => e.de && e.cuello);
@@ -63,4 +67,15 @@ export function coincide(lead, ver) {
     return filtroDe(ver) ? filtroDe(ver).coincide(lead) : true;
 }
 
-export const iniciales = (nombre) => (nombre || '?').split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join('');
+/** `por_dia` (un renglón por día y persona) en un renglón por día: de una persona o de todas. */
+export const diasDe = (porDia = [], persona = null) => {
+    const dias = new Map();
+    porDia.filter((r) => persona == null || r.id === persona).forEach(({ dia, id, ...numeros }) => {
+        const suma = dias.get(dia) || { dia };
+        Object.entries(numeros).forEach(([k, v]) => { suma[k] = (suma[k] || 0) + v; });
+        dias.set(dia, suma);
+    });
+    return [...dias.values()];
+};
+
+export const iniciales =(nombre) => (nombre || '?').split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join('');

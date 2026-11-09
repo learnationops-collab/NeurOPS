@@ -69,7 +69,10 @@ export function Tarjetas({ m, onVer }) {
         { rotulo: 'CIERRES LOW TICKET', valor: pctTexto(m.cerrado, m.pitch_low_ticket), sub: `${m.cerrado} de ${m.pitch_low_ticket} presentaciones`, color: 'error', ver: 'cerrado' },
         { rotulo: 'ASISTENCIA AL CLOSER', valor: <Porcentaje onVer={onVer} a={closerAsistieron} b={closerConRes} />, ancha: true, barra: pct(m.closer_asistieron, closerConRes.n),
             sub: <Partes onVer={onVer} partes={[[m.closer_asistieron, 'asistieron', 'closer_asistieron'], [m.closer_no_asistieron, 'no asistieron', 'closer_no_asistieron']]} />,
-            sub2: <>de {m.pasaron} que pasaron a closing{m.closer_pendientes > 0 && <> · <Partes onVer={onVer} partes={[[m.closer_pendientes, 'pendientes de llamada', 'closer_pendientes']]} /></>}</>,
+            // La llamada que todavía no llega no es una falta: va aparte de la que ya pasó sin reporte.
+            sub2: <>de {m.pasaron} que pasaron a closing{m.closer_pendientes > 0 && <> · <Partes onVer={onVer} partes={
+                m.closer_sin_reporte == null ? [[m.closer_pendientes, 'pendientes de llamada', 'closer_pendientes']]
+                    : [[m.closer_sin_reporte, 'sin reportar', 'closer_sin_reporte'], [m.closer_por_venir, 'por venir', 'closer_por_venir']].filter(([n]) => n > 0)} /></>}</>,
             color: 'info', ver: 'closer_asistieron' },
         { rotulo: 'CONVERSIÓN CON EL CLOSER', valor: <Porcentaje onVer={onVer} a={{ n: m.closer_cerraron, texto: 'cerraron', clave: 'closer_cerraron', titulo: 'Cerraron con el closer' }} b={closerAsistieron} />,
             ancha: true, barra: pct(m.closer_cerraron, m.closer_asistieron),

@@ -7,7 +7,7 @@ from flask_login import current_user
 from app.api.auth import login_required
 from app.api.triage import bp
 from app.decorators import triage_metricas_required
-from app.services import triage_service
+from app.services import triage_alcance, triage_service
 from app.services.user_time_service import limites_rango_utc, zona_del_usuario
 
 
@@ -30,7 +30,11 @@ def metricas():
     if desde > hasta:
         return jsonify({'message': '«Desde» es posterior a «hasta».'}), 400
     inicio, fin = limites_rango_utc(current_user, desde, hasta)
-    solo = current_user.id if current_user.role == 'triage' else request.args.get('triage_id', type=int)
     segmentos = {s for s in (request.args.get('segmento') or '').split(',') if s in ('A', 'B', 'C', 'D', 'sin')}
-    return jsonify(triage_service.metricas(inicio, fin, solo=solo, zona=zona_del_usuario(current_user),
-                                           segmentos=segmentos)), 200
+    zona = zona_del_usuario(current_user)
+    if current_user.role == 'triage':
+        # La triage ve lo suyo y, para compararse, las cifras de cada compañera (sin sus leads).
+        return jsonify(triage_alcance.solo_de(triage_service.metricas(inicio, fin, zona=zona, segmentos=segmentos),
+                                              current_user.id)), 200
+    solo = request.args.get('triage_id', type=int)
+    return jsonify(triage_service.metricas(inicio, fin, solo=solo, zona=zona, segmentos=segmentos)), 200

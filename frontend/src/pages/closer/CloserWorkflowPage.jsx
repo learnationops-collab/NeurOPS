@@ -32,7 +32,6 @@ import '../comercial/comercial.css';
 import '../../components/dashboard/pareja.css';
 import './clarity-v6.css';
 import ComisionMesCard from './components/ComisionMesCard';
-import TriageMetricas from '../triage/components/TriageMetricas';
 import TriageAbandonos from '../triage/components/TriageAbandonos';
 import CompartidosConmigo, { useCompartidos } from '../../components/compartidos/CompartidosConmigo';
 import ProcrastinarModal from './components/ProcrastinarModal';
@@ -2726,7 +2725,9 @@ const CloserWorkflowPage = () => {
                 ) : activeView === 'abandonos' ? (
                     <TriageAbandonos />
                 ) : activeView === 'metricas' ? (
-                    <TriageMetricas />
+                    /* Las métricas de la triage son el tablero Triage de la dirección con lo suyo y el
+                       equipo para compararse (pedido de Marlon, 09/11/2026): mismos períodos y paneles. */
+                    <DashboardComercial embebido seccionFija="analizar" triage />
                 ) : activeView === 'auditoria' ? (
                     <CloserLeadsAudit embedded />
                 ) : activeView === 'cartera' ? (

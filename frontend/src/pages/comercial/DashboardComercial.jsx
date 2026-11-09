@@ -179,7 +179,7 @@ const FaltaFecha = ({ texto, children }) => (
  * pestañas de su espacio: su Ventas no es una tabla del rol setters para la dirección (ver
  * `TABLAS_POR_ROL`), así que por la URL sola no se podía abrir.
  */
-const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion = null, onAbrirCliente = null, espacio = null, tablaFija = null }) => {
+const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion = null, onAbrirCliente = null, espacio = null, tablaFija = null, triage = false }) => {
     const [params, setParams] = useSearchParams();
     const [contexto, setContexto] = useState(null);
     const { user, logout } = useAuth();
@@ -352,7 +352,8 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     // string no puede cambiarlos (ver `alcance_de` en app/api/comercial.py).
     // «Triage» es el tercero del interruptor (30/10/2026) pero no un rol de datos: su tablero tiene su propio pedido
     // (`TriageDireccion`) y todo lo demás sigue con los closers.
-    const vistaTriage = !!contexto?.puede_elegir_equipo && rolPedido === 'triage' && seccion === 'analizar';
+    // `triage`: la triage mira lo suyo con el mismo tablero (sus Métricas, pedido de Marlon del 09/11/2026).
+    const vistaTriage = seccion === 'analizar' && (triage || (!!contexto?.puede_elegir_equipo && rolPedido === 'triage'));
     const rol = contexto?.puede_elegir_equipo ? (rolPedido === 'triage' ? 'closers' : (rolPedido || 'closers')) : contexto?.rol;
     // Las personas del selector son las del rol elegido: con Setters, los setters. Un `m` de la
     // URL que no es de ese rol (un link viejo, o el closer que quedó elegido al cambiar el switch)
@@ -833,7 +834,8 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                     )}
                     {vistaTriage && !esperaFechas && (
                         <TriageDireccion key={`${period}|${rango?.desde}|${rango?.hasta}|${segmento}|${miembroElegido}`} onAbrirFila={abrirFila}
-                            period={period} rango={rango} triageId={miembroElegido} segmento={segmento} onElegirPersona={(id) => set({ m: id })} />
+                            period={period} rango={rango} triageId={miembroElegido} segmento={segmento}
+                            onElegirPersona={contexto.puede_elegir_equipo ? (id) => set({ m: id }) : null} />
                     )}
                     {!esperaFechas && !vistaTriage && seccion === 'analizar' && tab === 'dashboard' && (
                         <Analizar datos={resumen} rol={rol} irA={irADetalle}

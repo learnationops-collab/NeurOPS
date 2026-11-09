@@ -342,7 +342,8 @@ def _vacias():
                            'calificados', 'descalificados', 'pitch_low_ticket', 'no_pitch', 'cerrado',
                            'no_cerrado', 'seguimiento', 'descartado',
                            'pasaron', 'closer_asistieron', 'closer_cerraron', 'closer_no_asistieron',
-                           'closer_pendientes', 'closer_senas', 'closer_cobrado')}
+                           'closer_pendientes', 'closer_sin_reporte', 'closer_por_venir',
+                           'closer_senas', 'closer_cobrado')}
 
 
 def _sumar(m, a, pase, ahora=None):
@@ -358,6 +359,9 @@ def _sumar(m, a, pase, ahora=None):
         m['closer_cerraron'] += 1 if pase['cerro'] else 0
         m['closer_no_asistieron'] += 1 if pase.get('estado') == 'no_asistio' else 0
         m['closer_pendientes'] += 1 if pase.get('estado') in ('pendiente', 'sin_reporte') else 0
+        # Las dos mitades: la llamada ya pasó sin reporte, o todavía no llega (no es una falta).
+        m['closer_sin_reporte'] += 1 if pase.get('estado') == 'sin_reporte' else 0
+        m['closer_por_venir'] += 1 if pase.get('estado') == 'pendiente' else 0
         m['closer_senas'] += 1 if pase.get('sena') else 0
         m['closer_cobrado'] = round(m['closer_cobrado'] + pase.get('cobrado', 0), 2)
     if resultado == 'show up':
