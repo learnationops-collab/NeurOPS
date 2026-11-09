@@ -416,3 +416,7 @@
 
 ### 09/11/2026 — Mis datos del setter dejaba la pantalla en negro
 - `embudoSetter.etapasParaDibujar`: la base de Asistieron llega del backend como número (generadas que ya ocurrieron) y `FlujoEmbudo` esperaba `{ label, n }`; con al menos una llamada pasada la píldora hacía `undefined.toLowerCase()` y se caía toda la pantalla. Ahora se convierte a `{ label: 'Generadas que ya ocurrieron', n }`. Arregla también los embudos de Comparativas.
+
+### 09/11/2026 — Cartera de Jean Carlo y ventas que se partían al cambiar el programa
+- `sale_service`: reubicar varios pagos en un mismo guardado (cambiar el programa desde la ficha) abría una venta por pago, sin total y a precio de lista. Ahora cuentan los pagos ya guardados que se movieron en ese guardado, y una venta con plan de cuotas y sin cobros recibe el primero (`sales_grouping.decidir`). Caso: Silka Rodríguez figuraba con 3 ventas y 3,200 de deuda en vez de 200.
+- Datos en prod (06–09/11, con el registro del closer): montos, cuotas y fechas de 29 clientes de Jean Carlo; 12 señas inactivas sin cuota vencida; bajas de Carolina Murillo y Jhonatan Cahuin con el acceso a la Academia cortado; foto de la Academia refrescada. Pagos «Desconocido» unidos a su venta en 5 clientes (Alisson Izabal, Lucero Aroquipa, Melany Caballero, Sandra Zhimnay, Angeles Valerio): su deuda bajó de 4,000 a 1,400 entre los cinco.
