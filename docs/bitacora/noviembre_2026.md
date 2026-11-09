@@ -411,3 +411,5 @@
 ### 09/11/2026 — Cierre: tasa de presentación
 - Panel Cierre: nueva fila «Presentación» (llamadas con show up en las que el closer respondió que presentó la oferta ÷ las que asistieron), con barra, cuenta y la del período comparado. En noviembre los closers marcaron «Sí» en las 13 reportadas (100%); en octubre, 77 de 87.
 - Tabla por canal: sin período anterior ya no muestra «— =».
+- **9 de Noviembre de 2026 (Academia: la venta pagada de a partes recibe la Momentum de seña)** *([academy_payment_sync.py](../../app/services/academy_payment_sync.py))*
+  - El aviso de pago a la Academia lleva `en_cuotas`: seña, parcial o cuota de una venta nueva o upsell (no renovación). La Academia le da la Momentum de seña aunque el alumno ya no sea seña.

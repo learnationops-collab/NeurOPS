@@ -21,6 +21,7 @@ from datetime import date, datetime, timedelta
 from flask import current_app
 from sqlalchemy import func
 
+from app import db
 from app.services.academy_access_service import AcademyAccessService, _add_months
 
 GRACE_DAYS = 5
@@ -46,6 +47,19 @@ def compute_payment_expiration(client_id, programa_code, tipo_simple, fecha_pago
         if proxima:
             return proxima.fecha_vencimiento + timedelta(days=GRACE_DAYS)
     return _add_months(base, 4)
+
+
+TIPOS_EN_CUOTAS = ('seña', 'parcial', 'cuota')
+
+
+def en_cuotas(pago, tipo):
+    """¿El pago es de una venta (no renovación) que se paga de a partes?"""
+    from app.models import Sale
+
+    if tipo not in TIPOS_EN_CUOTAS:
+        return False
+    venta = db.session.get(Sale, pago.sale_id) if pago.sale_id else None
+    return not (venta and venta.kind == 'renewal')
 
 
 def build_payment_payload(sale):
@@ -95,6 +109,9 @@ def build_payment_payload(sale):
         'tipo_pago': tipo_pago,
         'product_slug': AcademyAccessService.get_product_mapping().get(programa) if programa else None,
         'is_deposit_payment': tipo == 'seña',
+        # Entró pagando de a partes (seña, parcial o cuota de una venta nueva o upsell): en la Academia
+        # le toca la Momentum de seña aunque hoy ya no sea seña. La renovación en cuotas no cuenta.
+        'en_cuotas': en_cuotas(sale, tipo),
         'expires_at': expires_at.isoformat(),
     }
 
