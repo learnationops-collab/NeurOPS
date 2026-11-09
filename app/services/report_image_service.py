@@ -4,7 +4,7 @@ import base64
 import functools
 import uuid
 import tempfile
-from flask import render_template_string
+from flask import current_app
 from html2image import Html2Image
 
 class ReportImageService:
@@ -51,6 +51,16 @@ class ReportImageService:
         )
 
     @staticmethod
+    def _entorno():
+        """El Jinja de la app, buscando también en app/templates: la carpeta de plantillas de Flask es
+        frontend/dist (la SPA), y sin esto `{% import "reports/_tarjeta.html" %}` no se encontraba y toda
+        tarjeta salía como texto (desde ADR-W121 hasta el 09/11/2026)."""
+        from jinja2 import ChoiceLoader, FileSystemLoader
+
+        propias = FileSystemLoader(os.path.join(current_app.root_path, 'templates'))
+        return current_app.jinja_env.overlay(loader=ChoiceLoader([propias, current_app.jinja_env.loader]))
+
+    @staticmethod
     def _render_and_capture(template_rel_path, data, size, output_prefix):
         """
         Helper generico para leer plantilla, renderizar HTML, tomar captura y retornar buffer.
@@ -59,7 +69,7 @@ class ReportImageService:
         with open(template_path, 'r', encoding='utf-8') as f:
             template_content = f.read()
 
-        rendered_html = render_template_string(template_content, **data)
+        rendered_html = ReportImageService._entorno().from_string(template_content).render(**data)
         output_filename = f"{output_prefix}_{uuid.uuid4().hex}.png"
         
         hti = ReportImageService._get_hti(size)

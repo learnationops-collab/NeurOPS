@@ -436,3 +436,5 @@
 - **9 de Noviembre de 2026 (Momentum: reporte de si sigue y su plan, ADR-W129)** *([momentum_reporte.py](../../app/services/momentum_reporte.py), [arbolResultado.momentum.js](../../frontend/src/components/ficha/arbolResultado.momentum.js))*
   - En la ficha de una Momentum, después de «Asistió»: ¿sigue? Pagó (venta), con plan de pago (arma el plan del saldo), lo está pensando o no sigue. Va así a la Academia (resultado nuevo «plan») y a la tarjeta de Discord, con las cuotas.
   - Si hay nota de Gemini de la llamada, la ficha muestra lo que dice y «Usar en el reporte» lo precarga.
+- **9 de Noviembre de 2026 (Discord: las tarjetas vuelven a salir como imagen)** *([report_image_service.py](../../app/services/report_image_service.py))*
+  - La carpeta de plantillas de Flask es la del frontend, y `{% import "reports/_tarjeta.html" %}` no se encontraba: desde ADR-W121 las tarjetas (agendas, ventas, resultados, avisos de la Academia) salían con el texto de respaldo. El render busca ahora también en `app/templates`.
