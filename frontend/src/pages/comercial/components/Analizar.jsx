@@ -202,12 +202,13 @@ const PanelCierre = ({ bloque, previo, vsLabel, irA, cargarNoCerradas, onAbrirFi
                 ayuda={'El close rate cuenta solo pagos completos y split pay, una venta por lead. El '
                     + 'anillo azul son las ventas y el rosa las señas, sobre las llamadas con show up y '
                     + 'sobre las presentaciones. Abajo, el mismo close rate de las agendas directas y de '
-                    + 'las que vienen del triage.'}>
+                    + 'las que vienen del triage. Debajo de cada cifra, la del período comparado y cuánto cambió.'}>
+                {previo && <span className="cc-vs-cab"><small>vs</small>{vsLabel || 'Período comparado'}</span>}
             </PanelCab>
         }>
             {vacio
                 ? <Vacio texto="Ninguna llamada del período tiene todavía un show up cargado." />
-                : <CierreComercial cierres={c} previo={previo?.cierres} vsLabel={vsLabel}
+                : <CierreComercial cierres={c} previo={previo?.cierres} previoCanal={previo?.cierres_canal} vsLabel={vsLabel}
                     porCanal={bloque.cierres_canal} irA={irA} destinos={DESTINOS_CIERRES}
                     onVerNoCerradas={cargarNoCerradas ? () => setVerNoCerradas(true) : undefined} />}
             {verNoCerradas && cargarNoCerradas && (

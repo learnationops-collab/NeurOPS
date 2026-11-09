@@ -399,3 +399,7 @@
 
 ### 09/11/2026 — Presentaciones: manda lo que respondió el closer
 - `comercial_agendas`: una llamada en la que el closer marcó «no presenté la oferta» ya no cuenta como presentación por haber terminado sin venta ni seguimiento (`cerro_sin_venta` solo infiere cuando el campo está vacío). Venta y seña siguen contando siempre. Afecta embudo, tasa de presentación y cierre por presentación.
+
+### 09/11/2026 — Cierre: cada cifra con su período comparado
+- Panel Cierre: ventas, señas y no cerradas llevan debajo «antes N» y el cambio en % (verde si mejoró; en no cerradas, bajar es mejorar). Bajo cada anillo, una tabla Ahora / Antes (con su cuenta) / cambio para el close rate solo ventas y con señas. La tabla por canal muestra la tasa de antes y el cambio debajo de cada %. El período se nombra una vez en la cabecera del panel («vs …»).
+- Nueva pieza `VsPrevio.jsx` (`VsPrevio`, `Delta`) con flechas de lucide en vez de ▲▼.
