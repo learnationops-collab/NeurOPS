@@ -109,8 +109,48 @@ def conflictos(claves, desde, hasta, excluir_id=None):
     return [(clave, otra) for clave, otra in filas.all() if _se_pisan(desde, hasta, otra.desde, otra.hasta)]
 
 
-def guardar(campana, datos):
-    """Crea o edita la campaña con lo que manda la API. Valida todo antes de tocar la fila; no hace commit."""
+CONJUNTOS = ('palabras', 'campanas_meta')
+
+
+def _foto(campana):
+    """Lo que se compara entre antes y después de guardar, en JSON."""
+    fecha = lambda f: f.isoformat() + 'Z' if f else None
+    return {
+        'nombre': campana.nombre, 'embudo': campana.embudo, 'tipo': campana.tipo,
+        'desde': fecha(campana.desde), 'hasta': fecha(campana.hasta), 'flujo_id': campana.flujo_id,
+        'reparto': campana.reparto, 'solo_conectados': bool(campana.solo_conectados),
+        'palabras': [p.texto for p in campana.palabras],
+        'campanas_meta': [m.meta_campana_id for m in campana.campanas_meta],
+        'pesos': {str(s.user_id): s.peso or 1 for s in campana.setters},
+    }
+
+
+def registrar_cambio(campana, antes, por=None, motivo=None):
+    """Suma al log lo que cambió entre `antes` y ahora. Sin diferencias no anota nada."""
+    despues = _foto(campana)
+    cambios = {}
+    for campo, valor in despues.items():
+        previo = antes.get(campo)
+        if campo in CONJUNTOS:
+            agregadas = [v for v in valor if v not in (previo or [])]
+            quitadas = [v for v in (previo or []) if v not in valor]
+            if agregadas or quitadas:
+                cambios[campo] = {'agregadas': agregadas, 'quitadas': quitadas}
+        elif previo != valor:
+            cambios[campo] = {'antes': previo, 'despues': valor}
+    if not cambios:
+        return
+    entrada = {'en': ahora().isoformat() + 'Z', 'por': por, 'accion': 'editada' if campana.id else 'creada',
+               'cambios': cambios}
+    if motivo:
+        entrada['motivo'] = motivo
+    campana.cambios = list(campana.cambios or []) + [entrada]
+
+
+def guardar(campana, datos, por=None, motivo=None):
+    """Crea o edita la campaña con lo que manda la API. Valida todo antes de tocar la fila; no hace commit.
+    `por` (quién) y `motivo` van al log de cambios."""
+    antes = _foto(campana) if campana.id else {}
     nombre = (datos.get('nombre', campana.nombre) or '').strip()[:150]
     if not nombre:
         raise ErrorDeCampana('La campaña necesita un nombre')
@@ -170,6 +210,7 @@ def guardar(campana, datos):
         actuales = {m.meta_campana_id: m for m in campana.campanas_meta}
         ids = list(dict.fromkeys(m.strip()[:40] for m in meta))
         campana.campanas_meta = [actuales.get(i) or AutCampanaMeta(meta_campana_id=i) for i in ids]
+    registrar_cambio(campana, antes, por=por, motivo=motivo)
     return campana
 
 

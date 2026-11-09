@@ -2,6 +2,7 @@
 from datetime import date, datetime, timedelta, timezone
 
 from flask import jsonify, request
+from flask_login import current_user
 
 from app import db
 from app.automatizaciones import campanas, metricas_campanas, reparto, servicio
@@ -34,7 +35,7 @@ def _datos():
 
 def _guardar(campana):
     try:
-        campanas.guardar(campana, _datos())
+        campanas.guardar(campana, _datos(), por=current_user.username)
     except ValueError as error:  # ErrorDeCampana o una fecha mal escrita
         db.session.rollback()
         return jsonify({'message': str(error)}), 400
@@ -96,6 +97,15 @@ def editar_campana(campana_id):
     if error:
         return error
     return jsonify(campanas.resumen(campana, servicio.ahora()))
+
+
+@bp.route('/campanas/<int:campana_id>/cambios', methods=['GET'])
+def cambios_de_campana(campana_id):
+    """El log de cambios de la campaña, del más nuevo al más viejo."""
+    campana = db.session.get(AutCampana, campana_id)
+    if campana is None:
+        return jsonify({'message': 'Not found'}), 404
+    return jsonify({'cambios': list(reversed(campana.cambios or []))})
 
 
 @bp.route('/campanas/<int:campana_id>', methods=['DELETE'])

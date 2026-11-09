@@ -966,3 +966,11 @@
 - **Decisión:** si el dato corregido lo tiene una sola persona y el nombre no lo contradice (`mismo_nombre`: igual, parecido o vacío), es el mismo lead duplicado: la persona de la agenda se fusiona en la dueña del dato (`person_service.fusionar`, con sus clientes) y el dato mal escrito se da de baja. Vale para el Tablero, el mazo del setter y la palabra clave.
 - **Qué se pierde:** `corregir` ya no es solo «sin commit»: al unir, confirma la fusión. Si el setter se equivoca de Instagram y los nombres son parecidos, une a dos personas distintas (queda el evento `fusion` para deshacerlo a mano).
 - **Consecuencias:** con otro nombre o con varias dueñas sigue el 409, ahora diciendo de quién es el dato. Sin migración.
+
+## ADR-W120: cada campaña del Inbox guarda su log de cambios
+
+- **Fecha:** 2026-11-09 · **Subsistema:** Inbox › Campañas (`automatizaciones/campanas.py`, `/api/inbox/campanas`) · **Estado:** implementado.
+- **Contexto:** Meta subió «SETTING FUNNEL | ROAS MAX» con nueve palabras; cuatro (CURSO GRATUITO, APROBACIÓN, QUIERO APLICAR, GUÍA STEPS) ya estaban en «Winners Reels MX + PE» y «LM Funnel». Una palabra no puede estar en dos campañas vigentes, así que hay que moverlas, y al moverlas no quedaba rastro de que habían sido de otra campaña ni desde cuándo.
+- **Decisión:** `aut_campanas.cambios` (JSON, solo se agrega) anota en cada guardado quién, cuándo, `creada`/`editada`, un motivo opcional y qué cambió: palabras y campañas de Meta como `{agregadas, quitadas}`; el resto como `{antes, despues}`. Un guardado sin diferencias no anota. `GET /api/inbox/campanas/<id>/cambios` lo devuelve del más nuevo al más viejo.
+- **Qué se pierde:** nada. Los cambios anteriores a hoy no tienen log (las campañas existentes arrancan vacías).
+- **Consecuencias:** migración `e8b2c4d6f1a3`. Las entradas ya registradas siguen con su campaña (`AutEjecucion.campana_id`), así que mover una palabra no cambia las métricas de lo que ya entró. Todavía no hay pantalla que muestre el log.
