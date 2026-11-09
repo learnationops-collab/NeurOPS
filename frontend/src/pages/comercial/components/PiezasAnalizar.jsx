@@ -36,6 +36,30 @@ export const Delta = ({ delta, actual }) => {
     );
 };
 
+/**
+ * La comparación de una cifra contra el período comparado (09/11/2026): «PERÍODO ANTERIOR $7,811 ▼ 57%».
+ * `vs` es el rótulo que eligió la persona en el selector de arriba; `modo` 'pts' para tasas (diferencia
+ * en puntos); `mejorBaja` para un costo (bajar es verde). Sin `previo` no dibuja nada.
+ */
+export const Comparado = ({ vs, actual, previo, f, modo = 'pct', mejorBaja = false }) => {
+    if (previo === null || previo === undefined || actual === null || actual === undefined) return null;
+    const dif = modo === 'pts' ? Math.round((actual - previo) * 10) / 10
+        : (previo ? Math.round(((actual - previo) / Math.abs(previo)) * 1000) / 10 : null);
+    const sube = dif > 0;
+    const bueno = dif === 0 || dif === null ? null : (sube !== mejorBaja);
+    return (
+        <span className="cmp" title={`${vs || 'Período comparado'}: ${f(previo)}`}>
+            <small className="cmp-rot">{vs || 'Período comparado'}</small>
+            <b className="cmp-n num">{f(previo)}</b>
+            {dif !== null && dif !== 0 && (
+                <small className="cmp-d num" style={{ '--c': v(bueno ? 'success' : 'error') }}>
+                    {sube ? '▲' : '▼'} {Math.abs(dif)}{modo === 'pts' ? ' pts' : '%'}
+                </small>
+            )}
+        </span>
+    );
+};
+
 /** Barra fina. Crece de 0 al montar, que es la animación que define el CSS (`.riel > i`). */
 export const Riel = ({ pct, color, fino, delay }) => {
     const montado = useMontado();

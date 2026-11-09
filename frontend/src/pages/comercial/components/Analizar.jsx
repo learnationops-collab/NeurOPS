@@ -19,7 +19,7 @@ import {
     DESTINOS_CIERRES, DESTINOS_CLOSER as D, DESTINO_PROCEDENCIAS_TOTAL, PASOS_CLOSER, destinoProcedencia,
 } from './destinos';
 // El tile, la barra gruesa y el panel los comparte el tablero de setters (10/10/2026).
-import { Panel, PanelCab, Riel, Tabs, Tile, Vacio, tasa, v } from './PiezasAnalizar';
+import { Comparado, Panel, PanelCab, Riel, Tabs, Tile, Vacio, tasa, v } from './PiezasAnalizar';
 import DashboardSetters, { VISTAS_CANAL } from './DashboardSetters';
 
 /**
@@ -186,7 +186,7 @@ const PanelEstados = ({ bloque, irA }) => {
  * de nuevo por si en la ficha se cargó una objeción. Sin `cargarNoCerradas` el número va directo a
  * Revisar, como el resto de la tarjeta.
  */
-const PanelCierre = ({ bloque, irA, cargarNoCerradas, onAbrirFila }) => {
+const PanelCierre = ({ bloque, previo, vsLabel, irA, cargarNoCerradas, onAbrirFila }) => {
     const [verNoCerradas, setVerNoCerradas] = useState(false);
     const c = bloque.cierres;
     // Sin llamadas de este período pero con cierres de llamadas anteriores, el panel se muestra igual.
@@ -206,7 +206,8 @@ const PanelCierre = ({ bloque, irA, cargarNoCerradas, onAbrirFila }) => {
         }>
             {vacio
                 ? <Vacio texto="Ninguna llamada del período tiene todavía un show up cargado." />
-                : <CierreComercial cierres={c} porCanal={bloque.cierres_canal} irA={irA} destinos={DESTINOS_CIERRES}
+                : <CierreComercial cierres={c} previo={previo?.cierres} vsLabel={vsLabel}
+                    porCanal={bloque.cierres_canal} irA={irA} destinos={DESTINOS_CIERRES}
                     onVerNoCerradas={cargarNoCerradas ? () => setVerNoCerradas(true) : undefined} />}
             {verNoCerradas && cargarNoCerradas && (
                 <ModalNoCerradas cargar={cargarNoCerradas} total={c?.no_cerradas?.num ?? null}
@@ -659,7 +660,7 @@ const pasosDe = (funnel, vocabulario, irA) => funnel.map(p => {
     };
 });
 
-const DashboardClosers = ({ bloque, previo, deltas, porCobrar, adquisicion, fuentes, irA, cargarNoCerradas, onAbrirFila }) => (
+const DashboardClosers = ({ bloque, previo, deltas, porCobrar, adquisicion, vsLabel, fuentes, irA, cargarNoCerradas, onAbrirFila }) => (
     <>
         <div className="grid grid--4">
             <Tile label="Show up" valor={fmt.pct(bloque.show_up)} color={v('success')}
@@ -691,13 +692,9 @@ const DashboardClosers = ({ bloque, previo, deltas, porCobrar, adquisicion, fuen
                 help={'Dinero que entró en el período, descontadas las fees de la pasarela: pagos '
                     + 'completos, primeras cuotas, cuotas de ventas anteriores y señas. Debajo, lo '
                     + 'que entró en el período comparado.'}
-                delta={deltas.cash_neto || deltas.cash}
                 humo={[v('brand-secondary'), v('brand-primary'), v('brand-secondary-light'), v('brand-navy')]}
                 sub={previo?.cash_neto != null ? (
-                    <span className="kpi-previo">
-                        <span className="kpi-previo-lbl">vs</span>
-                        <span className="kpi-previo-n">{fmt.money(previo.cash_neto)}</span>
-                    </span>
+                    <Comparado vs={vsLabel} actual={bloque.cash_neto} previo={previo.cash_neto} f={fmt.money} />
                 ) : undefined}
                 ver={abrir(irA, D.cash)} baja="p-cash" />
             <Tile label="Ticket promedio" valor={fmt.money(bloque.ticket)} color={v('info')}
@@ -716,10 +713,10 @@ const DashboardClosers = ({ bloque, previo, deltas, porCobrar, adquisicion, fuen
         </div>
 
         <div className="grid-2">
-            <PanelCierre bloque={bloque} irA={irA} cargarNoCerradas={cargarNoCerradas}
+            <PanelCierre bloque={bloque} previo={previo} vsLabel={vsLabel} irA={irA} cargarNoCerradas={cargarNoCerradas}
                 onAbrirFila={onAbrirFila} />
-            <PanelCash bloque={bloque} previo={previo} deltas={deltas} porCobrar={porCobrar}
-                adquisicion={adquisicion} irA={irA} />
+            <PanelCash bloque={bloque} previo={previo} porCobrar={porCobrar}
+                adquisicion={adquisicion} vsLabel={vsLabel} irA={irA} />
         </div>
 
         {/* Las dos maneras de abrir el mismo cash: por forma de pago y por la fuente que lo trajo.
@@ -747,7 +744,7 @@ const DashboardClosers = ({ bloque, previo, deltas, porCobrar, adquisicion, fuen
  * `canal` / `onCanal`: la pestaña General · Anuncios · Inbound del tablero de setters, que vive en la
  * URL como el resto de los filtros (ver `DashboardComercial`). El de closers no la usa.
  */
-const Analizar = ({ datos, rol, irA, cargarNoCerradas = null, onAbrirFila = null, canal = null, onCanal = null,
+const Analizar = ({ datos, rol, irA, cargarNoCerradas = null, onAbrirFila = null, canal = null, onCanal = null, vsLabel = null,
     fallo = false, onReintentar = null }) => {
     // El resumen que hay en mano puede ser todavía el del rol anterior: el `rol` de arriba cambia
     // en el momento y el fetch llega después. Dibujar el dashboard de closers con un payload de
@@ -770,7 +767,7 @@ const Analizar = ({ datos, rol, irA, cargarNoCerradas = null, onAbrirFila = null
         ? <DashboardSetters bloque={actual} deltas={deltas} deltasCanales={datos.deltas_canales}
             comision={datos.comision} canal={canal} onCanal={onCanal} irA={irA} />
         : <DashboardClosers bloque={actual} previo={datos.previo} deltas={deltas} porCobrar={datos.por_cobrar}
-            adquisicion={datos.adquisicion}
+            adquisicion={datos.adquisicion} vsLabel={vsLabel}
             fuentes={datos.fuentes} irA={irA} cargarNoCerradas={cargarNoCerradas}
             onAbrirFila={onAbrirFila} />;
 };

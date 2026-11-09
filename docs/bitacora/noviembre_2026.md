@@ -363,3 +363,6 @@
   - Dos promedios: Ticket promedio y CAC (gasto de Meta en Setting y Workshop ÷ clientes nuevos, `datos.adquisicion`; solo con todo el equipo y sin segmento ni país), cada uno con su «vs».
   - Por cobrar a hoy: una barra partida en vencido, por vencer y sin cronograma, con monto y % de cada uno. Sin la tabla, la torta ni el texto de pie.
   - Panel Cierre: la tabla de directas / desde triage con una columna por cifra (Llamada, Present., + Señas) y rótulos que ya no se parten.
+- **9 de Noviembre de 2026 (Analizar: la comparación dice contra qué compara)** *([PiezasAnalizar.jsx](../../frontend/src/pages/comercial/components/PiezasAnalizar.jsx), [PanelCash.jsx](../../frontend/src/pages/comercial/components/PanelCash.jsx), [CierreComercial.jsx](../../frontend/src/pages/comercial/components/CierreComercial.jsx))*:
+  - Pieza única `Comparado`: el rótulo elegido en el selector VS («Período anterior», «Mes anterior», las fechas), el valor de entonces y la variación con flecha y color (en el CAC bajar es verde).
+  - Va en el tile y el panel de Cash collected, el ticket promedio, el CAC y los dos close rates de Cierre (en puntos). El «▼ %» suelto de las cabeceras salió: ya está en la pieza.

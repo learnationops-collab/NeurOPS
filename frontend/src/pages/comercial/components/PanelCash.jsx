@@ -3,7 +3,7 @@ import { fmt, Tip, useMontado } from './Shared';
 import Cifra from './Cifra';
 import MetricaClicable from '../../../components/dashboard/MetricaClicable';
 import { DESTINOS_CLOSER as D } from './destinos';
-import { Delta, Panel, PanelCab, v } from './PiezasAnalizar';
+import { Comparado, Panel, PanelCab, v } from './PiezasAnalizar';
 import './panelCash.css';
 
 /**
@@ -42,21 +42,19 @@ const Dias = ({ dias, mejor }) => {
 };
 
 /** Un promedio: rótulo, cifra grande y, si hay comparación, la del período anterior. */
-const Promedio = ({ label, help, valor, previo, tone, destino, irA, pie }) => (
+const Promedio = ({ label, help, valor, previo, tone, destino, irA, pie, vs, mejorBaja }) => (
     <div className="pc-prom" style={{ '--c': v(tone) }}>
         <span className="pc-rot">{label}<Tip titulo={label} texto={help} /></span>
         <MetricaClicable irA={irA} destino={destino} vacio={valor == null} subrayar={false}
             detalle={`${label} · ${valor == null ? '—' : fmt.money(valor)}`}>
             <Cifra className="pc-prom-n num" valor={valor == null ? '—' : fmt.money(valor)} />
         </MetricaClicable>
-        <small className="pc-prom-pie num">
-            {pie}
-            {previo != null && <span className="pc-vs">vs {fmt.money(previo)}</span>}
-        </small>
+        <small className="pc-prom-pie num">{pie}</small>
+        <Comparado vs={vs} actual={valor} previo={previo} f={fmt.money} mejorBaja={mejorBaja} />
     </div>
 );
 
-const PanelCash = ({ bloque, previo, deltas, porCobrar, adquisicion, irA }) => {
+const PanelCash = ({ bloque, previo, porCobrar, adquisicion, vsLabel, irA }) => {
     const montado = useMontado();
     const cac = adquisicion?.actual;
     const total = porCobrar?.total || 0;
@@ -64,9 +62,7 @@ const PanelCash = ({ bloque, previo, deltas, porCobrar, adquisicion, irA }) => {
         <Panel id="p-cash" cab={
             <PanelCab titulo="Cash"
                 ayuda={'Todo neto de la comisión de la pasarela. Abajo, lo que falta cobrar a hoy: es un '
-                    + 'saldo, no cambia con el filtro de fechas.'}>
-                <Delta delta={deltas.cash_neto || deltas.cash} actual={fmt.money(bloque.cash_neto)} />
-            </PanelCab>
+                    + 'saldo, no cambia con el filtro de fechas.'} />
         }>
             <div className="pc-hero">
                 <div className="pc-hero-cifra">
@@ -75,18 +71,18 @@ const PanelCash = ({ bloque, previo, deltas, porCobrar, adquisicion, irA }) => {
                         detalle={`Cash collected · ${fmt.money(bloque.cash_neto)}`}>
                         <Cifra className="pc-hero-n num" valor={fmt.money(bloque.cash_neto)} />
                     </MetricaClicable>
-                    {previo?.cash_neto != null && <span className="pc-vs num">vs {fmt.money(previo.cash_neto)}</span>}
+                    <Comparado vs={vsLabel} actual={bloque.cash_neto} previo={previo?.cash_neto} f={fmt.money} />
                 </div>
                 <Dias dias={bloque.cash_por_dia} mejor={bloque.mejor_dia} />
             </div>
 
             <div className="pc-proms">
-                <Promedio label="Ticket promedio" tone="info" irA={irA} destino={D.ticket_promedio}
+                <Promedio label="Ticket promedio" tone="info" irA={irA} destino={D.ticket_promedio} vs={vsLabel}
                     help="Lo cobrado en las ventas nuevas ÷ cuántas fueron. Cuotas y señas no entran."
                     valor={bloque.ticket_neto ?? bloque.ticket}
                     previo={previo ? (previo.ticket_neto ?? previo.ticket) : null}
                     pie={fmt.plural(bloque.ventas, 'venta', 'ventas')} />
-                <Promedio label="CAC" tone="brand-secondary" irA={irA}
+                <Promedio label="CAC" tone="brand-secondary" irA={irA} vs={vsLabel} mejorBaja
                     help={cac
                         ? `Costo por cliente: ${fmt.money(cac.gasto)} de Meta (Setting y Workshop) ÷ `
                             + `${fmt.plural(cac.clientes, 'cliente nuevo', 'clientes nuevos')}.`

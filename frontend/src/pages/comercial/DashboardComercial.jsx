@@ -839,7 +839,8 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                         <Analizar datos={resumen} rol={rol} irA={irADetalle}
                             fallo={fallas.resumen} onReintentar={cargarAnalizar}
                             cargarNoCerradas={cargarNoCerradas} onAbrirFila={abrirFila}
-                            canal={canal} onCanal={(c) => set({ canal: c })} />
+                            canal={canal} onCanal={(c) => set({ canal: c })}
+                            vsLabel={rangoVs ? textoRango(rangoVs) : contexto?.comparaciones?.find(c => c.key === compare)?.label} />
                     )}
                     {!esperaFechas && !vistaTriage && seccion === 'analizar' && tab === 'dashboard' && ['closers', 'setters'].includes(rol) && (
                         <SegmentosPanel filtros={filtros} rol={rol} elegidos={elegidosSeg}

@@ -2,7 +2,8 @@ import React from 'react';
 import { ChevronRight } from 'lucide-react';
 import MetricaClicable, { abrir } from '../../../components/dashboard/MetricaClicable';
 import { Pct } from '../../../components/dashboard/piezasCierres';
-import { Tip } from './Shared';
+import { Tip, fmt } from './Shared';
+import { Comparado } from './PiezasAnalizar';
 import { CANALES } from './embudoCanales';
 import './cierreComercial.css';
 
@@ -37,7 +38,7 @@ const Anillo = ({ ventas, senas, den, children }) => {
     );
 };
 
-const Lectura = ({ titulo, ayuda, ventas, senas, den, unidad, destino, irA }) => {
+const Lectura = ({ titulo, ayuda, ventas, senas, den, unidad, destino, irA, previoPct, vs }) => {
     const solo = tasa(ventas, den);
     const con = tasa(ventas + senas, den);
     return (
@@ -59,6 +60,7 @@ const Lectura = ({ titulo, ayuda, ventas, senas, den, unidad, destino, irA }) =>
                 <small>con señas</small>
                 <b className="num">{con === null ? '—' : `${con}%`}</b>
             </div>
+            <Comparado vs={vs} actual={solo} previo={previoPct} f={fmt.pct} modo="pts" />
         </div>
     );
 };
@@ -100,7 +102,7 @@ const FilaCanal = ({ canal, d }) => {
     );
 };
 
-const CierreComercial = ({ cierres, porCanal, destinos, irA, onVerNoCerradas }) => {
+const CierreComercial = ({ cierres, previo, vsLabel, porCanal, destinos, irA, onVerNoCerradas }) => {
     const c = cierres;
     const abrirLista = (d) => abrir(irA, d);
     return (
@@ -119,11 +121,13 @@ const CierreComercial = ({ cierres, porCanal, destinos, irA, onVerNoCerradas }) 
                 <Lectura titulo="Por llamada" unidad="llamadas con show up" irA={irA}
                     ayuda="Sobre todas las llamadas a las que el lead se presentó."
                     ventas={c.ventas} senas={c.senas} den={c.asistieron}
-                    destino={destinos.sin_senas.por_llamada} />
+                    destino={destinos.sin_senas.por_llamada} vs={vsLabel}
+                    previoPct={previo?.sin_senas?.por_llamada?.pct} />
                 <Lectura titulo="Por presentación" unidad="presentaciones" irA={irA}
                     ayuda="Sobre las llamadas donde se llegó a presentar la oferta."
                     ventas={c.ventas} senas={c.senas} den={c.presentaciones}
-                    destino={destinos.sin_senas.por_presentacion} />
+                    destino={destinos.sin_senas.por_presentacion} vs={vsLabel}
+                    previoPct={previo?.sin_senas?.por_presentacion?.pct} />
             </div>
             {porCanal && (
                 <div className="cc-canales" role="group" aria-label="Close rate por canal">
