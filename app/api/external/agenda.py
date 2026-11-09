@@ -655,9 +655,13 @@ def _reservar_momentum(u, datos, inicio, inicio_dt, dur):
     appt.google_event_id = event_id
     appt.agenda_payload = {**appt.agenda_payload, 'meet': meet}
     if equipo:
+        from app.services import meet_config
+
         appt.calendar_id = equipo[1]
         appt.agenda_payload = {**appt.agenda_payload,
-                               'organizador': {'cuenta': organizador.cuenta(), 'calendar_id': equipo[1]}}
+                               'organizador': {'cuenta': organizador.cuenta(), 'calendar_id': equipo[1]},
+                               # Notas de Gemini, transcripción y grabación automáticas (ADR-W128).
+                               'meet_notas': meet_config.activar_artefactos(meet)}
     if desplazadas:
         desplazar.marcar(appt, desplazadas)
     cuando = inicio_dt.strftime('%d/%m/%Y %H:%M')

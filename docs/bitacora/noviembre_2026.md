@@ -431,3 +431,5 @@
 - Show up del closer: las agendas que ya pasaron sin reporte entran en la base; las que no llegaron, no. Prod: equipo octubre 55,4 % → 54,7 %, noviembre 56,0 % → 53,8 %.
 - **9 de Noviembre de 2026 (Momentum: las organiza team@, ADR-W127)** *([organizador.py](../../app/agendas_v2/organizador.py))*
   - La Momentum se crea como team@ en su calendario «Momentum · closers» e invita al alumno y al closer, para que la nota de Gemini quede en el Drive que Work lee. Mover, cancelar y borrar usan la cuenta de team@. Sin team@ conectado, va al calendario del closer como antes.
+- **9 de Noviembre de 2026 (Momentum: notas de Gemini automáticas, ADR-W128)** *([meet_config.py](../../app/services/meet_config.py))*
+  - Al crear la Momentum como team@, la reunión queda con las notas de Gemini, la transcripción y la grabación automáticas (API de Meet). team@ se conecta con ese permiso aparte, como el correo; las dos autorizaciones comparten `google_aparte.py`.
