@@ -189,8 +189,12 @@ class ComercialAgendasMixin:
                 'no_cerrada': post in ASISTIO and post not in CERRO,
                 'realizada': post in REALIZADAS,
                 'base_show_up': post in BASE_SHOW_UP,
-                'presento': (post in PRESENTO or bool(a.offer_presented)
-                             or cerro_sin_venta(estado, con_venta, con_seguimiento, con_sena=con_sena)),
+                # Lo que el closer respondió manda: «no presenté» no se vuelve presentación por haber terminado
+                # sin venta (09/11/2026, el cierre por presentación daba igual al de por llamada). Venta y seña
+                # sí cuentan siempre: no se compra sin ver el precio.
+                'presento': (post in PRESENTO or a.offer_presented is True
+                             or (a.offer_presented is None
+                                 and cerro_sin_venta(estado, con_venta, con_seguimiento, con_sena=con_sena))),
                 'retraso_dias': retraso,
                 'ya_paso': ya_paso,
                 'descartada': post in DESCARTADAS,

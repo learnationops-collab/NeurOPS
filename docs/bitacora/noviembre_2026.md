@@ -396,3 +396,6 @@
 - `comercial_analitica._sin_triage`: con «Todo el equipo», el bloque de closers (embudo, estados, show up, close rates, variabilidad, fila Equipo de Comparativas) ya no cuenta las agendas de quienes tienen rol triage; solo las de closing. Elegir una persona sigue mostrando lo suyo.
 - CAC con filtro (persona, segmento o país): el gasto de Meta se reparte por la parte de las agendas de closing del equipo que le tocaron ÷ sus clientes nuevos. Sin CAC para personas de triage.
 - `triage_service.nombres_de_triage`: una sola definición de quién es triage (la usa también Segmentos).
+
+### 09/11/2026 — Presentaciones: manda lo que respondió el closer
+- `comercial_agendas`: una llamada en la que el closer marcó «no presenté la oferta» ya no cuenta como presentación por haber terminado sin venta ni seguimiento (`cerro_sin_venta` solo infiere cuando el campo está vacío). Venta y seña siguen contando siempre. Afecta embudo, tasa de presentación y cierre por presentación.
