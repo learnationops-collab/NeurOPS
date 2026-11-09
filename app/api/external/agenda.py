@@ -126,7 +126,7 @@ def _estado_de_ventas(u):
 
 def _notas_automaticas(u, meet):
     """La sesión que se crea en un calendario de team@ sale con las notas de Gemini, la transcripción y la
-    grabación automáticas, como la Momentum (ADR-W130). Con otra cuenta (la propia de cada uno) no: solo
+    grabación automáticas, como la Momentum (ADR-W131). Con otra cuenta (la propia de cada uno) no: solo
     el organizador puede configurarla y Work solo tiene ese permiso para team@."""
     if meet and (_preferencias(u).get('cuenta') or '').lower() == organizador.cuenta():
         from app.services import meet_config

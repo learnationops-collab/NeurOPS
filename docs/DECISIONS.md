@@ -1053,7 +1053,7 @@
 - **Qué se pierde:** menos pares marcados (16 en vez de 31 con la regla vieja), y los talleres del último mes no aportan a las métricas de venta hasta cumplir 30 días. El p sigue siendo la aproximación de Fisher, no una permutación.
 - **Consecuencias:** sin migración. La celda trae `por_metodo` (`p`, `q`, `firme`, `confianza` por método); `p` y `confianza` arriba siguen siendo los de Pearson para lo que ya los leía.
 
-## ADR-W130: las sesiones de la Academia en team@ también salen con las notas automáticas
+## ADR-W131: las sesiones de la Academia en team@ también salen con las notas automáticas
 
 - **Fecha:** 2026-11-09 · **Subsistema:** Agenda de la Academia (`app/api/external/agenda.py`) · **Estado:** implementado.
 - **Contexto:** las sesiones de fulfillment ya se crean en un calendario de team@ (ADR-W102) y Work ya lee sus notas, pero la nota solo se escribía si alguien la activaba en la reunión: cerca del 60 % de las sesiones tenía nota. Con ADR-W128, Work puede dejar una reunión de team@ con los artefactos automáticos.

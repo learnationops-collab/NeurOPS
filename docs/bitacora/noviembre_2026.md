@@ -442,5 +442,5 @@
 ### 09/11/2026 · Correlaciones de Workshops sin falsos «no es azar»
 - El punto del mapa ahora marca solo los pares que resisten la corrección por todas las comparaciones (16 en vez de 31), y la confianza sale del método elegido (Pearson o Spearman).
 - Ventas, cash, ticket, close rate y ROAS no cuentan los talleres de menos de 30 días; show up de citas usa las citas reportadas, como el Resumen; ventas/ROAS, close rate/cash y close rate/ROAS quedan como «por construcción»; los porcentajes de más de 100% se excluyen y se avisan (ADR-W130).
-- **9 de Noviembre de 2026 (Sesiones de la Academia en team@: notas automáticas, ADR-W130)** *([agenda.py](../../app/api/external/agenda.py))*
+- **9 de Noviembre de 2026 (Sesiones de la Academia en team@: notas automáticas, ADR-W131)** *([agenda.py](../../app/api/external/agenda.py))*
   - La sesión que se crea o se vincula en un calendario de team@ sale con las notas de Gemini, la transcripción y la grabación automáticas, como la Momentum.
