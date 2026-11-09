@@ -333,3 +333,6 @@
 - **7 de Noviembre de 2026 (Embudo de seguimiento por días desde la llamada, solo en el servidor de prueba)** *([embudo_seguimiento_service.py](../../app/services/embudo_seguimiento_service.py), [FilaEmbudo.jsx](../../frontend/src/pages/closer/components/embudo/FilaEmbudo.jsx), [ADR-W121](../DECISIONS.md))*:
   - Las columnas son «1 día», «2 días» y «3 días» desde la llamada, con una fila chica por persona (sin la tarjeta alta). Cada fila dice cómo va: pagó, llamada agendada, descartado, seguido hoy o sin seguimiento.
   - «Registrar» anota el seguimiento de hoy (respondió o no) o abre la ficha para registrar un pago o venta, agendar otra llamada o descartar.
+
+### 09/11/2026 — Mis datos del setter dejaba la pantalla en negro
+- `embudoSetter.etapasParaDibujar`: la base de Asistieron llega del backend como número (generadas que ya ocurrieron) y `FlujoEmbudo` esperaba `{ label, n }`; con al menos una llamada pasada la píldora hacía `undefined.toLowerCase()` y se caía toda la pantalla. Ahora se convierte a `{ label: 'Generadas que ya ocurrieron', n }`. Arregla también los embudos de Comparativas.
