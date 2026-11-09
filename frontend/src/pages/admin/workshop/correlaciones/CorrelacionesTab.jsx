@@ -7,7 +7,7 @@ import RankingObjetivo from './RankingObjetivo';
 import Dispersion from './Dispersion';
 import useCorrelaciones from './useCorrelaciones';
 import {
-    METODOS, TIP_LIGADA, TIP_METODO, etiquetaConfianza, formatoR, frasePar, setLigadas, valorDe,
+    METODOS, TIP_LIGADA, TIP_METODO, confianzaDe, etiquetaConfianza, formatoR, frasePar, setLigadas, valorDe,
 } from './correlaciones';
 import './correlaciones.css';
 
@@ -112,7 +112,7 @@ const CorrelacionesTab = () => {
                                 onElegir={elegir} ligadas={ligadas} />
                             <p className="wc-leyenda">
                                 <i className="wc-leyenda-neg" /> −1 <i className="wc-leyenda-cero" /> 0
-                                <i className="wc-leyenda-pos" /> +1 · <i className="wc-firme wc-firme--ley" /> menos probable que sea azar · borde punteado: por construcción
+                                <i className="wc-leyenda-pos" /> +1 · <i className="wc-firme wc-firme--ley" /> no es azar, aun corrigiendo por todos los pares · borde punteado: por construcción
                             </p>
                         </section>
 
@@ -136,7 +136,7 @@ const CorrelacionesTab = () => {
                                         <h3 className="t-h3">{a.label} vs {b.label}</h3>
                                         <div className="panel-cab-der">
                                             <span className="chip num">{formatoR(r)}</span>
-                                            <span className="wc-n">n={celdaPar?.n ?? 0} · {etiquetaConfianza(celdaPar?.confianza)}</span>
+                                            <span className="wc-n">n={celdaPar?.n ?? 0} · {etiquetaConfianza(confianzaDe(celdaPar, metodo))}</span>
                                         </div>
                                     </div>
                                     <p className="t-sm mut wc-frase">{frasePar(a.label, b.label, celdaPar, metodo)}

@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Select } from '../../../../components/standard';
-import { TIP_LIGADA, etiquetaConfianza, formatoR, intensidadDe, rankingContra } from './correlaciones';
+import { TIP_LIGADA, confianzaDe, etiquetaConfianza, formatoR, intensidadDe, rankingContra } from './correlaciones';
 
 /**
  * «Qué se mueve parecido a…»: las demás métricas ordenadas por qué tan fuerte es su relación con la
@@ -28,7 +28,7 @@ const RankingObjetivo = ({ metricas, matriz, metodo, objetivo, onObjetivo, par, 
                                 className={`wc-rk${activa ? ' wc-rk--on' : ''}${ligadas?.has(`${objetivo}|${key}`) ? ' wc-rk--ligada' : ''}`}
                                 aria-pressed={!!activa}
                                 onClick={() => onElegir(key, objetivo)}
-                                data-tip={`${etiqueta[key]}|${intensidadDe(r) || 'sin cálculo'} · ${celda.n} talleres · ${etiquetaConfianza(celda.confianza)}${ligadas?.has(`${objetivo}|${key}`) ? `. ${TIP_LIGADA}` : ''}`}
+                                data-tip={`${etiqueta[key]}|${intensidadDe(r) || 'sin cálculo'} · ${celda.n} talleres · ${etiquetaConfianza(confianzaDe(celda, metodo))}${ligadas?.has(`${objetivo}|${key}`) ? `. ${TIP_LIGADA}` : ''}`}
                             >
                                 <span className="wc-rk-nombre">{etiqueta[key]}</span>
                                 <span className="wc-rk-pista" aria-hidden="true">

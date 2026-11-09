@@ -56,9 +56,11 @@ METRICAS = [
     _metrica('agendas', 'Agendas', 'Agendas', lambda e: e.agendas_exitosas or 0, 'numero'),
     _metrica('costo_agenda', 'Costo por agenda', 'Agendas',
              lambda e: _ratio(e.inversion_real, e.agendas_exitosas), 'usd', 'Gasto ÷ agendas'),
+    # Misma base que el Resumen (`funnelMath.js`): las citas reportadas; sin ese dato, las agendas.
     _metrica('show_up_citas', 'Show up de citas', 'Agendas',
-             lambda e: _ratio(e.show_up_sales_call, e.agendas_exitosas, 100), 'pct',
-             'Agendas que asistieron a la llamada'),
+             lambda e: _ratio(e.show_up_sales_call,
+                              e.citas_reportadas if e.citas_reportadas is not None else e.agendas_exitosas, 100),
+             'pct', 'Asistentes a la llamada ÷ citas reportadas'),
     _metrica('close_rate', 'Close rate', 'Ventas',
              lambda e: _ratio(e.sales, e.show_up_sales_call, 100), 'pct', 'Ventas ÷ asistentes a la llamada'),
     _metrica('ventas', 'Ventas', 'Ventas', lambda e: e.sales or 0, 'numero'),
@@ -77,9 +79,19 @@ DERIVADAS = {
     'tx_whatsapp': ('whatsapp_leads', 'leads'), 'show_up_workshop': ('show_up', 'whatsapp_leads'),
     'retencion_clase': ('show_up',), 'costo_agenda': ('inversion', 'agendas'),
     'show_up_citas': ('agendas',), 'close_rate': ('ventas',),
-    'ticket': ('cash_collected',), 'roas': ('cash_collected', 'inversion'),
+    'ticket': ('cash_collected', 'ventas'), 'roas': ('cash_collected', 'inversion'),
 }
-LIGADAS_EXTRA = (('cash_collected', 'ventas'),)
+# El cash crece con las ventas, así que lo que se arma con uno arrastra al otro.
+LIGADAS_EXTRA = (('cash_collected', 'ventas'), ('roas', 'ventas'), ('close_rate', 'cash_collected'),
+                 ('close_rate', 'roas'))
+
+# Las cuotas de un taller se siguen cobrando semanas después: antes de esto, sus ventas y su cash
+# todavía no están completos y arrastran a la baja todo lo que se compara con ellos.
+MADUREZ_DIAS = 30
+METRICAS_DE_VENTA = ('close_rate', 'ventas', 'ticket', 'cash_collected', 'roas')
+# Corrección por comparaciones múltiples (Benjamini-Hochberg): el punto del mapa solo marca los pares
+# que siguen sin explicarse por azar después de corregir por todos los que se comparan a la vez.
+Q_FIRME = 0.10
 
 
 def _ligadas():
@@ -180,22 +192,62 @@ def _par(xs_all, ys_all):
     xs, ys = [p[0] for p in pares], [p[1] for p in pares]
     constante = n >= MIN_N and (len(set(xs)) == 1 or len(set(ys)) == 1)
     r_p, r_s = pearson(xs, ys), spearman(xs, ys)
-    p = p_aproximado(r_p, n)
+    p, p_s = p_aproximado(r_p, n), p_aproximado(r_s, n)
+    # Cada método con su propio p (antes la confianza usaba siempre el de Pearson). `q` y `firme`
+    # los completa `corregir_por_azar` cuando ve todos los pares juntos.
+    por_metodo = {
+        'pearson': {'p': None if p is None else round(p, 4), 'q': None, 'firme': False, 'confianza': confianza(n, p)},
+        'spearman': {'p': None if p_s is None else round(p_s, 4), 'q': None, 'firme': False, 'confianza': confianza(n, p_s)},
+    }
     return {
         'n': n,
         'pearson': None if r_p is None else round(r_p, 3),
         'spearman': None if r_s is None else round(r_s, 3),
-        'p': None if p is None else round(p, 4),
-        'confianza': confianza(n, p),
+        'p': por_metodo['pearson']['p'],
+        'confianza': por_metodo['pearson']['confianza'],
+        'por_metodo': por_metodo,
         'intensidad': intensidad(r_p),
         'constante': constante,
     }
 
 
+def benjamini_hochberg(ps):
+    """q de cada p (mismo orden): el p corregido por la cantidad de comparaciones hechas a la vez."""
+    m = len(ps)
+    orden = sorted(range(m), key=lambda i: ps[i])
+    qs = [0.0] * m
+    minimo = 1.0
+    for rango in range(m, 0, -1):
+        i = orden[rango - 1]
+        minimo = min(minimo, ps[i] * m / rango)
+        qs[i] = minimo
+    return qs
+
+
+def corregir_por_azar(matriz, claves, ligadas):
+    """Completa `q` y `firme` en cada celda: los pares de negocio (sin los «por construcción») se
+    corrigen juntos, por método. La confianza pasa a leerse sobre el q, no sobre el p suelto."""
+    for metodo in ('pearson', 'spearman'):
+        pares = [(a, b) for i, a in enumerate(claves) for b in claves[i + 1:]
+                 if frozenset((a, b)) not in ligadas and matriz[a][b]['por_metodo'][metodo]['p'] is not None]
+        qs = benjamini_hochberg([matriz[a][b]['por_metodo'][metodo]['p'] for a, b in pares])
+        for (a, b), q in zip(pares, qs):
+            for x, y in ((a, b), (b, a)):
+                celda = matriz[x][y]
+                bloque = celda['por_metodo'][metodo]
+                bloque['q'] = round(q, 4)
+                bloque['firme'] = celda['n'] >= N_CONFIABLE and q < Q_FIRME
+                bloque['confianza'] = confianza(celda['n'], q)
+                if metodo == 'pearson':
+                    celda['confianza'] = bloque['confianza']
+    return matriz
+
+
 def calcular(valores, claves=None):
     """`valores`: {clave: [valor por taller, None si no existe]}. Matriz simétrica de celdas."""
     claves = claves or list(valores)
-    return {a: {b: _par(valores[a], valores[b]) for b in claves} for a in claves}
+    matriz = {a: {b: _par(valores[a], valores[b]) for b in claves} for a in claves}
+    return corregir_por_azar(matriz, claves, {frozenset(p) for p in _ligadas()})
 
 
 def ranking(matriz, objetivo, metodo='pearson'):
@@ -227,6 +279,33 @@ def _redondear(v):
     return None if v is None else round(float(v), 4)
 
 
+def _dia_mes(d):
+    return d.strftime('%d/%m')
+
+
+def _limpiar(valores, eventos, hoy):
+    """Saca (deja en None) lo que no se puede comparar todavía y devuelve los avisos que lo explican:
+    las ventas de los talleres sin madurar y los porcentajes imposibles (más de 100%)."""
+    avisos = []
+    jovenes = [i for i, e in enumerate(eventos) if (hoy - e.date).days < MADUREZ_DIAS]
+    for clave in METRICAS_DE_VENTA:
+        for i in jovenes:
+            valores[clave][i] = None
+    if jovenes:
+        fechas = ', '.join(_dia_mes(eventos[i].date) for i in jovenes)
+        avisos.append(f'Ventas, cash, ticket, close rate y ROAS no cuentan los talleres de menos de {MADUREZ_DIAS} '
+                      f'días ({fechas}): sus cuotas todavía se están cobrando.')
+    for m in METRICAS:
+        if m['formato'] != 'pct':
+            continue
+        for i, v in enumerate(valores[m['key']]):
+            if v is not None and v > 100:
+                valores[m['key']][i] = None
+                avisos.append(f'Se excluye {m["label"]} del {_dia_mes(eventos[i].date)} ({v:.0f}%): '
+                              'pasa de 100%, falta un dato en la carga del taller.')
+    return avisos
+
+
 def armar(desde=None, hasta=None, objetivo=OBJETIVO_DEFECTO, ultimos=None, hoy=None):
     """Todo lo que pinta la pestaña: talleres con sus valores, matriz, ranking y advertencias."""
     if objetivo not in _POR_CLAVE:
@@ -236,6 +315,7 @@ def armar(desde=None, hasta=None, objetivo=OBJETIVO_DEFECTO, ultimos=None, hoy=N
         eventos = eventos[-ultimos:]
 
     valores = {m['key']: [_redondear(m['fn'](e)) for e in eventos] for m in METRICAS}
+    excluidos = _limpiar(valores, eventos, hoy or date.today())
     matriz = calcular(valores)
     n = len(eventos)
     avisos = []
@@ -243,7 +323,9 @@ def armar(desde=None, hasta=None, objetivo=OBJETIVO_DEFECTO, ultimos=None, hoy=N
         avisos.append(f'Hay {n} talleres: con menos de {MIN_N} no se puede calcular ninguna correlación.')
     elif n < N_CONFIABLE:
         avisos.append(f'Solo {n} talleres: las correlaciones son muy inestables, un taller distinto las cambia.')
-    avisos.append('Se comparan muchas parejas a la vez: algunas salen "fuertes" solo por azar.')
+    avisos.append('Se comparan muchas parejas a la vez: el punto marca solo las que siguen sin explicarse '
+                  'por azar después de corregir por todas.')
+    avisos.extend(excluidos)
 
     return {
         'n_talleres': n,

@@ -438,3 +438,7 @@
   - Si hay nota de Gemini de la llamada, la ficha muestra lo que dice y «Usar en el reporte» lo precarga.
 - **9 de Noviembre de 2026 (Discord: las tarjetas vuelven a salir como imagen)** *([report_image_service.py](../../app/services/report_image_service.py))*
   - La carpeta de plantillas de Flask es la del frontend, y `{% import "reports/_tarjeta.html" %}` no se encontraba: desde ADR-W121 las tarjetas (agendas, ventas, resultados, avisos de la Academia) salían con el texto de respaldo. El render busca ahora también en `app/templates`.
+
+### 09/11/2026 · Correlaciones de Workshops sin falsos «no es azar»
+- El punto del mapa ahora marca solo los pares que resisten la corrección por todas las comparaciones (16 en vez de 31), y la confianza sale del método elegido (Pearson o Spearman).
+- Ventas, cash, ticket, close rate y ROAS no cuentan los talleres de menos de 30 días; show up de citas usa las citas reportadas, como el Resumen; ventas/ROAS, close rate/cash y close rate/ROAS quedan como «por construcción»; los porcentajes de más de 100% se excluyen y se avisan (ADR-W130).
