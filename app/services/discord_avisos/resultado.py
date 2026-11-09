@@ -10,9 +10,11 @@ from zoneinfo import ZoneInfo
 from flask import current_app
 
 from app import db
+from app.services import momentum_reporte
 from app.services.discord_avisos.tarjeta import Aviso, avisar, corto
 
 ZONA_EQUIPO = 'America/La_Paz'
+TONO_SIGUE = {'pago': 'verde', 'plan': 'verde', 'pensando': 'amarillo', 'no': 'rojo'}
 DIAS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 
 # closer_result guardado -> (estado, tono)
@@ -57,6 +59,24 @@ def _tipo_de_llamada(appt):
     return 'Llamada de venta'
 
 
+def _plata(v):
+    try:
+        return f'US$ {float(v):,.0f}'.replace(',', '.')
+    except (TypeError, ValueError):
+        return '-'
+
+
+def _tiles_del_plan(datos):
+    plan = (datos.get('momentum') or {}).get('plan') if isinstance(datos.get('momentum'), dict) else None
+    if not isinstance(plan, dict):
+        return []
+    fechas, montos = plan.get('fechas') or [], plan.get('montos') or []
+    cuotas = ' · '.join(f'{f[8:10]}/{f[5:7]} {_plata(m)}' for f, m in zip(fechas, montos) if isinstance(f, str) and len(f) >= 10)
+    n = plan.get('num_cuotas') or len(fechas)
+    return [{'icono': 'dinero', 'titulo': f'Plan: {n} {"cuota" if n == 1 else "cuotas"} · {_plata(plan.get("saldo") or plan.get("total"))}',
+             'sub': corto(cuotas, 160) or 'Sin fechas'}]
+
+
 def armar(appt, datos, usuario):
     """El Aviso del reporte que se acaba de guardar en `appt`."""
     from app.models import User
@@ -74,6 +94,11 @@ def armar(appt, datos, usuario):
     closer = db.session.get(User, appt.closer_id) if appt.closer_id else None
     setter = db.session.get(User, appt.setter_id) if appt.setter_id else None
     tipo = _tipo_de_llamada(appt)
+    # La Momentum dice si el alumno sigue (ADR-W129), como el reporte de la ficha.
+    sigue = momentum_reporte.sigue_de(datos) if tipo.startswith('Momentum') and estado in ('Asistió', 'No cerró') else None
+    if sigue:
+        estado = momentum_reporte.etiqueta(sigue, 'sena' if tipo == 'Momentum de seña' else 'cierre')
+        tono = TONO_SIGUE[sigue]
 
     chips = [{'icono': 'cal', 'texto': _cuando(appt.start_time)}]
     seg = (payload.get('segmento_lead') or {}).get('segmento')
@@ -84,7 +109,7 @@ def armar(appt, datos, usuario):
     if setter:
         cajas.append({'titulo': 'Origen', 'valor': setter.username, 'color': 'verde', 'icono': 'bandeja'})
 
-    tiles = []
+    tiles = _tiles_del_plan(datos) if sigue == 'plan' else []
     objecion = _texto(datos, 'objecion', 'motivo_sin_oferta', 'motivo_estado', 'motivo')
     if objecion:
         tiles.append({'icono': 'x', 'titulo': 'Objeción' if estado == 'No cerró' else 'Motivo', 'sub': corto(objecion, 160)})

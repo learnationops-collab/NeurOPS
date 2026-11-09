@@ -96,8 +96,22 @@ def confirmacion(appt_id):
 
 @bp.route('/<int:appt_id>/resultado', methods=['POST'])
 def resultado(appt_id):
-    """El arbol de reporte de la llamada."""
-    return _ejecutar(appt_id, 'reportar', acciones.resultado, momentum='resultado', aviso=True)
+    """El arbol de reporte de la llamada. En una Momentum, si sigue con plan, también arma el plan (ADR-W129)."""
+    from app.services import momentum_reporte
+
+    return _ejecutar(appt_id, 'reportar', momentum_reporte.resultado, momentum='resultado', aviso=True)
+
+
+@bp.route('/<int:appt_id>/momentum/nota', methods=['GET'])
+def momentum_nota(appt_id):
+    """Lo que la nota de Gemini dice de la Momentum, para precargar su reporte (ADR-W129). 204 sin nota."""
+    from app.services import momentum_reporte
+
+    appt, error = _agenda_y_permiso(appt_id, 'reportar')
+    if error:
+        return error
+    sugerencia = momentum_reporte.sugerencia(appt, current_user)
+    return (jsonify(sugerencia), 200) if sugerencia else ('', 204)
 
 
 @bp.route('/<int:appt_id>/triage', methods=['POST'])

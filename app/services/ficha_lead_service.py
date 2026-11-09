@@ -122,6 +122,14 @@ def _datos_de_persona(client):
     return datos, identidades
 
 
+def _tipo_momentum(appt):
+    from app.services.momentum_academia import es_momentum
+
+    if not es_momentum(appt):
+        return None
+    return 'sena' if ((appt.agenda_payload or {}).get('academia') or {}).get('tipo') == 'sena' else 'cierre'
+
+
 def _identidad(appt, client, programa_nombre, ingreso, baja=None):
     contacto, identidades = _datos_de_persona(client)
     return {
@@ -140,6 +148,8 @@ def _identidad(appt, client, programa_nombre, ingreso, baja=None):
         'ingreso': ingreso,
         'llamada': _momento(appt.start_time if appt else None),
         'fuente': (appt.origin or None) if appt else None,
+        # Una Momentum de la Academia: 'sena' o 'cierre'. Su reporte pregunta si sigue (TabResultado).
+        'momentum': _tipo_momentum(appt),
         # El segmento de la agenda (nucleo/segmento.py) y sus puntos: con qué prioridad llega el lead.
         # Sin el de la agenda (manual, setter, anterior a Thalamus), el de su cliente, como en `segmentos_lectura`.
         'segmento': ((appt.segmento or (client.segmento if client else None)) or None) if appt else None,

@@ -181,6 +181,8 @@ const CONSULTAS = {
     // lo que ya pagó, lo que debe y qué tipos de pago siguen la secuencia. Depende del programa
     // que se elige en medio de la venta, por eso no viaja en la ficha.
     estado_venta: (appt, config) => api.get(`/ficha/${appt}/estado-venta`, config),
+    // Lo que la nota de Gemini dice de la Momentum, para precargar su reporte (vacío si no hay nota).
+    momentum_nota: (appt) => api.get(`/ficha/${appt}/momentum/nota`),
 };
 
 export const ACCIONES = Object.keys(RUTAS);

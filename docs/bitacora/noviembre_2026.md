@@ -433,3 +433,6 @@
   - La Momentum se crea como team@ en su calendario «Momentum · closers» e invita al alumno y al closer, para que la nota de Gemini quede en el Drive que Work lee. Mover, cancelar y borrar usan la cuenta de team@. Sin team@ conectado, va al calendario del closer como antes.
 - **9 de Noviembre de 2026 (Momentum: notas de Gemini automáticas, ADR-W128)** *([meet_config.py](../../app/services/meet_config.py))*
   - Al crear la Momentum como team@, la reunión queda con las notas de Gemini, la transcripción y la grabación automáticas (API de Meet). team@ se conecta con ese permiso aparte, como el correo; las dos autorizaciones comparten `google_aparte.py`.
+- **9 de Noviembre de 2026 (Momentum: reporte de si sigue y su plan, ADR-W129)** *([momentum_reporte.py](../../app/services/momentum_reporte.py), [arbolResultado.momentum.js](../../frontend/src/components/ficha/arbolResultado.momentum.js))*
+  - En la ficha de una Momentum, después de «Asistió»: ¿sigue? Pagó (venta), con plan de pago (arma el plan del saldo), lo está pensando o no sigue. Va así a la Academia (resultado nuevo «plan») y a la tarjeta de Discord, con las cuotas.
+  - Si hay nota de Gemini de la llamada, la ficha muestra lo que dice y «Usar en el reporte» lo precarga.
