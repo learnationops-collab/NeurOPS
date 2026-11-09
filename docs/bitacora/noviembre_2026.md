@@ -429,3 +429,5 @@
 - Métricas de la triage es ahora el tablero Triage de Dirección comercial con sus datos: mismos períodos (Hoy, Ayer, 7 y 30 días, Este mes, Mes pasado, Personalizado) y paneles; «Vos y el equipo» muestra las cifras de cada triage, sin los leads de las demás (`triage_alcance.solo_de`). Se retira `TriageMetricas.jsx`.
 - Con el closer, las pendientes de llamada se parten en «sin reportar» y «por venir», y el embudo mide «Asistieron al closer» contra las que ya tuvieron resultado: las de mañana o pasado ya no parecen faltantes.
 - Show up del closer: las agendas que ya pasaron sin reporte entran en la base; las que no llegaron, no. Prod: equipo octubre 55,4 % → 54,7 %, noviembre 56,0 % → 53,8 %.
+- **9 de Noviembre de 2026 (Momentum: las organiza team@, ADR-W127)** *([organizador.py](../../app/agendas_v2/organizador.py))*
+  - La Momentum se crea como team@ en su calendario «Momentum · closers» e invita al alumno y al closer, para que la nota de Gemini quede en el Drive que Work lee. Mover, cancelar y borrar usan la cuenta de team@. Sin team@ conectado, va al calendario del closer como antes.

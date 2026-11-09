@@ -232,11 +232,12 @@ class GoogleService:
 
     @staticmethod
     def crear_evento_con_meet(user_id, inicio_utc, fin_utc, titulo, descripcion, invitado_email=None, otros_invitados=None,
-                              disponible=False):
+                              disponible=False, calendar_id=None):
         """Crea el evento en el calendario elegido del usuario, con link de Google Meet, e invita a
         `invitado_email` (Google le manda la invitacion por mail). Lo usa Agendas 2.0. `otros_invitados`:
         más emails a invitar (la Academia suma el calendario personal de quien da la sesión).
         `disponible`: el evento queda marcado «Disponible» (agendas C/D, que un lead A/B puede tomar).
+        `calendar_id`: otro calendario de la cuenta (la Momentum, en el de team@: agendas_v2/organizador.py).
 
         inicio_utc/fin_utc: datetime UTC sin zona. Devuelve (event_id, link_de_meet). A diferencia de
         create_event, NO se traga los errores: quien llama decide que hacer si Google falla."""
@@ -265,7 +266,7 @@ class GoogleService:
             cuerpo['attendees'] = [{'email': e} for e in dict.fromkeys(invitados)]
         invitado_email = invitados[0] if invitados else None
         evt = service.events().insert(
-            calendarId=GoogleService._calendario(user_id),
+            calendarId=calendar_id or GoogleService._calendario(user_id),
             body=cuerpo,
             conferenceDataVersion=1,
             sendUpdates='all' if invitado_email else 'none',

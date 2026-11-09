@@ -25,7 +25,7 @@ from itsdangerous import BadSignature, URLSafeTimedSerializer
 from sqlalchemy import func
 
 from app import db
-from app.agendas_v2 import desplazar, momentum, servicio
+from app.agendas_v2 import desplazar, momentum, organizador, servicio
 from app.agendas_v2.modelos import SchedPerfil
 from app.agendas_v2.nucleo.disponibilidad import agenda_opt, ahora_ms, se_solapa, slots_persona
 from app.api.external import bp
@@ -641,16 +641,23 @@ def _reservar_momentum(u, datos, inicio, inicio_dt, dur):
                                        'titulo': titulo, 'lead': {'nombre': invitado.get('nombre'), 'email': email}})
     db.session.add(appt)
     db.session.flush()
+    # La organiza team@ e invita al closer: las notas de Gemini quedan en el Drive que Work lee (ADR-W127).
+    equipo = organizador.cuenta_equipo()
     try:
         event_id, meet = GoogleService.crear_evento_con_meet(
-            u.id, inicio_dt, inicio_dt + timedelta(minutes=dur), titulo, str(datos.get('descripcion') or '')[:4000],
-            invitado_email=email)
+            equipo[0] if equipo else u.id, inicio_dt, inicio_dt + timedelta(minutes=dur), titulo,
+            str(datos.get('descripcion') or '')[:4000], invitado_email=email,
+            otros_invitados=[u.email] if equipo and u.email else None, calendar_id=equipo[1] if equipo else None)
     except Exception as e:  # noqa: BLE001
         db.session.rollback()
         current_app.logger.warning(f'[AGENDA ACADEMIA] No se pudo crear la Momentum de #{u.id}: {e}')
         return _error('google', 502)
     appt.google_event_id = event_id
     appt.agenda_payload = {**appt.agenda_payload, 'meet': meet}
+    if equipo:
+        appt.calendar_id = equipo[1]
+        appt.agenda_payload = {**appt.agenda_payload,
+                               'organizador': {'cuenta': organizador.cuenta(), 'calendar_id': equipo[1]}}
     if desplazadas:
         desplazar.marcar(appt, desplazadas)
     cuando = inicio_dt.strftime('%d/%m/%Y %H:%M')
@@ -662,8 +669,8 @@ def _reservar_momentum(u, datos, inicio, inicio_dt, dur):
     if desplazadas:
         desplazar.pasar_al_triage(appt)
     _aviso(u, inicio, servicio.zona_de_usuario(u), aviso.get('sesion'), aviso.get('alumno') or invitado.get('nombre'))
-    return jsonify({'event_id': event_id, 'calendar_id': GoogleService._calendario(u.id), 'meet': meet,
-                    'appointment_id': appt.id}), 200
+    return jsonify({'event_id': event_id, 'calendar_id': equipo[1] if equipo else GoogleService._calendario(u.id),
+                    'meet': meet, 'appointment_id': appt.id}), 200
 
 
 def _momentum_de(u, event_id):
@@ -689,13 +696,15 @@ def agenda_mover(event_id):
     if not isinstance(inicio, int) or dur is None:
         return _error('Datos inválidos (inicio o duracion)', 400)
     inicio_dt = servicio.ms_a_dt(inicio)
+    appt = _momentum_de(u, event_id) if ventas else None
+    # La Momentum que organiza team@ se mueve con esa cuenta: el closer solo es invitado.
+    dueno_id, calendario = organizador.dueno(appt) if appt else (u.id, None)
     try:
-        GoogleService.mover_evento(u.id, event_id, inicio_dt, inicio_dt + timedelta(minutes=dur),
-                                   calendar_id=datos.get('calendar_id'))
+        GoogleService.mover_evento(dueno_id, event_id, inicio_dt, inicio_dt + timedelta(minutes=dur),
+                                   calendar_id=calendario or datos.get('calendar_id'))
     except Exception as e:  # noqa: BLE001
         current_app.logger.warning(f'[AGENDA ACADEMIA] No se pudo mover el evento {event_id} de #{u.id}: {e}')
         return _error('google', 502)
-    appt = _momentum_de(u, event_id) if ventas else None
     if appt:
         appt.start_time, appt.is_rescheduled = inicio_dt, True
         db.session.commit()
@@ -715,8 +724,9 @@ def agenda_cancelar(event_id):
     u = _cuenta(datos.get('email'), ventas)
     if not u:
         return _error('No existe esa persona del equipo', 404)
-    ok = GoogleService.delete_event(u.id, event_id, calendar_id=datos.get('calendar_id'), avisar=True)
     appt = _momentum_de(u, event_id) if ventas else None
+    dueno_id, calendario = organizador.dueno(appt) if appt else (u.id, None)
+    ok = GoogleService.delete_event(dueno_id, event_id, calendar_id=calendario or datos.get('calendar_id'), avisar=True)
     if appt:
         appt.result = 'Cancelada'  # La canceló la Academia: deja de ocupar el horario y sale del mazo.
         db.session.commit()
