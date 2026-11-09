@@ -188,7 +188,9 @@ class ComercialAgendasMixin:
                 # panel Cierre, su lista de «No cerradas» y el filtro de Revisar lean el MISMO dato.
                 'no_cerrada': post in ASISTIO and post not in CERRO,
                 'realizada': post in REALIZADAS,
-                'base_show_up': post in BASE_SHOW_UP,
+                # La que ya pasó sin reporte también cuenta (baja el show up hasta que se reporte); la que
+                # todavía no llega, no (pedido de Marlon, 09/11/2026).
+                'base_show_up': post in BASE_SHOW_UP or (post == 'pendiente' and ya_paso),
                 # Lo que el closer respondió manda: «no presenté» no se vuelve presentación por haber terminado
                 # sin venta (09/11/2026, el cierre por presentación daba igual al de por llamada). Venta y seña
                 # sí cuentan siempre: no se compra sin ver el precio.

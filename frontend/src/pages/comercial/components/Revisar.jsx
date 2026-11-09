@@ -550,7 +550,7 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
         }
 
         const realizadas = lista.filter(f => f.realizada).length;
-        // La base del show up: los cuatro destinos (presentó, canceló, reprogramó, no show), ADR-W112.
+        // La base del show up: los cuatro destinos (ADR-W112) y las sin reportar que ya pasaron (la fila lo trae).
         const base = lista.filter(f => f.base_show_up).length;
         const asistieron = lista.filter(f => f.asistio).length;
         const ventas = lista.filter(f => f.post_call.key === 'venta').length;
