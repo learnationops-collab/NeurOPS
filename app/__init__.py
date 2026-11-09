@@ -164,6 +164,9 @@ def create_app(config_class=Config):
     from app.api.notas_meet import bp as notas_meet_bp
     app.register_blueprint(notas_meet_bp)  # /api/notas-meet/* (admin) y /google/notas/conectar/<firma>
 
+    from app.api.correo import bp as correo_bp
+    app.register_blueprint(correo_bp)  # /google/correo/conectar/<firma>: la cuenta que manda los mails
+
 
     from app.api.instagram_webhook import bp as instagram_webhook_bp
     app.register_blueprint(instagram_webhook_bp, url_prefix='/api/webhooks/instagram')

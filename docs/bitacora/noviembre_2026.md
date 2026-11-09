@@ -336,3 +336,94 @@
 
 ### 09/11/2026 — Mis datos del setter dejaba la pantalla en negro
 - `embudoSetter.etapasParaDibujar`: la base de Asistieron llega del backend como número (generadas que ya ocurrieron) y `FlujoEmbudo` esperaba `{ label, n }`; con al menos una llamada pasada la píldora hacía `undefined.toLowerCase()` y se caía toda la pantalla. Ahora se convierte a `{ label: 'Generadas que ya ocurrieron', n }`. Arregla también los embudos de Comparativas.
+- **8 de Noviembre de 2026 (Hiring: la ficha de postulación entra sin scroll)** *([HiringCandidateModal.jsx](../../frontend/src/pages/admin/hiring/components/HiringCandidateModal.jsx), [fichaPostulacion.css](../../frontend/src/pages/admin/hiring/components/fichaPostulacion.css), [PanelDecision.jsx](../../frontend/src/pages/admin/hiring/components/PanelDecision.jsx))*:
+  - Ficha más compacta: cabecera, tarjetas de sección, renglones, chips y botones más bajos; el score va en una línea con su estado y sin el rótulo «Decisión».
+  - Si igual no entra (formulario largo o pantalla baja), la ficha se achica en bloque hasta entrar, hasta un 70 %; abrir un «Ver todo» la vuelve a medir. En el teléfono sigue con scroll.
+  - Cabecera: el país con su bandera al lado del nombre, íconos de correo y WhatsApp en las cápsulas y el botón «Abrir CV» con el humo de marca.
+- **8 de Noviembre de 2026 (Hiring: ficha con Cualitativo a la izquierda y la pretensión arriba)** *([SeccionesFicha.jsx](../../frontend/src/pages/admin/hiring/components/SeccionesFicha.jsx), [HiringCandidateModal.jsx](../../frontend/src/pages/admin/hiring/components/HiringCandidateModal.jsx), [fichaPostulacion.css](../../frontend/src/pages/admin/hiring/components/fichaPostulacion.css))*:
+  - La pretensión salarial pasa a la cabecera, al lado del WhatsApp, en verde y grande; sale del bloque Perfil.
+  - Cualitativo ocupa sola la columna izquierda (más angosta) y Excluyentes, Deseables e Inteligencia artificial van apilados en la del medio, más ancha. En el teléfono Cualitativo queda después de las otras.
+- **8 de Noviembre de 2026 (Hiring: letra más grande en la ficha)** *([fichaPostulacion.css](../../frontend/src/pages/admin/hiring/components/fichaPostulacion.css))*:
+  - Respuestas, preguntas, chips, títulos de sección, desglose del score y perfil, un punto o punto y medio más grandes.
+- **8 de Noviembre de 2026 (Hiring: los textos de Cualitativo más grandes)** *([fichaPostulacion.css](../../frontend/src/pages/admin/hiring/components/fichaPostulacion.css))*:
+  - Las respuestas largas (Experiencia previa, Cualidad diferencial, Persona indicada) pasan de 15 a 17 px, con más interlineado y más blancas.
+- **8 de Noviembre de 2026 (Hiring: ficha con letra más grande que igual entra)** *([fichaPostulacion.css](../../frontend/src/pages/admin/hiring/components/fichaPostulacion.css))*:
+  - Medida en una réplica a 1481 × 725: la ficha se achicaba al 79 % y las respuestas se veían de ~13,6 px. Ahora se achica al 93 % y se ven de ~16 px.
+  - En la columna ancha, las respuestas cortas de Excluyentes y Deseables van de a cuatro por renglón; Cualitativo más angosto muestra 5 renglones de cada respuesta antes del «Ver todo».
+  - Respuestas a 17 px, chips a 15, preguntas a 14 y títulos a 19; menos margen en cabecera, tarjetas y renglones. El panel del score y el perfil también más grandes.
+- **8 de Noviembre de 2026 (Talent: la más barata primero)** *([vista.js](../../frontend/src/pages/admin/hiring/lib/vista.js), [HiringDashboardPage.jsx](../../frontend/src/pages/admin/hiring/HiringDashboardPage.jsx))*:
+  - Las tablas de Talent (Inbox, Analyze, Winners) arrancan siempre ordenadas por lo que pide, menor primero; a igual pretensión, mejor score. Otro orden elegido dura lo que dura la visita.
+  - «Próxima a revisar» es la que pide menos entre las sin analizar, y las flechas de la ficha siguen ese mismo orden.
+- **8 de Noviembre de 2026 (Hiring: las respuestas largas de la ficha se leen de a una)** *([SeccionesFicha.jsx](../../frontend/src/pages/admin/hiring/components/SeccionesFicha.jsx), [fichaPostulacion.css](../../frontend/src/pages/admin/hiring/components/fichaPostulacion.css))*:
+  - «Ver todo» abre una sola respuesta a la vez: la abierta pasa a 19,5 px y las otras de la sección quedan en un renglón, apagadas.
+  - La columna de Cualitativo ya no decide el alto de la ficha: abrir una respuesta larga no achica el resto; si no entra, se desliza solo esa columna.
+- **8 de Noviembre de 2026 (Talent: Inbox con la pretensión a la vista y solo aprobación y reserva)** *([ResumenInbox.jsx](../../frontend/src/pages/admin/hiring/components/ResumenInbox.jsx), [talent.css](../../frontend/src/pages/admin/hiring/talent.css))*:
+  - «Próxima a revisar» muestra lo que pide grande y en verde, con «La más barata», al lado del score (antes era un chip más).
+  - «Avance de la revisión» pasa a dos anillos: % de aprobación (seleccionadas + finalistas) y % de reserva, sobre las postulaciones con decisión. Cada uno abre su pestaña.
+- **8 de Noviembre de 2026 (Hiring: el «Ver todo» de la última respuesta de Cualitativo se cortaba)** *([fichaPostulacion.css](../../frontend/src/pages/admin/hiring/components/fichaPostulacion.css))*:
+  - La tarjeta de Cualitativo se encogía al alto de la columna y cortaba «Persona indicada» y su «Ver todo». Ahora no se encoge (si no entra, se desliza la columna) y cada respuesta cerrada muestra 4 renglones en vez de 5, así en una pantalla de 1481 × 725 entran las tres con su botón.
+- **9 de Noviembre de 2026 (Analizar: Cash collected con el monto del período comparado)** *([Analizar.jsx](../../frontend/src/pages/comercial/components/Analizar.jsx), [comercial.css](../../frontend/src/pages/comercial/comercial.css))*:
+  - El tile se llama «Cash collected» (es el neto). Debajo, en vez de bruto y comisión, va «VS $X»: lo que entró en el período comparado.
+- **9 de Noviembre de 2026 (Analizar: una venta por lead, panel Cierre nuevo y embudo con el total por canal)** *([comercial_agendas.py](../../app/services/comercial_agendas.py), [comercial_analitica.py](../../app/services/comercial_analitica.py), [CierreComercial.jsx](../../frontend/src/pages/comercial/components/CierreComercial.jsx), [Embudo.jsx](../../frontend/src/pages/comercial/components/Embudo.jsx))*:
+  - Error de datos: el pago es posterior a la 1ª y a la 2ª llamada del lead, y las dos quedaban en «Venta» (dos ventas por un cobro). Ahora la venta va solo en la última llamada con show up del lead; la seña igual, y no cuenta si el lead ya tiene la venta.
+  - Panel Cierre: ventas, señas y no cerradas arriba; dos anillos con el close rate por llamada y por presentación (solo ventas) y «con señas» debajo; abajo el close rate de directas y desde triage (`cierres_canal`, mismas reglas).
+  - Embudo: arriba el total de agendas y cuánto se lleva cada canal (número y %); sin las líneas de texto bajo las barras; las descartadas como chip. El close rate salió del embudo (se borró `CloseRatesCanales.jsx`).
+- **9 de Noviembre de 2026 (Analizar: panel Cash rehecho, con CAC)** *([PanelCash.jsx](../../frontend/src/pages/comercial/components/PanelCash.jsx), [comercial_analitica.py](../../app/services/comercial_analitica.py))*:
+  - Todo neto: sin fees ni bruto. Arriba el Cash collected con «vs» el período comparado y las barras por día.
+  - Dos promedios: Ticket promedio y CAC (gasto de Meta en Setting y Workshop ÷ clientes nuevos, `datos.adquisicion`; solo con todo el equipo y sin segmento ni país), cada uno con su «vs».
+  - Por cobrar a hoy: una barra partida en vencido, por vencer y sin cronograma, con monto y % de cada uno. Sin la tabla, la torta ni el texto de pie.
+  - Panel Cierre: la tabla de directas / desde triage con una columna por cifra (Llamada, Present., + Señas) y rótulos que ya no se parten.
+- **9 de Noviembre de 2026 (Analizar: la comparación dice contra qué compara)** *([PiezasAnalizar.jsx](../../frontend/src/pages/comercial/components/PiezasAnalizar.jsx), [PanelCash.jsx](../../frontend/src/pages/comercial/components/PanelCash.jsx), [CierreComercial.jsx](../../frontend/src/pages/comercial/components/CierreComercial.jsx))*:
+  - Pieza única `Comparado`: el rótulo elegido en el selector VS («Período anterior», «Mes anterior», las fechas), el valor de entonces y la variación con flecha y color (en el CAC bajar es verde).
+  - Va en el tile y el panel de Cash collected, el ticket promedio, el CAC y los dos close rates de Cierre (en puntos). El «▼ %» suelto de las cabeceras salió: ya está en la pieza.
+- **9 de Noviembre de 2026 (Analizar: comparación más clara y Por cobrar en su propio panel)** *([PiezasAnalizar.jsx](../../frontend/src/pages/comercial/components/PiezasAnalizar.jsx), [PanelCash.jsx](../../frontend/src/pages/comercial/components/PanelCash.jsx), [PanelPorCobrar.jsx](../../frontend/src/pages/comercial/components/PanelPorCobrar.jsx))*:
+  - `Comparado`: más contraste; la variación es relativa (de 11.8% a 6.1% es ▼ 48%, los puntos quedan en el tooltip) y lleva la cuenta del período comparado: «4/34» en los close rates, las ventas en el ticket, el gasto y los clientes en el CAC, la diferencia en plata en el Cash collected.
+  - Por cobrar sale de Cash a un panel propio a lo ancho: total con clientes con saldo y con cuota vencida, barra partida tocable y una tarjeta por parte (monto, medidor y % del total).
+  - Lo que abre una lista es una tarjeta-botón con flecha (`Tocable`): Cash collected, ticket promedio, el total y cada parte de Por cobrar.
+- **9 de Noviembre de 2026 (Analizar: Segmentos rehecho, triage aparte de los closers)** *([SegmentosPanel.jsx](../../frontend/src/pages/comercial/components/SegmentosPanel.jsx), [segmentos_comercial.py](../../app/services/segmentos_comercial.py))*:
+  - Lo central es el % de A, B, C y D: cada grupo es una barra al 100% partida por segmento (con el % adentro) y, debajo y finita, la del período comparado. Cifra a elegir: agendas, asistieron o ventas. Cada tramo abre su lista.
+  - Arriba siempre el General: la barra grande y una tarjeta por segmento con su %, cuántas, el cambio en puntos de participación, show up y cierre.
+  - Cortes: Closers, Triage, Setters, Fuente, Origen. Las agendas de las personas con rol triage salen de Closers y van a Triage. «Sin agrupar», las tablas y el cruce salieron.
+- **9 de Noviembre de 2026 (Inbox: campaña «Setting Funnel · ROAS MAX» y log de cambios de campañas)** *([campanas.py](../../app/automatizaciones/campanas.py), ADR-W120)*:
+  - Campaña 5 «Setting Funnel · ROAS MAX» (Meta 120249210694070532, flujo «Lead Magnet», reparto 60/40): PROTOCOLO, ACCESO, TRÍADA, VACÍO, DOCUMENTO 25, DOCUMENTO25, y movidas desde Winners (CURSO GRATUITO, APROBACIÓN, QUIERO APLICAR) y LM Funnel (GUÍA STEPS). Atiende DM y comentario.
+  - `aut_campanas.cambios`: cada guardado anota quién, cuándo y qué cambió (palabras y Meta como agregadas/quitadas); `GET /api/inbox/campanas/<id>/cambios`. Migración `e8b2c4d6f1a3`.
+- **9 de Noviembre de 2026 (Discord: un solo servicio y todo con imagen; ventas fuera de n8n, ADR-W121)** *([discord_avisos/](../../app/services/discord_avisos/), [aviso.html](../../app/templates/reports/aviso.html))*
+  - Todos los avisos salen por `discord_avisos/envio.py` (webhook o el bot del equipo): en el texto, título, nombre y número para buscar; el resto en la tarjeta. Las agendas se ven igual (sus estilos pasaron a `_tarjeta.html`).
+  - Venta o cobro: tarjeta con monto, programa, método, closer, origen, saldo, plan de cuotas y si convirtió una seña. A #wins siempre y a #onboardings si entra un alumno nuevo. Reemplaza al flujo «New Sales» de n8n.
+  - Resultado de cada llamada (ficha, triage y mazo) a #onboardings: asistió, no asistió, canceló, reagendó o no cerró, con objeción, nota y próximo seguimiento. No repite un mismo resultado.
+  - `POST /api/external/academy/discord/aviso`: la Academia manda por acá Onboarding, reactivación, Momentum, upsell y tours.
+- **9 de Noviembre de 2026 (Meta Ads: miniatura y publicación de cada anuncio)** *([MiniaturaAnuncio.jsx](../../frontend/src/pages/admin/marketing/anuncios/MiniaturaAnuncio.jsx), ADR-W122)*:
+  - Cada fila de anuncio en Campañas, conjuntos y anuncios muestra la miniatura del creativo; al tocarla se abre la publicación en Instagram. Migración `f3a5c7e9b1d4`.
+- **9 de Noviembre de 2026 (Correo: los mails de la Academia salen por Work con Gmail, ADR-W123)** *([correo.py](../../app/services/correo.py))*
+  - Conexión aparte de una cuenta de Google solo para enviar (team@), sin contraseña ni verificación en dos pasos, sin tocar Calendar ni las notas de Meet.
+  - `POST /api/external/academy/correo`: la Academia manda el mail entero y Work lo envía. Reemplaza al flujo «Mail Academia» de n8n y hace andar «Olvidé mi contraseña».
+- **9 de Noviembre de 2026 (Work deja de usar n8n, ADR-W124)** *([sheets_service.py](../../app/services/sheets_service.py))*
+  - La venta ya no se manda al webhook de n8n. «Reenviar aviso» (antes «Reenviar webhook») y la corrección desde el mazo vuelven a mandar la tarjeta de la venta a Discord. En la ficha, la casilla dice «Avisar en Discord».
+- **9 de Noviembre de 2026 (Discord: el triage no se avisa en #onboardings)** *([resultado.py](../../app/services/discord_avisos/resultado.py))*
+  - El resultado de una llamada de triage ya no sale a #onboardings (por ninguna ruta: ficha ni mazo). Solo se avisan las llamadas de los closers.
+
+### 09/11/2026 — Analizar sin llamadas de triage y CAC por closer
+- `comercial_analitica._sin_triage`: con «Todo el equipo», el bloque de closers (embudo, estados, show up, close rates, variabilidad, fila Equipo de Comparativas) ya no cuenta las agendas de quienes tienen rol triage; solo las de closing. Elegir una persona sigue mostrando lo suyo.
+- CAC con filtro (persona, segmento o país): el gasto de Meta se reparte por la parte de las agendas de closing del equipo que le tocaron ÷ sus clientes nuevos. Sin CAC para personas de triage.
+- `triage_service.nombres_de_triage`: una sola definición de quién es triage (la usa también Segmentos).
+
+### 09/11/2026 — Presentaciones: manda lo que respondió el closer
+- `comercial_agendas`: una llamada en la que el closer marcó «no presenté la oferta» ya no cuenta como presentación por haber terminado sin venta ni seguimiento (`cerro_sin_venta` solo infiere cuando el campo está vacío). Venta y seña siguen contando siempre. Afecta embudo, tasa de presentación y cierre por presentación.
+
+### 09/11/2026 — Cierre: cada cifra con su período comparado
+- Panel Cierre: ventas, señas y no cerradas llevan debajo «antes N» y el cambio en % (verde si mejoró; en no cerradas, bajar es mejorar). Bajo cada anillo, una tabla Ahora / Antes (con su cuenta) / cambio para el close rate solo ventas y con señas. La tabla por canal muestra la tasa de antes y el cambio debajo de cada %. El período se nombra una vez en la cabecera del panel («vs …»).
+- Nueva pieza `VsPrevio.jsx` (`VsPrevio`, `Delta`) con flechas de lucide en vez de ▲▼.
+
+### 09/11/2026 — Tiles de arriba con el período comparado
+- Show up, Close rate real, Cash collected y Ticket promedio: arriba a la derecha el cambio relativo (flecha y %) y abajo, junto a los botones, «antes X» discreto. Sale la caja grande de período anterior del Cash. El Ticket muestra el neto.
+- `Tile` suma la prop `antes`; los estilos de la comparación pasan a `vsPrevio.css` (los importa `VsPrevio.jsx`).
+
+### 09/11/2026 — Cierre: tasa de presentación
+- Panel Cierre: nueva fila «Presentación» (llamadas con show up en las que el closer respondió que presentó la oferta ÷ las que asistieron), con barra, cuenta y la del período comparado. En noviembre los closers marcaron «Sí» en las 13 reportadas (100%); en octubre, 77 de 87.
+- Tabla por canal: sin período anterior ya no muestra «— =».
+- **9 de Noviembre de 2026 (Academia: la venta pagada de a partes recibe la Momentum de seña)** *([academy_payment_sync.py](../../app/services/academy_payment_sync.py))*
+  - El aviso de pago a la Academia lleva `en_cuotas`: seña, parcial o cuota de una venta nueva o upsell (no renovación). La Academia le da la Momentum de seña aunque el alumno ya no sea seña.
+
+### 09/11/2026 — Cartera de Jean Carlo y ventas que se partían al cambiar el programa
+- `sale_service`: reubicar varios pagos en un mismo guardado (cambiar el programa desde la ficha) abría una venta por pago, sin total y a precio de lista. Ahora cuentan los pagos ya guardados que se movieron en ese guardado, y una venta con plan de cuotas y sin cobros recibe el primero (`sales_grouping.decidir`). Caso: Silka Rodríguez figuraba con 3 ventas y 3,200 de deuda en vez de 200.
+- Datos en prod (06–09/11, con el registro del closer): montos, cuotas y fechas de 29 clientes de Jean Carlo; 12 señas inactivas sin cuota vencida; bajas de Carolina Murillo y Jhonatan Cahuin con el acceso a la Academia cortado; foto de la Academia refrescada. Pagos «Desconocido» unidos a su venta en 5 clientes (Alisson Izabal, Lucero Aroquipa, Melany Caballero, Sandra Zhimnay, Angeles Valerio): su deuda bajó de 4,000 a 1,400 entre los cinco.

@@ -205,12 +205,12 @@ const HiringDashboardPage = () => {
     const ids = useMemo(() => grupos.flatMap((g) => g.filas.map((p) => p.id)), [grupos]);
     const cols = colsVisibles(cfg);
 
-    // La próxima a revisar: la de mejor score entre las que nadie miró (de la tanda elegida si es
-    // Híbridos u Online; de todas si se está mirando Incompletas).
+    // La próxima a revisar: la que pide menos entre las que nadie miró, y a igual pretensión la de
+    // mejor score (de la tanda elegida si es Híbridos u Online; de todas si se mira Incompletas).
     const proxima = useMemo(() => {
         const candidatas = todas.filter((p) => p.veredicto === 'sin_analizar' && (pestanas.pend === 'incompletas' || p.modalidad === pestanas.pend));
         const lista = candidatas.length ? candidatas : todas.filter((p) => p.veredicto === 'sin_analizar');
-        return [...lista].sort((a, b) => (b.score ?? 0) - (a.score ?? 0))[0] || null;
+        return ordenar(lista, { campo: 'pide', dir: 'asc' })[0] || null;
     }, [todas, pestanas.pend]);
 
     const modoDescarte = !enBusqueda && ((seccion === 'anal' && pestana === 'descartado') || (seccion === 'fin' && pestana === 'baja'));

@@ -159,3 +159,21 @@ Las notas que Gemini deja en el Drive conectado (`app/services/notas_meet/`, ADR
 - **Categorías:** `sales` (venta), `student` (sesión con estudiante), `team` (reunión del equipo), `interview` (entrevista), `other`. Work las pone solo (`app/services/notas_meet/categorias.py`). `series` es la reunión recurrente («Educational Team», «Scale Session»): elegir la categoría de una serie (`PUT /notas/series`) vale para todas sus notas y las que vengan; `PATCH /notas/<id>` cambia una sola y le gana a la de su serie. Lo mismo se hace desde Work en Operaciones › Integraciones. Sesiones con estudiantes: `GET /notas?categoria=student`; reuniones del equipo: `categoria=team`.
 - **Cruzar con una sesión:** `GET /notas?event_id=<event_id>`, con el que devolvió `POST /agenda/reservas` o `/agenda/reuniones` (en una serie, el de cada ocurrencia lleva `_<fecha>` al final). Por alumno: `email`. `desde`/`hasta` aceptan `YYYY-MM-DD` (incluye el día entero) o ISO con hora.
 - **Conectar:** la URL es `/google/notas/conectar/<firma>`, vence a las 24 h y sirve una vez. Pide `drive.readonly` (con `drive.meet.readonly` Google lista las notas de Gemini pero no deja exportarlas). Vuelve a `ACADEMY_URL` + `volver?notas=ok|cancelado|error`. Después de conectar, la primera lectura baja todo en segundo plano.
+
+## API de avisos a Discord para la Academia: `/api/external/academy/discord/aviso`
+
+`POST`, mismo token que la agenda. La Academia manda los datos del aviso y Work lo publica con su tarjeta (ADR-W121). Responde 202 (la imagen se arma en segundo plano), 400 si falta `canal`, `titulo` o `nombre`, y 503 si el canal no está configurado.
+
+```json
+{"canal": "onboarding", "emoji": "🚀", "titulo": "Onboarding Session", "nombre": "Ana Pérez", "telefono": "+52…",
+ "evento": "Onboarding Session", "estado": "Asistió", "tono": "verde",
+ "chips": [{"icono": "cal", "texto": "Hasta el 05/01/2027"}],
+ "cajas": [{"titulo": "La dio", "valor": "Dari", "color": "azul", "icono": "personas"}],
+ "tiles": [{"icono": "nota", "titulo": "Síntesis", "sub": "…"}],
+ "pie": "Academia · Onboarding", "menciones": ["123…"], "texto_extra": "> la síntesis entera"}
+```
+
+- `canal`: `onboarding` (#onboardings de fulfillment) o `reportes`.
+- `tono`: verde, azul, amarillo, rojo o gris. `color` de una caja: azul, verde, rojo o rosa.
+- Íconos: check, x, meta, billetera, pin, maletin, personas, cal, reloj, bandeja, antes, dinero, nota, flecha.
+- En el texto del mensaje va solo emoji, título, nombre y teléfono (y las menciones, más `texto_extra` debajo).

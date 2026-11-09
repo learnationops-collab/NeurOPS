@@ -158,6 +158,9 @@ class AutCampana(db.Model):
     # pero no filtra hasta que haya presencia (la bandeja de mensajes propia).
     reparto = db.Column(db.String(20), nullable=False, default='distribuido', server_default='distribuido')
     solo_conectados = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
+    # Log de cambios (solo se agrega): [{en, por, accion, cambios: {campo: {antes, despues}}}].
+    # Las palabras y campañas de Meta van como {agregadas, quitadas}. Ver `campanas.registrar_cambio`.
+    cambios = db.Column(db.JSON, nullable=True)
     creada_en = db.Column(db.DateTime, nullable=False, default=ahora)
     actualizada_en = db.Column(db.DateTime, nullable=False, default=ahora, onupdate=ahora)
 

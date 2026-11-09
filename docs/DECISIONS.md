@@ -147,7 +147,6 @@
 - **Qué se pierde (nombrado):** no hay vuelta Leadership → Work (marcar «registrar datos» no depende de que Work tenga los datos); los avisos solo llegan con la PC encendida; el ritual fijo «Preparar workshop» sigue duplicando los mensajes hasta que Kerwin decida quitarlos.
 - **Consecuencias:** mover un taller cambia las tareas en segundos; el token de Leadership pasa a ser un secreto de producción de Work.
 
-
 ## ADR-W050: La cifra sola y su cuenta en un tooltip (`CifraConCuenta`), y las listas de Workshop
 - **Fecha:** 2026-10-28 · **Subsistema:** Componentes estándar, Workshop y Analizar · **Estado:** implementado
 - **Contexto:** Kerwin pidió que todo porcentaje, costo y ROAS diga «N de M» como Closing, sin texto explicativo, y que cada parte abra su lista (ADR-W015). En Marketing ya existía `CifraConCuenta` dentro de una carpeta de pantalla.
@@ -219,7 +218,6 @@
   - Las métricas del resumen (pomodoros, racha, aprobación…) dejan de estar a la vista: van cerradas al final.
 - **Consecuencias:** Comunicación sigue mezclando los comentarios de la Academia con las notas (`useComentariosAcademia`). Se borraron `TabFulfillment.test.jsx` y `SuscripcionWork.test.jsx`, que probaban la estructura anterior.
 
-
 ## ADR-W023: Eliminar un lead de prueba entero desde la ficha, solo sin plata ni suscripción
 
 - **Estado:** implementada (28/10/2026).
@@ -235,7 +233,6 @@
 - **Decisión:** (1) siempre, cada nube es un degradé radial ya difuso, sin blur ni mezcla de capas y solo con `transform` y `opacity` (como ya hacía la reserva pública); (2) `efectos.js` pone `data-efectos="bajo"` en `<html>` si la compu tiene 2 núcleos o menos o 2 GB o menos, si pide menos movimiento, si lo elige la persona (`?efectos=bajo`) o si una medición de ~70 cuadros (a los 1,5, 8 y 20 s de cargar) da menos de ~40 por segundo (o un 20% de cuadros de más de 40 ms). Cubre las dos formas del humo: `.humo` y `.ui-aura` (las tarjetas y paneles estándar, que son casi todas las de Tálamus: la primera versión solo cubría la primera y no arregló el parpadeo); en ese modo no hay nubes que se muevan, solo un fondo suave y quieto. Lo medido se recuerda 14 días; `?efectos=normal` lo vuelve a la medición.
 - **Qué se pierde:** el humo se ve un poco menos intenso y sin la mezcla de capas del tema claro; en las compus lentas es un fondo fijo. La medición corre una vez por visita sin la pestaña oculta y puede equivocarse con un pico de carga.
 - **Consecuencias:** un `.humo` nuevo debe tener el contenedor `.humo` y los cuatro `<i>`; el modo bajo solo cubre `.dc-shell`, `.thalamus` y `.talent` (otras animaciones infinitas, como el fondo del ingreso, no se tocaron).
-
 
 ## ADR-W033: «De dónde vino lo cobrado» sale de las fuentes y el Cash total dice cuánto es de ventas anteriores
 
@@ -530,7 +527,6 @@
 - **Decisión:** (1) fuera `confirmadas` del embudo, las tarjetas, Por persona, Día por día y el JSON; la asistencia es asistieron ÷ agendas. (2) `triage_pases.pases_de` resuelve el pase de cada agenda de triage (agenda de closing con `agenda_triage_id`): asistió = `closer_result` Show up, cerró = venta de pago completo o split pay con la misma fila de `ComercialService.filas_de_citas` (`REAL_SALE_TIPOS`, la seña no es cierre). Si el closer reagendó el pase, se sigue la cadena (mismo cliente, `is_rescheduled`, id posterior, no del triage) hasta la agenda en pie. (3) El JSON suma `pasaron`, `closer_asistieron`, `closer_cerraron` en `total`, `por_persona` y `por_dia`; `por_closer` (un renglón por triage y closer) y `closing` en cada lead. % de asistencia = asistieron ÷ pasaron; % de conversión = cerraron ÷ asistieron. (4) El cuello de botella solo mira las etapas del triage.
 - **Qué se pierde:** los pases manuales desde la ficha no llevan `agenda_triage_id` y no cuentan. `pasaron` incluye las llamadas que todavía no ocurrieron, así que el % de asistencia es bajo hasta que pasen. La cadena de reagendas se reconstruye por cliente (no hay enlace directo) y puede errar si el lead tiene varias reagendas cruzadas. Quien miraba la tarjeta de asistencia como «sin contar cancelaciones» ve otro número.
 - **Consecuencias:** el embudo de Closing en dos colores (directas y desde triage) puede reusar `triage_pases.pases_de`. Los pases se cuentan por la fecha de la llamada de triage, no por la del closing.
-
 
 ## ADR-W067: El embudo de Closing se parte en agendas directas y agendas desde triage, con su close rate cada una
 
@@ -870,7 +866,6 @@
 - **Qué se pierde:** un pago declarado que no aparece en el CSV ya no se marca solo; hay que mirarlo en Diferencias. El neto de la pasarela ya no pisa el neto del pago al subir el CSV.
 - **Consecuencias:** se cargaron los CSV de Stripe y Hotmart del cruce del 26/10 (enero a octubre) y cada pago verificado quedó atado a su fila: 370 de 377 (los 7 restantes son transferencias y dos aceptados a mano). 18 pendientes que coincidían exacto quedaron verificados. Ningún pago se degradó.
 
-
 ## ADR-W108: Al reagendar, el evento de Google sigue a la agenda y el tablero muestra a cada persona una vez
 
 - **Fecha:** 2026-11-05 · **Subsistema:** Agendas (Triage y Closing, Google Calendar) · **Estado:** implementado.
@@ -982,3 +977,42 @@
 - **Decisión:** cada columna es un día desde la última llamada reportada del lead (en la zona del usuario), no una etapa: la persona cambia de columna sola con el calendario. Cada fila: nombre (abre la ficha), segmento, qué pasó en la llamada, teléfono y cómo va: pagó después de la llamada, descartado, otra llamada agendada, seguido hoy (respondió o no) o lo último que se hizo. «Registrar ▾» anota «Le escribí · respondió / no respondió» sin salir del tablero, o abre la ficha en «Registrar una venta» o en el seguimiento (otra llamada, descartar). Arriba: seguidos hoy, respondieron y pagaron sobre esas personas. Los días siguen siendo del equipo y los edita la dirección.
 - **Qué se pierde:** la columna Respondieron, el «Devolver», el «pasa al Día N» y la fecha `desde` (queda en la tabla, sin uso): ya no hay etapas. Entran también los leads que compraron o se descartaron, para ver cómo terminó cada uno.
 - **Consecuencias:** sin migración nueva. `embudo_registros.dia` pasa a ser el día desde la llamada en que se escribió.
+
+## ADR-W120: cada campaña del Inbox guarda su log de cambios
+
+- **Fecha:** 2026-11-09 · **Subsistema:** Inbox › Campañas (`automatizaciones/campanas.py`, `/api/inbox/campanas`) · **Estado:** implementado.
+- **Contexto:** Meta subió «SETTING FUNNEL | ROAS MAX» con nueve palabras; cuatro (CURSO GRATUITO, APROBACIÓN, QUIERO APLICAR, GUÍA STEPS) ya estaban en «Winners Reels MX + PE» y «LM Funnel». Una palabra no puede estar en dos campañas vigentes, así que hay que moverlas, y al moverlas no quedaba rastro de que habían sido de otra campaña ni desde cuándo.
+- **Decisión:** `aut_campanas.cambios` (JSON, solo se agrega) anota en cada guardado quién, cuándo, `creada`/`editada`, un motivo opcional y qué cambió: palabras y campañas de Meta como `{agregadas, quitadas}`; el resto como `{antes, despues}`. Un guardado sin diferencias no anota. `GET /api/inbox/campanas/<id>/cambios` lo devuelve del más nuevo al más viejo.
+- **Qué se pierde:** nada. Los cambios anteriores a hoy no tienen log (las campañas existentes arrancan vacías).
+- **Consecuencias:** migración `e8b2c4d6f1a3`. Las entradas ya registradas siguen con su campaña (`AutEjecucion.campana_id`), así que mover una palabra no cambia las métricas de lo que ya entró. Todavía no hay pantalla que muestre el log.
+## ADR-W121: un solo servicio para los avisos a Discord, todos con imagen
+
+- **Fecha:** 2026-11-09 · **Subsistema:** Avisos a Discord (`app/services/discord_avisos/`, `agendas_v2/avisos_discord.py`, `/api/external/academy/discord/aviso`) · **Estado:** implementado.
+- **Contexto:** solo los avisos de agenda salían como imagen (nombre y WhatsApp en el texto para buscar, el resto en la tarjeta). La venta la anunciaba n8n con el webhook de ventas; la conversión de seña tenía su texto propio, sin webhook configurado, así que no salía nunca; el resultado de una llamada no se avisaba; la Academia mandaba Onboarding, reactivación, Momentum y tours en texto y el upsell con una imagen propia.
+- **Decisión (Santiago, 09/11):** todos los avisos pasan por `discord_avisos/envio.py` (webhook o el bot del equipo, por canal) con la misma forma: en el texto, título, nombre y número; el resto, en la imagen (`templates/reports/aviso.html`, que comparte estilos e íconos con la de agenda en `_tarjeta.html`). Se suman: la **venta o cobro** (`venta.py`, desde `post_to_sheets` con el mismo interruptor que n8n: monto, programa, método, closer, origen, saldo y plan de cuotas, y si convirtió una seña) y el **resultado de cada llamada** (`resultado.py`, desde la ficha, el triage y el mazo; no repite un mismo resultado guardado dos veces). La venta va a **#wins** siempre y a **#onboardings** si entra un alumno nuevo (completo, primer pago o seña), como hacía n8n; el resultado va a **#onboardings de fulfillment**. La Academia pide los suyos a Work (`POST /api/external/academy/discord/aviso`, Academia ADR-210).
+- **Qué se pierde:** el flujo «New Sales» de n8n se apaga entero: sus textos a #wins y #onboardings, el WhatsApp de dos plantillas a un número fijo que nadie identifica (+55 41 8826-7607; la bienvenida al alumno nunca le llegaba al alumno), la página de Notion, el «responsable» al azar y el cash collect con comisión estimada (lo reemplazan los pagos reales). El mail de bienvenida con link de ZapSign ya estaba apagado (el contrato se firma en la Academia). El texto de «conversión de seña» desaparece: lo dice un chip de la tarjeta de la venta. El reenvío de una venta desde el admin o la corrección en el mazo siguen yendo solo a n8n.
+- **Consecuencias:** variable nueva en Work: `DISCORD_BOT_TOKEN` (el bot del equipo publica en #onboardings y #wins; sus IDs van en el código y se pueden pisar con `DISCORD_ONBOARDINGS_CHANNEL_ID` y `DISCORD_WINS_CHANNEL_ID`). Sin bot, la venta y el resultado no salen (queda en el log). Las agendas se ven igual. Sin migración.
+
+## ADR-W122: cada anuncio de Meta muestra su miniatura y abre su publicación de Instagram
+
+- **Fecha:** 2026-11-09 · **Subsistema:** Marketing › Meta Ads (`meta_ads_service`, `ArbolMeta`) · **Estado:** implementado.
+- **Contexto:** para reconocer un anuncio (por ejemplo, un ganador de Winners reciclado en ROAS MAX) había que ir al Administrador de anuncios: en la plataforma solo se veían el nombre y el texto.
+- **Decisión:** la ficha del anuncio trae del creativo `thumbnail_url` e `instagram_permalink_url` (`meta_anuncios.miniatura` y `publicacion_url`), también en la sincronización liviana, porque la URL de la miniatura es firmada y vence. En Campañas, conjuntos y anuncios, cada fila de anuncio muestra la miniatura (32 px); al tocarla se abre la publicación en Instagram.
+- **Qué se pierde:** nada. La miniatura es la de 64 px de Meta (no da para verla grande) y se descarta la vista previa embebida (iframe de Meta, que vence a las horas).
+- **Consecuencias:** migración `f3a5c7e9b1d4`. Los anuncios vigentes la traen en la próxima sincronización liviana (al volver a la pestaña Meta Ads); los viejos sin gasto reciente, en una sincronización completa del tramo.
+
+## ADR-W123: el correo de la plataforma sale por la API de Gmail desde Work
+
+- **Fecha:** 2026-11-09 · **Subsistema:** Correo saliente (`app/services/correo.py`, `/google/correo/conectar/<firma>`, `/api/external/academy/correo`) · **Estado:** implementado.
+- **Contexto:** la Academia no tiene correo propio; su bienvenida la mandaba n8n con su Gmail y «Olvidé mi contraseña» no salía. Se saca n8n este mes. El SMTP de Gmail pide contraseña de aplicación y verificación en dos pasos, que no se le puede poner a team@ (la usan varias personas).
+- **Decisión (Santiago, 09/11):** Work conecta una cuenta de Google (team@) **solo con `gmail.send`**, en una autorización aparte (sin `include_granted_scopes`): no toca las de Calendar ni las del Drive de las notas de Meet. El token vive en `integrations` (clave `correo`). La Academia manda cada mail como MIME a `POST /api/external/academy/correo` y Work lo envía con `users.messages.send`. Se conecta con un link firmado (24 h, un uso) que abre quien tiene la cuenta.
+- **Qué se pierde:** si la cuenta se desconecta no sale ningún mail de la Academia hasta reconectarla (Work avisa a admin). El remitente es siempre la cuenta conectada. Sin pantalla todavía: el link se genera por consola (`correo.link_para_conectar`).
+- **Consecuencias:** el proyecto de Google Cloud tiene que tener la API de Gmail habilitada. Sin migración.
+
+## ADR-W124: Work deja de usar n8n
+
+- **Fecha:** 2026-11-09 · **Subsistema:** Ventas (`sheets_service.post_to_sheets`, reenvío de la venta) · **Estado:** implementado.
+- **Contexto:** con los avisos de venta en Work (ADR-W121) y el correo por Gmail (ADR-W123), lo único que Work seguía mandando a n8n era el webhook de cada venta (`VENTAS_WEBHOOK`), a un flujo ya apagado. El «Reenviar webhook» de una venta y la corrección desde el mazo también iban ahí.
+- **Decisión (Santiago, 09/11):** se borra el envío a n8n (`_trigger_n8n_webhook`, `build_sale_webhook_payload`). El interruptor de la ficha («Avisar en Discord») y «Reenviar aviso» de una venta mandan de nuevo la tarjeta de Discord de la venta. La ruta `/public/financial-sales/<id>/resend-webhook` conserva su nombre.
+- **Qué se pierde:** nada en uso: los flujos de n8n (New Sales, Mail Academia, New Call y New Call Form) quedan apagados. `VENTAS_WEBHOOK` queda sin leer.
+- **Consecuencias:** sin migración.

@@ -1087,16 +1087,16 @@ const PublicFinancialSalesPage = () => {
 
     const handleResendWebhook = async (sale) => {
         const confirmResend = window.confirm(
-            `¿Estás seguro de que deseas volver a enviar la venta de "${sale.nombre_cliente}" por $${sale.monto} a n8n?`
+            `¿Estás seguro de que deseas volver a enviar la venta de "${sale.nombre_cliente}" por $${sale.monto} a Discord?`
         );
         if (!confirmResend) return;
 
-        const loadingToast = toast.loading('Reenviando webhook a n8n...');
+        const loadingToast = toast.loading('Reenviando el aviso a Discord...');
         try {
             await api.post(`/public/financial-sales/${sale.id}/resend-webhook`);
-            toast.success('Webhook reenviado a n8n con éxito', { id: loadingToast });
+            toast.success('Aviso reenviado a Discord', { id: loadingToast });
         } catch (error) {
-            toast.error(error.response?.data?.error || 'Error al reenviar webhook', { id: loadingToast });
+            toast.error(error.response?.data?.error || 'Error al reenviar el aviso', { id: loadingToast });
             console.error(error);
         }
     };

@@ -16,8 +16,11 @@ from app.services.procedencia_ingresos_service import setters_conocidos
 
 METRICAS = ('agendas', 'realizadas', 'asistieron', 'ventas', 'sin_reporte')
 CAMPOS = METRICAS + ('show_up', 'cierre')
-CORTES = ('ninguno', 'closer', 'setter', 'fuente', 'origen')
-ETIQUETA_CORTE = {'ninguno': 'Sin agrupar', 'closer': 'Closer', 'setter': 'Setter', 'fuente': 'Fuente', 'origen': 'Origen'}
+# Sin «Sin agrupar» (09/11/2026): el total va siempre arriba, como `general`. Triage aparte de los closers: las personas
+# de triage hacen otra llamada, con otro perfil de lead (pedido de Mario).
+CORTES = ('closer', 'triage', 'setter', 'fuente', 'origen')
+_VALIDOS = CORTES + ('ninguno',)
+ETIQUETA_CORTE = {'closer': 'Closers', 'triage': 'Triage', 'setter': 'Setters', 'fuente': 'Fuente', 'origen': 'Origen'}
 ETIQUETA_FUENTE = {'setting': 'Setting', 'workshop': 'Workshop', 'otras': 'Otras'}
 TODO = 'todo'
 ROTULO = {'agendas': 'Agendas', 'realizadas': 'Con resultado', 'asistieron': 'Asistieron', 'ventas': 'Ventas',
@@ -62,10 +65,19 @@ def _cuenta(filas):
             'sin_reporte': sum(1 for f in filas if _sin_reporte(f))}
 
 
+def _de_triage():
+    from app.services.triage_service import nombres_de_triage
+    return nombres_de_triage()
+
+
 def _clave_de(corte):
-    """La clave del grupo de una fila para el `corte`: la ÚNICA definición, del panel y de sus listas."""
-    if corte == 'closer':
-        return lambda f: f['closer'] or SIN_CLOSER
+    """La clave del grupo de una fila para el `corte`: la ÚNICA definición, del panel y de sus listas. None = la fila no
+    entra en ese corte (las agendas de triage no son de un closer, y al revés)."""
+    if corte in ('closer', 'triage'):
+        triage = _de_triage()
+        if corte == 'triage':
+            return lambda f: f['closer'] if f['closer'] in triage else None
+        return lambda f: None if f['closer'] in triage else (f['closer'] or SIN_CLOSER)
     if corte == 'setter':
         return lambda f: f['setter'] or 'Sin setter'
     if corte in ('origen', 'fuente'):
@@ -86,22 +98,32 @@ def _grupo(corte, clave, filas, elegidos):
                       **_cuenta([f for s in grupos for f in por.get(s, [])])}}
 
 
-def panel(rol, start, end, miembro_id=None, elegidos=None, corte='ninguno', previo=None, paises=None):
+def _separar(filas, clave_de):
+    sep = cortes.separar(filas, clave_de)
+    sep.pop(None, None)
+    return sep
+
+
+def panel(rol, start, end, miembro_id=None, elegidos=None, corte='closer', previo=None, paises=None):
     """{rol, corte, segmentos, cuentas, grupos: [{key, label, filas: [una por segmento], total}], comparacion}. Con `elegidos`,
     solo esos segmentos y el total de ellos. `previo`: (desde, hasta) del período contra el que se compara; cada fila y
     total trae `previo` y `delta`."""
-    corte = corte if corte in CORTES else 'ninguno'
+    corte = corte if corte in CORTES else 'closer'
     clave_de = _clave_de(corte)
     filas = con_segmento(_filas_del_rol(rol, start, end, miembro_id, paises))
-    sep = cortes.separar(filas, clave_de) or {TODO: []}
-    sep_p = cortes.separar(con_segmento(_filas_del_rol(rol, *previo, miembro_id, paises)), clave_de) if previo else {}
+    filas_p = con_segmento(_filas_del_rol(rol, *previo, miembro_id, paises)) if previo else []
+    sep = _separar(filas, clave_de)
+    sep_p = _separar(filas_p, clave_de) if previo else {}
     grupos = [_grupo(corte, k, sep.get(k, []), elegidos) for k in cortes.claves(sep, sep_p)]
+    # Todo el período junto, siempre arriba: la referencia contra la que se lee cada grupo.
+    general = _grupo('ninguno', TODO, filas, elegidos)
     if previo:
         grupos = cortes.unir_comparacion(grupos, [_grupo(corte, g['key'], sep_p.get(g['key'], []), elegidos) for g in grupos], CAMPOS)
+        general = cortes.unir_comparacion([general], [_grupo('ninguno', TODO, filas_p, elegidos)], CAMPOS)[0]
     return {'rol': rol, 'corte': corte, 'cortes': [{'key': k, 'label': ETIQUETA_CORTE[k]} for k in CORTES],
             'segmentos': lectura.lista(),
             'cuentas': {s: sum(1 for f in filas if f['segmento'] == s) for s in lectura.ORDEN},
-            'grupos': grupos,
+            'grupos': grupos, 'general': general,
             'comparacion': {'desde': previo[0].isoformat(), 'hasta': previo[1].isoformat()} if previo else None}
 
 
@@ -130,7 +152,7 @@ def registros(rol, start, end, miembro_id, metrica, segmento, corte='ninguno', g
     if metrica not in METRICAS:
         raise ValueError('Esa cifra todavía no tiene lista.')
     elegidos = lectura.parsear(segmento)
-    clave_de = _clave_de(corte if corte in CORTES else 'ninguno')
+    clave_de = _clave_de(corte if corte in _VALIDOS else 'ninguno')
     filas = [f for f in filtrar(_filas_del_rol(rol, start, end, miembro_id, paises), elegidos)
              if _CONDICION[metrica](f) and (grupo is None or clave_de(f) == grupo)]
     salida = [{

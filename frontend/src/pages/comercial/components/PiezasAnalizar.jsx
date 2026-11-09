@@ -2,6 +2,7 @@ import React from 'react';
 import { ArrowRight, ChevronsDown, Eye } from 'lucide-react';
 import { Humo, Tip, useMontado } from './Shared';
 import Cifra from './Cifra';
+import { Delta as DeltaRel } from './VsPrevio';
 import { CifraConCuenta } from '../../../components/standard';
 import MetricaClicable, { abrir } from '../../../components/dashboard/MetricaClicable';
 
@@ -32,6 +33,37 @@ export const Delta = ({ delta, actual }) => {
         <span className="delta" style={{ '--c': v(sube ? 'success' : 'error') }}
             title={`${actual ? `${actual} · ` : ''}${txt} vs. el período comparado`}>
             {txt}
+        </span>
+    );
+};
+
+/**
+ * La comparación de una cifra contra el período comparado (09/11/2026). Arriba el rótulo que eligió la
+ * persona en el selector VS («Período anterior», «Mes anterior», las fechas); abajo el valor de entonces,
+ * `detalle` (su cuenta: «4/34», «5 ventas») y la variación RELATIVA con flecha y color: de 11.8% a 6.1% es
+ * ▼ 48%, no 5.7 pts (pedido de Mario). Con `puntos` (tasas) la diferencia en puntos va en el tooltip.
+ * `mejorBaja` para un costo: bajar es verde. Sin `previo` no dibuja nada.
+ */
+export const Comparado = ({ vs, actual, previo, f, detalle = null, puntos = false, mejorBaja = false }) => {
+    if (previo === null || previo === undefined || actual === null || actual === undefined) return null;
+    const rel = previo ? Math.round(((actual - previo) / Math.abs(previo)) * 1000) / 10 : null;
+    const pts = Math.round((actual - previo) * 10) / 10;
+    const sube = actual > previo;
+    const igual = actual === previo;
+    const rot = vs || 'Período comparado';
+    return (
+        <span className="cmp" title={`${rot}: ${f(previo)}${detalle ? ` (${detalle})` : ''}`
+            + `${puntos && !igual ? ` · ${pts > 0 ? '+' : ''}${pts} pts` : ''}`}>
+            <small className="cmp-rot">{rot}</small>
+            <span className="cmp-fila">
+                <b className="cmp-n num">{f(previo)}</b>
+                {detalle && <small className="cmp-det num">{detalle}</small>}
+                {!igual && rel !== null && (
+                    <small className="cmp-d num" style={{ '--c': v(sube !== mejorBaja ? 'success' : 'error') }}>
+                        {sube ? '▲' : '▼'} {Math.abs(rel)}%
+                    </small>
+                )}
+            </span>
         </span>
     );
 };
@@ -101,13 +133,21 @@ export const bajarA = (id) => {
  * `cuenta` {a, b}: la tasa va sola y su «N de M» en un tooltip (Kerwin, 28/10/2026). El numerador abre la lista del
  * tile (`ver`) si la tiene; el denominador no tiene lista propia todavía y solo se lee.
  */
-export const Tile = ({ label, help, valor, color, sub, delta, humo, ver, baja, cuenta = null }) => (
+/**
+ * `antes` (09/11/2026): la cifra del período comparado, `{ actual, previo, texto, vs, mejorBaja }`. Arriba a la
+ * derecha va el cambio relativo y abajo, discreto y junto a los botones, «antes $7,811». Reemplaza a `delta`.
+ */
+export const Tile = ({ label, help, valor, color, sub, delta, humo, ver, baja, cuenta = null, antes = null }) => (
     <section className="kpi caja">
         <Humo colores={humo} />
         <div className="kpi-cab">
             <p className="t-eyebrow">{label}</p>
             <Tip texto={help} titulo={label} />
-            {delta && <span style={{ marginLeft: 'auto' }}><Delta delta={delta} actual={valor} /></span>}
+            {antes?.previo != null ? (
+                <span style={{ marginLeft: 'auto' }}>
+                    <DeltaRel actual={antes.actual} previo={antes.previo} mejorBaja={antes.mejorBaja} />
+                </span>
+            ) : delta && <span style={{ marginLeft: 'auto' }}><Delta delta={delta} actual={valor} /></span>}
         </div>
         <div className="kpi-cifra">
             {cuenta ? (
@@ -121,7 +161,7 @@ export const Tile = ({ label, help, valor, color, sub, delta, humo, ver, baja, c
             )}
             {sub && <p className="kpi-sub num">{sub}</p>}
         </div>
-        {(ver || baja) && (
+        {(ver || baja || antes?.previo != null) && (
             <div className="kpi-acciones">
                 {ver && (
                     <button type="button" className="kpi-acc kpi-acc--solo" onClick={ver}
@@ -134,6 +174,11 @@ export const Tile = ({ label, help, valor, color, sub, delta, humo, ver, baja, c
                         title="Profundizar: bajar al desglose" aria-label="Profundizar: bajar al desglose">
                         <ChevronsDown size={14} />
                     </button>
+                )}
+                {antes?.previo != null && (
+                    <span className="kpi-antes num" title={`${antes.vs || 'Período comparado'}: ${antes.texto}`}>
+                        <small>antes</small>{antes.texto}
+                    </span>
                 )}
             </div>
         )}

@@ -1,0 +1,66 @@
+/* Segmentos (SegmentosPanel.jsx, 09/11/2026): barras al 100% por grupo, el General arriba. */
+.dc-shell .sgp-controles { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-bottom: 18px; }
+.dc-shell .sgp-rot { font-size: 10px; font-weight: 900; letter-spacing: .16em; text-transform: uppercase; color: var(--text-muted); }
+.dc-shell .sgp-mut { font-size: 11px; font-weight: 600; color: var(--text-muted); }
+.dc-shell .sgp-mut em { font-style: normal; font-weight: 800; }
+
+/* Barra al 100% */
+.dc-shell .sgp-barra { display: flex; gap: 3px; width: 100%; }
+.dc-shell .sgp-barra--lg { height: 44px; }
+.dc-shell .sgp-barra--md { height: 30px; }
+.dc-shell .sgp-barra--sm { height: 6px; margin-top: 4px; opacity: .45; }
+.dc-shell .sgp-barra > button, .dc-shell .sgp-barra > i {
+    min-width: 4px; border: 0; padding: 0 8px; border-radius: 9px; display: flex; align-items: center;
+    color: var(--ink, #0b0f1e); font-size: 12px; font-weight: 900; overflow: hidden; white-space: nowrap;
+    transition: flex .9s cubic-bezier(.2, .8, .2, 1), filter .2s, transform .2s;
+}
+.dc-shell .sgp-barra--lg > button { border-radius: 12px; font-size: 14px; padding: 0 12px; }
+.dc-shell .sgp-barra--sm > i { border-radius: 999px; padding: 0; }
+.dc-shell .sgp-barra > button { cursor: pointer; }
+.dc-shell .sgp-barra > button:hover { filter: brightness(1.15); transform: translateY(-1px); }
+.dc-shell .sgp-vacia { font-size: 11px; color: var(--text-muted); align-self: center; }
+
+/* General */
+.dc-shell .sgp-general { display: grid; gap: 8px; padding: 16px; border-radius: 20px; border: 1px solid var(--border-subtle);
+    background: color-mix(in srgb, var(--text-on-surface) 4%, transparent); }
+.dc-shell .sgp-general-cab { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.dc-shell .sgp-general-n { font-size: 26px; font-weight: 900; letter-spacing: -.02em; margin-left: 6px; }
+.dc-shell .sgp-segs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin-top: 8px; }
+.dc-shell .sgp-seg {
+    display: grid; justify-items: start; gap: 4px; padding: 10px 12px; border-radius: 14px; text-align: left; font: inherit;
+    color: inherit; cursor: pointer; border: 1px solid color-mix(in srgb, var(--c) 28%, transparent);
+    background: linear-gradient(160deg, color-mix(in srgb, var(--c) 14%, transparent), transparent 80%);
+    animation: sgpSube .45s calc(var(--i) * 60ms) both cubic-bezier(.2, .8, .2, 1);
+    transition: transform .2s, border-color .2s;
+}
+.dc-shell .sgp-seg:hover:not(:disabled) { transform: translateY(-2px); border-color: color-mix(in srgb, var(--c) 60%, transparent); }
+.dc-shell .sgp-seg:disabled { cursor: default; opacity: .55; }
+.dc-shell .sgp-seg-cab { display: inline-flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 900; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--text-muted); }
+.dc-shell .sgp-seg-cab i { width: 8px; height: 8px; border-radius: 3px; background: var(--c); }
+.dc-shell .sgp-seg-pct { font-size: 24px; line-height: 1; font-weight: 900; letter-spacing: -.02em; color: var(--c); }
+.dc-shell .sgp-seg-tasas { display: flex; gap: 8px; font-size: 11px; font-weight: 700; color: color-mix(in srgb, var(--text-on-surface) 70%, transparent); }
+
+.dc-shell .sgp-leyenda { display: flex; align-items: center; gap: 6px; margin: 14px 0 4px; font-size: 11px; color: var(--text-muted); }
+.dc-shell .sgp-ley-actual, .dc-shell .sgp-ley-antes { display: inline-block; width: 18px; border-radius: 999px; background: var(--text-muted); }
+.dc-shell .sgp-ley-actual { height: 8px; }
+.dc-shell .sgp-ley-antes { height: 4px; opacity: .45; margin-left: 10px; }
+
+/* Grupos */
+.dc-shell .sgp-filas { display: grid; gap: 4px; margin-top: 8px; }
+.dc-shell .sgp-fila { display: grid; grid-template-columns: minmax(120px, 190px) minmax(0, 1fr); gap: 14px; align-items: center;
+    padding: 10px 12px; border-radius: 14px; animation: sgpSube .45s calc(var(--i) * 50ms) both cubic-bezier(.2, .8, .2, 1); }
+.dc-shell .sgp-fila:hover { background: color-mix(in srgb, var(--text-on-surface) 4%, transparent); }
+.dc-shell .sgp-fila-nombre { display: grid; gap: 2px; min-width: 0; }
+.dc-shell .sgp-fila-nombre b { font-size: 14px; font-weight: 800; }
+.dc-shell .sgp-fila-n { display: flex; align-items: center; gap: 8px; }
+.dc-shell .sgp-fila-n small { font-size: 12px; font-weight: 700; color: var(--text-muted); }
+.dc-shell .sgp-cambio { font-size: 11px; font-weight: 900; color: var(--c); padding: 1px 7px; border-radius: 999px;
+    background: color-mix(in srgb, var(--c) 18%, transparent); white-space: nowrap; }
+
+@keyframes sgpSube { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .dc-shell .sgp-seg, .dc-shell .sgp-fila { animation: none; } .dc-shell .sgp-barra > * { transition: none; } }
+@media (max-width: 720px) {
+    .dc-shell .sgp-segs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .dc-shell .sgp-fila { grid-template-columns: 1fr; gap: 6px; }
+}

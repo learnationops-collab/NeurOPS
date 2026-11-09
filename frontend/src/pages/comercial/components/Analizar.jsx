@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { ChevronDown, CreditCard, PieChart, Rows } from 'lucide-react';
 import Embudo from './Embudo';
-import CloseRatesCanales from './CloseRatesCanales';
+import CierreComercial from './CierreComercial';
+import PanelCash from './PanelCash';
+import PanelPorCobrar from './PanelPorCobrar';
 import { canalesDe, partesDe } from './embudoCanales';
 // El "i" era una copia local con una prop `der` para forzar el lado a mano. El `Tip` compartido
 // mide y elige el lado que entra, así que la prop desapareció de todas las llamadas.
@@ -10,7 +12,6 @@ import EsqueletoAnalizar from './EsqueletoAnalizar';
 // La cifra que sube hasta su valor: vive aparte porque la usa también la tira de Revisar.
 import Cifra from './Cifra';
 import MetricaClicable, { abrir } from '../../../components/dashboard/MetricaClicable';
-import MatrizCierres, { LeyendaCierres } from '../../../components/dashboard/MatrizCierres';
 import RepartoEstados from './RepartoEstados';
 import TiraDescalificadas from './TiraDescalificadas';
 import ModalNoCerradas from './ModalNoCerradas';
@@ -19,7 +20,7 @@ import {
     DESTINOS_CIERRES, DESTINOS_CLOSER as D, DESTINO_PROCEDENCIAS_TOTAL, PASOS_CLOSER, destinoProcedencia,
 } from './destinos';
 // El tile, la barra gruesa y el panel los comparte el tablero de setters (10/10/2026).
-import { Delta, Panel, PanelCab, Riel, Tabs, Tile, Vacio, tasa, v } from './PiezasAnalizar';
+import { Panel, PanelCab, Riel, Tabs, Tile, Vacio, tasa, v } from './PiezasAnalizar';
 import DashboardSetters, { VISTAS_CANAL } from './DashboardSetters';
 
 /**
@@ -44,8 +45,6 @@ import DashboardSetters, { VISTAS_CANAL } from './DashboardSetters';
 /* ============================================================
    PIEZAS
    ============================================================ */
-
-const TABS_VISTA = [['tabla', 'Tabla', Rows], ['grafico', 'Gráfico', PieChart]];
 
 /**
  * Torta: cada ítem como un arco, el total al medio. Un ítem puede traer su `pct` ya calculado (el
@@ -102,32 +101,6 @@ const Torta = ({ items, total, f, centro }) => {
                         : <div key={it.label} className="tl-fila">{cuerpo}</div>;
                 })}
             </div>
-        </div>
-    );
-};
-
-/** Sparkline del cash del período: una barra por día, el pico marcado si es único. */
-const Chispa = ({ dias, tone, etiqueta }) => {
-    const montado = useMontado();
-    const tope = Math.max(...dias.map(d => d.cash), 0);
-    const picos = dias.filter(d => d.cash === tope && tope > 0).length;
-    return (
-        <div>
-            <div className="dias">
-                {dias.map((d, i) => {
-                    const alto = tope ? Math.max((d.cash / tope) * 100, d.cash === 0 ? 4 : 8) : 4;
-                    const solo = picos === 1 && d.cash === tope && tope > 0;
-                    return (
-                        <i key={d.dia} title={`${fmt.fecha(d.dia)} · ${fmt.money(d.cash)}`}
-                            style={{
-                                height: montado ? `${alto}%` : undefined,
-                                background: v(solo ? 'success' : (d.cash === 0 ? 'hueco' : tone)),
-                                transitionDelay: `${i * 35}ms`,
-                            }} />
-                    );
-                })}
-            </div>
-            {etiqueta && <p className="t-cap mut40 num" style={{ marginTop: 8 }}>{etiqueta}</p>}
         </div>
     );
 };
@@ -214,7 +187,7 @@ const PanelEstados = ({ bloque, irA }) => {
  * de nuevo por si en la ficha se cargó una objeción. Sin `cargarNoCerradas` el número va directo a
  * Revisar, como el resto de la tarjeta.
  */
-const PanelCierre = ({ bloque, irA, cargarNoCerradas, onAbrirFila }) => {
+const PanelCierre = ({ bloque, previo, vsLabel, irA, cargarNoCerradas, onAbrirFila }) => {
     const [verNoCerradas, setVerNoCerradas] = useState(false);
     const c = bloque.cierres;
     // Sin llamadas de este período pero con cierres de llamadas anteriores, el panel se muestra igual.
@@ -226,167 +199,22 @@ const PanelCierre = ({ bloque, irA, cargarNoCerradas, onAbrirFila }) => {
     return (
         <Panel id="p-cierre" cab={
             <PanelCab titulo="Cierre"
-                ayuda={'El close rate cuenta solo pagos completos y split pay: una seña es una reserva, '
-                    + 'no una venta, y va en su propia fila. Cada tarjeta mide lo mismo contra las '
-                    + 'llamadas con show up y contra las presentaciones. Abajo, las no cerradas: las '
-                    + 'que asistieron y no terminaron ni en venta ni en seña.'}>
-                {!vacio && <LeyendaCierres cierres={c} />}
+                ayuda={'El close rate cuenta solo pagos completos y split pay, una venta por lead. El '
+                    + 'anillo azul son las ventas y el rosa las señas, sobre las llamadas con show up y '
+                    + 'sobre las presentaciones. Abajo, el mismo close rate de las agendas directas y de '
+                    + 'las que vienen del triage. Debajo de cada cifra, la del período comparado y cuánto cambió.'}>
+                {previo && <span className="cc-vs-cab"><small>vs</small>{vsLabel || 'Período comparado'}</span>}
             </PanelCab>
         }>
             {vacio
                 ? <Vacio texto="Ninguna llamada del período tiene todavía un show up cargado." />
-                : <MatrizCierres cierres={c} irA={irA} destinos={DESTINOS_CIERRES} Ayuda={Tip}
+                : <CierreComercial cierres={c} previo={previo?.cierres} previoCanal={previo?.cierres_canal} vsLabel={vsLabel}
+                    porCanal={bloque.cierres_canal} irA={irA} destinos={DESTINOS_CIERRES}
                     onVerNoCerradas={cargarNoCerradas ? () => setVerNoCerradas(true) : undefined} />}
             {verNoCerradas && cargarNoCerradas && (
                 <ModalNoCerradas cargar={cargarNoCerradas} total={c?.no_cerradas?.num ?? null}
                     irA={irA} destino={DESTINOS_CIERRES.no_cerradas} onAbrir={abrirLead}
                     onCerrar={() => setVerNoCerradas(false)} />
-            )}
-        </Panel>
-    );
-};
-
-const DEUDA = [
-    {
-        label: 'Vencido', campo: 'vencido', tone: 'error', destino: 'por_cobrar_vencido',
-        help: 'Cuotas con vencimiento ya pasado y sin pagar. Plata que había que cobrar y no se cobró.',
-    },
-    {
-        label: 'Por vencer', campo: 'por_vencer', tone: 'info', destino: 'por_cobrar_por_vencer',
-        help: 'Cuotas con fecha futura. Cronograma normal, no es un problema.',
-    },
-    {
-        label: 'Sin cronograma', campo: 'sin_plan', tone: 'warning', destino: 'por_cobrar_sin_plan',
-        help: 'Saldo que no tiene ninguna cuota programada: no está vencido ni por vencer, '
-            + 'directamente nadie le armó un plan de cobro.',
-    },
-];
-
-/**
- * Lo cobrado del período y lo que falta cobrar.
- *
- * La referencia enfrenta "revenue firmado" con "cash collected", y ese revenue no existe:
- * `FinancialSale` guarda el monto de cada cobro, no el total del contrato, así que el "% de lo
- * firmado" habría que inventarlo. Lo que sí se puede afirmar son dos cosas distintas, y por eso
- * van separadas por una regla: arriba el cash del período abierto en fees y neto —eso cierra
- * exacto—, y abajo lo que falta cobrar A HOY, que es un saldo y no un flujo. De ahí que la
- * segunda mitad no tenga variación y no se mueva cuando cambiás el período.
- */
-const PanelCash = ({ bloque, deltas, porCobrar, irA }) => {
-    const [vista, setVista] = useState('tabla');
-    const fees = Math.max(0, Math.round((bloque.cash - bloque.cash_neto) * 100) / 100);
-    const filas = [
-        {
-            label: 'Cash collected', valor: bloque.cash, p: '100%', tone: 'success',
-            destino: D.cash_collected,
-            help: 'Todo lo que entró en el período: pagos completos, primeras cuotas, cuotas de '
-                + 'ventas anteriores y señas.',
-        },
-        {
-            label: 'Fees de pasarela', valor: fees, p: fmt.pct(tasa(fees, bloque.cash)), tone: 'warning',
-            destino: D.fees,
-            help: 'Lo que se quedó la pasarela de pago: la diferencia entre lo cobrado y lo neto.',
-        },
-        {
-            label: 'Cash neto', valor: bloque.cash_neto, tone: 'info', destino: D.cash_neto,
-            p: fmt.pct(tasa(bloque.cash_neto, bloque.cash)),
-            help: 'Lo cobrado ya descontadas las fees. Es sobre esto que se calcula la comisión.',
-        },
-        {
-            label: 'Ticket promedio', valor: bloque.ticket, p: '—', tone: 'brand-secondary',
-            destino: D.ticket_promedio,
-            help: `Lo cobrado en las ${bloque.ventas} ventas nuevas dividido por cuántas fueron. `
-                + 'Las cuotas y las señas no entran.',
-        },
-    ];
-    return (
-        <Panel id="p-cash" cab={
-            <PanelCab titulo="Cash"
-                ayuda={'Arriba, el cash del período abierto en fees y neto. Abajo, lo que falta cobrar '
-                    + 'a hoy: es el saldo de las inscripciones vivas, no una cifra del período, así que '
-                    + 'no cambia cuando cambiás el filtro de fechas.'}>
-                <Tabs valor={vista} onChange={setVista} ops={TABS_VISTA} aria="Vista de cash" />
-                <Delta delta={deltas.cash} actual={fmt.money(bloque.cash)} />
-            </PanelCab>
-        }>
-            {vista === 'grafico'
-                ? (
-                    <Torta total={bloque.cash} f={fmt.money} centro="cobrado"
-                        items={[{ label: 'Cash neto', n: bloque.cash_neto, tone: 'success' },
-                            { label: 'Fees de pasarela', n: fees, tone: 'warning' }]} />
-                )
-                : (
-                    <div className="tdatos tdatos--montos">
-                        <div className="tdatos-cab">
-                            <span>Concepto</span><span>Monto</span><span>%</span><span />
-                        </div>
-                        {filas.map(f => (
-                            <div key={f.label} className="tdatos-fila">
-                                <span className="tdatos-nom">
-                                    <span className="dato-punto" style={{ background: v(f.tone) }} />
-                                    <span className="trunc">{f.label}</span>
-                                </span>
-                                <MetricaClicable irA={irA} destino={f.destino} vacio={!f.valor}
-                                    detalle={`${f.label} · ${fmt.money(f.valor)}`}
-                                    className="tdatos-n" style={{ color: v(f.tone) }}>
-                                    {fmt.money(f.valor)}
-                                </MetricaClicable>
-                                <span className="tdatos-p">{f.p}</span>
-                                <span><Tip texto={f.help} titulo={f.label} /></span>
-                            </div>
-                        ))}
-                    </div>
-                )}
-
-            <Chispa dias={bloque.cash_por_dia} tone="brand-secondary"
-                etiqueta={bloque.mejor_dia
-                    ? `mejor día ${fmt.money(bloque.mejor_dia.cash)} · ${fmt.fecha(bloque.mejor_dia.dia)}`
-                    : 'sin cobros en el período'} />
-
-            {porCobrar && (
-                <>
-                    <hr className="sep" />
-                    <div className="fila" style={{ marginBottom: 'var(--s3)' }}>
-                        <span className="t-rotulo">Por cobrar · a hoy</span>
-                        <Tip titulo="Por cobrar"
-                            texto={'El saldo de las inscripciones vivas: el precio que negoció cada '
-                                + 'cliente menos lo que ya pagó. No está acotado al período — es lo que '
-                                + 'se debe hoy, sin fecha de corte — así que no lleva variación.'} />
-                        <MetricaClicable irA={irA} destino={D.por_cobrar}
-                            detalle={`Por cobrar a hoy · ${fmt.money(porCobrar.total)}`}
-                            style={{ marginLeft: 'auto' }}>
-                            <Cifra className="num" valor={fmt.money(porCobrar.total)}
-                                style={{ fontSize: 19, fontWeight: 900 }} />
-                        </MetricaClicable>
-                    </div>
-                    <div className="grid-sm pareja">
-                        {DEUDA.map(x => (
-                            <div key={x.label} className="ficha" style={{ '--c': v(x.tone) }}>
-                                <span className="fila" style={{ gap: 5, alignItems: 'flex-start' }}>
-                                    <span className="ficha-lbl">{x.label}</span>
-                                    <Tip texto={x.help} titulo={x.label} />
-                                </span>
-                                <MetricaClicable irA={irA} destino={D[x.destino]} subrayar={false}
-                                    vacio={!porCobrar[x.campo]}
-                                    detalle={`${x.label} · ${fmt.money(porCobrar[x.campo])}`}>
-                                    <Cifra className="ficha-n" valor={fmt.money(porCobrar[x.campo])} />
-                                </MetricaClicable>
-                            </div>
-                        ))}
-                    </div>
-                    <p className="t-cap mut40" style={{ marginTop: 'var(--s3)' }}>
-                        {fmt.plural(porCobrar.clientes, 'cliente', 'clientes')} con saldo
-                        {porCobrar.clientes_vencido > 0
-                            && `, ${porCobrar.clientes_vencido} con una cuota vencida`}.{' '}
-                        <button type="button" className="t-cap num" onClick={abrir(irA, D.cash_collected)}
-                            style={{
-                                background: 'none', border: 0, padding: 0, cursor: 'pointer',
-                                color: v('brand-secondary'), textDecoration: 'underline',
-                            }}>
-                            Ver los cobros del período
-                        </button>
-                    </p>
-                </>
             )}
         </Panel>
     );
@@ -827,23 +655,20 @@ const pasosDe = (funnel, vocabulario, irA) => funnel.map(p => {
         // El paso partido en agendas directas y desde triage (solo en el embudo de closers).
         ...partesDe(p.por_canal, def.destino, irA),
         // Agendas: cuántas son vigentes y cuántas descartadas; la segunda cifra abre las descartadas.
-        sub: p.descartadas != null ? `${p.vigentes} vigentes + ${p.descartadas} descartadas`
-            : p.show_up != null ? `show up: ${p.n} de ${p.base_show_up} agendas`
-                : p.presentaciones != null ? `${p.n} de ${p.presentaciones} presentaciones` : undefined,
-        irSub: p.descartadas ? abrir(irA, def.destinoDescartadas) : undefined,
+        chip: p.descartadas ? { t: `${p.descartadas} descartadas`, ir: abrir(irA, def.destinoDescartadas) } : undefined,
         // El show up del paso es el de la tarjeta de arriba: presentes sobre los cuatro destinos (ADR-W112).
         tasa: p.show_up != null ? `${p.show_up}%` : undefined,
         subTasa: p.show_up != null ? `Show up: ${p.n} de ${p.base_show_up} agendas` : undefined,
     };
 });
 
-const DashboardClosers = ({ bloque, deltas, porCobrar, fuentes, irA, cargarNoCerradas, onAbrirFila }) => (
+const DashboardClosers = ({ bloque, previo, deltas, porCobrar, adquisicion, vsLabel, fuentes, irA, cargarNoCerradas, onAbrirFila }) => (
     <>
         <div className="grid grid--4">
             <Tile label="Show up" valor={fmt.pct(bloque.show_up)} color={v('success')}
                 help={'Se presentaron, sobre las agendas que se presentaron, cancelaron, reprogramaron o no '
                     + 'se presentaron. Cada agenda cuenta, también la 2ª llamada.'}
-                delta={deltas.show_up}
+                antes={previo ? { actual: bloque.show_up, previo: previo.show_up, texto: fmt.pct(previo.show_up), vs: vsLabel } : null}
                 humo={[v('success'), v('info'), v('brand-primary'), v('success')]}
                 cuenta={{ a: String(bloque.asistieron), b: fmt.plural(bloque.base_show_up ?? bloque.realizadas, 'agenda', 'agendas') }}
                 ver={abrir(irA, D.show_up)} baja="p-estados" />
@@ -858,41 +683,44 @@ const DashboardClosers = ({ bloque, deltas, porCobrar, fuentes, irA, cargarNoCer
                     + 'seguimiento, una segunda llamada). Cuenta por cobro, así que una seña del mes '
                     + 'pasado que se paga hoy suma. El close rate por llamada, que mide solo las '
                     + 'llamadas de este período, está en el panel Cierre.'}
-                delta={deltas.close_rate_real}
+                antes={previo ? { actual: bloque.close_rate_real, previo: previo.close_rate_real,
+                    texto: fmt.pct(previo.close_rate_real), vs: vsLabel } : null}
                 humo={[v('error'), v('warning'), v('brand-primary'), v('error')]}
                 cuenta={bloque.cierres?.reales ? { a: String(bloque.cierres.reales.cierres), b: `${bloque.cierres.reales.base} oportunidades` } : null}
                 sub={bloque.cierres?.reales?.anteriores ? `${fmt.plural(bloque.cierres.reales.anteriores, 'de llamada anterior', 'de llamadas anteriores')}` : undefined}
                 ver={abrir(irA, D.close_rate_real)} baja="p-cierre" />
-            <Tile label="Cash collected · neto" valor={fmt.money(bloque.cash_neto)}
+            {/* Debajo va el monto del período comparado, el que explica el delta (pedido de Mario,
+                09/11/2026). El bruto y la comisión de la pasarela quedan en el panel Cash. */}
+            <Tile label="Cash collected" valor={fmt.money(bloque.cash_neto)}
                 help={'Dinero que entró en el período, descontadas las fees de la pasarela: pagos '
-                    + 'completos, primeras cuotas, cuotas de ventas anteriores y señas. El bruto '
-                    + '(antes de fees) se ve debajo.'}
-                delta={deltas.cash_neto || deltas.cash}
+                    + 'completos, primeras cuotas, cuotas de ventas anteriores y señas. Debajo, lo '
+                    + 'que entró en el período comparado.'}
                 humo={[v('brand-secondary'), v('brand-primary'), v('brand-secondary-light'), v('brand-navy')]}
-                sub={`bruto ${fmt.money(bloque.cash)} · comisión ${fmt.money(bloque.comision)}`}
+                antes={previo ? { actual: bloque.cash_neto, previo: previo.cash_neto, texto: fmt.money(previo.cash_neto), vs: vsLabel } : null}
                 ver={abrir(irA, D.cash)} baja="p-cash" />
-            <Tile label="Ticket promedio" valor={fmt.money(bloque.ticket)} color={v('info')}
-                help={`Lo cobrado en las ${bloque.ventas} ventas nuevas dividido por cuántas fueron. `
+            <Tile label="Ticket promedio" valor={fmt.money(bloque.ticket_neto ?? bloque.ticket)} color={v('info')}
+                help={`Lo cobrado en las ${bloque.ventas} ventas nuevas, neto de la pasarela, dividido por cuántas fueron. `
                     + 'Las cuotas y las señas no entran.'}
-                delta={deltas.ticket}
+                antes={previo ? { actual: bloque.ticket_neto ?? bloque.ticket, previo: previo.ticket_neto ?? previo.ticket,
+                    texto: fmt.money(previo.ticket_neto ?? previo.ticket), vs: vsLabel } : null}
                 humo={[v('info'), v('brand-primary'), v('info'), v('brand-navy')]}
-                sub={`${fmt.plural(bloque.ventas, 'venta nueva', 'ventas nuevas')}${bloque.ticket_neto != null ? ` · neto ${fmt.money(bloque.ticket_neto)}` : ''}`}
+                sub={fmt.plural(bloque.ventas, 'venta nueva', 'ventas nuevas')}
                 ver={abrir(irA, D.ticket)} baja="p-cash" />
         </div>
 
         <div className="grid-2">
             <PanelEstados bloque={bloque} irA={irA} />
             <Embudo pasos={pasosDe(bloque.funnel, PASOS_CLOSER, irA)} sinFinal
-                canales={canalesDe(bloque.funnel, PASOS_CLOSER.Agendas.destino, irA)}>
-                <CloseRatesCanales reales={bloque.cierres?.reales} irA={irA} />
-            </Embudo>
+                canales={canalesDe(bloque.funnel, PASOS_CLOSER.Agendas.destino, irA)} />
         </div>
 
         <div className="grid-2">
-            <PanelCierre bloque={bloque} irA={irA} cargarNoCerradas={cargarNoCerradas}
+            <PanelCierre bloque={bloque} previo={previo} vsLabel={vsLabel} irA={irA} cargarNoCerradas={cargarNoCerradas}
                 onAbrirFila={onAbrirFila} />
-            <PanelCash bloque={bloque} deltas={deltas} porCobrar={porCobrar} irA={irA} />
+            <PanelCash bloque={bloque} previo={previo} adquisicion={adquisicion} vsLabel={vsLabel} irA={irA} />
         </div>
+
+        {porCobrar && <PanelPorCobrar porCobrar={porCobrar} irA={irA} />}
 
         {/* Las dos maneras de abrir el mismo cash: por forma de pago y por la fuente que lo trajo.
             Sin `fuentes` (un payload viejo en mano mientras llega el nuevo) Payment types vuelve a
@@ -919,7 +747,7 @@ const DashboardClosers = ({ bloque, deltas, porCobrar, fuentes, irA, cargarNoCer
  * `canal` / `onCanal`: la pestaña General · Anuncios · Inbound del tablero de setters, que vive en la
  * URL como el resto de los filtros (ver `DashboardComercial`). El de closers no la usa.
  */
-const Analizar = ({ datos, rol, irA, cargarNoCerradas = null, onAbrirFila = null, canal = null, onCanal = null,
+const Analizar = ({ datos, rol, irA, cargarNoCerradas = null, onAbrirFila = null, canal = null, onCanal = null, vsLabel = null,
     fallo = false, onReintentar = null }) => {
     // El resumen que hay en mano puede ser todavía el del rol anterior: el `rol` de arriba cambia
     // en el momento y el fetch llega después. Dibujar el dashboard de closers con un payload de
@@ -941,7 +769,8 @@ const Analizar = ({ datos, rol, irA, cargarNoCerradas = null, onAbrirFila = null
     return rol === 'setters'
         ? <DashboardSetters bloque={actual} deltas={deltas} deltasCanales={datos.deltas_canales}
             comision={datos.comision} canal={canal} onCanal={onCanal} irA={irA} />
-        : <DashboardClosers bloque={actual} deltas={deltas} porCobrar={datos.por_cobrar}
+        : <DashboardClosers bloque={actual} previo={datos.previo} deltas={deltas} porCobrar={datos.por_cobrar}
+            adquisicion={datos.adquisicion} vsLabel={vsLabel}
             fuentes={datos.fuentes} irA={irA} cargarNoCerradas={cargarNoCerradas}
             onAbrirFila={onAbrirFila} />;
 };

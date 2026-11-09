@@ -56,7 +56,6 @@ const PanelDecision = ({ d, botones, titulos, onDecidir, nota }) => {
     const grupos = porSeccion(d.puntaje);
     const lugar = [d.provincia, d.pais].filter(Boolean).join(', ');
     const perfil = [
-        d.remuneracion && ['Pretensión', `${d.remuneracion} USD / mes`],
         lugar && ['País', lugar],
         d.edad && ['Edad', `${d.edad} años`],
         d.modalidad && ['Modalidad', MODALIDAD[d.modalidad]?.label],
@@ -65,16 +64,15 @@ const PanelDecision = ({ d, botones, titulos, onDecidir, nota }) => {
 
     return (
         <aside className="tl-fi-dec" aria-label="Decisión">
-            <span className="tl-fi-etq">Decisión</span>
             <div className="tl-fi-score">
                 <Aura size="card" colors={['var(--success)', 'var(--info)', 'var(--brand-secondary)']} />
                 <div className="tl-fi-score-cab">
-                    <span>Score</span>
+                    <strong className="tl-fi-score-num">{d.score == null ? '—' : score}</strong>
+                    <span className="tl-fi-score-etq">Score<small>de 100</small></span>
                     <span className="tl-fi-estado" style={{ color: veredicto.fg, background: veredicto.bg, borderColor: veredicto.bd }}>
                         {veredicto.label}
                     </span>
                 </div>
-                <strong className="tl-fi-score-num">{d.score == null ? '—' : score}</strong>
                 {grupos.map((g, i) => (
                     <div key={g.bloque} className="tl-fi-fila" style={{ '--c': decoBloque(g.bloque, titulos.indexOf(g.bloque)).color, '--i': i }}>
                         <div><span title={titular(g.bloque)}>{titular(g.bloque)}</span><b>{+g.puntos.toFixed(1)}<small> de {g.maximo}</small></b></div>

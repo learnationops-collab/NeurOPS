@@ -110,3 +110,25 @@
 }
 
 .dc-shell .dc-canales-cr-pct--periodo { color: var(--text-muted); }
+
+/* Cabecera del embudo partido (09/11/2026): el total y cuánto se lleva cada canal, con su barra. */
+.dc-shell .dc-mix { display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: center; margin: 0 0 var(--s3); }
+.dc-shell .dc-mix-total { display: grid; justify-items: start; line-height: 1; }
+.dc-shell .dc-mix-total b { font-size: 34px; font-weight: 900; letter-spacing: -.03em; }
+.dc-shell .dc-mix-total small { font-size: 10px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--text-muted); margin-top: 4px; }
+.dc-shell .dc-mix-cuerpo { display: grid; gap: 8px; min-width: 0; }
+.dc-shell .dc-mix-barra { display: flex; gap: 3px; height: 12px; }
+.dc-shell .dc-mix-barra i { min-width: 6px; border-radius: 999px; transition: flex .9s cubic-bezier(.2, .8, .2, 1); }
+.dc-shell .dc-mix-ley { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 14px; }
+.dc-shell .dc-mix-item { display: inline-flex; align-items: baseline; gap: 6px; background: none; border: 0; padding: 0; color: inherit; font: inherit; }
+.dc-shell button.dc-mix-item { cursor: pointer; }
+.dc-shell button.dc-mix-item:hover .dc-mix-nombre { color: var(--text-on-surface); }
+.dc-shell .dc-mix-item > i { width: 8px; height: 8px; border-radius: 3px; align-self: center; }
+.dc-shell .dc-mix-nombre { font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--text-muted); }
+.dc-shell .dc-mix-item b { font-size: 14px; font-weight: 800; }
+.dc-shell .dc-mix-item small { font-size: 12px; font-weight: 800; }
+.dc-shell .dc-funnel-chip {
+    border: 1px solid var(--border-subtle); border-radius: 999px; padding: 1px 7px; background: none;
+    font-size: 9px; font-weight: 700; color: var(--text-muted); cursor: pointer; white-space: nowrap;
+}
+.dc-shell .dc-funnel-chip:hover { color: var(--text-on-surface); }

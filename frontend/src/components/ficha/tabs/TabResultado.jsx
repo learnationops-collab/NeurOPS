@@ -1070,9 +1070,9 @@ function Revision({
           <span className="ln-choice-label">
             <span className="ln-check" aria-hidden="true"><Check /></span>
             <span className="ln-choice-text">
-              Avisar por la automatización (n8n)
+              Avisar en Discord
               <span className="ln-choice-hint">
-                Dispara los mensajes automáticos al cliente y las notificaciones del equipo. Apagalo
+                Manda la tarjeta de la venta a #wins y, si entra un alumno nuevo, a #onboardings. Apagalo
                 solo si ya avisaste vos o si es una venta de prueba.
               </span>
             </span>

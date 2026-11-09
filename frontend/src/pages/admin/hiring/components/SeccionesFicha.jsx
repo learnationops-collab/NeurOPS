@@ -58,6 +58,15 @@ const altoDe = (s) => 70 + s.preguntas.reduce((n, p) => {
 
 /** Reparte las secciones en dos columnas: cada una va a la más corta, en orden. */
 export const repartir = (secciones) => {
+    // Con sección cualitativa: ella sola a la izquierda (textos largos) y el resto apilado a la derecha.
+    const esCuali = (s) => /cualitativ|criterio|aporte|actitud/.test(
+        String(s.titulo || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase());
+    if (secciones.some(esCuali) && !secciones.every(esCuali)) {
+        const conIndice = secciones.map((s, i) => ({ s, i }));
+        const cols = [conIndice.filter(({ s }) => esCuali(s)), conIndice.filter(({ s }) => !esCuali(s))];
+        cols.cuali = true;
+        return cols;
+    }
     const cols = [[], []];
     const alto = [0, 0];
     secciones.forEach((s, i) => {
@@ -75,16 +84,18 @@ const Copiar = ({ texto, etiqueta, onCopiar }) => (
 );
 
 // Texto largo: tres renglones y «Ver todo», solo si de verdad quedó cortado.
-const TextoLargo = ({ texto, abierto, onToggle }) => {
+// `plegado`: otra respuesta de la sección está abierta, así que esta queda en un renglón.
+const TextoLargo = ({ texto, abierto, plegado, onToggle }) => {
     const ref = useRef(null);
     const [cortado, setCortado] = useState(false);
     useLayoutEffect(() => {
         const el = ref.current;
         if (el && !abierto) setCortado(el.scrollHeight > el.clientHeight + 1);
-    }, [texto, abierto]);
+    }, [texto, abierto, plegado]);
+    const estado = abierto ? ' is-abierto' : `${plegado ? ' is-plegado' : ''} is-cerrado`;
     return (
         <>
-            <p ref={ref} className={`tl-fi-valor tl-fi-valor--largo${abierto ? '' : ' is-cerrado'}`}>{texto}</p>
+            <p ref={ref} className={`tl-fi-valor tl-fi-valor--largo${estado}`}>{texto}</p>
             {(cortado || abierto) && (
                 <button type="button" className="tl-fi-vertodo" onClick={onToggle}>
                     {abierto ? 'Ver menos' : 'Ver todo'}
@@ -95,7 +106,7 @@ const TextoLargo = ({ texto, abierto, onToggle }) => {
     );
 };
 
-const Valor = ({ p, abierto, onToggle }) => {
+const Valor = ({ p, abierto, plegado, onToggle }) => {
     if (p.valor == null) return <p className="tl-fi-valor is-vacio">Sin respuesta</p>;
     const texto = String(p.valor);
     if (p.tipo === 'check') {
@@ -120,11 +131,11 @@ const Valor = ({ p, abierto, onToggle }) => {
             ? <a className="tl-fi-link" href={enlace} target="_blank" rel="noreferrer">{texto}</a>
             : <p className="tl-fi-valor">{texto}</p>;
     }
-    if (p.tipo === 'parrafo' || texto.length > 90) return <TextoLargo texto={texto} abierto={abierto} onToggle={onToggle} />;
+    if (p.tipo === 'parrafo' || texto.length > 90) return <TextoLargo texto={texto} abierto={abierto} plegado={plegado} onToggle={onToggle} />;
     return <p className="tl-fi-valor">{texto}</p>;
 };
 
-const Item = ({ p, pts, abierto, onToggle, onCopiar }) => {
+const Item = ({ p, pts, abierto, plegado, onToggle, onCopiar }) => {
     const copiable = p.valor != null && (p.tipo === 'parrafo' || p.tipo === 'email' || p.tipo === 'tel' || String(p.valor).length > 90);
     return (
         <div className={`tl-fi-item${esAncho(p) ? ' is-ancho' : ''}${p.corta ? ' is-corta' : ''}`}>
@@ -134,7 +145,7 @@ const Item = ({ p, pts, abierto, onToggle, onCopiar }) => {
                 {pts && <span className="tl-fi-pts" title={`Importancia ×${pts.peso}`}>{+pts.puntos.toFixed(1)}/{pts.maximo} pts</span>}
                 {copiable && <Copiar texto={p.valor} etiqueta="respuesta" onCopiar={onCopiar} />}
             </div>
-            <Valor p={p} abierto={abierto} onToggle={onToggle} />
+            <Valor p={p} abierto={abierto} plegado={plegado} onToggle={onToggle} />
         </div>
     );
 };
@@ -144,11 +155,12 @@ export const Seccion = ({ s, i, puntos, abiertas, onToggle, onCopiar }) => {
     const total = s.preguntas.length;
     const bien = s.preguntas.filter((p) => p.valor != null && !p.corta).length;
     const corta = s.preguntas.some((p) => p.corta);
+    const algunaAbierta = s.preguntas.some((p) => abiertas.has(p.id));
     return (
         <section className="tl-fi-sec" style={{ '--c': color, '--i': i }}>
             <Aura soft size="card" colors={[color, 'var(--brand-primary)']} />
             <header className="tl-fi-sec-cab">
-                <span className="tl-fi-tile"><Icono size={20} aria-hidden="true" /></span>
+                <span className="tl-fi-tile"><Icono size={18} aria-hidden="true" /></span>
                 <h3 className="tl-fi-sec-tit" title={titular(s.titulo)}>{titular(s.titulo)}</h3>
                 <span className="tl-fi-cuenta" style={corta ? { '--c': 'var(--error)' } : undefined}
                     title={corta ? 'Una respuesta corta la postulación' : 'Respondidas sin cortar'}>
@@ -157,7 +169,7 @@ export const Seccion = ({ s, i, puntos, abiertas, onToggle, onCopiar }) => {
             </header>
             <div className="tl-fi-items">
                 {s.preguntas.map((p) => (
-                    <Item key={p.id} p={p} pts={puntos[p.id]} abierto={abiertas.has(p.id)}
+                    <Item key={p.id} p={p} pts={puntos[p.id]} abierto={abiertas.has(p.id)} plegado={algunaAbierta && !abiertas.has(p.id)}
                         onToggle={() => onToggle(p.id)} onCopiar={onCopiar} />
                 ))}
             </div>

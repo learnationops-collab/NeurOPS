@@ -188,7 +188,7 @@ export const ANCHO_MAX = 640;
 export const vistaDefault = () => ({
     cols: COLS.map((c) => c.id),
     anchos: {},
-    orden: { campo: 'score', dir: 'desc' },
+    orden: { campo: 'pide', dir: 'asc' },
     agrupar: 'none',
     // `resp`: {pregunta: [opciones]}, de las preguntas de opción del formulario.
     filtros: { paises: [], soloVideo: false, scoreMin: 0, pideMax: 0, resp: {} },
@@ -236,7 +236,8 @@ export const leerVista = () => {
             ...guardada,
             cols: Array.isArray(guardada.cols) ? guardada.cols.filter((id) => ids.has(id)) : base.cols,
             anchos: guardada.anchos && typeof guardada.anchos === 'object' ? guardada.anchos : {},
-            orden: ORDENES.some((o) => o.id === guardada.orden?.campo) ? guardada.orden : base.orden,
+            // Siempre arranca con la más barata primero; otro orden dura lo que dura la visita.
+            orden: base.orden,
             agrupar: AGRUPAR.some((a) => a.id === guardada.agrupar) ? guardada.agrupar : base.agrupar,
             filtros: { ...base.filtros, ...(guardada.filtros || {}) },
         };

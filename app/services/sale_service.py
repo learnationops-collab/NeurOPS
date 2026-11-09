@@ -39,10 +39,17 @@ def _orden(fila):
 
 
 def _pagos_de(session, sale, excepto):
-    """Los pagos de `sale` en orden, con los de este mismo flush que todavía no se guardaron."""
+    """Los pagos de `sale` en orden, como quedan en este flush: los nuevos y también los guardados que
+    se acaban de reubicar en ella. Cambiar el programa de un cliente reubica todos sus pagos en un solo
+    flush, y sin los reubicados cada pago veía vacía la venta que abrió el anterior y abría otra (Silka
+    Rodríguez, 06/11/2026: 3 pagos, 3 ventas a precio de lista)."""
     guardados = session.query(FinancialSale).filter(FinancialSale.sale_id == sale.id).all() if sale.id else []
-    nuevos = [f for f in session.new if isinstance(f, FinancialSale) and f.sale is sale]
-    return sorted((f for f in {*guardados, *nuevos} if f is not excepto), key=_orden)
+    en_vuelo = [f for f in (*session.new, *session.dirty) if isinstance(f, FinancialSale) and f.sale is sale]
+    return sorted((f for f in {*guardados, *en_vuelo} if f is not excepto and f.sale is sale), key=_orden)
+
+
+def _tiene_plan(session, sale):
+    return bool(sale.id) and session.query(InstallmentPlan.id).filter(InstallmentPlan.sale_id == sale.id).first() is not None
 
 
 def _vigente(session, fila, pago):
@@ -64,8 +71,9 @@ def _vigente(session, fila, pago):
                                    else Sale.program_code == pago.programa)
     pendientes = [s for s in session.new if isinstance(s, Sale) and s.program_code == pago.programa
                   and ((persona and s.person_uuid == persona) or (fila.client_id and s.client_id == fila.client_id))]
-    # La venta de la que sale este mismo pago (al corregirlo) no cuenta si se queda sin nada.
-    candidatas = [s for s in q.all() + pendientes if _pagos_de(session, s, fila)]
+    # La venta de la que sale este mismo pago (al corregirlo) no cuenta si se queda sin nada. Una con
+    # plan de cuotas y sin pagos sí: es la venta declarada que espera su cobro.
+    candidatas = [s for s in q.all() + pendientes if _pagos_de(session, s, fila) or _tiene_plan(session, s)]
     if not candidatas:
         return None
     hasta = fila.date or datetime.max

@@ -11,7 +11,7 @@ movia junto con cada correccion ya no existe (Etapa 2c de docs/plan_personas.md)
 «Sin automatizaciones» es no pasar por `SheetsService.post_to_sheets`, que es el camino de una venta
 DECLARADA. Eso deja afuera, a proposito:
 
-  · el POST a Google Sheets y el webhook de n8n (los mensajes al cliente, el aviso a Discord);
+  · el POST a Google Sheets y el aviso de la venta a Discord (discord_avisos/venta.py; antes, el webhook de n8n);
   · el aviso de «seña convertida en venta» (`check_and_notify_down_payment_conversion`);
   · marcar la agenda como Show up (`mark_sale_appointment_as_show_up`);
   · pisar el total acordado de la venta (`Sale.agreed_total`);

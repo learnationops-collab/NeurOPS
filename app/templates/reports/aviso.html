@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    {% from "reports/_tarjeta.html" import estilos, icono, logo %}
+    {{ estilos(fuente_b64) }}
+    <style>
+        .estado { flex-shrink: 0; padding: 10px 22px; border-radius: 999px; font-size: 17px; font-weight: 800;
+                  white-space: nowrap; color: rgb(var(--rgb)); background: rgba(var(--rgb), .14); border: 1px solid rgba(var(--rgb), .6); }
+    </style>
+</head>
+
+{# Tarjeta genérica de los avisos de Discord (app/services/discord_avisos/tarjeta.py), con el estilo de la de agenda. #}
+<body>
+    <div class="card" style="--rgb: {{ rgb }}">
+        <div class="cuerpo">
+            <div class="cab">
+                <div>
+                    <div class="evento">{{ evento }}</div>
+                    <h1>{{ nombre }}</h1>
+                </div>
+                {% if estado %}<div class="estado">{{ estado }}</div>{% endif %}
+            </div>
+
+            {% if chips %}
+            <div class="chips">
+                {% for c in chips %}<span class="chip"><i>{% if c.icono %}{{ icono(c.icono) }}{% else %}{{ c.marca or '•' }}{% endif %}</i>{{ c.texto }}</span>{% endfor %}
+            </div>
+            {% endif %}
+
+            {% if cajas %}
+            <div class="boxes">
+                {% for b in cajas %}
+                <div class="box" style="--c: var(--{{ b.color or 'azul' }})"><span>{{ icono(b.icono or 'check') }}</span>
+                    <div><small>{{ b.titulo }}</small><div>{{ b.valor }}{% if b.sub %} <em>· {{ b.sub }}</em>{% endif %}</div></div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if tiles %}
+            <div class="tiles">
+                {% for t in tiles %}
+                <div class="tile">
+                    <span>{{ icono(t.icono or 'check') }}</span>
+                    <div><b>{{ t.titulo }}</b>{% if t.sub %}<small>{{ t.sub }}</small>{% endif %}</div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="pie">
+                <span>{{ pie }}</span>
+                {{ logo() }}
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

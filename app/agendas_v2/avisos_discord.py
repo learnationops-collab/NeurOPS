@@ -5,20 +5,15 @@ El texto lleva solo lo que se busca después en Discord (nombre y WhatsApp del l
 con su ID (`<@id>`: escribir «@nombre» no notifica a nadie). Todo lo demás va en una imagen
 (app/templates/reports/agenda_v2.html). Si la imagen falla, sale un embed de texto.
 
-Webhooks: DISCORD_AGENDAS_WEBHOOK; los que no califican, DISCORD_NO_CALIFICA_WEBHOOK, y los que no terminan,
-DISCORD_ABANDONOS_WEBHOOK (sin esas, el de agendas).
+Sale por el envío único (app/services/discord_avisos/envio.py): canales agendas, no_califica y abandonos.
 Los datos se arman en la request y el envío va en un hilo: Chromium tarda segundos y el lead no los
-espera. Si falta el webhook o Discord falla, queda en el log: nunca frena la agenda.
+espera. Si falta el canal o Discord falla, queda en el log: nunca frena la agenda.
 """
 
-import json
-import os
 import re
-import threading
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-import requests
 from flask import current_app
 
 from app import db
@@ -360,53 +355,22 @@ def embed_de_texto(d):
             'footer': {'text': d['pie']}}
 
 
-def _enviar(url, d):
-    """Manda el aviso con la imagen; si la imagen falla, con el embed de texto. True si Discord lo aceptó."""
+def _mandar(canal, d, en_hilo=True):
+    """Por el envío único (app/services/discord_avisos/envio.py), con la tarjeta de agenda o, si falla, el embed."""
+    from app.services.discord_avisos import envio
     from app.services.report_image_service import ReportImageService
 
-    cuerpo = mensaje(d)
-    try:
-        imagen = ReportImageService.generate_agenda_v2_card(d)
-    except Exception as e:  # noqa: BLE001  (sin imagen el aviso sale igual)
-        current_app.logger.error(f'[AGENDAS 2.0] Sin imagen para Discord ({d["pie"]}): {e}')
-        imagen = None
-    try:
-        if imagen is None:
-            r = requests.post(url, json={**cuerpo, 'embeds': [embed_de_texto(d)]}, timeout=10)
-        else:
-            cuerpo['embeds'] = [{'color': d['color'], 'image': {'url': 'attachment://agenda.png'}}]
-            r = requests.post(url, files={'file1': ('agenda.png', imagen, 'image/png')},
-                              data={'payload_json': json.dumps(cuerpo)}, timeout=20)
-        if r.status_code >= 300:
-            current_app.logger.error(f'[AGENDAS 2.0] Discord respondio {r.status_code} ({d["pie"]})')
-            return False
-        return True
-    except Exception as e:  # noqa: BLE001  (Discord nunca puede frenar una agenda)
-        current_app.logger.error(f'[AGENDAS 2.0] No se pudo avisar a Discord ({d["pie"]}): {e}')
-        return False
-
-
-def _despachar(url, d):
-    if current_app.testing:
-        return _enviar(url, d)
-    app = current_app._get_current_object()
-
-    def correr():
-        with app.app_context():
-            _enviar(url, d)
-
-    threading.Thread(target=correr, daemon=True).start()
-    return True
+    kw = {'embed': embed_de_texto(d), 'color': d['color'], 'archivo': 'agenda.png', 'etiqueta': 'AGENDAS 2.0'}
+    armar = lambda: ReportImageService.generate_agenda_v2_card(d)  # noqa: E731
+    if en_hilo:
+        return envio.despachar(canal, mensaje(d), armar, **kw)
+    return envio.enviar(canal, mensaje(d), armar, **kw)
 
 
 def avisar_agenda(appt):
     """Avisa una agenda nueva o reprogramada. Nunca lanza."""
-    url = os.environ.get('DISCORD_AGENDAS_WEBHOOK')
-    if not url:
-        current_app.logger.warning('[AGENDAS 2.0] Sin DISCORD_AGENDAS_WEBHOOK: no se avisa a Discord.')
-        return False
     try:
-        return _despachar(url, datos_de_agenda(appt))
+        return _mandar('agendas', datos_de_agenda(appt))
     except Exception as e:  # noqa: BLE001
         current_app.logger.error(f'[AGENDAS 2.0] No se pudo armar el aviso de la agenda #{appt.id}: {e}')
         return False
@@ -414,11 +378,8 @@ def avisar_agenda(appt):
 
 def avisar_no_califica(payload, setter, evento_nombre, motivo):
     """Avisa un lead que no calificó (motivo: una clave de MOTIVOS). Nunca lanza."""
-    url = os.environ.get('DISCORD_NO_CALIFICA_WEBHOOK') or os.environ.get('DISCORD_AGENDAS_WEBHOOK')
-    if not url:
-        return False
     try:
-        return _despachar(url, datos_de_no_califica(payload, setter, evento_nombre, motivo))
+        return _mandar('no_califica', datos_de_no_califica(payload, setter, evento_nombre, motivo))
     except Exception as e:  # noqa: BLE001
         current_app.logger.error(f'[AGENDAS 2.0] No se pudo armar el aviso de un lead que no calificó: {e}')
         return False
@@ -427,11 +388,8 @@ def avisar_no_califica(payload, setter, evento_nombre, motivo):
 def avisar_abandono(payload, setter, evento_nombre, hasta_donde):
     """Avisa un lead que dejó sus datos y no terminó de agendar. Corre en el scheduler: manda sin hilo.
     True si Discord lo aceptó. Nunca lanza."""
-    url = os.environ.get('DISCORD_ABANDONOS_WEBHOOK') or os.environ.get('DISCORD_AGENDAS_WEBHOOK')
-    if not url:
-        return False
     try:
-        return _enviar(url, datos_de_abandono(payload, setter, evento_nombre, hasta_donde))
+        return _mandar('abandonos', datos_de_abandono(payload, setter, evento_nombre, hasta_donde), en_hilo=False)
     except Exception as e:  # noqa: BLE001
         current_app.logger.error(f'[AGENDAS 2.0] No se pudo avisar un lead que no terminó: {e}')
         return False

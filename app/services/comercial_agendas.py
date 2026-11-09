@@ -121,6 +121,12 @@ class ComercialAgendasMixin:
         cierran = con_venta_posterior(con_pago)
         # La seña, con la misma regla: una seña de antes de la llamada no es de esta llamada.
         senan = con_sena_posterior([a for a in appts if 'seña' in tipos_de(a)])
+        # Un cierre es UNO por lead (09/11/2026): el pago es posterior a la 1ª y a la 2ª llamada, y
+        # las dos quedaban en «Venta» — 2 ventas por un solo cobro. Se queda con la última llamada con
+        # show up; la seña, igual, y no cuenta si ese lead ya tiene la venta.
+        cierran = _ultima_por_lead(appts, cierran)
+        con_cierre = {_lead_de(a) for a in appts if a.id in cierran}
+        senan = _ultima_por_lead([a for a in appts if _lead_de(a) not in con_cierre], senan)
 
         from app.services.triage_pases import _pase_de, origen_de, quien_triage
         pases = _pase_de(appts)
@@ -183,8 +189,12 @@ class ComercialAgendasMixin:
                 'no_cerrada': post in ASISTIO and post not in CERRO,
                 'realizada': post in REALIZADAS,
                 'base_show_up': post in BASE_SHOW_UP,
-                'presento': (post in PRESENTO or bool(a.offer_presented)
-                             or cerro_sin_venta(estado, con_venta, con_seguimiento, con_sena=con_sena)),
+                # Lo que el closer respondió manda: «no presenté» no se vuelve presentación por haber terminado
+                # sin venta (09/11/2026, el cierre por presentación daba igual al de por llamada). Venta y seña
+                # sí cuentan siempre: no se compra sin ver el precio.
+                'presento': (post in PRESENTO or a.offer_presented is True
+                             or (a.offer_presented is None
+                                 and cerro_sin_venta(estado, con_venta, con_seguimiento, con_sena=con_sena))),
                 'retraso_dias': retraso,
                 'ya_paso': ya_paso,
                 'descartada': post in DESCARTADAS,
@@ -334,3 +344,22 @@ class ComercialAgendasMixin:
             'pendientes_con_retraso': len(con_retraso),
             'retraso_max': max((f['retraso_dias'] for f in con_retraso), default=0),
         }
+
+
+def _lead_de(a):
+    """La clave del lead de una agenda: su persona, o su cliente sin ella."""
+    return ('p', a.person_uuid) if a.person_uuid else ('c', a.client_id or f'a{a.id}')
+
+
+def _ultima_por_lead(appts, ids):
+    """De `ids`, la última agenda con show up de cada lead (o la última a secas si ninguna lo tiene)."""
+    ahora = datetime.utcnow()
+    mejor = {}
+    for a in appts:
+        if a.id not in ids:
+            continue
+        clave = (derivar_estado(a, ahora) == 'show_up', a.start_time or datetime.min)
+        lead = _lead_de(a)
+        if lead not in mejor or clave > mejor[lead][0]:
+            mejor[lead] = (clave, a.id)
+    return {i for _, i in mejor.values()}

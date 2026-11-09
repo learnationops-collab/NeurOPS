@@ -88,8 +88,8 @@ def discord(monkeypatch):
         raise RuntimeError('sin chromium')
 
     monkeypatch.setenv('DISCORD_AGENDAS_WEBHOOK', 'https://discord.test/webhook')
-    monkeypatch.setattr('app.agendas_v2.avisos_discord.requests.post',
-                        lambda url, json=None, timeout=None: enviados.append(json) or Respuesta())
+    monkeypatch.setattr('app.services.discord_avisos.envio.requests.post',
+                        lambda url, json=None, timeout=None, headers=None: enviados.append(json) or Respuesta())
     monkeypatch.setattr('app.services.report_image_service.ReportImageService.generate_agenda_v2_card', sin_chromium)
     return enviados
 

@@ -16,7 +16,7 @@ export const ATRIBUIR = {
     id: 'ventas.atribuir', label: 'Atribuir a una agenda', Icono: Link2, Panel: PanelAtribuir,
 };
 export const REENVIAR_WEBHOOK = {
-    id: 'ventas.reenviar_webhook', label: 'Reenviar webhook', Icono: Send, Panel: PanelReenviarWebhook,
+    id: 'ventas.reenviar_webhook', label: 'Reenviar aviso', Icono: Send, Panel: PanelReenviarWebhook,
 };
 export const EDITAR_EN_LOTE = {
     id: 'ventas.editar_lote', label: 'Editar en lote', Icono: Pencil, Panel: PanelEditarLote,

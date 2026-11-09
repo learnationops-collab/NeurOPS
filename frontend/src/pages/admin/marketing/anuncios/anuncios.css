@@ -282,6 +282,10 @@
   border-radius:var(--radius-pill);color:var(--text-muted);transition:background-color .16s ease,color .16s ease}
 .dc-shell .mk-arbol-abrir:hover{background:var(--mat-1);color:var(--text-on-surface)}
 .dc-shell .mk-arbol-hueco{width:24px;flex-shrink:0}
+.dc-shell .mk-miniatura{width:32px;height:32px;flex-shrink:0;border-radius:6px;overflow:hidden;display:block;background:var(--border-subtle)}
+.dc-shell .mk-miniatura img{width:100%;height:100%;object-fit:cover;display:block}
+.dc-shell a.mk-miniatura{transition:transform .16s ease,box-shadow .16s ease}
+.dc-shell a.mk-miniatura:hover,.dc-shell a.mk-miniatura:focus-visible{transform:scale(1.08);box-shadow:0 0 0 2px var(--brand-secondary)}
 .dc-shell .mk-chip-estado{max-width:150px}
 .dc-shell .mk-sub-estado{display:block;margin-top:4px;font-size:11px}
 .dc-shell .mk-celda-txt{display:block;max-width:200px}

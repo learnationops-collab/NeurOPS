@@ -13,7 +13,7 @@ import api from '../../../../../services/api';
 export const getVenta = (id) => api.get('/public/financial-sales', { params: { ids: String(id) } })
     .then(r => (Array.isArray(r.data) ? r.data.find(v => v.id === id) || r.data[0] : null) || null);
 
-/** Vuelve a mandar la venta al webhook de n8n. */
+/** Vuelve a mandar el aviso de la venta a Discord (la ruta conserva su nombre viejo). */
 export const reenviarWebhook = (id) => api.post(`/public/financial-sales/${id}/resend-webhook`)
     .then(r => r.data);
 

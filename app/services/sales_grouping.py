@@ -159,6 +159,8 @@ def decidir(abierta, pago):
         return abierta is None, [NOTA_SIN_TIPO]
     if _abre_venta(abierta, pago):
         return True, [NOTA_CUOTA_SIN_VENTA] if pago.tipo == 'cuota' else []
+    if not abierta.pagos:  # la venta declarada con su plan, todavía sin cobros: este es el primero
+        return False, []
     notas = []
     primero = abierta.pagos[0].dia
     if pago.tipo in ('completo', 'parcial') and primero and pago.dia and (pago.dia - primero).days > DIAS_RESTO_TARDE:
