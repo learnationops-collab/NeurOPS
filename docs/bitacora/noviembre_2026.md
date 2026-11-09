@@ -382,3 +382,5 @@
   - Venta o cobro: tarjeta con monto, programa, método, closer, origen, saldo, plan de cuotas y si convirtió una seña. A #wins siempre y a #onboardings si entra un alumno nuevo. Reemplaza al flujo «New Sales» de n8n.
   - Resultado de cada llamada (ficha, triage y mazo) a #onboardings: asistió, no asistió, canceló, reagendó o no cerró, con objeción, nota y próximo seguimiento. No repite un mismo resultado.
   - `POST /api/external/academy/discord/aviso`: la Academia manda por acá Onboarding, reactivación, Momentum, upsell y tours.
+- **9 de Noviembre de 2026 (Meta Ads: miniatura y publicación de cada anuncio)** *([MiniaturaAnuncio.jsx](../../frontend/src/pages/admin/marketing/anuncios/MiniaturaAnuncio.jsx), ADR-W122)*:
+  - Cada fila de anuncio en Campañas, conjuntos y anuncios muestra la miniatura del creativo; al tocarla se abre la publicación en Instagram. Migración `f3a5c7e9b1d4`.

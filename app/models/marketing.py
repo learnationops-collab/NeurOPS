@@ -141,6 +141,10 @@ class MetaAnuncio(db.Model):
     # Adónde lleva el anuncio, del creativo: el link (instagram.com = al DM; la landing de la clase =
     # workshop) o «cta:INSTAGRAM_MESSAGE» si no trae link. Es lo que más pesa para el embudo.
     destino = db.Column(db.String(500), nullable=True)
+    # La miniatura del creativo (URL firmada de Meta: vence, la refresca cada sincronización) y la
+    # publicación de Instagram del anuncio, para verlo sin ir al Administrador de anuncios (09/11/2026).
+    miniatura = db.Column(db.Text, nullable=True)
+    publicacion_url = db.Column(db.String(500), nullable=True)
     creado_at = db.Column(db.DateTime, default=datetime.utcnow)
     actualizado_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

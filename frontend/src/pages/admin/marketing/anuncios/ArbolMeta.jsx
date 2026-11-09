@@ -9,6 +9,7 @@ import { useColumnasVisibles } from '../../../../components/listas/useColumnasVi
 import { useEstadoGuardado } from '../../../../hooks/useEstadoGuardado';
 import { useEnPantalla } from '../../../../components/ui/useEnPantalla';
 import EnlaceMeta from './EnlaceMeta';
+import MiniaturaAnuncio from './MiniaturaAnuncio';
 import CajaDeTabla, { BotonPantallaCompleta } from './CajaDeTabla';
 import { usePantallaCompleta } from './usePantallaCompleta';
 import { armarDesglose, clavesAbribles, ordenarDesglose, totalDelDesglose } from './desgloseMeta';
@@ -274,6 +275,9 @@ const ArbolMeta = ({ anuncios, claves, leadsPorClave, cuentas, moneda, guardando
                                     {abiertaN ? <ChevronDown size={14} aria-hidden="true" /> : <ChevronRight size={14} aria-hidden="true" />}
                                 </button>
                             ) : <span className="mk-arbol-hueco" aria-hidden="true" />}
+                            {n.tipo === 'anuncio' && (
+                                <MiniaturaAnuncio src={n.anuncio.miniatura} href={n.anuncio.publicacion_url} nombre={n.nombre} />
+                            )}
                             <span className="mk-nombre-txt">
                                 <span className="mk-nombre-kw trunc" title={n.nombre}>{n.nombre}</span>
                                 {sub && <span className="mk-nombre-sub trunc" title={sub}>{sub}</span>}

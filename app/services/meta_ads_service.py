@@ -43,14 +43,16 @@ VERSION_POR_DEFECTO = 'v24.0'
 DIAS_POR_DEFECTO = 7
 DIAS_MAXIMOS = 180
 PAGINAS_MAXIMAS = 100
+# La miniatura y la publicación van también en la ficha liviana: la URL de la miniatura vence.
+CAMPOS_DE_IMAGEN = 'thumbnail_url,instagram_permalink_url'
 CAMPOS_DEL_ANUNCIO = ('id,name,effective_status,campaign{id,name},adset{id,name},'
-                      'creative{id,name,body,title,call_to_action_type,'
+                      'creative{id,name,body,title,call_to_action_type,' + CAMPOS_DE_IMAGEN + ','
                       'object_story_spec{link_data{link,call_to_action},video_data{call_to_action}},'
                       'asset_feed_spec{bodies,link_urls{website_url}}}')
 # La ficha liviana (16/10/2026): lo que se cambia a mano en el Administrador de anuncios (nombre, estado,
 # campaña y conjunto), sin el creativo, que es lo que pesa. `effective_status` del anuncio ya dice si su
 # conjunto o su campaña están pausados (ADSET_PAUSED, CAMPAIGN_PAUSED).
-CAMPOS_DE_ESTADO = 'id,name,effective_status,campaign{id,name},adset{id,name}'
+CAMPOS_DE_ESTADO = 'id,name,effective_status,campaign{id,name},adset{id,name},creative{id,' + CAMPOS_DE_IMAGEN + '}'
 CAMPOS_DE_INSIGHTS = ('ad_id,ad_name,campaign_id,campaign_name,adset_id,adset_name,spend,account_currency,'
                       'impressions,clicks,inline_link_clicks,actions')
 
@@ -258,6 +260,8 @@ def _guardar_anuncio(fila, cuenta, existentes):
     anuncio.creative_id = str(creativo.get('id') or anuncio.creative_id or '') or None
     anuncio.texto = _texto_del_creativo(creativo) or anuncio.texto
     anuncio.destino = _destino_del_creativo(creativo) or anuncio.destino
+    anuncio.miniatura = creativo.get('thumbnail_url') or anuncio.miniatura
+    anuncio.publicacion_url = (creativo.get('instagram_permalink_url') or anuncio.publicacion_url or '')[:500] or None
     anuncio.estado = fila.get('effective_status') or anuncio.estado
     anuncio.actualizado_at = datetime.utcnow()
     return anuncio
@@ -757,6 +761,8 @@ def listado(desde, hasta):
             'embudo': anuncio.embudo,
             'embudo_mapeo': anuncio.embudo_mapeo,
             'destino': anuncio.destino,
+            'miniatura': anuncio.miniatura,
+            'publicacion_url': anuncio.publicacion_url,
             'gasto': round(float(gasto or 0), 2),
             'impresiones': int(impresiones or 0),
             'clics': int(clics or 0),
