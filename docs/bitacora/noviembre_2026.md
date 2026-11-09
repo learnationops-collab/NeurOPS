@@ -389,3 +389,5 @@
   - `POST /api/external/academy/correo`: la Academia manda el mail entero y Work lo envía. Reemplaza al flujo «Mail Academia» de n8n y hace andar «Olvidé mi contraseña».
 - **9 de Noviembre de 2026 (Work deja de usar n8n, ADR-W124)** *([sheets_service.py](../../app/services/sheets_service.py))*
   - La venta ya no se manda al webhook de n8n. «Reenviar aviso» (antes «Reenviar webhook») y la corrección desde el mazo vuelven a mandar la tarjeta de la venta a Discord. En la ficha, la casilla dice «Avisar en Discord».
+- **9 de Noviembre de 2026 (Discord: el triage no se avisa en #onboardings)** *([resultado.py](../../app/services/discord_avisos/resultado.py))*
+  - El resultado de una llamada de triage ya no sale a #onboardings (por ninguna ruta: ficha ni mazo). Solo se avisan las llamadas de los closers.

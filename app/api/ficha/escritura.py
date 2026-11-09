@@ -105,7 +105,7 @@ def triage(appt_id):
     """El reporte de la llamada de triage: asistencia, calificación, pase al closer y low ticket."""
     from app.services import triage_service
 
-    return _ejecutar(appt_id, 'triar', triage_service.reportar, aviso=True)
+    return _ejecutar(appt_id, 'triar', triage_service.reportar)
 
 
 @bp.route('/<int:appt_id>/fathom', methods=['PATCH'])

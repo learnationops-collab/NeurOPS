@@ -1,7 +1,7 @@
 """El resultado de cada llamada reportada, al canal #onboardings de fulfillment (ADR-W121).
 
-Sale cuando el closer reporta en la ficha (POST /ficha/<id>/resultado), en el mazo viejo o cuando el triage
-reporta su llamada. La venta no pasa por acá: «Sí, cerró» va por la ruta de venta y la avisa venta.py.
+Sale cuando el closer reporta en la ficha (POST /ficha/<id>/resultado) o en el mazo viejo. La llamada de
+triage no se avisa: es antes de la venta y no le sirve a fulfillment. La venta no pasa por acá: «Sí, cerró» va por la ruta de venta y la avisa venta.py.
 El texto lleva nombre y número (para buscar en Discord junto a la agenda); el resto va en la imagen.
 """
 from datetime import timezone
@@ -54,12 +54,6 @@ def _tipo_de_llamada(appt):
     if es_momentum(appt):
         tipo = ((appt.agenda_payload or {}).get('academia') or {}).get('tipo')
         return 'Momentum de seña' if tipo == 'sena' else 'Momentum de cierre'
-    try:
-        from app.services.triage_service import es_de_triage
-        if es_de_triage(appt):
-            return 'Llamada de triage'
-    except Exception:  # noqa: BLE001
-        pass
     return 'Llamada de venta'
 
 
@@ -110,7 +104,9 @@ def avisar_resultado(appt, datos, usuario):
     """Avisa el resultado de la llamada. Un mismo resultado guardado de nuevo (corregir una nota) no se repite:
     el último avisado queda en `agenda_payload.discord_resultado`. Nunca lanza."""
     try:
-        if not appt or not (appt.closer_result or '').strip():
+        from app.services.triage_service import es_de_triage
+
+        if not appt or not (appt.closer_result or '').strip() or es_de_triage(appt):
             return False
         aviso = armar(appt, datos or {}, usuario)
         payload = dict(appt.agenda_payload or {})
