@@ -760,7 +760,9 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
             </div>
 
             {tabla === 'agendas' && chips.some(c => c.key === 'descartadas') && chips.some(c => c.key === 'todas') && (
-                <ConciliacionAgendas total={filas.length} descartadas={filas.filter(f => f.descartada).length}
+                // Sobre las filas ya filtradas: con «workshop» elegido contaba las de todas las fuentes y no
+                // cuadraba con la lista ni con el «mostrando X de Y» (Kerwin, 11/11/2026).
+                <ConciliacionAgendas total={filtradas.length} descartadas={filtradas.filter(f => f.descartada).length}
                     chipActivo={chipActivo} elegir={setChip} />
             )}
 
