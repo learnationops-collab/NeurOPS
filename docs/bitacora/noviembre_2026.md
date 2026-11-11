@@ -485,3 +485,6 @@
 
 ### 11/11/2026 · Una agenda de Workshop ya no cuenta en dos talleres
 - Al comparar las 322 agendas del tablero de Workshop con las de Revisar aparecieron 6 agendas del taller del 14/07 que sumaban también al del 08/07: entraban a una ventana por la fecha de creación (13/07 a la noche, hora de Bolivia) y a la otra por la fecha de registro. Ahora, cuando las dos fechas caen en talleres distintos, manda la de registro ([workshop_metrics_service.py](../../app/services/workshop_metrics_service.py), `_agendas_por_embudo`). El taller del 08/07 pasa de 21 a 15 agendas y el total de julio a noviembre de 322 a 316; ningún otro taller cambia.
+
+### 11/11/2026 · Revisar: la línea de vigentes y descartadas sigue el filtro
+- En Revisar › Agendas, la línea «N agendas = vigentes + descartadas» contaba todas las agendas del período aunque la lista estuviera filtrada (con la fuente «workshop» decía 1069 sobre una lista de 316). Ahora cuenta las mismas filas que la lista, con sus filtros y su búsqueda ([Revisar.jsx](../../frontend/src/pages/comercial/components/Revisar.jsx), [ConciliacionAgendas.jsx](../../frontend/src/pages/comercial/components/ConciliacionAgendas.jsx)).

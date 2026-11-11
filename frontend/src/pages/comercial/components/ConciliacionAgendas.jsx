@@ -8,6 +8,8 @@ import { Tip } from './Shared';
  * sin esta línea la diferencia se explicaba en un texto de ayuda (Kerwin, 28/10/2026: que se vea en los
  * números). Las descartadas son las que el lead canceló, el closer marcó como lead perdido o descalificó
  * y las que el sistema archivó sin reporte (`DESCARTADAS` en `comercial_vocabulario.py`).
+ *
+ * Las cifras siguen los filtros y la búsqueda de la lista: con una fuente elegida son las agendas de esa fuente.
  */
 const Cifra = ({ chip, n, rotulo, chipActivo, elegir }) => (
     <button type="button" className={`pastilla pastilla--sm${chipActivo === chip ? ' pastilla--on' : ''}`}
