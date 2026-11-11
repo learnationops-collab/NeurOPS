@@ -38,6 +38,12 @@ export const obtenerComentariosAcademia = ({ appointmentId = null, clientId = nu
     return api.get('/ficha/comentarios-academia', { params, signal, timeout: 60000 }).then(r => r.data);
 };
 
+/** Las notas de Gemini de las reuniones de Meet con el lead (`GET /ficha/notas-meet`), para Reuniones. */
+export const obtenerNotasMeet = ({ appointmentId = null, clientId = null, signal } = {}) => {
+    const params = appointmentId != null ? { appointment_id: appointmentId } : { client_id: clientId };
+    return api.get('/ficha/notas-meet', { params, signal, timeout: 60000 }).then(r => r.data);
+};
+
 /** Avance, seguimiento del equipo y uso del alumno (`GET /ficha/seguimiento-academia`), para Fulfillment. */
 export const obtenerSeguimientoAcademia = ({ appointmentId = null, clientId = null, signal } = {}) => {
     const params = appointmentId != null ? { appointment_id: appointmentId } : { client_id: clientId };
@@ -123,6 +129,13 @@ const RUTAS = {
     agregar_pago: (appt, p) => api.post(`/ficha/${appt}/pago`, p),
     corregir_pago: (appt, { pago_id: pagoId, ...cambios }) => api.patch(`/ficha/${appt}/pago/${pagoId}`, cambios),
     borrar_pago: (appt, p) => api.delete(`/ficha/${appt}/pago/${p.pago_id}`),
+    // El comprobante de un pago (ADR-W088): Learnito lo lee y el pago queda verificado o no.
+    subir_comprobante: (appt, { pago_id: pagoId, archivo }) => {
+        const datos = new FormData();
+        datos.append('archivo', archivo);
+        return api.post(`/ficha/${appt}/pago/${pagoId}/comprobante`, datos, { timeout: 90000 });
+    },
+    quitar_comprobante: (appt, p) => api.delete(`/ficha/${appt}/pago/${p.pago_id}/comprobante/${p.comprobante_id}`),
     registrar_seguimiento: (appt, p) => api.post(`/ficha/${appt}/seguimiento`, p),
     dar_de_baja: (appt, p) => api.post(`/ficha/${appt}/baja`, p),
     // Deshace la baja: el cliente vuelve a deber y a las listas de cobro. No lleva cuerpo.
@@ -217,3 +230,6 @@ export default {
  */
 export const chequearDatosVenta = ({ clientId, nombre, email, instagram, signal }) => api
     .get('/ficha/venta/chequeo', { params: { client_id: clientId, nombre, email, instagram }, signal }).then(r => r.data);
+
+/** El archivo de un comprobante, para abrirlo en otra pestaña (la sesión viaja en la cookie). */
+export const urlComprobante = (appt, pagoId, id) => `/api/ficha/${appt}/pago/${pagoId}/comprobante/${id}`;

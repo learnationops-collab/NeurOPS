@@ -28,6 +28,25 @@ const Rotulo = () => (
     </div>
 );
 
+// Cuántos pagos del mes tienen el comprobante verificado (ADR-W088). Se cobra igual; lo que falta se
+// sube desde la ficha del cliente, sección Pagos.
+const PagosSinVerificar = ({ v }) => {
+    if (!v) return null;
+    const faltan = (v.pending || 0) + (v.unverified || 0);
+    const total = faltan + (v.verified || 0);
+    if (!total) return null;
+    return (
+        <div className="tud-foot-row-v6">
+            <span className="tud-foot-v6" style={{ color: faltan ? 'var(--warning, #d97706)' : undefined }}
+                title={faltan ? `${money(v.bruto_sin_verificar)} brutos sin verificar. Subí el comprobante desde la ficha del cliente, sección Pagos.` : undefined}>
+                {faltan
+                    ? `${v.verified || 0} de ${total} pagos verificados${v.unverified ? ` · ${v.unverified} no cuadran` : ''}`
+                    : `Los ${total} pagos del mes verificados`}
+            </span>
+        </div>
+    );
+};
+
 const ComisionMesCard = () => {
     const [data, setData] = useState(null);
     const [fallo, setFallo] = useState(false);
@@ -70,6 +89,7 @@ const ComisionMesCard = () => {
                     {Math.round(data.rate * 100)}% de {money(data.cash_neto)} cobrados netos
                 </span>
             </div>
+            <PagosSinVerificar v={data.verificacion} />
         </div>
     );
 };

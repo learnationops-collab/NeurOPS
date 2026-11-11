@@ -28,6 +28,8 @@ export const PESTANAS = [
     { id: 'hist', label: 'Historial', permiso: null },
     // Todo lo del lead por tramos, de la primera palabra clave a sus meses en la Academia (23/10/2026).
     { id: 'bita', label: 'Bitácora', permiso: null },
+    // Las notas de Gemini de las sesiones de Meet con el lead (04/11/2026).
+    { id: 'meet', label: 'Reuniones', permiso: null },
     { id: 'form', label: 'Formulario', permiso: null },
     { id: 'com', label: 'Comunicación', permiso: 'comentar' },
 ];

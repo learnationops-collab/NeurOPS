@@ -142,7 +142,10 @@ export default function Panel({
                 <CampoEtapa key={nodo.id} nodo={nodo} etapas={etapas} lectura={lectura} onCambiarNodo={onCambiarNodo} onCambiarEtapas={onCambiarEtapas} />
             )}
             <Avisos lista={avisos.porNodo[nodo.id]} />
-            {nodo.tipo === 'mensaje' && <PanelMensaje nodo={nodo} cambiar={cambiar} lectura={lectura} variables={variables} destinos={destinos} metrica={metrica} />}
+            {nodo.tipo === 'mensaje' && (
+                <PanelMensaje key={nodo.id} nodo={nodo} cambiar={cambiar} lectura={lectura} variables={variables} destinos={destinos}
+                    metrica={metrica} prueba={flujo.pruebas_ab?.find((p) => p.id === nodo.id)} />
+            )}
             {nodo.tipo === 'mensaje' && <RegistroMensaje nodo={nodo} cambiar={cambiar} lectura={lectura} />}
             {nodo.tipo === 'esperar' && (
                 <Campo label="Esperar (minutos)" ayuda="De 1 a 1440. Si pasan 24 h desde su último mensaje, no se le puede escribir.">

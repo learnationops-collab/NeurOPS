@@ -12,6 +12,7 @@ import TabConfirmacion from './tabs/TabConfirmacion';
 import TabFulfillment from './tabs/TabFulfillment';
 import TabHistorial from './tabs/TabHistorial';
 import TabBitacora from './tabs/TabBitacora';
+import TabReuniones from './tabs/TabReuniones';
 import TabFormulario from './tabs/TabFormulario';
 import TabComunicacion from './tabs/TabComunicacion';
 import ResultadoTriage from './tabs/ResultadoTriage';
@@ -55,7 +56,7 @@ const TabAcciones = lazyDe('TabAcciones');
 // veces, y encima el de arriba suele quedar fuera de la vista con el historial scrolleado.
 // El reporte y la venta de «Resultado» también: la pestaña pinta el error sobre su revisión.
 const ERRORES_EN_LINEA = new Set(['editar_agenda', 'corregir_seguimiento', 'agendar_seguimiento',
-    'corregir_pago', 'borrar_pago', 'agregar_pago', 'eliminar_agenda', 'eliminar_lead', 'borrar_seguimiento',
+    'corregir_pago', 'borrar_pago', 'agregar_pago', 'subir_comprobante', 'quitar_comprobante', 'eliminar_agenda', 'eliminar_lead', 'borrar_seguimiento',
     'borrar_plan', 'borrar_evento', 'crear_evento', 'reportar_resultado', 'registrar_venta',
     'mail_academia', 'quitar_acceso_academia', 'prorrogar_acceso_academia', 'guardar_fathom', 'guardar_objecion',
     'pasar_a_recuperacion', 'reportar_triage']);
@@ -152,6 +153,10 @@ const MENSAJES = {
         ? 'Listo: quedó anotado a quién se le hizo la transferencia.'
         : 'Pago corregido: la deuda se recalculó.'),
     borrar_pago: 'Pago borrado: la deuda se recalculó.',
+    subir_comprobante: (r) => (r?.estado === 'verified'
+        ? { tono: 'success', texto: 'Learnito verificó el pago.' }
+        : { tono: 'error', texto: `El comprobante no cuadra: ${r?.motivo || 'revisalo en el pago.'}` }),
+    quitar_comprobante: 'Comprobante quitado.',
     registrar_seguimiento: 'Seguimiento agendado.',
     dar_de_baja: (r) => conAccesoDeLaBaja(
         'Baja registrada: ya no debe nada y sale de las listas de cobro. Lo que pagó queda.', r),
@@ -365,6 +370,7 @@ const FichaLeadModal = ({
             case 'ful': return <TabFulfillment {...props} />;
             case 'hist': return <TabHistorial {...props} seccionAbierta={seccionInicial} />;
             case 'bita': return <TabBitacora {...props} />;
+            case 'meet': return <TabReuniones {...props} />;
             case 'form': return <TabFormulario {...props} />;
             case 'com': return <TabComunicacion {...props} />;
             default: return null;

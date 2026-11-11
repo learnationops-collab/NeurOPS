@@ -159,6 +159,18 @@ def reabrir(caso, usuario):
     return detalle(caso)
 
 
+def abrir_si_falta(person_uuid, tipo, titulo, detalle=None, origen_texto=None):
+    """Abre un caso automático si la persona no tiene ya uno abierto con ese título. No hace commit."""
+    if not person_uuid:
+        return None
+    if Conflicto.query.filter_by(person_uuid=person_uuid, titulo=titulo[:255], estado='abierto').first():
+        return None
+    caso = Conflicto(tipo=tipo, titulo=titulo[:255], detalle=detalle, person_uuid=person_uuid,
+                     origen_texto=(origen_texto or '')[:255] or None, origen_fecha=datetime.utcnow())
+    db.session.add(caso)
+    return caso
+
+
 def crear(datos, usuario):
     """Lo usan Operaciones y los scripts de limpieza para cargar un caso."""
     titulo = (datos.get('titulo') or '').strip()

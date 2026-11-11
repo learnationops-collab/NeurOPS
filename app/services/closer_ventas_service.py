@@ -85,8 +85,18 @@ def listar(user, page=1, search=None, start_date=None, end_date=None, programas=
             'payment_method': (ultimo.metodo_pago if ultimo and ultimo.metodo_pago else 'N/A'),
             'status': s.status if s.status != 'active' else ('completed' if saldo <= 0.01 else 'pending'),
             'date': s.sold_at.isoformat() if s.sold_at else None,
+            'verificacion': verificacion_de_venta(suyos),
         })
     return {'data': filas, 'total': pagina.total, 'pages': pagina.pages}
+
+
+def verificacion_de_venta(pagos):
+    """El estado de los comprobantes de una venta (ADR-W088): `unverified` si alguno no cuadra, `pending`
+    si alguno no tiene comprobante, `verified` si todos están verificados (o None sin pagos)."""
+    estados = {p.transaction_status or 'pending' for p in pagos}
+    if not estados:
+        return None
+    return 'unverified' if 'unverified' in estados else ('pending' if 'pending' in estados else 'verified')
 
 
 def detalle(sale_id):
@@ -135,6 +145,7 @@ def detalle(sale_id):
             'id': p.id, 'amount': float(p.monto or 0), 'date': p.date.isoformat() if p.date else None,
             'type': p.tipo_pago, 'method': p.metodo_pago or 'N/A',
             'status': 'completed' if venta_completada(p) else 'pending', 'method_id': None,
+            'verificacion': p.transaction_status or 'pending',
         } for p in suyos],
         'appointments': agendas,
         'survey': formulario,

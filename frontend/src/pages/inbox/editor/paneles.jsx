@@ -1,9 +1,11 @@
 // Lo que se edita de cada tipo de nodo en el inspector: disparadores, mensaje, condición y acción.
+import { useState } from 'react';
 import { Plus, X } from 'lucide-react';
 import { Chip, IconButton, Input, LinkButton, Select, Stepper, Switch, TextArea } from '../../../components/standard';
 import { LIMITE_BOTONES, nuevoId } from './grafoFlujo';
 import { OPERADOR } from './nodos';
 import { porciento } from '../estadoFlujo';
+import { PestanasVariantes, ResultadosPrueba, conContenido, contenidoDe, idsVariantes } from './VariantesMensaje';
 
 const opciones = (mapa) => Object.entries(mapa).map(([value, label]) => ({ value, label }));
 
@@ -81,8 +83,12 @@ function Destino({ salida, destinos, metrica }) {
     return <span className="pf-destino">{n ? `→ paso ${n}` : 'sin conectar'}{pct != null ? ` · ${porciento(pct)}` : ''}</span>;
 }
 
-export function PanelMensaje({ nodo, cambiar, lectura, variables, destinos, metrica }) {
-    const contenido = nodo.contenido || [];
+export function PanelMensaje({ nodo, cambiar, lectura, variables, destinos, metrica, prueba }) {
+    const [elegida, setElegida] = useState('A');
+    // Si la variante que se veía se borró (o se cerró la prueba), se vuelve a la A.
+    const actual = idsVariantes(nodo).includes(elegida) ? elegida : 'A';
+    const contenido = contenidoDe(nodo, actual);
+    const ponerContenido = (lista) => cambiar(conContenido(nodo, actual, lista));
     const modo = nodo.botones?.length ? 'botones' : nodo.espera ? 'texto' : 'nada';
     const estilo = nodo.estilo_botones || 'botones';
     const botones = nodo.botones || [];
@@ -98,6 +104,7 @@ export function PanelMensaje({ nodo, cambiar, lectura, variables, destinos, metr
     };
     return (
         <>
+            <PestanasVariantes nodo={nodo} actual={actual} onElegir={setElegida} cambiar={cambiar} lectura={lectura} />
             {contenido.map((c, i) => {
                 const tope = modo === 'botones' && estilo === 'botones' && i === contenido.length - 1 ? LARGO_CON_BOTONES : LARGO_TEXTO;
                 const largo = (c.texto || '').length;
@@ -105,24 +112,24 @@ export function PanelMensaje({ nodo, cambiar, lectura, variables, destinos, metr
                     <div key={i} className="pf-bloque">
                         <div className="pf-fila">
                             <Select label="Tipo de contenido" value={c.tipo} disabled={lectura} options={TIPOS_CONTENIDO}
-                                onChange={(v) => cambiar({ contenido: reemplazar(contenido, i, v === 'texto' ? { tipo: 'texto', texto: c.texto || '', url: undefined } : { tipo: v, url: c.url || '', texto: undefined }) })} />
+                                onChange={(v) => ponerContenido(reemplazar(contenido, i, v === 'texto' ? { tipo: 'texto', texto: c.texto || '', url: undefined } : { tipo: v, url: c.url || '', texto: undefined }))} />
                             <span data-tip="Escribiendo…|Antes de mandarlo se ve «escribiendo…» estos segundos, como una persona que tipea.">
                                 <Stepper label="Segundos escribiendo" value={c.escribiendo || 0} min={0} max={MAX_ESCRIBIENDO} disabled={lectura}
                                     display={c.escribiendo ? `${c.escribiendo} s` : 'Sin pausa'}
-                                    onChange={(v) => cambiar({ contenido: reemplazar(contenido, i, { escribiendo: v || undefined }) })} />
+                                    onChange={(v) => ponerContenido(reemplazar(contenido, i, { escribiendo: v || undefined }))} />
                             </span>
                             {!lectura && contenido.length > 1 && (
-                                <Quitar titulo="Quitar contenido" onClick={() => cambiar({ contenido: contenido.filter((_, j) => j !== i) })} />
+                                <Quitar titulo="Quitar contenido" onClick={() => ponerContenido(contenido.filter((_, j) => j !== i))} />
                             )}
                         </div>
                         {c.tipo === 'texto' ? (
                             <>
                                 <TextArea value={c.texto || ''} disabled={lectura} aria-label="Texto del mensaje" placeholder="Escribí el mensaje…"
-                                    onChange={(e) => cambiar({ contenido: reemplazar(contenido, i, { texto: e.target.value }) })} />
+                                    onChange={(e) => ponerContenido(reemplazar(contenido, i, { texto: e.target.value }))} />
                                 <div className="pf-fila pf-fila--variables">
                                     {!lectura && variables.map((v) => (
                                         <Chip key={v} as="button" type="button" subtle data-tip={`Insertar {{${v}}}|Se reemplaza por el dato de cada persona.`}
-                                            onClick={() => cambiar({ contenido: reemplazar(contenido, i, { texto: `${c.texto || ''}{{${v}}}` }) })}>
+                                            onClick={() => ponerContenido(reemplazar(contenido, i, { texto: `${c.texto || ''}{{${v}}}` }))}>
                                             {`+ {{${v}}}`}
                                         </Chip>
                                     ))}
@@ -131,13 +138,13 @@ export function PanelMensaje({ nodo, cambiar, lectura, variables, destinos, metr
                             </>
                         ) : (
                             <Input value={c.url || ''} disabled={lectura} aria-label="Enlace del archivo" placeholder="https://…"
-                                onChange={(e) => cambiar({ contenido: reemplazar(contenido, i, { url: e.target.value.trim() }) })} />
+                                onChange={(e) => ponerContenido(reemplazar(contenido, i, { url: e.target.value.trim() }))} />
                         )}
                     </div>
                 );
             })}
             {!lectura && (
-                <LinkButton icon={<Plus />} onClick={() => cambiar({ contenido: [...contenido, { tipo: 'texto', texto: '' }] })}>Contenido</LinkButton>
+                <LinkButton icon={<Plus />} onClick={() => ponerContenido([...contenido, { tipo: 'texto', texto: '' }])}>Contenido</LinkButton>
             )}
 
             <Campo label="Después de mandarlo">
@@ -190,6 +197,7 @@ export function PanelMensaje({ nodo, cambiar, lectura, variables, destinos, metr
                     </div>
                 </Campo>
             )}
+            <ResultadosPrueba prueba={prueba} />
         </>
     );
 }

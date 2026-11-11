@@ -26,6 +26,7 @@ from app.services import ficha_vocabulario as voc
 from app.services import lead_log_service, triage_service
 from app.services.closer_followup_service import CloserFollowUpService
 from app.services.comercial_service import ASISTIO, cerro_sin_venta, chip, post_call_de, pre_call_de
+from app.services.comprobantes.validacion import estado_de as estado_de_verificacion
 from app.services.estado_lead import estado_de_agenda, resolver_estado
 from app.services.lead_cobro_service import UMBRAL_DEUDA, resolver_etapa
 
@@ -345,7 +346,8 @@ def _cobro(client, ventas, deuda, programa_code, programa_nombre, enrollment_dt,
                       'transferido_a': v.transferido_a, 'sale_id': v.sale_id,
                       # A quién se le atribuye el pago (comisión y nómina): cada pago es de SU closer.
                       'vendedor': closer.username if closer else (email.split('@')[0] or None),
-                      'vendedor_id': closer.id if closer else None})
+                      'vendedor_id': closer.id if closer else None,
+                      'verificacion': estado_de_verificacion(v)})
     # Las ventas del cliente (20/10/2026): a cuál pertenece cada pago, y entre cuáles se elige al
     # cargar o mover uno.
     ventas_del_cliente = ([s.to_dict() for s in Sale.query.filter_by(client_id=client_id)

@@ -349,7 +349,7 @@ describe('SetterEspacioPage · la sesión en el dock', () => {
         await abrirSesion('Tu sesión: Ana Setter, 3 videos pendientes del Playbook');
         expect(screen.getByText('Setter')).toBeInTheDocument();
         expect(screen.getAllByRole('menuitem').map(i => i.getAttribute('aria-label') || i.textContent))
-            .toEqual(['Mis links de agendamiento', 'Tálamus', 'Configuración', 'Portal, 3 videos pendientes del Playbook, en Cortex', 'Mis reportes',
+            .toEqual(['Mis links de agendamiento', 'Configuración', 'Portal, 3 videos pendientes del Playbook, en Cortex', 'Mis reportes',
                 'Reportar un problema', 'Cerrar sesión']);
     });
 
@@ -359,19 +359,18 @@ describe('SetterEspacioPage · la sesión en el dock', () => {
         await montar('/setter/deck?step=agendas');
 
         const header = document.querySelector('header.tope');
-        expect(Array.from(header.querySelectorAll('button')).map(b => b.textContent)).toEqual(['Volver a mi sesión']);
+        expect(Array.from(header.querySelectorAll('button')).map(b => b.textContent)).toEqual(['Tálamus', 'Volver a mi sesión']);
 
         await abrirSesion('Tu sesión: Ana Setter');
         expect(screen.getByText('Setter · simulación')).toBeInTheDocument();
         expect(screen.getAllByRole('menuitem').map(i => i.getAttribute('aria-label') || i.textContent))
-            .toEqual(['Mis links de agendamiento', 'Tálamus', 'Configuración', 'Portal', 'Mis reportes', 'Reportar un problema', 'Volver a mi sesión', 'Cerrar sesión']);
+            .toEqual(['Mis links de agendamiento', 'Configuración', 'Portal', 'Mis reportes', 'Reportar un problema', 'Volver a mi sesión', 'Cerrar sesión']);
     });
 
-    it('«Tálamus» lleva a Agendas 2.0, donde el setter mira en solo lectura', async () => {
+    it('«Tálamus», en el encabezado, lleva a Agendas 2.0, donde el setter mira en solo lectura', async () => {
         await montar('/setter/deck?step=agendas');
-        await abrirSesion('Tu sesión: Ana Setter, 3 videos pendientes del Playbook');
 
-        await act(async () => { fireEvent.click(screen.getByRole('menuitem', { name: 'Tálamus' })); });
+        await act(async () => { fireEvent.click(screen.getByRole('button', { name: /Tálamus/ })); });
 
         expect(screen.getByTestId('ruta')).toHaveTextContent(/^\/agendas-v2$/);
     });

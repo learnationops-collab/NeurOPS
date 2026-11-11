@@ -42,10 +42,11 @@ def desplaza(seg):
 
 def desplazable(appt):
     """¿Un lead A/B puede tomar el horario de esa agenda? Una C/D de un closer, salvo la que pasó el triage
-    (ya la aprobaron) y la llamada del propio triage (sus llamadas son C/D por diseño)."""
+    (ya la aprobaron), la llamada del propio triage (sus llamadas son C/D por diseño) y una Momentum (hereda
+    el segmento del formulario viejo del alumno, pero va por encima de las C/D y la da su closer)."""
     from app.models.user import ROLE_TRIAGE
 
-    return (appt.segmento in DESPLAZABLES and not appt.agenda_triage_id
+    return (appt.segmento in DESPLAZABLES and not appt.agenda_triage_id and appt.origin != 'Momentum'
             and not (appt.closer and appt.closer.role == ROLE_TRIAGE))
 
 

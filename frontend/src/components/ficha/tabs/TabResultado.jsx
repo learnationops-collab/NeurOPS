@@ -15,6 +15,7 @@
 // padding:0}` y el botón queda como texto suelto en mayúsculas (ver `PlanCuotasForm`).
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import ComprobanteDeVenta from '../acciones/ComprobanteDeVenta';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
   Check, CheckCircle2, XCircle, CalendarX, CalendarClock, RotateCcw, AlertTriangle, ArrowLeft, X,
@@ -183,6 +184,8 @@ export default function TabResultado({
   }, [closerId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [guardando, setGuardando] = useState(false);
+  // El comprobante del pago (ADR-W088): se sube apenas la venta devuelve el id de su pago.
+  const [comprobante, setComprobante] = useState(null);
   const [error, setError] = useState(null);
   // Lo que quedó guardado. Mientras existe, la pestaña muestra la confirmación y no la revisión:
   // con la revisión a la vista, un segundo clic en «Registrar la venta» la declaraba dos veces.
@@ -289,6 +292,14 @@ export default function TabResultado({
       // puede fallar sin deshacerla. Los dos avisos tienen que llegar al closer: si no, se queda
       // sin saber que hay algo para revisar.
       const avisos = [respuesta?.warning, ...(respuesta?.avisos || [])].filter(Boolean);
+      if (fueVenta && comprobante && respuesta?.pago_id) {
+        try {
+          await onAccion('subir_comprobante', { pago_id: respuesta.pago_id, archivo: comprobante });
+        } catch (e) {
+          avisos.push(`La venta quedó registrada, pero el comprobante no se subió: ${e?.response?.data?.message || e?.message}. Subilo desde Pagos en el historial.`);
+        }
+        setComprobante(null);
+      }
       setHecho({
         venta: fueVenta, conDeuda, saldo: fueVenta ? saldoVenta(respuestas, contexto) : 0, avisos,
         seguimiento: cierreDelSeguimiento(respuestas, contexto),
@@ -414,6 +425,8 @@ export default function TabResultado({
               onAnterior={volver}
               onReiniciar={empezarDeNuevo}
               grabacion={grabacion}
+              comprobante={comprobante}
+              onComprobante={setComprobante}
             />
           </motion.section>
         ) : (
@@ -911,7 +924,7 @@ function CronogramaVenta({ respuestas, contexto, onCambiar, soloLectura = false 
 
 function Revision({
   respuestas, contexto, guardando, onGuardar, onCambiar, onElegir, precarga, onVolverA, onAnterior,
-  reducido, grabacion = null, onReiniciar = null,
+  reducido, grabacion = null, onReiniciar = null, comprobante = null, onComprobante = null,
 }) {
   const venta = esVenta(respuestas);
   // La fila que se está editando acá mismo, sin salir de la revisión. Solo una a la vez.
@@ -1038,6 +1051,10 @@ function Revision({
             <span className="ln-alert-desc">Al guardar se abre la pestaña «Acciones» para seguir el cobro.</span>
           </span>
         </div>
+      )}
+
+      {venta && onComprobante && (
+        <ComprobanteDeVenta archivo={comprobante} onCambiar={onComprobante} disabled={guardando} />
       )}
 
       {/* El único dato que no se pregunta: prendido por defecto para no perder avisos por

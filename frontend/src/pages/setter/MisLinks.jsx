@@ -17,8 +17,11 @@ export const rotuloDeLink = (l) => `${l.setter || l.funnel} · ${l.evento}`;
  * en el encabezado de su espacio, en cualquier sección: antes vivían solo en el menú del avatar y no los
  * encontraban (corrección del 14/10/2026). Tocar uno lo copia. Sin links, o si el pedido falla, no ocupa
  * nada: el menú del avatar los sigue teniendo, con los de los eventos viejos.
+ *
+ * `children` va al final del grupo y se ve aunque no haya links: es el acceso a Tálamus, que el
+ * equipo de ventas pidió en la pantalla principal y no en el menú del avatar (Sales Team, 07/11/2026).
  */
-const MisLinks = () => {
+const MisLinks = ({ children }) => {
     const [links, setLinks] = useState([]);
     useEffect(() => {
         let vivo = true;
@@ -28,9 +31,9 @@ const MisLinks = () => {
         );
         return () => { vivo = false; };
     }, []);
-    if (!links.length) return null;
+    if (!links.length && !children) return null;
     return (
-        <div className="setter-links" role="group" aria-label="Tus links de agendamiento">
+        <div className="setter-links" role="group" aria-label="Agendamiento">
             {links.map((l) => (
                 <button key={l.ruta} type="button" className="pastilla pastilla--sm setter-link"
                     title={`Copiar tu link de ${rotuloDeLink(l)}`}
@@ -40,6 +43,7 @@ const MisLinks = () => {
                     <Copy size={13} />
                 </button>
             ))}
+            {children}
         </div>
     );
 };

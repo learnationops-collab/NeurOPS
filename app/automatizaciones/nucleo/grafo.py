@@ -13,6 +13,8 @@ Tipos de nodo y sus salidas:
       - `botones` [{id, titulo}] → una salida por botón (estilo "botones" hasta 3, "respuestas_rapidas" hasta 13), o
       - `espera` {guardar_en} → salida "respuesta" (el texto libre que conteste se guarda en esa variable).
     Si espera algo puede tener `sin_respuesta` {minutos} → salida "sin_respuesta". Si no espera nada → "siguiente".
+    Puede tener `variantes` [{id, contenido}] (prueba A/B, `variantes.py`): otros contenidos para los mismos
+      botones; el propio es la «A».
     Cada contenido puede tener `escribiendo` (segundos, hasta 10): antes de mandarlo se ve «escribiendo…».
     `registro` {mensaje_id, etapa, etapa_respuesta, califica} es lo que hoy manda ManyChat por webhook
     (tableros): el motor lo escribe en las mismas tablas (`registro.py`). `mensaje_id` es el id del catálogo
@@ -38,6 +40,8 @@ LARGO_TEXTO_CON_BOTONES = 640
 MAX_MINUTOS_ESPERA = 24 * 60
 # El motor manda de a un contacto por vez: una pausa larga demora a los que vienen detrás.
 MAX_SEGUNDOS_ESCRIBIENDO = 10
+# Prueba A/B de un mensaje: la «A» (su contenido) y hasta tres alternativas.
+MAX_VARIANTES = 4
 
 
 def normalizar_texto(texto):
@@ -107,23 +111,8 @@ def _errores_nodo(nodo, ids):
 
     if tipo == 'mensaje':
         contenido = nodo.get('contenido') or []
-        if not contenido:
-            errores.append(f'Nodo {nid}: el mensaje no tiene contenido')
-        for item in contenido:
-            escribiendo = item.get('escribiendo')
-            if escribiendo is not None and (isinstance(escribiendo, bool) or not isinstance(escribiendo, (int, float))
-                                            or not 0 <= escribiendo <= MAX_SEGUNDOS_ESCRIBIENDO):
-                errores.append(f'Nodo {nid}: «escribiendo» va de 0 a {MAX_SEGUNDOS_ESCRIBIENDO} segundos')
-            if item.get('tipo') not in TIPOS_CONTENIDO:
-                errores.append(f'Nodo {nid}: contenido de tipo desconocido «{item.get("tipo")}»')
-            elif item['tipo'] == 'texto':
-                if not (item.get('texto') or '').strip():
-                    errores.append(f'Nodo {nid}: hay un texto vacío')
-                elif len(item['texto']) > LARGO_TEXTO:
-                    errores.append(f'Nodo {nid}: un texto supera los {LARGO_TEXTO} caracteres')
-            elif not (item.get('url') or '').startswith('https://'):
-                errores.append(f'Nodo {nid}: el {item["tipo"]} necesita una URL https')
-
+        errores += _errores_contenido(nid, contenido)
+        errores += _errores_variantes(nodo)
         botones = nodo.get('botones') or []
         if botones and nodo.get('espera'):
             errores.append(f'Nodo {nid}: un mensaje espera botones o texto libre, no las dos cosas')
@@ -188,6 +177,57 @@ def _errores_nodo(nodo, ids):
     return errores
 
 
+def _errores_contenido(nid, contenido, cual=''):
+    """Los errores de la lista de contenidos de un mensaje (o de una de sus variantes: `cual`)."""
+    errores = []
+    if not contenido:
+        errores.append(f'Nodo {nid}: {cual}el mensaje no tiene contenido')
+    for item in contenido:
+        escribiendo = item.get('escribiendo')
+        if escribiendo is not None and (isinstance(escribiendo, bool) or not isinstance(escribiendo, (int, float))
+                                        or not 0 <= escribiendo <= MAX_SEGUNDOS_ESCRIBIENDO):
+            errores.append(f'Nodo {nid}: {cual}«escribiendo» va de 0 a {MAX_SEGUNDOS_ESCRIBIENDO} segundos')
+        if item.get('tipo') not in TIPOS_CONTENIDO:
+            errores.append(f'Nodo {nid}: {cual}contenido de tipo desconocido «{item.get("tipo")}»')
+        elif item['tipo'] == 'texto':
+            if not (item.get('texto') or '').strip():
+                errores.append(f'Nodo {nid}: {cual}hay un texto vacío')
+            elif len(item['texto']) > LARGO_TEXTO:
+                errores.append(f'Nodo {nid}: {cual}un texto supera los {LARGO_TEXTO} caracteres')
+        elif not (item.get('url') or '').startswith('https://'):
+            errores.append(f'Nodo {nid}: {cual}el {item["tipo"]} necesita una URL https')
+    return errores
+
+
+def _errores_variantes(nodo):
+    """Prueba A/B (`variantes.py`): cada variante es otro contenido para los mismos botones."""
+    variantes = nodo.get('variantes')
+    if variantes is None:
+        return []
+    nid = nodo.get('id')
+    if not isinstance(variantes, list) or len(variantes) + 1 > MAX_VARIANTES:
+        return [f'Nodo {nid}: un mensaje admite hasta {MAX_VARIANTES} variantes']
+    errores = []
+    ids_variantes = [v.get('id') if isinstance(v, dict) else None for v in variantes]
+    if (len(set(ids_variantes)) != len(ids_variantes) or 'A' in ids_variantes
+            or not all(isinstance(i, str) and 0 < len(i) <= 10 for i in ids_variantes)):
+        errores.append(f'Nodo {nid}: cada variante necesita una letra propia (la «A» es el mensaje)')
+        return errores
+    botones = nodo.get('botones') or []
+    for v in variantes:
+        cual = f'variante {v["id"]} · '
+        contenido = v.get('contenido') or []
+        errores += _errores_contenido(nid, contenido, cual)
+        if botones and contenido:
+            ultimo = contenido[-1]
+            if ultimo.get('tipo') != 'texto':
+                errores.append(f'Nodo {nid}: {cual}los botones van debajo de un texto (el último contenido debe ser texto)')
+            elif (nodo.get('estilo_botones', 'botones') == 'botones'
+                  and len(ultimo.get('texto') or '') > LARGO_TEXTO_CON_BOTONES):
+                errores.append(f'Nodo {nid}: {cual}el texto con botones no puede superar {LARGO_TEXTO_CON_BOTONES} caracteres')
+    return errores
+
+
 def _errores_minutos(nid, minutos):
     if not isinstance(minutos, (int, float)) or isinstance(minutos, bool) or not 1 <= minutos <= MAX_MINUTOS_ESPERA:
         return [f'Nodo {nid}: la espera debe ser de 1 a {MAX_MINUTOS_ESPERA} minutos (la ventana de Instagram es de 24 h)']
@@ -222,7 +262,9 @@ def validar(grafo):
         errores.append('El flujo no indica en qué nodo empieza')
     elif any(d.get('canal') == 'comentario' for d in disparadores):
         primero = por_id[grafo['inicio']]
-        if primero.get('tipo') != 'mensaje' or len(primero.get('contenido') or []) != 1:
+        contenidos = [primero.get('contenido')] + [v.get('contenido') for v in primero.get('variantes') or []
+                                                  if isinstance(v, dict)]
+        if primero.get('tipo') != 'mensaje' or any(len(c or []) != 1 for c in contenidos):
             # Instagram admite UNA respuesta privada por comentario; el resto, cuando el contacto conteste.
             errores.append('Un flujo que arranca por comentario debe empezar con un mensaje de un solo contenido '
                            '(la respuesta privada al comentario)')

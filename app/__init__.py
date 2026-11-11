@@ -158,10 +158,17 @@ def create_app(config_class=Config):
     app.register_blueprint(google_calendar_bp)
     csrf.exempt(google_calendar_bp) # Exento para webhooks de Google Calendar
 
+    from app.api.notas_meet import bp as notas_meet_bp
+    app.register_blueprint(notas_meet_bp)  # /api/notas-meet/* (admin) y /google/notas/conectar/<firma>
+
 
     from app.api.instagram_webhook import bp as instagram_webhook_bp
     app.register_blueprint(instagram_webhook_bp, url_prefix='/api/webhooks/instagram')
     csrf.exempt(instagram_webhook_bp) # Exento: lo llama Meta, autenticado por la firma X-Hub-Signature-256
+
+    from app.api.whatsapp_webhook import bp as whatsapp_webhook_bp
+    app.register_blueprint(whatsapp_webhook_bp, url_prefix='/api/webhooks/whatsapp')
+    csrf.exempt(whatsapp_webhook_bp) # Exento: lo llama Meta, autenticado por la firma X-Hub-Signature-256
 
     from app.api.analytics import bp as analytics_bp
     app.register_blueprint(analytics_bp, url_prefix='/api/analytics')

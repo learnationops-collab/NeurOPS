@@ -16,7 +16,7 @@ Reglas que garantiza:
 from datetime import timedelta
 
 from app import db
-from app.automatizaciones import acciones, campanas, efectos, etapas, registro, reparto
+from app.automatizaciones import acciones, campanas, efectos, etapas, registro, reparto, variantes
 from app.automatizaciones.modelos import AutEjecucion, AutFlujo, AutFlujoVersion, IgContacto, IgMensaje
 from app.automatizaciones.nucleo import eventos as ev
 from app.automatizaciones.nucleo import grafo as g
@@ -419,7 +419,9 @@ class Motor:
             self._cerrar(ejecucion, AutEjecucion.VENTANA_VENCIDA, 'Pasaron más de 24 h desde el último mensaje del contacto')
             return False
         variables = {**(contacto.variables or {}), 'nombre': contacto.nombre or '', 'usuario': contacto.username or ''}
-        for cuerpo, pausa in zip(mensajes.construir(nodo, variables, ejecucion.version_id), mensajes.pausas(nodo)):
+        variante = variantes.elegir(ejecucion, nodo)
+        enviado = variantes.aplicar(nodo, variante)
+        for cuerpo, pausa in zip(mensajes.construir(enviado, variables, ejecucion.version_id), mensajes.pausas(enviado)):
             if pausa and not ejecucion.comentario_id:
                 self.transporte.escribiendo(contacto.igsid, pausa)
             if ejecucion.comentario_id:
@@ -436,17 +438,19 @@ class Motor:
                 return False
             db.session.add(IgMensaje(contacto_id=contacto.id, mid=mid, direccion=IgMensaje.SALIENTE,
                                      origen=IgMensaje.MOTOR, texto=mensajes.texto_visible(cuerpo), contenido=cuerpo,
-                                     ejecucion_id=ejecucion.id, nodo_id=nodo['id'], enviado_en=self.ahora))
+                                     ejecucion_id=ejecucion.id, nodo_id=nodo['id'], variante=variante,
+                                     enviado_en=self.ahora))
             db.session.flush()
         registro.envio(ejecucion, nodo, self.ahora)
         return True
 
     def _enviar_con_control(self, contacto, destinatario, cuerpo):
-        """Si la conversación es de otra app, toma el control una vez y reintenta."""
+        """Si la conversación es de otra app, toma el control una vez y reintenta. Vale también para la
+        respuesta privada a un comentario: si el hilo es de ManyChat o Kommo, Meta la rechaza igual."""
         try:
             return self.transporte.enviar(destinatario, cuerpo)
         except ErrorDeEnvio as error:
-            if not error.sin_control or 'id' not in destinatario:
+            if not error.sin_control:
                 raise
             if not self.transporte.tomar_control(contacto.igsid):
                 raise

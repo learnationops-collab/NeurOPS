@@ -19,6 +19,7 @@ import Button from '../ui/Button';
 import Badge from '../ui/Badge';
 import Card from '../ui/Card';
 import { parseUtcIso } from '../../utils/datetime';
+import EstadoVerificacion from '../closer/EstadoVerificacion';
 import toast from 'react-hot-toast';
 
 // El detalle de una venta (`Sale`, Etapa 2c): sus pagos son filas de FinancialSale. Se corrigen la fecha y
@@ -326,6 +327,7 @@ const SaleDetailModal = ({ isOpen, saleId, onClose, onSuccess }) => {
                                                                         <div className="flex flex-col gap-1 items-start">
                                                                             <Badge variant="neutral" className="text-[9px]">{p.type}</Badge>
                                                                             <span className="text-[10px] text-muted font-medium uppercase tracking-tight">{p.method}</span>
+                                                                            <EstadoVerificacion estado={p.verificacion} className="mt-0" />
                                                                             <select
                                                                                 value={p.status || 'completed'}
                                                                                 onChange={(e) => handleUpdatePaymentStatus(p.id, e.target.value)}

@@ -27,9 +27,12 @@ function textoAccion(a) {
 
 function resumen(nodo) {
     switch (nodo.tipo) {
-        case 'mensaje': return (nodo.contenido || []).map((c, i) => (
-            <p key={i} className="nf-linea nf-linea--copy">{c.tipo === 'texto' ? (c.texto ? `“${c.texto}”` : <em>Texto vacío</em>) : `📎 ${c.tipo}`}</p>
-        ));
+        case 'mensaje': return [
+            ...(nodo.contenido || []).map((c, i) => (
+                <p key={i} className="nf-linea nf-linea--copy">{c.tipo === 'texto' ? (c.texto ? `“${c.texto}”` : <em>Texto vacío</em>) : `📎 ${c.tipo}`}</p>
+            )),
+            ...(nodo.variantes?.length ? [<p key="ab" className="nf-linea mut">Prueba A/B · {nodo.variantes.length + 1} variantes</p>] : []),
+        ];
         case 'esperar': return <p className="nf-linea">Espera {duracion(nodo.minutos)} y sigue</p>;
         case 'condicion': return (nodo.reglas || []).map((r, i) => (
             <p key={i} className="nf-linea">{r.campo || '…'} {OPERADOR[r.operador] || r.operador} {r.valor}</p>

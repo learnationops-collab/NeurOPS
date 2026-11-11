@@ -211,9 +211,6 @@ const SetterEspacioPage = () => {
             // queda a su nombre y aparece en sus agendas, como con Calendly. Tocar uno lo copia.
             { id: 'links', label: 'Mis links de agendamiento', Icono: Link2,
                 panel: { titulo: 'Mis links de agendamiento', vacio: 'Todavía no hay funnels de setting publicados.', cargar: cargarMisLinks } },
-            // Tálamus (Agendas 2.0) en solo lectura: los funnels, formularios y el equipo con que se
-            // agenda. Desde su menú, «Volver a mi espacio» trae de vuelta acá.
-            { id: 'thalamus', label: 'Tálamus', Icono: CalendarDays, onClick: () => navegar('/agendas-v2') },
         ],
         configuracion: { onClick: () => abrirConfiguracion() },
         playbook: { onClick: () => openPlaybook('pending'), pendientes: pendingCount },
@@ -243,7 +240,16 @@ const SetterEspacioPage = () => {
                                 ariaLabel={`Vistas de ${seccionActual.label}`} />
                         )}
                         {/* Su link de agendamiento, a la vista en todas las secciones (14/10/2026). */}
-                        <MisLinks />
+                        {/* Tálamus (Agendas 2.0) en solo lectura, junto a sus links: los eventos y horarios
+                            de triage y de closing a un clic (Sales Team, 07/11/2026; antes estaba en el
+                            menú del avatar). Desde su menú, «Volver a mi espacio» trae de vuelta acá. */}
+                        <MisLinks>
+                            <button type="button" className="pastilla pastilla--sm setter-link"
+                                title="Ver los eventos y horarios en Tálamus" onClick={() => navegar('/agendas-v2')}>
+                                <CalendarDays size={14} />
+                                <span className="setter-link-t">Tálamus</span>
+                            </button>
+                        </MisLinks>
                         {/* Simulando, la salida es terminar la simulación. Ya no es la ÚNICA
                             salida de ningún lado: moverse entre secciones es el dock. También está
                             en el menú del avatar, pero acá se ve sin buscarla. */}

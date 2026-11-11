@@ -91,6 +91,9 @@ export const resumenDeCarga = (r) => {
     return [`${nombre}: ${r.nuevas} ${r.nuevas === 1 ? 'cobro nuevo' : 'cobros nuevos'} de ${PASARELAS[r.pasarela]}`,
         r.repetidas ? `${r.repetidas} ya estaban` : null,
         r.omitidas ? `${r.omitidas} ${r.omitidas === 1 ? 'fila omitida' : 'filas omitidas'}` : null,
+        // El cierre de mes de la verificación de pagos (ADR-W088).
+        r.verificacion?.verificados ? `${r.verificacion.verificados} pagos verificados` : null,
+        r.verificacion?.no_cuadran ? `${r.verificacion.no_cuadran} no cuadran` : null,
     ].filter(Boolean).join(' · ');
 };
 

@@ -111,7 +111,30 @@ class CommissionService:
             'rate': tasa,
             'cash_neto': round(cash_neto, 2),
             'commission': round(cash_neto * tasa, 2),
+            'verificacion': CommissionService._verificacion_del_closer(clave, user, inicio, fin),
         }
+
+    @staticmethod
+    def _verificacion_del_closer(clave, user, inicio, fin):
+        """Los pagos del mes del closer por estado de verificación (ADR-W088): {verified, pending,
+        unverified, bruto_sin_verificar}. Mismo cruce de closer que la nómina."""
+        from app.services.closer_name_service import resolver_nombre_closer
+        from app.services.nomina_service import venta_completada, ventas_del_rango
+
+        cuenta = {'verified': 0, 'pending': 0, 'unverified': 0, 'bruto_sin_verificar': 0.0}
+        desde, hasta = (datetime.strptime(d, '%Y-%m-%d').date() for d in (inicio, fin))
+        email = (user.email or '').strip().lower()
+        for v in ventas_del_rango(desde, hasta):
+            vendedor = (v.email_vendedor or '').strip().lower()
+            if not venta_completada(v) or not (vendedor == email or (
+                    clave and clave_de_closer(resolver_nombre_closer(v.email_vendedor)) == clave)):
+                continue
+            estado = v.transaction_status or 'pending'
+            cuenta[estado] = cuenta.get(estado, 0) + 1
+            if estado != 'verified':
+                cuenta['bruto_sin_verificar'] += float(v.monto or 0)
+        cuenta['bruto_sin_verificar'] = round(cuenta['bruto_sin_verificar'], 2)
+        return cuenta
 
     @staticmethod
     def get_setter_commission(user):

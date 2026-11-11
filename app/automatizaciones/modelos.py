@@ -135,6 +135,8 @@ class IgMensaje(db.Model):
     contenido = db.Column(db.JSON, nullable=True)
     ejecucion_id = db.Column(db.Integer, db.ForeignKey('aut_ejecuciones.id', ondelete='SET NULL'), nullable=True)
     nodo_id = db.Column(db.String(64), nullable=True)
+    # Qué variante del nodo se mandó en una prueba A/B ('A': el contenido del nodo). Ver `variantes.py`.
+    variante = db.Column(db.String(10), nullable=True, index=True)
     enviado_en = db.Column(db.DateTime, nullable=False, default=ahora, index=True)
 
 

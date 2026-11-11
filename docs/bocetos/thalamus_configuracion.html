@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thalamus sin consola</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap">
+<style>
+/* Layout: barra de pantallas arriba, cada pantalla en una columna de 1280px; tema oscuro Modern de Thalamus a propósito. */
+:root{
+  color-scheme:dark;
+  --bg:#020617; --bg-2:#0A0E3D; --ink:#FFFFFF; --muted:rgba(255,255,255,.64); --faint:rgba(255,255,255,.44);
+  --panel:rgba(255,255,255,.04); --panel-2:rgba(255,255,255,.08); --inset:rgba(0,0,0,.34);
+  --line:rgba(255,255,255,.08); --line-2:rgba(255,255,255,.16);
+  --brand:#FF3FA4; --brand-soft:rgba(255,63,164,.12); --brand-line:rgba(255,63,164,.45); --brand-text:#FFB3DE;
+  --focus:#5B7CFF;
+  --ok:#7DEAC0; --ok-bg:#071A24; --ok-line:#10413D;
+  --info:#93C5FD; --info-bg:#0A152C; --info-line:#1A3155;
+  --warn:#F3D08A; --warn-bg:#1A171C; --warn-line:#473924;
+  --idle:#B7C0D4; --idle-bg:#0E1326; --idle-line:#252C42;
+  --danger:#F5A99C; --danger-bg:#1B0F1D; --danger-line:#4C2227;
+  --font:'Montserrat','Helvetica Neue',Arial,sans-serif;
+  --r-lg:28px; --r-md:18px; --r-sm:12px;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);background-image:linear-gradient(135deg,var(--bg) 0%,var(--bg-2) 50%,#05082D 100%);background-attachment:fixed;color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.5;min-height:100vh}
+a{color:var(--brand-text)}
+button,select{font-family:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+h1,h2,h3{margin:0;text-wrap:balance}
+.wrap{max-width:1280px;margin:0 auto;padding-block:20px 56px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:22px}
+.top{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+.marca{display:flex;align-items:center;gap:10px;font-weight:800;font-size:15px}
+.marca i{width:12px;height:12px;border-radius:50%;background:var(--brand);box-shadow:0 0 18px var(--brand)}
+.marca small{font-weight:600;color:var(--muted);font-size:12px}
+nav{display:flex;flex-wrap:wrap;gap:6px}
+.pill{min-height:40px;padding:0 14px;border-radius:14px;border:1px solid var(--line-2);background:transparent;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+.pill:hover{color:var(--ink);border-color:var(--line-2);background:var(--panel)}
+.pill[aria-current="true"],.pill.on{color:var(--ink);background:var(--brand-soft);border-color:var(--brand-line)}
+.pill .n{font-variant-numeric:tabular-nums;color:var(--faint);font-weight:600}
+.head{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;justify-content:space-between}
+.head > div{display:flex;flex-direction:column;gap:6px;min-width:0;flex:1 1 420px}
+.migas{font-size:12px;font-weight:600;color:var(--muted)}
+h1{font-size:clamp(24px,3vw,32px);font-weight:800;letter-spacing:-.01em}
+.sub{color:var(--muted);max-width:68ch}
+.btn{min-height:44px;padding:0 18px;border-radius:16px;font-weight:700;font-size:14px;cursor:pointer;border:1px solid var(--line-2);background:transparent}
+.btn.prim{background:var(--brand);border-color:var(--brand);color:#020617}
+.acc{display:flex;gap:10px;flex-wrap:wrap}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);padding:22px;min-width:0}
+.lbl{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.t2{font-size:12px;color:var(--muted)}
+.aviso{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:12px 16px;border-radius:16px;font-size:14px;font-weight:600}
+.aviso.ok{background:var(--ok-bg);border:1px solid var(--ok-line);color:var(--ok)}
+.aviso.warn{background:var(--warn-bg);border:1px solid var(--warn-line);color:var(--warn)}
+.aviso span.t2{font-weight:500}
+.cols{display:flex;flex-wrap:wrap;gap:22px;align-items:flex-start}
+.cols > .main{flex:999 1 640px;min-width:0}
+.cols > .side{flex:1 1 300px;min-width:0;display:flex;flex-direction:column;gap:10px}
+
+/* Segmentos */
+.seg{display:inline-flex;align-items:center;justify-content:center;min-height:42px;min-width:44px;padding:0 10px;border-radius:var(--r-sm);font-weight:800;font-size:14px;border:1px solid transparent}
+.s-Alfa{background:var(--brand-soft);color:var(--brand-text);border-color:var(--brand-line)}
+.s-A{background:var(--ok-bg);color:var(--ok);border-color:var(--ok-line)}
+.s-B{background:var(--info-bg);color:var(--info);border-color:var(--info-line)}
+.s-C{background:var(--warn-bg);color:var(--warn);border-color:var(--warn-line)}
+.s-D{background:var(--idle-bg);color:var(--idle);border-color:var(--idle-line)}
+
+/* Tabla */
+.scroll{overflow-x:auto;padding-bottom:4px}
+.grid{display:grid;grid-template-columns:190px repeat(8,minmax(56px,1fr));gap:8px;align-items:center;min-width:760px}
+.gh{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:center;padding-bottom:6px;border-bottom:1px solid var(--line-2)}
+.gd{font-size:12px;font-weight:600;color:var(--muted);text-align:center}
+.fila{display:flex;flex-direction:column;gap:1px;padding-right:6px}
+.fila b{font-size:14px}
+.celda{width:100%;cursor:pointer;position:relative}
+.celda:hover{filter:brightness(1.25)}
+.celda.sel{outline:3px solid var(--focus);outline-offset:2px}
+.celda.cambio::after{content:"";position:absolute;top:5px;right:5px;width:7px;height:7px;border-radius:50%;background:var(--brand)}
+.editor{display:flex;flex-wrap:wrap;gap:14px;align-items:center;padding:16px;border-radius:20px;background:var(--inset);border:1px solid rgba(91,124,255,.5)}
+.editor .que{flex:1 1 260px;display:flex;flex-direction:column;gap:2px}
+.editor .que b{font-size:15px}
+.elegir{display:flex;gap:8px;flex-wrap:wrap}
+.elegir button{cursor:pointer}
+.elegir button[aria-pressed="true"]{outline:3px solid var(--focus);outline-offset:2px}
+.segcard{display:flex;gap:14px;align-items:flex-start;padding:14px;border-radius:var(--r-md);background:var(--panel);border:1px solid var(--line)}
+.segcard > div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.segcard b{font-size:14px}
+.segcard .cuenta{font-size:12px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+.reglas{margin:0;padding:14px 16px 14px 34px;border-radius:var(--r-md);background:var(--inset);font-size:12px;color:var(--muted);max-height:240px;overflow:auto}
+.reglas li{margin-block:3px}
+
+/* Mapa */
+.ruta{display:flex;flex-wrap:wrap;gap:10px}
+.caja{flex:1 1 240px;min-width:0;padding:14px 16px;border-radius:var(--r-md);background:var(--panel);border:1px solid var(--line);display:flex;flex-direction:column;gap:3px}
+.caja b{font-size:14px;overflow-wrap:anywhere}
+.caja a{font-size:12px;font-weight:700;text-decoration:none;margin-top:4px}
+.mapa{display:grid;grid-template-columns:110px 20px minmax(0,1.2fr) 20px minmax(0,.9fr) 20px minmax(0,1.9fr);gap:10px;align-items:center;min-width:980px}
+.fl{color:var(--faint);text-align:center}
+.hs{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.hora{display:inline-flex;align-items:center;height:30px;padding:0 10px;border-radius:10px;background:var(--inset);font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}
+.ultimo{text-decoration:none}
+
+/* Simulador */
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+.campo{display:flex;flex-direction:column;gap:6px}
+.campo label{font-size:12px;font-weight:700;color:var(--muted)}
+select{min-height:44px;border-radius:14px;background:var(--inset);border:1px solid var(--line-2);padding:0 12px;font-size:14px;font-weight:600}
+.pasos{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:0}
+.paso{display:grid;grid-template-columns:36px minmax(0,1fr) auto;gap:14px;align-items:start;padding:14px 0;border-bottom:1px solid var(--line)}
+.paso:last-child{border-bottom:0}
+.paso .num{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--panel-2);font-size:12px;font-weight:800}
+.paso b{display:block;font-size:15px}
+.paso a{font-size:12px;font-weight:700;text-decoration:none;white-space:nowrap;padding-top:4px}
+.frase{font-size:18px;font-weight:700;line-height:1.45;padding:18px;border-radius:var(--r-md);background:var(--inset)}
+
+/* Evento */
+.modos{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.modo{display:flex;flex-direction:column;gap:6px;padding:18px;border-radius:var(--r-md);background:var(--panel);border:1px solid var(--line);cursor:pointer;text-align:left}
+.modo:has(input:checked){background:var(--brand-soft);border-color:var(--brand-line)}
+.modo input{accent-color:var(--brand);width:18px;height:18px;margin:0}
+.modo .tit{display:flex;gap:10px;align-items:center;font-weight:800;font-size:15px}
+.modo .t2{font-size:13px}
+.kv{display:grid;grid-template-columns:minmax(120px,200px) minmax(0,1fr);gap:10px 18px;font-size:14px}
+.kv dt{color:var(--muted);font-weight:600}
+.kv dd{margin:0;font-weight:600}
+
+/* Historial */
+.hist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.hit{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;align-items:center;width:100%;padding:14px 16px;border-radius:var(--r-md);background:var(--panel);border:1px solid var(--line);cursor:pointer;text-align:left}
+.hit[aria-pressed="true"]{border-color:var(--brand-line);background:var(--brand-soft)}
+.hit .hora{background:var(--panel-2)}
+.hit b{display:block;font-size:14px}
+.chip{display:inline-flex;align-items:center;height:24px;padding:0 9px;border-radius:999px;font-size:11px;font-weight:700;border:1px solid var(--line-2);color:var(--muted);white-space:nowrap}
+.chip.script{color:var(--warn);border-color:var(--warn-line);background:var(--warn-bg)}
+.chip.ui{color:var(--ok);border-color:var(--ok-line);background:var(--ok-bg)}
+.diff{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.diff li{display:grid;grid-template-columns:minmax(0,1fr);gap:4px;padding:12px 14px;border-radius:14px;background:var(--inset);font-size:13px}
+.diff .antes{color:var(--danger);text-decoration:line-through;text-decoration-color:rgba(245,169,156,.5)}
+.diff .despues{color:var(--ok);font-weight:700}
+.diff .que{font-weight:700}
+
+@media (max-width:560px){.paso{grid-template-columns:30px minmax(0,1fr)}.paso a{grid-column:2}.kv{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="top">
+    <div class="marca"><i aria-hidden="true"></i>Thalamus <small>boceto · configurar sin consola</small></div>
+    <nav aria-label="Pantallas">
+      <a class="pill" href="#tabla" data-v="tabla">Segmentación</a>
+      <a class="pill" href="#mapa" data-v="mapa">Mapa</a>
+      <a class="pill" href="#simulador" data-v="simulador">Simulador</a>
+      <a class="pill" href="#evento" data-v="evento">Evento</a>
+      <a class="pill" href="#historial" data-v="historial">Historial</a>
+    </nav>
+  </div>
+
+  <!-- 1 · TABLA -->
+  <section id="v-tabla" class="vista">
+    <div class="head">
+      <div>
+        <div class="migas">Forms › Sesión de Aceleración › Segmentación</div>
+        <h1>¿A qué segmento va cada lead?</h1>
+        <div class="sub">Elegí cuánto puede invertir y tocá una celda para cambiar su segmento. Las reglas se escriben solas al guardar.</div>
+      </div>
+      <div class="acc">
+        <button class="btn" id="verReglas" type="button" aria-expanded="false">Ver las reglas generadas</button>
+        <button class="btn prim" id="guardar" type="button">Guardar cambios</button>
+      </div>
+    </div>
+
+    <div class="aviso ok" id="estado">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+      <span>Todas las combinaciones tienen un segmento, y ninguna tiene dos.</span>
+      <span class="t2" id="cambios">Sin cambios.</span>
+    </div>
+
+    <div class="cols">
+      <div class="main panel" style="display:flex;flex-direction:column;gap:18px">
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <span class="lbl">¿Cuánto puede invertir?</span>
+          <div class="acc" id="tabsInv" role="group" aria-label="Inversión"></div>
+        </div>
+        <div class="scroll"><div class="grid" id="grid"></div></div>
+        <div class="t2">«Otro examen» junta USMLE, MIR, Ecuador, Chile, Panamá y Otro. Cada fila puede separarse si hace falta.</div>
+        <div class="editor">
+          <div class="que"><span class="t2">Celda elegida</span><b id="selTxt">—</b></div>
+          <div class="elegir" id="elegir"></div>
+        </div>
+        <ol class="reglas" id="reglas" hidden></ol>
+      </div>
+      <aside class="side">
+        <span class="lbl">Qué pasa con cada segmento</span>
+        <div id="segcards" style="display:flex;flex-direction:column;gap:10px"></div>
+        <a href="#mapa" style="font-size:13px;font-weight:700;padding:6px 0">Ver el recorrido completo en el mapa →</a>
+      </aside>
+    </div>
+  </section>
+
+  <!-- 2 · MAPA -->
+  <section id="v-mapa" class="vista" hidden>
+    <div class="head">
+      <div>
+        <div class="migas">Thalamus › Mapa</div>
+        <h1>De dónde entra el lead hasta quién lo atiende</h1>
+        <div class="sub">Solo para leer. Cada paso tiene su «Editar», que lleva a donde se cambia.</div>
+      </div>
+      <a class="aviso warn ultimo" href="#historial">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        Último cambio: hoy 18:36, Mario Bühler · Ver historial
+      </a>
+    </div>
+    <div class="acc" role="group" aria-label="Embudo">
+      <span class="lbl" style="align-self:center;margin-right:4px">Embudo</span>
+      <button class="pill on" type="button">Workshop</button>
+      <button class="pill" type="button">Setting</button>
+      <button class="pill" type="button">Momentum Sessions</button>
+      <button class="pill" type="button">Hiring</button>
+    </div>
+    <div class="ruta">
+      <div class="caja"><span class="lbl">Entra por</span><b>…/agendas-v2/agenda/workshop</b><span class="t2">Evento «Sesión de Aceleración» · 45 min</span><a href="#evento">Editar evento</a></div>
+      <div class="caja"><span class="lbl">Formulario</span><b>Sesión de Aceleración · 7 preguntas</b><span class="t2">Deciden: Inversión, Etapa, Examen y Decide</span><a href="#tabla">Editar segmentación</a></div>
+      <div class="caja"><span class="lbl">Cómo se asigna</span><b>Según la segmentación</b><span class="t2">Si falta inversión o etapa: Segmento D</span><a href="#evento">Cambiar</a></div>
+    </div>
+    <div class="panel scroll">
+      <div class="mapa" id="mapa"></div>
+    </div>
+    <div class="t2">Horarios en tu hora (GMT−3), descontando agendas y Google Calendar. En este boceto los horarios son de ejemplo; las combinaciones salen de la tabla.</div>
+  </section>
+
+  <!-- 3 · SIMULADOR -->
+  <section id="v-simulador" class="vista" hidden>
+    <div class="head">
+      <div>
+        <div class="migas">Thalamus › Simulador</div>
+        <h1>¿A dónde va este lead, y por qué?</h1>
+        <div class="sub">Cargá las respuestas y leé el camino. Cada paso lleva a donde se cambia.</div>
+      </div>
+    </div>
+    <div class="cols">
+      <div class="main panel" style="display:flex;flex-direction:column;gap:18px">
+        <div class="form">
+          <div class="campo"><label for="sEmb">Entró por</label><select id="sEmb"><option>Workshop</option><option>Setting</option></select></div>
+          <div class="campo"><label for="sInv">Inversión</label><select id="sInv"></select></div>
+          <div class="campo"><label for="sEta">Etapa</label><select id="sEta"><option value="0">Médico general</option><option value="0r">Servicio Rural</option><option value="1">Residente</option><option value="2">Especialista</option><option value="3">Estudiante</option><option value="3i" selected>Internado</option></select></div>
+          <div class="campo"><label for="sExa">Examen</label><select id="sExa"><option value="0">Colombia</option><option value="0p">Perú</option><option value="1">USMLE</option><option value="1c">Chile</option><option value="2">No busco examen</option><option value="3">ENARM</option></select></div>
+          <div class="campo"><label for="sDec">Quién decide</label><select id="sDec"><option value="0">Solo yo</option><option value="1" selected>Necesito apoyo</option></select></div>
+        </div>
+        <p class="frase" id="frase"></p>
+      </div>
+      <aside class="side panel">
+        <span class="lbl">El camino, paso a paso</span>
+        <ol class="pasos" id="pasos"></ol>
+      </aside>
+    </div>
+  </section>
+
+  <!-- 4 · EVENTO -->
+  <section id="v-evento" class="vista" hidden>
+    <div class="head">
+      <div>
+        <div class="migas">Eventos › Momentum Session</div>
+        <h1>¿Quién atiende a los que reservan este evento?</h1>
+        <div class="sub">Hoy esto se deduce de campos sueltos. Acá es una sola elección, y lo demás se ajusta a ella.</div>
+      </div>
+      <div class="acc"><button class="btn prim" type="button">Guardar</button></div>
+    </div>
+    <fieldset class="modos" style="border:0;padding:0;margin:0">
+      <legend class="lbl" style="margin-bottom:10px">Cómo se asigna</legend>
+      <label class="modo"><span class="tit"><input type="radio" name="modo" id="mSeg" value="seg">Según la segmentación</span><span class="t2">El formulario decide el segmento y el segmento decide quiénes. Es lo de la Sesión de Aceleración.</span></label>
+      <label class="modo"><span class="tit"><input type="radio" name="modo" id="mFija" value="fija">Una persona fija</span><span class="t2">Siempre la misma persona. Sirve para Consultoría o Hiring.</span></label>
+      <label class="modo"><span class="tit"><input type="radio" name="modo" id="mVenta" value="venta" checked>Con el closer de su venta</span><span class="t2">Para alumnos: lo atiende quien le vendió. No pasa por ninguna segmentación.</span></label>
+    </fieldset>
+    <div class="cols">
+      <div class="main panel" style="display:flex;flex-direction:column;gap:16px">
+        <span class="lbl">Con esta elección</span>
+        <dl class="kv" id="kv"></dl>
+      </div>
+      <aside class="side">
+        <div class="aviso warn" style="align-items:flex-start;flex-direction:column;gap:4px">
+          <span>Hoy en producción</span>
+          <span class="t2" style="color:var(--warn)">Momentum Session tiene persona fija = Jean Carlo y un formulario con una sola pregunta. Todos los que entran por ese link van con Jean Carlo, no con su closer.</span>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- 5 · HISTORIAL -->
+  <section id="v-historial" class="vista" hidden>
+    <div class="head">
+      <div>
+        <div class="migas">Thalamus › Historial</div>
+        <h1>Quién cambió qué</h1>
+        <div class="sub">Cada guardado queda acá, se haga desde la pantalla o desde un script. Se puede volver a cualquier versión.</div>
+      </div>
+    </div>
+    <div class="cols">
+      <div class="main"><ul class="hist" id="hist"></ul></div>
+      <aside class="side panel" style="gap:14px">
+        <span class="lbl">Qué cambió</span>
+        <b id="hTit" style="font-size:16px"></b>
+        <ul class="diff" id="diff"></ul>
+        <div class="acc"><button class="btn" type="button">Comparar con hoy</button><button class="btn" type="button">Volver a esta versión</button></div>
+      </aside>
+    </div>
+    <div class="t2">Los cambios de hoy son los reales, sacados de la base. Hoy no queda registro, así que se reconstruyeron por la hora de actualización.</div>
+  </section>
+</div>
+
+<script>
+(function(){
+  const SEGS=['Alfa','A','B','C','D'];
+  const EXA=['Colombia · Perú','Otro examen','Sin examen','ENARM'];
+  const ETA=[['Médico general · Rural','+1 en etapa'],['Residente','−2 en etapa'],['Especialista','−1 en etapa'],['Estudiante · Interno','−3 en etapa']];
+  const INV=[
+    {k:'500',n:'$500 o más'},{k:'200',n:'$200 a $500'},{k:'ayuda',n:'Podría conseguir ayuda'},{k:'no',n:'No está dispuesto'}
+  ];
+  // Columnas: [ColPe solo, ColPe apoyo, Otro solo, Otro apoyo, Sin solo, Sin apoyo, ENARM solo, ENARM apoyo]. Sale de las 27 reglas vivas.
+  const BASE={
+    '500':[['Alfa','A','A','A','A','A','A','B'],['A','B','A','B','A','B','A','B'],['A','B','A','B','A','B','A','B'],['A','B','B','B','B','B','B','B']],
+    '200':[['Alfa','A','A','A','A','B','B','B'],['A','B','A','B','A','B','A','B'],['A','B','A','B','A','B','A','B'],['A','B','B','B','B','B','B','B']],
+    'ayuda':[['C','C','C','D','D','D','D','D'],['D','D','D','D','D','D','D','D'],['C','D','D','D','D','D','D','D'],['D','D','D','D','D','D','D','D']],
+    'no':[['C','D','C','D','D','D','D','D'],['D','D','D','D','D','D','D','D'],['D','D','D','D','D','D','D','D'],['D','D','D','D','D','D','D','D']]
+  };
+  const tabla=JSON.parse(JSON.stringify(BASE));
+  const INFO={
+    Alfa:{q:'Marlon › Jean Carlo › Mario',m:'Máxima disponibilidad: ve todos sus horarios',s:'Sesión de Aceleración · 45 min',h:['Hoy 17:00','Hoy 18:00','Mañana 09:00','Mañana 10:00']},
+    A:{q:'Jean Carlo › Marlon',m:'Llenar agenda: primero Jean Carlo',s:'Sesión de Aceleración · 45 min',h:['Mañana 11:00','Mañana 14:00','Jue 09:00']},
+    B:{q:'Jean Carlo › Marlon',m:'Llenar agenda: primero Jean Carlo',s:'Sesión de Aceleración · 45 min',h:['Mañana 11:00','Mañana 14:00','Jue 09:00']},
+    C:{q:'Juliana › Dari (triage)',m:'Máxima disponibilidad',s:'Sesión diagnóstica · 30 min',h:['Hoy 16:30','Hoy 17:00','Mañana 08:30']},
+    D:{q:'Juliana › Dari (triage)',m:'Máxima disponibilidad',s:'Sesión diagnóstica · 30 min',h:['Hoy 16:30','Hoy 17:00','Mañana 08:30']}
+  };
+  let inv='500', sel=[3,1];
+  const $=id=>document.getElementById(id);
+  const el=(t,c,txt)=>{const e=document.createElement(t);if(c)e.className=c;if(txt!=null)e.textContent=txt;return e;};
+  const colTxt=c=>EXA[c>>1]+' · '+(c%2?'con apoyo':'decide solo');
+  const contar=()=>{const n={Alfa:0,A:0,B:0,C:0,D:0};Object.values(tabla).forEach(f=>f.forEach(r=>r.forEach(s=>n[s]++)));return n;};
+  const cambios=()=>{const out=[];Object.keys(tabla).forEach(k=>tabla[k].forEach((r,i)=>r.forEach((s,c)=>{if(s!==BASE[k][i][c])out.push({k,i,c,a:BASE[k][i][c],b:s});})));return out;};
+
+  function pintarTabla(){
+    const tabs=$('tabsInv');tabs.replaceChildren();
+    INV.forEach(x=>{const b=el('button','pill'+(x.k===inv?' on':''));b.type='button';b.setAttribute('aria-pressed',x.k===inv);b.append(x.n+' ');b.append(el('span','n','32'));b.onclick=()=>{inv=x.k;pintarTabla();};tabs.append(b);});
+    const g=$('grid');g.replaceChildren();
+    g.append(el('div'));EXA.forEach(e=>{const h=el('div','gh',e);h.style.gridColumn='span 2';g.append(h);});
+    g.append(el('div'));for(let i=0;i<8;i++)g.append(el('div','gd',i%2?'Con apoyo':'Solo'));
+    tabla[inv].forEach((r,i)=>{
+      const f=el('div','fila');f.append(el('b',null,ETA[i][0]),el('span','t2',ETA[i][1]));g.append(f);
+      r.forEach((s,c)=>{const b=el('button','seg celda s-'+s,s);b.type='button';
+        if(sel[0]===i&&sel[1]===c)b.classList.add('sel');
+        if(BASE[inv][i][c]!==s)b.classList.add('cambio');
+        b.setAttribute('aria-label',ETA[i][0]+', '+colTxt(c)+': '+s);
+        b.onclick=()=>{sel=[i,c];pintarTabla();};g.append(b);});
+    });
+    const actual=tabla[inv][sel[0]][sel[1]];
+    $('selTxt').textContent=INV.find(x=>x.k===inv).n+' · '+ETA[sel[0]][0]+' · '+colTxt(sel[1]);
+    const eg=$('elegir');eg.replaceChildren();
+    SEGS.forEach(s=>{const b=el('button','seg s-'+s,s);b.type='button';b.setAttribute('aria-pressed',s===actual);b.onclick=()=>{tabla[inv][sel[0]][sel[1]]=s;pintarTodo();};eg.append(b);});
+    const cs=cambios();
+    $('cambios').textContent=cs.length?(cs.length===1?'Un cambio sin guardar: ':cs.length+' cambios sin guardar. Último: ')+ETA[cs[cs.length-1].i][0]+', '+colTxt(cs[cs.length-1].c)+' pasa de '+cs[cs.length-1].a+' a '+cs[cs.length-1].b+'.':'Sin cambios.';
+    const n=contar(),sc=$('segcards');sc.replaceChildren();
+    SEGS.forEach(s=>{const c=el('div','segcard');c.append(el('span','seg s-'+s,s));const d=el('div');d.append(el('b',null,INFO[s].q),el('span','t2',INFO[s].m),el('span','t2',INFO[s].s),el('span','cuenta',n[s]+' de 128 combinaciones'));c.append(d);sc.append(c);});
+    pintarReglas();
+  }
+  function pintarReglas(){
+    const ol=$('reglas');ol.replaceChildren();let k=0;
+    INV.forEach(x=>tabla[x.k].forEach((r,i)=>{const grupos={};r.forEach((s,c)=>{(grupos[s]=grupos[s]||[]).push(c);});
+      Object.entries(grupos).forEach(([s,cs])=>{k++;const ex=[...new Set(cs.map(c=>EXA[c>>1]))].join(' o ');const dec=new Set(cs.map(c=>c%2));
+        ol.append(el('li',null,'Si invierte «'+x.n+'», es '+ETA[i][0]+', rinde '+ex+(dec.size===1?(dec.has(0)?' y decide solo':' y necesita apoyo'):'')+' → Segmento '+s));});}));
+    $('verReglas').textContent=($('reglas').hidden?'Ver':'Ocultar')+' las '+k+' reglas generadas';
+  }
+  $('verReglas').onclick=()=>{const r=$('reglas');r.hidden=!r.hidden;$('verReglas').setAttribute('aria-expanded',!r.hidden);pintarReglas();};
+  $('guardar').onclick=()=>{Object.keys(tabla).forEach(k=>BASE[k]=JSON.parse(JSON.stringify(tabla[k])));pintarTodo();$('cambios').textContent='Guardado. Las reglas se volvieron a escribir.';};
+
+  function pintarMapa(){
+    const m=$('mapa');m.replaceChildren();const n=contar();
+    ['Segmento','','Quiénes atienden y cómo','','Sesión','','Horarios libres ahora para este segmento'].forEach(t=>m.append(el('span','lbl',t)));
+    SEGS.forEach(s=>{const a=el('div');a.style.cssText='display:flex;flex-direction:column;gap:4px';a.append(el('span','seg s-'+s,s),el('span','t2',n[s]+' comb.'));m.append(a);
+      m.append(el('span','fl','→'));const q=el('div','caja');q.append(el('b',null,INFO[s].q),el('span','t2',INFO[s].m));m.append(q);
+      m.append(el('span','fl','→'));const se=el('div','caja');se.append(el('b',null,INFO[s].s.split(' · ')[0]),el('span','t2',INFO[s].s.split(' · ')[1]));m.append(se);
+      m.append(el('span','fl','→'));const h=el('div','caja hs');h.style.flexDirection='row';INFO[s].h.forEach(x=>h.append(el('span','hora',x)));m.append(h);});
+  }
+
+  // Simulador
+  INV.forEach(x=>{const o=el('option',null,x.n);o.value=x.k;$('sInv').append(o);});$('sInv').value='ayuda';
+  const etaFila={'0':0,'0r':0,'1':1,'2':2,'3':3,'3i':3}, exaCol={'0':0,'0p':0,'1':1,'1c':1,'2':2,'3':3};
+  function simular(){
+    const k=$('sInv').value,i=etaFila[$('sEta').value],c=exaCol[$('sExa').value]*2+(+$('sDec').value),s=tabla[k][i][c],I=INFO[s];
+    const t=id=>$(id).options[$(id).selectedIndex].text;
+    $('frase').textContent='Entró por '+t('sEmb')+', '+t('sInv').toLowerCase()+', '+t('sEta').toLowerCase()+', '+t('sExa')+', '+t('sDec').toLowerCase()+' → Segmento '+s+' → '+I.q+' → '+I.s.split(' · ')[0]+'.';
+    const p=$('pasos');p.replaceChildren();
+    [['Link del embudo '+t('sEmb'),'Evento «Sesión de Aceleración», asignación según la segmentación','#evento','Editar evento'],
+     ['Celda de la tabla: Segmento '+s,INV.find(x=>x.k===k).n+' · '+ETA[i][0]+' · '+colTxt(c),'#tabla','Editar celda'],
+     ['Lo atienden '+I.q,I.m,'#mapa','Ver estrategia'],
+     ['Ve '+I.s.split(' · ')[0],I.s.split(' · ')[1]+' · próximo libre: '+I.h[0],'#mapa','Ver horarios']
+    ].forEach((x,j)=>{const li=el('li','paso');li.append(el('span','num',String(j+1)));const d=el('div');d.append(el('b',null,x[0]),el('span','t2',x[1]));li.append(d);const a=el('a',null,x[3]);a.href=x[2];li.append(a);p.append(li);});
+    if(s===tabla[k][i][c]&&$('sEta').value==='3i'){ }
+  }
+  ['sEmb','sInv','sEta','sExa','sDec'].forEach(id=>$(id).addEventListener('change',simular));
+
+  // Evento
+  const MODOS={
+    seg:[['Quién atiende','La estrategia del segmento (ver Mapa)'],['Formulario','Decide el segmento: tiene que tener Inversión y Etapa'],['Sesión','La de la regla, o la de este evento'],['Ejemplo','Sesión de Aceleración']],
+    fija:[['Quién atiende','Una persona: [elegir persona]'],['Formulario','Solo junta datos; no decide nada'],['Sesión','La de este evento'],['Ejemplo','Consultoría, Hiring']],
+    venta:[['Quién atiende','El closer de la venta del alumno. Sin venta: Jean Carlo'],['Formulario','Solo junta datos («¿Qué resultados valorás?»); no decide nada'],['Sesión','Momentum · 15 min, en los huecos entre llamadas'],['Encima de C/D','Sí: si pisa una agenda C o D, esa pasa al triage'],['Igual que','La Momentum que se reserva desde la Academia']]
+  };
+  function pintarEvento(){const v=document.querySelector('input[name=modo]:checked').value,kv=$('kv');kv.replaceChildren();MODOS[v].forEach(([a,b])=>{kv.append(el('dt',null,a),el('dd',null,b));});}
+  document.querySelectorAll('input[name=modo]').forEach(r=>r.addEventListener('change',pintarEvento));
+
+  // Historial: lo de hoy, reconstruido por actualizado_en / actualizado_por.
+  const HIST=[
+    {h:'18:37',q:'Mario Bühler',via:'ui',t:'Eventos Consultoría y Hiring',d:[['Formulario','Consultoría y Hiring guardados de nuevo','(sin diferencias visibles)']]},
+    {h:'18:36',q:'Mario Bühler',via:'ui',t:'Momentum Session y su formulario',d:[['Formulario Momentum','sin preguntas','«¿Cuáles son los resultados que más valoras…?»'],['Persona fija','—','Jean Carlo']]},
+    {h:'18:16',q:'Mario Bühler',via:'ui',t:'Estrategias Segmento C y D',d:[['Personas','Triage','Juliana › Dari'],['Modo','—','Máxima disponibilidad']]},
+    {h:'18:13',q:'Mario Bühler',via:'script',t:'Segmentación 2026-12.4 con Segmento Alfa',d:[['Reglas','3 (con dinero, sin dinero, página de gracias)','27, escritas solo con respuestas'],['Página de gracias para estudiantes','mk-academy','borrada: todos agendan'],['Todo lo demás','Grupo 1','Segmento D'],['Examen Colombia y Perú','+1','+2'],['Estrategias','Grupos 1 a 5, Triage','Alfa, A, B, C, D']]},
+    {h:'antes',q:'Santiago Coro',via:'script',t:'Etapa: internado separado de estudiante',d:[['Opción','Soy estudiante o estoy en mi internado','Soy estudiante + Estoy en mi internado']]}
+  ];
+  let hs=3;
+  function pintarHist(){
+    const ul=$('hist');ul.replaceChildren();
+    HIST.forEach((x,i)=>{const li=el('li');const b=el('button','hit');b.type='button';b.setAttribute('aria-pressed',i===hs);
+      b.append(el('span','hora',x.h==='antes'?'antes 18:13':x.h));const d=el('div');d.append(el('b',null,x.t),el('span','t2','Hoy · '+x.q));b.append(d);
+      b.append(el('span','chip '+x.via,x.via==='ui'?'Pantalla':'Script'));b.onclick=()=>{hs=i;pintarHist();};li.append(b);ul.append(li);});
+    const x=HIST[hs];$('hTit').textContent=x.t;const df=$('diff');df.replaceChildren();
+    x.d.forEach(([q,a,b])=>{const li=el('li');li.append(el('span','que',q),el('span','antes',a),el('span','despues',b));df.append(li);});
+  }
+
+  function pintarTodo(){pintarTabla();pintarMapa();simular();}
+  function ruta(){const v=(location.hash||'#tabla').slice(1);const ok=['tabla','mapa','simulador','evento','historial'].includes(v)?v:'tabla';
+    document.querySelectorAll('.vista').forEach(s=>s.hidden=s.id!=='v-'+ok);
+    document.querySelectorAll('nav .pill').forEach(a=>a.setAttribute('aria-current',a.dataset.v===ok));window.scrollTo(0,0);}
+  window.addEventListener('hashchange',ruta);
+  pintarTodo();pintarEvento();pintarHist();ruta();
+})();
+</script>
+</body>
+</html>

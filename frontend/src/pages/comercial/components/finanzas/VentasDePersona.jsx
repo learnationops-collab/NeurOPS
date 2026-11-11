@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { PanelCab } from '../Shared';
 import { CONCEPTOS, FUENTES } from './DetalleNomina';
 import { Cifron, HUMOS, dinero } from './comun';
+import { rotuloVerificacion } from './verificacion';
 import * as apiFz from './finanzasApi';
 
 /**
@@ -325,6 +326,12 @@ const VentasDePersona = ({ persona, datos, desde, hasta, onVolver, onCambio }) =
                                     <span className="fz-nom">
                                         <b className="fz-tachable" title={venta.nombre_cliente}>{venta.nombre_cliente}</b>
                                         <small className="trunc" title={venta.tipo_pago}>{venta.tipo_pago}</small>
+                                        {rotuloVerificacion(venta) && (
+                                            <small style={{ color: v(venta.verificacion === 'unverified' ? 'error' : 'warning') }}
+                                                title="Se paga igual. El comprobante se sube en la ficha del cliente, sección Pagos.">
+                                                {rotuloVerificacion(venta)}
+                                            </small>
+                                        )}
                                     </span>
                                     <span className="trunc mut">{conceptoDe(persona, venta)}</span>
                                     <span className="trunc" title={venta.setter}>{venta.setter}</span>

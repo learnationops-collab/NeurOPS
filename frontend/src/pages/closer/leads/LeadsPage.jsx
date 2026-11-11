@@ -25,6 +25,7 @@ import {
 import Button from '../../../components/ui/Button';
 import Card from '../../../components/ui/Card';
 import Badge from '../../../components/ui/Badge';
+import EstadoVerificacion from '../../../components/closer/EstadoVerificacion';
 import AgendaManagerModal from '../../../components/modals/AgendaManagerModal';
 import SaleDetailModal from '../../../components/modals/SaleDetailModal';
 import DateRangeFilter from '../../../components/shared/DateRangeFilter';
@@ -493,7 +494,10 @@ const CloserLeadsPage = () => {
                                                             ) : (
                                                                 <>
                                                                     <td className="px-8 py-6 text-[10px] font-black">{item.program_name}</td>
-                                                                    <td className="px-8 py-6 text-lg font-black text-success">${item.amount?.toLocaleString()}</td>
+                                                                    <td className="px-8 py-6 text-lg font-black text-success">
+                                                                        ${item.amount?.toLocaleString()}
+                                                                        <EstadoVerificacion estado={item.verificacion} />
+                                                                    </td>
                                                                 </>
                                                             )}
                                                             <td className="px-8 py-6 text-right">

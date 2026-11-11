@@ -200,12 +200,30 @@ def _resolver(nombre, email, instagram, phone, manychat_id, learnation_user_id, 
                         phone=telefono_crudo(phone))
         db.session.add(person)
     else:
+        if fuente == 'agenda':
+            _avisar_si_es_otro(person, nombre, email, phone)
         if nombre and not person.full_name:
             person.full_name = nombre
         if not person.phone and telefono_crudo(phone):
             person.phone = telefono_crudo(phone)  # el primero que llega, como se escribió
     anotar(person, pares, fuente)
     return person
+
+
+def _avisar_si_es_otro(person, nombre, email, phone):
+    """El lead agendó con un dato fuerte (su mail) que es de una persona con otro nombre: la ficha le
+    mostraría el nombre y el teléfono de esa otra (Celia / «Karen Manzano G», 10/11/2026). No se pisa
+    nada (un mail compartido en la familia es real): va a Conflictos para que lo decida Operaciones."""
+    if not nombre or not person.full_name or mismo_nombre(nombre, person.full_name):
+        return
+    from app.services import conflictos_service
+    logger.warning(f'[PERSONA] Agendó como {nombre!r} pero cayó en {person.uuid} ({person.full_name!r})')
+    conflictos_service.abrir_si_falta(
+        person.uuid, 'fichas', f'Agendó como «{nombre}» pero la ficha es de «{person.full_name}»',
+        detalle=(f'En la agenda dejó: {email or "sin mail"} · {phone or "sin teléfono"}. '
+                 f'La ficha muestra: {person.email or "sin mail"} · {person.phone or "sin teléfono"}. '
+                 'Si es la misma persona, corregí el nombre y el teléfono principal en la ficha; si no, separalas.'),
+        origen_texto='Agenda del lead')
 
 
 def por_uuid(valor):

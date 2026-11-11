@@ -90,6 +90,7 @@ def conectar_desde_la_academia(firma):
     session['google_oauth_state'] = state
     session['google_redirect_uri'] = redirect_uri
     session.pop('google_oauth_proposito', None)
+    session.pop('google_notas', None)
     session['google_conectar'] = {'u': usuario.id, 'v': datos.get('v') or '/'}
     return redirect(auth_url)
 
@@ -124,6 +125,7 @@ def login():
     session['google_redirect_uri'] = redirect_uri
     session.pop('google_oauth_proposito', None)  # es conectar el calendario, no entrar con Google
     session.pop('google_conectar', None)  # ni el de una cuenta de la Academia que quedó a medias
+    session.pop('google_notas', None)  # ni el Drive de team@ (app/api/notas_meet.py)
     # ?volver=agendamiento: se conecta desde la Configuración de Agendamiento y vuelve ahí. Con una
     # ruta ("/admin/comercial"), vuelve a esa pantalla con la Configuración abierta (sesion/).
     volver = request.args.get('volver')
@@ -199,6 +201,9 @@ def callback():
     conectar = session.pop('google_conectar', None)
     if conectar:
         return _vuelta_a_la_academia(conectar, state, redirect_uri)
+    if session.pop('google_notas', None):
+        from app.api.notas_meet import vuelta_de_google
+        return vuelta_de_google(state, redirect_uri)
     if not current_user.is_authenticated:
         return 'Tu sesión se cerró mientras conectabas Google. Volvé a entrar y probá de nuevo.', 401
     if request.args.get('error'):  # el usuario canceló en la pantalla de Google

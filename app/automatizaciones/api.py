@@ -9,7 +9,7 @@ from flask import Blueprint, jsonify, request
 from flask_login import current_user, login_required
 
 from app import db
-from app.automatizaciones import bandeja, campanas, metricas, progreso, servicio
+from app.automatizaciones import bandeja, campanas, metricas, metricas_variantes, progreso, servicio
 from app.automatizaciones.modelos import AutEjecucion, AutFlujo, IgContacto, IgMensaje
 from app.automatizaciones.nucleo import grafo as g
 from app.models.instagram import InstagramWebhookEvento
@@ -89,7 +89,8 @@ def _resumen_flujo(flujo, detalle=False):
 
 def _flujo_completo(flujo):
     """Lo que abre el lienzo: el resumen, el borrador, sus errores y las métricas de cada paso."""
-    return {**_resumen_flujo(flujo, detalle=True), 'grafo': flujo.grafo, 'errores': g.validar(flujo.grafo)}
+    return {**_resumen_flujo(flujo, detalle=True), 'grafo': flujo.grafo, 'errores': g.validar(flujo.grafo),
+            'pruebas_ab': metricas_variantes.de_flujo(flujo, servicio.ahora())}
 
 
 def _error_de_grafo(grafo):

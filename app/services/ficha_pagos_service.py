@@ -319,9 +319,16 @@ def corregir(appt, datos, usuario, pago_id=None, origen=DESDE_LA_FICHA):
     cambios, bitacora = _aplicar(venta, datos)
     if not cambios:
         return _respuesta(appt, venta, cambios=[])
+    _reevaluar(venta)
     db.session.commit()
     _anotar(appt, usuario, 'pago_corregido', f'corrigió el pago #{venta.id}', '; '.join(bitacora), origen)
     return _respuesta(appt, venta, cambios=sorted(cambios))
+
+
+def _reevaluar(venta):
+    """Un pago corregido se vuelve a comparar con sus comprobantes ya leídos (sin llamar a Claude)."""
+    from app.services.comprobantes import validacion
+    validacion.reevaluar_si_tiene(venta)
 
 
 def _aplicar(venta, datos):
@@ -419,6 +426,7 @@ def corregir_venta(venta, datos, usuario):
             db.session.rollback()
     cambios, _ = _aplicar(venta, datos)
     if cambios:
+        _reevaluar(venta)
         db.session.commit()
     return {'id': venta.id, 'ficha': False, 'cambios': sorted(cambios)}
 
