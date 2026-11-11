@@ -282,7 +282,15 @@ export function TarjetaDisponibilidad() {
 
     return (
         <Tarjeta icono="clock" titulo="Disponibilidad" texto="Los horarios en los que el sistema te ofrece a los leads. La dirección comercial también puede ajustarlos.">
-            {!datos ? <p className="t-sm mut">{error || 'Cargando…'}</p> : (
+            {!datos ? <p className="t-sm mut">{error || 'Cargando…'}</p> : datos.fuente === 'leadership' ? (
+                // Con su horario cargado en Leadership, se edita allá (ADR-W133): acá se ve como queda.
+                <>
+                    <p className="t-sm mut">Tu horario se edita en Leadership (Setting · Disponibilidad). Tus bloqueos y rituals con hora también cuentan como ocupado.</p>
+                    <div className="horario--horizontal" style={{ pointerEvents: 'none', opacity: 0.75 }} aria-disabled="true">
+                        <HorarioEditor p={{ id: 'yo', horario, tz }} onGuardar={() => {}} />
+                    </div>
+                </>
+            ) : (
                 <>
                     <div className="horario--horizontal"><HorarioEditor p={{ id: 'yo', horario, tz }} onGuardar={editar} /></div>
                     <div className="cu-fila cu-fila--fin">

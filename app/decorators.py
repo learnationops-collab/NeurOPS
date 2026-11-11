@@ -129,6 +129,9 @@ require_academy_token = _requiere_token_bearer('ACADEMY_INBOUND_API_TOKEN', con_
 # que consulta y actualiza bug reports de NeurOPS. Ver docs/dev_platform_bug_reports.md.
 require_dev_platform_token = _requiere_token_bearer('DEV_PLATFORM_INBOUND_API_TOKEN', con_success=True)
 
+# Autenticacion de Leadership mandando la disponibilidad del equipo (app/agendas_v2/leadership.py).
+require_leadership_token = _requiere_token_bearer('LEADERSHIP_INBOUND_API_TOKEN', con_success=False)
+
 
 # Un secreto de menos caracteres que esto no es un secreto: se rechaza al configurarlo.
 LARGO_MINIMO_DE_SECRETO = 20

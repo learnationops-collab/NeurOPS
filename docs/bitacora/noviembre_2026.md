@@ -467,3 +467,6 @@
 
 ### 11/11/2026 · Las llamadas del día, cada mañana en #🔔-new-call
 - Pedido de Elias: todos los días a las 12:00 UTC (8:00 Bolivia, 6:00 México) el bot publica en #🔔-new-call las llamadas de triage y aceleración hasta la medianoche de México, agrupadas por setter y con el setter etiquetado, para que le escriba a cada lead por Instagram antes de su llamada. La hora va en formato de Discord: cada uno la ve en su zona. La Momentum no entra. Hora configurable con `LLAMADAS_DEL_DIA_HORA_UTC` ([llamadas_del_dia.py](../../app/services/discord_avisos/llamadas_del_dia.py)). Más adelante, también por WhatsApp con la plantilla `notificacion_learnation` de Whatchimp, cuando Meta la apruebe.
+
+### 11/11/2026 · La disponibilidad del equipo se carga en Leadership y Thalamus la respeta
+- Leadership pasa a ser el dueño de cuándo puede cada uno (horario semanal, días bloqueados y rituals con hora) y le manda a Work la foto de la persona en cada cambio. Para quien la cargó allá: el closer toma ese horario en su persona de Team (en Configuración se ve de solo lectura), el staff de la Academia lo usa en vez del que manda la Academia, y los bloqueos y rituals cuentan como ocupado y se escriben en su Google Calendar. Quien no la cargó sigue igual. ADR-W133 ([leadership.py](../../app/agendas_v2/leadership.py)).

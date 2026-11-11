@@ -144,6 +144,10 @@ def create_app(config_class=Config):
     app.register_blueprint(external_academy_api_bp, url_prefix='/api/external/academy')
     csrf.exempt(external_academy_api_bp) # Exento - consumido por la Academia con token Bearer propio, no sesión
 
+    from app.api.external.leadership import bp as external_leadership_api_bp
+    app.register_blueprint(external_leadership_api_bp, url_prefix='/api/external/leadership')
+    csrf.exempt(external_leadership_api_bp) # Exento - Leadership manda la disponibilidad con token Bearer propio
+
     from app.api.external.dev_platform import bp as external_dev_platform_api_bp
     app.register_blueprint(external_dev_platform_api_bp, url_prefix='/api/external/dev-platform')
     csrf.exempt(external_dev_platform_api_bp) # Exento - consumido con token Bearer propio, no sesión
