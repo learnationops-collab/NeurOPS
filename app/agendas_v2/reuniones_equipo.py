@@ -381,8 +381,11 @@ def mudar(dry=False):
             # La vieja termina antes de su próxima fecha (UNTIL en UTC): lo pasado queda.
             hasta = (datetime.fromisoformat(x['proxima_iso']).astimezone(timezone.utc) - timedelta(minutes=1)).strftime('%Y%m%dT%H%M%SZ')
             for parte in partes[x['id']]:
-                if (parte['start'].get('dateTime') or '') > x['proxima_iso'] and parte is not ev:
-                    continue  # una parte que empieza después ya la cubre la que se corta
+                if datetime.fromisoformat(parte['start']['dateTime']) > datetime.fromisoformat(x['proxima_iso']):
+                    # Una parte que empieza después de la próxima fecha es toda futura: la cubre la serie de
+                    # team@, así que se borra entera (no tiene nada pasado que conservar).
+                    sv.events().delete(calendarId=viejo, eventId=parte['id'], sendUpdates='all').execute()
+                    continue
                 vieja = []
                 for r in parte.get('recurrence') or []:
                     if r.startswith('RRULE:') and 'UNTIL=' in r:
