@@ -142,6 +142,8 @@ def series(cal=None):
             'proxima_iso': evs[0]['start']['dateTime'],
             # La serie del calendario viejo que reemplaza (mudar): Leadership reengancha el mismo ritual.
             'reemplaza': ((evs[0].get('extendedProperties') or {}).get('private') or {}).get('reemplaza'),
+            # Una serie partida en Google («esta y las siguientes») tiene varias series de verdad: id, id_R….
+            'ids': sorted({e.get('recurringEventId') or e['id'] for e in evs}),
         })
     return sorted(out, key=lambda x: (x['dias'][:1], x['hora']))
 
@@ -320,14 +322,19 @@ def mudar(dry=False):
 
     # Quien armaba las series sigue pudiendo editarlas en el calendario nuevo.
     creadores, masters = set(), {}
+    partes = {}
     for x in lista:
-        try:
-            ev = sv.events().get(calendarId=viejo, eventId=x['id']).execute()
-            masters[x['id']] = ev
-            if (ev.get('creator') or {}).get('email'):
-                creadores.add(ev['creator']['email'].lower())
-        except Exception as e:  # noqa: BLE001
-            logger.warning('Team Meetings: no se pudo leer la serie %s: %s', x['id'], e)
+        for sid in x.get('ids') or [x['id']]:
+            try:
+                ev = sv.events().get(calendarId=viejo, eventId=sid).execute()
+                partes.setdefault(x['id'], []).append(ev)
+                if (ev.get('creator') or {}).get('email'):
+                    creadores.add(ev['creator']['email'].lower())
+            except Exception as e:  # noqa: BLE001
+                logger.warning('Team Meetings: no se pudo leer la serie %s: %s', sid, e)
+        # La que rige desde ahora: la que empieza más tarde.
+        if partes.get(x['id']):
+            masters[x['id']] = max(partes[x['id']], key=lambda e: e['start'].get('dateTime') or '')
     uid, cal, creado = _calendario_team(dry, sorted(creadores))
     if not uid:
         return {'falta': 'team@ no está conectada en Work'}
@@ -373,12 +380,22 @@ def mudar(dry=False):
                     'extendedProperties': {'private': {'reemplaza': x['id'], MARCA_MEET: codigo}}}).execute()
             # La vieja termina antes de su próxima fecha (UNTIL en UTC): lo pasado queda.
             hasta = (datetime.fromisoformat(x['proxima_iso']).astimezone(timezone.utc) - timedelta(minutes=1)).strftime('%Y%m%dT%H%M%SZ')
-            vieja = []
-            for r in ev.get('recurrence') or []:
-                if r.startswith('RRULE:'):
-                    r = re.sub(r';(UNTIL|COUNT)=[^;]+', '', r) + f';UNTIL={hasta}'
-                vieja.append(r)
-            sv.events().patch(calendarId=viejo, eventId=x['id'], sendUpdates='all', body={'recurrence': vieja}).execute()
+            for parte in partes[x['id']]:
+                if (parte['start'].get('dateTime') or '') > x['proxima_iso'] and parte is not ev:
+                    continue  # una parte que empieza después ya la cubre la que se corta
+                vieja = []
+                for r in parte.get('recurrence') or []:
+                    if r.startswith('RRULE:') and 'UNTIL=' in r:
+                        # Ya termina: solo se acorta si termina después de la próxima fecha.
+                        fin_regla = re.search(r'UNTIL=([0-9TZ]+)', r).group(1)
+                        if fin_regla.rstrip('Z') <= hasta.rstrip('Z'):
+                            vieja.append(r)
+                            continue
+                    if r.startswith('RRULE:'):
+                        r = re.sub(r';(UNTIL|COUNT)=[^;]+', '', r) + f';UNTIL={hasta}'
+                    vieja.append(r)
+                if vieja != (parte.get('recurrence') or []):
+                    sv.events().patch(calendarId=viejo, eventId=parte['id'], sendUpdates='all', body={'recurrence': vieja}).execute()
             hechas.append(resumen + ('' if notas else ' (sin notas automáticas: ver logs [MEET])'))
         except Exception as e:  # noqa: BLE001
             errores.append(f"{x['titulo']}: {str(e)[:160]}")
