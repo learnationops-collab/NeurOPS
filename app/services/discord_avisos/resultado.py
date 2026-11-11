@@ -132,6 +132,38 @@ def armar(appt, datos, usuario):
                  estado=estado, tono=tono, chips=chips, cajas=cajas, tiles=tiles, pie=f'Resultado · agenda #{appt.id}')
 
 
+TONO_ACADEMIA = {'verde': 'verde', 'rojo': 'rojo', 'amarillo': 'ambar', 'azul': 'azul'}
+
+
+def a_la_academia(aviso):
+    """El mismo resultado, al canal Agendas del chat de la Academia (que reemplaza a Discord; Academia
+    PLAN_CHAT_UNICO_SIN_DISCORD.md): solo datos, la Academia dibuja la tarjeta. Fuera de la request; nunca lanza."""
+    import os
+    import threading
+
+    if not os.environ.get('ACADEMY_API_TOKEN'):
+        return
+    body = {
+        'canal': 'resultados', 'icono': 'phone', 'titulo': aviso.titulo, 'nombre': aviso.nombre,
+        'telefono': aviso.telefono, 'estado': aviso.estado, 'tono': TONO_ACADEMIA.get(aviso.tono),
+        'chips': [{'texto': c.get('texto', '')} for c in aviso.chips if c.get('texto')],
+        'cajas': [{'titulo': c.get('titulo', ''), 'valor': c.get('valor', ''), 'sub': c.get('sub', '')} for c in aviso.cajas],
+        'tiles': [{'titulo': t.get('titulo', ''), 'sub': t.get('sub', '')} for t in aviso.tiles],
+        'pie': aviso.pie or 'Work',
+    }
+    app = current_app._get_current_object()
+
+    def _correr():
+        with app.app_context():
+            from app.services.learnation_service import LearnationService
+            try:
+                LearnationService._request('POST', '/chat/aviso', json=body)
+            except Exception as e:  # noqa: BLE001
+                app.logger.warning(f'[RESULTADO] No llegó a la Academia: {e}')
+
+    threading.Thread(target=_correr, daemon=True, name='academy-chat-aviso').start()
+
+
 def avisar_resultado(appt, datos, usuario):
     """Avisa el resultado de la llamada. Un mismo resultado guardado de nuevo (corregir una nota) no se repite:
     el último avisado queda en `agenda_payload.discord_resultado`. Nunca lanza."""
@@ -147,6 +179,7 @@ def avisar_resultado(appt, datos, usuario):
         payload['discord_resultado'] = aviso.estado
         appt.agenda_payload = payload
         db.session.commit()
+        a_la_academia(aviso)
         return avisar('resultados', aviso, etiqueta='RESULTADO')
     except Exception as e:  # noqa: BLE001
         db.session.rollback()
