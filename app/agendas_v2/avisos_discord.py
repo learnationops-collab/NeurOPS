@@ -75,19 +75,29 @@ def _hora(dt, zona):
     return local, f"{DIAS[local.weekday()]} {local.strftime('%d/%m %H:%M')}"
 
 
-def _horario(inicio_utc, lead):
-    """La hora en la zona del lead y, si es otra, la del equipo (los closers trabajan con esa)."""
+def _zona_de(closer):
+    """La zona del closer (su perfil); la del equipo si no tiene una válida."""
+    try:
+        return ZoneInfo(getattr(closer, 'timezone', None) or ZONA_EQUIPO)
+    except Exception:  # noqa: BLE001
+        return ZoneInfo(ZONA_EQUIPO)
+
+
+def _horario(inicio_utc, lead, closer=None):
+    """La hora en la zona del lead y, si es otra, la del closer con su nombre («20:00 Jean Carlo»).
+    Antes la segunda era siempre la de Bolivia, que ya no es la de nadie del equipo."""
     zona, pais = zona_del_lead(lead)
     dt = inicio_utc.replace(tzinfo=ZoneInfo('UTC'))
     local, texto = _hora(dt, zona)
-    equipo = dt.astimezone(ZoneInfo(ZONA_EQUIPO))
+    equipo = dt.astimezone(_zona_de(closer))
     return {
         'lead': texto,
         'dia': f"{DIAS[local.weekday()][:3].capitalize()} {local.strftime('%d/%m')}",
         'hora': local.strftime('%H:%M'),
         'pais': pais['n'],
         'bandera': BANDERAS.get(pais['c'], '🌍'),
-        'equipo': equipo.strftime('%H:%M') if local.utcoffset() != equipo.utcoffset() else None,
+        'equipo': (f"{equipo.strftime('%H:%M')} {closer.username if closer else 'Bolivia'}"
+                   if local.utcoffset() != equipo.utcoffset() else None),
     }
 
 
@@ -240,7 +250,7 @@ def _datos_de_pase(appt, payload, origen, por, nota):
         'closer': closer.username if closer else '-',
         'closer_discord': _id_discord(closer),
         'prioridad': _segmento(previo) or '-',
-        'horario': _horario(appt.start_time, lead),
+        'horario': _horario(appt.start_time, lead, closer),
         'antes': None,
         'meet': payload.get('meet') or '',
         'pie': f'Agendas 2.0 · agenda #{appt.id} · viene de la #{origen.id}',
@@ -271,7 +281,7 @@ def datos_de_agenda(appt):
         'closer_discord': _id_discord(closer),
         # El segmento A/B/C/D del lead; el nombre de la prioridad («Grupo 4») solo si el formulario no segmenta.
         'prioridad': _segmento(payload) or payload.get('prioridad_nombre') or '-',
-        'horario': _horario(appt.start_time, lead),
+        'horario': _horario(appt.start_time, lead, closer),
         'antes': _antes(payload.get('reprogramada_desde'), lead) if reprogramada else None,
         'meet': payload.get('meet') or '',
         'pie': f'Agendas 2.0 · agenda #{appt.id}',
@@ -340,7 +350,7 @@ def embed_de_texto(d):
         campos.append({'name': 'Motivo', 'value': d['motivo'], 'inline': False})
     else:
         h = d['horario']
-        hora = f"{h['lead']} {h['bandera']} {h['pais']}" + (f" ({h['equipo']} Bolivia)" if h['equipo'] else '')
+        hora = f"{h['lead']} {h['bandera']} {h['pais']}" + (f" ({h['equipo']})" if h['equipo'] else '')
         campos[:0] = [{'name': 'Closer', 'value': d['closer'], 'inline': True},
                       {'name': 'Horario del lead', 'value': hora, 'inline': True}]
         campos.append({'name': 'Segmento', 'value': d['prioridad'], 'inline': True})

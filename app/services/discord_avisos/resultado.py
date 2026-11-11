@@ -44,11 +44,17 @@ def _texto(datos, *claves):
     return ''
 
 
-def _cuando(dt):
+def _cuando(dt, closer=None):
+    """El día y la hora en la zona del closer, con su nombre (antes, siempre en la de Bolivia)."""
     if not dt:
         return ''
-    local = dt.replace(tzinfo=timezone.utc).astimezone(ZoneInfo(ZONA_EQUIPO))
-    return f"{DIAS[local.weekday()]} {local.strftime('%d/%m %H:%M')} (Bolivia)"
+    try:
+        zona = ZoneInfo(getattr(closer, 'timezone', None) or ZONA_EQUIPO)
+    except Exception:  # noqa: BLE001
+        zona = ZoneInfo(ZONA_EQUIPO)
+    local = dt.replace(tzinfo=timezone.utc).astimezone(zona)
+    quien = f'hora de {closer.username}' if closer else 'Bolivia'
+    return f"{DIAS[local.weekday()]} {local.strftime('%d/%m %H:%M')} ({quien})"
 
 
 def _tipo_de_llamada(appt):
@@ -101,7 +107,7 @@ def armar(appt, datos, usuario):
         estado = momentum_reporte.etiqueta(sigue, 'sena' if tipo == 'Momentum de seña' else 'cierre')
         tono = TONO_SIGUE[sigue]
 
-    chips = [{'icono': 'cal', 'texto': _cuando(appt.start_time)}]
+    chips = [{'icono': 'cal', 'texto': _cuando(appt.start_time, closer)}]
     seg = (payload.get('segmento_lead') or {}).get('segmento')
     if seg:
         chips.append({'marca': seg, 'texto': f'Segmento {seg}'})

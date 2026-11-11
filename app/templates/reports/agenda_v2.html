@@ -28,7 +28,7 @@
                 {% if lead.telefono %}<span class="chip"><i>TEL</i>{{ lead.telefono }}</span>{% endif %}
                 {% if horario %}
                 <span class="chip"><i>{{ icono('cal') }}</i>{{ horario.dia }}</span>
-                <span class="chip"><i>{{ icono('reloj') }}</i>{{ horario.hora }} · {{ horario.pais }}{% if horario.equipo %}<em>({{ horario.equipo }} Bolivia)</em>{% endif %}</span>
+                <span class="chip"><i>{{ icono('reloj') }}</i>{{ horario.hora }} · {{ horario.pais }}{% if horario.equipo %}<em>({{ horario.equipo }})</em>{% endif %}</span>
                 {% endif %}
                 {% if antes %}<span class="chip"><i>{{ icono('antes') }}</i><em>Antes:</em> {{ antes }}</span>{% endif %}
             </div>

@@ -461,3 +461,6 @@
 
 ### 11/11/2026 · El WhatsApp de agenda nueva dice la hora del lead y la del closer
 - Jean Carlo vio «6:00 pm 🇲🇽» en el WhatsApp y 8 pm en su calendario para la misma llamada (lead en Tijuana, él en Ciudad de México) y pensó que estaba mal agendada. Si el closer está en otra zona, la hora del aviso ahora suma la suya: «6:00 pm 🇲🇽 (lead) · 8:00 pm (tuya)», con el día si también cambia ([operacion.py](../../app/agendas_v2/operacion.py)).
+
+### 11/11/2026 · Los avisos de Discord dejan de usar la hora de Bolivia
+- El aviso de agenda nueva (imagen y texto) mostraba la hora del lead y, al lado, «(09:00 Bolivia)» como hora del equipo, aunque ya casi nadie trabaja en esa zona. Ahora la segunda hora es la del closer de esa agenda, con su nombre: «18:00 🇲🇽 México (20:00 Jean Carlo)». El resultado de la llamada dice el día y la hora en la zona del closer («Vie 13/11 20:00 (hora de Jean Carlo)»). Si el closer no tiene zona cargada, sigue Bolivia ([avisos_discord.py](../../app/agendas_v2/avisos_discord.py), [resultado.py](../../app/services/discord_avisos/resultado.py)).
