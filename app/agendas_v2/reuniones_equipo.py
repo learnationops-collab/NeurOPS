@@ -340,7 +340,7 @@ def mudar(dry=False):
         return {'falta': 'team@ no está conectada en Work'}
     st = GoogleService.get_service(uid)
 
-    hechas, errores = [], []
+    hechas, errores, cortadas = [], [], set()
     for x in lista:
         ev = masters.get(x['id'])
         if not ev:
@@ -399,16 +399,34 @@ def mudar(dry=False):
                     vieja.append(r)
                 if vieja != (parte.get('recurrence') or []):
                     sv.events().patch(calendarId=viejo, eventId=parte['id'], sendUpdates='all', body={'recurrence': vieja}).execute()
-            # Una fecha que alguien tocó (aceptar la invitación, por ejemplo) es una excepción y el corte no la
-            # borra: las futuras que quedan se borran, las cubre la serie de team@ (pasó el 11/11).
-            ahora = datetime.now(timezone.utc)
-            for parte in partes[x['id']]:
-                quedan = sv.events().instances(calendarId=viejo, eventId=parte['id'], timeMin=ahora.isoformat(),
-                                               maxResults=250).execute().get('items') or []
-                for inst in quedan:
-                    if inst.get('status') != 'cancelled':
-                        sv.events().delete(calendarId=viejo, eventId=inst['id'], sendUpdates='all').execute()
+            cortadas.update(p['id'] for p in partes[x['id']])
             hechas.append(resumen + ('' if notas else ' (sin notas automáticas: ver logs [MEET])'))
         except Exception as e:  # noqa: BLE001
             errores.append(f"{x['titulo']}: {str(e)[:160]}")
+    if not dry:
+        errores += _borrar_sueltas(sv, viejo, cortadas)
     return {'calendario': cal, 'creado': creado, 'compartido_con': sorted(creadores), 'series': hechas, 'errores': errores}
+
+
+def _borrar_sueltas(sv, cal, series):
+    """Una fecha que alguien tocó (aceptar la invitación, por ejemplo) es una excepción: el corte (UNTIL) no
+    la borra y `instances()` ya no la devuelve, pero los invitados la siguen viendo. Se buscan con
+    singleEvents=False (las excepciones traen recurringEventId) y se borran las futuras: las cubre la serie
+    de team@ (pasó el 11/11)."""
+    ahora = datetime.now(timezone.utc)
+    errores, pagina = [], None
+    while series:
+        r = sv.events().list(calendarId=cal, singleEvents=False, maxResults=250, pageToken=pagina).execute()
+        for e in r.get('items', []):
+            inicio = (e.get('start') or {}).get('dateTime')
+            if (e.get('recurringEventId') not in series or e.get('status') == 'cancelled' or not inicio
+                    or datetime.fromisoformat(inicio).astimezone(timezone.utc) < ahora):
+                continue
+            try:
+                sv.events().delete(calendarId=cal, eventId=e['id'], sendUpdates='all').execute()
+            except Exception as x:  # noqa: BLE001
+                errores.append(f"{e.get('summary')}: {str(x)[:120]}")
+        pagina = r.get('nextPageToken')
+        if not pagina:
+            break
+    return errores
