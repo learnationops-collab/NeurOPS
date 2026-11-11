@@ -413,7 +413,7 @@ class GoogleService:
                         maxResults=250, pageToken=pagina,
                         fields='timeZone,accessRole,nextPageToken,'
                                'items(id,recurringEventId,summary,start,end,status,transparency,visibility,'
-                               'hangoutLink,attendees(self,responseStatus))',
+                               'hangoutLink,attendees(self,responseStatus),extendedProperties(private))',
                     ).execute()
                     zona, escribe = r.get('timeZone') or 'UTC', r.get('accessRole') in ('owner', 'writer')
                     for e in r.get('items') or []:
@@ -431,6 +431,8 @@ class GoogleService:
                             'id': e['id'], 'calendar_id': cal, 'serie': e.get('recurringEventId'),
                             'titulo': None if privado else ((e.get('summary') or '').strip() or None),
                             'inicio': inicio, 'fin': fin, 'meet': e.get('hangoutLink'), 'escribe': escribe,
+                            # Lo que escribió Leadership (rituals y bloqueos, app/agendas_v2/leadership.py).
+                            'leadership': ((e.get('extendedProperties') or {}).get('private') or {}).get('leadership'),
                         }
                     pagina = r.get('nextPageToken')
                     if not pagina:

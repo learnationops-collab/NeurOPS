@@ -157,9 +157,13 @@ def persona_de_usuario(d, user):
 def disponibilidad_de(user):
     """Lo que el closer ve en su Configuración: su horario semanal (el de su persona de Team, el mismo que
     edita la dirección comercial en Agendamiento) y su zona horaria."""
+    from app.agendas_v2 import leadership
+
     p = persona_de_usuario(colecciones(), user)
     return {
         'en_team': bool(p),
+        # Con su horario cargado en Leadership, se edita allá (ADR-W133).
+        'fuente': 'leadership' if leadership.foto(user.id) else 'thalamus',
         'horario': p['horario'] if p else NORM['personas']('x', {'horario': {}})['horario'],
         'tz': p['tz'] if p and p['tz'] != TZ_DEF else zona_de_usuario(user),
         'zonas': [{'tz': z['tz'], 'n': z['n']} for z in ZONAS],
@@ -182,6 +186,10 @@ def _persona_nueva(d, user, **campos):
 def guardar_disponibilidad(user, horario, tz):
     """Guarda el horario y la zona del closer en su persona de Team (si no está en Team, la crea: así la
     dirección comercial lo ve y lo puede sumar a una prioridad). La zona también queda en su cuenta."""
+    from app.agendas_v2 import leadership
+
+    if leadership.foto(user.id):
+        raise ValueError('Tu horario se edita en Leadership (Setting · Disponibilidad).')
     if not zona_valida(tz):
         raise ValueError('Elegí una zona horaria de la lista.')
     d = colecciones()
@@ -398,7 +406,9 @@ def guardar_perfil(usuario_id, datos):
     fila = db.session.get(SchedPerfil, usuario_id) or SchedPerfil(user_id=usuario_id)
     # `academia`: preferencias que guarda la API de agenda de la Academia (app/api/external/agenda.py).
     academia = (fila.datos or {}).get('academia') if isinstance(fila.datos, dict) else None
-    fila.datos = {**perfil, 'academia': academia} if academia else perfil
+    # `leadership` / `leadership_google`: la disponibilidad que manda Leadership (app/agendas_v2/leadership.py).
+    otros = {k: v for k, v in (fila.datos or {}).items() if k in ('leadership', 'leadership_google')} if isinstance(fila.datos, dict) else {}
+    fila.datos = {**perfil, **({'academia': academia} if academia else {}), **otros}
     db.session.add(fila)
     db.session.commit()
     return perfil
@@ -616,6 +626,13 @@ def _ocupacion(ahora, elegibles=None, libres=None):
     agendas = _agendas_de_operacion(elegibles, ms_a_dt(ahora - 7 * DIA_MS), leido, leido_desde=ahora - 3600000, excluir=excluir)
     base = opciones_de_ocupacion(agendas, ahora)
     google = {pid: [{'inicio': a, 'fin': b} for a, b in leido[u]] for pid, u in elegibles.items() if leido.get(u)}
+    # Sus bloqueos y rituals de Leadership (también van a su Google; esto cubre lo que todavía no llegó).
+    from app.agendas_v2 import leadership
+    hasta_l = ahora + VENTANA_GOOGLE_DIAS * DIA_MS
+    for pid, u in elegibles.items():
+        extra = leadership.franjas(u, ahora - 3600000, hasta_l)
+        if extra:
+            google[pid] = google.get(pid, []) + [{'inicio': a, 'fin': b} for a, b in extra]
     if not google:
         return base
     ocupado = base['ocupado']

@@ -1,7 +1,8 @@
-"""El resultado de cada llamada reportada, al canal #onboardings de fulfillment (ADR-W121).
+"""El resultado de cada llamada reportada, al canal #agendas de fulfillment (ADR-W121). Hasta el
+11/11/2026 iba a #onboardings.
 
 Sale cuando el closer reporta en la ficha (POST /ficha/<id>/resultado) o en el mazo viejo. La llamada de
-triage no se avisa: es antes de la venta y no le sirve a fulfillment. La venta no pasa por acá: «Sí, cerró» va por la ruta de venta y la avisa venta.py.
+triage no se avisa: es antes de la venta. La venta no pasa por acá: «Sí, cerró» va por la ruta de venta y la avisa venta.py.
 El texto lleva nombre y número (para buscar en Discord junto a la agenda); el resto va en la imagen.
 """
 from datetime import timezone
@@ -43,11 +44,17 @@ def _texto(datos, *claves):
     return ''
 
 
-def _cuando(dt):
+def _cuando(dt, closer=None):
+    """El día y la hora en la zona del closer, con su nombre (antes, siempre en la de Bolivia)."""
     if not dt:
         return ''
-    local = dt.replace(tzinfo=timezone.utc).astimezone(ZoneInfo(ZONA_EQUIPO))
-    return f"{DIAS[local.weekday()]} {local.strftime('%d/%m %H:%M')} (Bolivia)"
+    try:
+        zona = ZoneInfo(getattr(closer, 'timezone', None) or ZONA_EQUIPO)
+    except Exception:  # noqa: BLE001
+        zona = ZoneInfo(ZONA_EQUIPO)
+    local = dt.replace(tzinfo=timezone.utc).astimezone(zona)
+    quien = f'hora de {closer.username}' if closer else 'Bolivia'
+    return f"{DIAS[local.weekday()]} {local.strftime('%d/%m %H:%M')} ({quien})"
 
 
 def _tipo_de_llamada(appt):
@@ -100,7 +107,7 @@ def armar(appt, datos, usuario):
         estado = momentum_reporte.etiqueta(sigue, 'sena' if tipo == 'Momentum de seña' else 'cierre')
         tono = TONO_SIGUE[sigue]
 
-    chips = [{'icono': 'cal', 'texto': _cuando(appt.start_time)}]
+    chips = [{'icono': 'cal', 'texto': _cuando(appt.start_time, closer)}]
     seg = (payload.get('segmento_lead') or {}).get('segmento')
     if seg:
         chips.append({'marca': seg, 'texto': f'Segmento {seg}'})
@@ -125,6 +132,38 @@ def armar(appt, datos, usuario):
                  estado=estado, tono=tono, chips=chips, cajas=cajas, tiles=tiles, pie=f'Resultado · agenda #{appt.id}')
 
 
+TONO_ACADEMIA = {'verde': 'verde', 'rojo': 'rojo', 'amarillo': 'ambar', 'azul': 'azul'}
+
+
+def a_la_academia(aviso):
+    """El mismo resultado, al canal Agendas del chat de la Academia (que reemplaza a Discord; Academia
+    PLAN_CHAT_UNICO_SIN_DISCORD.md): solo datos, la Academia dibuja la tarjeta. Fuera de la request; nunca lanza."""
+    import os
+    import threading
+
+    if not os.environ.get('ACADEMY_API_TOKEN'):
+        return
+    body = {
+        'canal': 'resultados', 'icono': 'phone', 'titulo': aviso.titulo, 'nombre': aviso.nombre,
+        'telefono': aviso.telefono, 'estado': aviso.estado, 'tono': TONO_ACADEMIA.get(aviso.tono),
+        'chips': [{'texto': c.get('texto', '')} for c in aviso.chips if c.get('texto')],
+        'cajas': [{'titulo': c.get('titulo', ''), 'valor': c.get('valor', ''), 'sub': c.get('sub', '')} for c in aviso.cajas],
+        'tiles': [{'titulo': t.get('titulo', ''), 'sub': t.get('sub', '')} for t in aviso.tiles],
+        'pie': aviso.pie or 'Work',
+    }
+    app = current_app._get_current_object()
+
+    def _correr():
+        with app.app_context():
+            from app.services.learnation_service import LearnationService
+            try:
+                LearnationService._request('POST', '/chat/aviso', json=body)
+            except Exception as e:  # noqa: BLE001
+                app.logger.warning(f'[RESULTADO] No llegó a la Academia: {e}')
+
+    threading.Thread(target=_correr, daemon=True, name='academy-chat-aviso').start()
+
+
 def avisar_resultado(appt, datos, usuario):
     """Avisa el resultado de la llamada. Un mismo resultado guardado de nuevo (corregir una nota) no se repite:
     el último avisado queda en `agenda_payload.discord_resultado`. Nunca lanza."""
@@ -140,7 +179,8 @@ def avisar_resultado(appt, datos, usuario):
         payload['discord_resultado'] = aviso.estado
         appt.agenda_payload = payload
         db.session.commit()
-        return avisar('onboarding', aviso, etiqueta='RESULTADO')
+        a_la_academia(aviso)
+        return avisar('resultados', aviso, etiqueta='RESULTADO')
     except Exception as e:  # noqa: BLE001
         db.session.rollback()
         current_app.logger.error(f'[RESULTADO] No se pudo avisar la agenda #{getattr(appt, "id", None)}: {e}')

@@ -454,3 +454,34 @@
 
 ### 09/11/2026 · «APLICAR» y «QUIERO APLICAR» son una sola palabra clave en Marketing
 - El tablero de anuncios cuenta las entradas, agendas, ventas y gasto de «APLICAR» (como guardaba ManyChat hasta el 23/10) dentro de «QUIERO APLICAR» (ADR-W132). En 30 días al 08/11 su ROAS pasa de 0,21 a 1,38; los totales no cambian.
+
+### 09/11/2026 — Revisar y Triage: show up sobre todas las agendas y el resultado en closing
+- Tira de totales de Revisar: el show up y el % de no show se calculan sobre TODAS las agendas de la lista (pedido de Mario: «de las 17, cuántas»). Con llamadas de triage en la lista, una tarjeta más: «pasó a closing», de las que asistieron.
+- Triage Dashboard: el % de asistencia también sobre todas las agendas, para dar lo mismo que Revisar.
+- Revisar › Agendas: columna y faceta «Closing». En una llamada de triage dice si pasó a closing y, si pasó, el post call de la llamada con el closer, quién la tomó y si presentó la oferta (`comercial_agendas._con_closing`, `triage_pases.pases_de` suma `post_call` y `presento`).
+
+### 11/11/2026 · Las palabras clave en comentarios vuelven a responder siempre
+- Desde el 09/11, con la campaña «Setting Funnel · ROAS MAX», la mitad de los comentarios con palabra clave (PROTOCOLO, DOCUMENTO 25, VACÍO, TRÍADA…) no recibían la respuesta privada: 15 de 31 terminaron en «The thread owner has archived or deleted this conversation» porque el hilo era de otra app (ManyChat/Kommo) y el motor solo tomaba el control al escribir por DM. Ahora lo toma también para responder un comentario y reintenta ([motor.py](../../app/automatizaciones/motor.py)).
+
+### 11/11/2026 · El resultado de cada llamada de venta va a #agendas de fulfillment
+- Pedido de Mario: los avisos «Llamada de venta · No asistió / No cerró / Reagendó…» y los de Momentum salían en #🙌-onboardings. Ahora el bot los publica en #agendas de fulfillment (canal `resultados`, `DISCORD_RESULTADOS_CHANNEL_ID` para cambiarlo). Primero se mandaron a #📋-reportes de adquisitions y el mismo día se pasaron a #agendas, el canal nuevo. Los de onboarding y venta siguen donde estaban ([resultado.py](../../app/services/discord_avisos/resultado.py)).
+
+### 11/11/2026 · El WhatsApp de agenda nueva dice la hora del lead y la del closer
+- Jean Carlo vio «6:00 pm 🇲🇽» en el WhatsApp y 8 pm en su calendario para la misma llamada (lead en Tijuana, él en Ciudad de México) y pensó que estaba mal agendada. Si el closer está en otra zona, la hora del aviso ahora suma la suya: «6:00 pm 🇲🇽 (lead) · 8:00 pm (tuya)», con el día si también cambia ([operacion.py](../../app/agendas_v2/operacion.py)).
+
+### 11/11/2026 · Los avisos de Discord dejan de usar la hora de Bolivia
+- El aviso de agenda nueva (imagen y texto) mostraba la hora del lead y, al lado, «(09:00 Bolivia)» como hora del equipo, aunque ya casi nadie trabaja en esa zona. Ahora la segunda hora es la del closer de esa agenda, con su nombre: «18:00 🇲🇽 México (20:00 Jean Carlo)». El resultado de la llamada dice el día y la hora en la zona del closer («Vie 13/11 20:00 (hora de Jean Carlo)»). Si el closer no tiene zona cargada, sigue Bolivia ([avisos_discord.py](../../app/agendas_v2/avisos_discord.py), [resultado.py](../../app/services/discord_avisos/resultado.py)).
+
+### 11/11/2026 · Las llamadas del día, cada mañana en #🔔-new-call
+- Pedido de Elias: todos los días a las 12:00 UTC (8:00 Bolivia, 6:00 México) el bot publica en #🔔-new-call las llamadas de triage y aceleración hasta la medianoche de México, agrupadas por setter y con el setter etiquetado, para que le escriba a cada lead por Instagram antes de su llamada. La hora va en formato de Discord: cada uno la ve en su zona. La Momentum no entra. Hora configurable con `LLAMADAS_DEL_DIA_HORA_UTC` ([llamadas_del_dia.py](../../app/services/discord_avisos/llamadas_del_dia.py)). Más adelante, también por WhatsApp con la plantilla `notificacion_learnation` de Whatchimp, cuando Meta la apruebe.
+
+### 11/11/2026 · La disponibilidad del equipo se carga en Leadership y Thalamus la respeta
+- Leadership pasa a ser el dueño de cuándo puede cada uno (horario semanal, días bloqueados y rituals con hora) y le manda a Work la foto de la persona en cada cambio. Para quien la cargó allá: el closer toma ese horario en su persona de Team (en Configuración se ve de solo lectura), el staff de la Academia lo usa en vez del que manda la Academia, y los bloqueos y rituals cuentan como ocupado y se escriben en su Google Calendar. Quien no la cargó sigue igual. ADR-W133 ([leadership.py](../../app/agendas_v2/leadership.py)).
+- El Calendar de Leadership también muestra lo de tu Google Calendar (`GET /api/external/leadership/eventos`), sin repetir los rituals y bloqueos que escribió Leadership.
+
+### 11/11/2026 · Las reuniones de «🎥 Team Meetings» pasan a Leadership como rituals
+- Leadership lee las series del calendario compartido de reuniones (`GET /api/external/leadership/reuniones`) y las convierte en rituals de cada invitado; si alguien les cambia la hora desde Leadership, la serie se reescribe en Google y les llega a todos (`PATCH`). ADR-W134 ([reuniones_equipo.py](../../app/agendas_v2/reuniones_equipo.py)).
+- Las reuniones de Team Meetings pasan a tener el Meet de team@ con notas de Gemini, transcripción y grabación automáticas, así nadie se olvida de grabar (`POST /api/external/leadership/reuniones/asegurar-notas`, lo llama Leadership en cada sincronización).
+
+### 11/11/2026 · Una agenda de Workshop ya no cuenta en dos talleres
+- Al comparar las 322 agendas del tablero de Workshop con las de Revisar aparecieron 6 agendas del taller del 14/07 que sumaban también al del 08/07: entraban a una ventana por la fecha de creación (13/07 a la noche, hora de Bolivia) y a la otra por la fecha de registro. Ahora, cuando las dos fechas caen en talleres distintos, manda la de registro ([workshop_metrics_service.py](../../app/services/workshop_metrics_service.py), `_agendas_por_embudo`). El taller del 08/07 pasa de 21 a 15 agendas y el total de julio a noviembre de 322 a 316; ningún otro taller cambia.

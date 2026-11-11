@@ -346,16 +346,33 @@ BANDERAS = {
 DIAS = ('lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo')
 
 
+def _hora(local):
+    return local.strftime('%I:%M').lstrip('0') + (' am' if local.hour < 12 else ' pm')
+
+
+def _hora_del_closer(inicio_utc, local_lead, closer):
+    """« (lead) · 8:00 pm (tuya)» si en la zona del closer la hora es otra; con el día si también cambia."""
+    zona = getattr(closer, 'timezone', None)
+    if not zona or not zona_valida(zona):
+        return ''
+    suya = inicio_utc.astimezone(ZoneInfo(zona))
+    if suya.utcoffset() == local_lead.utcoffset():
+        return ''
+    dia = '' if suya.date() == local_lead.date() else f' del {DIAS[suya.weekday()]} {suya.day}'
+    return f' (lead) · {_hora(suya)}{dia} (tuya)'
+
+
 def aviso_whatsapp(appt):
     """Los 8 datos de la plantilla del aviso al closer (la misma del flujo de n8n): día y hora en la zona
-    del lead, con su bandera, como los mandaba n8n."""
+    del lead, con su bandera, como los mandaba n8n. Si el closer está en otra zona, la hora suma la suya
+    («6:00 pm 🇲🇽 (lead) · 8:00 pm (tuya)»): con una sola hora parecía que la agenda estaba mal."""
     payload = appt.agenda_payload or {}
     lead = payload.get('lead') or {}
     closer = db.session.get(User, appt.closer_id)
     setter = db.session.get(User, appt.setter_id) if appt.setter_id else None
     zona, pais = zona_del_lead(lead)
-    local = appt.start_time.replace(tzinfo=ZoneInfo('UTC')).astimezone(zona)
-    hora = local.strftime('%I:%M').lstrip('0') + (' am' if local.hour < 12 else ' pm')
+    inicio = appt.start_time.replace(tzinfo=ZoneInfo('UTC'))
+    local = inicio.astimezone(zona)
     reprogramada = ' (reprogramada)' if payload.get('reprogramada_desde') else ''
     return {
         'closer': closer.username if closer else '',
@@ -363,7 +380,7 @@ def aviso_whatsapp(appt):
         'telefono': lead.get('telefono'),
         'instagram': ('@' + lead['instagram']) if lead.get('instagram') else None,
         'dia': f'{DIAS[local.weekday()]} {local.day}',
-        'hora': f'{hora} {BANDERAS.get(pais["c"], "🌍")}',
+        'hora': f'{_hora(local)} {BANDERAS.get(pais["c"], "🌍")}{_hora_del_closer(inicio, local, closer)}',
         'grupo': payload.get('prioridad_nombre'),
         'fuente': (setter.username if setter else payload.get('origen') or payload.get('funnel_slug')),
     }

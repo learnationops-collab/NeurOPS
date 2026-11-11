@@ -25,7 +25,7 @@ from itsdangerous import BadSignature, URLSafeTimedSerializer
 from sqlalchemy import func
 
 from app import db
-from app.agendas_v2 import desplazar, momentum, organizador, servicio
+from app.agendas_v2 import desplazar, leadership, momentum, organizador, servicio
 from app.agendas_v2.modelos import SchedPerfil
 from app.agendas_v2.nucleo.disponibilidad import agenda_opt, ahora_ms, se_solapa, slots_persona
 from app.api.external import bp
@@ -528,6 +528,9 @@ def agenda_horarios():
         # Un closer: su horario de ventas, en su zona. El que manda la Academia no aplica.
         disp = servicio.disponibilidad_de(u)
         tz, horario = disp['tz'], disp['horario']
+    elif (foto_l := leadership.foto(u.id)):
+        # Su horario cargado en Leadership manda sobre el que manda la Academia (ADR-W133).
+        tz, horario = foto_l['tz'], _horario(foto_l['horario'])
     try:
         ZoneInfo(tz)
     except Exception:  # noqa: BLE001
@@ -550,6 +553,8 @@ def agenda_horarios():
     if franjas and libres:
         franjas = desplazar.restar(franjas, libres)
     ocupado = _franjas_ocupadas(datos.get('ocupado')) + [{'inicio': a, 'fin': b} for a, b in franjas or []]
+    # Sus bloqueos y rituals de Leadership (ADR-W133).
+    ocupado += [{'inicio': a, 'fin': b} for a, b in leadership.franjas(u.id, desde, hasta)]
     if ventas:
         # Sus agendas de Work con el margen que dejan después (en Google figura solo la sesión).
         ocupado += momentum.ocupado_en_work(u, desde, franjas, libres)

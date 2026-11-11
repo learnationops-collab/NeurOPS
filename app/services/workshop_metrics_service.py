@@ -136,13 +136,22 @@ def _contar_aplicaciones(desde, hasta, tz):
     return conteo
 
 
+def _dia_de_registro(agenda):
+    """El dia del alta segun `registro` (texto ISO), o None si no se puede leer."""
+    try:
+        return datetime.strptime((agenda.registro or '')[:10], '%Y-%m-%d').date()
+    except ValueError:
+        return None
+
+
 def _agendas_por_embudo(desde, hasta, tz):
     """Agendas del workshop dentro de su ventana, separadas en vivo y grabacion.
 
     Una agenda entra si `created_at` (UTC) cae en la ventana o si `registro` (la
     fecha local del alta, texto ISO que manda n8n) es de alguno de sus dias. No
     hay tolerancia hacia el dia anterior ni horas de mas al final: las ventanas
-    de dos talleres seguidos son contiguas y cada agenda cuenta en uno solo.
+    de dos talleres seguidos son contiguas y cada agenda cuenta en uno solo (si
+    las dos fechas caen en talleres distintos, manda `registro`).
 
     Pero la fecha de alta sola no alcanza: una agenda cuya LLAMADA ya habia
     pasado antes de la clase no la trajo este taller -- nadie reserva una cita
@@ -170,12 +179,21 @@ def _agendas_por_embudo(desde, hasta, tz):
         )
     ).all()
 
+    primer_taller = WorkshopEvent.query.with_entities(func.min(WorkshopEvent.date)).scalar()
+    hoy = datetime.now(tz).date()
+
     grupos = {'vivo': [], 'landing': []}
     for a in candidatas:
         # `date` es la hora de la cita en UTC e `inicio` las 00:00 locales del dia
         # de la clase: una cita anterior a eso es de antes del taller. Sin `date`
         # no hay con que descartarla, asi que se cuenta.
         if a.date and a.date < inicio:
+            continue
+        # Si entro por `created_at` pero su `registro` es de la ventana de otro taller, es de ese:
+        # manda `registro`. Sin esto contaba en los dos (11/11/2026: 6 agendas del 14/07 sumaban
+        # tambien al 08/07, porque su alta en UTC caia el 13/07 local).
+        dia = _dia_de_registro(a)
+        if dia and not (desde <= dia <= hasta) and primer_taller and primer_taller <= dia <= hoy:
             continue
         raw = a.raw_data or {}
         grupo = _clasificar_fuente(a.nombre, raw.get('fuente'), raw.get('fuente_form'))
