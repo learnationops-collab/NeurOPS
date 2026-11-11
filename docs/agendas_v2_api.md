@@ -147,6 +147,7 @@ Token `LEADERSHIP_INBOUND_API_TOKEN` (Bearer). ADR-W133.
 - `GET /reuniones`: las series vigentes del calendario «🎥 Team Meetings» (`TEAM_MEETINGS_CALENDAR_ID`) → `{series: [{id, recurrente, titulo, descripcion, tz, dias [0 = domingo], hora, duracion, invitados, meet, proxima}], calendario}` (días, hora y duración salen de las fechas de los próximos 21 días). ADR-W134.
 - `PATCH /reuniones/<id>`: `{hora, duracion, dias, tz}` reescribe la serie y avisa a los invitados.
 - `POST /reuniones/asegurar-notas` `{dry?}`: cada serie vigente con un Meet de team@ y notas, transcripción y grabación automáticas → `{hechas, ya, errores}`; 409 `{falta}` si team@ no está conectada o no puede editar el calendario.
+- `POST /reuniones/mudar` `{dry?}`: pasa las series vigentes del calendario viejo al «🎥 Team Meetings» de team@ (lo crea y lo comparte la primera vez) → `{calendario, creado, compartido_con, series, errores}`.
 
 ## API de notas de Meet para la Academia: `/api/external/academy/notas`
 

@@ -88,3 +88,14 @@ def reuniones_asegurar_notas():
     d = request.get_json(silent=True) or {}
     r = reuniones_equipo.asegurar_notas(dry=bool(d.get('dry')))
     return jsonify(r), (409 if r.get('falta') else 200)
+
+
+@bp.route('/reuniones/mudar', methods=['POST'])
+@require_leadership_token
+def reuniones_mudar():
+    """{dry?}: pasa las series vigentes del calendario viejo al «🎥 Team Meetings» de team@ (lo crea si falta)."""
+    from app.agendas_v2 import reuniones_equipo
+
+    d = request.get_json(silent=True) or {}
+    r = reuniones_equipo.mudar(dry=bool(d.get('dry')))
+    return jsonify(r), (409 if r.get('falta') else 200)

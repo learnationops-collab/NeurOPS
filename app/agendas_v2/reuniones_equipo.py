@@ -22,8 +22,20 @@ HORA = re.compile(r'^([01]\d|2[0-3]):[0-5]\d$')
 VENTANA_DIAS = 21
 
 
+CLAVE_CAL = 'team_meetings_calendario'
+NOMBRE_CAL = '🎥 Team Meetings'
+ZONA_CAL = 'America/Argentina/Buenos_Aires'
+
+
 def calendario():
-    return os.environ.get('TEAM_MEETINGS_CALENDAR_ID') or CAL_DEF
+    """El calendario de las reuniones: el de team@ (`integrations`, lo crea `mudar`) o, antes de mudarlas,
+    el viejo de Mario. TEAM_MEETINGS_CALENDAR_ID lo fija a mano."""
+    from app.models import Integration
+
+    if os.environ.get('TEAM_MEETINGS_CALENDAR_ID'):
+        return os.environ['TEAM_MEETINGS_CALENDAR_ID']
+    fila = Integration.query.filter_by(key=CLAVE_CAL).first()
+    return ((fila.payload_config or {}) if fila else {}).get('calendar_id') or CAL_DEF
 
 
 def _cuentas():
@@ -32,7 +44,13 @@ def _cuentas():
 
     from app.models import GoogleCalendarToken, User
 
+    from app.agendas_v2 import organizador
+
     ids = [t.user_id for t in GoogleCalendarToken.query.order_by(GoogleCalendarToken.user_id).all()]
+    # team@ primero: es la que organiza las reuniones.
+    team = organizador._titular()
+    if team in ids:
+        ids = [team] + [i for i in ids if i != team]
     preferida = (os.environ.get('TEAM_MEETINGS_CUENTA') or '').strip().lower()
     if preferida:
         u = User.query.filter(func.lower(User.email) == preferida).first()
@@ -41,11 +59,11 @@ def _cuentas():
     return ids
 
 
-def _servicio(escribir=False):
+def _servicio(escribir=False, cal=None):
     """(service, user_id) de una cuenta que puede leer (o escribir) el calendario, o (None, None)."""
     from app.services.google_service import GoogleService
 
-    cal = calendario()
+    cal = cal or calendario()
     for uid in _cuentas():
         try:
             s = GoogleService.get_service(uid)
@@ -63,18 +81,19 @@ def _servicio(escribir=False):
     return None, None
 
 
-def series():
+def series(cal=None):
     """Las series vigentes (con alguna fecha en los próximos 21 días): [{id, titulo, descripcion, tz, dias
     [0 = domingo], hora, duracion, invitados [emails], meet, proxima (ms)}]. Días, hora y duración salen de
     sus fechas (lo que de verdad pasa, con las excepciones), no de la regla. None si no se pudo leer."""
-    s, _uid = _servicio()
+    cal = cal or calendario()
+    s, _uid = _servicio(cal=cal)
     if not s:
         return None
     ahora = datetime.now(timezone.utc).replace(microsecond=0)
     items, pagina = [], None
     while True:
         r = s.events().list(
-            calendarId=calendario(), timeMin=ahora.isoformat().replace('+00:00', 'Z'),
+            calendarId=cal, timeMin=ahora.isoformat().replace('+00:00', 'Z'),
             timeMax=(ahora + timedelta(days=VENTANA_DIAS)).isoformat().replace('+00:00', 'Z'),
             singleEvents=True, orderBy='startTime', maxResults=250, pageToken=pagina,
         ).execute()
@@ -120,6 +139,9 @@ def series():
             'invitados': sorted(invitados),
             'meet': ultimo.get('hangoutLink') or ultimo.get('conferenceUrl'),
             'proxima': int(datetime.fromisoformat(evs[0]['start']['dateTime']).timestamp() * 1000),
+            'proxima_iso': evs[0]['start']['dateTime'],
+            # La serie del calendario viejo que reemplaza (mudar): Leadership reengancha el mismo ritual.
+            'reemplaza': ((evs[0].get('extendedProperties') or {}).get('private') or {}).get('reemplaza'),
         })
     return sorted(out, key=lambda x: (x['dias'][:1], x['hora']))
 
@@ -240,3 +262,124 @@ def asegurar_notas(dry=False):
         except Exception as e:  # noqa: BLE001
             errores.append(f'{titulo}: {str(e)[:160]}')
     return {'hechas': hechas, 'ya': ya, 'errores': errores}
+
+
+
+# --- Mudar las reuniones al calendario de team@ ---------------------------------------------------------
+# team@ organiza todo: tiene un calendario «🎥 Team Meetings» propio (se crea una vez y se comparte con quien
+# las armaba, para que siga editándolas) e invita al equipo. Cada serie del calendario viejo se crea de nuevo
+# ahí, desde su próxima fecha, con su título, descripción, regla e invitados, y un Meet de team@ con notas,
+# transcripción y grabación automáticas. La vieja se corta antes de esa fecha (lo pasado queda).
+
+
+def _calendario_team(dry, compartir_con):
+    """(user_id de team@, id de su calendario de reuniones, creado ahora?)."""
+    from app import db
+    from app.agendas_v2 import organizador
+    from app.models import Integration
+    from app.services.google_service import GoogleService
+
+    uid = organizador._titular()
+    if not uid:
+        return None, None, False
+    fila = Integration.query.filter_by(key=CLAVE_CAL).first()
+    cal = ((fila.payload_config or {}) if fila else {}).get('calendar_id')
+    if cal or dry:
+        return uid, cal, False
+    cal = GoogleService.crear_calendario(uid, NOMBRE_CAL, ZONA_CAL)
+    s = GoogleService.get_service(uid)
+    for email in compartir_con:
+        try:
+            s.acl().insert(calendarId=cal, sendNotifications=True,
+                           body={'role': 'writer', 'scope': {'type': 'user', 'value': email}}).execute()
+        except Exception as e:  # noqa: BLE001
+            logger.warning('Team Meetings: no se pudo compartir con %s: %s', email, e)
+    if fila is None:
+        fila = Integration(key=CLAVE_CAL, name='Calendario de las reuniones del equipo (team@)', payload_config={})
+        db.session.add(fila)
+    fila.payload_config = {'calendar_id': cal, 'cuenta': organizador.cuenta(), 'desde': CAL_DEF}
+    db.session.commit()
+    return uid, cal, True
+
+
+def mudar(dry=False):
+    """Pasa las series vigentes del calendario viejo al de team@. → {calendario, creado, series, errores}."""
+    import uuid
+
+    from app.services.google_service import GoogleService
+    from app.services.meet_config import activar_artefactos
+
+    viejo = CAL_DEF
+    lista = series(cal=viejo)
+    if lista is None:
+        return {'falta': 'No se pudo leer el calendario viejo de Team Meetings'}
+    lista = [x for x in lista if x.get('recurrente')]
+    sv, _ = _servicio(escribir=True, cal=viejo)
+    if not sv:
+        return {'falta': 'Ninguna cuenta conectada puede editar el calendario viejo (para cortar sus series)'}
+
+    # Quien armaba las series sigue pudiendo editarlas en el calendario nuevo.
+    creadores, masters = set(), {}
+    for x in lista:
+        try:
+            ev = sv.events().get(calendarId=viejo, eventId=x['id']).execute()
+            masters[x['id']] = ev
+            if (ev.get('creator') or {}).get('email'):
+                creadores.add(ev['creator']['email'].lower())
+        except Exception as e:  # noqa: BLE001
+            logger.warning('Team Meetings: no se pudo leer la serie %s: %s', x['id'], e)
+    uid, cal, creado = _calendario_team(dry, sorted(creadores))
+    if not uid:
+        return {'falta': 'team@ no está conectada en Work'}
+    st = GoogleService.get_service(uid)
+
+    hechas, errores = [], []
+    for x in lista:
+        ev = masters.get(x['id'])
+        if not ev:
+            errores.append(f"{x['titulo']}: no se pudo leer")
+            continue
+        tz = (ev.get('start') or {}).get('timeZone') or x['tz']
+        try:
+            zona = ZoneInfo(tz)
+        except Exception:  # noqa: BLE001
+            zona, tz = ZoneInfo('UTC'), 'UTC'
+        inicio = datetime.fromisoformat(x['proxima_iso']).astimezone(zona).replace(tzinfo=None)
+        fin = inicio + timedelta(minutes=int(x['duracion']))
+        regla = [r for r in (ev.get('recurrence') or []) if r.startswith('RRULE:')]
+        invitados = [{'email': e} for e in x['invitados']]
+        resumen = f"{x['titulo']} · desde {inicio:%d/%m %H:%M} · {len(invitados)} invitados"
+        if dry:
+            hechas.append(resumen)
+            continue
+        try:
+            cuerpo = {
+                'summary': ev.get('summary') or x['titulo'],
+                'description': ev.get('description') or '',
+                'start': {'dateTime': inicio.isoformat(), 'timeZone': tz},
+                'end': {'dateTime': fin.isoformat(), 'timeZone': tz},
+                'recurrence': regla,
+                'attendees': invitados,
+                'guestsCanModify': bool(ev.get('guestsCanModify')),
+                'extendedProperties': {'private': {'reemplaza': x['id']}},
+                'conferenceData': {'createRequest': {'requestId': uuid.uuid4().hex,
+                                                     'conferenceSolutionKey': {'type': 'hangoutsMeet'}}},
+            }
+            nuevo = st.events().insert(calendarId=cal, body=cuerpo, conferenceDataVersion=1, sendUpdates='all').execute()
+            codigo = _codigo(nuevo)
+            notas = bool(codigo) and activar_artefactos(nuevo.get('hangoutLink'))
+            if codigo and notas:
+                st.events().patch(calendarId=cal, eventId=nuevo['id'], sendUpdates='none', body={
+                    'extendedProperties': {'private': {'reemplaza': x['id'], MARCA_MEET: codigo}}}).execute()
+            # La vieja termina antes de su próxima fecha (UNTIL en UTC): lo pasado queda.
+            hasta = (datetime.fromisoformat(x['proxima_iso']).astimezone(timezone.utc) - timedelta(minutes=1)).strftime('%Y%m%dT%H%M%SZ')
+            vieja = []
+            for r in ev.get('recurrence') or []:
+                if r.startswith('RRULE:'):
+                    r = re.sub(r';(UNTIL|COUNT)=[^;]+', '', r) + f';UNTIL={hasta}'
+                vieja.append(r)
+            sv.events().patch(calendarId=viejo, eventId=x['id'], sendUpdates='all', body={'recurrence': vieja}).execute()
+            hechas.append(resumen + ('' if notas else ' (sin notas automáticas: ver logs [MEET])'))
+        except Exception as e:  # noqa: BLE001
+            errores.append(f"{x['titulo']}: {str(e)[:160]}")
+    return {'calendario': cal, 'creado': creado, 'compartido_con': sorted(creadores), 'series': hechas, 'errores': errores}
