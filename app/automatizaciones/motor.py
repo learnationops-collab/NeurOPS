@@ -442,11 +442,12 @@ class Motor:
         return True
 
     def _enviar_con_control(self, contacto, destinatario, cuerpo):
-        """Si la conversación es de otra app, toma el control una vez y reintenta."""
+        """Si la conversación es de otra app, toma el control una vez y reintenta. Vale también para la
+        respuesta privada a un comentario: si el hilo es de ManyChat o Kommo, Meta la rechaza igual."""
         try:
             return self.transporte.enviar(destinatario, cuerpo)
         except ErrorDeEnvio as error:
-            if not error.sin_control or 'id' not in destinatario:
+            if not error.sin_control:
                 raise
             if not self.transporte.tomar_control(contacto.igsid):
                 raise
