@@ -475,3 +475,6 @@
 ### 11/11/2026 · Las reuniones de «🎥 Team Meetings» pasan a Leadership como rituals
 - Leadership lee las series del calendario compartido de reuniones (`GET /api/external/leadership/reuniones`) y las convierte en rituals de cada invitado; si alguien les cambia la hora desde Leadership, la serie se reescribe en Google y les llega a todos (`PATCH`). ADR-W134 ([reuniones_equipo.py](../../app/agendas_v2/reuniones_equipo.py)).
 - Las reuniones de Team Meetings pasan a tener el Meet de team@ con notas de Gemini, transcripción y grabación automáticas, así nadie se olvida de grabar (`POST /api/external/leadership/reuniones/asegurar-notas`, lo llama Leadership en cada sincronización).
+
+### 11/11/2026 · Una agenda de Workshop ya no cuenta en dos talleres
+- Al comparar las 322 agendas del tablero de Workshop con las de Revisar aparecieron 6 agendas del taller del 14/07 que sumaban también al del 08/07: entraban a una ventana por la fecha de creación (13/07 a la noche, hora de Bolivia) y a la otra por la fecha de registro. Ahora, cuando las dos fechas caen en talleres distintos, manda la de registro ([workshop_metrics_service.py](../../app/services/workshop_metrics_service.py), `_agendas_por_embudo`). El taller del 08/07 pasa de 21 a 15 agendas y el total de julio a noviembre de 322 a 316; ningún otro taller cambia.
