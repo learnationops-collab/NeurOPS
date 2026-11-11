@@ -6,6 +6,7 @@ Canales (variables de entorno):
   · onboarding (#onboardings de fulfillment) y wins (#wins): el bot (DISCORD_BOT_TOKEN; el canal, BOT) o, sin
     bot, DISCORD_ONBOARDING_WEBHOOK / DISCORD_WINS_WEBHOOK.
   · reportes: DISCORD_REPORTS_WEBHOOK.
+  · reportes_ventas (#📋-reportes de adquisitions, el resultado de cada llamada): solo el bot.
 
 El mensaje va con la imagen adjunta; si la imagen no se pudo armar, con el embed de texto. Discord o Chromium
 nunca frenan lo que dispara el aviso: los errores quedan en el log.
@@ -31,6 +32,7 @@ WEBHOOKS = {
 BOT = {
     'onboarding': ('DISCORD_ONBOARDINGS_CHANNEL_ID', '1318622160951971922'),  # #🙌-onboardings (fulfillment)
     'wins': ('DISCORD_WINS_CHANNEL_ID', '1232723653032935464'),  # #🏆-wins (adquisitions)
+    'reportes_ventas': ('DISCORD_REPORTES_VENTAS_CHANNEL_ID', '1342945225890336910'),  # #📋-reportes (adquisitions)
 }
 
 

@@ -1,7 +1,8 @@
-"""El resultado de cada llamada reportada, al canal #onboardings de fulfillment (ADR-W121).
+"""El resultado de cada llamada reportada, al canal #📋-reportes de adquisitions (ADR-W121). Hasta el
+11/11/2026 iba a #onboardings; Mario lo pidió en reportes de ventas.
 
 Sale cuando el closer reporta en la ficha (POST /ficha/<id>/resultado) o en el mazo viejo. La llamada de
-triage no se avisa: es antes de la venta y no le sirve a fulfillment. La venta no pasa por acá: «Sí, cerró» va por la ruta de venta y la avisa venta.py.
+triage no se avisa: es antes de la venta. La venta no pasa por acá: «Sí, cerró» va por la ruta de venta y la avisa venta.py.
 El texto lleva nombre y número (para buscar en Discord junto a la agenda); el resto va en la imagen.
 """
 from datetime import timezone
@@ -140,7 +141,7 @@ def avisar_resultado(appt, datos, usuario):
         payload['discord_resultado'] = aviso.estado
         appt.agenda_payload = payload
         db.session.commit()
-        return avisar('onboarding', aviso, etiqueta='RESULTADO')
+        return avisar('reportes_ventas', aviso, etiqueta='RESULTADO')
     except Exception as e:  # noqa: BLE001
         db.session.rollback()
         current_app.logger.error(f'[RESULTADO] No se pudo avisar la agenda #{getattr(appt, "id", None)}: {e}')

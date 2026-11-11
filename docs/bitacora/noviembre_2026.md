@@ -455,3 +455,6 @@
 
 ### 11/11/2026 · Las palabras clave en comentarios vuelven a responder siempre
 - Desde el 09/11, con la campaña «Setting Funnel · ROAS MAX», la mitad de los comentarios con palabra clave (PROTOCOLO, DOCUMENTO 25, VACÍO, TRÍADA…) no recibían la respuesta privada: 15 de 31 terminaron en «The thread owner has archived or deleted this conversation» porque el hilo era de otra app (ManyChat/Kommo) y el motor solo tomaba el control al escribir por DM. Ahora lo toma también para responder un comentario y reintenta ([motor.py](../../app/automatizaciones/motor.py)).
+
+### 11/11/2026 · El resultado de cada llamada de venta va a #📋-reportes de adquisitions
+- Pedido de Mario: los avisos «Llamada de venta · No asistió / No cerró / Reagendó…» y los de Momentum salían en #🙌-onboardings. Ahora el bot los publica en #📋-reportes de adquisitions (canal `reportes_ventas`, `DISCORD_REPORTES_VENTAS_CHANNEL_ID` para cambiarlo). Los de onboarding y venta siguen donde estaban ([resultado.py](../../app/services/discord_avisos/resultado.py)).
