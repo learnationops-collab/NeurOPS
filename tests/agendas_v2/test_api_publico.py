@@ -612,7 +612,8 @@ def test_la_hora_del_aviso_va_en_la_zona_del_pais_del_whatsapp(client, armado, d
               'tz': 'America/La_Paz', 'inicio': LUNES_9, 'origen': 'juan-setter'}
     assert client.post(URL + '/reservas', json=cuerpo).status_code == 201
     assert _campos(discord[0])['Horario del lead'] == 'lunes 05/10 10:00 🇦🇷 Argentina (09:00 Bolivia)'
-    assert whatsapp[0]['hora'] == '10:00 am 🇦🇷'
+    # El closer está en Bolivia: el aviso suma su hora.
+    assert whatsapp[0]['hora'] == '10:00 am 🇦🇷 (lead) · 9:00 am (tuya)'
 
 
 def test_la_reprogramacion_avisa_distinto_y_el_descalificado_tambien_avisa(client, armado, discord):

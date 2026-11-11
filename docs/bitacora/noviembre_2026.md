@@ -458,3 +458,6 @@
 
 ### 11/11/2026 · El resultado de cada llamada de venta va a #agendas de fulfillment
 - Pedido de Mario: los avisos «Llamada de venta · No asistió / No cerró / Reagendó…» y los de Momentum salían en #🙌-onboardings. Ahora el bot los publica en #agendas de fulfillment (canal `resultados`, `DISCORD_RESULTADOS_CHANNEL_ID` para cambiarlo). Primero se mandaron a #📋-reportes de adquisitions y el mismo día se pasaron a #agendas, el canal nuevo. Los de onboarding y venta siguen donde estaban ([resultado.py](../../app/services/discord_avisos/resultado.py)).
+
+### 11/11/2026 · El WhatsApp de agenda nueva dice la hora del lead y la del closer
+- Jean Carlo vio «6:00 pm 🇲🇽» en el WhatsApp y 8 pm en su calendario para la misma llamada (lead en Tijuana, él en Ciudad de México) y pensó que estaba mal agendada. Si el closer está en otra zona, la hora del aviso ahora suma la suya: «6:00 pm 🇲🇽 (lead) · 8:00 pm (tuya)», con el día si también cambia ([operacion.py](../../app/agendas_v2/operacion.py)).
