@@ -471,3 +471,6 @@
 ### 11/11/2026 · La disponibilidad del equipo se carga en Leadership y Thalamus la respeta
 - Leadership pasa a ser el dueño de cuándo puede cada uno (horario semanal, días bloqueados y rituals con hora) y le manda a Work la foto de la persona en cada cambio. Para quien la cargó allá: el closer toma ese horario en su persona de Team (en Configuración se ve de solo lectura), el staff de la Academia lo usa en vez del que manda la Academia, y los bloqueos y rituals cuentan como ocupado y se escriben en su Google Calendar. Quien no la cargó sigue igual. ADR-W133 ([leadership.py](../../app/agendas_v2/leadership.py)).
 - El Calendar de Leadership también muestra lo de tu Google Calendar (`GET /api/external/leadership/eventos`), sin repetir los rituals y bloqueos que escribió Leadership.
+
+### 11/11/2026 · Las reuniones de «🎥 Team Meetings» pasan a Leadership como rituals
+- Leadership lee las series del calendario compartido de reuniones (`GET /api/external/leadership/reuniones`) y las convierte en rituals de cada invitado; si alguien les cambia la hora desde Leadership, la serie se reescribe en Google y les llega a todos (`PATCH`). ADR-W134 ([reuniones_equipo.py](../../app/agendas_v2/reuniones_equipo.py)).

@@ -144,6 +144,8 @@ Token `LEADERSHIP_INBOUND_API_TOKEN` (Bearer). ADR-W133.
 
 - `PUT /disponibilidad`: la foto de una persona. `{email, nombre, tz, definida, version, horario {0..6 (0 = domingo): [[HH:MM, HH:MM]]}, bloqueos [{id, inicio, fin, motivo}], ocupado_rituales [{habit_id, inicio, fin}], rituales [{habit_id, titulo, tz, hora, duracion, cadencia: semana|mes, dias [0 = domingo], dia_mes, desde}], desde, hasta}` (instantes en ms UTC) → `{ok, guardada, cambio}`. Email que no es de Work: `guardada: false, motivo: no_existe` (200).
 - `GET /eventos?email&desde&hasta` (ms, hasta 15 días): los eventos de su Google para el Calendar de Leadership, sin los que puso Leadership → `{eventos: [{id, serie, titulo, inicio, fin, meet}], estado: ok|no_existe|sin_calendario|sin_google}`.
+- `GET /reuniones`: las series vigentes del calendario «🎥 Team Meetings» (`TEAM_MEETINGS_CALENDAR_ID`) → `{series: [{id, recurrente, titulo, descripcion, tz, dias [0 = domingo], hora, duracion, invitados, meet, proxima}], calendario}` (días, hora y duración salen de las fechas de los próximos 21 días). ADR-W134.
+- `PATCH /reuniones/<id>`: `{hora, duracion, dias, tz}` reescribe la serie y avisa a los invitados.
 
 ## API de notas de Meet para la Academia: `/api/external/academy/notas`
 

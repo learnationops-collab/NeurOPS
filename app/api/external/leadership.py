@@ -50,3 +50,29 @@ def eventos():
         return jsonify({'eventos': [], 'estado': 'sin_google'}), 200
     salida = [{k: e.get(k) for k in ('id', 'serie', 'titulo', 'inicio', 'fin', 'meet')} for e in lista if not e.get('leadership')]
     return jsonify({'eventos': salida, 'estado': 'ok'}), 200
+
+
+# --- Reuniones del equipo (calendario «🎥 Team Meetings», app/agendas_v2/reuniones_equipo.py) ---------
+
+
+@bp.route('/reuniones', methods=['GET'])
+@require_leadership_token
+def reuniones():
+    """Las series vigentes de Team Meetings: {series: [...], calendario}. 503 si ninguna cuenta la puede leer."""
+    from app.agendas_v2 import reuniones_equipo
+
+    lista = reuniones_equipo.series()
+    if lista is None:
+        return jsonify({'error': 'Ninguna cuenta conectada puede leer Team Meetings'}), 503
+    return jsonify({'series': lista, 'calendario': reuniones_equipo.calendario()}), 200
+
+
+@bp.route('/reuniones/<serie_id>', methods=['PATCH'])
+@require_leadership_token
+def reunion_editar(serie_id):
+    """{hora, duracion, dias [0 = domingo], tz}: reescribe la serie (cambio hecho en Leadership)."""
+    from app.agendas_v2 import reuniones_equipo
+
+    d = request.get_json(silent=True) or {}
+    ok, error = reuniones_equipo.editar(serie_id, d.get('hora'), d.get('duracion'), d.get('dias'), d.get('tz'))
+    return (jsonify({'ok': True}), 200) if ok else (jsonify({'error': error}), 400)
