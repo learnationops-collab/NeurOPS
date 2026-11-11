@@ -474,3 +474,4 @@
 
 ### 11/11/2026 · Las reuniones de «🎥 Team Meetings» pasan a Leadership como rituals
 - Leadership lee las series del calendario compartido de reuniones (`GET /api/external/leadership/reuniones`) y las convierte en rituals de cada invitado; si alguien les cambia la hora desde Leadership, la serie se reescribe en Google y les llega a todos (`PATCH`). ADR-W134 ([reuniones_equipo.py](../../app/agendas_v2/reuniones_equipo.py)).
+- Las reuniones de Team Meetings pasan a tener el Meet de team@ con notas de Gemini, transcripción y grabación automáticas, así nadie se olvida de grabar (`POST /api/external/leadership/reuniones/asegurar-notas`, lo llama Leadership en cada sincronización).

@@ -76,3 +76,15 @@ def reunion_editar(serie_id):
     d = request.get_json(silent=True) or {}
     ok, error = reuniones_equipo.editar(serie_id, d.get('hora'), d.get('duracion'), d.get('dias'), d.get('tz'))
     return (jsonify({'ok': True}), 200) if ok else (jsonify({'error': error}), 400)
+
+
+@bp.route('/reuniones/asegurar-notas', methods=['POST'])
+@require_leadership_token
+def reuniones_asegurar_notas():
+    """{dry?}: deja cada serie de Team Meetings con un Meet de team@ y notas, transcripción y grabación
+    automáticas. Lo llama Leadership en cada sincronización (las series nuevas quedan bien solas)."""
+    from app.agendas_v2 import reuniones_equipo
+
+    d = request.get_json(silent=True) or {}
+    r = reuniones_equipo.asegurar_notas(dry=bool(d.get('dry')))
+    return jsonify(r), (409 if r.get('falta') else 200)

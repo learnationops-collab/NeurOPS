@@ -165,3 +165,78 @@ def editar(serie_id, hora, duracion, dias, tz):
         logger.warning('Team Meetings: no se pudo editar %s: %s', serie_id, e)
         return False, str(e)[:300]
     return True, None
+
+
+# --- Que team@ sea la dueña del Meet de cada reunión (notas de Gemini, transcripción y grabación) -------
+# La reunión de Meet es de la cuenta que la crea. Las series de Team Meetings las arma Mario con su cuenta,
+# así que su Meet es de Mario y team@ no lo puede pre-configurar (meet_config.py). team@, con permiso de
+# escribir en el calendario, le pide a Calendar un Meet nuevo para la serie (conferenceData.createRequest):
+# la reunión pasa a ser de team@, se le prenden los tres artefactos y Gemini deja la nota en el Drive de
+# team@, el que Work lee. La serie, el título y los invitados no cambian; a los invitados les llega el link
+# nuevo. Queda marcado (extendedProperties.private.meet_team) para no repetirlo.
+
+MARCA_MEET = 'meet_team'
+
+
+def _codigo(ev):
+    from app.services.meet_config import codigo_de
+
+    return codigo_de(ev.get('hangoutLink') or ((ev.get('conferenceData') or {}).get('entryPoints') or [{}])[0].get('uri'))
+
+
+def asegurar_notas(dry=False):
+    """Deja cada serie vigente con un Meet de team@ y sus notas automáticas. → {hechas, ya, errores, falta}."""
+    import uuid
+
+    from app.agendas_v2 import organizador
+    from app.services.google_service import GoogleService
+    from app.services.meet_config import activar_artefactos
+
+    uid = organizador._titular()
+    if not uid:
+        return {'falta': f'{organizador.cuenta()} no está conectada en Work'}
+    s = GoogleService.get_service(uid)
+    cal = calendario()
+    try:
+        rol = s.calendarList().get(calendarId=cal).execute().get('accessRole')
+    except Exception:  # noqa: BLE001
+        rol = None
+    if rol not in ('owner', 'writer'):
+        return {'falta': f'{organizador.cuenta()} no puede editar Team Meetings (hay que compartirle el calendario con permiso para hacer cambios)'}
+
+    vigentes = {x['id'] for x in (series() or []) if x.get('recurrente')}
+    hechas, ya, errores = [], [], []
+    for sid in sorted(vigentes):
+        try:
+            ev = s.events().get(calendarId=cal, eventId=sid).execute()
+        except Exception as e:  # noqa: BLE001
+            errores.append(f'{sid}: {str(e)[:120]}')
+            continue
+        titulo = ev.get('summary') or sid
+        marca = ((ev.get('extendedProperties') or {}).get('private') or {}).get(MARCA_MEET)
+        if marca and marca == _codigo(ev):
+            ya.append(titulo)
+            continue
+        if dry:
+            hechas.append(titulo)
+            continue
+        try:
+            nuevo = s.events().patch(
+                calendarId=cal, eventId=sid, conferenceDataVersion=1, sendUpdates='all',
+                body={'conferenceData': {'createRequest': {'requestId': uuid.uuid4().hex,
+                                                           'conferenceSolutionKey': {'type': 'hangoutsMeet'}}}},
+            ).execute()
+            codigo = _codigo(nuevo)
+            if not codigo:
+                errores.append(f'{titulo}: Google no devolvió el Meet nuevo')
+                continue
+            if not activar_artefactos(nuevo.get('hangoutLink')):
+                errores.append(f'{titulo}: Meet nuevo sin notas automáticas (ver logs [MEET])')
+                continue
+            privadas = {**((nuevo.get('extendedProperties') or {}).get('private') or {}), MARCA_MEET: codigo}
+            s.events().patch(calendarId=cal, eventId=sid, sendUpdates='none',
+                             body={'extendedProperties': {'private': privadas}}).execute()
+            hechas.append(titulo)
+        except Exception as e:  # noqa: BLE001
+            errores.append(f'{titulo}: {str(e)[:160]}')
+    return {'hechas': hechas, 'ya': ya, 'errores': errores}
