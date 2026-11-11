@@ -152,9 +152,21 @@ def start_scheduler(app):
             except Exception as e:
                 logger.error(f"[ReminderScheduler] Error trayendo las notas de Meet: {e}")
 
+    def _llamadas_del_dia():
+        with app.app_context():
+            from app.services.discord_avisos.llamadas_del_dia import publicar
+            try:
+                if not soy_lider(CLAVE_DEL_SCHEDULER):
+                    return
+                n = publicar()
+                logger.info(f"[ReminderScheduler] Llamadas del día publicadas en #new-call: {n}")
+            except Exception as e:
+                logger.error(f"[ReminderScheduler] Error publicando las llamadas del día: {e}")
+
     from datetime import datetime, timedelta
 
     from app.agendas_v2.movidas import MINUTOS as MOVIDAS_MINUTOS
+    from app.services.discord_avisos.llamadas_del_dia import HORA_UTC as LLAMADAS_HORA_UTC
     from app.services.origen_service import MINUTOS as ORIGENES_MINUTOS
     from app.services.notas_meet.sincronizar import MINUTOS as NOTAS_MEET_MINUTOS
     _scheduler = BackgroundScheduler(daemon=True)
@@ -168,6 +180,9 @@ def start_scheduler(app):
                        id='notas_meet', next_run_time=datetime.now() + timedelta(minutes=5))
     _scheduler.add_job(_senas, 'interval', minutes=AVANCE_INTERVAL_MINUTES,
                        id='senas_sin_seguir', next_run_time=datetime.now() + timedelta(minutes=3))
+    # Una vez por día; si el proceso arranca hasta 30 min tarde (un deploy), sale igual.
+    _scheduler.add_job(_llamadas_del_dia, 'cron', hour=LLAMADAS_HORA_UTC, minute=0, timezone='UTC',
+                       id='llamadas_del_dia', misfire_grace_time=1800)
     if con_avisos:
         # next_run_time=ahora: corre una vez apenas arranca el proceso (inofensivo —
         # send_due_reminders solo manda lo que ya llegó a su hora y no repite en el día) para no

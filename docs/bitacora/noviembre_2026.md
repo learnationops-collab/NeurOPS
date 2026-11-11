@@ -464,3 +464,6 @@
 
 ### 11/11/2026 · Los avisos de Discord dejan de usar la hora de Bolivia
 - El aviso de agenda nueva (imagen y texto) mostraba la hora del lead y, al lado, «(09:00 Bolivia)» como hora del equipo, aunque ya casi nadie trabaja en esa zona. Ahora la segunda hora es la del closer de esa agenda, con su nombre: «18:00 🇲🇽 México (20:00 Jean Carlo)». El resultado de la llamada dice el día y la hora en la zona del closer («Vie 13/11 20:00 (hora de Jean Carlo)»). Si el closer no tiene zona cargada, sigue Bolivia ([avisos_discord.py](../../app/agendas_v2/avisos_discord.py), [resultado.py](../../app/services/discord_avisos/resultado.py)).
+
+### 11/11/2026 · Las llamadas del día, cada mañana en #🔔-new-call
+- Pedido de Elias: todos los días a las 12:00 UTC (8:00 Bolivia, 6:00 México) el bot publica en #🔔-new-call las llamadas de triage y aceleración hasta la medianoche de México, agrupadas por setter y con el setter etiquetado, para que le escriba a cada lead por Instagram antes de su llamada. La hora va en formato de Discord: cada uno la ve en su zona. La Momentum no entra. Hora configurable con `LLAMADAS_DEL_DIA_HORA_UTC` ([llamadas_del_dia.py](../../app/services/discord_avisos/llamadas_del_dia.py)). Más adelante, también por WhatsApp con la plantilla `notificacion_learnation` de Whatchimp, cuando Meta la apruebe.
