@@ -399,6 +399,15 @@ def mudar(dry=False):
                     vieja.append(r)
                 if vieja != (parte.get('recurrence') or []):
                     sv.events().patch(calendarId=viejo, eventId=parte['id'], sendUpdates='all', body={'recurrence': vieja}).execute()
+            # Una fecha que alguien tocó (aceptar la invitación, por ejemplo) es una excepción y el corte no la
+            # borra: las futuras que quedan se borran, las cubre la serie de team@ (pasó el 11/11).
+            ahora = datetime.now(timezone.utc)
+            for parte in partes[x['id']]:
+                quedan = sv.events().instances(calendarId=viejo, eventId=parte['id'], timeMin=ahora.isoformat(),
+                                               maxResults=250).execute().get('items') or []
+                for inst in quedan:
+                    if inst.get('status') != 'cancelled':
+                        sv.events().delete(calendarId=viejo, eventId=inst['id'], sendUpdates='all').execute()
             hechas.append(resumen + ('' if notas else ' (sin notas automáticas: ver logs [MEET])'))
         except Exception as e:  # noqa: BLE001
             errores.append(f"{x['titulo']}: {str(e)[:160]}")
