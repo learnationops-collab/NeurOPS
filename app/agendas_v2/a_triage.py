@@ -139,6 +139,8 @@ def horarios_de(persona_id, dias=14, ahora=None, evento_id=None):
 def _validar(appt, ahora):
     if appt.closer and appt.closer.role == ROLE_TRIAGE:
         raise ValueError('Esta agenda ya es del triage.')
+    if appt.origin == 'Momentum':
+        raise ValueError('Una Momentum es una sesión del closer con su alumno: no pasa al triage.')
     if not servicio._vigente(appt):
         raise ValueError('La agenda ya no está vigente.')
     if not appt.start_time or appt.start_time <= ahora:

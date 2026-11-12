@@ -485,3 +485,6 @@
 ### 12/11/2026 · Inbox: el primer mensaje sin palabra clave ya no queda sin respuesta
 - Una campaña se puede marcar «Atiende los mensajes sin palabra clave»: el primer mensaje de alguien nuevo que no es ninguna palabra vigente («hola, info», una palabra mal escrita) entra a su flujo con su reparto de setters. Solo el primer mensaje y solo si nadie del equipo le escribió antes. Una sola campaña a la vez. ADR-W135 ([motor.py](../../app/automatizaciones/motor.py), [campanas.py](../../app/automatizaciones/campanas.py)).
 - En 14 días habían quedado sin flujo 56 personas que escribieron «OBTENER ACCESO» y unas 70 que escribieron otra cosa.
+
+### 12/11/2026 · Una Momentum ya no pasa al triage
+- Juliana (triage) recibió la Momentum de Fátima, una alumna que pagó la seña. Fátima heredó de cuando era lead el segmento D, y cuando Karla Mora, un lead A, agendó con Jean Carlo a la misma hora, Work trató la Momentum como una C/D que se puede desplazar y la pasó al triage. La Momentum es una sesión del closer con su alumno: ahora un lead A/B no puede tomar su horario y no se puede pasar al triage, ni sola ni con «Pasar a triage» desde la ficha ([desplazar.py](../../app/agendas_v2/desplazar.py), [a_triage.py](../../app/agendas_v2/a_triage.py)). Era la única Momentum afectada.

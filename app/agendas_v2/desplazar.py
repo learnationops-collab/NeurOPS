@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 QUE_DESPLAZAN = ('A', 'B')
 DESPLAZABLES = ('C', 'D')
+MOMENTUM = 'Momentum'  # origen de la Momentum (api/external/agenda.ORIGEN_MOMENTUM)
 ANTELACION = timedelta(hours=2)
 CACHE_S = 120
 
@@ -42,10 +43,12 @@ def desplaza(seg):
 
 def desplazable(appt):
     """¿Un lead A/B puede tomar el horario de esa agenda? Una C/D de un closer, salvo la que pasó el triage
-    (ya la aprobaron) y la llamada del propio triage (sus llamadas son C/D por diseño)."""
+    (ya la aprobaron), la llamada del propio triage (sus llamadas son C/D por diseño) y la Momentum: es una
+    sesión del closer con su alumno y nunca va al triage, aunque el alumno tenga el segmento C/D de cuando
+    era lead."""
     from app.models.user import ROLE_TRIAGE
 
-    return (appt.segmento in DESPLAZABLES and not appt.agenda_triage_id
+    return (appt.segmento in DESPLAZABLES and not appt.agenda_triage_id and appt.origin != MOMENTUM
             and not (appt.closer and appt.closer.role == ROLE_TRIAGE))
 
 
