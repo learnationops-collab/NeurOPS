@@ -56,6 +56,7 @@ export function formulario(c) {
         campanas_meta: c?.campanas_meta || [],
         reparto: c?.reparto || 'distribuido',
         solo_conectados: !!c?.solo_conectados,
+        por_defecto: !!c?.por_defecto,
         setters: c?.setters || [],
         // Cuánto recibe cada setter respecto de los demás, por id (texto: es lo que se escribe en el campo).
         pesos: Object.fromEntries(Object.entries(c?.pesos || {}).map(([id, p]) => [id, String(p)])),
@@ -73,6 +74,7 @@ export function copiaDe(c, ahora = new Date()) {
         hasta: '',
         palabras: estadoDe(c, ahora) === 'terminada' ? [...c.palabras] : [],
         campanas_meta: [],
+        por_defecto: false, // una sola a la vez: la copia no le quita el lugar a la original
     };
 }
 
@@ -97,7 +99,7 @@ export function errorDe(f) {
     if (!f.nombre.trim()) return 'Escribí un nombre.';
     if (!f.desde) return 'Elegí desde qué día corre.';
     if (f.hasta && f.hasta < f.desde) return 'El último día no puede ser anterior al primero.';
-    if (!f.palabras.length) return 'Agregá al menos una palabra clave.';
+    if (!f.palabras.length && !f.por_defecto) return 'Agregá al menos una palabra clave.';
     if (f.reparto === 'distribuido' && f.setters.some((id) => !pesoValido(f.pesos[id] ?? 1))) {
         return `El peso de cada setter es un número entero de 1 a ${PESO_MAX}.`;
     }
@@ -116,6 +118,7 @@ export function cuerpo(f) {
         campanas_meta: f.campanas_meta,
         reparto: f.reparto,
         solo_conectados: f.solo_conectados,
+        por_defecto: f.por_defecto,
         setters: f.reparto === 'distribuido' ? f.setters : [],
         pesos: f.reparto === 'distribuido' ? Object.fromEntries(f.setters.map((id) => [String(id), Number(f.pesos[id] ?? 1)])) : {},
     };

@@ -161,6 +161,8 @@ class AutCampana(db.Model):
     # Log de cambios (solo se agrega): [{en, por, accion, cambios: {campo: {antes, despues}}}].
     # Las palabras y campañas de Meta van como {agregadas, quitadas}. Ver `campanas.registrar_cambio`.
     cambios = db.Column(db.JSON, nullable=True)
+    # Atiende el primer mensaje de un contacto nuevo que no es ninguna palabra clave (`campanas.por_defecto`).
+    por_defecto = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
     creada_en = db.Column(db.DateTime, nullable=False, default=ahora)
     actualizada_en = db.Column(db.DateTime, nullable=False, default=ahora, onupdate=ahora)
 

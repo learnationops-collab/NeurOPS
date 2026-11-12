@@ -119,6 +119,14 @@ export default function EditorCampana({ campana, plantilla = null, flujos, campa
                         ))}
                     </div>
                 </Campo>
+                <div className="pf-check">
+                    <span>
+                        Atiende los mensajes sin palabra clave
+                        <span className="pf-ayuda">El primer mensaje de alguien nuevo que no es ninguna palabra vigente («hola, info», una palabra mal escrita) entra por esta campaña. Una sola a la vez.</span>
+                    </span>
+                    <Switch checked={f.por_defecto} disabled={lectura} label="Atiende los mensajes sin palabra clave"
+                        onChange={(v) => cambiar({ por_defecto: v })} />
+                </div>
                 <Campo label="Campañas de Meta" ayuda="De acá sale su gasto. Puede ser ninguna (orgánica) o varias.">
                     {!lectura && metaLibres.length > 0 && (
                         <Select label="Sumar campaña de Meta" value="" options={[{ value: '', label: 'Sumar una campaña de Meta…' }, ...metaLibres]}

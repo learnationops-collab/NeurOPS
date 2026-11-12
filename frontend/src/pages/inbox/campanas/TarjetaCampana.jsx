@@ -24,6 +24,7 @@ export default function TarjetaCampana({ c, setters = [], puedeEditar, onAbrir, 
                 <div className="fl-estado"><Status color={est.color}>{est.texto}</Status></div>
             </div>
             <div className="cp-chips">
+                {c.por_defecto && <Chip data-tip="Por defecto|El primer mensaje de alguien nuevo que no es ninguna palabra entra por acá.">Sin palabra clave</Chip>}
                 {c.palabras.map((p) => <Chip key={p} subtle>#{p}</Chip>)}
             </div>
             <p className={`cp-flujo t-cap ${c.flujo ? 'mut' : 'fl-sin-palabra'}`}>
