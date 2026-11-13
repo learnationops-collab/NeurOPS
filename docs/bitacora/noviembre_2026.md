@@ -501,3 +501,8 @@
 - **13 de Noviembre de 2026 (Notas de Gemini automáticas en las reuniones del equipo de la Academia)** *([agenda.py](../../app/api/external/agenda.py), [meet_config.py](../../app/services/meet_config.py), [google_service.py](../../app/services/google_service.py))*:
   - Nuevo `POST /api/external/academy/agenda/reuniones/notas`: prende notas, transcripción y grabación automáticas en el Meet de una reunión del equipo. La Academia lo llama al crear cada reunión y desde «Activar notas».
   - Si quien organiza está conectado con team@, usa la autorización de Meet de team@; si no, su propio Google. Por eso conectar Google Calendar ahora pide también el permiso de Meet. El calendario sigue renovando su token sin ese permiso, así que las conexiones de antes no se rompen; solo las notas piden reconectar.
+
+### 13/11/2026 · El ticket promedio suma la seña a su venta y se ve en bruto
+- La seña de un cliente que completa la venta en el mismo mes (o a ≤ 7 días) se suma a esa venta en el ticket promedio; una seña sola sigue sin contar. Producción: sep $745,65 → $757,08; oct $616,18 → $619,12; nov $693,70 → $750,00. ADR-W139 ([ticket_service.py](../../app/services/ticket_service.py)).
+- Comercial › Analizar muestra el ticket en bruto, con el neto de la pasarela debajo, igual que el tablero del closer ([Analizar.jsx](../../frontend/src/pages/comercial/components/Analizar.jsx)).
+- Correcciones a mano en producción (reunión con Jean Carlo): la renovación de Yancarlos quedó enlazada a su agenda del 07/11 (Show up) y tres agendas del 11/11 pasaron a Cancelado.
