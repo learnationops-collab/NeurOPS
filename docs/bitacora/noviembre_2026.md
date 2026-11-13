@@ -488,3 +488,8 @@
 
 ### 12/11/2026 · Una Momentum ya no pasa al triage
 - Juliana (triage) recibió la Momentum de Fátima, una alumna que pagó la seña. Fátima heredó de cuando era lead el segmento D, y cuando Karla Mora, un lead A, agendó con Jean Carlo a la misma hora, Work trató la Momentum como una C/D que se puede desplazar y la pasó al triage. La Momentum es una sesión del closer con su alumno: ahora un lead A/B no puede tomar su horario y no se puede pasar al triage, ni sola ni con «Pasar a triage» desde la ficha ([desplazar.py](../../app/agendas_v2/desplazar.py), [a_triage.py](../../app/agendas_v2/a_triage.py)). Era la única Momentum afectada.
+
+### 13/11/2026 · Workshop: el cobro de cada taller suma todas las cuotas de sus clientes
+- El Cash total de un taller sumaba las ventas nuevas, las señas y solo la primera cuota de cada venta: las cuotas que llegaban después no se le contaban a ningún taller. Ahora suma también las cuotas, renovaciones y upsells de quien compró o dejó seña en ese taller, aunque los pague meses después, y una cuota nueva recalcula el taller del que salió esa persona. ADR-W136 ([workshop_metrics_service.py](../../app/services/workshop_metrics_service.py), [workshop_live_sync.py](../../app/services/workshop_live_sync.py), [workshop_registros_service.py](../../app/services/workshop_registros_service.py)).
+- La tabla de talleres suma la columna «ROAS New Cash» al lado de «ROAS Total», para ver siempre las dos caras ([columnasTalleres.jsx](../../frontend/src/pages/admin/workshop/talleres/columnasTalleres.jsx)).
+- Con el recálculo, el ROAS Total de los talleres de julio a noviembre pasa de 2,52 a 2,88 (26/09: 6,4 → 11,3; 05/09: 4,3 → 5,5; 12/09: 0,9 → 1,9; 03/10: 1,3 → 2,0).
