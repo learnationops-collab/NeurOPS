@@ -49,6 +49,7 @@ logger = logging.getLogger(__name__)
 _TRACKED_MODELS = (FinancialAgenda, FinancialSale)
 _KEY_FECHAS = 'workshop_sync_fechas'        # dias (UTC) de agendas/ventas/formularios tocados
 _KEY_TALLERES = 'workshop_sync_talleres'    # dias de WorkshopEvent creados/borrados
+_KEY_PERSONAS = 'workshop_sync_personas'    # personas con una cuota/renovacion/upsell nueva (ADR-W136)
 
 
 def _formulario_tocado(cliente):
@@ -91,6 +92,12 @@ def _anotar_cambios(session):
     for obj in list(session.new) + list(session.dirty):
         if isinstance(obj, Client) and _formulario_tocado(obj):
             session.info.setdefault(_KEY_FECHAS, set()).add(_dia_del_formulario(obj))
+    # La cuota de un cliente cuenta para el taller del que salio (ADR-W136): ademas del taller de hoy
+    # se recalcula el de su agenda, que se busca en `before_commit` (aca no se emite SQL).
+    for obj in list(session.new) + list(session.dirty) + list(session.deleted):
+        tp = (getattr(obj, 'tipo_pago', None) or '').lower() if isinstance(obj, FinancialSale) else ''
+        if obj.__dict__.get('person_uuid') and any(x in tp for x in ('cuota', 'renovac', 'upsell')):
+            session.info.setdefault(_KEY_PERSONAS, set()).add(obj.person_uuid)
     for obj in list(session.new) + list(session.deleted):
         if isinstance(obj, WorkshopEvent) and obj.date:
             session.info.setdefault(_KEY_TALLERES, set()).add(obj.date)
@@ -135,6 +142,7 @@ def register_workshop_live_sync(app):
     def _olvidar_after_rollback(session):
         session.info.pop(_KEY_FECHAS, None)
         session.info.pop(_KEY_TALLERES, None)
+        session.info.pop(_KEY_PERSONAS, None)
 
     @event.listens_for(db.session, 'before_commit')
     def _sync_before_commit(session):
@@ -146,12 +154,17 @@ def register_workshop_live_sync(app):
             # scripts/resync_workshop_events.py --apply -- o los numeros quedan viejos.
             session.info.pop(_KEY_FECHAS, None)
             session.info.pop(_KEY_TALLERES, None)
+            session.info.pop(_KEY_PERSONAS, None)
             return
         # Lo que quedo pendiente se flushea ahora (y se anota, via before_flush)
         # para que `calcular_prefill` ya vea la agenda/venta/taller nuevo.
         session.flush()
         fechas = session.info.pop(_KEY_FECHAS, set())
         talleres = session.info.pop(_KEY_TALLERES, set())
+        personas = session.info.pop(_KEY_PERSONAS, set())
+        if personas:
+            fechas |= {a.created_at.date() for a in FinancialAgenda.query.filter(
+                FinancialAgenda.person_uuid.in_(sorted(personas))).all() if a.created_at}
         if not fechas and not talleres:
             return
 

@@ -313,7 +313,14 @@ def _es_venta_valida(sale):
                                 and not any(ex in tp for ex in ['cuota', 'renovac', 'upsell']))
 
 
-def _ventas_de(agendas, compradores_ya_contados):
+def _es_cobro_posterior(sale):
+    """Cuotas, renovaciones y upsells: no son venta del taller, pero si plata que dejaron sus clientes."""
+    tp = _tipo_simple(sale)
+    completada = (sale.estado or '').strip().lower() in ('', 'completada', 'confirmada')
+    return completada and any(ex in tp for ex in ['cuota', 'renovac', 'upsell'])
+
+
+def _ventas_de(agendas, compradores_ya_contados, cobros=None):
     """Compradores unicos y ventas de una lista de agendas.
 
     `compradores_ya_contados` evita que la misma persona sume en los dos embudos:
@@ -331,6 +338,9 @@ def _ventas_de(agendas, compradores_ya_contados):
     Compradora es quien pagó completo o hizo split pay: la seña suma a `ventas` (y por lo tanto al
     cash del taller) pero no hace compradora a nadie, así que no entra en `sales` ni en el close
     rate del taller (30/09/2026).
+
+    `cobros` (set opcional) recibe cuotas, renovaciones y upsells de quien dejó venta o seña, desde su
+    agenda: la plata de un cliente cuenta para su taller aunque la pague meses después (ADR-W136).
     """
     compradores = set()
     ventas = set()
@@ -363,11 +373,12 @@ def _ventas_de(agendas, compradores_ya_contados):
             filtro = and_(FinancialSale.person_uuid.is_(None), or_(*condiciones))
 
         piso_venta = a.created_at - timedelta(days=1) if a.created_at else None
-        validas = [
-            s for s in FinancialSale.query.filter(filtro).all()
-            if _es_venta_valida(s) and (not piso_venta or not s.date or s.date >= piso_venta)
-        ]
+        desde_agenda = [s for s in FinancialSale.query.filter(filtro).all()
+                        if not piso_venta or not s.date or s.date >= piso_venta]
+        validas = [s for s in desde_agenda if _es_venta_valida(s)]
         ventas.update(validas)
+        if cobros is not None and validas:
+            cobros.update(s for s in desde_agenda if _es_cobro_posterior(s))
         if any(_es_cierre(s) for s in validas):
             compradores.add(clave)
         elif any(st in (a.estado or '').lower().strip() for st in ESTADOS_DE_VENTA):
@@ -378,7 +389,7 @@ def _ventas_de(agendas, compradores_ya_contados):
     return compradores, ventas
 
 
-def _resumen(personas, agendas, compradores, ventas):
+def _resumen(personas, agendas, compradores, ventas, cobros=()):
     """`personas` son los grupos de `_agrupar_por_persona`; `agendas` las filas crudas.
 
     Las cuatro metricas del embudo van por persona. `llamadas` queda aparte como dato
@@ -394,6 +405,7 @@ def _resumen(personas, agendas, compradores, ventas):
     `cash_collected` (la base del ROAS Total) = New Cash + señas: las ventas nuevas y las señas
     mas las primeras cuotas que suman a esas ventas (29/10/2026). Antes se quedaba sin las cuotas
     y el total salia menor que el New Cash (3/10: $200 contra $500). Ver ADR-W035.
+    Desde el 13/11/2026 suma tambien los `cobros` de `_ventas_de` (cohorte del taller, ADR-W136).
 
     Todo el cash va en NETO desde el 02/11/2026 (`commission_service.cash_neto`: la comision real del pago o,
     si falta, el promedio de su plataforma): el ROAS compara lo que quedo con lo que se gasto. Por eso el ticket
@@ -405,6 +417,9 @@ def _resumen(personas, agendas, compradores, ventas):
     (cash_ventas, ventas_cobradas, _), cuotas = ticket_y_cuotas(
         [(claves_de_venta(s), s.date, cash_neto(s), VENTA if _es_cierre(s) else SENA) for s in ventas],
         monto_de=cash_neto)
+    # Las primeras cuotas que ya estan entre los cobros del cliente no se suman dos veces
+    ya = {(s.date, round(cash_neto(s) or 0.0, 2)) for s in cobros}
+    primeras = sum(c[2] or 0.0 for c in cuotas if (c[1], round(c[2] or 0.0, 2)) not in ya)
     return {
         "agendas": len(personas),
         "llamadas": len(agendas),
@@ -414,7 +429,7 @@ def _resumen(personas, agendas, compradores, ventas):
         "citas_reportadas": estados["reportadas"],
         "citas_sin_reportar": estados["sin_reportar"],
         "sales": len(compradores),
-        "cash_collected": sum(cash_neto(s) for s in ventas) + sum(c[2] or 0.0 for c in cuotas),
+        "cash_collected": sum(cash_neto(s) for s in ventas) + sum(cash_neto(s) for s in cobros) + primeras,
         "cash_ventas": cash_ventas,
         "ventas_cobradas": ventas_cobradas,
         "breakdown": estados["desglose"],
@@ -436,12 +451,13 @@ def calcular_prefill(dia, timezone_str='America/La_Paz'):
     personas_vivo = _agrupar_por_persona(grupos['vivo'], vistas)
     personas_landing = _agrupar_por_persona(grupos['landing'], vistas)
 
-    compradores_vivo, ventas_vivo = _ventas_de(grupos['vivo'], set())
-    compradores_landing, ventas_landing = _ventas_de(grupos['landing'], compradores_vivo)
+    cobros_vivo, cobros_landing = set(), set()
+    compradores_vivo, ventas_vivo = _ventas_de(grupos['vivo'], set(), cobros_vivo)
+    compradores_landing, ventas_landing = _ventas_de(grupos['landing'], compradores_vivo, cobros_landing)
 
-    resumen_vivo = _resumen(personas_vivo, grupos['vivo'], compradores_vivo, ventas_vivo)
+    resumen_vivo = _resumen(personas_vivo, grupos['vivo'], compradores_vivo, ventas_vivo, cobros_vivo)
     resumen_landing = _resumen(personas_landing, grupos['landing'], compradores_landing,
-                               ventas_landing - ventas_vivo)
+                               ventas_landing - ventas_vivo, cobros_landing - cobros_vivo)
 
     resumen_vivo["aplicaciones_form"] = aplicaciones['vivo']
     resumen_landing["aplicaciones_form"] = aplicaciones['landing']
