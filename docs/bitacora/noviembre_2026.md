@@ -201,3 +201,6 @@
   - Mover la hora o el closer de una llamada futura desde la ficha, el mazo, el triage o el panel de admin también se frena si cae encima de otra.
   - Si el tablero de agendas trae una llamada que cae encima de otra del closer, no se le crea la cita y admin recibe un aviso; la fila del tablero queda.
   - Los links de agendamiento de Paula y Elias dicen su nombre («Paula · Sesión de Aceleración») en lugar de «Setting».
+- **13 de Noviembre de 2026 (Notas de Gemini automáticas en las reuniones del equipo)** *([google_service.py](../../app/services/google_service.py), [agenda.py](../../app/api/external/agenda.py))*:
+  - Nuevo `POST /api/external/academy/agenda/reuniones/notas`: prende «Tomar notas con Gemini» en el Meet de una reunión con la API de Meet. La Academia lo llama al crear cada reunión y desde «Activar notas».
+  - Conectar Google Calendar ahora pide también el permiso de Meet (`meetings.space.settings`). El calendario sigue renovando su token sin ese permiso, así que las conexiones de antes no se rompen; solo las notas piden reconectar.

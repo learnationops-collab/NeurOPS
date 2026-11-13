@@ -386,6 +386,73 @@ def test_terminar_una_reunion_corta_la_serie_en_utc_y_borrar_la_quita(client, db
     assert r.json == {'ok': True} and google['borrar'][-1] == ('serie1', 'cal-dari', True)
 
 
+def test_notas_de_la_reunion_responden_segun_google(client, db, monkeypatch):
+    _alta(client)
+    _lista(db)
+    respuestas = iter([None, 'permiso', 'Meet API deshabilitada'])
+    vistos = []
+    monkeypatch.setattr(GoogleService, 'activar_notas_meet',
+                        staticmethod(lambda user_id, meet: vistos.append(meet) or next(respuestas)))
+    cuerpo = {'email': 'dari@thelearnation.com', 'meet': 'https://meet.google.com/abc-defg-hij'}
+    assert client.post(f'{BASE}/reuniones/notas', json=cuerpo, headers=H).json == {'ok': True}
+    r = client.post(f'{BASE}/reuniones/notas', json=cuerpo, headers=H)
+    assert r.status_code == 409 and r.json == {'error': 'permiso'}
+    r = client.post(f'{BASE}/reuniones/notas', json=cuerpo, headers=H)
+    assert r.status_code == 502 and r.json == {'error': 'Meet API deshabilitada'}
+    assert vistos == ['https://meet.google.com/abc-defg-hij'] * 3
+    cuerpo['email'] = 'nadie@x.com'
+    assert client.post(f'{BASE}/reuniones/notas', json=cuerpo, headers=H).status_code == 404
+
+
+class _Resp:
+    def __init__(self, status, datos=None):
+        self.status_code, self._datos = status, datos or {}
+        self.ok, self.text = status < 400, str(datos)
+
+    def json(self):
+        return self._datos
+
+
+def test_activar_notas_meet_busca_el_espacio_y_prende_las_notas(db, monkeypatch):
+    import google.auth.transport.requests as gtr
+    import google.oauth2.credentials as gcred
+    from google.auth.exceptions import RefreshError
+
+    u = User(username='Santi', email='santi@x.com', role='fulfillment')
+    u.set_unusable_password()
+    db.session.add(u)
+    db.session.flush()
+    db.session.add(GoogleCalendarToken(user_id=u.id, token_json='{"refresh_token": "r", "client_id": "c", "client_secret": "s"}'))
+    db.session.commit()
+    pedidos, refresco = [], {'falla': None}
+
+    def refrescar(self, request):
+        if refresco['falla']:
+            raise RefreshError(refresco['falla'])
+
+    class Sesion:
+        def __init__(self, creds):
+            assert 'https://www.googleapis.com/auth/meetings.space.settings' in creds.scopes
+
+        def get(self, url, timeout):
+            pedidos.append(('get', url))
+            return _Resp(200, {'name': 'spaces/AbC123'})
+
+        def patch(self, url, params, json, timeout):
+            pedidos.append(('patch', url, params['updateMask'], json))
+            return _Resp(200)
+
+    monkeypatch.setattr(gcred.Credentials, 'refresh', refrescar)
+    monkeypatch.setattr(gtr, 'AuthorizedSession', Sesion)
+    assert GoogleService.activar_notas_meet(u.id, 'https://meet.google.com/abc-defg-hij') is None
+    assert pedidos[0] == ('get', 'https://meet.googleapis.com/v2/spaces/abc-defg-hij')
+    assert pedidos[1][1] == 'https://meet.googleapis.com/v2/spaces/AbC123'
+    assert pedidos[1][3] == {'config': {'artifactConfig': {'smartNotesConfig': {'autoSmartNotesGeneration': 'ON'}}}}
+    assert GoogleService.activar_notas_meet(u.id, 'sin link') == 'Sin Meet'
+    refresco['falla'] = 'invalid_scope: Bad Request'
+    assert GoogleService.activar_notas_meet(u.id, 'abc-defg-hij') == 'permiso'
+
+
 # --- Momentum con un closer (modo ventas) ------------------------------------------------------
 
 

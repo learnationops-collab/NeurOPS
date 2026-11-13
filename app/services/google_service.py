@@ -26,6 +26,11 @@ from flask import current_app, has_request_context, request
 from app.models import db, GoogleCalendarToken
 
 SCOPES = ['https://www.googleapis.com/auth/calendar', 'https://www.googleapis.com/auth/calendar.events']
+# Prender las notas de Gemini en el Meet de una reunión (activar_notas_meet). Se pide al conectar el
+# calendario, pero el calendario renueva su token solo con SCOPES: así un token conectado antes, sin
+# este permiso, sigue andando igual.
+SCOPE_MEET = 'https://www.googleapis.com/auth/meetings.space.settings'
+SCOPES_CONEXION = SCOPES + [SCOPE_MEET]
 
 # Errores de Google que significan «este token ya no sirve, hay que reconectar». Otros (red,
 # cliente mal configurado) no marcan el token: reconectar no los arreglaría.
@@ -86,7 +91,7 @@ class GoogleService:
         return request.url_root.rstrip('/') + '/google/callback'
 
     @staticmethod
-    def get_flow(redirect_uri, scopes=SCOPES):
+    def get_flow(redirect_uri, scopes=SCOPES_CONEXION):
         client_id, client_secret = _cliente()
         config = {
             'web': {
@@ -643,6 +648,48 @@ class GoogleService:
                                                invitados),
             sendUpdates='all',
         ).execute()
+
+    @staticmethod
+    def activar_notas_meet(user_id, meet):
+        """Prende «Tomar notas con Gemini» en el Meet de una reunión (quien la organiza es dueña del Meet).
+        `meet`: el link o el código (abc-defg-hij). Devuelve None si quedó, o el motivo: 'permiso' si el token
+        no tiene SCOPE_MEET (hay que reconectar el calendario) u otro texto si Google no lo aceptó."""
+        from google.auth.transport.requests import AuthorizedSession
+
+        codigo = re.search(r'([a-z]{3}-[a-z]{4}-[a-z]{3})', meet or '')
+        if not codigo:
+            return 'Sin Meet'
+        token = GoogleService.token_vigente(user_id)
+        if not token:
+            return 'Sin Google Calendar conectado'
+        # Un token aparte, con el permiso de Meet: si no se dio, Google responde invalid_scope.
+        creds = google.oauth2.credentials.Credentials.from_authorized_user_info(
+            json.loads(token.token_json), SCOPES_CONEXION)
+        try:
+            creds.refresh(Request())
+        except RefreshError as e:
+            if 'invalid_scope' in str(e):
+                return 'permiso'
+            raise
+        sesion = AuthorizedSession(creds)
+        base = 'https://meet.googleapis.com/v2/'
+        r = sesion.get(f'{base}spaces/{codigo.group(1)}', timeout=15)
+        if r.ok:
+            r = sesion.patch(
+                base + r.json()['name'],
+                params={'updateMask': 'config.artifactConfig.smartNotesConfig.autoSmartNotesGeneration'},
+                json={'config': {'artifactConfig': {'smartNotesConfig': {'autoSmartNotesGeneration': 'ON'}}}},
+                timeout=15,
+            )
+        if r.status_code == 403 and 'insufficient' in r.text.lower():
+            return 'permiso'
+        if not r.ok:
+            try:
+                motivo = r.json().get('error', {}).get('message')
+            except ValueError:
+                motivo = None
+            return (motivo or f'Google respondió {r.status_code}')[:300]
+        return None
 
     @staticmethod
     def delete_event(user_id, event_id, calendar_id=None, avisar=False):

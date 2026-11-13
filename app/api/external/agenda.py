@@ -829,6 +829,29 @@ def agenda_reunion_editar(event_id):
     return jsonify({'ok': True}), 200
 
 
+@bp.route('/agenda/reuniones/notas', methods=['POST'])
+@require_academy_token
+def agenda_reunion_notas():
+    """{email (quien organiza), meet (link o código)}: prende las notas automáticas de Gemini en ese Meet.
+    → {ok} · 409 'permiso' (falta reconectar el calendario con el permiso de Meet) · 502 con el motivo."""
+    from app.services.google_service import GoogleService
+
+    datos = _cuerpo()
+    u = _cuenta(datos.get('email'))
+    if not u:
+        return _error('No existe esa persona del equipo', 404)
+    try:
+        motivo = GoogleService.activar_notas_meet(u.id, datos.get('meet'))
+    except Exception as e:  # noqa: BLE001
+        current_app.logger.warning(f'[AGENDA ACADEMIA] No se pudieron activar las notas de #{u.id}: {e}')
+        return _error('google', 502)
+    if motivo == 'permiso':
+        return _error('permiso', 409)
+    if motivo:
+        return _error(motivo, 502)
+    return jsonify({'ok': True}), 200
+
+
 @bp.route('/agenda/reuniones/<event_id>', methods=['DELETE'])
 @require_academy_token
 def agenda_reunion_borrar(event_id):
