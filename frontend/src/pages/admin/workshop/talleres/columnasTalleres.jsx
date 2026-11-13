@@ -49,7 +49,7 @@ export const columnasDe = ({ formatDate, elegidos, onComparar, comparar, onVer =
             const v = valor(e);
             if (v == null) return FALTA;
             const tono = comparar ? tonoDe(key, v, total?.valor, e) : null;
-            return <Cifra texto={conCuenta(key, e, formato(v, e), onVer)} tono={tono} solo={key === 'ganancia' || key === 'roas'}
+            return <Cifra texto={conCuenta(key, e, formato(v, e), onVer)} tono={tono} solo={key === 'ganancia' || key === 'roas' || key === 'roas_nc'}
                 nota={extra.nota ? extra.nota(e) : null} />;
         },
     });
@@ -114,7 +114,10 @@ export const columnasDe = ({ formatDate, elegidos, onComparar, comparar, onVer =
             oculta: true, ayuda: 'Ventas nuevas ÷ cantidad. Sin cuotas ni señas.',
         }),
         cifra('cac', 'CAC', cac, dinero, { oculta: true, ayuda: 'Lo que costó cada venta: la inversión dividida las ventas.' }),
-        cifra('roas', 'ROAS Total', (e) => e.roas, veces, { ayuda: 'Todo lo cobrado (con cuotas y señas) ÷ inversión. Desde 1x el taller se pagó.' }),
+        cifra('roas_nc', 'ROAS New Cash', (e) => (e.inversion > 0 ? (e.cash_ventas || 0) / e.inversion : null), veces, {
+            ayuda: 'Solo ventas nuevas (completo o parcial, con su primera cuota) ÷ inversión. Sin señas, cuotas posteriores ni renovaciones.',
+        }),
+        cifra('roas', 'ROAS Total', (e) => e.roas, veces, { ayuda: 'Todo lo que pagaron sus clientes hasta hoy (ventas, señas, todas las cuotas, renovaciones y upsells) ÷ inversión. Desde 1x el taller se pagó.' }),
         {
             key: 'grabacion', header: 'Grabación', width: 'minmax(96px,1fr)', oculta: true,
             valor: (e) => ESTADOS_GRABACION[estadoGrabacion(e).tipo].texto,
@@ -128,13 +131,13 @@ export const columnasDe = ({ formatDate, elegidos, onComparar, comparar, onVer =
 
 /** Las vistas de columnas: cada una deja a la vista justo estas. «Todo» rotula los grupos. */
 const TODAS = ['inversion', 'clics', 'ctr', 'cpc', 'cpm', 'leads', 'cpl', 'whatsapp', 'show_up', 'aplicaciones', 'agendas',
-    'costo_agenda', 'asistieron', 'ventas', 'close_rate', 'cash', 'ganancia', 'ticket', 'cac', 'roas'];
+    'costo_agenda', 'asistieron', 'ventas', 'close_rate', 'cash', 'ganancia', 'ticket', 'cac', 'roas_nc', 'roas'];
 export const VISTAS_TALLERES = [
-    { key: 'embudo', label: 'Embudo', columnas: ['inversion', 'leads', 'cpl', 'show_up', 'agendas', 'asistieron', 'ventas', 'close_rate', 'roas'] },
+    { key: 'embudo', label: 'Embudo', columnas: ['inversion', 'leads', 'cpl', 'show_up', 'agendas', 'asistieron', 'ventas', 'close_rate', 'roas_nc', 'roas'] },
     { key: 'trafico', label: 'Tráfico', columnas: ['inversion', 'clics', 'ctr', 'cpc', 'cpm', 'leads', 'cpl'] },
     { key: 'captacion', label: 'Captación', columnas: ['leads', 'cpl', 'whatsapp', 'show_up', 'aplicaciones', 'agendas'] },
     { key: 'conversion', label: 'Conversión', columnas: ['agendas', 'costo_agenda', 'asistieron', 'ventas', 'close_rate', 'cac'] },
-    { key: 'plata', label: 'Plata', columnas: ['inversion', 'ventas', 'cash', 'ganancia', 'ticket', 'cac', 'roas'] },
+    { key: 'plata', label: 'Plata', columnas: ['inversion', 'ventas', 'cash', 'ganancia', 'ticket', 'cac', 'roas_nc', 'roas'] },
     { key: 'todo', label: 'Todo', columnas: TODAS, grupos: true },
 ];
 

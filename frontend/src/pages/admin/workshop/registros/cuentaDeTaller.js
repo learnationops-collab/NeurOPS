@@ -25,6 +25,7 @@ export const cuentaDeTaller = (clave, e) => {
         case 'cac': return { cuenta: { a: inv, b: de(e.sales, 'ventas', 'ventas') } };
         case 'show_up': return { cuenta: { a: de(e.show_up, 't_show_up'), b: de(e.whatsapp_leads, 't_whatsapp_leads', 'en WhatsApp') } };
         case 'close_rate': return { cuenta: { a: de(e.sales, 'ventas'), b: de(e.show_up_sales_call, 'show_up', 'que asistieron') } };
+        case 'roas_nc': return { cuenta: { a: parteDe(dinero(e.cash_ventas || 0), 'new_cash'), b: inv } };
         case 'roas': return { cuenta: { a: parteDe(dinero(e.cash_collected), 'cash_total'), b: inv } };
         case 'ticket': {
             if (!e.ventas_cobradas) return null;
