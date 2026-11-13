@@ -386,6 +386,70 @@ def test_terminar_una_reunion_corta_la_serie_en_utc_y_borrar_la_quita(client, db
     assert r.json == {'ok': True} and google['borrar'][-1] == ('serie1', 'cal-dari', True)
 
 
+@pytest.fixture
+def meet(monkeypatch):
+    from app.services import meet_config
+
+    llamadas = {'activar': [], 'creds': 'creds-santi', 'ok': True}
+    def activar(link, credenciales=None):
+        llamadas['activar'].append((link, credenciales))
+        return llamadas['ok']
+
+    monkeypatch.setattr(meet_config, 'activar_artefactos', activar)
+    monkeypatch.setattr(GoogleService, 'credenciales_meet', staticmethod(lambda user_id: llamadas['creds']))
+    return llamadas
+
+
+def test_notas_de_una_reunion_con_su_propio_google(client, db, meet):
+    _alta(client)
+    u = _lista(db)
+    SchedPerfil.query.filter_by(user_id=u.id).first().datos = {'academia': {
+        'calendario_elegido': True, 'cuenta': 'dari@thelearnation.com'}}
+    db.session.commit()
+    cuerpo = {'email': 'dari@thelearnation.com', 'meet': 'https://meet.google.com/abc-defg-hij'}
+    assert client.post(f'{BASE}/reuniones/notas', json=cuerpo, headers=H).json == {'ok': True}
+    assert meet['activar'] == [('https://meet.google.com/abc-defg-hij', 'creds-santi')]
+    meet['creds'] = None
+    r = client.post(f'{BASE}/reuniones/notas', json=cuerpo, headers=H)
+    assert r.status_code == 409 and r.json == {'error': 'permiso'}
+    meet['creds'], meet['ok'] = 'creds-santi', False
+    assert client.post(f'{BASE}/reuniones/notas', json=cuerpo, headers=H).status_code == 502
+    assert client.post(f'{BASE}/reuniones/notas', json={**cuerpo, 'meet': 'no'}, headers=H).status_code == 400
+    assert client.post(f'{BASE}/reuniones/notas', json={**cuerpo, 'email': 'x@x.com'}, headers=H).status_code == 404
+
+
+def test_notas_de_una_reunion_de_team_usan_la_autorizacion_de_team(client, db, meet):
+    _alta(client)
+    _lista(db)  # conectada a team@
+    cuerpo = {'email': 'dari@thelearnation.com', 'meet': 'https://meet.google.com/abc-defg-hij'}
+    assert client.post(f'{BASE}/reuniones/notas', json=cuerpo, headers=H).json == {'ok': True}
+    assert meet['activar'] == [('https://meet.google.com/abc-defg-hij', None)]
+
+
+def test_credenciales_meet_sin_el_permiso_piden_reconectar(db, monkeypatch):
+    import google.oauth2.credentials as gcred
+    from google.auth.exceptions import RefreshError
+
+    u = User(username='Santi', email='santi@x.com', role='fulfillment')
+    u.set_unusable_password()
+    db.session.add(u)
+    db.session.flush()
+    token = '{"refresh_token": "r", "client_id": "c", "client_secret": "s"}'
+    db.session.add(GoogleCalendarToken(user_id=u.id, token_json=token))
+    db.session.commit()
+    falla = {'motivo': None}
+
+    def refrescar(self, request):
+        if falla['motivo']:
+            raise RefreshError(falla['motivo'])
+
+    monkeypatch.setattr(gcred.Credentials, 'refresh', refrescar)
+    creds = GoogleService.credenciales_meet(u.id)
+    assert 'https://www.googleapis.com/auth/meetings.space.settings' in creds.scopes
+    falla['motivo'] = 'invalid_scope: Bad Request'
+    assert GoogleService.credenciales_meet(u.id) is None
+
+
 # --- Momentum con un closer (modo ventas) ------------------------------------------------------
 
 

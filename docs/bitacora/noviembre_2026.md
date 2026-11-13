@@ -504,3 +504,12 @@
 ### 13/11/2026 · La seña sale con total y fecha de pago, y el seguimiento de venta dura una semana
 - Con Seña o Parcial el «Precio total» tiene que ser mayor a lo cobrado hoy, y la Seña pide siempre la fecha del próximo pago (el plan). 4 señas de octubre y noviembre se habían registrado con el total igual a la seña y quedaron sin plan. ADR-W137 ([arbolResultado.preguntas.js](../../frontend/src/components/ficha/arbolResultado.preguntas.js), [ficha_acciones_service.py](../../app/services/ficha_acciones_service.py)).
 - El seguimiento de un lead que no compró pasa de 4 contactos en 14 días a 3 en 7 (días 0, 3 y 7). Después del tercero solo se puede cerrar, y cerrar el seguimiento lo marca Lead Perdido. Los seguimientos de clientes y de cobro no cambian ([arbolResultado.payload.js](../../frontend/src/components/ficha/arbolResultado.payload.js), [closer_followup_service.py](../../app/services/closer_followup_service.py)).
+
+- **13 de Noviembre de 2026 (Notas de Gemini automáticas en las reuniones del equipo de la Academia)** *([agenda.py](../../app/api/external/agenda.py), [meet_config.py](../../app/services/meet_config.py), [google_service.py](../../app/services/google_service.py))*:
+  - Nuevo `POST /api/external/academy/agenda/reuniones/notas`: prende notas, transcripción y grabación automáticas en el Meet de una reunión del equipo. La Academia lo llama al crear cada reunión y desde «Activar notas».
+  - Si quien organiza está conectado con team@, usa la autorización de Meet de team@; si no, su propio Google. Por eso conectar Google Calendar ahora pide también el permiso de Meet. El calendario sigue renovando su token sin ese permiso, así que las conexiones de antes no se rompen; solo las notas piden reconectar.
+
+### 13/11/2026 · El ticket promedio suma la seña a su venta y se ve en bruto
+- La seña de un cliente que completa la venta en el mismo mes (o a ≤ 7 días) se suma a esa venta en el ticket promedio; una seña sola sigue sin contar. Producción: sep $745,65 → $757,08; oct $616,18 → $619,12; nov $693,70 → $750,00. ADR-W139 ([ticket_service.py](../../app/services/ticket_service.py)).
+- Comercial › Analizar muestra el ticket en bruto, con el neto de la pasarela debajo, igual que el tablero del closer ([Analizar.jsx](../../frontend/src/pages/comercial/components/Analizar.jsx)).
+- Correcciones a mano en producción (reunión con Jean Carlo): la renovación de Yancarlos quedó enlazada a su agenda del 07/11 (Show up) y tres agendas del 11/11 pasaron a Cancelado.

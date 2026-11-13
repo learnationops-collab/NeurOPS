@@ -860,6 +860,39 @@ def agenda_reunion_editar(event_id):
     return jsonify({'ok': True}), 200
 
 
+@bp.route('/agenda/reuniones/notas', methods=['POST'])
+@require_academy_token
+def agenda_reunion_notas():
+    """{email (quien organiza), meet}: prende las notas de Gemini, la transcripción y la grabación automáticas en
+    el Meet de una reunión del equipo. Solo el dueño del Meet puede: con team@ conectada como su cuenta, la
+    autorización de team@ (como _notas_automaticas); si no, su propio Google con el permiso de Meet.
+    → {ok} · 409 'permiso' (tiene que reconectar Google Calendar) · 502 si Google no lo aceptó."""
+    from app.services import meet_config
+    from app.services.google_service import GoogleService
+
+    datos = _cuerpo()
+    u = _cuenta(datos.get('email'))
+    if not u:
+        return _error('No existe esa persona del equipo', 404)
+    meet = datos.get('meet')
+    if not meet_config.codigo_de(meet):
+        return _error('Sin Meet', 400)
+    if (_preferencias(u).get('cuenta') or '').lower() == organizador.cuenta():
+        ok = meet_config.activar_artefactos(meet)
+    else:
+        try:
+            creds = GoogleService.credenciales_meet(u.id)
+        except Exception as e:  # noqa: BLE001
+            current_app.logger.warning(f'[AGENDA ACADEMIA] Sin credenciales de Meet para #{u.id}: {e}')
+            return _error('google', 502)
+        if creds is None:
+            return _error('permiso', 409)
+        ok = meet_config.activar_artefactos(meet, creds)
+    if not ok:
+        return _error('Google no aceptó la configuración del Meet (ver logs [MEET] de Work)', 502)
+    return jsonify({'ok': True}), 200
+
+
 @bp.route('/agenda/reuniones/<event_id>', methods=['DELETE'])
 @require_academy_token
 def agenda_reunion_borrar(event_id):

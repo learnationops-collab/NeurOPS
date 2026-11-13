@@ -1122,3 +1122,11 @@
 - **Decisión:** con Seña o Parcial, el precio total tiene que ser mayor que lo cobrado hoy (en la pantalla y en el servidor); con Seña, además, el plan de cuotas (la fecha del próximo pago) es obligatorio. La cadencia de seguimiento de venta pasa de 4 contactos en 14 días (0/3/7/14) a 3 en 7 (0/3/7): después del tercer contacto solo queda «Cerrar como lead perdido», y cerrar la cadencia marca la agenda como Lead Perdido con el motivo como nota. Los seguimientos de clientes (`seguimiento_tipo = 'cerrada'`) y la cola de cobro no cambian.
 - **Qué se pierde:** un lead que contesta tarde (después del día 7) ya no vuelve solo a la lista; hay que reabrirlo a mano. Un parcial que es el último pago de una seña vieja no pide plan (el saldo da cero).
 - **Consecuencias:** sin migración. Los seguimientos que hoy están en el contacto 4 siguen como están hasta su próximo reporte, donde solo se pueden cerrar. Las ventas sin plan ya registradas se corrigen a mano (lista CSV del 13/11).
+
+## ADR-W139: el ticket promedio suma la seña a su venta y Analizar lo muestra en bruto
+
+- **Fecha:** 2026-11-13 · **Subsistema:** `ticket_service` (`SUMAR_SENAS`), Comercial › Analizar (tarjeta Ticket promedio) · **Estado:** implementado.
+- **Contexto:** en la reunión con Jean Carlo (13/11) el ticket de Analizar no coincidía con el del tablero del closer: Analizar mostraba el neto de la pasarela y el closer el bruto. Además, quien dejaba seña y completaba en el mismo mes tenía una venta más chica que la real, porque la seña no se sumaba.
+- **Decisión:** `SUMAR_SENAS = True`: la seña del cliente en la misma ventana que su pago de venta nueva (mismo mes o ≤ 7 días) se suma a esa venta. Una seña sin venta sigue sin contar. La tarjeta de Analizar muestra el bruto en grande y el neto debajo, junto a la cantidad de ventas.
+- **Qué se pierde:** una seña de un mes y el pago completo en el siguiente (más de 7 días) siguen siendo ventas separadas, y la seña sola no entra. La comparación con el período anterior pasa a ser en bruto.
+- **Consecuencias:** sin migración. Cambia el ticket en todas partes (Analizar, tablero del closer, Workshop al resincronizar). Producción: sep 745,65 → 757,08; oct 616,18 → 619,12; nov 693,70 → 750,00. La cantidad de ventas y el close rate no cambian.

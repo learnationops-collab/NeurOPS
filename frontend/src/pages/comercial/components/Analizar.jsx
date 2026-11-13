@@ -698,13 +698,13 @@ const DashboardClosers = ({ bloque, previo, deltas, porCobrar, adquisicion, vsLa
                 humo={[v('brand-secondary'), v('brand-primary'), v('brand-secondary-light'), v('brand-navy')]}
                 antes={previo ? { actual: bloque.cash_neto, previo: previo.cash_neto, texto: fmt.money(previo.cash_neto), vs: vsLabel } : null}
                 ver={abrir(irA, D.cash)} baja="p-cash" />
-            <Tile label="Ticket promedio" valor={fmt.money(bloque.ticket_neto ?? bloque.ticket)} color={v('info')}
-                help={`Lo cobrado en las ${bloque.ventas} ventas nuevas, neto de la pasarela, dividido por cuántas fueron. `
-                    + 'Las cuotas y las señas no entran.'}
-                antes={previo ? { actual: bloque.ticket_neto ?? bloque.ticket, previo: previo.ticket_neto ?? previo.ticket,
-                    texto: fmt.money(previo.ticket_neto ?? previo.ticket), vs: vsLabel } : null}
+            <Tile label="Ticket promedio" valor={fmt.money(bloque.ticket)} color={v('info')}
+                help={`Lo cobrado en las ${bloque.ventas} ventas nuevas, en bruto, dividido por cuántas fueron. `
+                    + 'Cada venta suma su seña y su primera cuota. Debajo, el neto de la pasarela.'}
+                antes={previo ? { actual: bloque.ticket, previo: previo.ticket,
+                    texto: fmt.money(previo.ticket), vs: vsLabel } : null}
                 humo={[v('info'), v('brand-primary'), v('info'), v('brand-navy')]}
-                sub={fmt.plural(bloque.ventas, 'venta nueva', 'ventas nuevas')}
+                sub={`Neto ${fmt.money(bloque.ticket_neto ?? bloque.ticket)} · ${fmt.plural(bloque.ventas, 'venta nueva', 'ventas nuevas')}`}
                 ver={abrir(irA, D.ticket)} baja="p-cash" />
         </div>
 
