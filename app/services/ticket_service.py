@@ -17,8 +17,9 @@ from dateutil.relativedelta import relativedelta
 VENTANA_DIAS = 7
 # La primera cuota que llega a menos de un mes del pago de venta nueva suma a esa venta.
 SUMAR_PRIMERA_CUOTA = True
-# Si la seña del cliente, en la misma ventana, se suma a su venta. Sin definir: hoy no.
-SUMAR_SENAS = False
+# La seña del cliente, en la misma ventana que su pago de venta nueva, se suma a esa venta (13/11/2026,
+# reunión con Jean Carlo, ADR-W139). Una seña sin venta sigue sin contar: no forma grupo.
+SUMAR_SENAS = True
 
 VENTA, CUOTA, SENA = 'venta', 'cuota', 'sena'
 
