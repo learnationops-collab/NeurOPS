@@ -706,6 +706,25 @@ def _crear_referidos(appt, usuario, bloque, notas, solo_con_contacto=False):
     return len(filas)
 
 
+def _exigir_plan_si_queda_saldo(venta_, datos):
+    """Una seña o un pago parcial dejan saldo: el closer escribe el total del programa y la fecha del
+    próximo pago (el plan). Sin esto, poner el total igual a lo cobrado dejaba la seña sin plan y sin
+    nadie que la cobrara (13/11/2026: 4 señas de octubre y noviembre con total = seña)."""
+    tipo = str(venta_.get('tipo_pago') or '').split(' - ')[-1].strip().lower()
+    if not (tipo.startswith('se') or tipo == 'parcial'):
+        return
+    try:
+        total, monto = float(venta_.get('precio_total') or 0), float(venta_.get('monto') or 0)
+    except (TypeError, ValueError):
+        raise ErrorDeAccion('El precio total no es un número.', 'precio_total') from None
+    if total <= monto + 0.009:
+        raise ErrorDeAccion('El precio total tiene que ser mayor a lo cobrado hoy: es lo que paga en total.',
+                            'precio_total')
+    # Un parcial puede ser el último pago de una seña vieja (el saldo da cero): ahí no hay plan que pedir.
+    if tipo.startswith('se') and not isinstance(datos.get('plan_cuotas'), dict):
+        raise ErrorDeAccion('Falta la fecha del próximo pago (el plan de cuotas del saldo).', 'plan_cuotas')
+
+
 def _venta_del_arbol(appt, datos, usuario):
     """Declara la venta y todo lo que viene con ella, en el orden del wizard del mazo.
 
@@ -733,6 +752,7 @@ def _venta_del_arbol(appt, datos, usuario):
     if datos.get('venta_directa') is True:
         venta_['appointment_id'] = None
     cuota = _cuota_a_cobrar(appt, datos.get('cuota_cobrada'))
+    _exigir_plan_si_queda_saldo(venta_, datos)
 
     resultado = _declarar(appt, venta_, usuario)
     client_id = resultado.get('client_id') or appt.client_id
