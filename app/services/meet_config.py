@@ -28,14 +28,15 @@ def codigo_de(meet_link):
     return m.group(1) if m else None
 
 
-def activar_artefactos(meet_link):
+def activar_artefactos(meet_link, credenciales=None):
     """True si la reunión quedó con notas, transcripción y grabación automáticas. Nunca lanza: la reunión ya
-    está creada y sirve igual sin esto."""
+    está creada y sirve igual sin esto. `credenciales`: las de quien organiza, si no es team@ (las reuniones
+    del equipo de la Academia, GoogleService.credenciales_meet); por defecto, las de team@."""
     codigo = codigo_de(meet_link)
     if not codigo:
         return False
     try:
-        meet = build('meet', 'v2', credentials=MEET.credenciales(), cache_discovery=False)
+        meet = build('meet', 'v2', credentials=credenciales or MEET.credenciales(), cache_discovery=False)
         espacio = meet.spaces().get(name=f'spaces/{codigo}').execute()
         cuerpo = {'config': {'artifactConfig': {grupo: {campo: 'ON'} for grupo, campo in ARTEFACTOS.items()}}}
         mascara = ','.join(f'config.artifactConfig.{grupo}.{campo}' for grupo, campo in ARTEFACTOS.items())

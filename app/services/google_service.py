@@ -26,6 +26,11 @@ from flask import current_app, has_request_context, request
 from app.models import db, GoogleCalendarToken
 
 SCOPES = ['https://www.googleapis.com/auth/calendar', 'https://www.googleapis.com/auth/calendar.events']
+# Prender las notas de Gemini en el Meet de una reunión del equipo que organiza alguien que no es team@
+# (credenciales_meet). Se pide al conectar el calendario, pero el calendario renueva su token solo con
+# SCOPES: así un token conectado antes, sin este permiso, sigue andando igual.
+SCOPE_MEET = 'https://www.googleapis.com/auth/meetings.space.settings'
+SCOPES_CONEXION = SCOPES + [SCOPE_MEET]
 
 # Errores de Google que significan «este token ya no sirve, hay que reconectar». Otros (red,
 # cliente mal configurado) no marcan el token: reconectar no los arreglaría.
@@ -86,7 +91,7 @@ class GoogleService:
         return request.url_root.rstrip('/') + '/google/callback'
 
     @staticmethod
-    def get_flow(redirect_uri, scopes=SCOPES):
+    def get_flow(redirect_uri, scopes=SCOPES_CONEXION):
         client_id, client_secret = _cliente()
         config = {
             'web': {
@@ -646,6 +651,24 @@ class GoogleService:
                                                invitados),
             sendUpdates='all',
         ).execute()
+
+    @staticmethod
+    def credenciales_meet(user_id):
+        """Credenciales de su Google con el permiso de Meet (meet_config.activar_artefactos), en un token
+        aparte del que usa el calendario. None si no conectó Google o lo conectó sin ese permiso (Google
+        responde invalid_scope): hay que reconectar."""
+        token = GoogleService.token_vigente(user_id)
+        if not token:
+            return None
+        creds = google.oauth2.credentials.Credentials.from_authorized_user_info(
+            json.loads(token.token_json), SCOPES_CONEXION)
+        try:
+            creds.refresh(Request())
+        except RefreshError as e:
+            if 'invalid_scope' in str(e):
+                return None
+            raise
+        return creds
 
     @staticmethod
     def delete_event(user_id, event_id, calendar_id=None, avisar=False):
