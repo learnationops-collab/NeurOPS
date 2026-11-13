@@ -12,6 +12,9 @@ Una palabra vigente siempre tiene un flujo que corre (27/10/2026): la campaña v
 palabras no se guarda apuntando a un flujo en borrador, pausado o a ninguno, y un flujo no se pausa
 mientras lo use una (`que_lo_usan`). El 27/10 QUIERO APLICAR quedó sin flujo una noche y 14 leads no
 recibieron nada.
+
+Campaña por defecto (12/11/2026, ADR-W135): una sola a la vez atiende el primer mensaje de un contacto
+nuevo que no es ninguna palabra clave (la escribió mal, o «hola, info»). Entra sin clave, con su reparto.
 """
 from app import db
 from app.automatizaciones.modelos import AutCampana, AutCampanaMeta, AutCampanaPalabra, AutCampanaSetter, AutFlujo, ahora
@@ -43,11 +46,11 @@ def que_lo_usan(flujo, momento=None):
     """Las campañas vigentes o futuras con palabras que llevan a ese flujo."""
     momento = momento or ahora()
     return [c for c in AutCampana.query.filter(AutCampana.flujo_id == flujo.id).order_by(AutCampana.id).all()
-            if c.palabras and _sin_terminar(c.hasta, momento)]
+            if (c.palabras or c.por_defecto) and _sin_terminar(c.hasta, momento)]
 
 
-def _exigir_flujo_que_corre(flujo_id, palabras, hasta):
-    if not palabras or not _sin_terminar(hasta, ahora()):
+def _exigir_flujo_que_corre(flujo_id, palabras, hasta, por_defecto=False):
+    if not (palabras or por_defecto) or not _sin_terminar(hasta, ahora()):
         return
     flujo = db.session.get(AutFlujo, flujo_id) if flujo_id is not None else None
     if flujo is None:
@@ -73,6 +76,18 @@ def campana_de(texto, momento):
                           db.or_(AutCampana.hasta.is_(None), AutCampana.hasta > momento))
                   .order_by(AutCampana.id).all())
     return (candidatas[0] if candidatas else None), clave
+
+
+def por_defecto(momento):
+    """La campaña que atiende el primer mensaje de un contacto nuevo que no es ninguna palabra clave."""
+    return (AutCampana.query.filter(AutCampana.por_defecto.is_(True), AutCampana.desde <= momento,
+                                    db.or_(AutCampana.hasta.is_(None), AutCampana.hasta > momento))
+            .order_by(AutCampana.id).first())
+
+
+def _otra_por_defecto(desde, hasta, excluir_id):
+    otras = AutCampana.query.filter(AutCampana.por_defecto.is_(True), AutCampana.id != (excluir_id or 0)).all()
+    return next((o for o in otras if _se_pisan(desde, hasta, o.desde, o.hasta)), None)
 
 
 def _palabras(valores):
@@ -119,6 +134,7 @@ def _foto(campana):
         'nombre': campana.nombre, 'embudo': campana.embudo, 'tipo': campana.tipo,
         'desde': fecha(campana.desde), 'hasta': fecha(campana.hasta), 'flujo_id': campana.flujo_id,
         'reparto': campana.reparto, 'solo_conectados': bool(campana.solo_conectados),
+        'por_defecto': bool(campana.por_defecto),
         'palabras': [p.texto for p in campana.palabras],
         'campanas_meta': [m.meta_campana_id for m in campana.campanas_meta],
         'pesos': {str(s.user_id): s.peso or 1 for s in campana.setters},
@@ -176,7 +192,11 @@ def guardar(campana, datos, por=None, motivo=None):
     if choques:
         detalle = ', '.join(sorted(f'{clave} ({otra.nombre})' for clave, otra in choques))
         raise ErrorDeCampana(f'Estas palabras ya están en otra campaña vigente en esas fechas: {detalle}')
-    _exigir_flujo_que_corre(flujo_id, palabras, hasta)
+    defecto = bool(datos.get('por_defecto', campana.por_defecto or False))
+    otra = _otra_por_defecto(desde, hasta, campana.id) if defecto else None
+    if otra:
+        raise ErrorDeCampana(f'«{otra.nombre}» ya atiende los mensajes sin palabra clave en esas fechas')
+    _exigir_flujo_que_corre(flujo_id, palabras, hasta, defecto)
 
     meta = datos.get('campanas_meta')
     if meta is not None and (not isinstance(meta, list) or not all(isinstance(m, str) and m.strip() for m in meta)):
@@ -196,7 +216,7 @@ def guardar(campana, datos, por=None, motivo=None):
 
     campana.nombre, campana.embudo, campana.tipo = nombre, embudo, tipo
     campana.desde, campana.hasta, campana.flujo_id = desde, hasta, flujo_id
-    campana.reparto = reparto
+    campana.reparto, campana.por_defecto = reparto, defecto
     campana.solo_conectados = bool(datos.get('solo_conectados', campana.solo_conectados or False))
     if setters is not None or pesos is not None:
         actuales = {s.user_id: s for s in campana.setters}
@@ -229,6 +249,7 @@ def resumen(campana, momento):
         'campanas_meta': [m.meta_campana_id for m in campana.campanas_meta],
         'reparto': campana.reparto,
         'solo_conectados': bool(campana.solo_conectados),
+        'por_defecto': bool(campana.por_defecto),
         'setters': [s.user_id for s in campana.setters],
         'pesos': {str(s.user_id): s.peso or 1 for s in campana.setters},
     }

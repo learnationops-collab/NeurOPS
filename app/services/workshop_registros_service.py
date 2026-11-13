@@ -11,9 +11,9 @@ cuando éste está al día; si el taller guarda otro (se calculó antes), la pan
   · new_cash               los pagos de venta nueva (completo o split pay) más la primera cuota de cada venta si llega
     a menos de un mes (la base del ticket, `cash_ventas`, 19/10/2026): su suma es el New Cash.
   · cash_total             los pagos de venta nueva, las señas y las primeras cuotas que suman a esas ventas: su suma
-    es el Cash collected (`cash_collected`), la base del ROAS Total, y siempre contiene al New Cash (ADR-W035). Las
-    demás cuotas, renovaciones y upsells NO suman acá (`_es_venta_valida`); el Cash total de Marketing, que sí las
-    cuenta, está en Marketing › Rendimiento.
+    es el Cash collected (`cash_collected`), la base del ROAS Total, y siempre contiene al New Cash (ADR-W035).
+    Desde el 13/11/2026 suma también las demás cuotas, renovaciones y upsells de quien compró o dejó seña en el
+    taller, aunque lleguen meses después (ADR-W136).
 
 Las agendas se abren con `workshop_agendas_service` (la lista de Revisar), que ya existía.
 """
@@ -55,17 +55,18 @@ _EMBUDO = {'vivo': 'Clase en vivo', 'landing': 'Grabación'}
 
 
 def _grupos(taller, tz_nombre):
-    """{embudo: (personas, compradores, ventas)} del taller y su ventana, igual que `calcular_prefill`."""
+    """{embudo: (personas, compradores, ventas, cobros)} del taller y su ventana, igual que `calcular_prefill`."""
     tz = m._tz(tz_nombre)
     desde, hasta, _siguiente = m.ventana_evento(taller.date, tz)
     por_embudo = m._agendas_por_embudo(desde, hasta, tz)
     vistas = set()
     personas_vivo = m._agrupar_por_persona(por_embudo['vivo'], vistas)
     personas_landing = m._agrupar_por_persona(por_embudo['landing'], vistas)
-    compradores_vivo, ventas_vivo = m._ventas_de(por_embudo['vivo'], set())
-    compradores_landing, ventas_landing = m._ventas_de(por_embudo['landing'], compradores_vivo)
-    return {'vivo': (personas_vivo, compradores_vivo, ventas_vivo),
-            'landing': (personas_landing, compradores_landing, ventas_landing - ventas_vivo)}
+    cobros_vivo, cobros_landing = set(), set()
+    compradores_vivo, ventas_vivo = m._ventas_de(por_embudo['vivo'], set(), cobros_vivo)
+    compradores_landing, ventas_landing = m._ventas_de(por_embudo['landing'], compradores_vivo, cobros_landing)
+    return {'vivo': (personas_vivo, compradores_vivo, ventas_vivo, cobros_vivo),
+            'landing': (personas_landing, compradores_landing, ventas_landing - ventas_vivo, cobros_landing - cobros_vivo)}
 
 
 def _personas(talleres, metrica, tz_nombre):
@@ -73,7 +74,7 @@ def _personas(talleres, metrica, tz_nombre):
     filas = []
     ultimas = []
     for taller in talleres:
-        for embudo, (personas, compradores, _ventas) in _grupos(taller, tz_nombre).items():
+        for embudo, (personas, compradores, _ventas, _cobros) in _grupos(taller, tz_nombre).items():
             for agendas in personas:
                 bucket, _sin = bucket_de_persona(agendas, m._estado_post_call, ahora)
                 compro = m._clave_identidad(agendas[0]) in compradores
@@ -120,7 +121,7 @@ def _cobros(talleres, metrica, tz_nombre):
                       'embudo': _EMBUDO[embudo], 'medio': medio or '—'})
 
     for taller in talleres:
-        for embudo, (_personas_, _compradores, ventas) in _grupos(taller, tz_nombre).items():
+        for embudo, (_personas_, _compradores, ventas, cobros) in _grupos(taller, tz_nombre).items():
             pagos = [(claves_de_venta(v), v.date, cash_neto(v), VENTA if m._es_cierre(v) else SENA) for v in ventas]
             for venta, pago in zip(ventas, pagos):
                 nueva = pago[3] == VENTA
@@ -128,11 +129,17 @@ def _cobros(talleres, metrica, tz_nombre):
                     continue
                 agregar(taller, embudo, venta, cash_neto(venta), venta.date, venta.nombre_cliente,
                         'Venta nueva' if nueva else 'Seña', venta.metodo_pago)
-            # Las primeras cuotas suman a New Cash y a Cash total
+            # Las primeras cuotas suman a New Cash y a Cash total; la que ya está entre los cobros va con ellos
+            ya = {(c.date, round(cash_neto(c) or 0.0, 2)) for c in cobros} if metrica == 'cash_total' else set()
             for claves, fecha, monto, _clase in cuotas_que_suman(pagos, monto_de=cash_neto):
+                if (fecha, round(monto or 0.0, 2)) in ya:
+                    continue
                 dueno = next((v for v, p in zip(ventas, pagos) if set(p[0]) & set(claves or ())), None)
                 agregar(taller, embudo, None, monto, fecha, dueno.nombre_cliente if dueno else None,
                         'Primera cuota', None, dueno=dueno)
+            if metrica == 'cash_total':
+                for c in sorted(cobros, key=lambda c: c.date or datetime.min):
+                    agregar(taller, embudo, c, cash_neto(c), c.date, c.nombre_cliente, 'Cuota o renovación', c.metodo_pago)
     con_cliente = ficha_de_fila.personas_con_cliente(v.person_uuid for v in duenos if v)
     for fila, v in zip(filas, duenos):
         fila['ficha'] = ficha_de_fila.ficha_de(client_id=v.client_id, person_uuid=v.person_uuid,
@@ -140,11 +147,14 @@ def _cobros(talleres, metrica, tz_nombre):
     filas.sort(key=lambda f: f['fecha'], reverse=True)
     senas = round(sum(f['monto'] for f in filas if f['tipo'] == 'Seña'), 2)
     cuotas = round(sum(f['monto'] for f in filas if f['tipo'] == 'Primera cuota'), 2)
+    despues = round(sum(f['monto'] for f in filas if f['tipo'] == 'Cuota o renovación'), 2)
     resumen = f"{len(filas)} cobros · ${suma:,.2f}"
     if senas:
         resumen += f" · ${senas:,.2f} de señas (todavía no son una venta)"
     if cuotas:
         resumen += f" · ${cuotas:,.2f} de primeras cuotas (suman al ticket)"
+    if despues:
+        resumen += f" · ${despues:,.2f} de cuotas y renovaciones posteriores"
     return _COBROS, filas, resumen
 
 

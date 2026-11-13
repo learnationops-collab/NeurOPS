@@ -7330,6 +7330,9 @@
    },
    "solo_conectados": {
     "significado": "Repartir solo entre setters conectados. Guardado pero todavía sin efecto."
+   },
+   "por_defecto": {
+    "significado": "Campaña por defecto: atiende el primer mensaje de un contacto nuevo que no es ninguna palabra clave vigente (ADR-W135). Una sola a la vez; esas entradas no tienen palabra clave."
    }
   },
   "derivados": [

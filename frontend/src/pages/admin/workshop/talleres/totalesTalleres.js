@@ -52,6 +52,7 @@ export const calcularTotales = (fs) => {
         ganancia: t(fs.reduce((s, e) => s + ganancia(e), 0), dinero, 'suma'),
         ticket: t(promedio(fs.filter((e) => e.sales > 0 && e.ticket_promedio > 0).map((e) => e.ticket_promedio)), dinero, 'promedio'),
         cac: t(dividir(inv, ventas), dinero, 'ponderado'),
+        roas_nc: t(dividir(suma(fs, 'cash_ventas'), inv), veces, 'ponderado'),
         roas: t(dividir(cash, inv), veces, 'ponderado'),
     };
 };
@@ -70,7 +71,7 @@ const UMBRAL = 1.2;
 export const tonoDe = (key, v, total, e) => {
     if (v == null || !Number.isFinite(Number(v))) return null;
     if (key === 'ganancia') return v > 0 ? 'success' : 'error';
-    if (key === 'roas') return v >= 1 ? 'success' : 'error';
+    if (key === 'roas' || key === 'roas_nc') return v >= 1 ? 'success' : 'error';
     const dir = DIRECCION[key];
     if (!dir || !total) return null;
     if (key === 'close_rate' && (e.show_up_sales_call || 0) < MUESTRA_MINIMA) return null;

@@ -12,6 +12,7 @@ Reglas que garantiza:
   · Nunca escribe fuera de la ventana de 24 h, salvo la respuesta privada a un comentario.
   · Un flujo solo atrapa mensajes posteriores a su activación.
   · Un `mid` se procesa una sola vez, así reprocesar un evento no duplica nada.
+  · El primer mensaje de alguien nuevo que no es ninguna palabra va a la campaña por defecto (ADR-W135).
 """
 from datetime import timedelta
 
@@ -20,7 +21,7 @@ from app.automatizaciones import acciones, campanas, efectos, etapas, registro, 
 from app.automatizaciones.modelos import AutEjecucion, AutFlujo, AutFlujoVersion, IgContacto, IgMensaje
 from app.automatizaciones.nucleo import eventos as ev
 from app.automatizaciones.nucleo import grafo as g
-from app.automatizaciones.nucleo import mensajes
+from app.automatizaciones.nucleo import mensajes, reglas
 from app.automatizaciones.transporte import ErrorDeEnvio
 
 VENTANA = timedelta(hours=24)
@@ -92,8 +93,24 @@ class Motor:
         abierta = self._abierta(contacto)
         if abierta and abierta.estado == AutEjecucion.ESPERANDO_RESPUESTA:
             return self._respuesta(abierta, evento)
+        defecto = self._campana_por_defecto(contacto, evento)
+        if defecto:
+            self._iniciar(contacto, defecto.flujo.version_publicada, campana=defecto, meta_ad_id=evento.anuncio_id)
+            return 'flujo_por_defecto'
         registro.respuesta_libre(contacto, evento.momento)
         return 'sin_disparador'
+
+    def _campana_por_defecto(self, contacto, evento):
+        """La campaña por defecto si este es el primer mensaje (con texto) de alguien que nunca habló con
+        la cuenta ni pasó por un flujo; si ya hay historia, la conversación es de una persona del equipo."""
+        campana = campanas.por_defecto(evento.momento) if evento.texto else None
+        if campana is None or not campanas.corre(campana.flujo):
+            return None
+        if campana.flujo.activo_desde and evento.momento < campana.flujo.activo_desde:
+            return None
+        if AutEjecucion.query.filter_by(contacto_id=contacto.id).first() is not None:
+            return None
+        return campana if IgMensaje.query.filter_by(contacto_id=contacto.id).count() == 1 else None
 
     def _pausado(self, contacto, evento):
         """Con el bot pausado solo pasa una palabra clave de una campaña vigente: es un pedido explícito
@@ -400,7 +417,7 @@ class Motor:
                 db.session.flush()
                 return
             elif tipo == 'condicion':
-                salida = 'si' if self._cumple(ejecucion.contacto, nodo.get('reglas') or []) else 'no'
+                salida = 'si' if reglas.cumple(ejecucion.contacto, nodo.get('reglas') or []) else 'no'
             else:  # accion
                 self._aplicar(ejecucion, nodo.get('acciones') or [])
                 salida = 'siguiente'
@@ -456,29 +473,6 @@ class Motor:
 
     def _guardar(self, contacto, nuevas):
         contacto.variables = {**(contacto.variables or {}), **nuevas}
-
-    def _valor(self, contacto, campo):
-        if campo == 'usuario':
-            return contacto.username
-        if campo == 'nombre':
-            return contacto.nombre
-        return (contacto.variables or {}).get(campo)
-
-    def _cumple(self, contacto, reglas):
-        for regla in reglas:
-            valor = self._valor(contacto, regla.get('campo'))
-            actual, esperado = g.normalizar_texto(valor), g.normalizar_texto(regla.get('valor'))
-            ok = {
-                'igual': actual == esperado,
-                'distinto': actual != esperado,
-                'contiene': bool(esperado) and esperado in actual,
-                'no_contiene': not esperado or esperado not in actual,
-                'existe': bool(actual),
-                'no_existe': not actual,
-            }[regla['operador']]
-            if not ok:
-                return False
-        return True
 
     def _aplicar(self, ejecucion, acciones):
         contacto = ejecucion.contacto
