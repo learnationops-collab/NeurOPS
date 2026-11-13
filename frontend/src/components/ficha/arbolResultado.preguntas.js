@@ -38,8 +38,12 @@ export const RAICES = [
 ];
 
 // ← los 4 motivos de cierre del paso `seg` (3237).
+// La cadencia de venta: días desde el primer contacto. Igual a `CADENCIA` de `closer_followup_service`.
+export const CADENCIA_DIAS = [0, 3, 7];
+export const MAXIMO_INTENTOS = CADENCIA_DIAS.length;
+
 export const MOTIVOS_CIERRE_SEGUIMIENTO = [
-  'Pidió que no lo contacten', 'Se agotaron los 4 intentos', 'Compró en otro lado', 'Ya no califica',
+  'Pidió que no lo contacten', 'Se agotaron los 3 intentos', 'Compró en otro lado', 'Ya no califica',
 ];
 
 // ← DeclararVentaWizard `PROGRAMS` (49-53), `METHODS` (54), `PAYMENT_TYPES` (57-64).
@@ -55,7 +59,7 @@ export const MEDIOS_PAGO = ['Stripe', 'PayPal', 'Transferencia Bancaria', 'Binan
 export const TIPOS_PAGO = [
   { valor: 'completo', clave: 'completo', label: 'Completo (PIF)', sub: 'Paga todo hoy' },
   { valor: 'parcial', clave: 'parcial', label: 'Parcial (primer pago)', sub: 'Arranca un plan de cuotas' },
-  { valor: 'Seña', clave: 'seña', label: 'Seña', sub: 'Promesa de pago, sin cronograma todavía' },
+  { valor: 'Seña', clave: 'seña', label: 'Seña', sub: 'Reserva: el resto queda con fecha de pago' },
   { valor: 'Cuota', clave: 'cuota', label: 'Cuota', sub: 'Cobra una cuota del plan ya armado' },
   { valor: 'Renovacion', clave: 'renovacion', label: 'Renovación', sub: 'Ya fue alumno, compra de nuevo' },
   { valor: 'Upsell', clave: 'upsell', label: 'Upsell', sub: 'Suma otro programa o una mejora' },
@@ -350,6 +354,12 @@ export const PREGUNTAS = [
       },
       ...camposDelMedio(r, c),
     ],
+    // Seña y parcial dejan saldo: el total es lo que paga en total, no lo de hoy (13/11/2026).
+    validar: (r, c) => (['Seña', 'parcial'].includes(r.tipo_pago_simple)
+      && (parseFloat(r.precio_total) || 0) <= (parseFloat(r.monto) || 0) + 0.009
+      ? ['El precio total tiene que ser mayor a lo cobrado hoy: es lo que paga en total']
+      : (r.tipo_pago_simple === 'Seña' && !quedaSaldo(r, c)
+        ? ['Con lo que ya pagó, la seña no deja saldo: elegí Completo o revisá el total'] : [])),
     cuando: esNueva,
   },
   { // Solo si queda saldo: cuántas cuotas y cuándo, con el cronograma a la vista.
@@ -495,11 +505,14 @@ export const PREGUNTAS = [
     clave: 'sig_action', hito: 'resultado', campo: 'sig_action', tipo: 'opciones',
     enunciado: '¿Y ahora qué hacemos?',
     opciones: (r, c) => {
+      // Tres contactos en una semana (días 0, 3 y 7): después del tercero el lead se pierde (13/11/2026).
       const intento = c.intento || 1;
-      const dias = [0, 3, 7, 14][Math.min(3, intento)];
+      const cerrar = { valor: 'close', label: 'Cerrar como lead perdido', sub: 'Lead frío o agotado', tono: 'error' };
+      if (intento >= MAXIMO_INTENTOS) return [{ ...cerrar, sub: 'Ya tuvo sus 3 contactos' }];
+      const dias = CADENCIA_DIAS[intento] - CADENCIA_DIAS[intento - 1];
       return [
-        { valor: 'next', label: `Programar seguimiento ${Math.min(4, intento + 1)}`, sub: `Sugerido para +${dias} días`, tono: 'success' },
-        { valor: 'close', label: 'Cerrar seguimiento', sub: 'Lead frío o agotado', tono: 'error' },
+        { valor: 'next', label: `Programar contacto ${intento + 1} de ${MAXIMO_INTENTOS}`, sub: `Sugerido para +${dias} días`, tono: 'success' },
+        cerrar,
       ];
     },
     cuando: (r, c) => enSeguimiento(r, c) && !!r.contacto_result

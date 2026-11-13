@@ -145,10 +145,15 @@ function resultadoDeSeguimiento(r, seg) {
 }
 
 // `process` = las acciones que hoy pasan por `POST /closer/appointments/<id>/process`.
-function bloqueProcess(r) {
+function bloqueProcess(r, contexto = {}) {
   const descarte = { perdido: 'Lead Perdido', descartar: 'Lead Perdido', no_lead: 'No Lead' };
   const elegido = [r.nocierre_next, r.nopres_next, r.noshow_next, r.cancel_next]
     .find((v) => v && descarte[v]);
+  // Cerrar la cadencia de venta es perder el lead: no queda en seguimiento sin fin (13/11/2026).
+  if (!elegido && r.sig_action === 'close' && contexto.seguimientoTipo !== 'cerrada') {
+    return { status: 'Lead Perdido', role: 'closer', note: r.cierre_motivo || 'Seguimiento cerrado',
+      with_decision_maker: r.with_decision_maker ?? null, offer_presented: r.offer_presented ?? null };
+  }
   if (!elegido) return null;
   return {
     status: descarte[elegido],
@@ -219,7 +224,7 @@ function bloqueDeck(r, contexto) {
       ...base,
       contact_result: r.contacto_result,
       seguimiento_realizado: false,
-      seguimiento_intento: Math.min(4, (contexto.intento || 1) + 1),
+      seguimiento_intento: Math.min(3, (contexto.intento || 1) + 1),
       fecha_seguimiento: r.fecha_seguimiento || null,
       seguimiento_tipo: contexto.seguimientoTipo || (r.contacto_result === 'contesto' ? 'tomada' : 'no_tomada'),
       followup_reminder_enabled: !!r.followup_reminder_enabled,
@@ -242,7 +247,7 @@ function bloqueDeck(r, contexto) {
     };
   }
   // Descarte: el estado lo pone `process`, el deck solo deja la nota.
-  if (bloqueProcess(r)) return base;
+  if (bloqueProcess(r, contexto)) return base;
   // No asistió / canceló sin siguiente paso elegido: se reporta el resultado crudo.
   if (r.res === 'no_asistio') return { ...base, result: 'No Show' };
   if (r.res === 'cancelo') return { ...base, result: 'Cancelado' };
@@ -388,7 +393,7 @@ export function construirPayload(respuestas = {}, contexto = {}) {
       motivo_no_cierre: motivoNoCierre(r),
       motivo_descarte: r.motivo_descarte || null,
       deck: bloqueDeck(r, contexto),
-      process: bloqueProcess(r),
+      process: bloqueProcess(r, contexto),
       reagenda: bloqueReagenda(r),
       referidos: bloqueReferidos(r),
       momentum: bloqueMomentum(r, contexto),

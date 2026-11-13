@@ -11,7 +11,7 @@ from sqlalchemy import or_, and_, func
 logger = logging.getLogger(__name__)
 
 # Cadencia automática de reintentos (días desde el intento anterior), igual al prototipo v7.
-CADENCIA = [0, 3, 7, 14]
+CADENCIA = [0, 3, 7]  # 3 contactos en una semana; despues del tercero, lead perdido (13/11/2026)
 META_DIARIA = 50
 
 TIPOS_SEGUIMIENTO = {
@@ -84,7 +84,7 @@ class CloserFollowUpService:
     @staticmethod
     def next_cadence_date(intento, base_date=None):
         base = base_date or date.today()
-        idx = min(3, max(0, (intento or 1) - 1))
+        idx = min(len(CADENCIA) - 1, max(0, (intento or 1) - 1))
         return (base + timedelta(days=CADENCIA[idx])).isoformat()
 
     @staticmethod
