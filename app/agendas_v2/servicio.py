@@ -1003,8 +1003,13 @@ def _limpiar_respuestas(preguntas, resp):
     return limpias, errores, False
 
 
-def _contexto(evento, form, resp):
+def _contexto(evento, form, resp, abierto=None):
+    """abierto: el evento que abrió el lead, si la regla le cambió la sesión (sesion_del_lead). Con ese
+    agenda el closer del mínimo diario de la estrategia (con_minimo)."""
+    base = ({'evento_id': abierto['id'], 'dur': abierto['duracion'], 'margen': abierto.get('margen') or 0,
+             'paso': abierto['paso']} if abierto and abierto['id'] != evento['id'] else None)
     return {
+        'base': base,
         'preguntas': preguntas_flujo(form),
         'resp': resp,
         'dur': evento['duracion'],
@@ -1044,7 +1049,7 @@ def horarios(d, evento, form, resp, ahora=None):
     d, elegibles = solo_elegibles(d)
     libres = desplazar.libres(elegibles, ahora) if desplazar.desplaza(segmentar(form, limpias)) else {}
     sesion = sesion_del_lead(d, evento, form, limpias)
-    asig = asignacion(_contexto(sesion, form, limpias), d, {**_ocupacion(ahora, elegibles, libres), 'prueba': False})
+    asig = asignacion(_contexto(sesion, form, limpias, evento), d, {**_ocupacion(ahora, elegibles, libres), 'prueba': False})
     return sorted({s['t'] for s in asig['slots']})
 
 
@@ -1510,10 +1515,13 @@ def reservar(d, evento, form, funnel, cuerpo, ahora=None):
     # Un lead A/B puede tomar el horario de una agenda C/D (desplazar.py).
     libres = desplazar.libres(elegibles, ahora) if desplazar.desplaza(segmentar(form, limpias)) else {}
     sesion = sesion_del_lead(d, evento, form, limpias)
-    asig = asignacion(_contexto(sesion, form, limpias), d, {**_ocupacion(ahora, elegibles, libres), 'prueba': False})
+    asig = asignacion(_contexto(sesion, form, limpias, evento), d, {**_ocupacion(ahora, elegibles, libres), 'prueba': False})
     slot = next((s for s in asig['slots'] if s['t'] == inicio), None)
     if not slot or not slot['p'] or slot['p'] not in elegibles:
         raise ReservaRechazadaError('ocupado')
+    if slot.get('base'):
+        # Horario del closer del mínimo diario: agenda con el evento que abrió el lead, no con el de la regla.
+        sesion = evento
 
     user_id = elegibles[slot['p']]
     # La sesión de ese closer en este evento (lo que ajustó o la propuesta) y su margen: los dos bloquean.

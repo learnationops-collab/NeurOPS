@@ -99,6 +99,25 @@ def _por_estrategia(estrategia, miembros, slots_de, ahora, carga_de, g=None):
     return {'slots': slots, 'regla': regla}
 
 
+def con_minimo(d, g, x, slots_base, en_dia, con_base):
+    """Mínimo diario (Santi, 14/11/2026): `g.minimo` = {p, n}. Los días en que ese closer tiene menos de n
+    agendas, sus horarios se suman a los de la estrategia (a igual hora, gana él) y se agendan con el evento
+    que abrió el lead (`base`), no con la sesión de la regla."""
+    m = g.get('minimo') or {}
+    p, n = buscar(d, 'personas', m.get('p')), m.get('n') or 0
+    if not p or n <= 0 or not es_closer(d, p) or horas_semana(p) <= 0:
+        return x
+    tz = p.get('tz') or TZ_DEF
+    suyos = [t for t in slots_base(p) if en_dia(p['id'], t, tz) < n]
+    if not suyos:
+        return x
+    mapa = {s['t']: s for s in x['slots']}
+    for t in suyos:
+        mapa[t] = {'t': t, 'p': p['id'], **({'base': True} if con_base else {})}
+    regla = (x['regla'] + ' + ' if x['regla'] else '') + p['nombre'] + ' hasta ' + str(n) + ' por día'
+    return {'slots': [mapa[t] for t in sorted(mapa)], 'regla': regla}
+
+
 def dias_con_lugar(slots):
     """Cuántos días (en la zona del equipo) tienen MIN_HORARIOS_DIA horarios o más."""
     por_dia = Counter(clave_dia(s['t'], TZ_DEF) for s in slots)
@@ -146,29 +165,44 @@ def _asignacion(ctx, d, opts=None):
     """ctx: {preguntas, resp, dur, margen, evento_id, ag, reglas, resto, segmento, persona}. dur y margen son la
     propuesta del evento; cada closer usa lo suyo si lo ajustó (sesion_de).
     opts: {ahora, ocupado(persona_id, t, dur), carga_de(persona_id) → agendas futuras,
-           en_semana(persona_id, t, tz) → agendas en la semana de t, prueba, sin_desborde (solo su grupo)}
-    Devuelve {nota, grupo, grupo_regla, regla_idx, desborde, slots: [{t, p}], regla, aviso}."""
+           en_semana(persona_id, t, tz) → agendas en la semana de t, en_dia(persona_id, t, tz) → agendas en el
+           día de t, prueba, sin_desborde (solo su grupo)}
+    ctx.base: {evento_id, dur, margen, paso} del evento que abrió el lead si la regla le cambió la sesión.
+    Devuelve {nota, grupo, grupo_regla, regla_idx, desborde, slots: [{t, p, base?}], regla, aviso}."""
     opts = opts or {}
     ahora = ahora_ms() if opts.get('ahora') is None else opts['ahora']
     ocupado = opts.get('ocupado') or (lambda pid, t, dur: False)
     carga_de = opts.get('carga_de') or (lambda pid: 0)
     en_semana = opts.get('en_semana') or (lambda pid, t, tz: 0)
+    en_dia = opts.get('en_dia') or (lambda pid, t, tz: 0)
     resp = ctx.get('resp') or {}
     nota = calificar(ctx.get('preguntas') or [], resp)
     o = agenda_opt(ctx.get('ag'), ctx['dur'])
     memo = {}
 
-    def slots_de(p):
-        if p['id'] not in memo:
-            dur, margen = sesion_de(p, ctx.get('evento_id'), ctx['dur'], ctx.get('margen'))
-            slots = slots_persona(p, dur, o, ahora=ahora, ocupado=ocupado, margen=margen)
+    def _slots(p, evento_id, dur0, margen0, oo):
+        clave = (p['id'], evento_id)
+        if clave not in memo:
+            dur, margen = sesion_de(p, evento_id, dur0, margen0)
+            slots = slots_persona(p, dur, oo, ahora=ahora, ocupado=ocupado, margen=margen)
             # Con tope de llamadas por semana, una semana llena no ofrece horarios (Jean Carlo, 27/10/2026).
             tope = p.get('llamadas_semana') or 0
             if tope:
                 tz = p.get('tz') or TZ_DEF
                 slots = [t for t in slots if en_semana(p['id'], t, tz) < tope]
-            memo[p['id']] = slots
-        return memo[p['id']]
+            memo[clave] = slots
+        return memo[clave]
+
+    def slots_de(p):
+        return _slots(p, ctx.get('evento_id'), ctx['dur'], ctx.get('margen'), o)
+
+    # El evento que abrió el lead, cuando la regla le cambió la sesión (C/D → diagnóstica): con ese evento
+    # agenda el closer del mínimo diario.
+    eb = ctx.get('base')
+    o_base = agenda_opt({**ctx['ag'], 'paso': eb['paso']}, eb['dur']) if eb and ctx.get('ag') else o
+
+    def slots_base(p):
+        return _slots(p, eb['evento_id'], eb['dur'], eb.get('margen'), o_base) if eb else slots_de(p)
 
     base = {'nota': nota, 'grupo': None, 'grupo_regla': '', 'regla_idx': None, 'desborde': False, 'aviso': ''}
 
@@ -197,9 +231,8 @@ def _asignacion(ctx, d, opts=None):
         desde = next(i for i, g in enumerate(grupos) if g['id'] == g0['id'])
         for g in grupos[desde : desde + 1] if opts.get('sin_desborde') else grupos[desde:]:
             miembros = miembros_validos(d, g)
-            if not miembros:
-                continue
-            x = _por_estrategia(g['estrategia'], miembros, slots_de, ahora, carga_de, g)
+            x = _por_estrategia(g['estrategia'], miembros, slots_de, ahora, carga_de, g) if miembros else {'slots': [], 'regla': ''}
+            x = con_minimo(d, g, x, slots_base, en_dia, bool(eb))
             if x['slots']:
                 otro = g['id'] != g0['id']
                 return {

@@ -198,8 +198,15 @@ export function normalGrupo(id, d) {
     d = d || {};
     return {
         id, nombre: String(d.nombre || 'Sin nombre').slice(0, 60), estrategia: ESTRATEGIAS[d.estrategia] ? d.estrategia : 'llenar',
-        miembros: (Array.isArray(d.miembros) ? d.miembros : []).map(String).slice(0, 30), pesos: normalPesos(d.pesos), orden: Number(d.orden) || 0,
+        miembros: (Array.isArray(d.miembros) ? d.miembros : []).map(String).slice(0, 30), pesos: normalPesos(d.pesos), minimo: normalMinimo(d.minimo), orden: Number(d.orden) || 0,
     };
+}
+
+// Mínimo diario: {p: personaId, n: agendas por día}. Sin closer o con 0, no hay mínimo ({}).
+export function normalMinimo(v) {
+    v = v && typeof v === 'object' ? v : {};
+    const p = String(v.p || ''), n = entero(v.n, 0, 50, 0);
+    return p && n ? { p, n } : {};
 }
 
 // Distribuida: el porcentaje de cada closer {personaId: 0..100}. Sin dato, todos parejo.

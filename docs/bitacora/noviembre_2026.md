@@ -506,3 +506,7 @@
 - La seña de un cliente que completa la venta en el mismo mes (o a ≤ 7 días) se suma a esa venta en el ticket promedio; una seña sola sigue sin contar. Producción: sep $745,65 → $757,08; oct $616,18 → $619,12; nov $693,70 → $750,00. ADR-W139 ([ticket_service.py](../../app/services/ticket_service.py)).
 - Comercial › Analizar muestra el ticket en bruto, con el neto de la pasarela debajo, igual que el tablero del closer ([Analizar.jsx](../../frontend/src/pages/comercial/components/Analizar.jsx)).
 - Correcciones a mano en producción (reunión con Jean Carlo): la renovación de Yancarlos quedó enlazada a su agenda del 07/11 (Show up) y tres agendas del 11/11 pasaron a Cancelado.
+
+### 14/11/2026 · Triage solo con Dari y mínimo diario de 5 agendas para Jean Carlo con leads C
+- Thalamus › Team › Estrategias: «Segmento C» y «Segmento D» quedan solo con Dari; Juliana deja de recibir leads.
+- Las estrategias pueden tener un «Mínimo diario» de un closer ([Grupos.jsx](../../frontend/src/pages/agendas_v2/secciones/team/Grupos.jsx), [asignacion.py](../../app/agendas_v2/nucleo/asignacion.py), [ADR-W140](../DECISIONS.md)). «Segmento C» queda con Jean Carlo y 5 agendas por día: los días en que tiene menos, el lead C ve sus horarios mezclados con los de Dari y, si elige uno de Jean, se le agenda una Sesión de Aceleración. Los D siguen yendo solo al triage.
