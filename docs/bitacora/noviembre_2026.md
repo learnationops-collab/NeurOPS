@@ -521,3 +521,6 @@
 
 ### 16/11/2026 · Los links de agenda del setter, a mano en la bandeja de entrada
 - En la conversación, el menú del rayito (o «/» en la caja) trae «Links de agenda»: los links del setter (uno por evento de setting, con su nombre como fuente). Tocar uno lo pega en el mensaje. El formulario de la reserva decide si el lead va a closing o a triage, así que no hay un link aparte para cada uno ([MenuRayo.jsx](../../frontend/src/pages/inbox/conversaciones/MenuRayo.jsx); pedido de Sales Team 07/11).
+
+### 16/11/2026 · El botón «OBTENER ACCESO» de ManyChat ya no arranca el Lead Magnet
+- Los seguidores nuevos que tocaban «OBTENER ACCESO» en la bienvenida de ManyChat recibían el recurso de ManyChat y, además, nuestro flujo «Lead Magnet» (desde el 13/11, 24 personas; 7 con error de Meta). El texto del botón coincidía con la palabra clave cargada el 12/11. Ahora un botón de otra app no dispara nada del motor ([motor.py](../../app/automatizaciones/motor.py), [ADR-W141](../DECISIONS.md); aviso de Elías 13/11).

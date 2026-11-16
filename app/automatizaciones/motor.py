@@ -13,6 +13,7 @@ Reglas que garantiza:
   · Un flujo solo atrapa mensajes posteriores a su activación.
   · Un `mid` se procesa una sola vez, así reprocesar un evento no duplica nada.
   · El primer mensaje de alguien nuevo que no es ninguna palabra va a la campaña por defecto (ADR-W135).
+  · El botón de otra app (ManyChat) no dispara nada, aunque su texto sea una palabra clave (ADR-W141).
 """
 from datetime import timedelta
 
@@ -52,13 +53,16 @@ class Motor:
             return self._eco(contacto, evento)
         if not self._registrar_entrante(contacto, evento):
             return 'repetido'
+        if evento.payload:
+            datos = mensajes.leer_payload(evento.payload)
+            if datos is None:
+                # Botón de otra app (ManyChat): lo responde ella; su texto no es una palabra clave (ADR-W141).
+                return 'boton_ajeno'
         if contacto.bot_pausado_hasta and contacto.bot_pausado_hasta > self.ahora:
             return self._pausado(contacto, evento)
 
         if evento.payload:
-            datos = mensajes.leer_payload(evento.payload)
-            if datos:
-                return self._boton(contacto, *datos)
+            return self._boton(contacto, *datos)
 
         canal = 'comentario' if evento.tipo == ev.COMENTARIO else 'dm'
         if canal == 'dm' and acciones.retomar_pendiente(self, contacto, evento):
