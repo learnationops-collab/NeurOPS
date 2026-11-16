@@ -191,10 +191,24 @@ function useProbarDeLaUrl() {
     }, []);
 }
 
+// ?ver=available abre Team › Available: los turnos libres del equipo. Es a donde entra el setter desde su
+// espacio, para ver cuándo hay lugar y cuándo hay que abrir días (Resultad-OS, 14/11/2026).
+function useVistaDeLaUrl() {
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('ver') !== 'available') return;
+        params.delete('ver');
+        const resto = params.toString();
+        window.history.replaceState({}, document.title, window.location.pathname + (resto ? '?' + resto : ''));
+        ui.set(e => ({ seccion: 'team', team: { ...e.team, tab: 'available' } }));
+    }, []);
+}
+
 export default function ThalamusApp() {
     useIniciarAlmacen();
     useConfigDeLaUrl();
     useProbarDeLaUrl();
+    useVistaDeLaUrl();
     usePerfilDeLaSesion();
     useAtajos();
     const estado = useUi();

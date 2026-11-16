@@ -514,3 +514,7 @@
 ### 16/11/2026 · «Pasar a triage» ya no elige a quien salió del triage
 - La agenda que un closer pasa al triage (o la C/D que desplaza un A/B) va solo a una persona del triage que esté en algún grupo de reparto y con su cuenta activa. Juliana, que salió de los grupos el 14/11, seguía siendo candidata y, por no tener agendas por delante, era la primera ([a_triage.py](../../app/agendas_v2/a_triage.py)).
 - Correcciones en producción de la Academia: las dos Momentum quedaron con Giancarlos como responsable (sin responsable, 19 alumnos veían el link de la Momentum sin horarios) y los 14 alumnos de Facundo pasaron a Giancarlos.
+
+### 16/11/2026 · El setter llega a los turnos libres del equipo desde su espacio
+- Botón «Tálamus» en el encabezado del espacio del setter, junto a sus links (antes estaba en el menú del avatar; pedido de Sales Team 07/11). Abre directo Team › Available, con los turnos libres del equipo, para ver cuándo hay lugar y cuándo abrir días (Resultad-OS 14/11) ([SetterEspacioPage.jsx](../../frontend/src/pages/setter/SetterEspacioPage.jsx), [MisLinks.jsx](../../frontend/src/pages/setter/MisLinks.jsx)).
+- Thalamus acepta `?ver=available` para abrir esa vista ([ThalamusApp.jsx](../../frontend/src/pages/agendas_v2/ThalamusApp.jsx)). Lo de setters salió de la rama `wip/pendientes-2026-11`; el resto de esa rama sigue sin subir.
