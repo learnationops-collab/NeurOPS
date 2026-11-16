@@ -510,3 +510,7 @@
 ### 14/11/2026 · Triage solo con Dari y mínimo diario de 5 agendas para Jean Carlo con leads C
 - Thalamus › Team › Estrategias: «Segmento C» y «Segmento D» quedan solo con Dari; Juliana deja de recibir leads.
 - Las estrategias pueden tener un «Mínimo diario» de un closer ([Grupos.jsx](../../frontend/src/pages/agendas_v2/secciones/team/Grupos.jsx), [asignacion.py](../../app/agendas_v2/nucleo/asignacion.py), [ADR-W140](../DECISIONS.md)). «Segmento C» queda con Jean Carlo y 5 agendas por día: los días en que tiene menos, el lead C ve sus horarios mezclados con los de Dari y, si elige uno de Jean, se le agenda una Sesión de Aceleración. Los D siguen yendo solo al triage.
+
+### 16/11/2026 · «Pasar a triage» ya no elige a quien salió del triage
+- La agenda que un closer pasa al triage (o la C/D que desplaza un A/B) va solo a una persona del triage que esté en algún grupo de reparto y con su cuenta activa. Juliana, que salió de los grupos el 14/11, seguía siendo candidata y, por no tener agendas por delante, era la primera ([a_triage.py](../../app/agendas_v2/a_triage.py)).
+- Correcciones en producción de la Academia: las dos Momentum quedaron con Giancarlos como responsable (sin responsable, 19 alumnos veían el link de la Momentum sin horarios) y los 14 alumnos de Facundo pasaron a Giancarlos.
