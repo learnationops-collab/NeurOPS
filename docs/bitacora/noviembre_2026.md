@@ -524,3 +524,4 @@
 
 ### 16/11/2026 · El botón «OBTENER ACCESO» de ManyChat ya no arranca el Lead Magnet
 - Los seguidores nuevos que tocaban «OBTENER ACCESO» en la bienvenida de ManyChat recibían el recurso de ManyChat y, además, nuestro flujo «Lead Magnet» (desde el 13/11, 24 personas; 7 con error de Meta). El texto del botón coincidía con la palabra clave cargada el 12/11. Ahora un botón de otra app no dispara nada del motor ([motor.py](../../app/automatizaciones/motor.py), [ADR-W141](../DECISIONS.md); aviso de Elías 13/11).
+- Producción no desplegaba desde las 14:02: el menú del rayito importaba `rotuloDeLink` de [MisLinks.jsx](../../frontend/src/pages/setter/MisLinks.jsx), que quedó en la rama `wip` al pasar lo de setters. Se agregó el export.

@@ -8,6 +8,9 @@ export const copiar = async (url) => {
     try { await navigator.clipboard.writeText(url); toast.success('Link copiado'); } catch { window.prompt('Copiá tu link:', url); }
 };
 
+// Nombre de un link en la bandeja de entrada (menú del rayito).
+export const rotuloDeLink = (l) => `${l.setter || l.funnel} · ${l.evento}`;
+
 /**
  * Los links de agendamiento del setter (Agendas 2.0, uno por evento de cada funnel de setting) a la vista
  * en el encabezado de su espacio, en cualquier sección: antes vivían solo en el menú del avatar y no los
