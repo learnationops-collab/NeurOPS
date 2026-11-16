@@ -518,3 +518,6 @@
 ### 16/11/2026 · El setter llega a los turnos libres del equipo desde su espacio
 - Botón «Tálamus» en el encabezado del espacio del setter, junto a sus links (antes estaba en el menú del avatar; pedido de Sales Team 07/11). Abre directo Team › Available, con los turnos libres del equipo, para ver cuándo hay lugar y cuándo abrir días (Resultad-OS 14/11) ([SetterEspacioPage.jsx](../../frontend/src/pages/setter/SetterEspacioPage.jsx), [MisLinks.jsx](../../frontend/src/pages/setter/MisLinks.jsx)).
 - Thalamus acepta `?ver=available` para abrir esa vista ([ThalamusApp.jsx](../../frontend/src/pages/agendas_v2/ThalamusApp.jsx)). Lo de setters salió de la rama `wip/pendientes-2026-11`; el resto de esa rama sigue sin subir.
+
+### 16/11/2026 · Los links de agenda del setter, a mano en la bandeja de entrada
+- En la conversación, el menú del rayito (o «/» en la caja) trae «Links de agenda»: los links del setter (uno por evento de setting, con su nombre como fuente). Tocar uno lo pega en el mensaje. El formulario de la reserva decide si el lead va a closing o a triage, así que no hay un link aparte para cada uno ([MenuRayo.jsx](../../frontend/src/pages/inbox/conversaciones/MenuRayo.jsx); pedido de Sales Team 07/11).
