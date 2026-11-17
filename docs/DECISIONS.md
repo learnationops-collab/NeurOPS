@@ -1317,3 +1317,11 @@
   3. La Momentum, al reservar, cuenta lo ocupado en Google leído en el momento, sin las C/D que puede tomar. Antes de moverla, la Academia le pregunta a Work (`POST /agenda/libre`) si el closer tiene libre ese horario, sin contar la propia Momentum. Si Work no responde, no frena.
 - **Qué se pierde:** un reagendado sobre algo ocupado ya no se puede forzar: hay que liberar el horario primero. Quedan sin cubrir el editor de base de datos del admin, las agendas movidas a mano en Google (Work acepta lo que pasó) y el link viejo `/public/book`. Dari revisa solo el calendario del triage: su cuenta es la compartida de fulfillment y el principal la bloquearía con lo de todo el equipo.
 - **Consecuencias:** sin migración. `app/api/external/agenda.py` sigue pasando las 500 líneas (ya estaba en 908).
+
+## ADR-W158: los turnos que quedan de triage y de closers, arriba de Team › Available
+
+- **Fecha:** 2026-11-17 · **Subsistema:** Tálamus › Team › Available (`secciones/team/TurnosEquipo.jsx`) · **Estado:** implementado.
+- **Contexto:** Estrategia 16/11 y Resultad-OS 14/11: Mario quiere que los setters vean claro y en tiempo real los espacios de Triage y de Closers (Leadership 1397). El botón Tálamus del setter ya abría Team › Available, pero ahí había que leer el calendario de cada uno.
+- **Decisión:** arriba de Available (vista del equipo), una tabla de dos filas, Triage y Closers, con los turnos libres de cada día de la semana sumados entre las personas del grupo. Se cuentan como `TablaTurnos`: sesiones encadenadas con su margen, desde ahora, sin las agendas ni lo ocupado en Google. El triage usa la Sesión diagnóstica y los closers la Sesión de Aceleración, con la duración de cada persona. Un día en cero va en rojo; al pasar el mouse, cuántos tiene cada uno; «Por persona» abre la tabla de cada grupo.
+- **Qué se pierde:** los bloqueos de Leadership que todavía no llegaron a Google no se descuentan. Los turnos son por el horario de Team de cada uno, no por el ruteo por segmento: un día con turnos de closers puede no tener lugar para un C/D.
+- **Consecuencias:** sin migración ni pedidos nuevos (usa lo que ya leyó Available). No cambia ningún componente estándar.

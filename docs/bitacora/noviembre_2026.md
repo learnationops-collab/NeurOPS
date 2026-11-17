@@ -622,3 +622,6 @@
 
 ### 17/11/2026 · Inbox: los leads ya no aparecen «Sin usuario»
 - El usuario y el nombre de Instagram se pedían solo cuando el lead arrancaba un flujo: los que escribían sin palabra clave (1172 de 3104) quedaban «Sin usuario». Ahora se piden con su primer mensaje y, si Instagram no los da, se reintenta a las 24 h ([perfil.py](../../app/automatizaciones/perfil.py), [motor.py](../../app/automatizaciones/motor.py)). Los que faltaban se completaron con un script en el servidor.
+
+### 17/11/2026 · Turnos que quedan, para los setters
+- Arriba de Tálamus › Team › Available (lo que abre el botón Tálamus del setter): cuántas llamadas quedan libres cada día de la semana para Triage y para Closers, con el detalle por persona al pasar el mouse y un «Por persona» que abre la tabla de cada grupo ([TurnosEquipo.jsx](../../frontend/src/pages/agendas_v2/secciones/team/TurnosEquipo.jsx), [ADR-W158](../DECISIONS.md)).
