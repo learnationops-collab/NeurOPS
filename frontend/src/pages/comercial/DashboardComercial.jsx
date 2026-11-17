@@ -840,7 +840,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                     {!esperaFechas && !vistaTriage && seccion === 'analizar' && tab === 'dashboard' && (
                         <Analizar datos={resumen} rol={rol} irA={irADetalle}
                             fallo={fallas.resumen} onReintentar={cargarAnalizar}
-                            cargarNoCerradas={cargarNoCerradas} onAbrirFila={abrirFila}
+                            cargarNoCerradas={cargarNoCerradas} onAbrirFila={abrirFila} filtros={filtros}
                             canal={canal} onCanal={(c) => set({ canal: c })}
                             vsLabel={rangoVs ? textoRango(rangoVs) : contexto?.comparaciones?.find(c => c.key === compare)?.label} />
                     )}

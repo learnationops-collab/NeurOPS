@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { ChevronDown, CreditCard, PieChart, Rows } from 'lucide-react';
 import Embudo from './Embudo';
-import CierreComercial from './CierreComercial';
+// «Destino de las agendas» y «Cierre»: los paneles que miran las llamadas (ADR-W144).
+import { PanelCierre, PanelEstados } from './PanelesLlamadas';
 import PanelCash from './PanelCash';
 import PanelPorCobrar from './PanelPorCobrar';
 import { canalesDe, partesDe } from './embudoCanales';
@@ -12,13 +13,8 @@ import EsqueletoAnalizar from './EsqueletoAnalizar';
 // La cifra que sube hasta su valor: vive aparte porque la usa también la tira de Revisar.
 import Cifra from './Cifra';
 import MetricaClicable, { abrir } from '../../../components/dashboard/MetricaClicable';
-import RepartoEstados from './RepartoEstados';
-import TiraDescalificadas from './TiraDescalificadas';
-import ModalNoCerradas from './ModalNoCerradas';
 import { AYUDA_PROCEDENCIA } from './procedencias';
-import {
-    DESTINOS_CIERRES, DESTINOS_CLOSER as D, DESTINO_PROCEDENCIAS_TOTAL, PASOS_CLOSER, destinoProcedencia,
-} from './destinos';
+import { DESTINOS_CLOSER as D, DESTINO_PROCEDENCIAS_TOTAL, PASOS_CLOSER, destinoProcedencia } from './destinos';
 // El tile, la barra gruesa y el panel los comparte el tablero de setters (10/10/2026).
 import { Panel, PanelCab, Riel, Tabs, Tile, Vacio, tasa, v } from './PiezasAnalizar';
 import DashboardSetters, { VISTAS_CANAL } from './DashboardSetters';
@@ -125,100 +121,6 @@ const marcaPrograma = (programa) => {
 /* ============================================================
    PANELES · CLOSERS
    ============================================================ */
-
-const TABS_ESTADOS = [['grafico', 'Gráfico', PieChart], ['tabla', 'Tabla', Rows]];
-
-/**
- * Qué pasó con cada cita del período: la dona con los tres grupos (la vista de entrada) o la tabla
- * de estados. El total va una sola vez, en la cabecera. Lo de "Sin reporte" —que mientras no se
- * carguen el show up y el close rate quedan medidos de menos— vive en el tooltip y no en una nota
- * debajo: el diseño no lleva texto en el panel.
- */
-// Los estados de las primeras llamadas y los de las segundas, por separado (26/10/2026): el show up
-// de las 1ª no es el de las 2ª. «Todas» es el panel de siempre.
-const TABS_LLAMADA = [['primera', '1ª llamada'], ['segunda', '2ª llamada'], ['todas', 'Todas']];
-
-const PanelEstados = ({ bloque, irA }) => {
-    const [vista, setVista] = useState('grafico');
-    const porLlamada = bloque.estados_por_llamada;
-    const [llamada, setLlamada] = useState(porLlamada ? 'primera' : 'todas');
-    const elegida = llamada !== 'todas' && porLlamada?.[llamada];
-    const total = elegida ? elegida.agendas : bloque.agendas;
-    const estados = elegida ? elegida.estados : bloque.estados;
-    const sinReporte = estados.find(e => e.key === 'sin_reporte');
-    return (
-        <Panel id="p-estados" cab={
-            <PanelCab titulo="Estados"
-                ayuda={`Qué pasó con cada una de las ${total} citas agendadas del período.${sinReporte
-                    ? ` ${fmt.plural(sinReporte.n, 'llamada', 'llamadas')} ya `
-                        + `${sinReporte.n === 1 ? 'pasó' : 'pasaron'} sin reporte: hasta que se carguen, `
-                        + 'el show up y el close rate quedan medidos de menos.'
-                    : ''}`}>
-                {porLlamada && <Tabs valor={llamada} onChange={setLlamada} ops={TABS_LLAMADA} aria="Tipo de llamada" />}
-                <Tabs valor={vista} onChange={setVista} ops={TABS_ESTADOS} aria="Vista de estados" />
-                <small className="est-total num">
-                    <b>{fmt.num(total)}</b> {total === 1 ? 'agenda' : 'agendas'}
-                </small>
-            </PanelCab>
-        }>
-            {total === 0
-                ? <Vacio texto={llamada === 'segunda' ? 'Sin segundas llamadas en el período.' : 'Sin agendas en el período.'} />
-                : <RepartoEstados key={llamada} estados={estados} vista={vista} irA={irA} />}
-            {/* Los que el formulario corta no son agendas: pueden ser lo único del período. */}
-            {(total > 0 || bloque.descalificadas?.formulario > 0)
-                && <TiraDescalificadas datos={bloque.descalificadas} irA={irA} />}
-        </Panel>
-    );
-};
-
-/**
- * El cierre en sus cuatro lecturas: ventas (pago completo + split pay, el close rate de verdad) y
- * señas, cada una por llamada y por presentación. La matriz es la misma pieza que usa el
- * dashboard del closer (`MatrizCierres`) sobre el mismo bloque `cierres` del backend, y trae
- * arriba la tira de presentación (que lleva a la lista de las que presentaron, como antes).
- *
- * La cabecera lleva la leyenda de los dos colores con los conteos detrás de las tasas —cuántas
- * ventas, partidas en pago completo y split pay, y cuántas señas sin completar—, que es lo que
- * antes era "N de M llamadas".
- *
- * «No cerradas» abre un modal con cada lead y su objeción (`ModalNoCerradas`), que pide su lista
- * con `cargarNoCerradas` y desde el que se va a Revisar. Tocar un lead cierra el modal y abre su
- * ficha (`onAbrirFila`, la misma de Revisar); al cerrar la ficha se vuelve a la lista, que se pide
- * de nuevo por si en la ficha se cargó una objeción. Sin `cargarNoCerradas` el número va directo a
- * Revisar, como el resto de la tarjeta.
- */
-const PanelCierre = ({ bloque, previo, vsLabel, irA, cargarNoCerradas, onAbrirFila }) => {
-    const [verNoCerradas, setVerNoCerradas] = useState(false);
-    const c = bloque.cierres;
-    // Sin llamadas de este período pero con cierres de llamadas anteriores, el panel se muestra igual.
-    const vacio = !c || (bloque.asistieron === 0 && !c.reales?.base);
-    const abrirLead = onAbrirFila ? (fila) => {
-        setVerNoCerradas(false);
-        onAbrirFila(fila, { alCerrar: () => setVerNoCerradas(true) });
-    } : null;
-    return (
-        <Panel id="p-cierre" cab={
-            <PanelCab titulo="Cierre"
-                ayuda={'El close rate cuenta solo pagos completos y split pay, una venta por lead. El '
-                    + 'anillo azul son las ventas y el rosa las señas, sobre las llamadas con show up y '
-                    + 'sobre las presentaciones. Abajo, el mismo close rate de las agendas directas y de '
-                    + 'las que vienen del triage. Debajo de cada cifra, la del período comparado y cuánto cambió.'}>
-                {previo && <span className="cc-vs-cab"><small>vs</small>{vsLabel || 'Período comparado'}</span>}
-            </PanelCab>
-        }>
-            {vacio
-                ? <Vacio texto="Ninguna llamada del período tiene todavía un show up cargado." />
-                : <CierreComercial cierres={c} previo={previo?.cierres} previoCanal={previo?.cierres_canal} vsLabel={vsLabel}
-                    porCanal={bloque.cierres_canal} irA={irA} destinos={DESTINOS_CIERRES}
-                    onVerNoCerradas={cargarNoCerradas ? () => setVerNoCerradas(true) : undefined} />}
-            {verNoCerradas && cargarNoCerradas && (
-                <ModalNoCerradas cargar={cargarNoCerradas} total={c?.no_cerradas?.num ?? null}
-                    irA={irA} destino={DESTINOS_CIERRES.no_cerradas} onAbrir={abrirLead}
-                    onCerrar={() => setVerNoCerradas(false)} />
-            )}
-        </Panel>
-    );
-};
 
 /** Payment types: la barra apilada arriba y una tarjeta por forma de pago. */
 const PanelPagos = ({ bloque, irA }) => {
@@ -662,7 +564,7 @@ const pasosDe = (funnel, vocabulario, irA) => funnel.map(p => {
     };
 });
 
-const DashboardClosers = ({ bloque, previo, deltas, porCobrar, adquisicion, vsLabel, fuentes, irA, cargarNoCerradas, onAbrirFila }) => (
+const DashboardClosers = ({ bloque, previo, deltas, porCobrar, adquisicion, vsLabel, fuentes, irA, cargarNoCerradas, onAbrirFila, filtros }) => (
     <>
         <div className="grid grid--4">
             <Tile label="Show up" valor={fmt.pct(bloque.show_up)} color={v('success')}
@@ -710,14 +612,14 @@ const DashboardClosers = ({ bloque, previo, deltas, porCobrar, adquisicion, vsLa
         </div>
 
         <div className="grid-2">
-            <PanelEstados bloque={bloque} irA={irA} />
+            <PanelEstados bloque={bloque} irA={irA} filtros={filtros} />
             <Embudo pasos={pasosDe(bloque.funnel, PASOS_CLOSER, irA)} sinFinal
                 canales={canalesDe(bloque.funnel, PASOS_CLOSER.Agendas.destino, irA)} />
         </div>
 
         <div className="grid-2">
             <PanelCierre bloque={bloque} previo={previo} vsLabel={vsLabel} irA={irA} cargarNoCerradas={cargarNoCerradas}
-                onAbrirFila={onAbrirFila} />
+                onAbrirFila={onAbrirFila} filtros={filtros} />
             <PanelCash bloque={bloque} previo={previo} adquisicion={adquisicion} vsLabel={vsLabel} irA={irA} />
         </div>
 
@@ -749,7 +651,7 @@ const DashboardClosers = ({ bloque, previo, deltas, porCobrar, adquisicion, vsLa
  * URL como el resto de los filtros (ver `DashboardComercial`). El de closers no la usa.
  */
 const Analizar = ({ datos, rol, irA, cargarNoCerradas = null, onAbrirFila = null, canal = null, onCanal = null, vsLabel = null,
-    fallo = false, onReintentar = null }) => {
+    fallo = false, onReintentar = null, filtros = null }) => {
     // El resumen que hay en mano puede ser todavía el del rol anterior: el `rol` de arriba cambia
     // en el momento y el fetch llega después. Dibujar el dashboard de closers con un payload de
     // setters no muestra números raros — revienta el árbol entero y deja la pantalla en blanco,
@@ -773,7 +675,7 @@ const Analizar = ({ datos, rol, irA, cargarNoCerradas = null, onAbrirFila = null
         : <DashboardClosers bloque={actual} previo={datos.previo} deltas={deltas} porCobrar={datos.por_cobrar}
             adquisicion={datos.adquisicion} vsLabel={vsLabel}
             fuentes={datos.fuentes} irA={irA} cargarNoCerradas={cargarNoCerradas}
-            onAbrirFila={onAbrirFila} />;
+            onAbrirFila={onAbrirFila} filtros={filtros} />;
 };
 
 export default Analizar;
