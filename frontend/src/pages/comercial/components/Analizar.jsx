@@ -689,22 +689,23 @@ const DashboardClosers = ({ bloque, previo, deltas, porCobrar, adquisicion, vsLa
                 cuenta={bloque.cierres?.reales ? { a: String(bloque.cierres.reales.cierres), b: `${bloque.cierres.reales.base} oportunidades` } : null}
                 sub={bloque.cierres?.reales?.anteriores ? `${fmt.plural(bloque.cierres.reales.anteriores, 'de llamada anterior', 'de llamadas anteriores')}` : undefined}
                 ver={abrir(irA, D.close_rate_real)} baja="p-cierre" />
-            {/* Debajo va el monto del período comparado, el que explica el delta (pedido de Mario,
-                09/11/2026). El bruto y la comisión de la pasarela quedan en el panel Cash. */}
+            {/* Cash y ticket van en neto, con el bruto debajo (14/11/2026, ADR-W142): lo mismo que ve el
+                closer en su tablero. El monto del período comparado va al pie (pedido de Mario, 09/11/2026). */}
             <Tile label="Cash collected" valor={fmt.money(bloque.cash_neto)}
                 help={'Dinero que entró en el período, descontadas las fees de la pasarela: pagos '
-                    + 'completos, primeras cuotas, cuotas de ventas anteriores y señas. Debajo, lo '
-                    + 'que entró en el período comparado.'}
+                    + 'completos, primeras cuotas, cuotas de ventas anteriores y señas. Debajo, el '
+                    + 'bruto: lo cobrado antes de las fees.'}
+                sub={`Bruto ${fmt.money(bloque.cash)}`}
                 humo={[v('brand-secondary'), v('brand-primary'), v('brand-secondary-light'), v('brand-navy')]}
                 antes={previo ? { actual: bloque.cash_neto, previo: previo.cash_neto, texto: fmt.money(previo.cash_neto), vs: vsLabel } : null}
                 ver={abrir(irA, D.cash)} baja="p-cash" />
-            <Tile label="Ticket promedio" valor={fmt.money(bloque.ticket)} color={v('info')}
-                help={`Lo cobrado en las ${bloque.ventas} ventas nuevas, en bruto, dividido por cuántas fueron. `
-                    + 'Cada venta suma su seña y su primera cuota. Debajo, el neto de la pasarela.'}
-                antes={previo ? { actual: bloque.ticket, previo: previo.ticket,
-                    texto: fmt.money(previo.ticket), vs: vsLabel } : null}
+            <Tile label="Ticket promedio" valor={fmt.money(bloque.ticket_neto ?? bloque.ticket)} color={v('info')}
+                help={`Lo cobrado en las ${bloque.ventas} ventas nuevas, neto de la pasarela, dividido por cuántas fueron. `
+                    + 'Cada venta suma su seña y su primera cuota. Debajo, el bruto.'}
+                antes={previo ? { actual: bloque.ticket_neto ?? bloque.ticket, previo: previo.ticket_neto ?? previo.ticket,
+                    texto: fmt.money(previo.ticket_neto ?? previo.ticket), vs: vsLabel } : null}
                 humo={[v('info'), v('brand-primary'), v('info'), v('brand-navy')]}
-                sub={`Neto ${fmt.money(bloque.ticket_neto ?? bloque.ticket)} · ${fmt.plural(bloque.ventas, 'venta nueva', 'ventas nuevas')}`}
+                sub={`Bruto ${fmt.money(bloque.ticket)} · ${fmt.plural(bloque.ventas, 'venta nueva', 'ventas nuevas')}`}
                 ver={abrir(irA, D.ticket)} baja="p-cash" />
         </div>
 

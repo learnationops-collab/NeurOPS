@@ -52,7 +52,10 @@ const PerformanceKpis = ({ current, previous, deuda, irA }) => {
                 bruto={`bruto ${money(k.cash_collected)}`}
                 current={k.cash_neto ?? k.cash_collected} previous={pk ? (pk.cash_neto ?? pk.cash_collected) : undefined} irA={irA} />
             <KpiCard metric="ventas" label="Ventas cerradas" value={k.ventas} current={k.ventas} previous={pk?.ventas} irA={irA} />
-            <KpiCard metric="ticket_promedio" label="Ticket promedio" value={money(k.ticket_promedio)} current={k.ticket_promedio} previous={pk?.ticket_promedio} irA={irA} />
+            <KpiCard metric="ticket_promedio" label="Ticket promedio · neto" value={money(k.ticket_promedio_neto ?? k.ticket_promedio)}
+                bruto={`bruto ${money(k.ticket_promedio)}`}
+                current={k.ticket_promedio_neto ?? k.ticket_promedio}
+                previous={pk ? (pk.ticket_promedio_neto ?? pk.ticket_promedio) : undefined} irA={irA} />
             <KpiCard metric="deuda_total_pendiente" label="Deuda total pendiente" value={money(k.deuda_total_pendiente ?? deuda)}
                 note={k.deuda_vencida > 0 ? `${money(k.deuda_vencida)} vencidos` : null}
                 warning={k.deuda_vencida > 0} irA={irA}

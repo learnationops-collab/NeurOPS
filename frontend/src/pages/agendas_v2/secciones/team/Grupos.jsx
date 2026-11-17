@@ -4,7 +4,7 @@
 import { useCallback } from 'react';
 import { pesoDe } from '../../core/asignacion';
 import { COLOR_EST, ESTRATEGIAS, ICO_EST } from '../../core/catalogos';
-import { closers, colorVar, esCloser, horasSemana, maxOrden, ord } from '../../core/datos';
+import { closers, colorVar, esCloser, esTriage, horasSemana, maxOrden, ord } from '../../core/datos';
 import { almacen, useDatos, usePermisos } from '../../data/hooks';
 import { HUMO_MARCA, Avatar, Icono } from '../../ui/base';
 import { toast } from '../../ui/toast';
@@ -12,7 +12,7 @@ import { useOrdenable } from '../../ui/useOrdenable';
 import { avisoPrioridad, textoEstrategia } from './cobertura';
 import { CampoNombre, Compo, Nivel, colorNivel } from './comun';
 import ElegirCloser, { useUsuariosReales } from './ElegirCloser';
-import { Card, EmptyState, Grid, IconButton, Input, Segmented } from '../../../../components/standard';
+import { Card, EmptyState, Grid, IconButton, Input, Segmented, Select, Stepper } from '../../../../components/standard';
 
 const SUGERIDAS = ['Ultra cualificado', 'Medio cualificado', 'General'];
 
@@ -85,6 +85,34 @@ function Miembro({ p, j, g, numerar, ordenable, pct }) {
     );
 }
 
+// Mínimo diario: los días en que ese closer tiene menos de n agendas, también recibe los leads de esta
+// estrategia, con el evento que abrió el lead.
+function MinimoDiario({ g }) {
+    const { d } = useDatos();
+    const { lectura } = usePermisos();
+    const m = g.minimo || {};
+    const ops = closers(d).filter(p => !esTriage(d, p)).map(p => ({ value: p.id, label: p.nombre }));
+    const guardar = (cambio) => {
+        const v = { p: m.p || '', n: m.n || 5, ...cambio };
+        almacen.editar('grupos', g.id, { minimo: v.p ? v : {} }, true);
+    };
+    if (lectura && !m.p) return null;
+    return (
+        <div className="pr-regla" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <span>Mínimo diario:</span>
+            <Select size="sm" label={'Closer del mínimo diario de ' + g.nombre} value={m.p || ''} disabled={lectura}
+                options={[{ value: '', label: 'Ninguno' }, ...ops]} onChange={v => guardar({ p: v })} />
+            {m.p && (
+                <>
+                    <Stepper value={m.n || 5} min={1} max={50} disabled={lectura} label={'Agendas por día de ' + g.nombre}
+                        onChange={n => guardar({ n })} />
+                    <span>agendas por día</span>
+                </>
+            )}
+        </div>
+    );
+}
+
 function Prioridad({ g, i, ordenable, usuarios }) {
     const { d } = useDatos();
     const { lectura } = usePermisos();
@@ -125,6 +153,7 @@ function Prioridad({ g, i, ordenable, usuarios }) {
                 <span className="num">{ms.length}{ms.length === 1 ? ' closer' : ' closers'}</span> · {textoEstrategia(d, g)}
                 {aviso && <><br /><span style={{ color: 'var(--warning)' }}>{aviso}</span></>}
             </p>
+            <MinimoDiario g={g} />
         </Card>
     );
 }

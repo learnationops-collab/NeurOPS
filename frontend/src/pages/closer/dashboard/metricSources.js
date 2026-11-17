@@ -106,7 +106,7 @@ export const METRICS = {
         destino: { tabla: 'ventas', filtro: { tipo_pago: VENTAS_NUEVAS }, de: 'Ventas cerradas' }
     },
     ticket_promedio: {
-        title: 'Cuánto se cobró en promedio por venta nueva',
+        title: 'Cuánto se cobró en promedio por venta nueva (neto de fees; el bruto va debajo)',
         source: 'ventas',
         formula: 'cash de PIF + Split ÷ cantidad de ventas PIF + Split',
         note: 'Mismo criterio que "Ventas cerradas": cuotas, señas, upsells y renovaciones quedan fuera del promedio.',

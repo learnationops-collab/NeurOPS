@@ -357,8 +357,16 @@ def normal_grupo(id, d):
         'estrategia': d.get('estrategia') if _en(d.get('estrategia'), ESTRATEGIAS) else 'llenar',
         'miembros': [js_str(x) for x in lista(d.get('miembros'))][:30],
         'pesos': _pesos(d.get('pesos')),
+        'minimo': _minimo(d.get('minimo')),
         'orden': _orden(d.get('orden')),
     }
+
+
+def _minimo(v):
+    """Mínimo diario: {p: persona_id, n: agendas por día}. Sin closer o con 0, no hay mínimo ({})."""
+    v = obj(v)
+    p, n = js_str(v.get('p') or ''), entero(v.get('n'), 0, 50, 0)
+    return {'p': p, 'n': n} if p and n else {}
 
 
 def _pesos(v):

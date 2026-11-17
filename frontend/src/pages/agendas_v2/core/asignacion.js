@@ -61,6 +61,20 @@ function porEstrategia(estrategia, miembros, slotsDe, { ahora, cargaDe }, g = nu
     return { slots, regla: estrategia === 'horario' ? 'Máxima disponibilidad: ' + nombres.join(' → ') : 'Distribuida entre ' + miembros.length };
 }
 
+// Mínimo diario (Santi, 14/11/2026): g.minimo = {p, n}. Los días en que ese closer tiene menos de n agendas, sus
+// horarios se suman a los de la estrategia (a igual hora, gana él) y se agendan con el evento que abrió el lead.
+export function conMinimo(d, g, x, slotsBase, enDia, conBase) {
+    const m = g.minimo || {}, p = buscar(d, 'personas', m.p), n = m.n || 0;
+    if (!p || n <= 0 || !esCloser(d, p) || horasSemana(p) <= 0) return x;
+    const tz = p.tz || TZ_DEF;
+    const suyos = slotsBase(p).filter(t => enDia(p.id, t, tz) < n);
+    if (!suyos.length) return x;
+    const mapa = new Map(x.slots.map(s => [s.t, s]));
+    suyos.forEach(t => mapa.set(t, { t, p: p.id, ...(conBase ? { base: true } : {}) }));
+    const regla = (x.regla ? x.regla + ' + ' : '') + p.nombre + ' hasta ' + n + ' por día';
+    return { slots: [...mapa.keys()].sort((a, b) => a - b).map(t => mapa.get(t)), regla };
+}
+
 // Si en los días del evento no queda ningún horario, se suma un día por vez hasta encontrar uno: el lead
 // nunca se queda sin agendar porque la ventana se llenó. Tope de días agregados.
 export const DIAS_EXTRA_MAX = 14;
@@ -109,7 +123,9 @@ export function asignacion(ctx, d, opts = {}) {
  * ctx: {preguntas, resp, dur, margen, eventoId, ag, reglas, resto, segmento, persona}. dur y margen son la propuesta
  * del evento; cada closer usa lo suyo si lo ajustó (sesionDe).
  * opts: {ahora, ocupado(personaId, t, dur), cargaDe(personaId) → agendas futuras,
- *        enSemana(personaId, t, tz) → agendas en la semana de t, prueba, sinDesborde (solo su grupo)}
+ *        enSemana(personaId, t, tz) → agendas en la semana de t, enDia(personaId, t, tz) → agendas en el día de t,
+ *        prueba, sinDesborde (solo su grupo)}
+ * ctx.base: {eventoId, dur, margen, paso} del evento que abrió el lead si la regla le cambió la sesión.
  * Devuelve {nota, grupo, grupoRegla, reglaIdx, desborde, slots:[{t, p}], regla, aviso}.
  */
 function asignar(ctx, d, opts = {}) {
@@ -117,19 +133,26 @@ function asignar(ctx, d, opts = {}) {
     const ocupado = opts.ocupado || (() => false);
     const cargaDe = opts.cargaDe || (() => 0);
     const enSemana = opts.enSemana || (() => 0);
+    const enDia = opts.enDia || (() => 0);
     const nota = calificar(ctx.preguntas || [], ctx.resp || {});
     const o = agendaOpt(ctx.ag, ctx.dur);
     const memo = new Map();
-    const slotsDe = (p) => {
-        if (!memo.has(p.id)) {
-            const [dur, margen] = sesionDe(p, ctx.eventoId, ctx.dur, ctx.margen);
-            const slots = slotsPersona(p, dur, o, { ahora, ocupado, margen });
+    const slotsCon = (p, eventoId, dur0, margen0, oo) => {
+        const k = p.id + '|' + eventoId;
+        if (!memo.has(k)) {
+            const [dur, margen] = sesionDe(p, eventoId, dur0, margen0);
+            const slots = slotsPersona(p, dur, oo, { ahora, ocupado, margen });
             // Con tope de llamadas por semana, una semana llena no ofrece horarios (Jean Carlo, 27/10/2026).
             const tope = p.llamadas_semana || 0, tz = p.tz || TZ_DEF;
-            memo.set(p.id, tope ? slots.filter(t => enSemana(p.id, t, tz) < tope) : slots);
+            memo.set(k, tope ? slots.filter(t => enSemana(p.id, t, tz) < tope) : slots);
         }
-        return memo.get(p.id);
+        return memo.get(k);
     };
+    const slotsDe = (p) => slotsCon(p, ctx.eventoId, ctx.dur, ctx.margen, o);
+    // El evento que abrió el lead, cuando la regla le cambió la sesión: con ese agenda el closer del mínimo diario.
+    const eb = ctx.base;
+    const oBase = eb && ctx.ag ? agendaOpt({ ...ctx.ag, paso: eb.paso }, eb.dur) : o;
+    const slotsBase = (p) => (eb ? slotsCon(p, eb.eventoId, eb.dur, eb.margen, oBase) : slotsDe(p));
     const base = { nota, grupo: null, grupoRegla: '', reglaIdx: null, desborde: false, aviso: '' };
 
     if (ctx.persona) {
@@ -151,8 +174,8 @@ function asignar(ctx, d, opts = {}) {
         const desde = grupos.findIndex(g => g.id === g0.id);
         for (const g of opts.sinDesborde ? grupos.slice(desde, desde + 1) : grupos.slice(desde)) {
             const miembros = miembrosValidos(d, g);
-            if (!miembros.length) continue;
-            const x = porEstrategia(g.estrategia, miembros, slotsDe, { ahora, cargaDe }, g);
+            const x0 = miembros.length ? porEstrategia(g.estrategia, miembros, slotsDe, { ahora, cargaDe }, g) : { slots: [], regla: '' };
+            const x = conMinimo(d, g, x0, slotsBase, enDia, !!eb);
             if (x.slots.length) return { ...res, grupo: g, desborde: g.id !== g0.id, slots: x.slots, regla: (g.id !== g0.id ? g0.nombre + ' sin lugar → ' : '') + x.regla };
         }
         if (opts.sinDesborde) return { ...res, slots: [], regla: 'Sin horarios' };

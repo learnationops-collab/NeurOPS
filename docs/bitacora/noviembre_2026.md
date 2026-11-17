@@ -513,3 +513,26 @@
 - La seña de un cliente que completa la venta en el mismo mes (o a ≤ 7 días) se suma a esa venta en el ticket promedio; una seña sola sigue sin contar. Producción: sep $745,65 → $757,08; oct $616,18 → $619,12; nov $693,70 → $750,00. ADR-W139 ([ticket_service.py](../../app/services/ticket_service.py)).
 - Comercial › Analizar muestra el ticket en bruto, con el neto de la pasarela debajo, igual que el tablero del closer ([Analizar.jsx](../../frontend/src/pages/comercial/components/Analizar.jsx)).
 - Correcciones a mano en producción (reunión con Jean Carlo): la renovación de Yancarlos quedó enlazada a su agenda del 07/11 (Show up) y tres agendas del 11/11 pasaron a Cancelado.
+
+### 14/11/2026 · Triage solo con Dari y mínimo diario de 5 agendas para Jean Carlo con leads C
+- Thalamus › Team › Estrategias: «Segmento C» y «Segmento D» quedan solo con Dari; Juliana deja de recibir leads.
+- Las estrategias pueden tener un «Mínimo diario» de un closer ([Grupos.jsx](../../frontend/src/pages/agendas_v2/secciones/team/Grupos.jsx), [asignacion.py](../../app/agendas_v2/nucleo/asignacion.py), [ADR-W140](../DECISIONS.md)). «Segmento C» queda con Jean Carlo y 5 agendas por día: los días en que tiene menos, el lead C ve sus horarios mezclados con los de Dari y, si elige uno de Jean, se le agenda una Sesión de Aceleración. Los D siguen yendo solo al triage.
+
+### 16/11/2026 · «Pasar a triage» ya no elige a quien salió del triage
+- La agenda que un closer pasa al triage (o la C/D que desplaza un A/B) va solo a una persona del triage que esté en algún grupo de reparto y con su cuenta activa. Juliana, que salió de los grupos el 14/11, seguía siendo candidata y, por no tener agendas por delante, era la primera ([a_triage.py](../../app/agendas_v2/a_triage.py)).
+- Correcciones en producción de la Academia: las dos Momentum quedaron con Giancarlos como responsable (sin responsable, 19 alumnos veían el link de la Momentum sin horarios) y los 14 alumnos de Facundo pasaron a Giancarlos.
+
+### 16/11/2026 · El setter llega a los turnos libres del equipo desde su espacio
+- Botón «Tálamus» en el encabezado del espacio del setter, junto a sus links (antes estaba en el menú del avatar; pedido de Sales Team 07/11). Abre directo Team › Available, con los turnos libres del equipo, para ver cuándo hay lugar y cuándo abrir días (Resultad-OS 14/11) ([SetterEspacioPage.jsx](../../frontend/src/pages/setter/SetterEspacioPage.jsx), [MisLinks.jsx](../../frontend/src/pages/setter/MisLinks.jsx)).
+- Thalamus acepta `?ver=available` para abrir esa vista ([ThalamusApp.jsx](../../frontend/src/pages/agendas_v2/ThalamusApp.jsx)). Lo de setters salió de la rama `wip/pendientes-2026-11`; el resto de esa rama sigue sin subir.
+
+### 16/11/2026 · Los links de agenda del setter, a mano en la bandeja de entrada
+- En la conversación, el menú del rayito (o «/» en la caja) trae «Links de agenda»: los links del setter (uno por evento de setting, con su nombre como fuente). Tocar uno lo pega en el mensaje. El formulario de la reserva decide si el lead va a closing o a triage, así que no hay un link aparte para cada uno ([MenuRayo.jsx](../../frontend/src/pages/inbox/conversaciones/MenuRayo.jsx); pedido de Sales Team 07/11).
+
+### 16/11/2026 · El botón «OBTENER ACCESO» de ManyChat ya no arranca el Lead Magnet
+- Los seguidores nuevos que tocaban «OBTENER ACCESO» en la bienvenida de ManyChat recibían el recurso de ManyChat y, además, nuestro flujo «Lead Magnet» (desde el 13/11, 24 personas; 7 con error de Meta). El texto del botón coincidía con la palabra clave cargada el 12/11. Ahora un botón de otra app no dispara nada del motor ([motor.py](../../app/automatizaciones/motor.py), [ADR-W141](../DECISIONS.md); aviso de Elías 13/11).
+- Producción no desplegaba desde las 14:02: el menú del rayito importaba `rotuloDeLink` de [MisLinks.jsx](../../frontend/src/pages/setter/MisLinks.jsx), que quedó en la rama `wip` al pasar lo de setters. Se agregó el export.
+
+### 16/11/2026 · Cash collected y Ticket promedio en neto, con el bruto debajo
+- Comercial › Analizar: las tarjetas Cash collected y Ticket promedio, y el panel Cash, muestran el neto de la pasarela en grande y el bruto debajo ([Analizar.jsx](../../frontend/src/pages/comercial/components/Analizar.jsx), [PanelCash.jsx](../../frontend/src/pages/comercial/components/PanelCash.jsx)). El ticket deja de verse en bruto en grande (cambio del 13/11).
+- Tablero del closer: «Ticket promedio · neto» con el bruto debajo, igual que el cash, y la columna «Ticket neto» del ranking ([PerformanceKpis.jsx](../../frontend/src/pages/closer/dashboard/components/PerformanceKpis.jsx), [columnasRanking.jsx](../../frontend/src/pages/closer/dashboard/components/columnasRanking.jsx)). El servidor manda `ticket_promedio_neto` ([closer_service.py](../../app/services/closer_service.py)). [ADR-W142](../DECISIONS.md).

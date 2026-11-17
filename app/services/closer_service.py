@@ -1833,8 +1833,11 @@ class CloserService:
         # El ticket junta los pagos del mismo cliente en el mismo mes en UNA venta, con su primera
         # cuota si llega antes del mes, la haya cargado quien sea (`ticket_service`); `count`
         # sigue contando las filas de venta real del programa.
+        from app.services.commission_service import cash_neto
         program_data = {}
         pagos = []
+        # Los mismos pagos con el monto neto de la pasarela: el ticket neto, que va en grande (ADR-W142).
+        pagos_neto = []
 
         for sale in all_sales:
             program_code, tipo_simple = SheetsService.parse_tipo_pago(sale.tipo_pago)
@@ -1842,6 +1845,7 @@ class CloserService:
             if pago[3] == CUOTA:
                 continue
             pagos.append(pago)
+            pagos_neto.append((pago[0], pago[1], cash_neto(sale), pago[3]))
 
             # El programa sale del prefijo del propio tipo_pago ("RR - Parcial"). El respaldo por
             # `examen` solo aplica si no vino prefijo: antes se buscaba "AL" dentro del string
@@ -1858,6 +1862,7 @@ class CloserService:
 
         cuotas = primeras_cuotas(pagos)
         general_average_ticket = ticket_promedio(pagos + cuotas)[2] or 0.0
+        general_average_ticket_neto = ticket_promedio(pagos_neto + primeras_cuotas(pagos_neto, cash_neto))[2] or 0.0
 
         program_tickets = [
             {"program": prog_name, "average_ticket": ticket_promedio(p_info["pagos"] + cuotas)[2] or 0.0,
@@ -1913,6 +1918,7 @@ class CloserService:
         # Escalar metricas por tipo de agregacion (promedio de dias en dashboard)
         if agg_type == 'avg':
             scaled_general_avg = round(general_average_ticket / days_count, 2)
+            scaled_general_avg_neto = round(general_average_ticket_neto / days_count, 2)
             scaled_program_tickets = [
                 {
                     "program": pt["program"],
@@ -1923,6 +1929,7 @@ class CloserService:
             ]
         else:
             scaled_general_avg = general_average_ticket
+            scaled_general_avg_neto = general_average_ticket_neto
             scaled_program_tickets = program_tickets
 
         # Obtener cumplimiento de reportes diarios
@@ -2047,6 +2054,7 @@ class CloserService:
                     "rate_pending": pct_senas(max(0, total_señas - señas_convertidas))
                 },
                 "general_average_ticket": scaled_general_avg,
+                "general_average_ticket_neto": scaled_general_avg_neto,
                 "program_tickets": scaled_program_tickets,
                 "discrepancies": discrepancies,
                 "totals": {"count": total_sales, "cash": total_cash, "cash_neto": total_cash_neto, "in_call_count": total_ic_sales, "in_call_cash": total_ic_cash}

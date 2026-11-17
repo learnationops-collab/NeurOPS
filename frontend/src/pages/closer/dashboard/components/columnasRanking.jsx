@@ -72,9 +72,12 @@ export const columnasRanking = (irA, selectedCloserId) => [
                 {r.close_rate_presentacion}%{r.close_rate_presentacion > 100 ? ' ⚠️' : ''}
             </MetricaClicable>
         ) },
-    { key: 'ticket', header: 'Ticket', alinear: 'der', width: '100px', ayuda: ayudaDe('ticket_promedio'),
-        valor: (r) => r.ticket_promedio,
-        render: (r) => <Celda fila={r} irA={irA} metrica="ticket_promedio" valor={money(r.ticket_promedio)} /> },
+    { key: 'ticket', header: 'Ticket neto', alinear: 'der', width: '110px', ayuda: ayudaDe('ticket_promedio'),
+        valor: (r) => r.ticket_promedio_neto ?? r.ticket_promedio,
+        render: (r) => (
+            <Celda fila={r} irA={irA} metrica="ticket_promedio" valor={money(r.ticket_promedio_neto ?? r.ticket_promedio)}
+                bruto={`bruto ${money(r.ticket_promedio)}`} />
+        ) },
     { key: 'reportes', header: 'Reportes enviados', alinear: 'der', width: '140px', ayuda: ayudaDe('rank_reportes'),
         valor: (r) => r.reports_status, render: (r) => `${r.reports_status}%` },
     { key: 'sin_enviar', header: 'Sin enviar', alinear: 'der', width: '90px', valor: (r) => r.reportes_faltantes,

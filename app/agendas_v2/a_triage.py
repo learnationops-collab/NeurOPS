@@ -43,13 +43,15 @@ def _carga(user_id, ahora):
 
 
 def candidatas(appt, ahora=None):
-    """[(user, libre)] de las personas del triage con usuario activo y horario, la elegida primero."""
+    """[(user, libre)] de las personas del triage con usuario activo y horario, la elegida primero.
+    Solo las que están en algún grupo de reparto: quien salió del triage (sacada de los grupos) no recibe."""
     ahora = ahora or datetime.utcnow()
     d = servicio.colecciones()
     usuarios = servicio._usuarios_de_personas(d)
-    personas = {p['id']: p for p in d['personas'] if es_triage(d, p) and p['id'] in usuarios}
+    en_grupos = {m for g in d.get('grupos') or [] for m in g.get('miembros') or []}
+    personas = {p['id']: p for p in d['personas'] if es_triage(d, p) and p['id'] in usuarios and p['id'] in en_grupos}
     users = {u.id: u for u in User.query.filter(User.id.in_([usuarios[pid] for pid in personas] or [0]),
-                                                 User.role == ROLE_TRIAGE).all()}
+                                                 User.role == ROLE_TRIAGE, User.is_active.is_(True)).all()}
     personas = {pid: p for pid, p in personas.items() if usuarios[pid] in users}
     if not personas:
         return []

@@ -42,4 +42,6 @@ def opciones_de_ocupacion(reservas, ahora=None):
         'carga_de': lambda pid: len([x for x in por.get(pid, []) if x['inicio'] >= ahora]),
         # Cuántas agendas tiene en la semana de `t` (para el tope de llamadas por semana).
         'en_semana': lambda pid, t, tz: sum(1 for x in por.get(pid, []) if semana_de(x['inicio'], tz) == semana_de(t, tz)),
+        # Cuántas agendas tiene en el día de `t` (para el mínimo diario de una estrategia).
+        'en_dia': lambda pid, t, tz: sum(1 for x in por.get(pid, []) if clave_dia(x['inicio'], tz) == clave_dia(t, tz)),
     }

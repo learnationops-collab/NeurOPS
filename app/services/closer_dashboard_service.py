@@ -437,6 +437,8 @@ class CloserDashboardService:
                 'cash_neto': round(sales['totals'].get('cash_neto', 0) or 0, 2),
                 'ventas': ventas,
                 'ticket_promedio': sales['general_average_ticket'],
+                # El mismo ticket neto de la pasarela: va en grande, con el bruto debajo (ADR-W142).
+                'ticket_promedio_neto': sales.get('general_average_ticket_neto', sales['general_average_ticket']),
                 'close_rate_llamada': pct['close_rate'],
                 'close_rate_presentacion': pct['offer_to_sale'],
                 'seguimientos_hechos': fu['sent'],
@@ -654,6 +656,7 @@ class CloserDashboardService:
                 'show_rate': c_block['rings']['show_rate'],
                 'close_rate_presentacion': c_block['rings']['close_presentacion'],
                 'ticket_promedio': c_block['kpis']['ticket_promedio'],
+                'ticket_promedio_neto': c_block['kpis']['ticket_promedio_neto'],
                 # Cobertura de reportes de ESTE closer en el período. Antes esta columna mostraba
                 # `reports_productivity.al_dia_pct`, que se calcula sobre todos los closers activos
                 # sin filtrar: cada fila del ranking repetía el mismo número global.

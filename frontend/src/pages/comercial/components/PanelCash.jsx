@@ -64,6 +64,7 @@ const PanelCash = ({ bloque, previo, adquisicion, vsLabel, irA }) => {
                 <div className="pc-hero-cifra">
                     <span className="pc-rot">Cash collected</span>
                     <Cifra className="pc-hero-n num" valor={fmt.money(bloque.cash_neto)} />
+                    <small className="pc-prom-pie num">Bruto {fmt.money(bloque.cash)}</small>
                     <Comparado vs={vsLabel} actual={bloque.cash_neto} previo={previo?.cash_neto} f={fmt.money}
                         detalle={previo?.cash_neto != null ? diferencia(bloque.cash_neto, previo.cash_neto) : null} />
                 </div>
@@ -72,10 +73,10 @@ const PanelCash = ({ bloque, previo, adquisicion, vsLabel, irA }) => {
 
             <div className="pc-proms">
                 <Promedio label="Ticket promedio" tone="info" vs={vsLabel} onClick={abrir(irA, D.ticket_promedio)}
-                    help="Lo cobrado en las ventas nuevas ÷ cuántas fueron. Cuotas y señas no entran."
+                    help="Lo cobrado en las ventas nuevas, neto, ÷ cuántas fueron. Debajo, el bruto."
                     valor={bloque.ticket_neto ?? bloque.ticket} previo={ticketPrevio}
                     detallePrevio={previo ? fmt.plural(previo.ventas, 'venta', 'ventas') : null}
-                    pie={fmt.plural(bloque.ventas, 'venta', 'ventas')} />
+                    pie={`Bruto ${fmt.money(bloque.ticket)} · ${fmt.plural(bloque.ventas, 'venta', 'ventas')}`} />
                 <Promedio label="CAC" tone="brand-secondary" vs={vsLabel} mejorBaja
                     help={'Costo por cliente: gasto de Meta (Setting y Workshop) ÷ clientes nuevos.'
                         + (cac && cac.parte < 1
