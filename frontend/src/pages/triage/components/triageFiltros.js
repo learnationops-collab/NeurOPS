@@ -25,6 +25,7 @@ export const FILTROS = {
     closer_por_venir: { titulo: 'Con el closer: todavía no llegan', coincide: (l) => l.closing?.estado === 'pendiente' },
     closer_senas: { titulo: 'Señas con el closer', coincide: (l) => !!l.closing?.sena },
     descalificados: { titulo: 'Descalificados', coincide: descalificado },
+    en_seguimiento: { titulo: 'Lo van a pensar', coincide: (l) => l.calificacion === 'seguimiento' },
     pitch: { titulo: 'Presentaciones del low ticket', coincide: (l) => descalificado(l) && PITCHEADO.includes(l.low_ticket) },
     cerrado: { titulo: 'Cierres del low ticket', coincide: lowTicketEs('cerrado') },
     no_cerrado: { titulo: 'No cierres del low ticket', coincide: lowTicketEs('no_cerrado') },

@@ -1112,6 +1112,13 @@
 - **Qué se pierde:** un lead que contesta tarde (después del día 7) ya no vuelve solo a la lista; hay que reabrirlo a mano. Un parcial que es el último pago de una seña vieja no pide plan (el saldo da cero).
 - **Consecuencias:** sin migración. Los seguimientos que hoy están en el contacto 4 siguen como están hasta su próximo reporte, donde solo se pueden cerrar. Las ventas sin plan ya registradas se corrigen a mano (lista CSV del 13/11).
 
+## ADR-W138: el triage puede dejar al lead en «Lo va a pensar»
+- **Estado:** implementado.
+- **Contexto:** al cruzar la hoja de Dari con Work (13/11) aparecieron leads que asistieron y quedaron en pensarlo (Yesenia G., Gerardo Morales, Daniella Obregón) registrados como «descalificado», porque el triage solo tenía Califica y No califica. Eso bajaba la tasa de calificados y mandaba al low ticket a quien podía invertir.
+- **Decisión:** tercera calificación `seguimiento` («Lo va a pensar»): pide la fecha del próximo contacto y una nota de qué quedó pensando, deja la agenda en «Seguir» como el seguimiento del closer y no pasa al closer ni al low ticket. Cuando decide, se vuelve a reportar la llamada como Califica (crea el pase) o No califica. Las métricas la cuentan aparte (`en_seguimiento`, «lo van a pensar»). Al calificar después, el seguimiento queda hecho y sale de «Seguir». La nota de una llamada a la que el lead asistió (qué quedó pensando, por qué no califica) se guarda como nota de la llamada: antes se perdía, y 20 de los 25 descalificados del 26/10 al 16/11 quedaron sin texto. Las filas del reporte salen a `triage_filas.py` para que `triage_service.py` no pase de 500 líneas.
+- **Qué se pierde:** el embudo del triage tiene un estado más entre asistió y calificó; un lead que nunca vuelve queda en seguimiento hasta que alguien lo cierre.
+- **Consecuencias:** sin migración (`triage_calificacion` ya es texto). Los descalificados mal cargados de antes no se corrigen solos: se re-reportan desde la ficha.
+
 ## ADR-W139: el ticket promedio suma la seña a su venta y Analizar lo muestra en bruto
 
 - **Fecha:** 2026-11-13 · **Subsistema:** `ticket_service` (`SUMAR_SENAS`), Comercial › Analizar (tarjeta Ticket promedio) · **Estado:** implementado.

@@ -138,6 +138,7 @@ export function Estados({ m, onVer }) {
                 <small style={ROTULO}>DE LOS QUE ASISTIERON</small>
                 <span style={{ fontSize: 14, color: 'var(--text-muted)' }}><b style={{ fontSize: 20, fontWeight: 900, color: 'var(--success)' }}>{m.calificados}</b> calificados</span>
                 <span style={{ fontSize: 14, color: 'var(--text-muted)' }}><b style={{ fontSize: 20, fontWeight: 900, color: 'var(--warning)' }}>{m.descalificados}</b> descalificados</span>
+                <span style={{ fontSize: 14, color: 'var(--text-muted)' }}><b style={{ fontSize: 20, fontWeight: 900, color: 'var(--info)' }}>{m.en_seguimiento || 0}</b> lo van a pensar</span>
             </div>
         </div>
     );
