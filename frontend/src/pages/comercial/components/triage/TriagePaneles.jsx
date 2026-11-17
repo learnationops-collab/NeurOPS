@@ -4,7 +4,7 @@
 import { Fragment } from 'react';
 
 import { CifraConCuenta } from '../../../../components/standard';
-import { COLOR_DE_ESTADO, calificacionDe, conResultado, destinosDe, embudoDe, fueraDe, pct, pctTexto } from './triageDatos';
+import { COLOR_DE_ESTADO, calificacionDe, conResultado, destinosDe, embudoDe, fueraDe, motivosDe, pct, pctTexto } from './triageDatos';
 import './triageTarjetas.css';
 
 export const TARJETA = {
@@ -260,6 +260,34 @@ export function LowTicket({ m, onVer }) {
                         <small style={{ ...ROTULO, letterSpacing: '.2em' }}>{rotulo}</small>
                         <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
                             <b style={{ fontSize: 26, fontWeight: 900, color: '#fff' }}>{n}</b> {pctTexto(n, m.pitch_low_ticket)}
+                        </span>
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+/** Por qué no pasaron a closing los que no califican (ADR-W151): una barra por motivo; cada una abre su lista. */
+export function Motivos({ m, onVer }) {
+    const filas = motivosDe(m);
+    const mayor = Math.max(1, ...filas.map((f) => f.n));
+    return (
+        <div style={TARJETA}>
+            <div style={resplandor('warning', '100% 0%', '380px 240px', 12)} />
+            <Titulo texto="Por qué no pasaron a closing" lado={`${m.descalificados} no califican`} />
+            <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {filas.map((f) => (
+                    <button key={f.clave} type="button" disabled={!f.n} onClick={() => onVer(f.filtro)} aria-label={`${f.texto}: ${f.n}`}
+                        style={{ ...boton, cursor: f.n ? 'pointer' : 'default', display: 'grid', alignItems: 'center', gap: 14, padding: '8px 0',
+                            gridTemplateColumns: 'minmax(0, 200px) minmax(0, 1fr) 76px', opacity: f.n ? 1 : 0.55 }}>
+                        <span style={{ fontSize: 14, fontWeight: 700 }}>{f.texto}</span>
+                        <span style={{ height: 8, borderRadius: 999, background: 'rgba(255,255,255,.06)', overflow: 'hidden' }}>
+                            <i style={{ display: 'block', height: '100%', width: `${(f.n / mayor) * 100}%`, borderRadius: 999,
+                                background: f.clave === 'sin_dato' ? 'var(--idle)' : 'var(--warning)' }} />
+                        </span>
+                        <span style={{ textAlign: 'right', fontSize: 13, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                            <b style={{ fontSize: 18, fontWeight: 900, color: '#fff' }}>{f.n}</b> {pctTexto(f.n, m.descalificados)}
                         </span>
                     </button>
                 ))}
