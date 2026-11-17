@@ -63,8 +63,15 @@
 .dc-shell .wp-enlaces .chip { height: 22px; padding: 0 7px; gap: 4px; font-size: 9.5px; letter-spacing: .03em; }
 .dc-shell .wp-enlaces .chip svg { width: 12px; height: 12px; }
 .dc-shell a.wp-enlace:hover { background: color-mix(in srgb, var(--c) 24%, transparent); }
+/* El tipo y la cuenta de grupos son `Chip` estándar: acá miden lo mismo que los enlaces de al lado. */
+.dc-shell .wp-enlaces .ui-chip { height: 22px; padding: 0 7px; gap: 4px; font-size: 9.5px; letter-spacing: .03em; }
+.dc-shell .wp-enlaces .ui-chip svg { width: 12px; height: 12px; }
 
-.dc-shell .wp-taller-btns { display: flex; gap: 6px; }
+.dc-shell .wp-taller-btns { display: flex; gap: 6px; align-items: center; }
+/* Panel angosto (teléfono): los botones bajan en vez de apretar la fecha y las etiquetas. */
+@container (max-width: 520px) {
+    .dc-shell .wp-taller { grid-template-columns: minmax(0, 1fr); }
+}
 
 /* --- Una acción ---------------------------------------------------------------------------- */
 .dc-shell .wp-acciones { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; min-width: 0; }
@@ -128,6 +135,39 @@
     font-size: 13px; font-weight: 600; text-transform: capitalize; }
 .dc-shell .wp-vista-previa li[data-ocupada] { color: var(--text-muted-40); text-decoration: line-through; }
 .dc-shell .wp-vista-previa li[data-ocupada] span { text-transform: none; text-decoration: none; display: inline-block; }
+
+/* --- Grupos de WhatsApp por conjunto (ADR-W146) -------------------------------------------- */
+.dc-shell .wp-modal.wp-modal--ancho { width: min(880px, 100%); }
+.dc-shell .wp-grupos { display: grid; gap: var(--s3); min-width: 0; }
+.dc-shell .wp-campo-linea { display: grid; grid-template-columns: 124px minmax(0, 1fr); gap: var(--s3);
+    align-items: center; justify-items: start; min-width: 0; }
+/* Los campos estándar, a la altura del desplegable para que la fila quede pareja. */
+.dc-shell .wp-grupos .ui-input { height: 40px; padding: 0 12px; border-radius: 12px; font-size: 13.5px; }
+.dc-shell .wp-grupos-rotulos,
+.dc-shell .wp-grupo { display: grid; gap: var(--s2); align-items: center; min-width: 0;
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, .9fr) minmax(0, 1.4fr) 74px; }
+.dc-shell .wp-grupos-rotulos { margin-top: var(--s2); }
+.dc-shell .wp-grupos-rotulos .t-rotulo { font-size: 10px; letter-spacing: .1em;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dc-shell .wp-grupos-lista { display: grid; gap: var(--s2); margin: 0; padding: 0; list-style: none; min-width: 0; }
+.dc-shell .wp-grupo-conj { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.dc-shell .wp-grupo-conj .ui-select { width: 100%; }
+.dc-shell .wp-grupo-btns { display: flex; gap: 6px; justify-content: flex-end; }
+.dc-shell .wp-grupos-mas { justify-self: start; }
+.dc-shell .wp-grupos .wp-aviso { margin-bottom: 0; align-items: flex-start; }
+.dc-shell .wp-grupos .wp-aviso svg { flex-shrink: 0; margin-top: 2px; }
+@media (max-width: 720px) {
+    .dc-shell .wp-campo-linea { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+    .dc-shell .wp-grupos-rotulos { display: none; }
+    /* Cada grupo pasa a ser una tarjeta: conjunto arriba, nombre con sus botones, enlace abajo. */
+    .dc-shell .wp-grupo { grid-template-columns: minmax(0, 1fr) auto; padding: var(--s3);
+        grid-template-areas: "conj conj" "nom btns" "url url";
+        border-radius: var(--radius-control); background: var(--mat-0); border: 1px solid var(--border-subtle); }
+    .dc-shell .wp-grupo-conj { grid-area: conj; }
+    .dc-shell .wp-grupo-nom { grid-area: nom; }
+    .dc-shell .wp-grupo-url { grid-area: url; }
+    .dc-shell .wp-grupo-btns { grid-area: btns; }
+}
 
 /* --- Plan de acciones ---------------------------------------------------------------------- */
 .dc-shell .wp-cifras { display: grid; gap: var(--s2); grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: var(--s4); }
