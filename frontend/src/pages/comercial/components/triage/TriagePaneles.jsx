@@ -268,7 +268,7 @@ export function LowTicket({ m, onVer }) {
     );
 }
 
-/** Por qué no pasaron a closing los que no califican (ADR-W151): una barra por motivo; cada una abre su lista. */
+/** Por qué no pasaron a closing los que no califican (ADR-W153): una barra por motivo; cada una abre su lista. */
 export function Motivos({ m, onVer }) {
     const filas = motivosDe(m);
     const mayor = Math.max(1, ...filas.map((f) => f.n));

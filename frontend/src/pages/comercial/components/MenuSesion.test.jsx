@@ -50,7 +50,7 @@ describe('MenuSesion', () => {
         expect(screen.getAllByRole('group')).toHaveLength(4);
         // «Mis reportes», con el «+» al lado para reportar uno nuevo, se agrega solo antes del último grupo.
         expect(screen.getAllByRole('menuitem').map(i => i.getAttribute('aria-label') || i.textContent))
-            .toEqual(['Nueva agenda', 'Playbook, 5 pendientes', 'Mis reportes', 'Reportar un problema', 'Cerrar sesión']);
+            .toEqual(['Nueva agenda', 'Playbook, 5 pendientes', 'Mis reportes', 'Reportar o pedir algo', 'Cerrar sesión']);
         expect(document.activeElement).toBe(screen.getByRole('menuitem', { name: 'Nueva agenda' }));
     });
 
@@ -68,14 +68,14 @@ describe('MenuSesion', () => {
         expect(document.activeElement.textContent).toBe('Cerrar sesión');
     });
 
-    it('«Reportar un problema» y «Mis reportes» le piden al widget que abra su vista', async () => {
+    it('«Reportar o pedir algo» y «Mis reportes» le piden al widget que abra su vista', async () => {
         const pedidos = [];
         const alPedir = (e) => pedidos.push(e.detail.vista);
         window.addEventListener(BUG_REPORT_VISTA_EVENT, alPedir);
         renderMenu();
 
         await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Tu sesión: Marlon Closer' })); });
-        fireEvent.click(screen.getByRole('menuitem', { name: 'Reportar un problema' }));
+        fireEvent.click(screen.getByRole('menuitem', { name: 'Reportar o pedir algo' }));
         await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Tu sesión: Marlon Closer' })); });
         fireEvent.click(screen.getByRole('menuitem', { name: 'Mis reportes' }));
 
@@ -102,7 +102,7 @@ describe('MenuSesion', () => {
         renderMenu();
         await act(async () => { fireEvent.click(screen.getByRole('button', { name: 'Tu sesión: Marlon Closer' })); });
         expect(screen.getByRole('menuitem', { name: 'Continuar reporte en progreso' })).toBeTruthy();
-        expect(screen.queryByRole('menuitem', { name: 'Reportar un problema' })).toBeNull();
+        expect(screen.queryByRole('menuitem', { name: 'Reportar o pedir algo' })).toBeNull();
         publicarEstadoDeReportes({ sinLeer: 0, enProgreso: false });
     });
 

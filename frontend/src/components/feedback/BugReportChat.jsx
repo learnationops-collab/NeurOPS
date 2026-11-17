@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import { X, Minus, Bot, Send, Loader2, CheckCircle2, AlertOctagon, Clipboard, Video, XCircle, Bug, Lightbulb, ImagePlus } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X, Minus, Bot, Send, Loader2, CheckCircle2, AlertOctagon, Clipboard, Video, XCircle } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
+import ReportTypeStep from './ReportTypeStep';
+import DropOverlay from './DropOverlay';
+import { reportTypeMeta } from './reportTypes';
 
 // Lado máximo (px) al que se reduce cualquier captura pegada a mano antes de mandarla: el
 // portapapeles puede traer una imagen a resolución nativa (una captura de Windows en 4K pesa
@@ -65,16 +68,15 @@ const BugReportChat = ({ isOpen, onClose, onMinimize, technicalContext }) => {
     // siempre un bug de por sí -- no tiene sentido preguntarle al usuario, así que ahí se
     // salta el selector y arranca directo en 'description' como ya hacía antes.
     const [step, setStep] = useState(isReactive ? 'description' : 'type');
-    const [reportType, setReportType] = useState('bug'); // 'bug' | 'mejora'
+    const [reportType, setReportType] = useState('bug'); // ver reportTypes.js
     const [problem, setProblem] = useState('');
     const [description, setDescription] = useState('');
     const [extraScreenshots, setExtraScreenshots] = useState([]);
     const [loomLink, setLoomLink] = useState('');
     const [pasting, setPasting] = useState(false);
     const [arrastrando, setArrastrando] = useState(false);
-    const reducido = useReducedMotion();
 
-    const isMejora = reportType === 'mejora';
+    const tipo = reportTypeMeta(reportType);
 
     const reset = () => {
         setStep(isReactive ? 'description' : 'type');
@@ -268,7 +270,7 @@ const BugReportChat = ({ isOpen, onClose, onMinimize, technicalContext }) => {
                                 <Bot size={18} />
                             </div>
                             <div>
-                                <h3 className="text-sm font-black uppercase tracking-tight">Reportar un problema</h3>
+                                <h3 className="text-sm font-black uppercase tracking-tight">Reportar o pedir algo</h3>
                                 <p className="text-[10px] font-bold text-muted uppercase tracking-widest">{user?.username || 'Usuario'} · {user?.role}</p>
                             </div>
                         </div>
@@ -300,42 +302,7 @@ const BugReportChat = ({ isOpen, onClose, onMinimize, technicalContext }) => {
                         )}
 
                         {step === 'type' && (
-                            <div className="space-y-3">
-                                <div className="flex items-start gap-2">
-                                    <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center text-primary shrink-0">
-                                        <Bot size={14} />
-                                    </div>
-                                    <div className="bg-surface rounded-2xl rounded-tl-sm p-3 text-sm max-w-[85%]">
-                                        ¿Qué querés reportar?
-                                    </div>
-                                </div>
-                                <div className="pl-9 grid grid-cols-1 gap-2">
-                                    <button
-                                        onClick={() => { setReportType('bug'); setStep('problem'); }}
-                                        className="flex items-start gap-3 text-left bg-surface border border-base hover:border-rose-500/50 hover:bg-rose-500/5 rounded-2xl p-3 transition-all active:scale-[0.98]"
-                                    >
-                                        <div className="w-8 h-8 rounded-xl bg-rose-500/10 text-rose-500 flex items-center justify-center shrink-0">
-                                            <Bug size={16} />
-                                        </div>
-                                        <div>
-                                            <p className="text-xs font-black uppercase tracking-wide">Encontré un problema</p>
-                                            <p className="text-[11px] text-muted">Algo no está funcionando como debería</p>
-                                        </div>
-                                    </button>
-                                    <button
-                                        onClick={() => { setReportType('mejora'); setStep('problem'); }}
-                                        className="flex items-start gap-3 text-left bg-surface border border-base hover:border-amber-500/50 hover:bg-amber-500/5 rounded-2xl p-3 transition-all active:scale-[0.98]"
-                                    >
-                                        <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center shrink-0">
-                                            <Lightbulb size={16} />
-                                        </div>
-                                        <div>
-                                            <p className="text-xs font-black uppercase tracking-wide">Tengo una idea o sugerencia</p>
-                                            <p className="text-[11px] text-muted">Una mejora o pedido, no es un error</p>
-                                        </div>
-                                    </button>
-                                </div>
-                            </div>
+                            <ReportTypeStep onSelect={(id) => { setReportType(id); setStep('problem'); }} />
                         )}
 
                         {!isReactive && step !== 'type' && (
@@ -344,7 +311,7 @@ const BugReportChat = ({ isOpen, onClose, onMinimize, technicalContext }) => {
                                     <Bot size={14} />
                                 </div>
                                 <div className="bg-surface rounded-2xl rounded-tl-sm p-3 text-sm max-w-[85%]">
-                                    {isMejora ? '¿Qué mejora o idea te gustaría proponer?' : '¿Cuál es el problema?'}
+                                    {tipo.pregunta}
                                 </div>
                             </div>
                         )}
@@ -355,7 +322,7 @@ const BugReportChat = ({ isOpen, onClose, onMinimize, technicalContext }) => {
                                     autoFocus
                                     value={problem}
                                     onChange={(e) => setProblem(e.target.value)}
-                                    placeholder={isMejora ? 'Describe tu idea o sugerencia...' : 'Describe el problema...'}
+                                    placeholder={tipo.placeholder}
                                     className="w-full bg-surface border border-base rounded-2xl p-3 text-sm resize-none h-24 focus:outline-none focus:ring-2 focus:ring-primary/40"
                                 />
                                 <button
@@ -380,7 +347,7 @@ const BugReportChat = ({ isOpen, onClose, onMinimize, technicalContext }) => {
                                     <Bot size={14} />
                                 </div>
                                 <div className="bg-surface rounded-2xl rounded-tl-sm p-3 text-sm max-w-[85%]">
-                                    {isMejora ? '¿Por qué te serviría este cambio? Contanos el contexto.' : '¿Qué intentabas hacer cuando apareció el error o problema?'}
+                                    {tipo.preguntaContexto}
                                 </div>
                             </div>
                         )}
@@ -391,7 +358,7 @@ const BugReportChat = ({ isOpen, onClose, onMinimize, technicalContext }) => {
                                     autoFocus
                                     value={description}
                                     onChange={(e) => setDescription(e.target.value)}
-                                    placeholder={isMejora ? 'Escribe el contexto de tu idea...' : 'Escribe qué estabas haciendo...'}
+                                    placeholder={tipo.placeholderContexto}
                                     className="w-full bg-surface border border-base rounded-2xl p-3 text-sm resize-none h-24 focus:outline-none focus:ring-2 focus:ring-primary/40"
                                 />
                                 <button
@@ -500,37 +467,7 @@ const BugReportChat = ({ isOpen, onClose, onMinimize, technicalContext }) => {
 
                     {/* Mientras se arrastra un archivo, el drawer entero se vuelve el lugar donde
                         soltarlo. No captura eventos: los escucha la ventana (ver el efecto). */}
-                    <AnimatePresence>
-                        {arrastrando && (
-                            <motion.div
-                                key="soltar-imagen"
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                transition={{ duration: 0.15 }}
-                                // `--color-surface` ya es translúcido: el desenfoque evita que el
-                                // texto del chat se lea por detrás del aviso y compita con él.
-                                className="pointer-events-none absolute inset-0 z-10 p-3 flex bg-surface backdrop-blur-md"
-                            >
-                                <motion.div
-                                    initial={reducido ? false : { scale: 0.94, y: 8 }}
-                                    animate={{ scale: 1, y: 0 }}
-                                    transition={{ type: 'spring', bounce: 0.3, duration: 0.4 }}
-                                    className="flex-1 rounded-[1.6rem] border-2 border-dashed border-[#FF3FA4] flex flex-col items-center justify-center gap-2 text-center p-6"
-                                >
-                                    <motion.span
-                                        animate={reducido ? undefined : { y: [0, -4, 0] }}
-                                        transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
-                                        className="w-12 h-12 rounded-2xl bg-[#FF3FA4]/15 text-[#FF3FA4] flex items-center justify-center"
-                                    >
-                                        <ImagePlus size={22} />
-                                    </motion.span>
-                                    <p className="text-sm font-bold">Soltá la imagen acá</p>
-                                    <p className="text-xs text-muted">Se agrega al reporte como captura</p>
-                                </motion.div>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
+                    <DropOverlay visible={arrastrando} />
                 </motion.div>
             )}
         </AnimatePresence>

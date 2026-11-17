@@ -1257,7 +1257,15 @@
 - **Qué se pierde:** la respuesta tarda lo que tarda el cerebro (repartidor y herramientas) y cuenta en su tope por persona. El material de la Academia incluye recursos internos del staff, que ahora también ve el equipo de Work.
 - **Consecuencias:** sin migración. Cambian los ejemplos del conector (`r_categoria`, `r_tipo`), así que el cerebro rehace su caché de Work una vez. Tabla de paridad: material pasa a «Igual». Si la Academia no responde, Learnito de Work sigue sin material.
 
-## ADR-W151: al descalificar, el triage elige por qué el lead no pasó a closing
+## ADR-W151: las solicitudes al equipo de desarrollo entran por el mismo widget de reportes
+
+- **Fecha:** 2026-11-17 · **Subsistema:** Reportes (`bug_report.py`, `bug_reports.py`, `components/feedback/`, `BugReportsPanel.jsx`) · **Estado:** implementado.
+- **Contexto:** el equipo le hace a Santi muchos pedidos de trabajo (un acceso, cargar o corregir un dato, un reporte) por chat y de palabra. No quedan registrados, se pierden y no se puede ver cuántos hay ni de quién.
+- **Decisión:** (1) Un tercer tipo de reporte, `solicitud`, además de `bug` y `mejora`: mismo modelo, mismo hilo de mensajes, mismos estados y la misma API para la plataforma de desarrollo. (2) En el chat aparece como «Necesito que me hagan algo» y pregunta qué se necesita y para qué y para cuándo. (3) La cola se ordena bug, solicitud, mejora (`report_type_priority`), y el panel del operador cuenta los pendientes de cada tipo. (4) El botón del menú pasa de «Reportar un problema» a «Reportar o pedir algo». (5) Los tipos del frontend viven en un solo archivo (`reportTypes.js`).
+- **Qué se pierde:** la fecha límite va en texto libre, no en un campo, así que no se puede ordenar ni avisar por vencimiento. La solicitud también se manda con la captura automática de pantalla, aunque casi nunca sirva.
+- **Consecuencias:** sin migración (`report_type` es texto). Concepto nuevo `reporte_es_solicitud` en el diccionario de tablas. Lo que esté filtrado por tipo en la plataforma de desarrollo no ve las solicitudes hasta sumar `solicitud` al filtro.
+
+## ADR-W153: al descalificar, el triage elige por qué el lead no pasó a closing
 
 - **Fecha:** 2026-11-17 · **Subsistema:** Triage (`triage_motivos`, `triage_service.reportar` y `metricas`, ficha › Resultado del triage, Dirección comercial › Triage)
 - **Contexto:** al marcar «No califica», la ficha pedía una nota libre («¿Por qué no califica?»). Para ver de qué se cae la gente entre el triage y closing había que leer nota por nota. El 17/11 se pidió que el triage elija la razón entre opciones (no tenía dinero, no encontramos espacio para agendar, puso una objeción y no la resolví) con un cuadro de texto para la objeción.

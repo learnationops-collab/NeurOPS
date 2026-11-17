@@ -8885,9 +8885,13 @@
       "label": "Bug",
       "significado": "Algo está roto. Prioridad alta."
      },
+     "solicitud": {
+      "label": "Solicitud",
+      "significado": "Pedido concreto de trabajo al equipo de desarrollo (un acceso, un dato, un reporte). Entre bug y mejora."
+     },
      "mejora": {
       "label": "Mejora",
-      "significado": "Sugerencia o pedido, no es un error. Menos prioritario."
+      "significado": "Idea o sugerencia, no es un error. Menos prioritario."
      }
     }
    },
@@ -9059,7 +9063,23 @@
     ],
     "significado": "Sugerencia o pedido que no es un error (report_type = mejora).",
     "ejemplo": "¿Qué mejoras pidió el equipo?",
-    "palabras": "mejora, sugerencia, pedido, idea"
+    "palabras": "mejora, sugerencia, idea"
+   },
+   {
+    "clave": "reporte_es_solicitud",
+    "nombre": "Es una solicitud",
+    "fuente": "bug_reports",
+    "match": "all",
+    "condicion": [
+     {
+      "field": "f.report_type",
+      "op": "eq",
+      "value": "solicitud"
+     }
+    ],
+    "significado": "Pedido concreto de trabajo al equipo de desarrollo (report_type = solicitud).",
+    "ejemplo": "¿Qué solicitudes le hizo el equipo a desarrollo este mes?",
+    "palabras": "solicitud, petición, pedido, encargo"
    },
    {
     "clave": "bug_muy_urgente",

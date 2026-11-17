@@ -94,7 +94,7 @@ export function faltan(paso, r) {
   if (paso === 'nota' && !motivoAlcanza(r.nota)) f.push('Motivo');
   if (paso === 'por_que' && piensa(r) && !largo(r.nota)) f.push('Qué quedó pensando');
   if (paso === 'por_que' && descalifica(r)) {
-    // El motivo se elige; el texto solo es obligatorio con una objeción u otro motivo (ADR-W151).
+    // El motivo se elige; el texto solo es obligatorio con una objeción u otro motivo (ADR-W153).
     const motivo = motivoDe(r.motivo);
     if (!motivo) f.push('Motivo');
     else if (motivo.pideTexto && !largo(r.nota)) f.push(motivo.falta);

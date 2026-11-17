@@ -55,7 +55,7 @@ export const FILTROS = {
     no_cerrado: { titulo: 'No cierres del low ticket', coincide: lowTicketEs('no_cerrado') },
     seguimiento: { titulo: 'Low ticket en seguimiento', coincide: lowTicketEs('seguimiento') },
     descartado: { titulo: 'Low ticket perdidos', coincide: lowTicketEs('descartado') },
-    // Por qué no pasó a closing cada descalificada (ADR-W151): `motivo_<clave>`, la misma clave que cuenta el servidor.
+    // Por qué no pasó a closing cada descalificada (ADR-W153): `motivo_<clave>`, la misma clave que cuenta el servidor.
     ...Object.fromEntries([...MOTIVOS, SIN_MOTIVO].map((m) => [`motivo_${m.valor}`,
         { titulo: `No pasaron a closing · ${m.corto}`, coincide: (l) => descalificado(l) && claveDeMotivo(l) === m.valor }])),
 };

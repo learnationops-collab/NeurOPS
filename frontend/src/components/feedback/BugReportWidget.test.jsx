@@ -113,7 +113,7 @@ describe('BugReportWidget sin botón flotante', () => {
         expect(screen.getByTestId('estado').textContent).toBe('2|false');
         expect(screen.getByText('Mis reportes (2)')).toBeTruthy();
         // Una sola fila: «Mis reportes» y al lado el «+» para reportar uno nuevo.
-        expect(screen.getByRole('button', { name: 'Reportar un problema' })).toBeTruthy();
+        expect(screen.getByRole('button', { name: 'Reportar o pedir algo' })).toBeTruthy();
 
         act(() => triggerBugReport({ message: 'x', autoOpen: true }));
         fireEvent.click(screen.getByText('minimizar'));

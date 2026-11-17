@@ -8,7 +8,7 @@ import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 
 // Orquestador global del reporte de bugs: el chat, «Mis reportes» y el disparador reactivo. Desde el
-// 07/10/2026 NO dibuja el botón flotante rosado: «Reportar un problema» y «Mis reportes» son opciones
+// 07/10/2026 NO dibuja el botón flotante rosado: «Reportar o pedir algo» y «Mis reportes» son opciones
 // del menú de sesión que abre el avatar del dock (`MenuSesion`), que le pide a este componente que
 // abra una vista con BUG_REPORT_VISTA_EVENT y lee de acá, por el bus (`publicarEstadoDeReportes`), cuántas
 // respuestas hay sin leer y si quedó un reporte en progreso. Se monta a nivel de App

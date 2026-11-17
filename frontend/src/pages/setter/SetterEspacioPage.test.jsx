@@ -350,7 +350,7 @@ describe('SetterEspacioPage · la sesión en el dock', () => {
         expect(screen.getByText('Setter')).toBeInTheDocument();
         expect(screen.getAllByRole('menuitem').map(i => i.getAttribute('aria-label') || i.textContent))
             .toEqual(['Mis links de agendamiento', 'Configuración', 'Portal, 3 videos pendientes del Playbook, en Cortex', 'Mis reportes',
-                'Reportar un problema', 'Cerrar sesión']);
+                'Reportar o pedir algo', 'Cerrar sesión']);
     });
 
     it('simulando, "Volver a mi sesión" está arriba y también en el menú', async () => {
@@ -364,7 +364,7 @@ describe('SetterEspacioPage · la sesión en el dock', () => {
         await abrirSesion('Tu sesión: Ana Setter');
         expect(screen.getByText('Setter · simulación')).toBeInTheDocument();
         expect(screen.getAllByRole('menuitem').map(i => i.getAttribute('aria-label') || i.textContent))
-            .toEqual(['Mis links de agendamiento', 'Configuración', 'Portal', 'Mis reportes', 'Reportar un problema', 'Volver a mi sesión', 'Cerrar sesión']);
+            .toEqual(['Mis links de agendamiento', 'Configuración', 'Portal', 'Mis reportes', 'Reportar o pedir algo', 'Volver a mi sesión', 'Cerrar sesión']);
     });
 
     it('«Tálamus», en el encabezado, lleva a Agendas 2.0, donde el setter mira en solo lectura', async () => {

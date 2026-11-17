@@ -1,8 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, History, Loader2, MessageCircle, Clock, ArrowLeft, Bug, Lightbulb } from 'lucide-react';
+import { X, History, Loader2, MessageCircle, Clock, ArrowLeft } from 'lucide-react';
 import api from '../../services/api';
 import BugReportThread from './BugReportThread';
+import { reportTypeMeta } from './reportTypes';
+
+const TipoReporte = ({ id }) => {
+    const { icon: Icon, label, text } = reportTypeMeta(id);
+    return (
+        <span className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-1 ${text}`}>
+            <Icon size={11} /> {label}
+        </span>
+    );
+};
 
 const STATUS_LABELS = {
     open: 'Pendiente',
@@ -107,10 +117,7 @@ const BugReportHistory = ({ isOpen, onClose }) => {
                                         <span className="absolute top-3 right-3 w-2 h-2 rounded-full bg-rose-500" />
                                     )}
                                     <div className="flex items-center justify-between gap-2 pr-4">
-                                        <span className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-1 ${r.report_type === 'mejora' ? 'text-amber-400' : 'text-rose-400'}`}>
-                                            {r.report_type === 'mejora' ? <Lightbulb size={11} /> : <Bug size={11} />}
-                                            {r.report_type === 'mejora' ? 'Mejora' : 'Bug'}
-                                        </span>
+                                        <TipoReporte id={r.report_type} />
                                         {r.urgency && (
                                             <span className="text-[10px] font-black uppercase tracking-widest text-primary">{URGENCY_LABELS[r.urgency] || r.urgency}</span>
                                         )}

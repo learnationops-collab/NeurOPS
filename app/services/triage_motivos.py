@@ -1,4 +1,4 @@
-"""Por qué un lead que asistió al triage no pasó a closing (ADR-W151, pedido del 17/11/2026).
+"""Por qué un lead que asistió al triage no pasó a closing (ADR-W153, pedido del 17/11/2026).
 
 El triage lo elige al descalificar, en vez de la nota libre de antes: no tenía dinero, no encontramos
 horario, puso una objeción que no se resolvió, u otro motivo. Los dos últimos piden contar cuál.

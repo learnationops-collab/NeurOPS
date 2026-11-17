@@ -1,4 +1,4 @@
-// Por qué un lead que asistió al triage no pasó a closing (ADR-W151). Las claves son las de
+// Por qué un lead que asistió al triage no pasó a closing (ADR-W153). Las claves son las de
 // `app/services/triage_motivos.py`; `corto` es el rótulo de los chips y de la tarjeta del tablero.
 // `pideTexto`: sin contar cuál fue, ese motivo no dice nada.
 

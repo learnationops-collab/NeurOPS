@@ -109,7 +109,7 @@ export const diasDe = (porDia = [], persona = null) => {
 
 export const iniciales =(nombre) => (nombre || '?').split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join('');
 
-/** Por qué no pasaron a closing los que no califican (ADR-W151): una fila por motivo, de mayor a menor, con su
+/** Por qué no pasaron a closing los que no califican (ADR-W153): una fila por motivo, de mayor a menor, con su
  *  parte del total. «Sin motivo» (reportadas antes del cambio) va al final y solo si hay alguna. */
 export function motivosDe(m) {
     const fila = (x) => ({ clave: x.valor, texto: x.corto, n: m[`motivo_${x.valor}`] || 0, filtro: `motivo_${x.valor}` });

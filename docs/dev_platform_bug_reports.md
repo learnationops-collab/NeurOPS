@@ -44,7 +44,7 @@ curl -H "Authorization: Bearer <TOKEN>" \
 | Param | Default | Descripción |
 |---|---|---|
 | `status` | (todos) | Uno o varios, separados por coma: `open`, `reviewed`, `resolved`. Valores fuera de esta lista se ignoran. |
-| `type` | (todos) | Uno o varios, separados por coma: `bug`, `mejora`. |
+| `type` | (todos) | Uno o varios, separados por coma: `bug`, `solicitud`, `mejora`. |
 | `page` | 1 | — |
 | `limit` | 200 | Máximo 500 |
 
@@ -78,7 +78,7 @@ Para mostrar "lo pendiente de resolver" en un perfil, filtren con `status=open,r
 }
 ```
 
-Orden: primero `bug` y luego `mejora` (los bugs son más prioritarios), y dentro de cada tipo el más reciente primero — mismo criterio que el panel interno de operación.
+Orden: primero `bug`, después `solicitud` (pedido concreto de trabajo: un acceso, un dato, un reporte) y al final `mejora`, y dentro de cada tipo el más reciente primero — mismo criterio que el panel interno de operación.
 
 ---
 
