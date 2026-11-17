@@ -2,6 +2,7 @@
 // oculta y renombra las secciones de cada dock. Una oculta sale de la isla del medio y queda en
 // Herramientas (y se puede fijar a la izquierda). Se guarda en este navegador, por cuenta y por dock.
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
+import { avisarCambio, registrarParte } from '../sesion/dockServidor';
 
 const VACIO = { orden: [], ocultos: [], nombres: {} };
 const clave = (userId, dock) => `dock-nav:${userId}:${dock}`;
@@ -33,7 +34,7 @@ function leer(k) {
     return v;
 }
 
-function guardar(k, v) {
+function escribir(k, v) {
     cache.set(k, v);
     try {
         if (v === VACIO) window.localStorage.removeItem(k);
@@ -41,6 +42,39 @@ function guardar(k, v) {
     } catch { /* queda solo en memoria */ }
     avisar();
 }
+
+function guardar(k, v) {
+    escribir(k, v);
+    avisarCambio('nav', Number(k.split(':')[1]));
+}
+
+// En la cuenta (sesion/dockServidor.js): { dock: { orden, ocultos, nombres } } de todas las pantallas.
+registrarParte('nav', {
+    leer: (userId) => {
+        const prefijo = `dock-nav:${userId}:`;
+        const todo = {};
+        try {
+            for (let i = 0; i < window.localStorage.length; i += 1) {
+                const k = window.localStorage.key(i);
+                if (k && k.startsWith(prefijo)) todo[k.slice(prefijo.length)] = leer(k);
+            }
+        } catch { /* sin almacenamiento */ }
+        cache.forEach((v, k) => { if (k.startsWith(prefijo)) todo[k.slice(prefijo.length)] = v; });
+        Object.keys(todo).forEach((d) => { if (todo[d] === VACIO) delete todo[d]; });
+        return todo;
+    },
+    escribir: (userId, todo) => {
+        if (!todo || typeof todo !== 'object') return;
+        Object.entries(todo).forEach(([dock, v]) => {
+            if (v && typeof v === 'object') {
+                const k = clave(userId, dock);
+                cache.delete(k);
+                try { window.localStorage.setItem(k, JSON.stringify(v)); } catch { /* sin almacenamiento */ }
+            }
+        });
+        avisar();
+    },
+});
 
 /**
  * { todas (en su orden, con su nombre y `oculta`), visibles, ocultas, editando, editar(on), ordenar(ids),

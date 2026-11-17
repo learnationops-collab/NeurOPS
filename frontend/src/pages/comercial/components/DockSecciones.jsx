@@ -11,7 +11,12 @@ import DockEdicion from './DockEdicion';
 import DockLateral from './DockLateral';
 import { useModoDock } from '../../../ventanas/modoDock';
 import { agrupar } from '../../../ventanas/catalogoHerramientas';
-import { Bug, Plus } from 'lucide-react';
+import { hidratarDock } from '../../../sesion/dockServidor';
+import { BookOpen, Bug, Eye, Banknote, Plus, Receipt } from 'lucide-react';
+import { abrirBuscarLead } from '../../../ventanas/buscarLead';
+import { usePlaybook } from '../../../contexts/PlaybookContext';
+import { abrirSimulacion, puedeSimular } from '../../../sesion/simulacion';
+import { abrirLearnito, puedeUsarLearnito } from '../../../sesion/learnito';
 import { abrirReporteDeBug } from '../../../utils/bugReportBus';
 import '../dock2.css';
 
@@ -79,6 +84,8 @@ const DockSecciones = ({ secciones: todasLasSecciones, activa, onElegir, ariaLab
     siempreNombres = false }) => {
     const auth = useAuth();
     const usuario = auth?.user;
+    // El dock guardado en la cuenta pisa al del navegador (ADR-W164).
+    useEffect(() => { hidratarDock(usuario); }, [usuario]);
     const nav = useNavegacionDock(usuario, ariaLabel, todasLasSecciones);
     const secciones = nav.visibles;
     const angosto = useAngosto();
@@ -121,7 +128,13 @@ const DockSecciones = ({ secciones: todasLasSecciones, activa, onElegir, ariaLab
     // «Nuevo», una herramienta más (se fija como cualquiera): abre la lista de lo que crea algo en esta
     // pantalla (las acciones con `nuevo`) y «Reportar o pedir algo», que va en todas.
     const reportar = { id: 'reportar-bug', label: 'Reportar o pedir algo', Icono: Bug, onClick: abrirReporteDeBug };
-    const nuevos = [...acciones.filter(o => o.nuevo), reportar];
+    const venden = ['closer', 'triage', 'admin', 'director_comercial'].includes(usuario?.role);
+    const nuevos = [...acciones.filter(o => o.nuevo),
+        ...(venden ? [
+            { id: 'nuevo-pago', label: 'Registrar un pago', Icono: Receipt, onClick: () => abrirBuscarLead('pago') },
+            { id: 'nuevo-venta', label: 'Declarar una venta', Icono: Banknote, onClick: () => abrirBuscarLead('venta') },
+        ] : []),
+        reportar];
     const nuevosRef = useRef(nuevos);
     nuevosRef.current = nuevos;
     const nuevo = { id: 'nuevo', label: 'Nuevo', Icono: Plus, titulo: nuevos.map(o => o.label).join(' · '),
@@ -129,7 +142,32 @@ const DockSecciones = ({ secciones: todasLasSecciones, activa, onElegir, ariaLab
     const deCuenta = acciones.filter(o => o.seccion === 'cuenta');
     const deAccion = acciones.filter(o => o.seccion !== 'cuenta' && !o.nuevo);
     const sinLeer = deCuenta.reduce((n, o) => n + (Number(o.cuenta) || 0), 0);
-    const opciones = [nuevo, ...acciones, reportar, ...herramientas, ...ocultas];
+    // Las que están en todas las pantallas: el Playbook (con lo pendiente) y Simular, que antes había que
+    // buscar dentro del Portal.
+    const playbook = usePlaybook();
+    const globales = [
+        { id: 'playbook', label: 'Playbook', Icono: BookOpen, onClick: () => playbook.openPlaybook('pending'),
+            cuenta: playbook.pendingCount > 0 ? playbook.pendingCount : null,
+            titulo: playbook.pendingCount > 0 ? `${playbook.pendingCount} ${playbook.pendingCount === 1 ? 'video pendiente' : 'videos pendientes'}` : null },
+        ...(puedeSimular(usuario) ? [{ id: 'simular', label: 'Simular a alguien', Icono: Eye, onClick: abrirSimulacion }] : []),
+    ];
+    const opciones = [nuevo, ...acciones, reportar, ...herramientas, ...globales, ...ocultas];
+    // Atajos, como en la Academia: Ctrl+K busca un lead, Ctrl+L abre Learnito y Ctrl+J, Herramientas.
+    useEffect(() => {
+        const tecla = (e) => {
+            if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey || e.defaultPrevented) return;
+            const k = e.key.toLowerCase();
+            if (k === 'k' && herramientas.some(h => h.id === 'tool:buscar') && !document.querySelector('.talent')) {
+                e.preventDefault(); abrirBuscarLead(null);
+            } else if (k === 'l' && puedeUsarLearnito(usuario)) {
+                e.preventDefault(); abrirLearnito();
+            } else if (k === 'j') {
+                e.preventDefault(); window.dispatchEvent(new CustomEvent('abrir-herramientas'));
+            }
+        };
+        document.addEventListener('keydown', tecla);
+        return () => document.removeEventListener('keydown', tecla);
+    }, [herramientas, usuario]);
     opcionesRef.current = opciones;
     const contexto = useMemo(() => ({ publicar }), [publicar]);
     useEffect(() => {
@@ -197,7 +235,7 @@ const DockSecciones = ({ secciones: todasLasSecciones, activa, onElegir, ariaLab
     const herr = (
         <BotonHerramientas usuario={usuario} onEditar={todasLasSecciones.length > 1 && usuario ? () => nav.editar(true) : null}
             cuenta={sinLeer > 0 ? (sinLeer > 99 ? '99+' : sinLeer) : null}
-            grupos={agrupar([nuevo, ...herramientas, ...deAccion, ...ocultas, ...deCuenta])} />
+            principal grupos={agrupar([nuevo, ...herramientas, ...globales, ...deAccion, ...ocultas, ...deCuenta])} />
     );
     const centro = (
         <nav className={clases.filter(Boolean).join(' ')} aria-label={ariaLabel}>
@@ -245,7 +283,8 @@ const DockSecciones = ({ secciones: todasLasSecciones, activa, onElegir, ariaLab
         return (
             <DockContexto.Provider value={contexto}>
                 <DockLateral secciones={secciones} activa={activa} onElegir={onElegir} ariaLabel={ariaLabel} antes={antes}
-                    despues={despues} herr={herr} fijadas={fijadas} nav={nav} modo={modo} marcasDe={marcasDe} claseDeMarca={claseDeMarca} />
+                    despues={despues} herr={herr} fijadas={fijadas} nav={nav} modo={modo} marcasDe={marcasDe} claseDeMarca={claseDeMarca}
+                    usuario={usuario} salida={acciones.filter(o => o.id === 'salir' || o.id === 'volver')} />
             </DockContexto.Provider>
         );
     }

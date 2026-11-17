@@ -3,13 +3,16 @@
 // Las opciones salen de cada pantalla (MenuSesion), del catálogo en ventana (herramientas.js) y de las
 // secciones ocultas; acá solo se les da lugar. Una opción que no está acá cae en «Esta pantalla».
 
-export const GRUPOS = ['Crear', 'Agendas', 'Asistente', 'Pendientes', 'Esta pantalla', 'Secciones ocultas', 'Ir a', 'Sesión'];
+export const GRUPOS = ['Crear', 'Buscar', 'Agendas', 'Asistente', 'Pendientes', 'Esta pantalla', 'Secciones ocultas', 'Ir a', 'Sesión'];
 
 const CATALOGO = {
-    nuevo: { grupo: 'Crear', desc: 'Una agenda, un referido o un pedido al equipo técnico.', color: 'rosa' },
+    nuevo: { grupo: 'Crear', desc: 'Una agenda, un pago, una venta o un pedido al equipo técnico.', color: 'rosa' },
+    'tool:buscar': { grupo: 'Buscar', desc: 'Cualquier lead y su ficha · Ctrl+K', color: 'rosa' },
+    playbook: { grupo: 'Asistente', desc: 'Los videos del Playbook.', color: 'verde' },
+    simular: { grupo: 'Ir a', desc: 'Ver Work como lo ve otra persona.', color: 'violeta' },
     'tool:turnos': { grupo: 'Agendas', desc: 'Los turnos que quedan de triage y de closers, con sus horarios.', color: 'azul' },
     links: { grupo: 'Agendas', desc: 'Tus links de agendamiento: tocá uno para copiarlo.', color: 'azul' },
-    learnito: { grupo: 'Asistente', desc: 'Preguntale lo que necesites, en lenguaje natural.', color: 'violeta' },
+    learnito: { grupo: 'Asistente', desc: 'Preguntale lo que necesites · Ctrl+L', color: 'violeta' },
     avisos: { grupo: 'Pendientes', desc: 'Lo que el sistema te avisó.', color: 'ambar' },
     conflictos: { grupo: 'Pendientes', desc: 'Datos sueltos para revisar.', color: 'rojo' },
     'mis-reportes': { grupo: 'Pendientes', desc: 'Lo que reportaste o pediste, y sus respuestas.', color: 'verde' },

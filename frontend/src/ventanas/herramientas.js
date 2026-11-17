@@ -2,9 +2,18 @@
 // Academia y `DockTools` de Leadership. Cada una aparece en el menú de sesión (y se puede fijar en el dock)
 // y se abre encima de cualquier pantalla. Sumar una es agregar un item acá y su componente en ./herramientas/.
 import { lazy } from 'react';
-import { CalendarClock } from 'lucide-react';
+import { CalendarClock, Search } from 'lucide-react';
 
 export const HERRAMIENTAS = [
+    {
+        key: 'buscar',
+        label: 'Buscar lead',
+        hint: 'Cualquier lead y su ficha, desde cualquier pantalla',
+        Icono: Search,
+        roles: ['setter', 'closer', 'triage', 'admin', 'director_comercial', 'operator'],
+        ancho: 520,
+        Componente: lazy(() => import('./herramientas/BuscarLeadVentana.jsx')),
+    },
     {
         key: 'turnos',
         label: 'Turnos',

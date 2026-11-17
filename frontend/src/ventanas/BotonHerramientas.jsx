@@ -40,7 +40,7 @@ const Fila = ({ op, fijada, onAbrir, onFijar }) => {
  * Con `panelInicial` es el botón de una lista fijada: abre directo esa lista, sin volver al menú.
  */
 export default function BotonHerramientas({ usuario, grupos = [], onEditar = null, Icono = Wrench, rotulo = 'Herramientas',
-    pista = 'Fijá lo que más usás: va a la izquierda del dock', clase = '', cuenta = null, panelInicial = null }) {
+    pista = 'Fijá lo que más usás: va a la izquierda del dock', clase = '', cuenta = null, panelInicial = null, principal = false }) {
     const [abierto, setAbierto] = useState(false);
     const [pos, setPos] = useState(null);
     const [panel, setPanel] = useState(null);
@@ -65,6 +65,13 @@ export default function BotonHerramientas({ usuario, grupos = [], onEditar = nul
         setAbierto(false); setPos(null); setPanel(null); setLista(null);
     }, []);
     const abrir = () => { setAbierto(true); if (panelInicial) abrirPanel(panelInicial); };
+    // La llave del dock se abre también con Ctrl+J (DockSecciones avisa con 'abrir-herramientas').
+    useEffect(() => {
+        if (!principal) return undefined;
+        const alPedir = () => setAbierto(true);
+        window.addEventListener('abrir-herramientas', alPedir);
+        return () => window.removeEventListener('abrir-herramientas', alPedir);
+    }, [principal]);
 
     useLayoutEffect(() => {
         if (!abierto) return undefined;
@@ -146,6 +153,7 @@ export default function BotonHerramientas({ usuario, grupos = [], onEditar = nul
             <button ref={boton} type="button" className={`dock-fijada ${clase}`.trim()} aria-label={rotulo} title={rotulo}
                 aria-haspopup="menu" aria-expanded={abierto} onClick={() => (abierto ? cerrar() : abrir())}>
                 <Icono size={19} aria-hidden="true" />
+                <span className="dock-fijada-nombre">{rotulo}</span>
                 {cuenta != null && <span className="dock-sesion-aviso" aria-hidden="true">{cuenta}</span>}
             </button>
             {abierto && createPortal(

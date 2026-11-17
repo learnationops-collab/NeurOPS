@@ -1380,3 +1380,17 @@
   2. Herramientas se ordena por tipo, con un catálogo: Crear, Agendas, Asistente, Pendientes, Esta pantalla, Secciones ocultas, Ir a y Sesión. Va en dos columnas; cada opción tiene su ícono en color, una línea de para qué sirve y una flecha si lleva a otra pantalla. Lo que una opción dice en el momento (por ejemplo, «20 avisos sin leer») gana sobre la descripción fija. En la barra lateral, el menú abre a la derecha.
 - **Qué se pierde:** en la barra plegada no se ve el switch Closers/Setters de la dirección (aparece al desplegarla). La barra corre `#root`; una pantalla con algo `fixed` pegado a la izquierda puede quedar debajo.
 - **Consecuencias:** sin migración. Una opción nueva se ubica sumándola a `CATALOGO` (si no, cae en «Esta pantalla»).
+
+## ADR-W164: barra lateral en tres secciones, herramientas nuevas, atajos y el dock guardado en la cuenta
+
+- **Fecha:** 2026-11-17 · **Subsistema:** Dock 2.0 (`DockLateral`, `BuscarLeadVentana`, `DockSecciones`, `sesion/dockServidor.js`, `users.dock_prefs`, `PUT /auth/me/dock`) · **Estado:** implementado. Sigue a ADR-W163.
+- **Contexto:** Santi pidió ordenar la barra lateral en secciones: la tarjeta de usuario (personaje más grande, cerrar sesión, Herramientas y lo fijado) y la navegación, todo alineado a la izquierda. Aprobó las mejoras propuestas a las herramientas.
+- **Decisión:**
+  1. **Barra lateral, tres secciones:** la tarjeta (personaje grande que abre Configuración, nombre y rol, plegar, Herramientas con su nombre, cerrar sesión, volver a tu sesión si simulás, y lo fijado); la navegación, alineada a la izquierda y con su número; y al fondo las ventanas abiertas.
+  2. **Buscar lead** (Ctrl+K): ventana que busca cualquier lead por nombre, mail, Instagram o teléfono (`/closer/leads/search`, ahora también para la dirección comercial) y abre su ficha. Al abrir la ficha, la ventana se minimiza.
+  3. **Nuevo** suma «Registrar un pago» y «Declarar una venta» (closer, triage, admin y dirección comercial). Buscan el lead y abren la ficha en Acciones o en «Registrar una venta».
+  4. **Playbook**, con los videos pendientes, y **Simular a alguien** pasan a ser herramientas propias, en todas las pantallas. Ya no hace falta entrar al Portal.
+  5. **Atajos:** Ctrl+K busca un lead (salvo en Talent, que ya lo usa), Ctrl+L abre Learnito y Ctrl+J, Herramientas.
+  6. **El dock en la cuenta:** lo fijado, la navegación editada de cada pantalla y el modo (abajo o lateral) se guardan en `users.dock_prefs`. Al entrar, lo de la cuenta pisa lo del navegador. Si la cuenta todavía no tiene nada, se le sube lo que había en el navegador. Simulando no se lee ni se guarda.
+- **Qué se pierde:** un lead que solo está en la planilla vieja (sin cliente ni persona) aparece en Buscar pero no abre ficha. Las preferencias son por persona, no por rol como en Leadership.
+- **Consecuencias:** migración `c4e7a9d1f3b2` (columna `users.dock_prefs`, idempotente; corre sola en el deploy).

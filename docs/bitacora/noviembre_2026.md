@@ -647,3 +647,8 @@
 ### 17/11/2026 · Barra lateral y Herramientas ordenadas, como en la Academia
 - Configuración › Dock: la navegación puede ir en una barra lateral, desplegada o solo con íconos ([DockLateral.jsx](../../frontend/src/pages/comercial/components/DockLateral.jsx), [ADR-W163](../DECISIONS.md)).
 - Herramientas se ordena por tipo (Crear, Agendas, Asistente, Pendientes, Esta pantalla, Ir a, Sesión), en dos columnas, con ícono en color y una línea de para qué sirve cada una ([catalogoHerramientas.js](../../frontend/src/ventanas/catalogoHerramientas.js)).
+
+### 17/11/2026 · Barra lateral en secciones, Buscar lead, atajos y el dock en la cuenta
+- La barra lateral se ordena en la tarjeta de usuario (personaje grande, Herramientas, cerrar sesión y lo fijado), la navegación alineada a la izquierda y las ventanas al fondo ([DockLateral.jsx](../../frontend/src/pages/comercial/components/DockLateral.jsx), [ADR-W164](../DECISIONS.md)).
+- Herramienta **Buscar lead** (Ctrl+K): cualquier lead y su ficha, desde cualquier pantalla ([BuscarLeadVentana.jsx](../../frontend/src/ventanas/herramientas/BuscarLeadVentana.jsx)). Nuevo suma «Registrar un pago» y «Declarar una venta». Playbook y Simular pasan a ser herramientas. Ctrl+L abre Learnito y Ctrl+J, Herramientas.
+- Lo fijado, la navegación editada y el modo del dock se guardan en la cuenta: otra compu arranca igual ([dockServidor.js](../../frontend/src/sesion/dockServidor.js), migración `c4e7a9d1f3b2`).

@@ -59,35 +59,64 @@
 .dc-shell .menu-item--herr .menu-herr-ico svg{color:var(--c,var(--text-muted))}
 .dc-shell .menu-item--herr .menu-flecha{flex-shrink:0;color:var(--text-muted-40)}
 
-/* La barra lateral (DockLateral.jsx), como la de la Academia: plegada, solo íconos. */
-.dc-shell .dock-lado{position:fixed;left:16px;top:16px;bottom:16px;z-index:60;width:66px;
-  display:flex;flex-direction:column;gap:var(--s2);padding:5px;border-radius:24px;
+/* La barra lateral (DockLateral.jsx), como la de la Academia: la tarjeta de usuario, la navegación y las
+   ventanas, todo alineado a la izquierda. Plegada, solo íconos. */
+.dc-shell .dock-fijada-nombre{display:none}
+.dc-shell .dock-lado{position:fixed;left:16px;top:16px;bottom:16px;z-index:60;width:68px;
+  display:flex;flex-direction:column;gap:var(--s2);padding:6px;border-radius:24px;
   background:var(--bg-surface);backdrop-filter:saturate(180%) blur(28px);
   border:1px solid var(--border-main);border-top-color:var(--sheen);
   box-shadow:var(--shadow-main),0 0 0 1px rgba(0,0,0,.25);
   overflow-y:auto;overflow-x:hidden;scrollbar-width:none;transition:width .25s ease}
 .dc-shell .dock-lado::-webkit-scrollbar{display:none}
-.dc-shell .dock-lado--abierta{width:240px}
-.dc-shell .dock-lado-cab{display:flex;flex-direction:column;align-items:center;gap:2px;padding-bottom:var(--s2);
-  border-bottom:1px solid var(--border-subtle)}
-.dc-shell .dock-lado--abierta .dock-lado-cab{flex-direction:row;justify-content:space-between}
-.dc-shell .dock-lado .dock-sesion{width:54px;height:54px}
-.dc-shell .dock-lado .dock-fijada{width:54px;height:48px}
-.dc-shell .dock-lado-antes{display:flex;justify-content:center}
-.dc-shell .dock-lado-nav{display:flex;flex-direction:column;gap:2px}
-.dc-shell .dock-lado-item{position:relative;display:flex;align-items:center;gap:12px;height:46px;padding:0 15px;flex-shrink:0;
-  border-radius:15px;color:var(--text-muted);font-size:14px;font-weight:700;text-align:left;
+.dc-shell .dock-lado--abierta{width:248px}
+
+/* 1 · La tarjeta de usuario. */
+.dc-shell .dock-lado-tarjeta{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:6px;
+  border-radius:18px;background:var(--bg-element);border:1px solid var(--border-subtle)}
+.dc-shell .dock-lado-quien{display:flex;align-items:center;gap:10px;width:100%;min-width:0}
+.dc-shell .dock-lado-nombre{flex:1;min-width:0;display:grid;line-height:1.25}
+.dc-shell .dock-lado-nombre b{font-size:14px;font-weight:800;color:var(--text-on-surface)}
+.dc-shell .dock-lado-nombre small{font-size:11px;font-weight:600;color:var(--text-muted-40)}
+.dc-shell .dock-lado .dock-sesion{width:44px;height:44px;flex-shrink:0}
+.dc-shell .dock-lado--abierta .dock-sesion{width:64px;height:64px}
+.dc-shell .dock-lado--abierta .dock-sesion > :first-child{transform:scale(1.25)}
+.dc-shell .dock-lado-plegar{flex-shrink:0;display:grid;place-items:center;width:44px;height:32px;border-radius:10px;
+  color:var(--text-muted);align-self:flex-start;transition:background-color .15s ease,color .15s ease}
+.dc-shell .dock-lado--abierta .dock-lado-plegar{width:30px;height:30px;align-self:flex-start}
+.dc-shell .dock-lado-plegar:hover{background:var(--mat-3);color:var(--text-on-surface)}
+.dc-shell .dock-lado-acciones{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%}
+.dc-shell .dock-lado--abierta .dock-lado-acciones{flex-direction:row;align-items:center}
+.dc-shell .dock-lado-herr{display:contents}
+.dc-shell .dock-lado .dock-fijada{width:44px;height:44px;border-radius:14px}
+.dc-shell .dock-lado--abierta .dock-lado-herr .dock-fijada{flex:1;width:auto;display:flex;justify-content:flex-start;gap:10px;padding:0 12px;
+  font-size:13.5px;font-weight:700;background:var(--bg-surface);border:1px solid var(--border-subtle)}
+.dc-shell .dock-lado--abierta .dock-lado-herr .dock-fijada-nombre{display:inline}
+.dc-shell .dock-lado--abierta .dock-lado-herr .dock-sesion-aviso{position:static;margin-left:auto;box-shadow:none}
+.dc-shell .dock-lado-salir:hover{background:var(--error-surface);color:var(--error)}
+.dc-shell .dock-lado-fijadas{width:100%;padding-top:4px;border-top:1px solid var(--border-subtle)}
+.dc-shell .dock-lado-fijadas:empty{display:none}
+.dc-shell .dock-lado .dock-fijadas{flex-direction:column;align-items:flex-start;gap:2px}
+.dc-shell .dock-lado--abierta .dock-fijadas{flex-direction:row;flex-wrap:wrap}
+
+/* 2 · La navegación. */
+.dc-shell .dock-lado-nav{display:flex;flex-direction:column;align-items:stretch;gap:2px;padding:0 2px}
+.dc-shell .dock-lado-antes{display:flex;justify-content:flex-start;margin-bottom:4px}
+.dc-shell .dock-lado-item{position:relative;display:flex;align-items:center;justify-content:flex-start;gap:12px;height:44px;
+  padding:0 12px;flex-shrink:0;border-radius:14px;color:var(--text-muted);font-size:14px;font-weight:700;text-align:left;
   transition:background-color .15s ease,color .15s ease}
 .dc-shell .dock-lado-item svg{flex-shrink:0}
 .dc-shell .dock-lado-item:hover{background:var(--mat-3);color:var(--text-on-surface)}
 .dc-shell .dock-lado-item[aria-current="page"]{background:var(--brand-secondary);color:var(--on-brand)}
-.dc-shell .dock-lado-item .dock-marca{margin:0 0 0 auto}
-.dc-shell .dock-lado:not(.dock-lado--abierta) .dock-lado-item{justify-content:center;padding:0}
-.dc-shell .dock-lado:not(.dock-lado--abierta) .dock-lado-item .dock-marca{position:absolute;top:3px;right:3px;margin:0}
-.dc-shell .dock-lado-fin{margin-top:auto;display:flex;flex-direction:column;align-items:center;gap:2px}
-.dc-shell .dock-lado .dock-fijadas{flex-direction:column}
-.dc-shell .dock-lado--abierta .dock-fijadas{flex-direction:row;flex-wrap:wrap;justify-content:center}
-.dc-shell .dock-lado .dock-sep{width:70%;height:1px;margin:4px auto}
-.dc-shell .dock-lado .dock-nav .dock-item--edit{justify-content:flex-start}
-html.dock-lateral #root{padding-left:98px;transition:padding-left .25s ease}
-html.dock-lateral.dock-lateral--abierta #root{padding-left:272px}
+.dc-shell .dock-lado-num{margin-left:auto;font-size:10px;font-weight:900;opacity:.5}
+.dc-shell .dock-lado-item .dock-marca{margin:0}
+.dc-shell .dock-lado-item .dock-lado-num + .dock-marca{margin-left:4px}
+.dc-shell .dock-lado:not(.dock-lado--abierta) .dock-lado-item .dock-marca{position:absolute;top:3px;right:3px}
+.dc-shell .dock-lado-editar{flex-direction:column;align-items:stretch}
+
+/* 3 · Las ventanas abiertas, al fondo. */
+.dc-shell .dock-lado-fin{margin-top:auto;display:flex;flex-direction:column;align-items:flex-start;gap:2px}
+.dc-shell .dock-lado-fin:empty{display:none}
+.dc-shell .dock-lado .dock-sep{width:100%;height:1px;margin:4px 0}
+html.dock-lateral #root{padding-left:100px;transition:padding-left .25s ease}
+html.dock-lateral.dock-lateral--abierta #root{padding-left:280px}
