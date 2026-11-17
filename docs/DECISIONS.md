@@ -1194,3 +1194,11 @@
 - **Decisión:** (1) los días extra de ADR-W027 solo se aplican a eventos con ruteo; con persona fija, la ventana es exactamente la que eligió (Python y JS). (2) «Horarios libres» no muestra horarios hasta tener leídos los calendarios.
 - **Qué se pierde:** el lead de un evento de persona fija con la semana casi llena ve pocos horarios, o ninguno, en vez de días más lejanos. Es lo que la persona pidió al configurar la ventana.
 - **Consecuencias:** en persona fija, el modal y el link público dan los mismos horarios. Los eventos con ruteo siguen como en ADR-W027.
+
+## ADR-W148: la ventana «N días» es exacta; se abre un día más solo si el grupo no tiene ningún horario
+
+- **Fecha:** 2026-11-17 · **Subsistema:** Agendas 2.0 › asignación (`nucleo/asignacion.py`, `core/asignacion.js`) · **Estado:** implementado. Reemplaza a ADR-W027.
+- **Contexto:** «Sesión de Aceleración» tiene 2 días hábiles, pero el martes 17 los Segmentos A y B le mostraban al lead el viernes 20 y el lunes 23. Con ADR-W027, un día con menos de 3 horarios no contaba y se abrían días hasta juntar N días con lugar. Marlon avisó que agendar tan lejos baja la asistencia.
+- **Decisión:** se ofrecen solo los días configurados, aunque tengan 1 o 2 horarios. Se abre un día más por vez, hasta 14, solo si el grupo no tiene ningún horario en la ventana, sin desbordar. Si sigue sin haber nada, desborda como antes. Es la regla anterior al 29/10, y se mantiene ADR-W147 (persona fija nunca abre días). Decisión de Santi.
+- **Qué se pierde:** con Jean Carlo y Marlon casi llenos, el lead ve pocos horarios, por ejemplo 2 el martes y 1 el miércoles, en vez de más opciones lejanas.
+- **Consecuencias:** se borran `MIN_HORARIOS_DIA` y `dias_con_lugar`/`diasConLugar`. Para ofrecer más días hay que agrandar la ventana del evento.

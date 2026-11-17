@@ -564,3 +564,7 @@
 ### 17/11/2026 · Agendas: un evento de persona fija respeta sus días
 - El link público de un evento de persona fija ofrece solo los días que eligió esa persona («3 días hábiles» son 3). Antes, si sus días tenían 1 o 2 horarios libres, se abrían hasta 14 días más (ADR-W027) y el lead veía horarios de varias semanas: le pasó a Mario con «Consultoría» ([asignacion.py](../../app/agendas_v2/nucleo/asignacion.py), [asignacion.js](../../frontend/src/pages/agendas_v2/core/asignacion.js), ADR-W147).
 - «Horarios libres» espera a leer los Google Calendar antes de mostrar horarios: antes mostraba todo libre y después desaparecían los ocupados ([HorariosLibres.jsx](../../frontend/src/pages/agendas_v2/secciones/eventos/HorariosLibres.jsx)).
+
+### 17/11/2026 · Agendas: la ventana de días es exacta
+- Un evento de «2 días hábiles» ofrece solo esos 2 días, aunque tengan pocos horarios. Antes, los días con menos de 3 horarios no contaban y se abrían días más lejos: Segmentos A y B mostraban el viernes y el lunes (aviso de Marlon). Solo se abre un día más si el grupo no tiene ningún horario ([asignacion.py](../../app/agendas_v2/nucleo/asignacion.py), [asignacion.js](../../frontend/src/pages/agendas_v2/core/asignacion.js), ADR-W148).
+- Se borró la prueba de «se abre un día más», que había quedado vieja con ADR-W027.
