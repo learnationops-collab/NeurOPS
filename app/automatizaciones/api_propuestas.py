@@ -8,7 +8,7 @@ from flask_login import current_user
 from app import db
 from app.automatizaciones import servicio
 from app.automatizaciones.api import ROLES_CON_ACCESO, _error_de_grafo, _flujo_completo, _iso, bp
-from app.automatizaciones.modelos import AutFlujo, AutPropuesta, ahora
+from app.automatizaciones.modelos import AutFlujo, AutFlujoVersion, AutPropuesta, ahora
 from app.automatizaciones.nucleo import grafo as g
 
 LARGO_NOTA = 1000
@@ -126,7 +126,7 @@ def aprobar_propuesta(propuesta_id):
     if errores:
         db.session.rollback()
         return jsonify({'message': 'El flujo tiene errores', 'errores': errores}), 422
-    p.version_numero = flujo.version_publicada.numero
+    p.version_numero = db.session.get(AutFlujoVersion, flujo.version_publicada_id).numero
     db.session.commit()
     return jsonify(_resumen(p))
 
