@@ -8,7 +8,7 @@ import api from '../../../services/api';
 import { useDatosCacheados } from '../../../services/cacheDeVistas';
 import { EmptyState, FieldError, Skeleton, SkeletonKpi, SkeletonPanel } from '../../../components/standard';
 import { filtroDe } from '../../triage/components/triageFiltros';
-import { Abandonos, Embudo, Estados, LowTicket, Tarjetas } from './triage/TriagePaneles';
+import { Abandonos, Embudo, Estados, LowTicket, Motivos, Tarjetas } from './triage/TriagePaneles';
 import { DiaPorDia, PorPersona } from './triage/TriagePersonasDias';
 import { coloresDe } from './triage/coloresCloser';
 import { diasDe } from './triage/triageDatos';
@@ -61,6 +61,7 @@ export default function TriageDireccion({ onAbrirFila, period, rango, triageId, 
                     <Tarjetas m={m} onVer={verLista} />
                     <div style={FILA}><Estados m={m} onVer={verLista} /><Embudo m={m} onVer={verLista} closers={closers} colores={colores} /></div>
                     <PorCloser closers={closers} colores={colores} onVer={verLista} />
+                    {m.descalificados > 0 && <Motivos m={m} onVer={verLista} />}
                     <div style={FILA}><LowTicket m={m} onVer={verLista} /><Abandonos a={datos.abandonos} /></div>
                     <div style={FILA}>
                         {!elegida && <PorPersona personas={personas} yo={yo}

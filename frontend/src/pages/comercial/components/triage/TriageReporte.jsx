@@ -3,6 +3,7 @@
 
 import { useState } from 'react';
 import { formatAgendaDateTime } from '../../../../utils/datetime';
+import { cortoDeMotivo, motivoDe } from '../../../../utils/motivosTriage';
 import { COLOR_DE_ESTADO, ESTADOS, coincide, estadoDe } from './triageDatos';
 
 const LOW_TICKET = { cerrado: 'Cerró el low ticket', no_cerrado: 'No cerró', seguimiento: 'Seguimiento', descartado: 'Perdido', no_pitch: 'Sin presentación' };
@@ -30,6 +31,7 @@ const Llamada = ({ l, onAbrir }) => {
                 <span style={{ fontSize: 15, fontWeight: 800 }}>{l.cliente || `Agenda ${l.id}`}</span>
                 <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{formatAgendaDateTime(l.hora)}{l.triage ? ` · ${l.triage}` : ''}</span>
                 {chip(estado, COLOR_DE_ESTADO[estado])}
+                {l.calificacion === 'descalificado' && chip(cortoDeMotivo(l.motivo), motivoDe(l.motivo) ? 'warning' : 'idle')}
                 {extra && chip(extra, 'info')}
                 {l.closing?.asistio && chip('Asistió al closer', 'success')}
                 {l.closing?.estado === 'no_asistio' && chip('No asistió al closer', 'error')}

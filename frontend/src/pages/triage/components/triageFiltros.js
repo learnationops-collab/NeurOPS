@@ -3,6 +3,8 @@
 // (triage_service._sumar) y los criterios de acá tienen que dar el mismo número.
 // Lo que pasó al closing sale de `lead.closing` (triage_pases.py): el pase del lead, o null.
 
+import { MOTIVOS, SIN_MOTIVO, claveDeMotivo } from '../../../utils/motivosTriage';
+
 const PITCHEADO = ['cerrado', 'no_cerrado', 'seguimiento', 'descartado'];
 const REAGENDA = ['reagend', 'reprogram'];
 const asistencia = (l) => (l.asistencia || '').trim().toLowerCase();
@@ -53,6 +55,9 @@ export const FILTROS = {
     no_cerrado: { titulo: 'No cierres del low ticket', coincide: lowTicketEs('no_cerrado') },
     seguimiento: { titulo: 'Low ticket en seguimiento', coincide: lowTicketEs('seguimiento') },
     descartado: { titulo: 'Low ticket perdidos', coincide: lowTicketEs('descartado') },
+    // Por qué no pasó a closing cada descalificada (ADR-W153): `motivo_<clave>`, la misma clave que cuenta el servidor.
+    ...Object.fromEntries([...MOTIVOS, SIN_MOTIVO].map((m) => [`motivo_${m.valor}`,
+        { titulo: `No pasaron a closing · ${m.corto}`, coincide: (l) => descalificado(l) && claveDeMotivo(l) === m.valor }])),
 };
 
 // `cl:<id del closer>:<pasaron|asistieron|cerraron>`: la misma lista acotada a un closer (tabla «Por closer»).
