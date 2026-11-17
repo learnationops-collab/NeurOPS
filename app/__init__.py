@@ -213,6 +213,7 @@ def create_app(config_class=Config):
     from app.api import workshop_agendas  # noqa: F401
     from app.api import workshop_correlaciones  # noqa: F401
     from app.api import workshop_leadership  # noqa: F401
+    from app.api import workshop_grupos  # noqa: F401
     app.register_blueprint(workshop_bp, url_prefix='/api/workshop')
 
     from app.api.metrics import bp as metrics_bp
