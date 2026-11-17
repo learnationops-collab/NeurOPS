@@ -114,3 +114,11 @@ export const getSegmentosRegistros = (filtros, metrica, segmento, config = {}, {
             ...(grupo !== undefined && grupo !== null ? { grupo } : {}), ...(previo ? { previo: 1 } : {}) },
         ...config,
     }).then(r => r.data);
+
+/** La lista detrás de una cifra de «Destino de las agendas» o de «Por llamada» (ADR-W144): `que` es un grupo del panel,
+ *  un estado o una marca (agendas · base · asistieron · ventas); `llamada`, primera · segunda · momentum (sin ella, todas). */
+export const getLlamadasRegistros = (filtros, que, llamada = null, config = {}, { previo } = {}) =>
+    api.get('/comercial/llamadas/registros', {
+        params: { ...filtrosQuery(filtros), que, ...(llamada ? { llamada } : {}), ...(previo ? { previo: 1 } : {}) },
+        ...config,
+    }).then(r => r.data);

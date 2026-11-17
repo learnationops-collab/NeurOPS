@@ -84,6 +84,30 @@
 .dc-shell .cc-canal-v2 { font-size: 14px; font-weight: 700; text-align: right; color: color-mix(in srgb, var(--text-on-surface) 65%, transparent); }
 .dc-shell .cc-canal-v2.cc-canal-con { color: var(--cc-s); }
 
+/* Por llamada (CierrePorLlamada.jsx, ADR-W144): 1ª / 2ª o más / Momentum, con asistieron, ventas y close rate. */
+.dc-shell .cc-llamadas { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid var(--border-subtle); animation: ccSube .5s .2s both cubic-bezier(.2, .8, .2, 1); }
+.dc-shell .cc-ll { display: grid; grid-template-columns: minmax(0, 1fr) 62px 48px 84px 88px; gap: 8px; align-items: center; }
+.dc-shell .cc-ll--cab small, .dc-shell .cc-ll-tit {
+    font-size: 9px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; white-space: nowrap; color: var(--text-muted);
+}
+.dc-shell .cc-ll--cab small { text-align: right; }
+.dc-shell .cc-ll-tit { display: inline-flex; align-items: center; gap: 6px; }
+.dc-shell .cc-ll-nombre { display: inline-flex; align-items: center; gap: 7px; min-width: 0; font-size: 12px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: color-mix(in srgb, var(--text-on-surface) 82%, transparent); }
+.dc-shell .cc-ll[data-aparte] .cc-ll-nombre { color: var(--text-muted); }
+.dc-shell .cc-ll-n { justify-self: end; font-size: 14px; font-weight: 800; color: var(--text-on-surface); }
+.dc-shell button.cc-ll-n--clic { padding: 2px 6px; margin: -2px -6px; border-radius: 8px; color: var(--c); cursor: pointer; transition: background-color .16s ease; }
+.dc-shell button.cc-ll-n--clic:hover { background: color-mix(in srgb, var(--text-on-surface) 8%, transparent); }
+.dc-shell .cc-ll-tasa { display: grid; justify-items: end; gap: 2px; line-height: 1.1; }
+.dc-shell .cc-ll-pct { font-size: 16px; font-weight: 800; color: var(--text-on-surface); }
+.dc-shell .cc-ll-pct--pocas { color: var(--text-muted); }
+.dc-shell .cc-ll-tasa small { font-size: 10px; font-weight: 600; color: var(--text-muted); white-space: nowrap; }
+.dc-shell .cc-ll-antes { display: inline-flex; align-items: center; justify-content: flex-end; gap: 4px; min-width: 0; font-size: 11px; font-weight: 700; color: var(--text-muted); white-space: nowrap; }
+.dc-shell .cc-ll-antes .vsp-d { padding: 0 5px; font-size: 10px; }
+@media (max-width: 560px) {
+    .dc-shell .cc-ll { grid-template-columns: minmax(0, 1fr) 52px 40px 70px; gap: 6px; }
+    .dc-shell .cc-ll-antes, .dc-shell .cc-ll--cab small:last-child { display: none; }
+}
+
 @keyframes ccSube { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @keyframes ccArco { from { stroke-dashoffset: var(--largo); } }
 @keyframes ccRiel { from { width: 0; } }
