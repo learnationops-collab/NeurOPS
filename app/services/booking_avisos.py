@@ -93,7 +93,7 @@ class BookingAvisosMixin:
                     
                     # JSON payload
                     json_payload = {
-                        "content": f"@everyone **📅 NUEVA AGENDA**\nCantidad de agendas de hoy: **{todays_count}**",
+                        "content": f"@everyone 📅 **Nueva agenda** · {todays_count} hoy",
                         "embeds": [{
                             "color": 3801080, # Sky blue (matches accent)
                             "image": {

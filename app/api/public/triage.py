@@ -220,17 +220,7 @@ def _trigger_triage_report_webhook(report):
         img_buffer = ImageService.generate_triage_report_card(img_data)
         
         # Metadatos Discord
-        content = (
-            f"🎯 **REPORTE DIARIO DE TRIAJE**\n"
-            f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
-            f"👤 **Triaje:** `{report.triage_name}`\n"
-            f"📅 **Fecha:** `{report.date.strftime('%d/%m/%Y')}`\n"
-            f"📊 **Resultados Hoy:** `{today_conf}/{today_tot} Confirmadas ({conf_rate}%)`\n"
-            f"🔮 **Futuras Confirmadas:** `{report.future_confirmed}/{report.future_agendas}`\n"
-            f"🔄 **Recuperaciones:** `{report.recoveries_scheduled} Agendas`\n"
-            f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
-            f"@everyone"
-        )
+        content = f"🎯 **Reporte de triage** · {report.triage_name} · {report.date.strftime('%d/%m/%Y')} @everyone"
         
         json_payload = {
             "content": content,

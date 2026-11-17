@@ -78,6 +78,21 @@ def test_el_v2_sale_por_canal_con_su_tarjeta(client, elias, auth_headers, enviad
     assert url == 'https://discord.test/webhook'
     assert kw['files']['file1'][0] == 'setter_report.png'
     assert enviados['tarjetas'] == {'v1': 0, 'v2': 1}
+    assert contenido(enviados['salidas'][0])['content'] == "🚀 **Reporte de setter** · Elias · 10/10/2026 @everyone"
+
+
+@pytest.fixture()
+def sin_tarjeta(monkeypatch):
+    from app.services.image_service import ImageService
+
+    def rota(datos):
+        raise RuntimeError('sin chromium')
+
+    monkeypatch.setattr(ImageService, 'generate_setter_report_v2_card', rota)
+
+
+def test_sin_tarjeta_sale_el_resumen_completo(client, elias, auth_headers, enviados, sin_tarjeta):
+    client.post(URL, json=reporte_v2(elias.id), headers=auth_headers(elias))
     texto = contenido(enviados['salidas'][0])['content']
     assert '👤 **Setter:** `Elias`' in texto
     assert '📅 **Fecha:** `10/10/2026`' in texto
@@ -94,7 +109,7 @@ def test_el_v2_sale_por_canal_con_su_tarjeta(client, elias, auth_headers, enviad
     assert 'Avisos' not in texto
 
 
-def test_los_avisos_del_reporte_van_en_el_mensaje(client, elias, auth_headers, enviados):
+def test_los_avisos_del_reporte_van_en_el_mensaje(client, elias, auth_headers, enviados, sin_tarjeta):
     datos = reporte_v2(elias.id)
     datos['embudo']['oferta'] = 12
 
@@ -103,7 +118,7 @@ def test_los_avisos_del_reporte_van_en_el_mensaje(client, elias, auth_headers, e
     assert '⚠️ **Avisos:** Oferta supera a dolor (10)' in contenido(enviados['salidas'][0])['content']
 
 
-def test_respondieron_de_mas_va_en_los_avisos(client, elias, auth_headers, enviados):
+def test_respondieron_de_mas_va_en_los_avisos(client, elias, auth_headers, enviados, sin_tarjeta):
     datos = reporte_v2(elias.id)
     datos['followups_respondidos']['oferta'] = 4
 
@@ -127,12 +142,19 @@ def test_sin_tarjeta_el_reporte_sale_igual_en_texto(client, elias, auth_headers,
     assert '📥 **Entrantes:** 16' in kw['json']['content']
 
 
-def test_un_dia_no_laborable_lo_dice_y_nada_mas(client, elias, auth_headers, enviados):
+def test_un_dia_no_laborable_lo_dice_y_nada_mas(client, elias, auth_headers, enviados, sin_tarjeta):
     client.post(URL, json=reporte_v2(elias.id, is_non_working_day=True), headers=auth_headers(elias))
 
     texto = contenido(enviados['salidas'][0])['content']
     assert '🌙 **Día no laborable**' in texto
     assert 'Entrantes' not in texto
+
+
+def test_un_dia_no_laborable_con_tarjeta_sale_en_una_linea(client, elias, auth_headers, enviados):
+    client.post(URL, json=reporte_v2(elias.id, is_non_working_day=True), headers=auth_headers(elias))
+
+    assert contenido(enviados['salidas'][0])['content'] == (
+        "🚀 **Reporte de setter** · Elias · 10/10/2026 · día no laborable @everyone")
 
 
 def test_el_v1_sale_como_antes(client, elias, auth_headers, enviados):
@@ -141,12 +163,7 @@ def test_el_v1_sale_como_antes(client, elias, auth_headers, enviados):
 
     assert enviados['tarjetas'] == {'v1': 1, 'v2': 0}
     texto = contenido(enviados['salidas'][0])['content']
-    assert texto == ("🚀 **NUEVO REPORTE DIARIO DE SETTER**\n"
-                     "━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                     "👤 **Setter:** `Elias`\n"
-                     "📅 **Fecha:** `10/10/2026`\n"
-                     "━━━━━━━━━━━━━━━━━━━━━━━━\n"
-                     "@everyone")
+    assert texto == "🚀 **Reporte de setter** · Elias · 10/10/2026 @everyone"
 
 
 def test_la_tarjeta_v2_se_dibuja_con_sus_datos(app, db, elias):

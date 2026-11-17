@@ -184,7 +184,7 @@ def submit_triage_tracker():
                 print("[Discord Triage Tracker] No webhook URL configured in environment or database.")
                 return
             payload = {
-                "content": f"🎯 **NUEVO REPORTE DE TRIAGE TRACKER**\n**Triage:** {report.triage_name}\n**Fecha:** {render_data['date_str']}",
+                "content": f"🎯 **Reporte de triage** · {report.triage_name} · {render_data['date_str']}",
                 "username": "NeurOPS Triage AI",
                 "avatar_url": "https://i.imgur.com/4M34hi2.png"
             }
