@@ -1219,7 +1219,7 @@
 - **Qué se pierde:** la única condición es «no respondió». No hay seguimientos en cadena ni por etapa. El tope es de 6 días, porque después Instagram no deja escribir. Un seguimiento con error no se reintenta solo.
 - **Consecuencias:** migración `f6a8b1c3d5e7` (`aut_seguimientos`). Con el motor apagado no sale nada.
 
-## ADR-W150: aviso diario en Discord de los reportes que faltan
+## ADR-W154: aviso diario en Discord de los reportes que faltan
 
 - **Fecha:** 2026-11-17 · **Subsistema:** Avisos a Discord (`app/services/discord_avisos/reportes_faltantes.py`, `reminder_scheduler`) · **Estado:** implementado.
 - **Contexto:** reunión de estrategia del 16/11 (Mario, Kerwin, Santi): Discord tiene que etiquetar a quien tenga el reporte faltante o atrasado, con un envío automático a las 10:00 (Leadership 1405). En producción, el triage nunca mandó el reporte del día del mazo y el último de Jean Carlo era del 10/11.
@@ -1280,3 +1280,13 @@
   - Distinto del plan: en lugar de alta, edición y baja de a un grupo y un `PUT` aparte para el tipo, hay un solo `PUT` con todo. El modal tiene un único «Guardar», y dos filas que intercambian conjunto no se pueden escribir de a una sin chocar con los únicos.
 - **Qué se pierde:** nada de lo que ya se veía. El conjunto se sabe solo si el anuncio lleva `utm_term={{adset.id}}` o si Meta ya sincronizó el anuncio de `utm_content`; un anuncio recién publicado sin `utm_term` manda sus primeras visitas al grupo general. Quien agenda sin pasar por el grupo, o entra a un grupo por un enlace reenviado, queda en el conjunto equivocado: el cruce de la fase 2 hereda ese error.
 - **Consecuencias:** migración `b8d0f2a4c6e1` (sobre `c7d9e1f3a5b8`), idempotente; `develop` va a necesitar otra revisión de unión con `e3a9c5b17d40`. Falta el cambio en institute-site para que la landing mande los UTM al pedir los próximos talleres (hasta entonces todos reciben el grupo general) y que Mario sume `utm_term={{adset.id}}` a los anuncios nuevos. El listado de talleres hace una consulta más (los grupos de todos, `selectin`) y expone `tipo` y `grupos` (la cuenta). Pendientes: fase 2 (CSV de miembros de cada grupo y cruce por los últimos 8 dígitos del teléfono), fase 3 (el closer completa en la ficha el grupo de quien no cruzó) y fase 4 (gasto, agendas, ventas y ROAS por conjunto, y frío contra caliente en el Resumen).
+## ADR-W155: las llamadas de venta de Jean Carlo se graban y transcriben solas
+
+- **Fecha:** 2026-11-17 · **Subsistema:** Agendas 2.0 (`app/agendas_v2/grabar_llamadas.py`, `reminder_scheduler`) · **Estado:** implementado; falta que Jean Carlo reconecte Google y conecte su Drive.
+- **Contexto:** Sales Team 14/11: Mario quiere grabar las llamadas de venta desde la cuenta de Jean Carlo para el call review de Marlon, sin borrar ni recrear sesiones, y Marlon pidió la transcripción literal (Leadership 1394). Las Momentum ya salen con todo porque las organiza team@ (ADR-W127, W128).
+- **Decisión:**
+  1. Cada 15 minutos, Work busca las agendas de los próximos 14 días de los closers de `GRABAR_LLAMADAS_EMAILS` (por defecto, Jean Carlo) y prende la grabación, la transcripción y las notas de Gemini de su Meet con la cuenta del closer, que organiza el evento. Marca la agenda (`agenda_payload.grabacion_auto`) para no repetirla.
+  2. No toca la creación de agendas: cubre cualquier camino y las ya agendadas. La Momentum no entra.
+  3. La nota (con la transcripción) cae en el Drive del closer; con ese Drive conectado en Notas de Meet, Work la cuelga de la agenda y Marlon la lee en la ficha.
+- **Qué se pierde:** sin el permiso de Meet en su conexión de Google no prende nada (queda en el log). La grabación vive en el Drive del closer: Marlon la abre si se la comparten.
+- **Consecuencias:** sin migración. Sumar otro closer es agregar su email a la variable.
