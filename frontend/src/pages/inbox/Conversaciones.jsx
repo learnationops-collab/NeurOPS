@@ -1,9 +1,10 @@
 // Sección Conversaciones, como bandeja de trabajo (estilo Kommo): la lista, el chat y la ficha del lead,
 // o la vista Embudo (una columna por sub-etapa). En la cabecera, al lado del título, los filtros guardados
 // y Chats | Embudo; a la derecha, el buscador, el filtro, Mis tareas y Stats. La lista y el chat abierto
-// se vuelven a pedir solos cada 20 s.
+// se vuelven a pedir solos cada 20 s. Con el teclado: ↑↓ cambian de conversación y Esc la cierra. Las sin leer
+// van al título de la pestaña y, con permiso, como aviso del escritorio (`useAvisos`).
 import { useCallback, useEffect, useState } from 'react';
-import { BarChart3, Kanban, MessageSquare, Search } from 'lucide-react';
+import { BarChart3, Bell, Kanban, MessageSquare, Search } from 'lucide-react';
 import { EmptyState, HeaderActions, IconButton, InputGroup, Panel, Segmented } from '../../components/standard';
 import { useAuth } from '../../contexts/AuthContext';
 import { inboxApi } from './api';
@@ -17,6 +18,8 @@ import MisTareas from './conversaciones/MisTareas';
 import Resumen from './conversaciones/Resumen';
 import Stats from './conversaciones/Stats';
 import { VACIO } from './conversaciones/filtros';
+import { useBorradores } from './conversaciones/borradores';
+import useAvisos from './conversaciones/useAvisos';
 import { recordado, recordar } from './recuerdo';
 import './conversaciones/trabajo.css';
 
@@ -54,6 +57,29 @@ function useConversaciones(buscar) {
     return [datos, error, recargar];
 }
 
+const escribiendo = (el) => el && (el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName));
+
+// ↑↓ pasan a la conversación de arriba o de abajo de la lista; Esc cierra la abierta. No mientras se escribe ni
+// con un modal abierto.
+function useTeclado(visibles, elegida, setElegida) {
+    useEffect(() => {
+        const alTeclear = (e) => {
+            if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey || escribiendo(e.target)) return;
+            if (document.querySelector('[role="dialog"]')) return;
+            if (e.key === 'Escape' && elegida) { setElegida(null); return; }
+            if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+            if (!visibles.length) return;
+            e.preventDefault();
+            const i = visibles.findIndex((c) => c.id === elegida);
+            const j = i < 0 ? 0 : Math.min(visibles.length - 1, Math.max(0, i + (e.key === 'ArrowDown' ? 1 : -1)));
+            setElegida(visibles[j].id);
+            document.querySelector(`.cv-lista [data-conversacion="${visibles[j].id}"]`)?.scrollIntoView({ block: 'nearest' });
+        };
+        document.addEventListener('keydown', alTeclear);
+        return () => document.removeEventListener('keydown', alTeclear);
+    }, [visibles, elegida, setElegida]);
+}
+
 export default function Conversaciones() {
     const { user } = useAuth() || {};
     const yo = user?.id ?? null;
@@ -64,6 +90,8 @@ export default function Conversaciones() {
     const [elegida, setElegida] = useState(null);
     const [leidas, setLeidas] = useState({});
     const [stats, setStats] = useState(false);
+    const [panel, setPanel] = useState('ficha');
+    const borradores = useBorradores();
     const [datos, error, recargar] = useConversaciones(buscar);
     const ahora = useAhora();
 
@@ -73,7 +101,9 @@ export default function Conversaciones() {
     const marcarLeida = useCallback((id) => setLeidas((l) => ({ ...l, [id]: new Date() })), []);
     const visibles = filtrar(lista, { ...filtro, ahora });
     const cola = COLAS.find((c) => c.value === filtro.cola) || COLAS[0];
-    const abrir = (id) => { setVista('chats'); setElegida(id); };
+    const abrir = useCallback((id) => { setVista('chats'); setElegida(id); }, []);
+    useTeclado(vista === 'chats' ? visibles : [], elegida, setElegida);
+    const avisos = useAvisos(lista, { yo, soloMias: user?.role === 'setter', elegida, onAbrir: abrir });
     // En lo propio no hace falta decir de quién es; en el resto, sí.
     const conAsignado = filtro.asignado !== yo;
 
@@ -94,10 +124,11 @@ export default function Conversaciones() {
             <>
                 <p className="cv-lista-cab t-cap mut">
                     {visibles.length === 1 ? '1 conversación' : `${visibles.length} conversaciones`}
-                    {cola.porEspera ? ' · por espera' : ' · por último mensaje'}
+                    {cola.porEspera ? ' · por espera' : cola.porCierre ? ' · la que se cierra antes primero' : ' · por último mensaje'}
                     {sinLeer > 0 && <span className="cv-lista-nuevos"> · {sinLeer} sin leer</span>}
                 </p>
-                <ul>{visibles.map((c) => <Fila key={c.id} c={c} ahora={ahora} yo={yo} conAsignado={conAsignado} elegida={elegida === c.id} onElegir={setElegida} />)}</ul>
+                <ul>{visibles.map((c) => <Fila key={c.id} c={c} ahora={ahora} yo={yo} conAsignado={conAsignado} elegida={elegida === c.id} borrador={borradores[c.id]} onElegir={setElegida} />)}</ul>
+                <p className="cv-lista-pie t-cap mut40"><kbd>↑</kbd> <kbd>↓</kbd> cambiar de chat · <kbd>Esc</kbd> cerrar · <kbd>Enter</kbd> envía</p>
             </>
         );
     }
@@ -115,6 +146,9 @@ export default function Conversaciones() {
                         </InputGroup>
                         <MacroFiltro lista={lista} filtro={filtro} onCambiar={setFiltro} ahora={ahora} yo={yo} />
                         <MisTareas onAbrir={abrir} marca={datos} />
+                        {avisos.soportado && avisos.permiso === 'default' && (
+                            <IconButton label="Activar avisos" data-tip="Activar avisos|Te avisa cuando te escribe un lead, aunque estés en otra pestaña" icon={<Bell size={16} />} onClick={avisos.pedirPermiso} />
+                        )}
                         <IconButton label="Stats" data-tip="Stats" icon={<BarChart3 size={16} />} onClick={() => setStats(true)} />
                     </div>
                 </div>
@@ -126,7 +160,7 @@ export default function Conversaciones() {
                         {listado}
                     </Panel>
                     {elegida
-                        ? <Detalle key={elegida} id={elegida} yo={yo} onLeido={marcarLeida} />
+                        ? <Detalle key={elegida} id={elegida} yo={yo} onLeido={marcarLeida} panel={panel} onPanel={setPanel} />
                         : <Panel size="sm" className="cv-detalle cv-detalle--vacio"><EmptyState icon={<MessageSquare size={22} />}>Elegí una conversación.</EmptyState></Panel>}
                 </div>
             )}

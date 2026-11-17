@@ -1,9 +1,10 @@
 // Una fila de la bandeja: quién es, en qué va (los tres puntos: automática, manual, agendamiento), si
 // califica, cuánto hace que espera, la tarea que vence y a quién está asignada. Se decide a quién atender
-// sin abrir el chat. Lo no leído va en negrita con su cuenta.
-import { Bot, Check, Clock, User, X } from 'lucide-react';
+// sin abrir el chat. Lo no leído va en negrita con su cuenta. También: el borrador sin mandar, el seguimiento
+// programado y cuánto falta para que Instagram no deje escribirle (últimas 24 h).
+import { AlarmClock, Bot, Check, Clock, Hourglass, PencilLine, User, X } from 'lucide-react';
 import { Avatar, Chip } from '../../../components/standard';
-import { colorEspera, esperaMin, examenDe, quien, textoEspera } from './colas';
+import { AVISO_CIERRE, cierreMin, colorEspera, esperaMin, examenDe, quien, textoEspera } from './colas';
 import { Etiqueta } from './Etiquetas';
 import { Puntos } from './Progreso';
 
@@ -37,12 +38,13 @@ export function Vence({ tarea, ahora }) {
     return <span className={`cv-vence${tarde ? ' cv-vence--tarde' : ''}`} data-tip={`Tarea|${tarea.titulo}`}><Clock size={11} aria-hidden="true" />{cuando}</span>;
 }
 
-export default function Fila({ c, elegida, ahora, yo, conAsignado, onElegir }) {
+export default function Fila({ c, elegida, ahora, yo, conAsignado, borrador, onElegir }) {
     const espera = esperaMin(c, ahora);
+    const cierre = cierreMin(c, ahora);
     const examen = examenDe(c);
     return (
         <li>
-            <button type="button" className={`cv-item${c.sin_leer ? ' cv-item--nuevo' : ''}`} aria-pressed={elegida} onClick={() => onElegir(c.id)}>
+            <button type="button" className={`cv-item${c.sin_leer ? ' cv-item--nuevo' : ''}`} aria-pressed={elegida} data-conversacion={c.id} onClick={() => onElegir(c.id)}>
                 <Avatar name={c.username || c.nombre || '?'} size="sm" />
                 <span className="cv-item-cuerpo">
                     <span className="cv-item-cab">
@@ -52,7 +54,9 @@ export default function Fila({ c, elegida, ahora, yo, conAsignado, onElegir }) {
                     </span>
                     <span className="cv-item-texto mut">
                         {c.ultimo_de === 'motor' ? <Bot size={12} aria-label="Bot" /> : c.ultimo_de === 'otro' ? <User size={12} aria-label="Equipo" /> : null}
-                        <span>{c.ultimo_texto || '…'}</span>
+                        {borrador && !elegida
+                            ? <span className="cv-borrador"><PencilLine size={11} aria-hidden="true" />Borrador: {borrador}</span>
+                            : <span>{c.ultimo_texto || '…'}</span>}
                         {c.sin_leer > 0 && <i className="cv-sin-leer" aria-label={`${c.sin_leer} sin leer`}>{c.sin_leer}</i>}
                     </span>
                     <span className="cv-item-chips">
@@ -64,6 +68,17 @@ export default function Fila({ c, elegida, ahora, yo, conAsignado, onElegir }) {
                             </Chip>
                         )}
                         <Vence tarea={c.tarea} ahora={ahora} />
+                        {cierre != null && cierre <= AVISO_CIERRE && (
+                            <Chip subtle color={cierre <= 3 * 60 ? 'var(--error)' : 'var(--warning)'} icon={<Hourglass />}
+                                data-tip="Se cierra la ventana|Pasado esto Instagram no deja escribirle hasta que vuelva a escribir">
+                                se cierra en {textoEspera(cierre)}
+                            </Chip>
+                        )}
+                        {c.seguimiento && (
+                            <span className="cv-vence" data-tip={`Seguimiento programado|Sale ${hora(c.seguimiento)} si no responde`}>
+                                <AlarmClock size={11} aria-hidden="true" />{hora(c.seguimiento)}
+                            </span>
+                        )}
                     </span>
                     {(conAsignado || (c.etiquetas || []).length > 0) && (
                         <span className="cv-item-pie">

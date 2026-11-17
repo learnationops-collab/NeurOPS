@@ -1290,3 +1290,19 @@
   3. La nota (con la transcripción) cae en el Drive del closer; con ese Drive conectado en Notas de Meet, Work la cuelga de la agenda y Marlon la lee en la ficha.
 - **Qué se pierde:** sin el permiso de Meet en su conexión de Google no prende nada (queda en el log). La grabación vive en el Drive del closer: Marlon la abre si se la comparten.
 - **Consecuencias:** sin migración. Sumar otro closer es agregar su email a la variable.
+
+## ADR-W156: el chat del Inbox se trabaja más rápido: envío al instante, borradores, teclado, avisos y Learnito al costado
+
+- **Fecha:** 2026-11-17 · **Subsistema:** Inbox (`frontend/src/pages/inbox/conversaciones`, `app/automatizaciones/api.py`) · **Estado:** implementado.
+- **Contexto:** con escribir, audios, seguimientos y Learnito ya en el chat (ADR-W146, W148, W150), Santi aprobó sobre un mockup las mejoras para que el setter trabaje como en Kommo sin perder tiempo ni leads.
+- **Decisión:**
+  1. Lo que manda el setter aparece al instante como «enviando…»; si Instagram no lo acepta queda «no salió» con el motivo, Reintentar y Descartar (`useEnvio`).
+  2. Cada conversación guarda su borrador en el navegador (`borradores.js`, localStorage) y la fila lo muestra.
+  3. Enter envía (o guarda la nota) y Shift+Enter salta de línea; en la bandeja ↑↓ cambian de chat y Esc lo cierra.
+  4. La fila avisa «se cierra en X» en las últimas 24 h antes de los 7 días en que Instagram deja escribirle, y hay una cola «Se cierra la ventana» ordenada por lo que se cierra antes. Se toman los 7 días y no las 24 h porque desde el Inbox se le escribe como respuesta humana hasta ese límite (ADR-W146).
+  5. Las conversaciones sin leer van al título de la pestaña («(3) …») y, con permiso del navegador, un aviso del escritorio por cada mensaje nuevo (las del setter; todas para el resto). Tocarlo abre el chat.
+  6. Learnito se ve en el panel derecho, en una pestaña al lado de la ficha, en lugar del modal.
+  7. La fila marca el próximo seguimiento programado; la lista trae `seguimiento` y `ultimo_entrante_en` (`seguimientos.proximos`).
+  8. En el menú «/», la vista previa de cada respuesta rápida resalta lo que se completó con la ficha y marca en rojo la variable que falta.
+- **Qué se pierde:** el borrador vive en el navegador de cada uno (no pasa a otra computadora). Enter ya no hace salto de línea (es Shift+Enter). Los avisos del escritorio dependen de que la pestaña de Work esté abierta.
+- **Consecuencias:** sin migración. La consulta de la lista suma una agrupación por contacto sobre `aut_seguimientos`.

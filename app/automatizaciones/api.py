@@ -248,6 +248,8 @@ def listar_conversaciones():
     ejecuciones = bandeja.ultimas_ejecuciones(ids)
     asignados = bandeja.asignaciones(ids)
     etiquetas = tags_service.de(TARGET_IG_CONTACT, ids)
+    from app.automatizaciones import seguimientos  # importa el motor (por `escribir`): solo cuando se usa
+    proximos = seguimientos.proximos(ids)
     avance = progreso.de_contactos([c for c, _, _, _ in filas], ejecuciones, ahora, current_user.id,
                                    {c.id: primero for c, _, _, primero in filas})
     salida = []
@@ -266,6 +268,9 @@ def listar_conversaciones():
             'ultimo_en': _iso(momento),
             'ultimo_texto': (mensaje.texto or '')[:140] if mensaje else '',
             'ultimo_de': mensaje.origen if mensaje else None,
+            # Para la ventana de Instagram (24 h / 7 días) y el próximo seguimiento, a la vista en la fila.
+            'ultimo_entrante_en': _iso(contacto.ultimo_entrante_en),
+            'seguimiento': proximos.get(contacto.id),
             'bot_pausado': bool(contacto.bot_pausado_hasta and contacto.bot_pausado_hasta > ahora),
             'examen': variables.get('examen'),
             'califica': variables.get('_califica'),

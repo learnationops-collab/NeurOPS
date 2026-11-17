@@ -607,3 +607,10 @@
 
 ### 17/11/2026 · Grabación automática de las llamadas de venta de Jean Carlo
 - Cada 15 minutos, las llamadas de venta que vienen de Jean Carlo quedan con grabación, transcripción y notas de Gemini automáticas, prendidas con su cuenta, sin recrear nada. La nota llega a la ficha (con la transcripción) cuando su Drive esté conectado en Notas de Meet ([grabar_llamadas.py](../../app/agendas_v2/grabar_llamadas.py), [ADR-W155](../DECISIONS.md)). Para que arranque, Jean Carlo tiene que reconectar Google Calendar en Work (le falta el permiso de Meet) y conectar su Drive.
+
+### 17/11/2026 · Inbox: el chat se trabaja más rápido (ADR-W156)
+- Lo que manda el setter aparece al instante («enviando…»); si no sale, queda con el motivo y Reintentar ([useEnvio.js](../../frontend/src/pages/inbox/conversaciones/useEnvio.js), [Feed.jsx](../../frontend/src/pages/inbox/conversaciones/Feed.jsx)).
+- Borrador por conversación, visible en la fila ([borradores.js](../../frontend/src/pages/inbox/conversaciones/borradores.js)). Enter envía y Shift+Enter salta de línea; ↑↓ cambian de chat y Esc lo cierra ([Composer.jsx](../../frontend/src/pages/inbox/conversaciones/Composer.jsx), [Conversaciones.jsx](../../frontend/src/pages/inbox/Conversaciones.jsx)).
+- La fila avisa cuándo se cierra la ventana de Instagram (últimas 24 h de los 7 días) y el próximo seguimiento programado; cola nueva «Se cierra la ventana» ([colas.js](../../frontend/src/pages/inbox/conversaciones/colas.js), [Fila.jsx](../../frontend/src/pages/inbox/conversaciones/Fila.jsx), [api.py](../../app/automatizaciones/api.py)).
+- Sin leer en el título de la pestaña y avisos del escritorio con la campana de la bandeja ([useAvisos.js](../../frontend/src/pages/inbox/conversaciones/useAvisos.js)).
+- Learnito en el panel derecho, en una pestaña al lado de la ficha ([PanelDerecho.jsx](../../frontend/src/pages/inbox/conversaciones/PanelDerecho.jsx)). En el menú «/», la vista previa resalta las variables completadas ([MenuRayo.jsx](../../frontend/src/pages/inbox/conversaciones/MenuRayo.jsx)).
