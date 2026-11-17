@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Humo } from './Shared';
 import { DockContexto } from './dockContexto';
 import DockFijadas from './DockFijadas';
+import IslaVentanas from '../../../ventanas/IslaVentanas';
 
 const HUMO_DOCK = ['var(--brand-secondary)', 'var(--brand-primary)',
     'var(--brand-secondary-light)', 'var(--brand-navy)'];
@@ -162,6 +163,7 @@ const DockSecciones = ({ secciones, activa, onElegir, ariaLabel, antes = null, d
                     );
                 })}
             </div>
+            <IslaVentanas />
             {despues && (
                 <div className="dock-despues">
                     <span className="dock-sep" />

@@ -9,8 +9,9 @@ const clave = (userId) => `dock-fijadas:${userId}`;
 const NO_FIJABLES = new Set(['salir', 'volver']);
 export const esFijable = (op) => !!op && !NO_FIJABLES.has(op.id) && !op.panel && typeof op.onClick === 'function';
 
-// De fábrica: Learnito para los closers.
-export const fijadasDeFabrica = (role) => (role === 'closer' ? ['learnito'] : []);
+// De fábrica: Learnito para los closers; Turnos (la ventana, ventanas/herramientas.js) para los setters.
+const DE_FABRICA = { closer: ['learnito'], setter: ['tool:turnos'] };
+export const fijadasDeFabrica = (role) => DE_FABRICA[role] || [];
 
 const oyentes = new Set();
 const cache = new Map();

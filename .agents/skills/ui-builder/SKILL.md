@@ -96,6 +96,14 @@ Import: `import { Button, … } from '<ruta>/components/standard';`
 
 Todo lo que no es prop (`onClick`, `disabled`, `ref`, `data-nav`, `autoFocus`, `title`, `data-tip`…) pasa directo al elemento HTML.
 
+### Herramientas en ventana (`frontend/src/ventanas/`)
+
+Una herramienta que se usa encima de cualquier pantalla (hoy, «Turnos») va como ventana, igual que las de la Academia y Leadership: se arrastra por la cabecera; soltada arriba pasa a pantalla completa y soltada abajo se minimiza al dock. Doble clic maximiza y Escape minimiza. En el teléfono es una hoja de abajo.
+
+- **Sumar una:** un item en `ventanas/herramientas.js` (`key`, `label`, `hint`, `Icono`, `roles`, `ancho`, `Componente` con `lazy`) y su componente en `ventanas/herramientas/`. Aparece sola en el menú de sesión (grupo propio), se puede fijar en el dock con el 📌 y, abierta, tiene su acceso en la isla de ventanas del dock.
+- **Abrir desde una pantalla:** `abrirVentana(key)` (`ventanas/ventanasStore.js`). No hagas un modal propio para lo mismo.
+- El host (`HostVentanas`) va una sola vez en `App.jsx`. Una minimizada sigue montada: no pierde lo que tenía.
+
 ### Menús, listas y popovers (cualquier flotante)
 
 Regla del usuario: un desplegable se ve **encima de todo, siempre**, opaco y entero en la pantalla, con cualquier tema.

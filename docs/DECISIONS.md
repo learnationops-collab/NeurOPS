@@ -1325,3 +1325,15 @@
 - **Decisión:** arriba de Available (vista del equipo), una tabla de dos filas, Triage y Closers, con los turnos libres de cada día de la semana sumados entre las personas del grupo. Se cuentan como `TablaTurnos`: sesiones encadenadas con su margen, desde ahora, sin las agendas ni lo ocupado en Google. El triage usa la Sesión diagnóstica y los closers la Sesión de Aceleración, con la duración de cada persona. Un día en cero va en rojo; al pasar el mouse, cuántos tiene cada uno; «Por persona» abre la tabla de cada grupo.
 - **Qué se pierde:** los bloqueos de Leadership que todavía no llegaron a Google no se descuentan. Los turnos son por el horario de Team de cada uno, no por el ruteo por segmento: un día con turnos de closers puede no tener lugar para un C/D.
 - **Consecuencias:** sin migración ni pedidos nuevos (usa lo que ya leyó Available). No cambia ningún componente estándar.
+
+## ADR-W159: ventanas flotantes y herramientas por rol en el dock, como la Academia y Leadership
+
+- **Fecha:** 2026-11-17 · **Subsistema:** Dock y navegación (`frontend/src/ventanas/`, `DockSecciones`, `MenuSesion`, `sesion/fijadas.js`) · **Estado:** implementado.
+- **Contexto:** Santi pidió para Work el sistema de dock de la Academia (Ventanas v2, `modal/sheet.blade.php`, `config/staff_tools.php`) y el Dock 2.0 de Leadership (islas, `DockTools`, `dockModals`), y resolver con eso el panel de turnos para los setters (ADR-W158) como herramienta. Work tenía el dock de secciones y las fijadas, pero ninguna ventana flotante: los turnos estaban en Tálamus › Team › Available.
+- **Decisión:**
+  1. **Ventanas:** flotan encima de cualquier pantalla, no tapan (no son modales) y sobreviven a la navegación (`HostVentanas` en `App.jsx`) y, en la pestaña, a recargar (`sessionStorage`). Se arrastran por la cabecera; a menos de 24 px del borde de arriba pasan a pantalla completa y del de abajo se minimizan al dock, con una guía mientras se arrastra; doble clic maximiza; Escape minimiza. En el teléfono, hoja de abajo.
+  2. **Catálogo por rol:** `ventanas/herramientas.js`. Cada herramienta aparece en el menú de sesión en su propio grupo y se fija en el dock con el mismo 📌 de siempre (sin inventar otro sistema de pins).
+  3. **Isla de ventanas en el dock:** a la derecha de la navegación, un acceso por ventana abierta: la trae si estaba minimizada y la minimiza si estaba a la vista.
+  4. **Primera herramienta, Turnos:** el bloque de ADR-W158 con su semana, leyendo el almacén de Tálamus. Para el setter viene fijada de fábrica y su encabezado suma el botón «Turnos» al lado de «Tálamus».
+- **Qué se pierde:** la posición y el estado no se guardan en el servidor por rol, como en Leadership: viven en esta pestaña; las fijadas siguen en el navegador. Un setter que ya había cambiado sus fijadas no recibe Turnos fijado (lo tiene en el botón del encabezado y en el menú). Las secciones ocultas como ventana (iframe) de Leadership no se portaron.
+- **Consecuencias:** sin migración ni endpoints. Sumar una herramienta es un item del catálogo y su componente (`.agents/skills/ui-builder/SKILL.md`, «Herramientas en ventana»).

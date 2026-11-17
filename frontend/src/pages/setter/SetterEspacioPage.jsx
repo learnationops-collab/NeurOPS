@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { BarChart3, CalendarDays, CheckCircle2, ClipboardList, Ghost, Link2, Share2 } from 'lucide-react';
+import { BarChart3, CalendarClock, CalendarDays, CheckCircle2, ClipboardList, Ghost, Link2, Share2 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePlaybook } from '../../contexts/PlaybookContext';
@@ -19,6 +19,7 @@ import '../comercial/comercial.css';
 import './setterEspacio.css';
 import MisAgendas from './agendas/MisAgendas';
 import MisLinks, { copiar } from './MisLinks';
+import { abrirVentana } from '../../ventanas/ventanasStore';
 import { marcaDelDock } from './agendas/meses';
 import ReporteDiario from './reporte/ReporteDiario';
 import Historial from './reporte/Historial';
@@ -244,6 +245,13 @@ const SetterEspacioPage = () => {
                             de triage y de closing a un clic (Sales Team, 07/11/2026; antes estaba en el
                             menú del avatar). Desde su menú, «Volver a mi espacio» trae de vuelta acá. */}
                         <MisLinks>
+                            {/* Los turnos que quedan, en una ventana encima de su espacio (ventanas/, 17/11/2026);
+                                Tálamus entero sigue a un clic al lado. */}
+                            <button type="button" className="pastilla pastilla--sm setter-link"
+                                title="Los turnos que quedan de triage y de closers, por día" onClick={() => abrirVentana('turnos')}>
+                                <CalendarClock size={14} />
+                                <span className="setter-link-t">Turnos</span>
+                            </button>
                             <button type="button" className="pastilla pastilla--sm setter-link"
                                 title="Ver los turnos libres del equipo en Tálamus" onClick={() => navegar('/agendas-v2?ver=available')}>
                                 <CalendarDays size={14} />

@@ -625,3 +625,7 @@
 
 ### 17/11/2026 · Turnos que quedan, para los setters
 - Arriba de Tálamus › Team › Available (lo que abre el botón Tálamus del setter): cuántas llamadas quedan libres cada día de la semana para Triage y para Closers, con el detalle por persona al pasar el mouse y un «Por persona» que abre la tabla de cada grupo ([TurnosEquipo.jsx](../../frontend/src/pages/agendas_v2/secciones/team/TurnosEquipo.jsx), [ADR-W158](../DECISIONS.md)).
+
+### 17/11/2026 · Ventanas y herramientas en el dock; Turnos para los setters
+- Work suma ventanas flotantes, como la Academia y Leadership: se abren encima de cualquier pantalla, se arrastran, se maximizan soltándolas arriba y se minimizan al dock soltándolas abajo; el dock muestra las abiertas ([ventanas/](../../frontend/src/ventanas/), [ADR-W159](../DECISIONS.md)).
+- Las herramientas van por rol en el menú de sesión y se fijan en el dock. La primera es **Turnos**: los turnos que quedan de triage y de closers por día. El setter la tiene fijada y con un botón en su encabezado.

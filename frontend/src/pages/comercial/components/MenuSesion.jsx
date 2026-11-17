@@ -7,6 +7,7 @@ import { esFijable, useFijadas } from '../../../sesion/fijadas';
 import useOpcionesDeReporte from '../../../components/feedback/useOpcionesDeReporte';
 import useOpcionesDeAvisos from '../../../components/avisos/useOpcionesDeAvisos';
 import useOpcionesDeConflictos from '../../conflictos/useOpcionesDeConflictos';
+import useOpcionesDeHerramientas from '../../../ventanas/useOpcionesDeHerramientas';
 import Mascota from '../../../components/mascota/Mascota';
 import { subirACapa } from '../../../components/standard/capa';
 import { MASCOTAS, mascotaDe, nombreDeMascota } from '../../../components/mascota/mascotas';
@@ -222,8 +223,11 @@ const MenuSesion = ({ nombre, rol, aviso = null, grupos }) => {
     const avisos = useOpcionesDeAvisos();
     const reportes = useOpcionesDeReporte();
     const conflictos = useOpcionesDeConflictos();
+    // Las herramientas que se abren como ventana (ventanas/herramientas.js), en su propio grupo.
+    const herramientas = useOpcionesDeHerramientas();
     const conGrupos = grupos.filter(g => g.length);
-    const todosLosGrupos = [...conGrupos.slice(0, -1), [...avisos.opciones, ...conflictos.opciones, ...reportes.opciones], ...conGrupos.slice(-1)];
+    const todosLosGrupos = [...conGrupos.slice(0, -1), ...(herramientas.length ? [herramientas] : []),
+        [...avisos.opciones, ...conflictos.opciones, ...reportes.opciones], ...conGrupos.slice(-1)];
     const enCuenta = (Number(aviso?.texto) || 0) + avisos.sinLeer + reportes.sinLeer;
     const cuenta = enCuenta > 0 ? enCuenta : aviso?.texto;
     const titulos = [aviso?.titulo, avisos.opciones[0].titulo, reportes.sinLeer ? `${reportes.sinLeer} ${reportes.sinLeer === 1 ? 'respuesta sin leer' : 'respuestas sin leer'} a tus reportes` : null];

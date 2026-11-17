@@ -652,6 +652,9 @@
 .dc-shell .dock-fijada:hover{background:var(--mat-3);color:var(--text-on-surface)}
 .dc-shell .dock-fijada:active{transform:scale(.95)}
 .dc-shell .dock-fijada:focus-visible{outline:2px solid var(--brand-secondary);outline-offset:-2px}
+/* Las ventanas abiertas (ventanas/IslaVentanas.jsx): la que está a la vista lleva una rayita abajo. */
+.dc-shell .dock-ventana--abierta{color:var(--text-on-surface)}
+.dc-shell .dock-ventana--abierta::after{content:'';position:absolute;left:30%;right:30%;bottom:4px;height:3px;border-radius:2px;background:var(--brand-secondary)}
 .dc-shell .menu-item--peligro:hover,
 .dc-shell .menu-item--peligro:focus-visible{background:var(--error-surface);color:var(--error)}
 /* Una opcion que abre una lista en el mismo menu ("Simular a un closer"): la flecha la anuncia,
