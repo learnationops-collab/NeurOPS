@@ -64,6 +64,19 @@ def test_encendido_manda_la_suscripcion_con_su_ultimo_cambio(db, ana, monkeypatc
     assert (segundo['expires_at'], segundo['is_deposit'], segundo['event']['kind']) == ('2027-02-05', False, 'conversion')
 
 
+def test_el_aviso_lleva_el_closer_de_la_venta(db, ana, monkeypatch):
+    """El alumno que se inscribió después de la venta recibe el acceso por este aviso: sin el closer,
+    la Academia lo dejaba sin closer y su Momentum sin nadie que la diera."""
+    monkeypatch.setenv('ACADEMY_SUBSCRIPTIONS_PUSH', 'true')
+    with patch.object(subscription_sync.threading, 'Thread', HiloInmediato), \
+            patch.object(AcademyAccessService, 'closer_de', return_value='closer@x.com') as closer_de, \
+            patch('app.services.learnation_service.LearnationService.report_subscription') as enviar:
+        cobro(db, ana, 'AL - Seña', datetime(2026, 10, 1))
+
+    assert enviar.call_args.args[0]['closer_email'] == 'closer@x.com'
+    assert closer_de.call_args.args[0].id == ana.id
+
+
 def test_un_rollback_no_manda_nada(db, ana, monkeypatch):
     monkeypatch.setenv('ACADEMY_SUBSCRIPTIONS_PUSH', 'true')
     with patch.object(subscription_sync.threading, 'Thread', HiloInmediato), \

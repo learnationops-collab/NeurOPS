@@ -40,7 +40,11 @@ def anotar(session, sub):
 
 
 def aviso(sub):
-    """Lo que viaja a la Academia: la suscripción entera y el último cambio, con quién y por qué."""
+    """Lo que viaja a la Academia: la suscripción entera y el último cambio, con quién y por qué, y el
+    closer de su venta más reciente (`closer_de`): la Academia se lo deja al alumno que no tiene uno de
+    ventas, el caso del que se inscribió después de la venta (Luis Martínez, 13/11/2026: Momentum sin closer)."""
+    from app.services.academy_access_service import AcademyAccessService
+
     client = sub.client
     eventos = sub.events.all()
     ultimo = eventos[-1] if eventos else None
@@ -55,6 +59,7 @@ def aviso(sub):
         'is_deposit': bool(sub.is_deposit),
         'status': sub.status,
         'event': ultimo.to_dict() if ultimo else None,
+        'closer_email': AcademyAccessService.closer_de(client),
     }
 
 

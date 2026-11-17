@@ -581,3 +581,6 @@
 ### 17/11/2026 · Aviso diario de reportes que faltan
 - Todos los días a las 10:00 (Caracas y Bolivia) sale en #📋-reportes de adquisitions quién no mandó el reporte de ayer y quién tiene llamadas sin resultado, con la persona etiquetada: closers y triage con llamadas ayer, setters de lunes a sábado. Si no falta nada, no sale ([reportes_faltantes.py](../../app/services/discord_avisos/reportes_faltantes.py), [ADR-W150](../DECISIONS.md); acordado en la Estrategia del 16/11). Probado contra producción sin enviar: hoy etiquetaría a 3 personas.
 - Revisado (sin cambios): la Momentum muestra horarios a los 212 alumnos activos (Jean Carlo, y Marlon a sus 10 alumnos). El «0 turnos» del 16/11 ya no pasa.
+
+### 17/11/2026 · El aviso de suscripción lleva el closer de la venta
+- Cada suscripción que Work manda a la Academia lleva `closer_email`, el closer de la venta más reciente. La Academia se lo deja al alumno que no tiene un closer de ventas: el que se inscribía después de la venta quedaba sin closer y su Momentum sin nadie que la diera (Luis Martínez, 13/11) ([subscription_sync.py](../../app/services/subscription_sync.py)).
