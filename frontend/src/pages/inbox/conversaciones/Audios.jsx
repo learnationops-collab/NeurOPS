@@ -1,5 +1,5 @@
 // La biblioteca de audios del equipo: se escuchan, se suben (hasta 8 MB) y se borran los propios.
-// Mandar uno por Instagram se habilita con el corte de Kommo; mientras, «Mandar» queda apagado.
+// `onMandar(audio)` manda el elegido por Instagram; sin él (ventana cerrada), «Mandar» queda apagado.
 import { useEffect, useRef, useState } from 'react';
 import { Mic, Pause, Play, Send, Trash2, Upload } from 'lucide-react';
 import { Button, EmptyState, IconButton, Input, Modal, ModalHeader, toast } from '../../../components/standard';
@@ -56,9 +56,15 @@ function Subir({ onSubido }) {
     );
 }
 
-export default function Audios({ onCerrar }) {
+export default function Audios({ onCerrar, onMandar }) {
     const [audios, setAudios] = useState(null);
     const [elegido, setElegido] = useState(null);
+    const [mandando, setMandando] = useState(false);
+    const mandar = async () => {
+        setMandando(true);
+        await onMandar(audios.find((a) => a.id === elegido));
+        setMandando(false);
+    };
     const [sonando, setSonando] = useState(null);
     const reproductor = useRef(null);
     useEffect(() => {
@@ -108,9 +114,11 @@ export default function Audios({ onCerrar }) {
                 </ul>
             )}
             <div className="cv-modal-pie">
-                <span className="t-cap mut cv-bloqueado">Mandar audios desde acá se habilita con el corte de Kommo.</span>
+                <span className="t-cap mut cv-bloqueado">
+                    {onMandar ? 'Elegí uno y mandalo. Instagram reproduce m4a, mp3, aac y wav.' : 'La ventana de Instagram está cerrada: no se puede mandar.'}
+                </span>
                 <Button onClick={onCerrar}>Cerrar</Button>
-                <Button variant="primary" icon={<Send />} disabled>Mandar</Button>
+                <Button variant="primary" icon={<Send />} disabled={!onMandar || !elegido || mandando} onClick={mandar}>Mandar</Button>
             </div>
         </Modal>
     );

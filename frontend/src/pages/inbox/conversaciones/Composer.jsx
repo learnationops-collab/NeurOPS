@@ -1,14 +1,15 @@
-// La caja de abajo del chat, en tres modos: Chat, Nota interna (el lead no la ve) y Tarea. Escribir al
-// lead desde acá se habilita con el corte de Kommo: por ahora el texto se arma (respuestas rápidas,
-// variables) y se copia para pegarlo en Kommo. Los pasos del flujo sí salen: los manda el bot.
+// La caja de abajo del chat, en tres modos: Chat, Nota interna (el lead no la ve) y Tarea. En Chat el
+// mensaje (o un audio del equipo) sale por Instagram a nombre de quien lo manda (17/11/2026); los pasos del
+// flujo los manda el bot. Ctrl+Enter envía.
 import { useEffect, useRef, useState } from 'react';
-import { CalendarCheck, Copy, MessageSquare, Mic, Send, StickyNote, Zap } from 'lucide-react';
+import { CalendarCheck, MessageSquare, Mic, Send, StickyNote, Zap } from 'lucide-react';
 import { Button, IconButton, Input, Segmented, Select, TextArea, toast } from '../../../components/standard';
 import { inboxApi } from '../api';
 import Audios from './Audios';
 import MenuRayo, { NuevaRapida } from './MenuRayo';
 import ModalFlujo from './ModalFlujo';
 import useEquipo from './useEquipo';
+import { ventanaDe } from './ventana';
 
 const MODOS = [
     { value: 'chat', label: 'Chat', icon: <MessageSquare size={13} /> },
@@ -80,14 +81,23 @@ export default function Composer({ contacto, ejecucion, yo, onCambio }) {
             toast(e.response?.data?.message || 'No se pudo guardar la nota', 'error');
         }
     };
-    const copiar = async () => {
+    const [enviando, setEnviando] = useState(false);
+    const ventana = ventanaDe(contacto.ultimo_entrante_en);
+    const enviar = async (cuerpo) => {
+        setEnviando(true);
         try {
-            await navigator.clipboard.writeText(texto);
-            toast('Copiado: pegalo en Kommo');
-        } catch {
-            toast('No se pudo copiar', 'error');
+            await inboxApi.escribir(contacto.id, { ...cuerpo, pausar });
+            if (cuerpo.texto) setTexto('');
+            onCambio();
+            return true;
+        } catch (e) {
+            toast(e.response?.data?.message || 'No se pudo enviar', 'error');
+            return false;
+        } finally {
+            setEnviando(false);
         }
     };
+    const puedeEnviar = ventana.estado !== 'cerrada' && !enviando;
 
     return (
         <div className={`cv-composer cv-composer--${modo}`} ref={caja}>
@@ -98,8 +108,8 @@ export default function Composer({ contacto, ejecucion, yo, onCambio }) {
             <div className="cv-comp-cab">
                 <Segmented size="sm" label="Modo" value={modo} onChange={(m) => { setModo(m); setRayo(false); }} options={MODOS} />
                 {modo === 'chat' && (
-                    <label className="cv-comp-check" data-tip="Al enviar|Se habilita con el corte de Kommo">
-                        <input type="checkbox" checked={pausar} onChange={(e) => setPausar(e.target.checked)} disabled />Pausar el bot al enviar
+                    <label className="cv-comp-check" data-tip="Al enviar|El bot deja de hablarle 24 h y corta el flujo abierto">
+                        <input type="checkbox" checked={pausar} onChange={(e) => setPausar(e.target.checked)} />Pausar el bot al enviar
                     </label>
                 )}
             </div>
@@ -112,19 +122,15 @@ export default function Composer({ contacto, ejecucion, yo, onCambio }) {
                         </>
                     )}
                     <TextArea value={texto} onChange={(e) => setTexto(e.target.value)} aria-label={modo === 'nota' ? 'Nota interna' : 'Mensaje'}
-                        placeholder={modo === 'nota' ? 'Nota para el equipo: el lead no la ve' : 'Armá el mensaje: / para respuestas rápidas y pasos del flujo'} />
+                        onKeyDown={(e) => { if (modo === 'chat' && e.key === 'Enter' && (e.ctrlKey || e.metaKey) && texto.trim() && puedeEnviar) enviar({ texto }); }}
+                        placeholder={modo === 'nota' ? 'Nota para el equipo: el lead no la ve' : 'Escribile al lead: / para respuestas rápidas y pasos del flujo'} />
                     {modo === 'nota'
                         ? <Button variant="primary" disabled={!texto.trim()} onClick={guardarNota}>Guardar</Button>
-                        : (
-                            <>
-                                <IconButton size="sm" label="Copiar" data-tip="Copiar|Para pegarlo en Kommo" icon={<Copy size={14} />} disabled={!texto.trim()} onClick={copiar} />
-                                <Button variant="primary" icon={<Send />} disabled data-tip="Enviar|Se habilita con el corte de Kommo">Enviar</Button>
-                            </>
-                        )}
+                        : <Button variant="primary" icon={<Send />} disabled={!texto.trim() || !puedeEnviar} data-tip="Enviar|Ctrl+Enter" onClick={() => enviar({ texto })}>Enviar</Button>}
                 </div>
             )}
-            {modo === 'chat' && <p className="t-cap mut40 cv-bloqueado">Escribirle al lead desde acá se habilita con el corte de Kommo. Mientras, copiá y pegá en Kommo.</p>}
-            {audios && <Audios onCerrar={() => setAudios(false)} />}
+            {modo === 'chat' && ventana.aviso && <p className="t-cap mut40 cv-bloqueado">{ventana.aviso}</p>}
+            {audios && <Audios onCerrar={() => setAudios(false)} onMandar={puedeEnviar ? async (a) => { if (await enviar({ audio_id: a.id })) setAudios(false); } : null} />}
             {nueva && <NuevaRapida onCerrar={() => setNueva(false)} onCreada={() => { setNueva(false); toast('Respuesta rápida guardada'); }} />}
             {paso && (
                 <ModalFlujo accion="continuar" contacto={contacto} ejecucion={ejecucion} nodoInicial={paso}

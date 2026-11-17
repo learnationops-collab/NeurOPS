@@ -40,7 +40,7 @@ function Burbuja({ m }) {
             )}
             <span className="cv-meta">
                 {m.origen === 'motor' && <><Bot size={12} aria-hidden="true" />Automático · </>}
-                {m.origen === 'otro' && 'Equipo · '}
+                {m.origen === 'otro' && (m.autor ? `${m.autor} · ` : 'Equipo · ')}
                 {momento(m.en)}
             </span>
         </li>

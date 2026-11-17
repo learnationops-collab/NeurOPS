@@ -136,6 +136,9 @@ class IgMensaje(db.Model):
     ejecucion_id = db.Column(db.Integer, db.ForeignKey('aut_ejecuciones.id', ondelete='SET NULL'), nullable=True)
     nodo_id = db.Column(db.String(64), nullable=True)
     enviado_en = db.Column(db.DateTime, nullable=False, default=ahora, index=True)
+    # Quién del equipo lo mandó desde el Inbox (origen OTRO). Los ecos de Kommo o ManyChat no lo traen.
+    autor_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    autor = db.relationship('User', foreign_keys=[autor_id])
 
 
 class AutCampana(db.Model):

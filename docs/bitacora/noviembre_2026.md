@@ -555,3 +555,8 @@
 
 ### 17/11/2026 · El reporte del setter en Discord dice qué pasó con sus agendas
 - Debajo de la línea del reporte sale qué pasó con las agendas que el setter generó en los últimos 7 días: cuántas ya ocurrieron, cuántas asistieron (con el show up), cancelaron, reprogramaron, no show, y cuántas de las que asistieron al triage pasaron a closing. Son las mismas filas y la misma base que Analizar con Setters ([setter_reporte_discord.py](../../app/services/setter_reporte_discord.py); pedido de Mario en la Estrategia del 16/11).
+
+### 17/11/2026 · El setter le escribe al lead desde el Inbox
+- El chat de Conversaciones manda el mensaje por Instagram (Ctrl+Enter o «Enviar»), y el modal de Audios manda el audio elegido. Antes se copiaba y se pegaba en Kommo ([Composer.jsx](../../frontend/src/pages/inbox/conversaciones/Composer.jsx), [escribir.py](../../app/automatizaciones/escribir.py), [ADR-W146](../DECISIONS.md)).
+- Pasadas las 24 h sale como respuesta de una persona (HUMAN_AGENT, hasta 7 días); después la caja avisa que Instagram no deja. Si Kommo tiene el hilo, Work lo toma para mandar y lo devuelve. Cada mensaje muestra quién lo mandó (migración `d4e6f8a1b3c5`).
+- Se borró la aserción del texto exacto del reporte de setter en Discord, que quedó vieja con el cambio de la mañana.

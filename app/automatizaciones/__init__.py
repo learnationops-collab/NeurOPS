@@ -20,5 +20,8 @@ def registrar(app):
     from app.automatizaciones import api_mensajes  # noqa: F401
     from app.automatizaciones import api_trabajo  # noqa: F401
     from app.automatizaciones import api_biblioteca  # noqa: F401
+    from app.automatizaciones.api_escribir import bp_publico
 
     app.register_blueprint(bp, url_prefix='/api/inbox')
+    # Sin sesión: el audio que Meta baja para mandarlo, con link firmado (`api_escribir.py`).
+    app.register_blueprint(bp_publico, url_prefix='/api/inbox-publico')

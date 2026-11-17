@@ -41,6 +41,8 @@ export const inboxApi = {
     rapidas: () => api.get('/inbox/respuestas-rapidas').then((r) => r.data.respuestas),
     crearRapida: (r) => api.post('/inbox/respuestas-rapidas', r).then(datos),
     borrarRapida: (rid) => api.delete(`/inbox/respuestas-rapidas/${rid}`),
+    // Escribirle al lead: `{ texto }` o `{ audio_id }`, y `pausar` (el bot, por defecto sí).
+    escribir: (cid, cuerpo) => api.post(`/inbox/conversaciones/${cid}/escribir`, cuerpo).then(datos),
     audios: () => api.get('/inbox/audios').then((r) => r.data.audios),
     subirAudio: (form) => api.post('/inbox/audios', form).then(datos),
     archivoAudio: (aid) => api.get(`/inbox/audios/${aid}/archivo`, { responseType: 'blob' }).then(datos),
