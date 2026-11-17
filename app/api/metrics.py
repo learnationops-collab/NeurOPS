@@ -43,7 +43,7 @@ def track_visit():
             utm_medium=data.get('utm_medium'),
             utm_campaign=data.get('utm_campaign'),
             utm_content=data.get('utm_content'),
-            # El conjunto de anuncios (`{{adset.id}}`) o el código del grupo de WhatsApp (ADR-W146).
+            # El conjunto de anuncios (`{{adset.id}}`) o el código del grupo de WhatsApp (ADR-W152).
             utm_term=(str(data.get('utm_term') or '').strip()[:100] or None),
             page_path=raw_path,
             referrer=request.referrer,

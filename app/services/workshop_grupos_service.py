@@ -1,4 +1,4 @@
-"""Tipo del taller (frío / caliente) y sus grupos de WhatsApp por conjunto de anuncios (ADR-W146).
+"""Tipo del taller (frío / caliente) y sus grupos de WhatsApp por conjunto de anuncios (ADR-W152).
 
 Cada conjunto de anuncios de Workshop tiene su grupo de WhatsApp en cada taller. La landing le pide a
 Work los próximos talleres con los UTM de la visita y recibe el grupo del conjunto que la trajo; quien

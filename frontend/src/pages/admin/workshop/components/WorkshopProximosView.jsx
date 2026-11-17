@@ -21,7 +21,7 @@ import {
  * WhatsApp de cada taller. Acá se ven y se cargan en la hora de quien mira el panel; el que
  * está «en la landing» es el primero con hora que todavía no terminó.
  *
- * Desde el 17/11/2026 (ADR-W146) cada taller dice su tipo (frío o caliente) y cuántos grupos de
+ * Desde el 17/11/2026 (ADR-W152) cada taller dice su tipo (frío o caliente) y cuántos grupos de
  * WhatsApp por conjunto de anuncios tiene; «Grupos» los configura.
  */
 

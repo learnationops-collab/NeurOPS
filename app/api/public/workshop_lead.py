@@ -158,7 +158,7 @@ def workshops_proximos():
     cualquiera; nada personal.
 
     Con los UTM de la visita (`utm_term`, `utm_content`, `utm_campaign`, todos opcionales), `whatsapp`
-    es el grupo del conjunto de anuncios que la trajo y `grupo` dice cuál (ADR-W146). Sin ellos, igual
+    es el grupo del conjunto de anuncios que la trajo y `grupo` dice cuál (ADR-W152). Sin ellos, igual
     que siempre: una landing que no los manda sigue andando.
     """
     from app.services.workshop_agenda_service import proximos_publicos

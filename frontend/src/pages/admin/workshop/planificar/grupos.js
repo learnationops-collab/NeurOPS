@@ -1,4 +1,4 @@
-// Tipo del taller y sus grupos de WhatsApp por conjunto de anuncios (ADR-W146): las cuentas del modal
+// Tipo del taller y sus grupos de WhatsApp por conjunto de anuncios (ADR-W152): las cuentas del modal
 // «Grupos», sin dibujo. El backend es `workshop_grupos_service`.
 
 export const TIPOS = {

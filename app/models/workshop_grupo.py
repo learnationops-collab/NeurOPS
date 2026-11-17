@@ -4,7 +4,7 @@ from app import db
 
 
 class WorkshopGrupo(db.Model):
-    """Un grupo de WhatsApp de un taller, atado a un conjunto de anuncios de Meta (ADR-W146).
+    """Un grupo de WhatsApp de un taller, atado a un conjunto de anuncios de Meta (ADR-W152).
 
     La landing manda a cada visita al grupo del conjunto que la trajo (`workshop_grupos_service`), así
     después se sabe de qué conjunto vino cada persona. El grupo general, para las visitas sin anuncio,

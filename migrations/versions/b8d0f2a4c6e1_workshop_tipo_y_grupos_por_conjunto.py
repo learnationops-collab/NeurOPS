@@ -1,7 +1,7 @@
-"""Workshop: tipo del taller (frío / caliente), grupos de WhatsApp por conjunto y utm_term de las visitas (ADR-W146)
+"""Workshop: tipo del taller (frío / caliente), grupos de WhatsApp por conjunto y utm_term de las visitas (ADR-W152)
 
 Revision ID: b8d0f2a4c6e1
-Revises: c7d9e1f3a5b8
+Revises: f6a8b1c3d5e7
 Create Date: 2026-11-17
 
 Idempotente: lo que ya existe no se toca.
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision = 'b8d0f2a4c6e1'
-down_revision = 'c7d9e1f3a5b8'
+down_revision = 'f6a8b1c3d5e7'
 branch_labels = None
 depends_on = None
 
