@@ -1,12 +1,13 @@
 import { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { Bug, RefreshCw, AlertCircle, ImageIcon, Loader2, X, MessageCircle, Video, Lightbulb } from 'lucide-react';
+import { Bug, RefreshCw, AlertCircle, ImageIcon, Loader2, X, MessageCircle, Video } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import Card from '../ui/Card';
 import BugReportThread from '../feedback/BugReportThread';
 import MultiSelectFilter from '../shared/MultiSelectFilter';
 import LoomModal from '../shared/LoomModal';
+import { REPORT_TYPES, reportTypeMeta } from '../feedback/reportTypes';
 
 const STATUS_OPTIONS = [
     { id: 'open', label: 'Pendiente', color: 'bg-rose-500/10 text-rose-400 border-rose-500/20' },
@@ -21,11 +22,6 @@ const URGENCY_LABELS = {
     sin_urgencia: 'Sin urgencia',
 };
 
-const TYPE_OPTIONS = [
-    { id: 'bug', label: 'Bug', icon: Bug, color: 'bg-rose-500/10 text-rose-400 border-rose-500/20' },
-    { id: 'mejora', label: 'Mejora', icon: Lightbulb, color: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
-];
-const TYPE_META = Object.fromEntries(TYPE_OPTIONS.map(t => [t.id, t]));
 
 const formatDate = (iso) => iso ? new Date(iso).toLocaleString('es-BO', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
 
@@ -70,7 +66,7 @@ const ReportCard = ({ report, onStatusChange, onReportUpdate }) => {
     const [showLoom, setShowLoom] = useState(false);
 
     const statusMeta = STATUS_OPTIONS.find(s => s.id === report.status) || STATUS_OPTIONS[0];
-    const typeMeta = TYPE_META[report.report_type] || TYPE_META.bug;
+    const typeMeta = reportTypeMeta(report.report_type);
     const TypeIcon = typeMeta.icon;
 
     return (
@@ -84,7 +80,7 @@ const ReportCard = ({ report, onStatusChange, onReportUpdate }) => {
                     {report.unread_for_manager && (
                         <span className="w-2 h-2 rounded-full bg-rose-500" title="El usuario respondió" />
                     )}
-                    <span className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border ${typeMeta.color}`}>
+                    <span className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider border ${typeMeta.chip}`}>
                         <TypeIcon size={11} /> {typeMeta.label}
                     </span>
                     {report.urgency && (
@@ -216,24 +212,28 @@ const BugReportsPanel = () => {
         }
     };
 
-    const openBugs = useMemo(() => reports.filter(r => r.status === 'open' && r.report_type !== 'mejora').length, [reports]);
-    const openMejoras = useMemo(() => reports.filter(r => r.status === 'open' && r.report_type === 'mejora').length, [reports]);
+    // Pendientes por tipo; lo que no es solicitud ni mejora cuenta como bug.
+    const openByType = useMemo(() => {
+        const counts = { bug: 0, solicitud: 0, mejora: 0 };
+        reports.filter(r => r.status === 'open').forEach(r => { counts[reportTypeMeta(r.report_type).id] += 1; });
+        return counts;
+    }, [reports]);
 
     return (
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h2 className="text-2xl font-black italic tracking-tighter uppercase text-white flex items-center gap-2">
-                        <Bug size={22} /> Reportes de Bugs y Feedback
+                        <Bug size={22} /> Bugs, solicitudes y mejoras
                     </h2>
                     <p className="text-xs text-muted uppercase tracking-widest font-medium">
-                        {openBugs} bug(s) pendiente(s) · {openMejoras} mejora(s) pendiente(s)
+                        {openByType.bug} bug(s) · {openByType.solicitud} solicitud(es) · {openByType.mejora} mejora(s) pendientes
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
                     <MultiSelectFilter
                         label="Tipo"
-                        options={TYPE_OPTIONS.map(t => ({ value: t.id, label: t.label }))}
+                        options={REPORT_TYPES.map(t => ({ value: t.id, label: t.label }))}
                         value={typeFilter}
                         onChange={setTypeFilter}
                     />

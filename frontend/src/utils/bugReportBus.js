@@ -12,7 +12,7 @@ export function triggerBugReport(context = {}) {
 
 // --- Abrir el reporte a mano, desde el menú del usuario ---
 //
-// El botón flotante rosado se fue (07/10/2026): ahora «Reportar un problema» y «Mis reportes» son
+// El botón flotante rosado se fue (07/10/2026): ahora «Reportar o pedir algo» y «Mis reportes» son
 // opciones del menú de sesión que abre el avatar del dock (ver `MenuSesion`). El widget global sigue
 // siendo quien tiene el chat, el historial y el aviso reactivo de errores; las opciones del menú le
 // piden que abra una u otra vista con este evento.

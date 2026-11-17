@@ -3,7 +3,7 @@ from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from app.api.errores import error_interno
 from app import db
-from app.models import BugReport, BugReportMessage, STATUS_VALUES, REPORT_TYPES
+from app.models import BugReport, BugReportMessage, STATUS_VALUES, REPORT_TYPES, report_type_priority
 import logging
 
 logger = logging.getLogger(__name__)
@@ -90,7 +90,7 @@ def list_bug_reports():
 
     status_filter = request.args.get('status')  # comma separated
     urgency_filter = request.args.get('urgency')
-    type_filter = request.args.get('type')  # comma separated ('bug', 'mejora')
+    type_filter = request.args.get('type')  # comma separated ('bug', 'solicitud', 'mejora')
     query = BugReport.query
     if status_filter:
         statuses = [s.strip() for s in status_filter.split(',') if s.strip()]
@@ -103,10 +103,10 @@ def list_bug_reports():
         if types:
             query = query.filter(BugReport.report_type.in_(types))
 
-    # Los bugs son mas prioritarios que las mejoras -- se listan primero (mismo criterio en
-    # BugReportsPanel del lado del operador), y dentro de cada tipo el mas nuevo arriba.
+    # Bugs primero, despues solicitudes y al final mejoras (ver report_type_priority); dentro
+    # de cada tipo el mas nuevo arriba.
     reports = query.order_by(
-        db.case((BugReport.report_type == 'bug', 0), else_=1),
+        report_type_priority(),
         BugReport.created_at.desc()
     ).all()
     return jsonify([r.to_dict() for r in reports]), 200

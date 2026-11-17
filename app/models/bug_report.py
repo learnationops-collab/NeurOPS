@@ -6,7 +6,9 @@ STATUS_VALUES = ('open', 'reviewed', 'resolved')
 # 'bug' = algo esta roto (prioridad alta, lo que ya existia). 'mejora' = sugerencia/pedido
 # que no es un error -- se reporta por el mismo flujo pero es menos prioritario, asi que el
 # panel del operador los distingue visualmente y los ordena despues de los bugs (14/sep/2026).
-REPORT_TYPES = ('bug', 'mejora')
+# 'solicitud' = pedido concreto de trabajo al equipo de desarrollo (un acceso, un dato, un
+# reporte): deja registro de lo que antes llegaba por chat (ADR-W151). Va entre bug y mejora.
+REPORT_TYPES = ('bug', 'solicitud', 'mejora')
 
 
 class BugReport(db.Model):
@@ -115,3 +117,11 @@ class BugReportMessage(db.Model):
             "loom_link": self.loom_link,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
+
+
+def report_type_priority():
+    """Orden de la cola: bug, solicitud, mejora (lo desconocido al final)."""
+    return db.case(
+        {t: i for i, t in enumerate(REPORT_TYPES)},
+        value=BugReport.report_type, else_=len(REPORT_TYPES)
+    )

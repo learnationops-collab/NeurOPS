@@ -28,7 +28,7 @@ from .client_merge_log import ClientMergeLog
 from .system_log import SystemLog
 from .person import Person, PersonIdentity, PersonEvent, Conversation, IDENTITY_KINDS, IDENTITY_USOS, PERSON_EVENT_KINDS
 from .academy_snapshot import AcademySnapshot
-from .bug_report import BugReport, BugReportMessage, URGENCY_LEVELS, STATUS_VALUES, REPORT_TYPES
+from .bug_report import BugReport, BugReportMessage, URGENCY_LEVELS, STATUS_VALUES, REPORT_TYPES, report_type_priority
 from .job_application import JobApplication, JobApplicationVote, ClarityWeight, CLARITY_CRITERIA, VOTE_VALUES
 from .assistant_application import AssistantApplication, AssistantClarityWeight
 from .hiring_form import HiringForm, HiringConfig
@@ -65,7 +65,7 @@ __all__ = [
     'AlertRule', 'Alert',
     'InstallmentPlan', 'Sale', 'SALE_KINDS', 'SALE_STATUSES',
     'Subscription', 'SubscriptionEvent', 'SUBSCRIPTION_STATUSES', 'SUBSCRIPTION_EVENT_KINDS','ClientMergeLog', 'SystemLog', 'Person', 'PersonIdentity', 'PersonEvent', 'Conversation', 'IDENTITY_KINDS', 'IDENTITY_USOS', 'PERSON_EVENT_KINDS', 'FichaOpcion', 'AcademySnapshot',
-    'BugReport', 'BugReportMessage', 'URGENCY_LEVELS', 'STATUS_VALUES', 'REPORT_TYPES',
+    'BugReport', 'BugReportMessage', 'URGENCY_LEVELS', 'STATUS_VALUES', 'REPORT_TYPES', 'report_type_priority',
     'JobApplication', 'JobApplicationVote', 'ClarityWeight', 'CLARITY_CRITERIA', 'VOTE_VALUES',
     'AssistantApplication', 'AssistantClarityWeight', 'HiringForm', 'HiringConfig',
     'PlaybookRoadmap', 'PlaybookModule', 'PlaybookLesson', 'PlaybookQuestion', 'PlaybookOption',

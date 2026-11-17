@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, request
 
 from app import db
-from app.models import BugReport, STATUS_VALUES, REPORT_TYPES
+from app.models import BugReport, STATUS_VALUES, REPORT_TYPES, report_type_priority
 from app.decorators import require_dev_platform_token
 
 bp = Blueprint('external_dev_platform_api', __name__)
@@ -77,10 +77,10 @@ def list_bug_reports():
         if types:
             query = query.filter(BugReport.report_type.in_(types))
 
-    # Mismo criterio que el panel interno: bugs antes que mejoras, y dentro de cada tipo el
-    # mas nuevo arriba.
+    # Mismo criterio que el panel interno: bug, solicitud, mejora; dentro de cada tipo el mas
+    # nuevo arriba.
     query = query.order_by(
-        db.case((BugReport.report_type == 'bug', 0), else_=1),
+        report_type_priority(),
         BugReport.created_at.desc()
     )
 
