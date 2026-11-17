@@ -130,7 +130,7 @@ export const columnasDe = ({ formatDate, elegidos, onComparar, comparar, onVer =
             },
         },
         {
-            // Frío o caliente (ADR-W146). Los talleres anteriores al 17/11/2026 no lo tienen.
+            // Frío o caliente (ADR-W152). Los talleres anteriores al 17/11/2026 no lo tienen.
             key: 'tipo', header: 'Tipo', width: 'minmax(96px,1fr)', oculta: true,
             valor: (e) => tipoDe(e),
             render: (e) => (TIPOS[e.tipo] ? <ChipTipo tipo={e.tipo} /> : FALTA),

@@ -136,7 +136,7 @@
 .dc-shell .wp-vista-previa li[data-ocupada] { color: var(--text-muted-40); text-decoration: line-through; }
 .dc-shell .wp-vista-previa li[data-ocupada] span { text-transform: none; text-decoration: none; display: inline-block; }
 
-/* --- Grupos de WhatsApp por conjunto (ADR-W146) -------------------------------------------- */
+/* --- Grupos de WhatsApp por conjunto (ADR-W152) -------------------------------------------- */
 .dc-shell .wp-modal.wp-modal--ancho { width: min(880px, 100%); }
 .dc-shell .wp-grupos { display: grid; gap: var(--s3); min-width: 0; }
 .dc-shell .wp-campo-linea { display: grid; grid-template-columns: 124px minmax(0, 1fr); gap: var(--s3);

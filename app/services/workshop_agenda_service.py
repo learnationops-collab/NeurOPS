@@ -137,7 +137,7 @@ def proximos_publicos(ahora=None, utm=None):
     repetía el mismo Meet semana a semana): mejor el grupo de la semana pasada que ninguno.
 
     `utm` son los UTM de la visita (`utm_term`, `utm_content`, `utm_campaign`). Con alguno, `whatsapp`
-    es el grupo del conjunto de anuncios que la trajo, si ese taller lo tiene (ADR-W146), y se suma
+    es el grupo del conjunto de anuncios que la trajo, si ese taller lo tiene (ADR-W152), y se suma
     `grupo` (su código o nombre; None = el general). Sin UTM la respuesta es la de siempre.
     """
     ahora = ahora or datetime.utcnow()

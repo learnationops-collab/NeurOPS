@@ -23,7 +23,7 @@ const OPCIONES_TIPO = Object.entries(TIPOS).map(([value, t]) => {
 
 /**
  * «Grupos» de un taller: su tipo (frío o caliente), el grupo general y un grupo de WhatsApp por conjunto
- * de anuncios. La landing manda cada visita al grupo del conjunto que la trajo (ADR-W146). Se guarda
+ * de anuncios. La landing manda cada visita al grupo del conjunto que la trajo (ADR-W152). Se guarda
  * todo junto: cancelar no deja nada a medias.
  */
 const ModalGruposTaller = ({ taller, onCerrar, onGuardado }) => {

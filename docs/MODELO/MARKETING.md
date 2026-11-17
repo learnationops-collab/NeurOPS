@@ -113,7 +113,7 @@ El segmento de un lead lo calcula y guarda Thalamus (`segmento_service`, columna
 
 Renovación y upsell heredan el origen de la primera venta nueva de la persona (`origen_de_venta`). Pagos y suscripción cuelgan de la venta. Lo nuevo se fija cada 10 min (scheduler, `fijar_pendientes`, últimos 7 días; `ninguna` se reintenta en ese plazo); lo viejo con `scripts/backfill_origenes.py`.
 
-## Workshop por tipo y por conjunto de anuncios (ADR-W146)
+## Workshop por tipo y por conjunto de anuncios (ADR-W152)
 
 Fase 1, del 17/11/2026: el software guarda de qué tipo es cada taller y manda cada visita al grupo de WhatsApp de su conjunto. El cruce con las agendas y las cifras por conjunto todavía no existen (fases 2 a 4).
 
