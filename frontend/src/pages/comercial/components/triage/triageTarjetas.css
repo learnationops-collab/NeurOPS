@@ -16,3 +16,14 @@
 @media (max-width: 560px) {
     .tg-kpis { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* «De los que se presentaron» (ADR-W145): cuatro cuentas en una fila; en teléfono, 2 + 2 (nunca 3 + 1). */
+.tg-desglose {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+}
+
+@media (max-width: 560px) {
+    .tg-desglose { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

@@ -359,7 +359,8 @@ def bloque(appt):
 # --- Métricas ---------------------------------------------------------------------------------
 
 def _vacias():
-    return {k: 0 for k in ('agendas', 'asistencias', 'no_show', 'canceladas', 'sin_reporte', 'por_ocurrir',
+    return {k: 0 for k in ('agendas', 'asistencias', 'no_show', 'canceladas', 'reagendadas', 'sin_reporte',
+                           'por_ocurrir', 'fuera', 'sin_calificar',
                            'calificados', 'descalificados', 'en_seguimiento', 'pitch_low_ticket', 'no_pitch', 'cerrado',
                            'no_cerrado', 'seguimiento', 'descartado',
                            'pasaron', 'closer_asistieron', 'closer_cerraron', 'closer_no_asistieron',
@@ -369,11 +370,10 @@ def _vacias():
 
 def _sumar(m, a, pase, ahora=None):
     """Suma la agenda de triage `a` en `m`. `pase`: su agenda de closing (`triage_pases`) o None.
-    `ahora` (UTC naive) parte las llamadas sin resultado en «sin reportar» (ya pasaron) y «por ocurrir»."""
+    `ahora` (UTC naive) parte las llamadas sin resultado en «sin reportar» (ya pasaron) y «por ocurrir».
+    Cada agenda cae en UN destino (`triage_filas.destino_de`): los siete contadores suman las agendas."""
     ahora = ahora or datetime.utcnow()
     m['agendas'] += 1
-    resultado = (a.closer_result or '').strip().lower()
-    previo = (a.result or '').strip().lower()
     if pase:
         m['pasaron'] += 1
         m['closer_asistieron'] += 1 if pase['asistio'] else 0
@@ -385,14 +385,10 @@ def _sumar(m, a, pase, ahora=None):
         m['closer_por_venir'] += 1 if pase.get('estado') == 'pendiente' else 0
         m['closer_senas'] += 1 if pase.get('sena') else 0
         m['closer_cobrado'] = round(m['closer_cobrado'] + pase.get('cobrado', 0), 2)
-    if resultado == 'show up':
-        m['asistencias'] += 1
-    elif resultado == 'no show':
-        m['no_show'] += 1
-    elif resultado.startswith('cancel') or previo.startswith('cancel'):
-        m['canceladas'] += 1
-    elif resultado in ('', 'pendiente'):
-        m['por_ocurrir' if a.start_time > ahora else 'sin_reporte'] += 1
+    destino = triage_filas.destino_de(a, ahora)
+    m[triage_filas.CONTADOR[destino]] += 1
+    if destino == 'asistio' and not a.triage_calificacion:
+        m['sin_calificar'] += 1
     if a.triage_calificacion == 'calificado':
         m['calificados'] += 1
     elif a.triage_calificacion == 'seguimiento':
@@ -473,5 +469,5 @@ def metricas(desde, hasta, solo=None, zona=None, segmentos=None):
         'abandonos': abandonos.resumen(desde, hasta),
         'por_persona': [{'id': p.id, 'nombre': p.username, **por_id[p.id]} for p in personas],
         'por_closer': triage_filas.por_closer(agendas, pases),
-        'leads': triage_filas.leads(agendas, pases),
+        'leads': triage_filas.leads(agendas, pases, ahora),
     }

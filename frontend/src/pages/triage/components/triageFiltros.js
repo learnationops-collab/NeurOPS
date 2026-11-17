@@ -4,17 +4,39 @@
 // Lo que pasó al closing sale de `lead.closing` (triage_pases.py): el pase del lead, o null.
 
 const PITCHEADO = ['cerrado', 'no_cerrado', 'seguimiento', 'descartado'];
+const REAGENDA = ['reagend', 'reprogram'];
 const asistencia = (l) => (l.asistencia || '').trim().toLowerCase();
 const descalificado = (l) => l.calificacion === 'descalificado';
 const lowTicketEs = (estado) => (l) => descalificado(l) && l.low_ticket === estado;
 
+/** El destino de la llamada, el mismo que cuenta el servidor (`triage_filas.destino_de`, ADR-W145). Sin el dato
+ *  (una respuesta guardada de antes) se deduce de la asistencia. */
+export function destinoDe(l) {
+    if (l.destino) return l.destino;
+    const a = asistencia(l);
+    if (a === 'show up') return 'asistio';
+    if (a === 'no show') return 'no_show';
+    if (a.startsWith('cancel')) return 'cancelo';
+    if (REAGENDA.some((p) => a.startsWith(p))) return 'reagendo';
+    if (['', 'pendiente'].includes(a)) return l.ya_paso ? 'sin_reporte' : 'por_ocurrir';
+    return 'fuera';
+}
+const destinoEs = (...destinos) => (l) => destinos.includes(destinoDe(l));
+
 export const FILTROS = {
     agendas: { titulo: 'Agendas', coincide: () => true },
-    asistencias: { titulo: 'Asistieron', coincide: (l) => asistencia(l) === 'show up' },
-    // La base del % de asistencia: llamadas que ya tienen resultado (asistió o no show).
+    asistencias: { titulo: 'Asistieron', coincide: destinoEs('asistio') },
+    no_show: { titulo: 'No se presentaron', coincide: destinoEs('no_show') },
+    canceladas: { titulo: 'Cancelaron', coincide: destinoEs('cancelo') },
+    reagendadas: { titulo: 'Reprogramaron', coincide: destinoEs('reagendo') },
+    sin_reporte: { titulo: 'Sin reportar (ya pasaron)', coincide: destinoEs('sin_reporte') },
+    // La base del % de asistencia, la misma de closing: los cuatro destinos y las ya pasadas sin reportar.
+    base: { titulo: 'Agendas con destino', coincide: destinoEs('asistio', 'no_show', 'cancelo', 'reagendo', 'sin_reporte') },
+    por_ocurrir: { titulo: 'Aún no ocurrieron', coincide: destinoEs('por_ocurrir') },
+    // Descalificada, lead perdido o archivada: un estado que no es un destino y no entra en la base.
+    fuera: { titulo: 'Otros estados (no cuentan en la asistencia)', coincide: destinoEs('fuera') },
     con_resultado: { titulo: 'Llamadas con resultado', coincide: (l) => ['show up', 'no show'].includes(asistencia(l)) },
-    sin_reporte: { titulo: 'Sin reportar (ya pasaron)', coincide: (l) => ['', 'pendiente'].includes(asistencia(l)) && !!l.ya_paso },
-    por_ocurrir: { titulo: 'Aún no ocurrieron', coincide: (l) => ['', 'pendiente'].includes(asistencia(l)) && !l.ya_paso },
+    sin_calificar: { titulo: 'Asistieron y falta la calificación', coincide: (l) => destinoDe(l) === 'asistio' && !l.calificacion },
     calificados: { titulo: 'Calificados', coincide: (l) => l.calificacion === 'calificado' },
     pasaron: { titulo: 'Pasaron a closing', coincide: (l) => !!l.closing },
     closer_asistieron: { titulo: 'Asistieron al closer', coincide: (l) => !!l.closing?.asistio },

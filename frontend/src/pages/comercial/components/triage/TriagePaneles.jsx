@@ -4,7 +4,7 @@
 import { Fragment } from 'react';
 
 import { CifraConCuenta } from '../../../../components/standard';
-import { COLOR_DE_ESTADO, conResultado, embudoDe, estadosDe, pct, pctTexto } from './triageDatos';
+import { COLOR_DE_ESTADO, calificacionDe, conResultado, destinosDe, embudoDe, fueraDe, pct, pctTexto } from './triageDatos';
 import './triageTarjetas.css';
 
 export const TARJETA = {
@@ -53,17 +53,20 @@ const Partes = ({ partes, onVer }) => (
 
 /** Las tarjetas de arriba (triage y closing); «Ver registros ›» abre su lista. */
 export function Tarjetas({ m, onVer }) {
-    // El % de asistencia es sobre todas las agendas (09/11/2026), igual que la tira de Revisar.
-    const conRes = { n: conResultado(m), texto: 'agendas', clave: 'agendas', titulo: 'Agendas' };
+    // El % de asistencia es sobre las agendas con destino, la misma base de closing (ADR-W145).
+    const base = conResultado(m);
+    const conRes = { n: base, texto: 'con destino', clave: 'base', titulo: 'Agendas con destino' };
+    const fuera = fueraDe(m).filter(([n]) => n > 0);
     // Con el closer igual: las pendientes de llamada no restan al % de quienes ya tuvieron la llamada.
     const closerConRes = { n: m.closer_asistieron + m.closer_no_asistieron, texto: 'con resultado', clave: undefined, titulo: 'Con resultado' };
     const closerAsistieron = { n: m.closer_asistieron, texto: 'asistieron', clave: 'closer_asistieron', titulo: 'Asistieron al closer' };
     const tarjetas = [
         { rotulo: 'AGENDAS', valor: m.agendas, sub: `${m.agendas} ${m.agendas === 1 ? 'llamada' : 'llamadas'} en el período`, color: 'info', ver: 'agendas' },
         { rotulo: 'ASISTENCIA', valor: <Porcentaje onVer={onVer} a={{ n: m.asistencias, texto: 'asistieron', clave: 'asistencias', titulo: 'Asistieron' }} b={conRes} />,
-            sub: <Partes onVer={onVer} partes={[[m.asistencias, 'asistieron', 'asistencias'], [m.no_show, 'no show', 'st:No se presentó'], [m.canceladas, 'canceló', 'st:Canceló']]} />,
-            sub2: m.sin_reporte || m.por_ocurrir
-                ? <Partes onVer={onVer} partes={[[m.sin_reporte, 'sin reportar', 'sin_reporte'], [m.por_ocurrir, 'aún no ocurren', 'por_ocurrir']]} /> : null,
+            sub: <><Partes onVer={onVer} partes={[[m.asistencias, 'asistieron', 'asistencias']]} /> de <Partes onVer={onVer} partes={[[base, 'con destino', 'base']]} /></>,
+            sub2: <Partes onVer={onVer} partes={[[m.no_show, 'no show', 'no_show'], [m.canceladas, 'canceló', 'canceladas'],
+                ...[[m.reagendadas || 0, 'reprogramó', 'reagendadas'], [m.sin_reporte, 'sin reportar', 'sin_reporte']].filter(([n]) => n > 0)]} />,
+            sub3: fuera.length ? <>No cuentan: <Partes onVer={onVer} partes={fuera} /></> : null,
             color: 'success', ver: 'asistencias' },
         { rotulo: 'CALIFICADOS', valor: pctTexto(m.calificados, m.asistencias), sub: `${m.calificados} pasados al closer · ${m.closer_asistieron} ya asistieron con él`, color: 'brand-secondary', ver: 'calificados' },
         { rotulo: 'CIERRES LOW TICKET', valor: pctTexto(m.cerrado, m.pitch_low_ticket), sub: `${m.cerrado} de ${m.pitch_low_ticket} presentaciones`, color: 'error', ver: 'cerrado' },
@@ -89,6 +92,7 @@ export function Tarjetas({ m, onVer }) {
                     <span style={{ position: 'relative', fontSize: 40, fontWeight: 900, lineHeight: 1.1, color: `var(--${t.color})` }}>{t.valor}</span>
                     <span style={{ position: 'relative', fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.4 }}>{t.sub}</span>
                     {t.sub2 && <span style={{ position: 'relative', fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.4 }}>{t.sub2}</span>}
+                    {t.sub3 && <span style={{ position: 'relative', fontSize: 12, color: 'var(--text-muted-40)', lineHeight: 1.4 }}>{t.sub3}</span>}
                     {t.ancha && (
                         <span style={{ position: 'relative', display: 'block', height: 6, borderRadius: 6, marginTop: 4, background: 'rgba(255,255,255,.08)' }}>
                             <span style={{ display: 'block', height: 6, borderRadius: 6, width: `${Math.min(100, t.barra)}%`, background: `var(--${t.color})` }} />
@@ -104,26 +108,30 @@ export function Tarjetas({ m, onVer }) {
     );
 }
 
-/** Estados de las llamadas: la dona con el % que asistió y cada estado con su barra. */
+/** Estados de las llamadas: la dona con el % que se presentó sobre las agendas con destino (la base de closing), cada
+ *  destino con su barra, lo que no cuenta en la base y, de los que se presentaron, cómo quedó la calificación. */
 export function Estados({ m, onVer }) {
-    const estados = estadosDe(m);
+    const destinos = destinosDe(m);
+    const base = conResultado(m);
+    const fuera = fueraDe(m).filter(([n]) => n > 0);
     let acumulado = 0;
-    const tramos = estados.map((e) => { const desde = acumulado; acumulado += e.pct; return `var(--${e.color}) ${desde}% ${acumulado}%`; });
+    const tramos = destinos.map((e) => { const desde = acumulado; acumulado += e.pct; return `var(--${e.color}) ${desde}% ${acumulado}%`; });
     return (
         <div style={TARJETA}>
             <div style={resplandor('brand-secondary', '100% 100%', '420px 260px', 18)} />
-            <Titulo texto="Estados" lado={<><b style={{ color: '#fff' }}>{m.agendas}</b> llamadas</>} />
+            <Titulo texto="Estados" lado={<span title="Cada persona cuenta una vez, aunque haya reagendado."><b style={{ color: '#fff' }}>{m.agendas}</b> llamadas</span>} />
             <div style={{ ...CAJA, position: 'relative', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 28, padding: 22, borderRadius: 20 }}>
-                <div style={{ width: 150, height: 150, flexShrink: 0, borderRadius: '50%', background: `conic-gradient(${tramos.join(', ')})`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: 150, height: 150, flexShrink: 0, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: base ? `conic-gradient(${tramos.join(', ')})` : 'rgba(255,255,255,.08)' }}>
                     <div style={{ width: 108, height: 108, borderRadius: '50%', background: 'var(--ink)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
-                        <span style={{ fontSize: 30, fontWeight: 900, lineHeight: 1 }}>{Math.round(pct(m.asistencias, conResultado(m)))}%</span>
-                        <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>asistieron</span>
+                        <span style={{ fontSize: 30, fontWeight: 900, lineHeight: 1 }}>{base ? `${Math.round(pct(m.asistencias, base))}%` : '—'}</span>
+                        <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>se presentaron</span>
+                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{m.asistencias} de {base}</span>
                     </div>
                 </div>
                 <div style={{ flex: 1, minWidth: 200, display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    {estados.map((e) => (
-                        <button key={e.clave} type="button" onClick={() => onVer(`st:${e.clave}`)} style={{ ...boton, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {destinos.map((e) => (
+                        <button key={e.clave} type="button" onClick={() => onVer(e.filtro)} style={{ ...boton, display: 'flex', flexDirection: 'column', gap: 6 }}>
                             <span style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: 14, fontWeight: 700 }}>
                                 <span>{e.clave}</span><span style={{ color: `var(--${e.color})` }}>{e.n} · {e.pct}%</span>
                             </span>
@@ -134,11 +142,26 @@ export function Estados({ m, onVer }) {
                     ))}
                 </div>
             </div>
-            <div style={{ position: 'relative', display: 'flex', flexWrap: 'wrap', gap: 24, alignItems: 'baseline' }}>
-                <small style={ROTULO}>DE LOS QUE ASISTIERON</small>
-                <span style={{ fontSize: 14, color: 'var(--text-muted)' }}><b style={{ fontSize: 20, fontWeight: 900, color: 'var(--success)' }}>{m.calificados}</b> calificados</span>
-                <span style={{ fontSize: 14, color: 'var(--text-muted)' }}><b style={{ fontSize: 20, fontWeight: 900, color: 'var(--warning)' }}>{m.descalificados}</b> descalificados</span>
-                <span style={{ fontSize: 14, color: 'var(--text-muted)' }}><b style={{ fontSize: 20, fontWeight: 900, color: 'var(--info)' }}>{m.en_seguimiento || 0}</b> lo van a pensar</span>
+            {fuera.length > 0 && (
+                <div style={{ position: 'relative', display: 'flex', flexWrap: 'wrap', gap: '6px 14px', alignItems: 'baseline', fontSize: 13, color: 'var(--text-muted)' }}>
+                    <small style={ROTULO} title="No son un destino: quedan fuera del % de asistencia.">NO CUENTAN</small>
+                    <span><Partes onVer={onVer} partes={fuera} /></span>
+                </div>
+            )}
+            <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <small style={ROTULO}>DE LOS {m.asistencias} QUE SE PRESENTARON</small>
+                <div className="tg-desglose">
+                    {calificacionDe(m).map((c) => {
+                        const Caja = c.n ? 'button' : 'span';
+                        return (
+                            <Caja key={c.clave} {...(c.n ? { type: 'button', onClick: () => onVer(c.filtro) } : null)}
+                                style={{ ...(c.n ? boton : null), display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+                                <b style={{ fontSize: 20, fontWeight: 900, lineHeight: 1.1, color: c.n ? `var(--${c.color})` : 'var(--text-muted-40)' }}>{c.n}</b>
+                                <span style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.3 }}>{c.clave}</span>
+                            </Caja>
+                        );
+                    })}
+                </div>
             </div>
         </div>
     );
@@ -164,7 +187,7 @@ const BarraDeEtapa = ({ e, mayor, partes, onVer }) => {
 
 // Las etapas del closer se parten por closer (su color), cada parte abre las llamadas de ese closer.
 const partesDe = (etapa, closers, colores) => {
-    const cuenta = { closer_asistieron: 'asistieron', closer_cerraron: 'cerraron' }[etapa.filtro];
+    const cuenta = { pasaron: 'pasaron', closer_asistieron: 'asistieron', closer_cerraron: 'cerraron' }[etapa.filtro];
     if (!cuenta) return null;
     return closers.filter((c) => c[cuenta] > 0).map((c) => ({ n: c[cuenta], color: colores[c.id], nombre: c.nombre, filtro: `cl:${c.id}:${cuenta}` }));
 };
@@ -197,14 +220,14 @@ export function Embudo({ m, onVer, closers = [], colores = {} }) {
                                 ))}
                             </div>
                         )}
-                        <div style={{ display: 'grid', gridTemplateColumns: '110px minmax(0,1fr) 56px', alignItems: 'center', gap: 12 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '124px minmax(0,1fr) 56px', alignItems: 'center', gap: 12 }}>
                             <button type="button" onClick={() => onVer(e.filtro)} style={{ ...boton, alignSelf: 'start', paddingTop: 12 }}>
                                 <small style={{ ...ROTULO, letterSpacing: '.16em' }}>{e.rotulo || e.clave}</small>
                             </button>
                             <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
                                 {/* Cero es nada: sin barra, solo el número atenuado. */}
                                 <BarraDeEtapa e={e} mayor={mayor} partes={e.n ? partesDe(e, closers, colores) : null} onVer={onVer} />
-                                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{e.nota || ' '}</span>
+                                <span style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', lineHeight: 1.35 }}>{e.nota || ' '}</span>
                             </span>
                             <span style={{ textAlign: 'right', fontSize: 15, fontWeight: 800, paddingTop: 7, alignSelf: 'start', color: cuello === e.clave ? 'var(--error)' : 'var(--text-on-surface)' }}>
                                 {e.de ? pctTexto(e.n, e.de) : ''}
