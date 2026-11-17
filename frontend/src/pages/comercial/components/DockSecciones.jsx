@@ -3,6 +3,12 @@ import { Humo } from './Shared';
 import { DockContexto } from './dockContexto';
 import DockFijadas from './DockFijadas';
 import IslaVentanas from '../../../ventanas/IslaVentanas';
+import BotonHerramientas from '../../../ventanas/BotonHerramientas';
+import useOpcionesDeHerramientas from '../../../ventanas/useOpcionesDeHerramientas';
+import { useNavegacionDock } from '../../../ventanas/navegacionDock';
+import { useAuth } from '../../../contexts/AuthContext';
+import DockEdicion from './DockEdicion';
+import '../dock2.css';
 
 const HUMO_DOCK = ['var(--brand-secondary)', 'var(--brand-primary)',
     'var(--brand-secondary-light)', 'var(--brand-navy)'];
@@ -39,14 +45,39 @@ const HUMO_DOCK = ['var(--brand-secondary)', 'var(--brand-primary)',
  * navegación y a la derecha la sesión. Las fijadas salen del `MenuSesion` que va en `despues`: se las
  * pasa por `DockContexto` con `publicar`, y el dock las guarda solo si cambiaron (se compara una firma,
  * no la lista, que es nueva en cada render). Tocar una corre la acción más reciente de esa opción.
+ *
+ * Dock 2.0 (17/11/2026, como el de Leadership y la Academia): en una pantalla ancha son tres islas
+ * sueltas. Izquierda, lo fijado; centro, la navegación; derecha, «Herramientas» (`BotonHerramientas`)
+ * y la sesión. La navegación se edita (ordenar, ocultar, renombrar: `ventanas/navegacionDock.js`), y
+ * una sección oculta se abre desde Herramientas o fijada a la izquierda. En un teléfono vuelve a ser
+ * una sola barra.
  */
+const ANGOSTO = '(max-width: 640px)';
+const useAngosto = () => {
+    const [angosto, setAngosto] = useState(() => typeof window !== 'undefined' && !!window.matchMedia?.(ANGOSTO).matches);
+    useEffect(() => {
+        const mq = window.matchMedia?.(ANGOSTO);
+        if (!mq) return undefined;
+        const cambio = (e) => setAngosto(e.matches);
+        mq.addEventListener('change', cambio);
+        return () => mq.removeEventListener('change', cambio);
+    }, []);
+    return angosto;
+};
+
 const marcasDe = (s) => s.marcas || (s.marca ? [s.marca] : []);
 
 const claseDeMarca = (m) => ['dock-marca', m.tipo && `dock-marca--${m.tipo}`, m.apagada && 'dock-marca--apagada']
     .filter(Boolean).join(' ');
 
-const DockSecciones = ({ secciones, activa, onElegir, ariaLabel, antes = null, despues = null,
+const DockSecciones = ({ secciones: todasLasSecciones, activa, onElegir, ariaLabel, antes = null, despues = null,
     siempreNombres = false }) => {
+    const auth = useAuth();
+    const usuario = auth?.user;
+    const nav = useNavegacionDock(usuario, ariaLabel, todasLasSecciones);
+    const secciones = nav.visibles;
+    const angosto = useAngosto();
+    const herramientas = useOpcionesDeHerramientas();
     // El indicador se mide del DOM porque su ancho es el del botón activo, y eso depende del texto
     // de cada sección y de si el label está visible (bajo 1120px se esconde el de los inactivos).
     // Se remide al cambiar de sección, al cambiar la lista y al redimensionar.
@@ -72,13 +103,23 @@ const DockSecciones = ({ secciones, activa, onElegir, ariaLabel, antes = null, d
         const firma = `${usuario?.id ?? ''}#${opciones.map(o => `${o.id}:${o.label}:${o.cuenta ?? ''}:${o.titulo ?? ''}`).join('|')}`;
         setFijables(prev => (prev.firma === firma ? prev : { firma, usuario, opciones }));
     }, []);
-    const correr = useCallback((id) => accionesRef.current.find(o => o.id === id)?.onClick(), []);
+    // Lo que se puede fijar: las acciones del menú de sesión, las herramientas en ventana y las secciones ocultas.
+    const ocultas = nav.ocultas.map(s => ({ id: `sec:${s.id}`, label: s.label, titulo: 'Sección oculta', Icono: s.Icono,
+        onClick: () => onElegir(s.id) }));
+    // Las del menú corren su acción más reciente (accionesRef): la guardada en `fijables` puede ser vieja.
+    const opcionesRef = useRef([]);
+    const correr = useCallback((id) => (accionesRef.current.find(o => o.id === id)
+        || opcionesRef.current.find(o => o.id === id))?.onClick(), []);
+    const acciones = fijables.opciones.map(o => ({ ...o, onClick: () => correr(o.id) }));
+    const opciones = [...acciones, ...herramientas, ...ocultas];
+    opcionesRef.current = opciones;
     const contexto = useMemo(() => ({ publicar }), [publicar]);
     useEffect(() => {
         const medir = () => {
             const nav = navRef.current;
             const item = nav?.querySelector('[aria-current="page"]');
-            if (!nav || !item) return;
+            if (!nav) return;
+            if (!item) { setIndicador({ '--w': '0px', '--x': '0px' }); return; }
             const dock = nav.parentElement;
 
             // ¿Entra con todos los nombres? Se prueba sacando `dock--compacto` un instante: es
@@ -127,50 +168,77 @@ const DockSecciones = ({ secciones, activa, onElegir, ariaLabel, antes = null, d
             window.removeEventListener('resize', medir);
             observador?.disconnect();
         };
-    }, [activa, ids, compacto, claseSinLugar]);
+    }, [activa, ids, compacto, claseSinLugar, nav.editando, angosto]);
 
     // Con seis cosas o más en el dock (el mazo del closer, o la dirección con su switch y su sesión)
     // el aire de las cuatro secciones del dashboard no entra en una laptop: `dock--denso` las junta.
     const cosas = secciones.length + (antes ? 1 : 0) + (despues ? 1 : 0);
-    const clases = ['dock', cosas >= 6 && 'dock--denso', siempreNombres && 'dock--nombres',
-        compacto && claseSinLugar, desborda && 'dock--desborda', 'caja'];
-    return (
-        <DockContexto.Provider value={contexto}>
+    const clases = ['dock', !angosto && 'dock--centro', cosas >= 6 && 'dock--denso', siempreNombres && 'dock--nombres',
+        compacto && claseSinLugar, desborda && 'dock--desborda', nav.editando && 'dock--editando', 'caja'];
+    const fijadas = <DockFijadas usuario={fijables.usuario || usuario} opciones={opciones} onElegir={correr} separador={angosto} />;
+    const herr = (
+        <BotonHerramientas usuario={usuario} onEditar={todasLasSecciones.length > 1 && usuario ? () => nav.editar(true) : null}
+            grupos={[
+                { titulo: 'Herramientas', opciones: herramientas },
+                { titulo: 'Acciones', opciones: acciones },
+                { titulo: 'Secciones ocultas', opciones: ocultas },
+            ]} />
+    );
+    const centro = (
         <nav className={clases.filter(Boolean).join(' ')} aria-label={ariaLabel}>
             <Humo colores={HUMO_DOCK} />
-            <DockFijadas usuario={fijables.usuario} opciones={fijables.opciones} onElegir={correr} />
+            {angosto && fijadas}
             {antes}
             {antes && <span className="dock-sep" />}
             <div className="dock-nav" ref={navRef}>
-                {/* Indicador que se desliza hasta el item activo, en vez de que cada uno pinte su
-                    propio fondo: el movimiento dice de dónde a dónde se fue. */}
-                <span className="dock-ind" style={indicador} aria-hidden="true" />
-                {secciones.map((s, i) => {
-                    const marcas = marcasDe(s);
-                    return (
-                        <button key={s.id} type="button" className="dock-item"
-                            aria-current={activa === s.id ? 'page' : undefined}
-                            aria-label={[s.label, ...marcas.map(m => m.titulo)].join(', ')}
-                            onClick={() => onElegir(s.id)}>
-                            <span className="dock-num">{i + 1}</span>
-                            <s.Icono size={20} />
-                            <span className="dock-label">{s.label}</span>
-                            {s.pronto && <span className="dock-pronto">Pronto</span>}
-                            {marcas.map(m => (
-                                <span key={m.titulo} className={claseDeMarca(m)} aria-hidden="true">{m.texto}</span>
-                            ))}
-                        </button>
-                    );
-                })}
+                {nav.editando ? <DockEdicion nav={nav} /> : (
+                    <>
+                        {/* Indicador que se desliza hasta el item activo, en vez de que cada uno pinte su
+                            propio fondo: el movimiento dice de dónde a dónde se fue. */}
+                        <span className="dock-ind" style={indicador} aria-hidden="true" />
+                        {secciones.map((s, i) => {
+                            const marcas = marcasDe(s);
+                            return (
+                                <button key={s.id} type="button" className="dock-item"
+                                    aria-current={activa === s.id ? 'page' : undefined}
+                                    aria-label={[s.label, ...marcas.map(m => m.titulo)].join(', ')}
+                                    onClick={() => onElegir(s.id)}>
+                                    <span className="dock-num">{i + 1}</span>
+                                    <s.Icono size={20} />
+                                    <span className="dock-label">{s.label}</span>
+                                    {s.pronto && <span className="dock-pronto">Pronto</span>}
+                                    {marcas.map(m => (
+                                        <span key={m.titulo} className={claseDeMarca(m)} aria-hidden="true">{m.texto}</span>
+                                    ))}
+                                </button>
+                            );
+                        })}
+                    </>
+                )}
             </div>
             <IslaVentanas />
-            {despues && (
+            {angosto && (
                 <div className="dock-despues">
                     <span className="dock-sep" />
+                    {herr}
                     {despues}
                 </div>
             )}
         </nav>
+    );
+    return (
+        <DockContexto.Provider value={contexto}>
+            {angosto ? centro : (
+                <div className="dock-barra">
+                    <div className="dock-isla dock-isla--izq">{fijadas}</div>
+                    {centro}
+                    <div className="dock-isla dock-isla--der">
+                        {herr}
+                        {despues && <span className="dock-sep" />}
+                        {despues}
+                    </div>
+                </div>
+            )}
         </DockContexto.Provider>
     );
 };

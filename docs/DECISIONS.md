@@ -1337,3 +1337,14 @@
   4. **Primera herramienta, Turnos:** el bloque de ADR-W158 con su semana, leyendo el almacén de Tálamus. Para el setter viene fijada de fábrica y su encabezado suma el botón «Turnos» al lado de «Tálamus».
 - **Qué se pierde:** la posición y el estado no se guardan en el servidor por rol, como en Leadership: viven en esta pestaña; las fijadas siguen en el navegador. Un setter que ya había cambiado sus fijadas no recibe Turnos fijado (lo tiene en el botón del encabezado y en el menú). Las secciones ocultas como ventana (iframe) de Leadership no se portaron.
 - **Consecuencias:** sin migración ni endpoints. Sumar una herramienta es un item del catálogo y su componente (`.agents/skills/ui-builder/SKILL.md`, «Herramientas en ventana»).
+
+## ADR-W160: Dock 2.0 en Work: tres islas, Herramientas y navegación editable
+
+- **Fecha:** 2026-11-17 · **Subsistema:** Dock y navegación (`DockSecciones`, `DockEdicion`, `ventanas/BotonHerramientas.jsx`, `ventanas/navegacionDock.js`) · **Estado:** implementado. Corrige ADR-W159.
+- **Contexto:** con ADR-W159 el dock de Work no cambiaba a la vista: las herramientas quedaban escondidas en el menú de sesión. Santi pidió el dock de la Academia (tres islas: lo fijado, la navegación, el sistema) y el Dock 2.0 de Leadership (`components/dockbar/islas.blade.php`), que deja editar la navegación y abrir desde Herramientas las secciones ocultas.
+- **Decisión:**
+  1. En una pantalla ancha el dock son tres islas: a la izquierda lo fijado (sin nada, no se ve), en el centro las secciones y las ventanas abiertas, a la derecha «Herramientas» (llave) y la sesión. En el teléfono (≤ 640 px) sigue siendo una sola barra, con la llave al lado de la sesión.
+  2. «Herramientas» lista las herramientas en ventana del rol, las acciones de la pantalla (las del menú de sesión) y las secciones ocultas, cada una con su 📌 para fijarla a la izquierda. Las herramientas salen del menú de sesión.
+  3. «Editar navegación» (al pie de Herramientas): se arrastran las secciones para ordenarlas, el ojo las oculta y doble clic las renombra; «Restablecer» vuelve a la de fábrica y Escape o «Listo» termina. Siempre queda una a la vista. Una oculta se abre desde Herramientas o fijada; la numeración cuenta solo las visibles.
+- **Qué se pierde:** lo editado vive en el navegador, por cuenta y por dock (`dock-nav:<usuario>:<dock>`), no en el servidor como en Leadership. Una sección oculta no se abre como ventana (Leadership usa un iframe): se navega a ella. Sin beta: Work no tiene canal beta, así que el dock nuevo es para todos (Leadership también lo abrió a todos); lo editable es opcional de cada uno.
+- **Consecuencias:** sin migración ni endpoints. Estilos en `pages/comercial/dock2.css`.

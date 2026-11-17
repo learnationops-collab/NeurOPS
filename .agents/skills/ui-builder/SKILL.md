@@ -100,7 +100,8 @@ Todo lo que no es prop (`onClick`, `disabled`, `ref`, `data-nav`, `autoFocus`, `
 
 Una herramienta que se usa encima de cualquier pantalla (hoy, «Turnos») va como ventana, igual que las de la Academia y Leadership: se arrastra por la cabecera; soltada arriba pasa a pantalla completa y soltada abajo se minimiza al dock. Doble clic maximiza y Escape minimiza. En el teléfono es una hoja de abajo.
 
-- **Sumar una:** un item en `ventanas/herramientas.js` (`key`, `label`, `hint`, `Icono`, `roles`, `ancho`, `Componente` con `lazy`) y su componente en `ventanas/herramientas/`. Aparece sola en el menú de sesión (grupo propio), se puede fijar en el dock con el 📌 y, abierta, tiene su acceso en la isla de ventanas del dock.
+- **Sumar una:** un item en `ventanas/herramientas.js` (`key`, `label`, `hint`, `Icono`, `roles`, `ancho`, `Componente` con `lazy`) y su componente en `ventanas/herramientas/`. Aparece sola en el botón **Herramientas** del dock (isla derecha), se puede fijar a la izquierda con el 📌 y, abierta, tiene su acceso en la isla de ventanas del dock.
+- **El dock** (`DockSecciones`) son tres islas en pantalla ancha (fijadas · secciones · Herramientas y sesión) y una barra en el teléfono. Cada uno puede ordenar, ocultar y renombrar las secciones («Editar navegación»); una pantalla no tiene que hacer nada para eso.
 - **Abrir desde una pantalla:** `abrirVentana(key)` (`ventanas/ventanasStore.js`). No hagas un modal propio para lo mismo.
 - El host (`HostVentanas`) va una sola vez en `App.jsx`. Una minimizada sigue montada: no pierde lo que tenía.
 

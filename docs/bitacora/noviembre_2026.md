@@ -629,3 +629,8 @@
 ### 17/11/2026 · Ventanas y herramientas en el dock; Turnos para los setters
 - Work suma ventanas flotantes, como la Academia y Leadership: se abren encima de cualquier pantalla, se arrastran, se maximizan soltándolas arriba y se minimizan al dock soltándolas abajo; el dock muestra las abiertas ([ventanas/](../../frontend/src/ventanas/), [ADR-W159](../DECISIONS.md)).
 - Las herramientas van por rol en el menú de sesión y se fijan en el dock. La primera es **Turnos**: los turnos que quedan de triage y de closers por día. El setter la tiene fijada y con un botón en su encabezado.
+
+### 17/11/2026 · Dock 2.0: tres islas, Herramientas y navegación editable
+- El dock pasa a tres islas, como la Academia y Leadership: lo fijado a la izquierda, las secciones en el centro y, a la derecha, el botón **Herramientas** y la sesión ([DockSecciones.jsx](../../frontend/src/pages/comercial/components/DockSecciones.jsx), [ADR-W160](../DECISIONS.md)).
+- Herramientas junta las herramientas en ventana (Turnos), las acciones de la pantalla y las secciones ocultas, cada una con su 📌 para fijarla ([BotonHerramientas.jsx](../../frontend/src/ventanas/BotonHerramientas.jsx)).
+- «Editar navegación»: arrastrar para ordenar, el ojo para ocultar y doble clic para renombrar las secciones ([DockEdicion.jsx](../../frontend/src/pages/comercial/components/DockEdicion.jsx)).

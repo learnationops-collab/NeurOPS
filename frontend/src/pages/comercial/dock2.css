@@ -1,0 +1,46 @@
+/* Dock 2.0 (components/DockSecciones.jsx), como el de Leadership y la Academia: en una pantalla ancha,
+   tres islas sueltas. Izquierda, lo fijado; centro, la navegación; derecha, Herramientas y la sesión. */
+.dc-shell .dock-barra{position:fixed;left:0;right:0;bottom:calc(var(--s6) + env(safe-area-inset-bottom,0px));z-index:60;
+  display:grid;grid-template-columns:1fr minmax(0,max-content) 1fr;align-items:center;gap:var(--s4);
+  padding:0 var(--s6);pointer-events:none}
+.dc-shell .dock-barra > *{pointer-events:auto}
+.dc-shell .dock-barra .dock--centro{position:relative;left:auto;right:auto;bottom:auto;margin:0;width:auto;
+  max-width:100%;justify-self:center;grid-column:2;grid-row:1}
+.dc-shell .dock-isla{display:flex;align-items:center;gap:var(--s1);padding:7px;border-radius:24px;grid-row:1;
+  background:var(--bg-surface);backdrop-filter:saturate(180%) blur(28px);
+  border:1px solid var(--border-main);border-top-color:var(--sheen);
+  box-shadow:var(--shadow-main),0 0 0 1px rgba(0,0,0,.25)}
+.dc-shell .dock-isla--izq{justify-self:start;grid-column:1}
+.dc-shell .dock-isla--izq:empty{visibility:hidden;pointer-events:none}
+.dc-shell .dock-isla--der{justify-self:end;grid-column:3}
+
+/* Editar la navegación (DockEdicion.jsx). */
+.dc-shell .dock--editando{outline:2px dashed var(--brand-secondary);outline-offset:3px}
+.dc-shell .dock--editando .dock-item .dock-label{display:inline !important}
+.dc-shell .dock-item--edit{cursor:grab}
+.dc-shell .dock-item--edit:active{cursor:grabbing}
+.dc-shell .dock-item--oculta{opacity:.45}
+.dc-shell .dock-ojo{display:grid;place-items:center;width:26px;height:26px;margin-top:9px;border-radius:8px;
+  color:var(--text-muted);transition:background-color .15s ease,color .15s ease}
+.dc-shell .dock-ojo:hover,.dc-shell .dock-ojo:focus-visible{background:var(--mat-3);color:var(--text-on-surface)}
+.dc-shell .dock-renombrar{margin-top:9px;width:9em;height:28px;padding:0 8px;border-radius:8px;
+  border:1px solid var(--brand-secondary);background:var(--bg-element);color:var(--text-on-surface);font:inherit}
+.dc-shell.dock-editar-capa{position:fixed;top:0;left:0;width:0;height:0;z-index:70;
+  background:none;min-height:0;padding:0;overflow:visible}
+.dc-shell .dock-editar{position:fixed;left:50%;transform:translateX(-50%);
+  bottom:calc(var(--s6) + 92px + env(safe-area-inset-bottom,0px));max-width:calc(100vw - 32px);
+  display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2);padding:6px 6px 6px 14px;border-radius:16px;
+  background:var(--bg-flotante);border:1px solid var(--border-main);box-shadow:var(--shadow-main);
+  font-size:12.5px;color:var(--text-muted)}
+.dc-shell .dock-editar b{color:var(--text-on-surface)}
+
+/* El menú de Herramientas (ventanas/BotonHerramientas.jsx). */
+.dc-shell .menu.menu--herr{width:320px}
+.dc-shell .menu-herr-cab{display:grid;gap:2px;padding:6px 10px 8px}
+.dc-shell .menu-herr-cab b{font-size:14px;font-weight:800;color:var(--text-on-surface)}
+.dc-shell .menu-herr-cab small{display:flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:var(--text-muted-40)}
+.dc-shell .menu-grupo{margin:8px 10px 4px;font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--text-muted-40)}
+.dc-shell .menu-herr-tx{display:grid;min-width:0;text-align:left;line-height:1.25}
+.dc-shell .menu-herr-tx b{font-weight:700}
+.dc-shell .menu-herr-tx small{font-size:11px;font-weight:500;color:var(--text-muted-40)}
