@@ -55,13 +55,13 @@ def por_closer(agendas, pases):
     return sorted(filas.values(), key=lambda f: (f['closer'], f['triage_id']))
 
 
-def leads(agendas, pases, ahora=None):
+def leads(agendas, pases, ahora=None, motivos=None):
     """El reporte del período, lead por lead: cómo quedó, su pase al closing y sus dos notas (la de la llamada
     y la del closer). Las notas salen del log en una sola consulta. `destino` es el de `destino_de` con el
     mismo `ahora` de las cuentas: la lista de cada cifra tiene tantas filas como dice la cifra."""
     from app.models import LeadEventLog
 
-    notas, ahora = {}, ahora or datetime.utcnow()
+    notas, ahora, motivos = {}, ahora or datetime.utcnow(), motivos or {}
     for e in (LeadEventLog.query.filter(LeadEventLog.origen == 'appointment',
                                         LeadEventLog.origen_id.in_([a.id for a in agendas] or [0]),
                                         LeadEventLog.action_type.in_(('nota_llamada', 'nota_para_closer')))
@@ -71,7 +71,7 @@ def leads(agendas, pases, ahora=None):
         'id': a.id, 'cliente': a.client.full_name if a.client else None, 'client_id': a.client_id,
         'hora': _iso(a.start_time), 'ya_paso': bool(a.start_time and a.start_time <= ahora), 'triage': a.closer.username if a.closer else None,
         'asistencia': a.closer_result, 'destino': destino_de(a, ahora), 'closing': pases.get(a.id),
-        'calificacion': a.triage_calificacion, 'low_ticket': a.triage_low_ticket,
+        'calificacion': a.triage_calificacion, 'low_ticket': a.triage_low_ticket, 'motivo': motivos.get(a.id),
         'fecha_seguimiento': a.fecha_seguimiento,
         'nota': notas.get((a.id, 'nota_llamada')), 'nota_para_closer': notas.get((a.id, 'nota_para_closer')),
     } for a in sorted(agendas, key=lambda a: a.start_time)]
