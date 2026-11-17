@@ -22,8 +22,9 @@ import {
   respuestasGuardadas, secuencia, textoGuardar, vende,
 } from '../triage/recorrido';
 import {
-  Fecha, Horario, Nota, Opciones, Revision, Titulo, Venta,
+  Fecha, Horario, Motivo, Nota, Opciones, Revision, Titulo, Venta,
 } from '../triage/PantallasTriage';
+import { motivoDe } from '../../../utils/motivosTriage';
 import './resultado.css';
 
 // El reporte del seguimiento («¿qué pasó con este contacto?») es el del closer.
@@ -47,6 +48,7 @@ const filasReportadas = (t) => [
   t.closing && { label: 'Pasa a', valor: `${t.closing.closer || 'closing'} · ${instanteLegible(t.closing.fecha)}` },
   t.nota_para_closer && { label: 'Nota para el closer', valor: t.nota_para_closer },
   t.low_ticket && { label: 'Low ticket', valor: etiqueta(LOW_TICKET, t.low_ticket) },
+  motivoDe(t.motivo) && { label: 'Por qué no pasó a closing', valor: motivoDe(t.motivo).label },
   (t.low_ticket === 'seguimiento' || t.calificacion === 'seguimiento') && t.fecha_seguimiento && { label: 'Seguimiento', valor: String(t.fecha_seguimiento).slice(0, 10) },
 ].filter(Boolean);
 
@@ -161,9 +163,10 @@ export default function ResultadoTriage({ ficha, onAccion, irA = null, puedeEdit
       case 'fecha_seg': return <Fecha paso={paso} r={r} campo="fechaSeg" onCambiar={cambiar} nav={navCampos}
         texto="¿Cuándo lo volvés a hablar?" ayuda="Te aparece en «Seguir» ese día."
         atajos={ATAJOS_SEGUIMIENTO.map((a) => ({ valor: localDateFromNow(a.dias), label: a.label }))} />;
-      case 'por_que': return <Nota paso={paso} r={r} campo="nota" onCambiar={cambiar} nav={navCampos}
-        texto={piensa(r) ? '¿Qué quedó pensando?' : '¿Por qué no califica?'}
-        ayuda={piensa(r) ? 'Qué le falta para decidir y qué quedaron en hablar.' : 'Qué dijo del dinero, qué le ofreciste y cómo quedó.'} />;
+      case 'por_que': return piensa(r)
+        ? <Nota paso={paso} r={r} campo="nota" onCambiar={cambiar} nav={navCampos}
+          texto="¿Qué quedó pensando?" ayuda="Qué le falta para decidir y qué quedaron en hablar." />
+        : <Motivo paso={paso} r={r} onCambiar={cambiar} nav={navCampos} />;
       case 'reagenda': return <Fecha paso={paso} r={r} campo="nueva" conHora onCambiar={cambiar} nav={navCampos}
         texto="¿Para cuándo la pasa?" ayuda="La Sesión diagnóstica se mueve a la nueva fecha y vuelve a Confirmar." />;
       case 'nota': return <Nota paso={paso} r={r} campo="nota" minimo={MINIMO_MOTIVO} onCambiar={cambiar} nav={navCampos}

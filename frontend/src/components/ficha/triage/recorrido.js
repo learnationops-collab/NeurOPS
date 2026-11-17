@@ -8,6 +8,7 @@
 
 import { datetimeLocalToUtcIso } from '../../../utils/datetime';
 import { motivoAlcanza } from '../../../utils/motivoEstado';
+import { motivoDe } from '../../../utils/motivosTriage';
 
 export const MINIMO_NOTA = 20;
 // «No asistió», «Canceló» y «Reagenda» piden el motivo en la nota (ADR-W066): el mínimo es el de `utils/motivoEstado`.
@@ -91,7 +92,13 @@ export function faltan(paso, r) {
   if (paso === 'fecha_seg' && !r.fechaSeg) f.push('Fecha');
   if (paso === 'reagenda' && !r.nueva) f.push('Fecha nueva');
   if (paso === 'nota' && !motivoAlcanza(r.nota)) f.push('Motivo');
-  if (paso === 'por_que' && !largo(r.nota)) f.push(piensa(r) ? 'Qué quedó pensando' : 'Por qué no califica');
+  if (paso === 'por_que' && piensa(r) && !largo(r.nota)) f.push('Qué quedó pensando');
+  if (paso === 'por_que' && descalifica(r)) {
+    // El motivo se elige; el texto solo es obligatorio con una objeción u otro motivo (ADR-W153).
+    const motivo = motivoDe(r.motivo);
+    if (!motivo) f.push('Motivo');
+    else if (motivo.pideTexto && !largo(r.nota)) f.push(motivo.falta);
+  }
   return f;
 }
 
@@ -167,7 +174,10 @@ export function filas(r, { closers = [], medios = [], personas = [], legible = (
     if (esTransferencia(r.medio)) fila('Transferido a', personas.find((p) => p.clave === r.transferidoA)?.label, 'venta');
   }
   if ((r.lt === 'seguimiento' && r.modo !== 'venta') || piensa(r)) fila('Seguimiento', r.fechaSeg, 'fecha_seg');
-  if (descalifica(r)) fila('Por qué no califica', r.nota, 'por_que');
+  if (descalifica(r)) {
+    fila('Por qué no pasó a closing', motivoDe(r.motivo)?.label, 'por_que');
+    if ((r.nota || '').trim()) fila(r.motivo === 'objecion' ? 'Objeción' : 'Detalle', r.nota, 'por_que');
+  }
   if (piensa(r)) fila('Qué quedó pensando', r.nota, 'por_que');
   if (r.modo === 'llamada' && r.res && r.res !== 'asistio' && r.nota) fila('Motivo', r.nota, 'nota');
   return f;
@@ -192,7 +202,7 @@ export function payload(r) {
     nota: (r.nota || '').trim(),
     ...(r.res === 'asistio' ? { calificacion: r.cal } : {}),
     ...(califica(r) ? { closer_id: Number(r.closerId), fecha: r.cuando, nota_para_closer: r.notaCloser.trim() } : {}),
-    ...(descalifica(r) ? { low_ticket: r.lt, fecha_seguimiento: r.fechaSeg } : {}),
+    ...(descalifica(r) ? { low_ticket: r.lt, fecha_seguimiento: r.fechaSeg, motivo: r.motivo } : {}),
     ...(piensa(r) ? { fecha_seguimiento: r.fechaSeg } : {}),
     ...(descalifica(r) && r.lt === 'cerrado' ? { venta: venta(r) } : {}),
   };
