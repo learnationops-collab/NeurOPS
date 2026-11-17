@@ -207,8 +207,14 @@ def datos_de_la_imagen(stat):
     }
 
 
+def texto_corto(stat, setter_name):
+    """El mensaje que acompaña la tarjeta: una línea, el detalle ya está en la imagen."""
+    no_laborable = ' · día no laborable' if setter_reporte_v2.leer(stat)['no_laborable'] else ''
+    return f"🚀 **Reporte de setter** · {setter_name} · {stat.date.strftime('%d/%m/%Y')}{no_laborable} @everyone"
+
+
 def texto_de_discord(stat, setter_name):
-    """El mensaje de Discord de un reporte v2: el Resumen del formulario en texto."""
+    """El mensaje de Discord de un reporte v2 sin tarjeta: el Resumen del formulario en texto."""
     lectura = setter_reporte_v2.leer(stat)
     cabecera = (
         "🚀 **NUEVO REPORTE DIARIO DE SETTER**\n"

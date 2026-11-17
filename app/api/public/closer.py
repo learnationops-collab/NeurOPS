@@ -333,18 +333,10 @@ def _prepare_report_data(report):
 
 
 def _mensaje_discord(datos):
-    """El texto que acompaña la imagen en Discord. Un reporte mandado tarde lo dice en una línea
-    aparte, con el día reportado y el día del envío."""
-    lineas = [
-        "🎯 **NUEVO REPORTE DIARIO DE CLOSER**",
-        "━━━━━━━━━━━━━━━━━━━━━━━━",
-        f"👤 **Closer:** `{datos['closer_name']}`",
-        f"📅 **Fecha:** `{datos['date_str']}`",
-    ]
-    if datos['late']:
-        lineas.append(f"⏰ **Enviado tarde:** {datos['late_label']}")
-    lineas += ["━━━━━━━━━━━━━━━━━━━━━━━━", "@everyone"]
-    return "\n".join(lineas)
+    """El texto que acompaña la imagen en Discord: una línea; el detalle ya está en la imagen.
+    Un reporte mandado tarde lo dice con el día del envío (la fecha es la del día reportado)."""
+    tarde = f" · enviado tarde, el {datos['sent_date_str']}" if datos['late'] else ""
+    return f"🎯 **Reporte de closer** · {datos['closer_name']} · {datos['date_str']}{tarde} @everyone"
 
 
 def _trigger_closer_report_discord(report):

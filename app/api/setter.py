@@ -64,14 +64,7 @@ def _trigger_setter_report_webhook(stat):
         img_buffer = ImageService.generate_setter_report_card(img_data)
 
         # 3. Discord Metadata
-        content = (
-            f"🚀 **NUEVO REPORTE DIARIO DE SETTER**\n"
-            f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
-            f"👤 **Setter:** `{setter_name}`\n"
-            f"📅 **Fecha:** `{stat.date.strftime('%d/%m/%Y')}`\n"
-            f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
-            f"@everyone"
-        )
+        content = f"🚀 **Reporte de setter** · {setter_name} · {stat.date.strftime('%d/%m/%Y')} @everyone"
 
         json_payload = {
             "content": content,
@@ -99,10 +92,10 @@ def _trigger_setter_report_webhook(stat):
 
 
 def _enviar_reporte_v2(url, stat):
-    """Discord de un reporte v2: el Resumen en el texto del mensaje y la tarjeta por canal.
+    """Discord de un reporte v2: la tarjeta por canal con una línea de texto.
 
-    El texto va siempre, aunque la tarjeta no se pueda dibujar (depende del Chromium del
-    servidor): sin imagen, el reporte llega igual en vez de no llegar.
+    Si la tarjeta no se puede dibujar (depende del Chromium del servidor), el Resumen sale
+    completo en el texto: el reporte llega igual en vez de no llegar.
     """
     import json
     import requests
@@ -110,7 +103,6 @@ def _enviar_reporte_v2(url, stat):
     from app.services.image_service import ImageService
 
     nombre = stat.setter.username if stat.setter else 'Setter'
-    payload = {"content": setter_reporte_discord.texto_de_discord(stat, nombre)}
     try:
         tarjeta = ImageService.generate_setter_report_v2_card(setter_reporte_discord.datos_de_la_imagen(stat))
     except Exception as e:
@@ -118,8 +110,10 @@ def _enviar_reporte_v2(url, stat):
         tarjeta = None
 
     if tarjeta is None:
+        payload = {"content": setter_reporte_discord.texto_de_discord(stat, nombre)}
         res = requests.post(url, json=payload, timeout=20)
     else:
+        payload = {"content": setter_reporte_discord.texto_corto(stat, nombre)}
         payload["embeds"] = [{
             "color": 0xFF3FA4,
             "image": {"url": "attachment://setter_report.png"},
