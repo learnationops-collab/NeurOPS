@@ -542,3 +542,7 @@
 ### 16/11/2026 · «Canceló» y «reprogramó sin fecha» ya no se guardan como No Show
 - El árbol de Resultado guardaba «No Show» cuando el closer elegía «canceló → seguimiento» o «reagenda sin fecha»; el guardado correcto existía desde el 26/10, a prueba solo para Mario Bühler. Ahora vale para todos ([arbolResultado.payload.js](../../frontend/src/components/ficha/arbolResultado.payload.js), [ADR-W143](../DECISIONS.md)). El lead sigue en «Seguir» como antes.
 - Las agendas ya guardadas no cambian: del 26/10 al 16/11 hay 11 de closing por corregir a mano (10 de Jean Carlo, 1 de Marlon Garcia).
+
+### 16/11/2026 · Triage: «Lo va a pensar» y la nota de la llamada ya se guarda
+- Tercera calificación del triage, «Lo va a pensar»: el lead asistió y no decidió. Pide la fecha del próximo contacto y qué quedó pensando, queda en «Seguir» y se cuenta aparte en las métricas del triage; cuando decide, se vuelve a reportar como Califica o No califica ([triage_service.py](../../app/services/triage_service.py), [recorrido.js](../../frontend/src/components/ficha/triage/recorrido.js), [ADR-W138](../DECISIONS.md)).
+- La nota del triage en una llamada a la que el lead asistió («por qué no califica», «qué quedó pensando») se perdía al guardar; ahora queda como nota de la llamada y sale en el Reporte. Las llamadas ya reportadas no la recuperan.
