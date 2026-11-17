@@ -560,3 +560,7 @@
 - El chat de Conversaciones manda el mensaje por Instagram (Ctrl+Enter o «Enviar»), y el modal de Audios manda el audio elegido. Antes se copiaba y se pegaba en Kommo ([Composer.jsx](../../frontend/src/pages/inbox/conversaciones/Composer.jsx), [escribir.py](../../app/automatizaciones/escribir.py), [ADR-W146](../DECISIONS.md)).
 - Pasadas las 24 h sale como respuesta de una persona (HUMAN_AGENT, hasta 7 días); después la caja avisa que Instagram no deja. Si Kommo tiene el hilo, Work lo toma para mandar y lo devuelve. Cada mensaje muestra quién lo mandó (migración `d4e6f8a1b3c5`).
 - Se borró la aserción del texto exacto del reporte de setter en Discord, que quedó vieja con el cambio de la mañana.
+
+### 17/11/2026 · Agendas: un evento de persona fija respeta sus días
+- El link público de un evento de persona fija ofrece solo los días que eligió esa persona («3 días hábiles» son 3). Antes, si sus días tenían 1 o 2 horarios libres, se abrían hasta 14 días más (ADR-W027) y el lead veía horarios de varias semanas: le pasó a Mario con «Consultoría» ([asignacion.py](../../app/agendas_v2/nucleo/asignacion.py), [asignacion.js](../../frontend/src/pages/agendas_v2/core/asignacion.js), ADR-W147).
+- «Horarios libres» espera a leer los Google Calendar antes de mostrar horarios: antes mostraba todo libre y después desaparecían los ocupados ([HorariosLibres.jsx](../../frontend/src/pages/agendas_v2/secciones/eventos/HorariosLibres.jsx)).

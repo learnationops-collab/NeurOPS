@@ -92,9 +92,10 @@ export function diasConLugar(slots) {
 // menos de N, se abre un día más (y otro, hasta DIAS_EXTRA_MAX). Se abren días antes de pasar a otro grupo:
 // recién si el grupo no tiene ningún horario en todos esos días, desborda como siempre (y si tampoco hay
 // nadie, sigue abriendo días). `diasExtra` dice cuántos se abrieron.
+// Un evento de persona fija no desborda: su ventana es la que eligió esa persona, sin días extra (ADR-W147).
 export function asignacion(ctx, d, opts = {}) {
     const ag = ctx.ag;
-    if (!ag || !ag.reservas || ag.reservas.modo !== 'dias') return asignar(ctx, d, opts);
+    if (!ag || !ag.reservas || ag.reservas.modo !== 'dias' || ctx.persona) return asignar(ctx, d, opts);
     const n = ag.reservas.n || 0;
     const con = (extra, mas = {}) => {
         const r = asignar(extra ? { ...ctx, ag: { ...ag, reservas: { ...ag.reservas, n: n + extra } } } : ctx, d, { ...opts, ...mas });

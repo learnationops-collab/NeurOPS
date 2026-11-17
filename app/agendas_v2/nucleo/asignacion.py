@@ -129,10 +129,11 @@ def asignacion(ctx, d, opts=None):
     lead tiene menos de N, se abre un día más (y otro, hasta DIAS_EXTRA_MAX). Se abren días antes de pasar a
     otro grupo: recién si el grupo no tiene ningún horario en todos esos días, desborda como siempre (y si
     tampoco hay nadie, sigue abriendo días). `dias_extra` dice cuántos se abrieron. La reserva recalcula con
-    lo mismo, así que puede tomar un horario de un día abierto así."""
+    lo mismo, así que puede tomar un horario de un día abierto así.
+    Un evento de persona fija no desborda: su ventana es la que eligió esa persona, sin días extra (ADR-W147)."""
     opts = opts or {}
     ag = ctx.get('ag')
-    if not ag or (ag.get('reservas') or {}).get('modo') != 'dias':
+    if not ag or (ag.get('reservas') or {}).get('modo') != 'dias' or js_truthy(ctx.get('persona')):
         return _asignacion(ctx, d, opts)
     n = ag['reservas'].get('n') or 0
 
