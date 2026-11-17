@@ -7,6 +7,8 @@ propio es cómo se reporta la llamada, y por eso vive acá y no en el árbol del
   · reagenda: la misma agenda pasa a la hora nueva y vuelve a confirmarse, como la reagenda del closer;
   · si asistió, calificación económica: **calificado** (puede invertir más de 500 USD) pasa al closer
     con una agenda nueva y una nota; **descalificado** cierra con el low ticket de 100 USD;
+  · **lo va a pensar** (seguimiento): asistió y podría calificar, pero no decidió; queda con fecha de
+    seguimiento en «Seguir» y, cuando decide, se vuelve a reportar como calificado o descalificado;
   · del low ticket se registra si se pitcheó y cómo quedó: cerró, no cerró, seguimiento o descartado.
     «Cerró» trae la venta (monto y medio de pago): se registra como `LT - completo` a nombre del triage
     y se le da el acceso en la Academia (`_vender_low_ticket`, academy ADR-199).
@@ -20,10 +22,10 @@ import pytz
 
 from app import db
 from app.models import Appointment, User
-from app.services import triage_pases
+from app.services import triage_filas, triage_pases
 from app.services.user_time_service import zona_del_negocio
 
-CALIFICACIONES = ('calificado', 'descalificado')
+CALIFICACIONES = ('calificado', 'descalificado', 'seguimiento')
 logger = logging.getLogger(__name__)
 
 PROGRAMA_LOW_TICKET = 'LT'
@@ -67,16 +69,20 @@ def _fecha_seguimiento(datos):
         raise _error('Elegí la fecha del seguimiento.', 'fecha_seguimiento') from None
 
 
+def _dejar_en_seguimiento(appt, fecha):
+    # El mismo seguimiento del closer: cae en su pestaña «Seguir».
+    appt.fecha_seguimiento = fecha
+    appt.seguimiento_tipo = 'tomada'
+    appt.seguimiento_realizado = False
+
+
 def _aplicar_low_ticket(appt, estado, datos):
     if estado not in LOW_TICKET:
         raise _error('Elegí qué pasó con el low ticket.', 'low_ticket')
     fecha = _fecha_seguimiento(datos) if estado == 'seguimiento' else None
     appt.triage_low_ticket = estado
     if fecha:
-        # El seguimiento del triage es el mismo del closer: cae en su pestaña «Seguir».
-        appt.fecha_seguimiento = fecha
-        appt.seguimiento_tipo = 'tomada'
-        appt.seguimiento_realizado = False
+        _dejar_en_seguimiento(appt, fecha)
     elif appt.fecha_seguimiento:
         appt.seguimiento_realizado = True
 
@@ -125,6 +131,10 @@ def _validar(appt, datos):
             raise _error('Dejale una nota al closer.', 'nota_para_closer')
         if not datos.get('closer_id') or not datos.get('fecha'):
             raise _error('Elegí el closer y el horario de la llamada.', 'fecha')
+    elif calificacion == 'seguimiento':
+        if not (datos.get('nota') or '').strip():
+            raise _error('Dejá una nota de qué quedó pensando.', 'nota')
+        _fecha_seguimiento(datos)
     else:
         if not (datos.get('nota') or '').strip():
             raise _error('Dejá una nota de por qué no califica.', 'nota')
@@ -214,15 +224,23 @@ def reportar(appt, datos, usuario):
     # La calificación y el low ticket se escriben ANTES de `acciones.resultado`, que hace su propio commit:
     # así el resultado y la calificación se guardan juntos y nunca queda «asistió» sin calificar.
     appt.triage_calificacion = calificacion
-    if calificacion == 'calificado':
+    if calificacion in ('calificado', 'seguimiento'):
         appt.triage_low_ticket = None
     elif calificacion == 'descalificado':
         appt.triage_low_ticket = datos['low_ticket']
-    acciones.resultado(appt, {'resultado': datos['asistencia'], 'nota': nota}, usuario)
+    # Con «asistió» la nota (por qué no califica, qué quedó pensando) va como nota de la llamada:
+    # `process_agenda` solo guarda el motivo de no show y cancelación, y se perdía.
+    de_la_llamada = {'closer_notes': nota} if calificacion and nota else {}
+    acciones.resultado(appt, {'resultado': datos['asistencia'], 'nota': nota, **de_la_llamada}, usuario)
     if calificacion == 'calificado':
         _nota_para_closer(appt, closing, datos['nota_para_closer'].strip(), usuario)
+        if appt.fecha_seguimiento:
+            # Venía de «lo va a pensar» y decidió: el seguimiento queda hecho, sale de «Seguir».
+            appt.seguimiento_realizado = True
     elif calificacion == 'descalificado':
         _aplicar_low_ticket(appt, datos['low_ticket'], datos)
+    elif calificacion == 'seguimiento':
+        _dejar_en_seguimiento(appt, _fecha_seguimiento(datos))
     db.session.commit()
     verificado = _verificar(appt, datos['asistencia'], calificacion)
 
@@ -232,6 +250,9 @@ def reportar(appt, datos, usuario):
     elif calificacion == 'descalificado':
         _log(appt, usuario, f'{usuario.username} lo descalificó económicamente: '
                             f'{_LOW_TICKET_TEXTO[appt.triage_low_ticket]}.')
+    elif calificacion == 'seguimiento':
+        _log(appt, usuario, f'{usuario.username} lo dejó en seguimiento: lo va a pensar '
+                            f'(vuelve a hablarle el {appt.fecha_seguimiento}).')
     return {**bloque(appt), 'avisos': avisos, 'vendio': vende, 'verificado': verificado}
 
 
@@ -339,7 +360,7 @@ def bloque(appt):
 
 def _vacias():
     return {k: 0 for k in ('agendas', 'asistencias', 'no_show', 'canceladas', 'sin_reporte', 'por_ocurrir',
-                           'calificados', 'descalificados', 'pitch_low_ticket', 'no_pitch', 'cerrado',
+                           'calificados', 'descalificados', 'en_seguimiento', 'pitch_low_ticket', 'no_pitch', 'cerrado',
                            'no_cerrado', 'seguimiento', 'descartado',
                            'pasaron', 'closer_asistieron', 'closer_cerraron', 'closer_no_asistieron',
                            'closer_pendientes', 'closer_sin_reporte', 'closer_por_venir',
@@ -374,6 +395,8 @@ def _sumar(m, a, pase, ahora=None):
         m['por_ocurrir' if a.start_time > ahora else 'sin_reporte'] += 1
     if a.triage_calificacion == 'calificado':
         m['calificados'] += 1
+    elif a.triage_calificacion == 'seguimiento':
+        m['en_seguimiento'] += 1
     elif a.triage_calificacion == 'descalificado':
         m['descalificados'] += 1
         lt = a.triage_low_ticket
@@ -449,49 +472,6 @@ def metricas(desde, hasta, solo=None, zona=None, segmentos=None):
         'por_dia': [{'dia': dia, 'id': persona, **por_dia[(dia, persona)]} for dia, persona in sorted(por_dia)],
         'abandonos': abandonos.resumen(desde, hasta),
         'por_persona': [{'id': p.id, 'nombre': p.username, **por_id[p.id]} for p in personas],
-        'por_closer': _por_closer(agendas, pases),
-        'leads': _leads(agendas, pases),
+        'por_closer': triage_filas.por_closer(agendas, pases),
+        'leads': triage_filas.leads(agendas, pases),
     }
-
-
-def _por_closer(agendas, pases):
-    """Un renglón por triage y por closer de lo que pasó al closing: cuántas llamadas, cuántas asistieron y
-    cuántas cerraron. La pantalla los suma para «todas» las personas o se queda con una."""
-    filas = {}
-    for a in agendas:
-        pase = pases.get(a.id)
-        if not pase:
-            continue
-        f = filas.setdefault((a.closer_id, pase['closer_id']), {
-            'triage_id': a.closer_id, 'closer_id': pase['closer_id'], 'closer': pase['closer'],
-            'pasaron': 0, 'asistieron': 0, 'cerraron': 0, 'senas': 0, 'cobrado': 0.0,
-            'no_asistieron': 0})
-        f['pasaron'] += 1
-        f['asistieron'] += 1 if pase['asistio'] else 0
-        f['cerraron'] += 1 if pase['cerro'] else 0
-        f['no_asistieron'] += 1 if pase.get('estado') == 'no_asistio' else 0
-        f['senas'] += 1 if pase.get('sena') else 0
-        f['cobrado'] = round(f['cobrado'] + pase.get('cobrado', 0), 2)
-    return sorted(filas.values(), key=lambda f: (f['closer'], f['triage_id']))
-
-
-def _leads(agendas, pases):
-    """El reporte del período, lead por lead: cómo quedó, su pase al closing y sus dos notas (la de la llamada
-    y la del closer). Las notas salen del log en una sola consulta."""
-    from app.models import LeadEventLog
-
-    notas, ahora = {}, datetime.utcnow()
-    for e in (LeadEventLog.query.filter(LeadEventLog.origen == 'appointment',
-                                        LeadEventLog.origen_id.in_([a.id for a in agendas] or [0]),
-                                        LeadEventLog.action_type.in_(('nota_llamada', 'nota_para_closer')))
-              .order_by(LeadEventLog.created_at, LeadEventLog.id)):
-        notas[(e.origen_id, e.action_type)] = e.description
-    return [{
-        'id': a.id, 'cliente': a.client.full_name if a.client else None, 'client_id': a.client_id,
-        'hora': _iso(a.start_time), 'ya_paso': bool(a.start_time and a.start_time <= ahora), 'triage': a.closer.username if a.closer else None,
-        'asistencia': a.closer_result, 'closing': pases.get(a.id),
-        'calificacion': a.triage_calificacion, 'low_ticket': a.triage_low_ticket,
-        'fecha_seguimiento': a.fecha_seguimiento,
-        'nota': notas.get((a.id, 'nota_llamada')), 'nota_para_closer': notas.get((a.id, 'nota_para_closer')),
-    } for a in sorted(agendas, key=lambda a: a.start_time)]
-

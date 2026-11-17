@@ -7,7 +7,7 @@ import { CheckCircle2, RefreshCw } from 'lucide-react';
 import { Button } from '../../standard';
 
 const hora = (d) => d.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-const CALIFICACION = { calificado: 'Califica (+500 USD)', descalificado: 'No califica' };
+const CALIFICACION = { calificado: 'Califica (+500 USD)', descalificado: 'No califica', seguimiento: 'Lo va a pensar' };
 
 /** Lo que la base tiene de este lead, en pares [rótulo, valor]. Lo que no existe no se lista. */
 export function resumenDeLaFicha(ficha) {

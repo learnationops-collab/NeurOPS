@@ -22,6 +22,7 @@ export const RAICES = [
 export const CALIFICACION = [
   { valor: 'calificado', label: 'Califica', sub: 'Puede invertir +500 USD: pasa a closing' },
   { valor: 'descalificado', label: 'No califica', sub: 'Menos de 500 USD: va al low ticket' },
+  { valor: 'seguimiento', label: 'Lo va a pensar', sub: 'Todavía no decide: queda en seguimiento' },
 ];
 export const LOW_TICKET = [
   { valor: 'cerrado', label: 'Cerró', sub: 'Pagó el low ticket' },
@@ -40,6 +41,8 @@ export const inicial = (modo = 'llamada') => ({ modo, monto: PRECIO_LOW_TICKET }
 
 export const califica = (r) => r.res === 'asistio' && r.cal === 'calificado';
 export const descalifica = (r) => r.res === 'asistio' && r.cal === 'descalificado';
+// Asistió y no decidió: queda con fecha de seguimiento; cuando decide se vuelve a reportar.
+export const piensa = (r) => r.res === 'asistio' && r.cal === 'seguimiento';
 export const vende = (r) => r.modo === 'venta' || ((descalifica(r) || r.modo === 'actualizar') && r.lt === 'cerrado');
 
 // La venta en una pantalla: cuánto, por dónde y a quién si fue transferencia (ADR-W013, como el pago del closer).
@@ -59,6 +62,7 @@ export function secuencia(r) {
     s.push('cal');
     if (califica(r)) s.push('closer', 'horario', 'nota_closer');
     if (descalifica(r)) s.push(...pasosDelLowTicket(r), 'por_que');
+    if (piensa(r)) s.push('fecha_seg', 'por_que');
   } else if (r.res === 'reagenda') {
     s.push('reagenda', 'nota');
   } else if (r.res) {
@@ -87,7 +91,7 @@ export function faltan(paso, r) {
   if (paso === 'fecha_seg' && !r.fechaSeg) f.push('Fecha');
   if (paso === 'reagenda' && !r.nueva) f.push('Fecha nueva');
   if (paso === 'nota' && !motivoAlcanza(r.nota)) f.push('Motivo');
-  if (paso === 'por_que' && !largo(r.nota)) f.push('Por qué no califica');
+  if (paso === 'por_que' && !largo(r.nota)) f.push(piensa(r) ? 'Qué quedó pensando' : 'Por qué no califica');
   return f;
 }
 
@@ -119,7 +123,7 @@ export function hitos(r, hechos, guardado) {
       { key: 'res', label: 'Resultado', estado: est(!!r.res, r.res !== 'asistio') },
     ];
     if (!r.res || r.res === 'asistio') {
-      lista.push({ key: 'cal', label: 'Calificación', estado: est(!!r.cal && dado('cal'), r.cal === 'descalificado') });
+      lista.push({ key: 'cal', label: 'Calificación', estado: est(!!r.cal && dado('cal'), r.cal !== 'calificado') });
     }
     if (califica(r)) {
       lista.push({ key: 'closer', label: 'Closer', estado: est(dado('closer')) },
@@ -129,6 +133,9 @@ export function hitos(r, hechos, guardado) {
       lista.push(...lt, { key: 'por_que', label: 'Por qué', estado: est(dado('por_que')) });
       // El low ticket en seguimiento: lo que pasó en cada contacto se registra desde acá.
       if (r.lt === 'seguimiento') lista.push({ key: 'seg', label: 'Seguimiento', estado: r.seguimiento ? 'hecho' : 'pendiente' });
+    } else if (piensa(r)) {
+      lista.push({ key: 'por_que', label: 'Qué piensa', estado: est(dado('por_que')) },
+        { key: 'seg', label: 'Seguimiento', estado: r.seguimiento ? 'hecho' : 'pendiente' });
     } else if (r.res === 'reagenda') {
       lista.push({ key: 'reagenda', label: 'Fecha nueva', estado: est(dado('reagenda')) });
     } else if (!r.res || r.res === 'asistio' || r.res === 'no_asistio' || r.res === 'cancelo') {
@@ -159,8 +166,9 @@ export function filas(r, { closers = [], medios = [], personas = [], legible = (
     fila('Medio de pago', medios.find((m) => m.clave === r.medio)?.label || r.medio, 'venta');
     if (esTransferencia(r.medio)) fila('Transferido a', personas.find((p) => p.clave === r.transferidoA)?.label, 'venta');
   }
-  if (r.lt === 'seguimiento' && r.modo !== 'venta') fila('Seguimiento', r.fechaSeg, 'fecha_seg');
+  if ((r.lt === 'seguimiento' && r.modo !== 'venta') || piensa(r)) fila('Seguimiento', r.fechaSeg, 'fecha_seg');
   if (descalifica(r)) fila('Por qué no califica', r.nota, 'por_que');
+  if (piensa(r)) fila('Qué quedó pensando', r.nota, 'por_que');
   if (r.modo === 'llamada' && r.res && r.res !== 'asistio' && r.nota) fila('Motivo', r.nota, 'nota');
   return f;
 }
@@ -185,6 +193,7 @@ export function payload(r) {
     ...(r.res === 'asistio' ? { calificacion: r.cal } : {}),
     ...(califica(r) ? { closer_id: Number(r.closerId), fecha: r.cuando, nota_para_closer: r.notaCloser.trim() } : {}),
     ...(descalifica(r) ? { low_ticket: r.lt, fecha_seguimiento: r.fechaSeg } : {}),
+    ...(piensa(r) ? { fecha_seguimiento: r.fechaSeg } : {}),
     ...(descalifica(r) && r.lt === 'cerrado' ? { venta: venta(r) } : {}),
   };
 }

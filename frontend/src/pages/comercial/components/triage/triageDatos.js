@@ -15,6 +15,7 @@ export const closerConResultado = (m) => m.closer_asistieron + m.closer_no_asist
 export const ESTADOS = [
     { clave: 'Califica', color: 'success' },
     { clave: 'No califica', color: 'warning' },
+    { clave: 'Lo va a pensar', color: 'info' },
     { clave: 'No se presentó', color: 'error' },
     { clave: 'Canceló', color: 'brand-primary' },
     { clave: 'Sin reportar', color: 'idle' },
@@ -26,6 +27,7 @@ export const COLOR_DE_ESTADO = Object.fromEntries(ESTADOS.map((e) => [e.clave, e
 export function estadoDe(lead) {
     if (lead.calificacion === 'calificado') return 'Califica';
     if (lead.calificacion === 'descalificado') return 'No califica';
+    if (lead.calificacion === 'seguimiento') return 'Lo va a pensar';
     const asistencia = (lead.asistencia || '').trim().toLowerCase();
     if (asistencia === 'no show') return 'No se presentó';
     if (asistencia.startsWith('cancel')) return 'Canceló';
@@ -35,9 +37,9 @@ export function estadoDe(lead) {
 
 /** Cuántas llamadas hay en cada estado (suman las agendas). «Aún no ocurrió» es la mitad futura de las sin resultado. */
 export function estadosDe(m) {
-    const n = { Califica: m.calificados, 'No califica': m.descalificados, 'No se presentó': m.no_show, Canceló: m.canceladas };
+    const n = { Califica: m.calificados, 'No califica': m.descalificados, 'Lo va a pensar': m.en_seguimiento || 0, 'No se presentó': m.no_show, Canceló: m.canceladas };
     n['Aún no ocurrió'] = m.por_ocurrir || 0;
-    n['Sin reportar'] = Math.max(0, m.agendas - n.Califica - n['No califica'] - n['No se presentó'] - n.Canceló - n['Aún no ocurrió']);
+    n['Sin reportar'] = Math.max(0, m.agendas - n.Califica - n['No califica'] - n['Lo va a pensar'] - n['No se presentó'] - n.Canceló - n['Aún no ocurrió']);
     return ESTADOS.map((e) => ({ ...e, n: n[e.clave], pct: pct(n[e.clave], m.agendas) }));
 }
 
