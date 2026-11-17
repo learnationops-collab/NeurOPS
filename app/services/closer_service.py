@@ -1645,23 +1645,9 @@ class CloserService:
 
         # Query official sales from FinancialSale to match Sales Log exactly
         from app.models import FinancialSale
-        from app.services.comision_plataforma_service import fees_por_metodo
-        from sqlalchemy import case, func, or_
+        from app.services.commission_service import cash_neto
+        from sqlalchemy import func, or_
 
-        # El neto con la comisión estimada de cada pasarela (`fees_por_metodo`), en SQL.
-        neto_monto_expr = case(
-            *[(func.lower(func.trim(FinancialSale.metodo_pago)) == metodo, FinancialSale.monto * factor)
-              for metodo, factor in fees_por_metodo().items()],
-            else_=FinancialSale.monto
-        )
-        
-        sales_query = db.session.query(
-            FinancialSale.tipo_pago,
-            func.count(FinancialSale.id).label('count'),
-            func.sum(FinancialSale.monto).label('cash'),
-            func.sum(neto_monto_expr).label('cash_neto')
-        )
-        
         sales_filters = [
             or_(FinancialSale.estado == 'Completada', FinancialSale.estado == None, FinancialSale.estado == '')
         ]
@@ -1676,8 +1662,10 @@ class CloserService:
             # ventas resueltas mostraba el total de TODOS los closers combinados en vez de $0.
             sales_filters.append(FinancialSale.email_vendedor.in_(closer_identifiers))
 
-        sales_rows = sales_query.filter(*sales_filters).group_by(FinancialSale.tipo_pago).all()
-        
+        # Todos los pagos del período de este closer: de acá salen los totales por tipo, las señas ya
+        # contadas como cierre, el ticket promedio y las discrepancias de más abajo.
+        all_sales = FinancialSale.query.filter(*sales_filters).all()
+
         # Clasificación del tipo de pago: se delega en SheetsService.parse_tipo_pago, el mismo
         # parser canónico que ya usan el alta de ventas y el reporte diario del closer. Antes esto
         # era una cadena de `in` sobre el string crudo con dos agujeros: "Parcial" (el Split Pay
@@ -1692,12 +1680,15 @@ class CloserService:
             for k in ('pif', 'split', 'deposit', 'installment', 'upsell', 'renovacion', 'otros')
         }
 
-        for tipo, count, cash, cash_neto in sales_rows:
-            _, tipo_simple = SheetsService.parse_tipo_pago(tipo)
+        # El neto de cada pago es el de `commission_service.cash_neto`: lo que entró de verdad si está
+        # verificado y, si no, el promedio de su pasarela. Antes era el promedio para todos, en SQL, y el
+        # cash neto de un closer no coincidía con el de Analizar en los meses ya verificados (16/11/2026).
+        for sale in all_sales:
+            _, tipo_simple = SheetsService.parse_tipo_pago(sale.tipo_pago)
             bucket = sale_buckets[SALE_TIPO_TO_BUCKET.get(tipo_simple, 'otros')]
-            bucket['count'] += float(count or 0.0)
-            bucket['cash'] += float(cash or 0.0)
-            bucket['cash_neto'] += float(cash_neto or 0.0)
+            bucket['count'] += 1.0
+            bucket['cash'] += float(sale.monto or 0.0)
+            bucket['cash_neto'] += cash_neto(sale)
 
         # Scale official sales metrics by aggregation type
         def scale(v):
@@ -1753,12 +1744,10 @@ class CloserService:
         señas_a_pif = 0
         señas_a_split = 0
 
-        # Todos los pagos del período de este closer (también los usa el ticket promedio y las
-        # discrepancias de más abajo) y, de ellos, cuáles son ventas reales. Sirve para saber qué
-        # señas ya están contadas como cierre: la que se completó con una venta de ESTE mismo
-        # conjunto no puede sumar otra vez en el close rate con señas, o un lead que dejó seña y
-        # después pagó el programa daba dos cierres.
-        all_sales = FinancialSale.query.filter(*sales_filters).all()
+        # Cuáles de los pagos del período son ventas reales. Sirve para saber qué señas ya están
+        # contadas como cierre: la que se completó con una venta de ESTE mismo conjunto no puede
+        # sumar otra vez en el close rate con señas, o un lead que dejó seña y después pagó el
+        # programa daba dos cierres.
         ids_ventas_reales = {
             s.id for s in all_sales
             if SheetsService.parse_tipo_pago(s.tipo_pago)[1] in REAL_SALE_TIPOS
@@ -1833,7 +1822,6 @@ class CloserService:
         # El ticket junta los pagos del mismo cliente en el mismo mes en UNA venta, con su primera
         # cuota si llega antes del mes, la haya cargado quien sea (`ticket_service`); `count`
         # sigue contando las filas de venta real del programa.
-        from app.services.commission_service import cash_neto
         program_data = {}
         pagos = []
         # Los mismos pagos con el monto neto de la pasarela: el ticket neto, que va en grande (ADR-W142).
