@@ -39,7 +39,8 @@ describe('RepartoEstados · Descalificadas', () => {
         const irA = vi.fn();
         render(<RepartoEstados estados={ESTADOS} vista="grafico" irA={irA} />);
 
-        const grupo = screen.getByRole('button', { name: /^Descalificadas: 2 de 9 agendas/ });
+        // Desde ADR-W144 no tienen destino: van en la tira «No cuentan en el show up», no entre las barras.
+        const grupo = screen.getByRole('button', { name: /^Descalificadas: 2 agendas, fuera del show up/ });
         grupo.click();
 
         // La carga del drill-down viaja aplanada: faceta → etiqueta, más `__de` (ver `cargaDe`).
