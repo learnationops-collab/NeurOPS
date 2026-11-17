@@ -17,7 +17,6 @@ import {
   cobraCuotaExistente, cantidadCuotas, fechasCuotas, montosCuotas, saldoVenta,
 } from './arbolResultado.venta';
 import { esTransferencia } from './transferencia';
-import { loadSession } from '../../utils/sessionStore';
 
 const num = (v) => (v === '' || v === undefined || v === null ? undefined : parseFloat(v));
 const sinArroba = (v) => (v ? String(v).replace(/@/g, '').trim() : '');
@@ -124,21 +123,9 @@ function seguimientoDeRama(r) {
 
 // El resultado de la llamada que deja el primer seguimiento. Una reagenda sin fecha es una
 // reprogramación y una cancelación es una cancelación: antes las dos se guardaban «No Show» y el
-// lead contaba como no show en la ficha y en Mis datos (26/10/2026).
-// A prueba primero solo para Mario Bühler: el resto sigue guardando como antes hasta que lo apruebe.
-function enPrueba() {
-  try {
-    const u = loadSession() || {};
-    const nombre = String(u.username || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
-    return nombre === 'mario buhler' || String(u.email || '').toLowerCase() === 'mario@neurocogniciones.com';
-  } catch {
-    return false;
-  }
-}
-
+// lead contaba como no show en la ficha y en Mis datos (26/10/2026). Para todos desde el 16/11/2026.
 function resultadoDeSeguimiento(r, seg) {
   if (seg.tipo === 'tomada') return 'Show up';
-  if (!enPrueba()) return 'No Show';
   if (r.reag_dejo_fecha === false) return 'Reagendado';
   if (r.cancel_next === 'seguimiento') return 'Cancelado';
   return 'No Show';
