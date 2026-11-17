@@ -324,7 +324,7 @@ describe('camino: reagenda', () => {
       seguimiento: { fecha_seguimiento: '2026-09-29', notes: 'le pido fecha' },
     });
     const { datos } = construirPayload(r, {});
-    expect(datos.deck).toMatchObject({ seguimiento_tipo: 'no_tomada', seguimiento_sub: 'Reprogramó sin fecha', result: 'No Show' });
+    expect(datos.deck).toMatchObject({ seguimiento_tipo: 'no_tomada', seguimiento_sub: 'Reprogramó sin fecha', result: 'Reagendado' });
     expect(datos.reagenda).toBeNull();
     expect(hitos(r)[1]).toMatchObject({ sub: 'Reagenda', estado: 'alerta' });
   });

@@ -545,3 +545,7 @@
 - Los reportes diarios de closer, triage y setter mandaban varias líneas con separadores y cifras que ya están en la imagen. Ahora el texto es una línea: título, nombre, fecha y la mención ([closer.py](../../app/api/public/closer.py), [triage.py](../../app/api/public/triage.py), [setter.py](../../app/api/setter.py), [booking_avisos.py](../../app/services/booking_avisos.py)). Las imágenes no cambian.
 - Reporte nuevo del setter: el resumen completo en texto sale solo si la tarjeta no se puede dibujar ([setter_reporte_discord.py](../../app/services/setter_reporte_discord.py), `texto_corto`).
 - Pase de triage a closing: el aviso ya no repite la nota entera como texto; queda el resumen en la imagen y la nota completa en la ficha ([avisos_discord.py](../../app/agendas_v2/avisos_discord.py)).
+
+### 16/11/2026 · «Canceló» y «reprogramó sin fecha» ya no se guardan como No Show
+- El árbol de Resultado guardaba «No Show» cuando el closer elegía «canceló → seguimiento» o «reagenda sin fecha»; el guardado correcto existía desde el 26/10, a prueba solo para Mario Bühler. Ahora vale para todos ([arbolResultado.payload.js](../../frontend/src/components/ficha/arbolResultado.payload.js), [ADR-W143](../DECISIONS.md)). El lead sigue en «Seguir» como antes.
+- Las agendas ya guardadas no cambian: del 26/10 al 16/11 hay 11 de closing por corregir a mano (10 de Jean Carlo, 1 de Marlon Garcia).

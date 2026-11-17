@@ -1154,3 +1154,11 @@
 - **Decisión:** en las dos pantallas la cifra grande es la neta de la pasarela y el bruto va debajo como subdato, para Cash collected y para Ticket promedio. Vale para las tarjetas de arriba y el panel Cash de Analizar, y para el KPI y las columnas Cash y Ticket del ranking del closer. El tablero del closer recibe `ticket_promedio_neto` (mismos pagos y misma agrupación de `ticket_service`, con el monto de `commission_service.cash_neto`). Reemplaza la parte de ADR-W139 que ponía el bruto en grande en Analizar; la regla de la seña de ese ADR sigue igual.
 - **Qué se pierde:** la comparación con el período anterior del ticket vuelve a ser en neto. El ticket por programa («Programas vendidos») y el estimado de mejora del tablero del closer siguen en bruto.
 - **Consecuencias:** sin migración. El cálculo del closer hace una consulta más por closer (las primeras cuotas en neto). No cambia ninguna cuenta: solo cuál de las dos cifras va en grande.
+
+## ADR-W143: «canceló» y «reprogramó sin fecha» se guardan como tales para todos los closers
+
+- **Fecha:** 2026-11-16 · **Subsistema:** ficha › Resultado (`arbolResultado.payload.js`) · **Estado:** implementado.
+- **Contexto:** desde el 26/10 el árbol de Resultado guardaba «Cancelado» cuando el closer elegía «canceló → seguimiento» y «Reagendado» cuando elegía «reagenda sin fecha», pero solo para Mario Bühler, a prueba; el resto seguía guardando «No Show». Al listar las inconsistencias de preventa (26/10 al 16/11) salieron 11 agendas de closing guardadas «No Show» cuyo reporte decía canceló o reprogramó, y la regla de Mario para el show up separa los cuatro destinos (se presentó, no show, canceló, reprogramó). Kerwin aprobó activarlo para todos el 16/11.
+- **Decisión:** se quita la condición de prueba: el resultado sale de la rama recorrida para cualquier usuario. El seguimiento de recuperación no cambia (mismo `seguimiento_tipo` y subestado), así que el lead sigue en «Seguir».
+- **Qué se pierde:** nada en la pantalla. Las agendas ya guardadas «No Show» no se corrigen solas.
+- **Consecuencias:** sin migración. De acá en adelante baja el no show y suben canceladas y reprogramadas en Analizar, Revisar y Mis datos; el show up no cambia porque los cuatro destinos están en su base. Las 11 agendas del período se corrigen aparte, desde el historial de cada ficha.
