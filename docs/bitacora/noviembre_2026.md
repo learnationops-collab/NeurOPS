@@ -658,3 +658,6 @@
 - Tarjeta de sesión: Avisos arriba a la derecha, el personaje grande y el nombre, y la fila Cerrar sesión · Mensajes (pronto) · Leadership · Herramientas · Configuración. En el dock de abajo aparece al pasar el mouse por el avatar ([TarjetaSesion.jsx](../../frontend/src/pages/comercial/components/TarjetaSesion.jsx)).
 - La barra lateral separa la tarjeta de la navegación. Plegada muestra hasta 3 fijadas y 5 secciones, con «+N» para el resto ([DockLateral.jsx](../../frontend/src/pages/comercial/components/DockLateral.jsx)).
 - Las secciones ya no llevan número. El texto de cada herramienta del menú ya no se aplasta ([dock2.css](../../frontend/src/pages/comercial/dock2.css)).
+
+### 17/11/2026 · Mockup de la Configuración unificada
+- Una sola Configuración para Work, Academy y Leadership, en Baldosas (como Academy) o en Pestañas a la izquierda (como Work), con los cuatro temas únicos y los ajustes de pantalla ([docs/mockups/configuracion-unificada](../mockups/configuracion-unificada/index.html), [ADR-W166](../DECISIONS.md)).

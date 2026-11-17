@@ -1413,3 +1413,25 @@
   4. **Sin números** en las secciones, abajo y en la barra. Las señales (✓, cuentas, avisos) quedan.
 - **Qué se pierde:** el número de cada sección, que nadie usaba como atajo. Mensajes es un botón que todavía no hace nada.
 - **Consecuencias:** sin migración. `MenuSesion` ahora también publica Configuración (`seccion: 'config'`). `DockSecciones` la saca de Herramientas y la pasa a la tarjeta. Falta, para otros ADR: el auto-ocultar, el iframe de las secciones ocultas, los grupos comunes y el buscador del menú, la medición de uso y el tema único.
+
+## ADR-W166: Configuración unificada para Work, Academy y Leadership (mockup)
+
+- **Fecha:** 2026-11-17 · **Subsistema:** Configuración (`sesion/Configuracion.jsx`, `temas/TabApariencia.jsx`; en Academy `settings-modal`; en Leadership «Tu cuenta») · **Estado:** propuesta. El mockup es `docs/mockups/configuracion-unificada/`.
+- **Contexto:** con el dock unificado (ADR-W165) y los temas únicos, Santi pidió una sola Configuración para los tres servicios. Tenía que estar inspirada en la de Academy (identidad y baldosas) y poder cambiarse a pestañas como la de Work, pero con las pestañas a la izquierda.
+- **Decisión (propuesta):**
+  1. **El mismo contenido, en dos vistas.** Se eligen en la cabecera o en Apariencia › Esta ventana:
+     - Baldosas: la identidad a la izquierda (foto o personaje, nombre, contacto, zona horaria, rol, Calendar y WhatsApp) y una baldosa por sección con su resumen. Cada baldosa abre su ventana encima.
+     - Pestañas: las secciones a la izquierda, agrupadas en Vos / Trabajo / Cuenta, y el contenido a la derecha.
+  2. **Cabecera común:** Notificaciones, Portal, Cerrar sesión y cerrar.
+  3. **Secciones según el rol:**
+     - Para todos: Tu cuenta, Apariencia, Dock, Notificaciones, Seguridad y Ayuda.
+     - Según el rol: Disponibilidad, Integraciones, Mis eventos, Tu examen y Equipo.
+  4. **Apariencia:**
+     - Los cuatro temas únicos (Learnation, Sólido, Relámpago y Puro), con su vista previa.
+     - El modo: oscuro, claro o el del equipo.
+     - Efectos y modo liviano.
+     - Ancho, márgenes, densidad y tamaño de letra.
+     - El fondo del Portal.
+     - Se guarda en la cuenta y vale para los tres servicios.
+- **Qué se pierde:** en Academy, la Configuración «sin scroll» de una sola pantalla pasa a ser una de dos vistas. En Work, las pestañas de arriba pasan al costado.
+- **Consecuencias:** al implementarla hace falta llevar la apariencia a la cuenta, como el dock (ADR-W164), y pasar Classic y Modern a Learnation.
