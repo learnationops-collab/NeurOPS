@@ -1135,3 +1135,11 @@
 - **Decisión:** un mensaje con payload que no es de este motor se registra y no hace nada más: no cuenta como palabra clave, disparador, respuesta a un paso ni primer mensaje para la campaña por defecto. Lo responde la app dueña del botón.
 - **Qué se pierde:** si algún día un botón de ManyChat debe pasar a nuestro flujo, hay que migrar ese flujo entero (bienvenida incluida), no cargar el texto del botón como palabra. La palabra «OBTENER ACCESO» queda cargada: solo la usa quien la escribe a mano.
 - **Consecuencias:** sin migración. Las ejecuciones ya abiertas desde ese botón siguen su curso.
+
+## ADR-W142: Cash collected y Ticket promedio van en neto, con el bruto debajo, en Analizar y en el tablero del closer
+
+- **Fecha:** 2026-11-14 · **Subsistema:** Comercial › Analizar (tarjetas de arriba y panel Cash), tablero del closer (KPI y ranking), `closer_service` (`general_average_ticket_neto`) · **Estado:** implementado.
+- **Contexto:** las dos pantallas mostraban bases distintas. Analizar tenía el cash en neto sin el bruto y, desde ADR-W139, el ticket en bruto con el neto debajo; el panel Cash de la misma pantalla mostraba el ticket en neto. El tablero del closer tenía el cash en neto con el bruto debajo y el ticket solo en bruto.
+- **Decisión:** en las dos pantallas la cifra grande es la neta de la pasarela y el bruto va debajo como subdato, para Cash collected y para Ticket promedio. Vale para las tarjetas de arriba y el panel Cash de Analizar, y para el KPI y las columnas Cash y Ticket del ranking del closer. El tablero del closer recibe `ticket_promedio_neto` (mismos pagos y misma agrupación de `ticket_service`, con el monto de `commission_service.cash_neto`). Reemplaza la parte de ADR-W139 que ponía el bruto en grande en Analizar; la regla de la seña de ese ADR sigue igual.
+- **Qué se pierde:** la comparación con el período anterior del ticket vuelve a ser en neto. El ticket por programa («Programas vendidos») y el estimado de mejora del tablero del closer siguen en bruto.
+- **Consecuencias:** sin migración. El cálculo del closer hace una consulta más por closer (las primeras cuotas en neto). No cambia ninguna cuenta: solo cuál de las dos cifras va en grande.
