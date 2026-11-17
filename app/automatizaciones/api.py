@@ -15,18 +15,19 @@ from app.automatizaciones.nucleo import grafo as g
 from app.models.instagram import InstagramWebhookEvento
 from app.models.tag import TARGET_IG_CONTACT
 from app.services import tags_service
-from app.models.user import ROLE_ADMIN, ROLE_DIRECTOR_COMERCIAL, ROLE_SETTER
+from app.models.user import ROLE_ADMIN, ROLE_DIRECTOR_COMERCIAL, ROLE_OPERATOR, ROLE_SETTER
 
 bp = Blueprint('inbox', __name__)
 
-ROLES_CON_ACCESO = (ROLE_ADMIN, ROLE_DIRECTOR_COMERCIAL)
+# El operador es el super admin técnico (17/11/2026): también arma, publica y aprueba propuestas.
+ROLES_CON_ACCESO = (ROLE_ADMIN, ROLE_OPERATOR, ROLE_DIRECTOR_COMERCIAL)
 ROLES_DE_LECTURA = (ROLE_SETTER,)
 # Lo único que el setter puede cambiar: el recorrido y el bot de una conversación (`api_acciones.py`)
 # sus etiquetas, incluido crear un grupo (`api_etiquetas.py`), los textos de los flujos (`api_mensajes.py`),
 # lo que trabaja sobre la conversación (`api_trabajo.py`), la biblioteca del equipo (`api_biblioteca.py`)
-# y escribirle al lead (`api_escribir.py`).
+# escribirle al lead (`api_escribir.py`) y proponer cambios de estructura (`api_propuestas.py`).
 ACCIONES_DEL_SETTER = {'inbox.mover_en_flujo', 'inbox.bot_de_conversacion', 'inbox.crear_grupo_etiquetas',
-                       'inbox.escribir_al_lead',
+                       'inbox.escribir_al_lead', 'inbox.proponer_cambios',
                        'inbox.poner_etiqueta', 'inbox.sacar_etiqueta', 'inbox.guardar_mensajes',
                        'inbox.marcar_leido', 'inbox.asignar_conversacion', 'inbox.mover_etapa', 'inbox.corregir_variable',
                        'inbox.crear_nota', 'inbox.crear_tarea', 'inbox.cambiar_tarea',

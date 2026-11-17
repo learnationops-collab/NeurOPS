@@ -4,6 +4,8 @@
 // Guardar y Publicar) va en la fila del título de la página (HeaderActions).
 // Lo que se edita es el BORRADOR: «Guardar» lo deja en el servidor; «Publicar» lo pone a correr
 // (el servidor lo valida y devuelve los errores en castellano).
+// `modo="proponer"` (el setter, sobre lo publicado) y `modo="revisar"` (quien aprueba una propuesta)
+// cambian la barra por `AccionesPropuesta` (ADR-W147).
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     applyEdgeChanges, applyNodeChanges, Background, Panel as RFPanel, ReactFlow, ReactFlowProvider, useReactFlow, useViewport,
@@ -13,6 +15,7 @@ import { AlertTriangle, ArrowLeft, Clock, Flag, GitBranch, Hash, LogOut, Message
 import { Button, Chip, HeaderActions, IconButton, Input, Modal, ModalHeader, Status, toast } from '../../../components/standard';
 import { aGrafo, aLienzo, avisosPorNodo, conectar, INICIO, nodoNuevo, ordenPasos } from './grafoFlujo';
 import { TIPOS_DE_NODO } from './nodos';
+import AccionesPropuesta from './AccionesPropuesta';
 import Panel from './Panel';
 import { estadoDe } from '../estadoFlujo';
 import { inboxApi } from '../api';
@@ -52,7 +55,8 @@ function variablesDe(nodos) {
     return [...nombres];
 }
 
-function Lienzo({ flujoInicial, nodoInicial, lectura, onVolver, onCambio }) {
+function Lienzo({ flujoInicial, nodoInicial, lectura: soloLectura, modo, propuesta, onVolver, onCambio }) {
+    const lectura = soloLectura || modo === 'revisar';
     const [nodos, setNodos] = useState(() => aLienzo(flujoInicial.grafo).nodos.map((n) => ({ ...n, selected: n.id === nodoInicial })));
     const [aristas, setAristas] = useState(() => aLienzo(flujoInicial.grafo).aristas);
     const [flujo, setFlujo] = useState(flujoInicial);
@@ -188,6 +192,26 @@ function Lienzo({ flujoInicial, nodoInicial, lectura, onVolver, onCambio }) {
             setOcupado(false);
         }
     };
+    // Propuestas: cada una devuelve true si salió, para cerrar su modal.
+    const conPropuesta = async (llamada, aviso) => {
+        setOcupado(true);
+        try {
+            const r = await llamada();
+            setSucio(false);
+            toast(aviso(r));
+            onVolver();
+            return true;
+        } catch (e) {
+            if (e.response?.data?.errores) setErrores(e.response.data.errores);
+            toast(e.response?.data?.message || 'No se pudo', 'error');
+            return false;
+        } finally {
+            setOcupado(false);
+        }
+    };
+    const proponer = (nota) => conPropuesta(() => inboxApi.proponer(flujo.id, aGrafo(nodos, aristas), nota), () => 'Propuesta enviada: queda pendiente de aprobación');
+    const aprobar = (r) => conPropuesta(() => inboxApi.aprobarPropuesta(propuesta.id, r), (d) => `Aprobada: publicada como versión ${d.version_numero}`);
+    const rechazar = (r) => conPropuesta(() => inboxApi.rechazarPropuesta(propuesta.id, r), () => 'Propuesta rechazada');
     const volver = () => { if (sucio) setSalir(true); else onVolver(); };
     const guardarYSalir = async () => { if (await guardar()) onVolver(); };
 
@@ -203,15 +227,19 @@ function Lienzo({ flujoInicial, nodoInicial, lectura, onVolver, onCambio }) {
                 <div className="barra ef-barra">
                     <Button variant="ghost" icon={<ArrowLeft />} onClick={volver}>Flujos</Button>
                     <span className="ef-sep" aria-hidden="true">/</span>
-                    <Input className="ef-nombre" value={nombre} disabled={lectura} aria-label="Nombre del flujo" maxLength={150}
+                    <Input className="ef-nombre" value={nombre} disabled={lectura || !!modo} aria-label="Nombre del flujo" maxLength={150}
                         onChange={(e) => { setNombre(e.target.value); marcar(); }} />
                     {palabra && <Chip subtle icon={<Hash />}>{palabra}</Chip>}
                     <Status color={est.color}>{est.texto}</Status>
-                    {sucio && <Status color="var(--warning)">Sin guardar</Status>}
+                    {sucio && <Status color="var(--warning)">{modo === 'proponer' ? 'Sin proponer' : 'Sin guardar'}</Status>}
                     {!sucio && flujo.cambios_sin_publicar && flujo.version && (
                         <Status color="var(--warning)" data-tip="Cambios sin publicar|Lo que corre es la última versión publicada.">Sin publicar</Status>
                     )}
-                    {!lectura && (
+                    {modo && (
+                        <AccionesPropuesta modo={modo} propuesta={propuesta} sucio={sucio} ocupado={ocupado}
+                            onProponer={proponer} onAprobar={aprobar} onRechazar={rechazar} />
+                    )}
+                    {!lectura && !modo && (
                         <div className="barra-der">
                             {flujo.version && (
                                 <Button icon={flujo.estado === 'activo' ? <Pause /> : <Play />} onClick={pausarOActivar} disabled={ocupado}>
@@ -259,7 +287,7 @@ function Lienzo({ flujoInicial, nodoInicial, lectura, onVolver, onCambio }) {
                         <Button onClick={() => setSalir(false)}>Seguir editando</Button>
                         <div className="barra-der">
                             <Button variant="dangerSolid" icon={<LogOut />} onClick={onVolver}>Salir sin guardar</Button>
-                            <Button variant="primary" icon={<Save />} onClick={guardarYSalir} disabled={ocupado}>Guardar y salir</Button>
+                            {!modo && <Button variant="primary" icon={<Save />} onClick={guardarYSalir} disabled={ocupado}>Guardar y salir</Button>}
                         </div>
                     </div>
                 </Modal>

@@ -568,3 +568,8 @@
 ### 17/11/2026 · Agendas: la ventana de días es exacta
 - Un evento de «2 días hábiles» ofrece solo esos 2 días, aunque tengan pocos horarios. Antes, los días con menos de 3 horarios no contaban y se abrían días más lejos: Segmentos A y B mostraban el viernes y el lunes (aviso de Marlon). Solo se abre un día más si el grupo no tiene ningún horario ([asignacion.py](../../app/agendas_v2/nucleo/asignacion.py), [asignacion.js](../../frontend/src/pages/agendas_v2/core/asignacion.js), ADR-W148).
 - Se borró la prueba de «se abre un día más», que había quedado vieja con ADR-W027.
+
+### 17/11/2026 · Los setters proponen cambios de estructura de los flujos
+- En Flujos, el setter abre un flujo publicado con «Cambiar estructura», mueve o agrega pasos y lo manda con «Proponer cambios» y una nota. Admin, operador o dirección comercial lo ven arriba de la grilla, lo revisan en el lienzo y lo aprueban (se publica) o lo rechazan con el motivo ([api_propuestas.py](../../app/automatizaciones/api_propuestas.py), [AccionesPropuesta.jsx](../../frontend/src/pages/inbox/editor/AccionesPropuesta.jsx), [ADR-W147](../DECISIONS.md); acordado en la Estrategia del 16/11).
+- El operador entra al Inbox con los permisos de admin. Migración `e5f7a9b2c4d6`.
+- Investigado (sin cambios): los leads «argentinos» del 07/11 son argentinos de verdad (+54 11); en 4 meses hay 6 agendas, 4 cobros y 4 leads de Argentina.
