@@ -2,7 +2,7 @@ import { Tip } from '../Shared';
 import { Delta } from '../VsPrevio';
 
 /**
- * Close rate por llamada, en el panel Cierre (ADR-W144): la primera llamada del lead contra la segunda o más,
+ * Close rate de la primera y la segunda llamada, en el panel Cierre (ADR-W144): la primera del lead contra la segunda o más,
  * con las Momentum aparte. La llamada es primera o segunda por ORDEN (a cuántas ya asistió ese lead en los 90 días
  * anteriores), no por una marca de la agenda. Las tres filas suman las llamadas con show up y las ventas del panel.
  *
@@ -21,10 +21,13 @@ const POCAS = 5;
 const tasa = (num, den) => (den ? Math.round((num / den) * 1000) / 10 : null);
 const pctTexto = (x) => (x == null ? '—' : `${String(x).replace('.', ',')}%`);
 
-const Cuenta = ({ n, rotulo, onClick }) => (n && onClick ? (
-    <button type="button" className="cc-ll-n cc-ll-n--clic num" role="cell" onClick={onClick}
-        aria-label={`${rotulo}: ${n}. Ver la lista`}>{n}</button>
-) : <span className="cc-ll-n num" role="cell">{n ?? 0}</span>);
+const Cuenta = ({ n, rotulo, onClick }) => (
+    <span className="cc-ll-n num" role="cell">
+        {n && onClick ? (
+            <button type="button" className="cc-ll-clic" onClick={onClick} aria-label={`${rotulo}: ${n}. Ver la lista`}>{n}</button>
+        ) : (n ?? 0)}
+    </span>
+);
 
 const Fila = ({ fila, d, p, onVer, vs }) => {
     const ahora = tasa(d.ventas, d.asistieron);
@@ -62,11 +65,12 @@ const CierrePorLlamada = ({ porLlamada, previo, vsLabel, onVer }) => {
     if (!porLlamada) return null;
     const filas = FILAS.filter(f => porLlamada[f.clave] && (!f.aparte || porLlamada[f.clave].asistieron > 0));
     return (
-        <div className="cc-llamadas" role="table" aria-label="Close rate por llamada">
-            {/* El título va en su renglón: al lado de «Asistieron» no entra en el panel angosto. */}
+        <div className="cc-llamadas" role="table" aria-label="Close rate de primera y segunda llamada">
+            {/* El título va en su renglón: al lado de «Asistieron» no entra en el panel angosto. No se llama
+                «Por llamada»: ese nombre ya es del anillo de arriba (por llamada / por presentación). */}
             <span className="cc-ll-tit" role="caption">
-                Por llamada
-                <Tip titulo="Por llamada" texto="Primera o segunda según a cuántas llamadas ya asistió el lead." />
+                1ª y 2ª llamada
+                <Tip titulo="1ª y 2ª llamada" texto="Primera o segunda según a cuántas llamadas ya asistió el lead." />
             </span>
             <div className="cc-ll cc-ll--cab" role="row">
                 <span role="columnheader" />

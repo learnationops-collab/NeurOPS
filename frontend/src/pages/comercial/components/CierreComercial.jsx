@@ -207,7 +207,7 @@ const CierreComercial = ({ cierres, previo, previoCanal, vsLabel, porCanal, dest
                     ))}
                 </div>
             )}
-            {/* Lo que el tablero suma debajo, dentro del mismo panel (la tira «Por llamada», ADR-W144). */}
+            {/* Lo que el tablero suma debajo, dentro del mismo panel (la tira «1ª y 2ª llamada», ADR-W144). */}
             {children}
         </div>
     );
