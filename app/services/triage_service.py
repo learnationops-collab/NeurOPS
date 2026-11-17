@@ -22,7 +22,7 @@ import pytz
 
 from app import db
 from app.models import Appointment, User
-from app.services import triage_filas, triage_pases
+from app.services import triage_filas, triage_motivos, triage_pases
 from app.services.user_time_service import zona_del_negocio
 
 CALIFICACIONES = ('calificado', 'descalificado', 'seguimiento')
@@ -136,8 +136,9 @@ def _validar(appt, datos):
             raise _error('Dejá una nota de qué quedó pensando.', 'nota')
         _fecha_seguimiento(datos)
     else:
-        if not (datos.get('nota') or '').strip():
-            raise _error('Dejá una nota de por qué no califica.', 'nota')
+        falta = triage_motivos.falta(datos)
+        if falta:
+            raise _error(*falta)
         if datos.get('low_ticket') not in LOW_TICKET:
             raise _error('Elegí qué pasó con el low ticket.', 'low_ticket')
 
@@ -239,6 +240,7 @@ def reportar(appt, datos, usuario):
             appt.seguimiento_realizado = True
     elif calificacion == 'descalificado':
         _aplicar_low_ticket(appt, datos['low_ticket'], datos)
+        triage_motivos.guardar(appt, datos.get('motivo'), usuario)
     elif calificacion == 'seguimiento':
         _dejar_en_seguimiento(appt, _fecha_seguimiento(datos))
     db.session.commit()
@@ -248,7 +250,8 @@ def reportar(appt, datos, usuario):
         _log(appt, usuario, f'{usuario.username} calificó al lead (+500 USD) y lo pasó a '
                             f'{closing.closer.username if closing.closer else "closing"}.')
     elif calificacion == 'descalificado':
-        _log(appt, usuario, f'{usuario.username} lo descalificó económicamente: '
+        motivo = triage_motivos.MOTIVOS.get(datos.get('motivo'), 'no califica económicamente')
+        _log(appt, usuario, f'{usuario.username} no lo pasó a closing ({motivo.lower()}): '
                             f'{_LOW_TICKET_TEXTO[appt.triage_low_ticket]}.')
     elif calificacion == 'seguimiento':
         _log(appt, usuario, f'{usuario.username} lo dejó en seguimiento: lo va a pensar '
@@ -336,6 +339,7 @@ def bloque(appt):
             'asistencia': appt.closer_result,
             'calificacion': appt.triage_calificacion,
             'low_ticket': appt.triage_low_ticket,
+            'motivo': triage_motivos.de(appt),
             'nota_para_closer': _texto_nota(appt),
             'fecha_seguimiento': appt.fecha_seguimiento,
             'closing': closing and {'id': closing.id, 'fecha': _iso(closing.start_time),
@@ -365,11 +369,13 @@ def _vacias():
                            'no_cerrado', 'seguimiento', 'descartado',
                            'pasaron', 'closer_asistieron', 'closer_cerraron', 'closer_no_asistieron',
                            'closer_pendientes', 'closer_sin_reporte', 'closer_por_venir',
-                           'closer_senas', 'closer_cobrado')}
+                           'closer_senas', 'closer_cobrado',
+                           *(f'motivo_{clave}' for clave in triage_motivos.CLAVES))}
 
 
-def _sumar(m, a, pase, ahora=None):
+def _sumar(m, a, pase, ahora=None, motivo=None):
     """Suma la agenda de triage `a` en `m`. `pase`: su agenda de closing (`triage_pases`) o None.
+    `motivo`: por qué no pasó a closing, si es una descalificada que lo tiene (`triage_motivos`).
     `ahora` (UTC naive) parte las llamadas sin resultado en «sin reportar» (ya pasaron) y «por ocurrir».
     Cada agenda cae en UN destino (`triage_filas.destino_de`): los siete contadores suman las agendas."""
     ahora = ahora or datetime.utcnow()
@@ -395,6 +401,7 @@ def _sumar(m, a, pase, ahora=None):
         m['en_seguimiento'] += 1
     elif a.triage_calificacion == 'descalificado':
         m['descalificados'] += 1
+        m[f'motivo_{motivo or triage_motivos.SIN_DATO}'] += 1
         lt = a.triage_low_ticket
         if lt in PITCHEADO:
             m['pitch_low_ticket'] += 1
@@ -452,14 +459,15 @@ def metricas(desde, hasta, solo=None, zona=None, segmentos=None):
         filas = [{'person_uuid': a.person_uuid, 'client_id': a.client_id} for a in agendas]
         agendas = [a for a, g in zip(agendas, segmentos_lectura.de_filas(filas)) if g in segmentos]
     pases = triage_pases.pases_de(agendas)
+    motivos = triage_motivos.de_agendas(agendas)
 
     total, por_id, por_dia = _vacias(), {p.id: _vacias() for p in personas}, {}
     ahora = datetime.utcnow()
     for a in agendas:
-        pase = pases.get(a.id)
-        _sumar(total, a, pase, ahora)
-        _sumar(por_id[a.closer_id], a, pase, ahora)
-        _sumar(por_dia.setdefault((_dia(a, zona), a.closer_id), _vacias()), a, pase, ahora)
+        pase, motivo = pases.get(a.id), motivos.get(a.id)
+        _sumar(total, a, pase, ahora, motivo)
+        _sumar(por_id[a.closer_id], a, pase, ahora, motivo)
+        _sumar(por_dia.setdefault((_dia(a, zona), a.closer_id), _vacias()), a, pase, ahora, motivo)
     from app.agendas_v2 import abandonos
 
     return {
@@ -469,5 +477,5 @@ def metricas(desde, hasta, solo=None, zona=None, segmentos=None):
         'abandonos': abandonos.resumen(desde, hasta),
         'por_persona': [{'id': p.id, 'nombre': p.username, **por_id[p.id]} for p in personas],
         'por_closer': triage_filas.por_closer(agendas, pases),
-        'leads': triage_filas.leads(agendas, pases, ahora),
+        'leads': triage_filas.leads(agendas, pases, ahora, motivos),
     }
