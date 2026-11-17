@@ -8,11 +8,14 @@ import BotonHerramientas from '../../../ventanas/BotonHerramientas';
  * dibuja. Una que abre una lista (Nuevo) abre directo esa lista. El orden es el de cuándo se fijaron.
  * Sin ninguna, no ocupa lugar. `sep`: dónde va la línea que la separa ('antes', 'despues' o null).
  */
-const DockFijadas = ({ usuario, opciones, onElegir, sep = 'despues' }) => {
+// `tope`: cuántas se dibujan como mucho (la barra lateral plegada, 3); el resto queda en un «+N» que corre `onMas`.
+const DockFijadas = ({ usuario, opciones, onElegir, sep = 'despues', tope = null, onMas = null }) => {
     const { fijadas } = useFijadas(usuario);
     const porId = new Map(opciones.map((op) => [op.id, op]));
-    const visibles = fijadas.map((id) => porId.get(id)).filter(Boolean);
-    if (!visibles.length) return null;
+    const todas = fijadas.map((id) => porId.get(id)).filter(Boolean);
+    if (!todas.length) return null;
+    const visibles = tope ? todas.slice(0, tope) : todas;
+    const resto = todas.length - visibles.length;
     return (
         <>
             {sep === 'antes' && <span className="dock-sep" />}
@@ -26,6 +29,12 @@ const DockFijadas = ({ usuario, opciones, onElegir, sep = 'despues' }) => {
                         {op.cuenta != null && <span className="dock-sesion-aviso" aria-hidden="true">{op.cuenta}</span>}
                     </button>
                 )))}
+                {resto > 0 && (
+                    <button type="button" className="dock-fijada dock-mas" onClick={onMas}
+                        aria-label={`${resto} ${resto === 1 ? 'acceso fijado más' : 'accesos fijados más'}, en Herramientas`} title="Más en Herramientas">
+                        +{resto}
+                    </button>
+                )}
             </div>
             {sep === 'despues' && <span className="dock-sep" />}
         </>

@@ -59,64 +59,84 @@
 .dc-shell .menu-item--herr .menu-herr-ico svg{color:var(--c,var(--text-muted))}
 .dc-shell .menu-item--herr .menu-flecha{flex-shrink:0;color:var(--text-muted-40)}
 
-/* La barra lateral (DockLateral.jsx), como la de la Academia: la tarjeta de usuario, la navegación y las
-   ventanas, todo alineado a la izquierda. Plegada, solo íconos. */
+/* La barra lateral (DockLateral.jsx), como el mockup del dock unificado: dos contenedores separados, la
+   tarjeta de usuario y la navegación. Plegada, una columna centrada de botones de 44 px. */
 .dc-shell .dock-fijada-nombre{display:none}
 .dc-shell .dock-lado{position:fixed;left:16px;top:16px;bottom:16px;z-index:60;width:68px;
-  display:flex;flex-direction:column;gap:var(--s2);padding:6px;border-radius:24px;
-  background:var(--bg-surface);backdrop-filter:saturate(180%) blur(28px);
-  border:1px solid var(--border-main);border-top-color:var(--sheen);
-  box-shadow:var(--shadow-main),0 0 0 1px rgba(0,0,0,.25);
-  overflow-y:auto;overflow-x:hidden;scrollbar-width:none;transition:width .25s ease}
-.dc-shell .dock-lado::-webkit-scrollbar{display:none}
+  display:flex;flex-direction:column;gap:12px;transition:width .25s ease}
 .dc-shell .dock-lado--abierta{width:248px}
+.dc-shell .dock-lado-tarjeta,.dc-shell .dock-lado-nav{border-radius:24px;background:var(--bg-surface);
+  backdrop-filter:saturate(180%) blur(28px);border:1px solid var(--border-main);border-top-color:var(--sheen);
+  box-shadow:var(--shadow-main),0 0 0 1px rgba(0,0,0,.25)}
 
-/* 1 · La tarjeta de usuario. */
-.dc-shell .dock-lado-tarjeta{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:6px;
-  border-radius:18px;background:var(--bg-element);border:1px solid var(--border-subtle)}
-.dc-shell .dock-lado-quien{display:flex;align-items:center;gap:10px;width:100%;min-width:0}
-.dc-shell .dock-lado-nombre{flex:1;min-width:0;display:grid;line-height:1.25}
-.dc-shell .dock-lado-nombre b{font-size:14px;font-weight:800;color:var(--text-on-surface)}
-.dc-shell .dock-lado-nombre small{font-size:11px;font-weight:600;color:var(--text-muted-40)}
+/* 1 · La tarjeta. */
+.dc-shell .dock-lado-tarjeta{position:relative;flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 6px}
+.dc-shell .dock-lado-quien{display:flex;flex-direction:column;align-items:center;gap:8px;width:100%;min-width:0;text-align:center}
+.dc-shell .dock-lado-nombre{width:100%;min-width:0;display:grid;line-height:1.25}
+.dc-shell .dock-lado-nombre b{font-size:14.5px;font-weight:800;color:var(--text-on-surface)}
+.dc-shell .dock-lado-nombre small{font-size:11.5px;font-weight:600;color:var(--text-muted-40)}
 .dc-shell .dock-lado .dock-sesion{width:44px;height:44px;flex-shrink:0}
-.dc-shell .dock-lado--abierta .dock-sesion{width:64px;height:64px}
-.dc-shell .dock-lado--abierta .dock-sesion > :first-child{transform:scale(1.25)}
-.dc-shell .dock-lado-plegar{flex-shrink:0;display:grid;place-items:center;width:44px;height:32px;border-radius:10px;
-  color:var(--text-muted);align-self:flex-start;transition:background-color .15s ease,color .15s ease}
-.dc-shell .dock-lado--abierta .dock-lado-plegar{width:30px;height:30px;align-self:flex-start}
+.dc-shell .dock-lado--abierta .dock-lado-quien{padding-top:8px}
+.dc-shell .dock-lado--abierta .dock-sesion{width:88px;height:88px;border-radius:50%}
+.dc-shell .dock-lado--abierta .dock-sesion > :first-child{transform:scale(1.6)}
+.dc-shell .dock-lado-plegar{flex-shrink:0;display:grid;place-items:center;width:44px;height:44px;border-radius:14px;
+  color:var(--text-muted);transition:background-color .15s ease,color .15s ease}
 .dc-shell .dock-lado-plegar:hover{background:var(--mat-3);color:var(--text-on-surface)}
-.dc-shell .dock-lado-acciones{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%}
-.dc-shell .dock-lado--abierta .dock-lado-acciones{flex-direction:row;align-items:center}
+.dc-shell .dock-lado--abierta .dock-lado-plegar,.dc-shell .dock-lado .dock-lado-notif{position:absolute;top:8px;width:30px;height:30px;border-radius:10px}
+.dc-shell .dock-lado--abierta .dock-lado-plegar{left:8px}
+.dc-shell .dock-lado .dock-lado-notif{right:8px;color:var(--text-muted)}
+.dc-shell .dock-lado .dock-lado-notif .dock-sesion-aviso{top:-4px;right:-4px}
+.dc-shell .dock-lado-fila{display:flex;justify-content:center;gap:5px;width:100%}
+.dc-shell .dock-lado-fila .dock-fijada{width:40px;height:40px;border-radius:13px;background:var(--bg-element);border:1px solid var(--border-subtle)}
 .dc-shell .dock-lado-herr{display:contents}
+.dc-shell .dock-lado-acciones{display:flex;flex-direction:column;align-items:center;gap:2px}
 .dc-shell .dock-lado .dock-fijada{width:44px;height:44px;border-radius:14px}
-.dc-shell .dock-lado--abierta .dock-lado-herr .dock-fijada{flex:1;width:auto;display:flex;justify-content:flex-start;gap:10px;padding:0 12px;
-  font-size:13.5px;font-weight:700;background:var(--bg-surface);border:1px solid var(--border-subtle)}
-.dc-shell .dock-lado--abierta .dock-lado-herr .dock-fijada-nombre{display:inline}
-.dc-shell .dock-lado--abierta .dock-lado-herr .dock-sesion-aviso{position:static;margin-left:auto;box-shadow:none}
-.dc-shell .dock-lado-salir:hover{background:var(--error-surface);color:var(--error)}
-.dc-shell .dock-lado-fijadas{width:100%;padding-top:4px;border-top:1px solid var(--border-subtle)}
+.dc-shell .dock-lado-salir:hover{background:var(--error-surface) !important;color:var(--error)}
+.dc-shell .dock-lado-volver{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:36px;padding:0 10px;
+  border-radius:12px;background:var(--warning-surface,var(--bg-element));color:var(--text-on-surface);font-size:12.5px;font-weight:700}
+.dc-shell .dock-lado-fijadas{width:100%;padding-top:6px;border-top:1px solid var(--border-subtle)}
 .dc-shell .dock-lado-fijadas:empty{display:none}
-.dc-shell .dock-lado .dock-fijadas{flex-direction:column;align-items:flex-start;gap:2px}
-.dc-shell .dock-lado--abierta .dock-fijadas{flex-direction:row;flex-wrap:wrap}
+.dc-shell .dock-lado .dock-fijadas{flex-direction:column;align-items:center;gap:2px}
+.dc-shell .dock-lado--abierta .dock-fijadas{flex-direction:row;flex-wrap:wrap;justify-content:flex-start}
+.dc-shell .dock-mas{font-size:12.5px;font-weight:900;color:var(--text-muted)}
 
-/* 2 · La navegación. */
-.dc-shell .dock-lado-nav{display:flex;flex-direction:column;align-items:stretch;gap:2px;padding:0 2px}
+/* 2 · La navegación, con las ventanas abiertas al fondo. */
+.dc-shell .dock-lado-nav{flex:1;min-height:0;display:flex;flex-direction:column;align-items:stretch;gap:2px;padding:8px;
+  overflow-y:auto;overflow-x:hidden;scrollbar-width:none}
+.dc-shell .dock-lado-nav::-webkit-scrollbar{display:none}
+.dc-shell .dock-lado:not(.dock-lado--abierta) .dock-lado-nav{padding:8px 4px;align-items:center}
 .dc-shell .dock-lado-antes{display:flex;justify-content:flex-start;margin-bottom:4px}
 .dc-shell .dock-lado-item{position:relative;display:flex;align-items:center;justify-content:flex-start;gap:12px;height:44px;
   padding:0 12px;flex-shrink:0;border-radius:14px;color:var(--text-muted);font-size:14px;font-weight:700;text-align:left;
   transition:background-color .15s ease,color .15s ease}
+.dc-shell .dock-lado:not(.dock-lado--abierta) .dock-lado-item{width:44px;justify-content:center;padding:0}
 .dc-shell .dock-lado-item svg{flex-shrink:0}
 .dc-shell .dock-lado-item:hover{background:var(--mat-3);color:var(--text-on-surface)}
 .dc-shell .dock-lado-item[aria-current="page"]{background:var(--brand-secondary);color:var(--on-brand)}
-.dc-shell .dock-lado-num{margin-left:auto;font-size:10px;font-weight:900;opacity:.5}
-.dc-shell .dock-lado-item .dock-marca{margin:0}
-.dc-shell .dock-lado-item .dock-lado-num + .dock-marca{margin-left:4px}
+.dc-shell .dock-lado-item .dock-marca{margin:0 0 0 auto}
 .dc-shell .dock-lado:not(.dock-lado--abierta) .dock-lado-item .dock-marca{position:absolute;top:3px;right:3px}
 .dc-shell .dock-lado-editar{flex-direction:column;align-items:stretch}
-
-/* 3 · Las ventanas abiertas, al fondo. */
 .dc-shell .dock-lado-fin{margin-top:auto;display:flex;flex-direction:column;align-items:flex-start;gap:2px}
+.dc-shell .dock-lado:not(.dock-lado--abierta) .dock-lado-fin{align-items:center}
 .dc-shell .dock-lado-fin:empty{display:none}
 .dc-shell .dock-lado .dock-sep{width:100%;height:1px;margin:4px 0}
 html.dock-lateral #root{padding-left:100px;transition:padding-left .25s ease}
 html.dock-lateral.dock-lateral--abierta #root{padding-left:280px}
+/* Dock: la tarjeta de usuario al pasar el mouse por el avatar (TarjetaSesion.jsx), arriba a la derecha. */
+.dc-shell .dock-av-hover{position:relative;display:grid}
+.dc-shell .dock-tarjeta-flot{position:absolute;right:-8px;bottom:calc(100% + 16px);z-index:2;width:264px;padding:10px;
+  background:var(--bg-flotante,var(--bg-surface));border:1px solid var(--border-main);box-shadow:var(--shadow-main);
+  opacity:0;visibility:hidden;transform:translateY(6px);transition:opacity .15s ease .25s,transform .15s ease .25s,visibility 0s linear .4s}
+.dc-shell .dock-tarjeta-flot::after{content:"";position:absolute;left:0;right:0;top:100%;height:18px}
+.dc-shell .dock-av-hover:hover .dock-tarjeta-flot,.dc-shell .dock-av-hover:focus-within .dock-tarjeta-flot{opacity:1;visibility:visible;
+  transform:none;transition:opacity .15s ease .15s,transform .15s ease .15s,visibility 0s linear .15s}
+.dc-shell .dock-tarjeta-flot .dock-lado-quien{padding-top:8px}
+.dc-shell .dock-tarjeta-flot .dock-sesion--grande{width:88px;height:88px;border-radius:50%}
+.dc-shell .dock-tarjeta-flot .dock-sesion--grande > :first-child{transform:scale(1.6)}
+.dc-shell .dock-tarjeta-flot .dock-lado-notif{position:absolute;top:8px;right:8px;width:30px;height:30px;border-radius:10px;color:var(--text-muted)}
+.dc-shell .dock-tarjeta-flot .dock-lado-notif .dock-sesion-aviso{top:-4px;right:-4px}
+.dc-shell .dock-lado-volver:hover{filter:brightness(1.08)}
+/* El texto de cada herramienta ocupa lo que queda de la fila (si no, se aplastaba a una letra). */
+.dc-shell .menu-item--herr{align-items:center}
+.dc-shell .menu-item--herr .menu-herr-tx{flex:1 1 0;min-width:0;grid-template-columns:minmax(0,1fr)}
+.dc-shell .menu-item--herr .menu-cuenta{margin-left:0}

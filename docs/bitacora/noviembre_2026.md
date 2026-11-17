@@ -652,3 +652,9 @@
 - La barra lateral se ordena en la tarjeta de usuario (personaje grande, Herramientas, cerrar sesión y lo fijado), la navegación alineada a la izquierda y las ventanas al fondo ([DockLateral.jsx](../../frontend/src/pages/comercial/components/DockLateral.jsx), [ADR-W164](../DECISIONS.md)).
 - Herramienta **Buscar lead** (Ctrl+K): cualquier lead y su ficha, desde cualquier pantalla ([BuscarLeadVentana.jsx](../../frontend/src/ventanas/herramientas/BuscarLeadVentana.jsx)). Nuevo suma «Registrar un pago» y «Declarar una venta». Playbook y Simular pasan a ser herramientas. Ctrl+L abre Learnito y Ctrl+J, Herramientas.
 - Lo fijado, la navegación editada y el modo del dock se guardan en la cuenta: otra compu arranca igual ([dockServidor.js](../../frontend/src/sesion/dockServidor.js), migración `c4e7a9d1f3b2`).
+
+### 17/11/2026 · Dock unificado: la tarjeta de sesión y la barra en dos contenedores
+- Mockup de referencia del dock y los temas para Work, Academy y Leadership ([docs/mockups/dock-unificado](../mockups/dock-unificado/index.html), [ADR-W165](../DECISIONS.md)).
+- Tarjeta de sesión: Avisos arriba a la derecha, el personaje grande y el nombre, y la fila Cerrar sesión · Mensajes (pronto) · Leadership · Herramientas · Configuración. En el dock de abajo aparece al pasar el mouse por el avatar ([TarjetaSesion.jsx](../../frontend/src/pages/comercial/components/TarjetaSesion.jsx)).
+- La barra lateral separa la tarjeta de la navegación. Plegada muestra hasta 3 fijadas y 5 secciones, con «+N» para el resto ([DockLateral.jsx](../../frontend/src/pages/comercial/components/DockLateral.jsx)).
+- Las secciones ya no llevan número. El texto de cada herramienta del menú ya no se aplasta ([dock2.css](../../frontend/src/pages/comercial/dock2.css)).

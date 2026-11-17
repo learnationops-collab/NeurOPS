@@ -9,10 +9,11 @@ import { useNavegacionDock } from '../../../ventanas/navegacionDock';
 import { useAuth } from '../../../contexts/AuthContext';
 import DockEdicion from './DockEdicion';
 import DockLateral from './DockLateral';
+import { BotonFila, TarjetaFlotante } from './TarjetaSesion';
 import { useModoDock } from '../../../ventanas/modoDock';
 import { agrupar } from '../../../ventanas/catalogoHerramientas';
 import { hidratarDock } from '../../../sesion/dockServidor';
-import { BookOpen, Bug, Eye, Banknote, Plus, Receipt } from 'lucide-react';
+import { BookOpen, Bug, Eye, Banknote, Plus, Receipt, Wrench } from 'lucide-react';
 import { abrirBuscarLead } from '../../../ventanas/buscarLead';
 import { usePlaybook } from '../../../contexts/PlaybookContext';
 import { abrirSimulacion, puedeSimular } from '../../../sesion/simulacion';
@@ -124,7 +125,9 @@ const DockSecciones = ({ secciones: todasLasSecciones, activa, onElegir, ariaLab
     const opcionesRef = useRef([]);
     const correr = useCallback((id) => (accionesRef.current.find(o => o.id === id)
         || opcionesRef.current.find(o => o.id === id))?.onClick(), []);
-    const acciones = fijables.opciones.map(o => ({ ...o, onClick: () => correr(o.id) }));
+    const publicadas = fijables.opciones.map(o => ({ ...o, onClick: () => correr(o.id) }));
+    const configuracion = publicadas.find(o => o.seccion === 'config') || null;
+    const acciones = publicadas.filter(o => o.seccion !== 'config');
     // «Nuevo», una herramienta más (se fija como cualquiera): abre la lista de lo que crea algo en esta
     // pantalla (las acciones con `nuevo`) y «Reportar o pedir algo», que va en todas.
     const reportar = { id: 'reportar-bug', label: 'Reportar o pedir algo', Icono: Bug, onClick: abrirReporteDeBug };
@@ -231,7 +234,10 @@ const DockSecciones = ({ secciones: todasLasSecciones, activa, onElegir, ariaLab
     const cosas = secciones.length + (antes ? 1 : 0) + (despues ? 1 : 0);
     const clases = ['dock', !angosto && 'dock--centro', cosas >= 6 && 'dock--denso', siempreNombres && 'dock--nombres',
         compacto && claseSinLugar, desborda && 'dock--desborda', nav.editando && 'dock--editando', 'caja'];
-    const fijadas = <DockFijadas usuario={fijables.usuario || usuario} opciones={opciones} onElegir={correr} sep={angosto && !lateral ? 'despues' : null} />;
+    // Plegada, la barra lateral muestra hasta 3 fijadas; el resto, en Herramientas.
+    const plegada = lateral && !modo.desplegada;
+    const fijadas = <DockFijadas usuario={fijables.usuario || usuario} opciones={opciones} onElegir={correr} sep={angosto && !lateral ? 'despues' : null}
+        tope={plegada ? 3 : null} onMas={() => window.dispatchEvent(new CustomEvent('abrir-herramientas'))} />;
     const herr = (
         <BotonHerramientas usuario={usuario} onEditar={todasLasSecciones.length > 1 && usuario ? () => nav.editar(true) : null}
             cuenta={sinLeer > 0 ? (sinLeer > 99 ? '99+' : sinLeer) : null}
@@ -249,14 +255,13 @@ const DockSecciones = ({ secciones: todasLasSecciones, activa, onElegir, ariaLab
                         {/* Indicador que se desliza hasta el item activo, en vez de que cada uno pinte su
                             propio fondo: el movimiento dice de dónde a dónde se fue. */}
                         <span className="dock-ind" style={indicador} aria-hidden="true" />
-                        {secciones.map((s, i) => {
+                        {secciones.map((s) => {
                             const marcas = marcasDe(s);
                             return (
                                 <button key={s.id} type="button" className="dock-item"
                                     aria-current={activa === s.id ? 'page' : undefined}
                                     aria-label={[s.label, ...marcas.map(m => m.titulo)].join(', ')}
                                     onClick={() => onElegir(s.id)}>
-                                    <span className="dock-num">{i + 1}</span>
                                     <s.Icono size={20} />
                                     <span className="dock-label">{s.label}</span>
                                     {s.pronto && <span className="dock-pronto">Pronto</span>}
@@ -279,12 +284,14 @@ const DockSecciones = ({ secciones: todasLasSecciones, activa, onElegir, ariaLab
             )}
         </nav>
     );
+    const sesion = { configuracion, avisos: acciones.find(o => o.id === 'avisos'),
+        salir: acciones.find(o => o.id === 'salir'), volver: acciones.find(o => o.id === 'volver') };
     if (lateral) {
         return (
             <DockContexto.Provider value={contexto}>
                 <DockLateral secciones={secciones} activa={activa} onElegir={onElegir} ariaLabel={ariaLabel} antes={antes}
                     despues={despues} herr={herr} fijadas={fijadas} nav={nav} modo={modo} marcasDe={marcasDe} claseDeMarca={claseDeMarca}
-                    usuario={usuario} salida={acciones.filter(o => o.id === 'salir' || o.id === 'volver')} />
+                    usuario={usuario} {...sesion} />
             </DockContexto.Provider>
         );
     }
@@ -297,7 +304,13 @@ const DockSecciones = ({ secciones: todasLasSecciones, activa, onElegir, ariaLab
                     <div className="dock-isla dock-isla--der">
                         {herr}
                         {despues && <span className="dock-sep" />}
-                        {despues}
+                        {despues && (
+                            // Al pasar el mouse por el avatar, la misma tarjeta que la barra lateral. Su Herramientas
+                            // abre el menú de la isla (el de la tarjeta se escondería al irse el mouse).
+                            <TarjetaFlotante avatar={despues} usuario={usuario} {...sesion}
+                                herr={<BotonFila Icono={Wrench} label="Herramientas · Ctrl+J" cuenta={sinLeer > 0 ? (sinLeer > 99 ? '99+' : sinLeer) : null}
+                                    onClick={() => window.dispatchEvent(new CustomEvent('abrir-herramientas'))} />} />
+                        )}
                     </div>
                 </div>
             )}

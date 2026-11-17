@@ -1394,3 +1394,22 @@
   6. **El dock en la cuenta:** lo fijado, la navegación editada de cada pantalla y el modo (abajo o lateral) se guardan en `users.dock_prefs`. Al entrar, lo de la cuenta pisa lo del navegador. Si la cuenta todavía no tiene nada, se le sube lo que había en el navegador. Simulando no se lee ni se guarda.
 - **Qué se pierde:** un lead que solo está en la planilla vieja (sin cliente ni persona) aparece en Buscar pero no abre ficha. Las preferencias son por persona, no por rol como en Leadership.
 - **Consecuencias:** migración `c4e7a9d1f3b2` (columna `users.dock_prefs`, idempotente; corre sola en el deploy).
+
+## ADR-W165: el dock unificado de Learnation, primer paso en Work (tarjeta de sesión, barra en dos contenedores, sin números)
+
+- **Fecha:** 2026-11-17 · **Subsistema:** Dock 2.0 (`DockLateral`, `TarjetaSesion`, `DockSecciones`, `DockFijadas`, `MenuSesion`) · **Estado:** implementado en Work. El mockup (`docs/mockups/dock-unificado/`) es la referencia para Academy y Leadership. Sigue a ADR-W164.
+- **Contexto:** Santi quiere una sola navegación para Work, Academy y Leadership. Se armó un mockup que junta lo de los tres. Las decisiones tomadas sobre ese mockup: el avatar abre Configuración, la navegación se edita, el dock se auto-oculta, una sección oculta se abre en una ventana desde Herramientas, las secciones no se numeran pero conservan su señal, se mide el uso de cada herramienta y hay un solo sistema de temas. Este ADR implementa en Work la tarjeta de sesión y la barra lateral.
+- **Decisión:**
+  1. **Tarjeta de sesión, igual en los tres:**
+     - Arriba a la derecha, Notificaciones (Avisos, con la cuenta).
+     - Al centro, el personaje grande (abre Configuración) y el nombre y el rol debajo.
+     - Una fila de botones: Cerrar sesión · Mensajes · Leadership · Herramientas · Configuración.
+     - Mensajes y Leadership son transversales. Mensajes todavía es un lugar reservado (avisa «pronto»), y ahí va a vivir Learnito. Leadership entra con el pase firmado del Portal, y simulando no se puede.
+  2. **Barra lateral en dos contenedores separados:**
+     - La tarjeta, con plegar arriba a la izquierda, «Volver a mi sesión» si simulás y lo fijado.
+     - La navegación, con las ventanas abiertas al fondo.
+     - Plegada, una columna de íconos: hasta 3 fijadas y 5 secciones, con la activa siempre adentro. El resto va a un «+N»: el de las fijadas abre Herramientas y el de las secciones despliega la barra.
+  3. **Dock de abajo:** al pasar el mouse por el avatar (o al llegar con Tab) aparece la misma tarjeta, arriba. Su Herramientas abre el menú de la isla.
+  4. **Sin números** en las secciones, abajo y en la barra. Las señales (✓, cuentas, avisos) quedan.
+- **Qué se pierde:** el número de cada sección, que nadie usaba como atajo. Mensajes es un botón que todavía no hace nada.
+- **Consecuencias:** sin migración. `MenuSesion` ahora también publica Configuración (`seccion: 'config'`). `DockSecciones` la saca de Herramientas y la pasa a la tarjeta. Falta, para otros ADR: el auto-ocultar, el iframe de las secciones ocultas, los grupos comunes y el buscador del menú, la medición de uso y el tema único.

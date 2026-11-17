@@ -31,9 +31,9 @@ const MenuSesion = ({ nombre, rol, grupos }) => {
     const todas = [...grupos.flat(), ...avisos.opciones, ...conflictos.opciones,
         ...reportes.opciones.map(({ accion, ...op }) => op)];
     const configuracion = todas.find(op => op.id === 'configuracion');
+    // Configuración también se publica (seccion 'config'): la barra lateral la pone en la fila de la tarjeta.
     const opciones = todas
-        .filter(op => op.id !== 'configuracion')
-        .map(op => ({ ...op, seccion: op.enDock ? 'acciones' : 'cuenta' }));
+        .map(op => ({ ...op, seccion: op.id === 'configuracion' ? 'config' : op.enDock ? 'acciones' : 'cuenta' }));
     useEffect(() => { dock?.publicar(usuario, opciones); });
 
     const falta = configuracion?.cuenta;
