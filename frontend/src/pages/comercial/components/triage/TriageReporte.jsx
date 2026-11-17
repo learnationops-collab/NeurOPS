@@ -55,8 +55,10 @@ const Llamada = ({ l, onAbrir }) => {
 };
 
 export default function TriageReporte({ leads, ver, onVer, titulo, onAbrir }) {
+    // Los estados poco frecuentes (`soloSiHay`) muestran su chip solo si hay alguno, o si es el que se está mirando.
     const chips = [{ clave: 'agendas', texto: 'Todas', n: leads.length },
-        ...ESTADOS.map((e) => ({ clave: `st:${e.clave}`, texto: e.clave, n: leads.filter((l) => estadoDe(l) === e.clave).length }))];
+        ...ESTADOS.map((e) => ({ clave: `st:${e.clave}`, texto: e.clave, n: leads.filter((l) => estadoDe(l) === e.clave).length, soloSiHay: e.soloSiHay }))
+            .filter((c) => !c.soloSiHay || c.n > 0 || ver === c.clave)];
     const lista = leads.filter((l) => coincide(l, ver));
     return (
         <div id="triage-reporte" style={{ display: 'flex', flexDirection: 'column', gap: 18, padding: 28, borderRadius: 32, background: 'var(--bg-element)', border: '1px solid var(--border-main)' }}>
