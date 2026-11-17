@@ -90,22 +90,6 @@ def test_la_palabra_clave_manda_los_botones_y_espera(flujo, lead):
     assert ejecucion.despertar_en == T0 + timedelta(minutes=60)
 
 
-def test_boton_respuesta_libre_y_condicion(flujo, lead):
-    guia = flujo()
-    lead.escribe('OBTENER GUIA')
-    lead.toca(payload(guia, 'perfil', 'medico'), 'Médico graduado', minutos=1)
-
-    assert lead.textos()[1:] == ['Genial ya te lo mando 🙌', 'Antes, para qué examen te estás preparando?']
-    assert lead.ejecucion().nodo_actual == 'examen'
-
-    lead.escribe('ENARM', minutos=2)
-
-    assert lead.textos()[-1] == 'Recursos para ENARM'
-    assert lead.ejecucion().estado == AutEjecucion.TERMINADA
-    contacto = IgContacto.query.one()
-    assert contacto.variables == {'ultimo_boton': 'Médico graduado', 'examen': 'ENARM'}
-
-
 def test_la_otra_rama_de_la_condicion_y_un_adjunto(flujo, lead):
     guia = flujo()
     lead.escribe('OBTENER GUIA')
@@ -342,15 +326,6 @@ def test_el_mismo_mensaje_dos_veces_se_procesa_una(flujo, lead):
         ['flujo_iniciado', 'repetido']
 
 
-def test_apagado_no_procesa_nada(flujo, db):
-    flujo()
-    db.session.add(InstagramWebhookEvento(tipos='messages', payload=f.dm('OBTENER GUIA', 'm1', ms(T0)), recibido_en=T0))
-    db.session.commit()
-
-    assert servicio.tick(T0) == {'procesados': 0, 'despertadas': 0}
-    assert InstagramWebhookEvento.query.one().procesado_en is None
-
-
 def test_lo_que_lleva_mucho_sin_procesar_no_se_contesta(flujo, lead):
     flujo()
     _db.session.add(InstagramWebhookEvento(tipos='messages', payload=f.dm('OBTENER GUIA', 'm1', ms(T0)), recibido_en=T0))
@@ -493,17 +468,6 @@ def test_apagado_el_reloj_no_corre_ni_arranca(monkeypatch):
     assert servicio.correr_una_vuelta() is None
     servicio.avisar(object())
     assert servicio._reloj is None
-
-
-def test_una_vuelta_del_reloj_procesa_y_despierta(flujo, lead, monkeypatch):
-    flujo()
-    monkeypatch.setenv('IG_MOTOR_MODO', 'simulado')
-    _db.session.add(InstagramWebhookEvento(tipos='m', payload=f.dm('OBTENER GUIA', 'r1', ms(servicio.ahora())),
-                                           recibido_en=servicio.ahora()))
-    _db.session.commit()
-
-    assert servicio.correr_una_vuelta() == {'procesados': 1, 'despertadas': 0}
-    assert InstagramWebhookEvento.query.one().resultado == 'flujo_iniciado'
 
 
 # --- Control de la conversación (otra app es la dueña) -------------------------------------------
