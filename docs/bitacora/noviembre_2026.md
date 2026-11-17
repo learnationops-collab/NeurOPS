@@ -533,3 +533,8 @@
 ### 16/11/2026 · El cash neto del tablero del closer usa el neto real de cada pago
 - El tablero del closer pasaba el cash a neto con la comisión promedio de la pasarela para todos los pagos; Analizar usa lo que entró de verdad cuando el pago está verificado. En los meses ya verificados el cash neto por closer no coincidía entre las dos pantallas. Ahora el tablero usa el mismo neto que Analizar ([closer_service.py](../../app/services/closer_service.py), `commission_service.cash_neto`). El bruto y los conteos no cambian.
 - Producción, octubre: Jean Carlo $13.866,31 → $13.928,05; Facundo $2.200,38 → $2.183,43; Marlon Garcia $1.195,86 → $1.149,60; equipo $17.262,54 → $17.261,08. Noviembre no cambia (todavía sin pagos verificados).
+
+### 16/11/2026 · Discord: el texto que acompaña a cada imagen queda en una línea
+- Los reportes diarios de closer, triage y setter mandaban varias líneas con separadores y cifras que ya están en la imagen. Ahora el texto es una línea: título, nombre, fecha y la mención ([closer.py](../../app/api/public/closer.py), [triage.py](../../app/api/public/triage.py), [setter.py](../../app/api/setter.py), [booking_avisos.py](../../app/services/booking_avisos.py)). Las imágenes no cambian.
+- Reporte nuevo del setter: el resumen completo en texto sale solo si la tarjeta no se puede dibujar ([setter_reporte_discord.py](../../app/services/setter_reporte_discord.py), `texto_corto`).
+- Pase de triage a closing: el aviso ya no repite la nota entera como texto; queda el resumen en la imagen y la nota completa en la ficha ([avisos_discord.py](../../app/agendas_v2/avisos_discord.py)).
