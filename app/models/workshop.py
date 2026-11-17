@@ -84,6 +84,10 @@ class WorkshopEvent(db.Model):
     meet_url = db.Column(db.String(300), nullable=True)
     whatsapp_url = db.Column(db.String(300), nullable=True)
 
+    # 'frio' (anuncios a quien no sigue la cuenta) · 'caliente' (a quien ya la sigue); null = sin tipo
+    # (los talleres anteriores al 17/11/2026). Los grupos por conjunto son `grupos` (`WorkshopGrupo`).
+    tipo = db.Column(db.String(10), nullable=True)
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # --- Inversión, CPM, CPC y clics: de Meta si hay, si no los cargados a mano ---
@@ -272,6 +276,8 @@ class WorkshopEvent(db.Model):
             "inicio_at": (self.inicio_at.isoformat() + 'Z') if self.inicio_at else None,
             "meet_url": self.meet_url,
             "whatsapp_url": self.whatsapp_url,
+            "tipo": self.tipo,
+            "grupos": len(self.grupos),
 
             # Calculadas
             "impresiones": round(self.impresiones, 2),
