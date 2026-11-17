@@ -130,13 +130,22 @@ def programar_semanal(inicio_local, nombre_zona, semanas, meet_url, whatsapp_url
     return creados, existentes
 
 
-def proximos_publicos(ahora=None):
+def proximos_publicos(ahora=None, utm=None):
     """Lo que leen las landings: talleres con hora desde hace una semana, en orden.
 
     Un taller sin link hereda el del anterior que lo tenga (como se hacía en el CSV, donde se
     repetía el mismo Meet semana a semana): mejor el grupo de la semana pasada que ninguno.
+
+    `utm` son los UTM de la visita (`utm_term`, `utm_content`, `utm_campaign`). Con alguno, `whatsapp`
+    es el grupo del conjunto de anuncios que la trajo, si ese taller lo tiene (ADR-W146), y se suma
+    `grupo` (su código o nombre; None = el general). Sin UTM la respuesta es la de siempre.
     """
     ahora = ahora or datetime.utcnow()
+    utm = {k: v for k, v in (utm or {}).items() if v}
+    elegir = None
+    if utm:
+        from app.services import workshop_grupos_service
+        elegir = workshop_grupos_service.selector(**utm)
     eventos = (WorkshopEvent.query
                .filter(WorkshopEvent.inicio_at.isnot(None))
                .order_by(WorkshopEvent.inicio_at)
@@ -148,11 +157,17 @@ def proximos_publicos(ahora=None):
         whatsapp = ev.whatsapp_url or whatsapp
         if ev.inicio_at < ahora - VENTANA_PASADA:
             continue
-        salida.append({
+        fila = {
             'inicio': ev.inicio_at.isoformat() + 'Z',
             'meet': meet,
             'whatsapp': whatsapp,
-        })
+        }
+        if elegir:
+            grupo = elegir(ev)
+            if grupo:
+                fila['whatsapp'] = grupo.whatsapp_url
+            fila['grupo'] = (grupo.codigo or grupo.nombre) if grupo else None
+        salida.append(fila)
     return salida
 
 
