@@ -1,6 +1,7 @@
 // Lo que el Triage Dashboard (diseño de Claude Design, 30/10/2026) calcula de `GET /api/triage/metricas`:
 // los estados de las llamadas, el embudo con su cuello de botella y el estado de cada lead del reporte.
 
+import { MOTIVOS, SIN_MOTIVO } from '../../../../utils/motivosTriage';
 import { destinoDe, filtroDe } from '../../../triage/components/triageFiltros';
 
 export const pct = (a, b) => (b ? Math.round((a / b) * 1000) / 10 : 0);
@@ -107,3 +108,12 @@ export const diasDe = (porDia = [], persona = null) => {
 };
 
 export const iniciales =(nombre) => (nombre || '?').split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join('');
+
+/** Por qué no pasaron a closing los que no califican (ADR-W151): una fila por motivo, de mayor a menor, con su
+ *  parte del total. «Sin motivo» (reportadas antes del cambio) va al final y solo si hay alguna. */
+export function motivosDe(m) {
+    const fila = (x) => ({ clave: x.valor, texto: x.corto, n: m[`motivo_${x.valor}`] || 0, filtro: `motivo_${x.valor}` });
+    const sinMotivo = fila(SIN_MOTIVO);
+    const filas = [...MOTIVOS.map(fila).sort((a, b) => b.n - a.n), ...(sinMotivo.n ? [sinMotivo] : [])];
+    return filas.map((f) => ({ ...f, pct: pct(f.n, m.descalificados) }));
+}

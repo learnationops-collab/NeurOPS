@@ -75,7 +75,10 @@ export default function Tarjeta({ f, puedeEditar, borrando, clonando = false, on
                             <IconButton label={`Clonar ${f.nombre}`} icon={<Copy />} size="sm" data-tip="Clonar|Una copia como borrador"
                                 disabled={clonando} onClick={() => onClonar(f)} />
                         )}
-                        <Button icon={puedeEditar ? <Pencil /> : <Eye />} onClick={() => onAbrir(f.id)}>{puedeEditar ? 'Editar' : 'Ver'}</Button>
+                        <Button icon={puedeEditar ? <Pencil /> : <Eye />} onClick={() => onAbrir(f.id)}
+                            data-tip={!puedeEditar && f.version ? 'Cambiar la estructura|Queda pendiente hasta que la aprueben' : undefined}>
+                            {puedeEditar ? 'Editar' : f.version ? 'Cambiar estructura' : 'Ver'}
+                        </Button>
                         {/* Solo los textos de lo publicado: lo que puede tocar el setter. */}
                         {f.version && !puedeEditar && <Button icon={<Type />} onClick={() => onEditarMensajes(f.id)}>Editar mensajes</Button>}
                     </div>

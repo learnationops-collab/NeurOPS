@@ -1,8 +1,9 @@
 // El menú del rayito (o «/» en la caja): las variables de la persona, los links de agenda del setter, las
-// respuestas rápidas del equipo (con sus variables ya completadas) y los pasos del flujo. Un paso lo manda el
+// respuestas rápidas del equipo (con sus variables ya completadas), los audios del equipo (tocar uno lo manda,
+// `onAudio`; sin él, con la ventana cerrada, no aparecen) y los pasos del flujo. Un paso lo manda el
 // bot y el flujo sigue desde ahí (abre «Continuar desde…» con ese paso elegido).
 import { useEffect, useState } from 'react';
-import { Bot, Link2, Plus, Trash2 } from 'lucide-react';
+import { Bot, Link2, Mic, Plus, Trash2 } from 'lucide-react';
 import useEnPantalla from '../../../components/ui/useEnPantalla';
 import { Button, Input, LinkButton, Modal, ModalHeader, TextArea, toast } from '../../../components/standard';
 import api from '../../../services/api';
@@ -38,10 +39,11 @@ export function NuevaRapida({ onCreada, onCerrar }) {
     );
 }
 
-export default function MenuRayo({ contacto, filtro, onTexto, onPaso, onNueva }) {
+export default function MenuRayo({ contacto, filtro, onTexto, onPaso, onNueva, onAudio }) {
     const pop = useEnPantalla();
     const [rapidas, setRapidas] = useState(null);
     const [pasos, setPasos] = useState(null);
+    const [audios, setAudios] = useState([]);
     // Los links de agenda del setter, a mano en la conversación (Sales Team, 07/11/2026). Quien no es setter
     // no tiene: el pedido falla y la sección no aparece.
     const [links, setLinks] = useState([]);
@@ -49,6 +51,7 @@ export default function MenuRayo({ contacto, filtro, onTexto, onPaso, onNueva })
         inboxApi.rapidas().then(setRapidas).catch(() => setRapidas([]));
         inboxApi.pasos(contacto.id).then(setPasos).catch(() => setPasos({ pasos: [] }));
     }, [contacto.id]);
+    useEffect(() => { if (onAudio) inboxApi.audios().then(setAudios).catch(() => setAudios([])); }, [onAudio]);
     useEffect(() => {
         api.get('/setter/agendas-links').then((r) => setLinks(Array.isArray(r?.data?.links) ? r.data.links : []), () => {});
     }, []);
@@ -57,6 +60,7 @@ export default function MenuRayo({ contacto, filtro, onTexto, onPaso, onNueva })
     const okV = variablesDe(contacto).filter(([k]) => !f || k.includes(f));
     const okL = links.filter((l) => !f || 'link agenda'.includes(f) || rotuloDeLink(l).toLowerCase().includes(f));
     const okR = (rapidas || []).filter((r) => !f || r.atajo.includes(f) || r.titulo.toLowerCase().includes(f));
+    const okA = onAudio ? audios.filter((a) => !f || 'audio'.includes(f) || a.nombre.toLowerCase().includes(f)) : [];
     const okP = (pasos?.pasos || []).filter((p) => !f || (p.nombre || '').toLowerCase().includes(f) || `paso ${p.numero}`.includes(f));
     const borrar = async (r) => {
         try {
@@ -93,6 +97,12 @@ export default function MenuRayo({ contacto, filtro, onTexto, onPaso, onNueva })
                 </div>
             ))}
             <LinkButton icon={<Plus size={13} />} onClick={onNueva}>Nueva respuesta rápida</LinkButton>
+            {okA.length > 0 && <span className="t-rotulo">Audios · tocá uno para mandarlo</span>}
+            {okA.map((a) => (
+                <button key={a.id} type="button" className="cv-rayo-op" onClick={() => onAudio(a)}>
+                    <b><Mic size={13} aria-hidden="true" />{a.nombre}</b><span>{a.autor ? `subido por ${a.autor}` : 'Audio del equipo'}</span>
+                </button>
+            ))}
             {okP.length > 0 && <span className="t-rotulo">Pasos de {pasos.flujo} · el bot sigue desde ahí</span>}
             {okP.map((p) => (
                 <button key={p.id} type="button" className="cv-rayo-op" onClick={() => onPaso(p.id)}>

@@ -163,9 +163,21 @@ def start_scheduler(app):
             except Exception as e:
                 logger.error(f"[ReminderScheduler] Error publicando las llamadas del día: {e}")
 
+    def _reportes_faltantes():
+        with app.app_context():
+            from app.services.discord_avisos.reportes_faltantes import publicar
+            try:
+                if not soy_lider(CLAVE_DEL_SCHEDULER):
+                    return
+                n = publicar()
+                logger.info(f"[ReminderScheduler] Reportes faltantes avisados en #reportes: {n} personas")
+            except Exception as e:
+                logger.error(f"[ReminderScheduler] Error avisando los reportes faltantes: {e}")
+
     from datetime import datetime, timedelta
 
     from app.agendas_v2.movidas import MINUTOS as MOVIDAS_MINUTOS
+    from app.services.discord_avisos.reportes_faltantes import HORA_UTC as REPORTES_HORA_UTC
     from app.services.discord_avisos.llamadas_del_dia import HORA_UTC as LLAMADAS_HORA_UTC
     from app.services.origen_service import MINUTOS as ORIGENES_MINUTOS
     from app.services.notas_meet.sincronizar import MINUTOS as NOTAS_MEET_MINUTOS
@@ -183,6 +195,8 @@ def start_scheduler(app):
     # Una vez por día; si el proceso arranca hasta 30 min tarde (un deploy), sale igual.
     _scheduler.add_job(_llamadas_del_dia, 'cron', hour=LLAMADAS_HORA_UTC, minute=0, timezone='UTC',
                        id='llamadas_del_dia', misfire_grace_time=1800)
+    _scheduler.add_job(_reportes_faltantes, 'cron', hour=REPORTES_HORA_UTC, minute=0, timezone='UTC',
+                       id='reportes_faltantes', misfire_grace_time=1800)
     if con_avisos:
         # next_run_time=ahora: corre una vez apenas arranca el proceso (inofensivo —
         # send_due_reminders solo manda lo que ya llegó a su hora y no repite en el día) para no

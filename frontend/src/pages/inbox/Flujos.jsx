@@ -9,6 +9,7 @@ import EditorMensajes from './flujos/EditorMensajes';
 import { ESTADOS } from './estadoFlujo';
 import NuevoFlujo from './flujos/NuevoFlujo';
 import Plantillas from './flujos/Plantillas';
+import Propuestas from './flujos/Propuestas';
 import Tarjeta from './flujos/Tarjeta';
 import { inboxApi } from './api';
 import { recordado, recordar } from './recuerdo';
@@ -36,11 +37,25 @@ export default function Flujos({ puedeEditar }) {
     }, []);
     useEffect(() => { cargar(); }, [cargar]);
 
+    // El setter abre lo publicado para proponer cambios de estructura (ADR-W147); sin versión, solo lo mira.
     const abrir = async (id, nodo = null) => {
         try {
+            if (!puedeEditar) {
+                const f = await inboxApi.paraProponer(id).catch(() => null);
+                if (f) { setAbierto({ flujo: f, nodo, modo: 'proponer' }); return; }
+            }
             setAbierto({ flujo: await inboxApi.flujo(id), nodo });
         } catch {
             toast('No se pudo abrir el flujo', 'error');
+        }
+    };
+    const abrirPropuesta = async (pid) => {
+        try {
+            const d = await inboxApi.propuesta(pid);
+            const revisar = puedeEditar && d.propuesta.estado === 'pendiente';
+            setAbierto({ flujo: d.flujo, nodo: null, modo: revisar ? 'revisar' : undefined, propuesta: d.propuesta, soloVer: !revisar });
+        } catch {
+            toast('No se pudo abrir la propuesta', 'error');
         }
     };
     const borrar = async (flujo) => {
@@ -81,8 +96,8 @@ export default function Flujos({ puedeEditar }) {
     if (textos) return <EditorMensajes id={textos} onVolver={() => { setTextos(null); cargar(); }} />;
     if (abierto) {
         return (
-            <EditorFlujo flujoInicial={abierto.flujo} nodoInicial={abierto.nodo} lectura={!puedeEditar}
-                onVolver={() => { setAbierto(null); cargar(); }} />
+            <EditorFlujo flujoInicial={abierto.flujo} nodoInicial={abierto.nodo} lectura={!puedeEditar || !!abierto.soloVer}
+                modo={abierto.modo} propuesta={abierto.propuesta} onVolver={() => { setAbierto(null); cargar(); }} />
         );
     }
 
@@ -138,6 +153,7 @@ export default function Flujos({ puedeEditar }) {
                     )}
                 </div>
             </HeaderActions>
+            <Propuestas key={flujos?.length} onAbrir={abrirPropuesta} />
             {cuerpo}
             {creando !== null && (
                 <NuevoFlujo plantillaInicial={creando} onCerrar={() => setCreando(null)}

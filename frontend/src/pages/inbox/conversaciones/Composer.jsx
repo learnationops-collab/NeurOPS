@@ -1,14 +1,18 @@
-// La caja de abajo del chat, en tres modos: Chat, Nota interna (el lead no la ve) y Tarea. Escribir al
-// lead desde acá se habilita con el corte de Kommo: por ahora el texto se arma (respuestas rápidas,
-// variables) y se copia para pegarlo en Kommo. Los pasos del flujo sí salen: los manda el bot.
+// La caja de abajo del chat, en tres modos: Chat, Nota interna (el lead no la ve) y Tarea. En Chat el
+// mensaje (o un audio del equipo) sale por Instagram a nombre de quien lo manda (17/11/2026); los pasos del
+// flujo los manda el bot. Ctrl+Enter envía.
 import { useEffect, useRef, useState } from 'react';
-import { CalendarCheck, Copy, MessageSquare, Mic, Send, StickyNote, Zap } from 'lucide-react';
+import { AlarmClock, CalendarCheck, MessageSquare, Mic, Send, Sparkles, StickyNote, Zap } from 'lucide-react';
 import { Button, IconButton, Input, Segmented, Select, TextArea, toast } from '../../../components/standard';
+import { abrirLearnito } from '../../../sesion/learnito';
+import { useLearnito } from '../../../sesion/LearnitoContext';
 import { inboxApi } from '../api';
 import Audios from './Audios';
 import MenuRayo, { NuevaRapida } from './MenuRayo';
 import ModalFlujo from './ModalFlujo';
+import { ListaSeguimientos, ProgramarSeguimiento } from './Seguimientos';
 import useEquipo from './useEquipo';
+import { ventanaDe } from './ventana';
 
 const MODOS = [
     { value: 'chat', label: 'Chat', icon: <MessageSquare size={13} /> },
@@ -51,13 +55,19 @@ function FormTarea({ contacto, yo, onHecho }) {
     );
 }
 
-export default function Composer({ contacto, ejecucion, yo, onCambio }) {
+// El lead de la conversación de Learnito abierta desde el Inbox: preguntar por otro arranca una nueva.
+const conversacionDeLearnito = { contacto: null };
+
+export default function Composer({ contacto, ejecucion, seguimientos, yo, onCambio }) {
     const [modo, setModo] = useState('chat');
     const [texto, setTexto] = useState('');
     const [rayo, setRayo] = useState(false);
     const [audios, setAudios] = useState(false);
     const [nueva, setNueva] = useState(false);
     const [paso, setPaso] = useState(null);
+    const [programar, setProgramar] = useState(false);
+    const [preguntando, setPreguntando] = useState(false);
+    const learnito = useLearnito();
     const [pausar, setPausar] = useState(true);
     const caja = useRef(null);
     const barra = texto.startsWith('/');
@@ -80,26 +90,55 @@ export default function Composer({ contacto, ejecucion, yo, onCambio }) {
             toast(e.response?.data?.message || 'No se pudo guardar la nota', 'error');
         }
     };
-    const copiar = async () => {
+    const [enviando, setEnviando] = useState(false);
+    const ventana = ventanaDe(contacto.ultimo_entrante_en);
+    const enviar = async (cuerpo) => {
+        setEnviando(true);
         try {
-            await navigator.clipboard.writeText(texto);
-            toast('Copiado: pegalo en Kommo');
-        } catch {
-            toast('No se pudo copiar', 'error');
+            await inboxApi.escribir(contacto.id, { ...cuerpo, pausar });
+            if (cuerpo.texto) setTexto('');
+            onCambio();
+            return true;
+        } catch (e) {
+            toast(e.response?.data?.message || 'No se pudo enviar', 'error');
+            return false;
+        } finally {
+            setEnviando(false);
         }
     };
+    const puedeEnviar = ventana.estado !== 'cerrada' && !enviando;
+    // Abre Learnito (el mismo cerebro de siempre) con el contexto del lead. Lo escrito en la caja va como lo que se
+    // quiere saber. Con otro lead, o con la conversación agotada, arranca otra conversación de Learnito.
+    const preguntarALearnito = async () => {
+        setPreguntando(true);
+        try {
+            const p = await inboxApi.preguntaLearnito(contacto.id, texto.startsWith('/') ? '' : texto);
+            const nueva = conversacionDeLearnito.contacto !== contacto.id || Boolean(learnito.agotada);
+            conversacionDeLearnito.contacto = contacto.id;
+            abrirLearnito();
+            const error = await learnito.enviar(p.pregunta, p.muestra, { nueva });
+            if (error) toast(error, 'error');
+        } catch (e) {
+            toast(e.response?.data?.message || 'No se pudo preguntar a Learnito', 'error');
+        } finally {
+            setPreguntando(false);
+        }
+    };
+    const audioDelMenu = async (a) => { setRayo(false); setTexto((x) => (x.startsWith('/') ? '' : x)); if (await enviar({ audio_id: a.id })) toast(`Audio enviado: ${a.nombre}`); };
 
     return (
         <div className={`cv-composer cv-composer--${modo}`} ref={caja}>
+            <ListaSeguimientos items={seguimientos} onCambio={onCambio} />
             {menu && (
                 <MenuRayo contacto={contacto} filtro={barra ? texto.slice(1) : ''} onTexto={insertar}
-                    onPaso={(id) => { setRayo(false); setTexto(''); setPaso(id); }} onNueva={() => { setRayo(false); setNueva(true); }} />
+                    onPaso={(id) => { setRayo(false); setTexto(''); setPaso(id); }} onNueva={() => { setRayo(false); setNueva(true); }}
+                    onAudio={puedeEnviar ? audioDelMenu : null} />
             )}
             <div className="cv-comp-cab">
                 <Segmented size="sm" label="Modo" value={modo} onChange={(m) => { setModo(m); setRayo(false); }} options={MODOS} />
                 {modo === 'chat' && (
-                    <label className="cv-comp-check" data-tip="Al enviar|Se habilita con el corte de Kommo">
-                        <input type="checkbox" checked={pausar} onChange={(e) => setPausar(e.target.checked)} disabled />Pausar el bot al enviar
+                    <label className="cv-comp-check" data-tip="Al enviar|El bot deja de hablarle 24 h y corta el flujo abierto">
+                        <input type="checkbox" checked={pausar} onChange={(e) => setPausar(e.target.checked)} />Pausar el bot al enviar
                     </label>
                 )}
             </div>
@@ -109,22 +148,28 @@ export default function Composer({ contacto, ejecucion, yo, onCambio }) {
                         <>
                             <IconButton size="sm" label="Respuestas rápidas, variables y pasos del flujo" data-tip="Respuestas rápidas y pasos|O escribí /" pressed={rayo} icon={<Zap size={15} />} onClick={() => setRayo((r) => !r)} />
                             <IconButton size="sm" label="Audios" data-tip="Audios del equipo" icon={<Mic size={15} />} onClick={() => setAudios(true)} />
+                            {learnito && (
+                                <IconButton size="sm" label="Preguntar a Learnito" data-tip="Preguntar a Learnito|Qué info del programa te sirve para este lead. Si escribiste algo, es lo que querés saber" icon={<Sparkles size={15} />}
+                                    disabled={preguntando || learnito.enviando} onClick={preguntarALearnito} />
+                            )}
+                            <IconButton size="sm" label="Seguimiento si no responde" data-tip="Seguimiento|Sale solo si no responde en el tiempo que elijas" icon={<AlarmClock size={15} />}
+                                disabled={ventana.estado === 'cerrada'} onClick={() => setProgramar(true)} />
                         </>
                     )}
                     <TextArea value={texto} onChange={(e) => setTexto(e.target.value)} aria-label={modo === 'nota' ? 'Nota interna' : 'Mensaje'}
-                        placeholder={modo === 'nota' ? 'Nota para el equipo: el lead no la ve' : 'Armá el mensaje: / para respuestas rápidas y pasos del flujo'} />
+                        onKeyDown={(e) => { if (modo === 'chat' && e.key === 'Enter' && (e.ctrlKey || e.metaKey) && texto.trim() && puedeEnviar) enviar({ texto }); }}
+                        placeholder={modo === 'nota' ? 'Nota para el equipo: el lead no la ve' : 'Escribile al lead: / para respuestas rápidas y pasos del flujo'} />
                     {modo === 'nota'
                         ? <Button variant="primary" disabled={!texto.trim()} onClick={guardarNota}>Guardar</Button>
-                        : (
-                            <>
-                                <IconButton size="sm" label="Copiar" data-tip="Copiar|Para pegarlo en Kommo" icon={<Copy size={14} />} disabled={!texto.trim()} onClick={copiar} />
-                                <Button variant="primary" icon={<Send />} disabled data-tip="Enviar|Se habilita con el corte de Kommo">Enviar</Button>
-                            </>
-                        )}
+                        : <Button variant="primary" icon={<Send />} disabled={!texto.trim() || !puedeEnviar} data-tip="Enviar|Ctrl+Enter" onClick={() => enviar({ texto })}>Enviar</Button>}
                 </div>
             )}
-            {modo === 'chat' && <p className="t-cap mut40 cv-bloqueado">Escribirle al lead desde acá se habilita con el corte de Kommo. Mientras, copiá y pegá en Kommo.</p>}
-            {audios && <Audios onCerrar={() => setAudios(false)} />}
+            {modo === 'chat' && ventana.aviso && <p className="t-cap mut40 cv-bloqueado">{ventana.aviso}</p>}
+            {audios && <Audios onCerrar={() => setAudios(false)} onMandar={puedeEnviar ? async (a) => { if (await enviar({ audio_id: a.id })) setAudios(false); } : null} />}
+            {programar && (
+                <ProgramarSeguimiento contacto={contacto} textoInicial={texto.startsWith('/') ? '' : texto} pausar={pausar}
+                    onCerrar={() => setProgramar(false)} onHecho={() => { setProgramar(false); setTexto(''); onCambio(); }} />
+            )}
             {nueva && <NuevaRapida onCerrar={() => setNueva(false)} onCreada={() => { setNueva(false); toast('Respuesta rápida guardada'); }} />}
             {paso && (
                 <ModalFlujo accion="continuar" contacto={contacto} ejecucion={ejecucion} nodoInicial={paso}

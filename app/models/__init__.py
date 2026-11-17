@@ -17,6 +17,7 @@ from .liquidez import FinanceLiquidity
 from .triage_report import TriageDailyReport
 from .triage_tracker import TriageTrackerReport
 from .workshop import WorkshopEvent, WorkshopGoals, WorkshopAction
+from .workshop_grupo import WorkshopGrupo
 from .workshop_lead import WorkshopLead
 from .landing_session import LandingSession
 from .alert import AlertRule, Alert  # Alertas se retiró el 10/10/2026; las tablas se conservan (ver alert.py)
@@ -61,7 +62,7 @@ __all__ = [
     'TeamMember', 'MonthlyPayroll', 'MonthlyPaymentMethodBalance', 'MonthlySaving',
     'ConciliacionCarga', 'ConciliacionMovimiento', 'ConciliacionRevision',
     'WorkshopEvent',
-    'WorkshopGoals', 'WorkshopAction',
+    'WorkshopGoals', 'WorkshopAction', 'WorkshopGrupo',
     'WorkshopLead', 'LandingSession',
     'AlertRule', 'Alert',
     'InstallmentPlan', 'Sale', 'SALE_KINDS', 'SALE_STATUSES',

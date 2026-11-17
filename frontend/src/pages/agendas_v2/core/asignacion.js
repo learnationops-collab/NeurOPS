@@ -5,7 +5,6 @@ import { TZ_DEF } from './catalogos';
 import { buscar, closers, esCloser, esTriage, horasSemana, ord, sesionDe } from './datos';
 import { GENERICA, agendaOpt, slotsPersona } from './disponibilidad';
 import { calificar, grupoPorReglas } from './formulario';
-import { claveDia } from './tiempo';
 
 const DIA = 86400000;
 // "Llenar en orden": un closer está lleno cuando no le queda ningún horario libre en esta ventana.
@@ -78,38 +77,23 @@ export function conMinimo(d, g, x, slotsBase, enDia, conBase) {
 // Si en los días del evento no queda ningún horario, se suma un día por vez hasta encontrar uno: el lead
 // nunca se queda sin agendar porque la ventana se llenó. Tope de días agregados.
 export const DIAS_EXTRA_MAX = 14;
-// Un día con menos horarios que esto está virtualmente lleno: no cuenta como día de la ventana (Santi, 29/10/2026).
-export const MIN_HORARIOS_DIA = 3;
-
-// Cuántos días (en la zona del equipo) tienen MIN_HORARIOS_DIA horarios o más.
-export function diasConLugar(slots) {
-    const porDia = new Map();
-    for (const s of slots) { const k = claveDia(s.t, TZ_DEF); porDia.set(k, (porDia.get(k) || 0) + 1); }
-    return [...porDia.values()].filter(n => n >= MIN_HORARIOS_DIA).length;
-}
-
-// Como asignar(), con la ventana «N días» contada en días con lugar (diasConLugar): si el grupo del lead tiene
-// menos de N, se abre un día más (y otro, hasta DIAS_EXTRA_MAX). Se abren días antes de pasar a otro grupo:
-// recién si el grupo no tiene ningún horario en todos esos días, desborda como siempre (y si tampoco hay
-// nadie, sigue abriendo días). `diasExtra` dice cuántos se abrieron.
+// Como asignar(), con la ventana «N días» exacta: se ofrecen solo esos días aunque tengan pocos horarios
+// (ADR-W148). Si el grupo del lead no tiene ningún horario en ellos, se abre un día más (y otro, hasta
+// DIAS_EXTRA_MAX) antes de pasar a otro grupo; recién si no hay nada en todos esos días, desborda (y si
+// tampoco hay nadie, sigue abriendo días). `diasExtra` dice cuántos se abrieron.
+// Un evento de persona fija no desborda: su ventana es la que eligió esa persona, sin días extra (ADR-W147).
 export function asignacion(ctx, d, opts = {}) {
     const ag = ctx.ag;
-    if (!ag || !ag.reservas || ag.reservas.modo !== 'dias') return asignar(ctx, d, opts);
+    if (!ag || !ag.reservas || ag.reservas.modo !== 'dias' || ctx.persona) return asignar(ctx, d, opts);
     const n = ag.reservas.n || 0;
     const con = (extra, mas = {}) => {
         const r = asignar(extra ? { ...ctx, ag: { ...ag, reservas: { ...ag.reservas, n: n + extra } } } : ctx, d, { ...opts, ...mas });
         return extra ? { ...r, diasExtra: extra } : r;
     };
-    let propio = null;
     for (let extra = 0; extra <= DIAS_EXTRA_MAX; extra++) {
         const r = con(extra, { sinDesborde: true });
-        if (r.url || r.no) return r;
-        if (r.slots.length) {
-            propio = r;
-            if (diasConLugar(r.slots) >= Math.max(n, 1)) break;
-        }
+        if (r.url || r.no || r.slots.length) return r;
     }
-    if (propio) return propio;
     let primero = null;
     for (let extra = 0; extra <= DIAS_EXTRA_MAX; extra++) {
         const r = con(extra);

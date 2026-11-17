@@ -6,9 +6,13 @@ agendas por canal, cualificación, apertura, bienvenidas, el embudo, los follow-
 los avisos. El texto va completo en el mensaje aunque la tarjeta no se pueda dibujar (la imagen
 depende de un Chromium del servidor): el reporte llega igual.
 """
+import logging
+
 from markupsafe import Markup, escape
 
 from app.services import setter_reporte_v2
+
+logger = logging.getLogger(__name__)
 
 # Los colores de cada canal: los del formulario (tema oscuro, `--ch-*`).
 COLOR = {'anuncios': '#FF3FA4', 'inbound': '#6F7BFF', 'bienvenidas': '#9A7BE0', 'tot': '#C9B8FF'}
@@ -207,10 +211,53 @@ def datos_de_la_imagen(stat):
     }
 
 
+# Lo que pasó con las agendas del setter: los últimos días por fecha de creación (Mario, 16/11/2026).
+DIAS_AGENDAS = 7
+
+
+def resultado_de_agendas(stat, dias=DIAS_AGENDAS):
+    """Qué pasó con las agendas que el setter generó en los últimos `dias` hasta el día del reporte:
+    las mismas filas y la misma base que Analizar con Setters (`setter_analitica.despues_de`). El
+    paso a closing es de los que asistieron al triage: cuántos llegaron a un closer."""
+    from datetime import timedelta
+
+    from app.services.comercial_service import ComercialService
+    from app.services.setter_analitica import despues_de
+
+    filas = ComercialService.generadas(stat.date - timedelta(days=dias - 1), stat.date, setter_id=stat.setter_id)
+    triage = [f for f in filas if f.get('es_triage') and f.get('asistio')]
+    pasaron = sum(1 for f in triage if f.get('closing'))
+    return {**despues_de(filas), 'triage_asistieron': len(triage), 'pasaron': pasaron,
+            'paso_closing': pct(pasaron, len(triage))}
+
+
+def linea_de_agendas(stat):
+    """Asistieron, cancelaron, reprogramaron, no show y paso a closing de sus agendas, en una línea
+    (Estrategia 16/11/2026). None si no se pudo calcular: el reporte sale igual."""
+    try:
+        r = resultado_de_agendas(stat)
+    except Exception as e:
+        logger.error(f"[Discord Setter] Sin resultado de agendas: {e}")
+        return None
+    if not r['ocurridas']:
+        return f"📊 Sus agendas ({DIAS_AGENDAS} días): {r['generadas']} generadas, ninguna ocurrió todavía"
+    return (
+        f"📊 Sus agendas ({DIAS_AGENDAS} días, {r['ocurridas']} ya ocurrieron): "
+        f"asistieron {r['asistieron']} ({fmt_pct(r['show_up'])}) · cancelaron {r['canceladas']} · "
+        f"reprogramaron {r['reagendadas']} · no show {r['no_show']} · "
+        f"a closing {r['pasaron']}/{r['triage_asistieron']} ({fmt_pct(r['paso_closing'])})"
+    )
+
+
 def texto_corto(stat, setter_name):
-    """El mensaje que acompaña la tarjeta: una línea, el detalle ya está en la imagen."""
-    no_laborable = ' · día no laborable' if setter_reporte_v2.leer(stat)['no_laborable'] else ''
-    return f"🚀 **Reporte de setter** · {setter_name} · {stat.date.strftime('%d/%m/%Y')}{no_laborable} @everyone"
+    """El mensaje que acompaña la tarjeta: una línea y, debajo, qué pasó con sus agendas (eso no
+    está en la imagen)."""
+    no_laborable = setter_reporte_v2.leer(stat)['no_laborable']
+    linea = f"🚀 **Reporte de setter** · {setter_name} · {stat.date.strftime('%d/%m/%Y')}"
+    if no_laborable:
+        return linea + " · día no laborable @everyone"
+    agendas = linea_de_agendas(stat)
+    return linea + (f"\n{agendas}" if agendas else '') + " @everyone"
 
 
 def texto_de_discord(stat, setter_name):
@@ -256,6 +303,9 @@ def texto_de_discord(stat, setter_name):
     avisos = setter_reporte_v2.avisos(lectura)
     if avisos:
         lineas.append('⚠️ **Avisos:** ' + ' · '.join(a['msg'] for a in avisos))
+    agendas = linea_de_agendas(stat)
+    if agendas:
+        lineas.append(agendas)
     reflexion = lectura['reflexion']
     if reflexion['flujo_trabajo'].strip():
         lineas.append(f"🧭 **Flujo de trabajo:** {_recortar(reflexion['flujo_trabajo'])}")

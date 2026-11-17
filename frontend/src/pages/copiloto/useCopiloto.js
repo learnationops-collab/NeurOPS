@@ -29,12 +29,15 @@ export function useCopiloto() {
     }, []);
 
     // Una pregunta o un botón. `muestra` es lo que se ve del lado de la persona. Devuelve null o el error.
-    const alCerebro = useCallback(async (pedido, muestra) => {
-        const anteriores = mensajes;
+    // `nueva`: arranca otra conversación en el mismo pedido (el Inbox, con otro lead; reiniciar() + enviar() en el
+    // mismo clic usaría la conversación vieja, porque el estado todavía no cambió).
+    const alCerebro = useCallback(async (pedido, muestra, nueva = false) => {
+        const anteriores = nueva ? [] : mensajes;
+        if (nueva) { setCalificacion(null); setUso((u) => (u ? { ...u, conversacion: null } : u)); }
         setMensajes([...anteriores, { role: 'user', content: muestra }]);
         setEnviando(true);
         try {
-            const { data } = await api.post('/copiloto/learnito', { ...pedido, conversacion_id: conversacion || undefined });
+            const { data } = await api.post('/copiloto/learnito', { ...pedido, conversacion_id: (!nueva && conversacion) || undefined });
             setConversacion(data.conversacion_id);
             setMensajes([...anteriores, { role: 'user', content: muestra },
                 { role: 'assistant', content: data.mensaje?.text || '', mensaje: data.mensaje, indice: data.mensaje_indice }]);
@@ -54,7 +57,8 @@ export function useCopiloto() {
     }, [mensajes, conversacion]);
 
     // `muestra` es lo que se ve: la pregunta viaja con los nombrados como "@[Nombre, id N]" (menciones.js).
-    const enviar = useCallback((texto, muestra = texto) => alCerebro({ pregunta: texto }, muestra), [alCerebro]);
+    const enviar = useCallback((texto, muestra = texto, { nueva = false } = {}) => alCerebro({ pregunta: texto }, muestra, nueva),
+        [alCerebro]);
 
     // Un botón (tipo "boton") o una opción (tipo "opcion") de la respuesta `indice` del cerebro.
     const tocar = useCallback((indice, tipo, i, texto) => alCerebro({ boton: { mensaje: indice, tipo, indice: i } }, texto),

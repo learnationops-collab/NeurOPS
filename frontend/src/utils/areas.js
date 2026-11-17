@@ -34,7 +34,7 @@ const AREAS_POR_ROL = {
     closer: ['cierres'],
     setter: ['setting', 'inbox'],
     triage: ['triage'],
-    operator: ['operaciones'],
+    operator: ['operaciones', 'inbox'],
     director_marketing: ['marketing'],
     hiring: ['talent'],
 };

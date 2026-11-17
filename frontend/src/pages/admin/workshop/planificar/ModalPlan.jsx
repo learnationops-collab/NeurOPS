@@ -10,7 +10,7 @@ import { useComportamientoModal } from '../../../../components/ui/Modal';
  *
  * Va en un portal a `body`: el velo lleva la clase del shell para tener sus tokens ahí afuera.
  */
-const ModalPlan = ({ titulo, eyebrow, onCerrar, onSubmit, pie, cerrable = true, children }) => {
+const ModalPlan = ({ titulo, eyebrow, onCerrar, onSubmit, pie, cerrable = true, className = '', children }) => {
     const panel = useRef(null);
     const id = useId();
     const { cerrar, atraparTab, propsFondo } = useComportamientoModal({ onCerrar, cerrable, panel });
@@ -18,7 +18,7 @@ const ModalPlan = ({ titulo, eyebrow, onCerrar, onSubmit, pie, cerrable = true, 
     return createPortal(
         <div className="dc-shell scrim wp-velo" {...propsFondo}>
             <form ref={panel} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby={`${id}-t`}
-                className="modal wp-modal" onKeyDown={atraparTab}
+                className={`modal wp-modal ${className}`.trim()} onKeyDown={atraparTab}
                 onSubmit={(e) => { e.preventDefault(); onSubmit?.(e); }}>
                 <div className="modal-cab wp-modal-cab">
                     <div className="wp-modal-tit">

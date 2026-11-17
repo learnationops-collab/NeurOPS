@@ -28,6 +28,8 @@
 | Pantalla | `frontend/src/pages/copiloto/` (`LearnitoChat`, `Grafico`, `LearnitoModal`, `UsoMensual`, `useCopiloto`, `useDictado`, `Markdown`) |
 | Estado global y cómo abrirlo | `frontend/src/sesion/LearnitoContext.jsx`, `frontend/src/sesion/learnito.js` (roles, `abrirLearnito`) |
 | Entrada en el menú y el dock | `frontend/src/sesion/menuSesion.js`, `frontend/src/sesion/fijadas.js` (fijado de fábrica a closers) |
+| Preguntar desde una conversación del Inbox (§9) | `app/automatizaciones/learnito_inbox.py`, `GET /api/inbox/conversaciones/<id>/learnito` (`api_learnito.py`), botón ✨ de `Composer.jsx` |
+| Material del programa, pedido a la Academia | `app/services/learnito_material.py` |
 
 ## 2. Pantalla
 
@@ -68,7 +70,7 @@ La Academia le pide a Work cada dato con `POST {op, args, quien}` y el token `AC
   - Montos: como siempre, solo admin y director comercial (`exclusion.py`). Las herramientas del closer muestran la deuda de sus clientes, como su cartera.
 - **Acciones** (`proposeAction`, `executeAction`, `actionLabel`): `comentario` (una fila en `client_comments`, como el comentario de la ficha del lead) y `aviso` (una fila en `notifications` para una persona, con el cliente asociado si lo hay). La propuesta no escribe nada; la hace quien la propuso, sobre un cliente que puede ver, al confirmar.
 - **Gráfico** (`card`): de un plan que agrupa o mide, `{title, w: {tipo, pct}, data, error}`. Respeta el alcance.
-- **Material**: Work no tiene (`findMaterial` vacío).
+- **Material** (ADR-W150): el de la Academia (Learnation Resources). `findMaterial` y las herramientas `buscar_material` y `leer_recurso` se le piden a su conector (`learnito_material.py`); las definiciones vienen de ella tal cual, recordadas 10 minutos. Sin respuesta de la Academia, Learnito de Work sigue sin material.
 
 ## 4. Herramientas
 
@@ -118,7 +120,8 @@ Sobre quien pregunta, con los mismos servicios que sus pantallas. Están para to
 | Datos de un alumno | Expediente y ficha corta | Solo la dirección (agentes pares) | Distinto |
 | Voz | Dictado y lectura en voz alta | Dictado | Falta: lectura |
 | Métricas del motor | Más: mediana, correlación, comparar grupos | `count`, `avg`, `sum`, `min`, `max`, `pct` | Falta |
-| Material académico | `buscar_material`, `leer_recurso` | No (no le toca a Work) | Distinto |
+| Material académico | `buscar_material`, `leer_recurso` | Las mismas, pedidas a la Academia (ADR-W150) | Igual |
+| Preguntar desde una conversación con un lead (setters) | No existe | El cerebro, con el contexto del lead en la pregunta (§9) | Solo Work |
 
 ### Reglas de coherencia
 
@@ -136,3 +139,11 @@ Sin orden comprometido; la prioridad la decide el usuario.
 - Más acciones (registrar un pago, delegar una tarea), siempre por el mismo camino que la ficha y con confirmación.
 - El closer en `/tablas` ahora que el motor filtra lo suyo (`tablas_required` todavía no lo deja).
 - Learnito de Cortex («Buscador con IA» sobre las transcripciones del Playbook): sigue «Pronto»; es otra pieza.
+
+## 9. Preguntar a Learnito desde una conversación del Inbox (ADR-W150)
+
+- **Qué hace:** en el chat de una conversación, el botón ✨ abre el Learnito de siempre y le pregunta qué información del programa o del material le sirve al setter para responderle a ese lead, y qué conviene preguntarle o evitar. No redacta el mensaje. Lo escrito en la caja del chat va como lo que se quiere saber («cómo le explico qué incluye Scale»).
+- **El mismo cerebro:** la pregunta la responde el cerebro de la Academia, con sus reglas de costo, tope por conversación y calificación. Work solo arma la pregunta (`learnito_inbox.pregunta`): lo que se sabe del lead, las últimas 3 notas del equipo y los últimos 20 mensajes. En el chat de Learnito se ve solo «Ayudame con @usuario»; el contexto viaja en la pregunta.
+- **Una conversación por lead:** preguntar por otro lead, o con la conversación agotada, arranca otra (`enviar(…, { nueva: true })` de `useCopiloto`); por el mismo lead, sigue la que está abierta. Con conversaciones sin calificar, el cerebro pide calificarlas antes, como siempre.
+- **El material** lo busca el cerebro con `buscar_material` (§3, Material).
+- Reemplazó a la sugerencia redactada por una llamada directa a Claude (ADR-W149), el mismo 17/11.

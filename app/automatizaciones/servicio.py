@@ -111,7 +111,16 @@ def tick(momento=None, transporte=None):
         if resumen['recuperados']:
             resumen['procesados'] += procesar_pendientes(momento)['procesados']
     resumen['despertadas'] = despertar(momento, transporte)
+    resumen['seguimientos'] = mandar_seguimientos(momento, transporte)
     return resumen
+
+
+def mandar_seguimientos(momento=None, transporte=None):
+    """Los seguimientos condicionales que ya tocan (`seguimientos.py`)."""
+    if modo() == APAGADO and transporte is None:
+        return 0
+    from app.automatizaciones import seguimientos  # usa `escribir`, que importa el motor: acá no es circular
+    return seguimientos.mandar_vencidos(_motor(transporte, momento or ahora()))
 
 
 # --- El reloj del proceso ------------------------------------------------------------------------

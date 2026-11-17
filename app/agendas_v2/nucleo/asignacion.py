@@ -2,13 +2,10 @@
 Orden: respuestas → regla → prioridad → estrategia de la prioridad → closer por horario.
 """
 
-from collections import Counter
-
 from app.agendas_v2.nucleo.datos import buscar, closers, es_closer, es_triage, horas_semana, ordenados, sesion_de
 from app.agendas_v2.nucleo.catalogos import TZ_DEF
 from app.agendas_v2.nucleo.disponibilidad import GENERICA, agenda_opt, ahora_ms, slots_persona
 from app.agendas_v2.nucleo.formulario import calificar, grupo_por_reglas
-from app.agendas_v2.nucleo.tiempo import clave_dia
 from app.agendas_v2.nucleo.util import js_truthy
 
 DIA = 86400000
@@ -18,8 +15,6 @@ VENTANA_LLENAR_DIAS = 7
 # Si en los días del evento no queda ningún horario, se suma un día por vez hasta encontrar uno: el lead
 # nunca se queda sin agendar porque la ventana se llenó. Tope de días agregados.
 DIAS_EXTRA_MAX = 14
-# Un día con menos horarios que esto está virtualmente lleno: no cuenta como día de la ventana (Santi, 29/10/2026).
-MIN_HORARIOS_DIA = 3
 
 
 def miembros_validos(d, g):
@@ -118,21 +113,16 @@ def con_minimo(d, g, x, slots_base, en_dia, con_base):
     return {'slots': [mapa[t] for t in sorted(mapa)], 'regla': regla}
 
 
-def dias_con_lugar(slots):
-    """Cuántos días (en la zona del equipo) tienen MIN_HORARIOS_DIA horarios o más."""
-    por_dia = Counter(clave_dia(s['t'], TZ_DEF) for s in slots)
-    return sum(1 for n in por_dia.values() if n >= MIN_HORARIOS_DIA)
-
-
 def asignacion(ctx, d, opts=None):
-    """Como _asignacion, con la ventana «N días» contada en días con lugar (dias_con_lugar): si el grupo del
-    lead tiene menos de N, se abre un día más (y otro, hasta DIAS_EXTRA_MAX). Se abren días antes de pasar a
-    otro grupo: recién si el grupo no tiene ningún horario en todos esos días, desborda como siempre (y si
+    """Como _asignacion, con la ventana «N días» exacta: se ofrecen solo esos días aunque tengan pocos horarios
+    (ADR-W148). Si el grupo del lead no tiene ningún horario en ellos, se abre un día más (y otro, hasta
+    DIAS_EXTRA_MAX) antes de pasar a otro grupo; recién si no hay nada en todos esos días, desborda (y si
     tampoco hay nadie, sigue abriendo días). `dias_extra` dice cuántos se abrieron. La reserva recalcula con
-    lo mismo, así que puede tomar un horario de un día abierto así."""
+    lo mismo, así que puede tomar un horario de un día abierto así.
+    Un evento de persona fija no desborda: su ventana es la que eligió esa persona, sin días extra (ADR-W147)."""
     opts = opts or {}
     ag = ctx.get('ag')
-    if not ag or (ag.get('reservas') or {}).get('modo') != 'dias':
+    if not ag or (ag.get('reservas') or {}).get('modo') != 'dias' or js_truthy(ctx.get('persona')):
         return _asignacion(ctx, d, opts)
     n = ag['reservas'].get('n') or 0
 
@@ -141,17 +131,10 @@ def asignacion(ctx, d, opts=None):
         r = _asignacion(c, d, {**opts, **mas})
         return {**r, 'dias_extra': extra} if extra else r
 
-    propio = None
     for extra in range(DIAS_EXTRA_MAX + 1):
         r = con(extra, sin_desborde=True)
-        if r.get('url') or r.get('no'):
+        if r.get('url') or r.get('no') or r['slots']:
             return r
-        if r['slots']:
-            propio = r
-            if dias_con_lugar(r['slots']) >= max(n, 1):
-                break
-    if propio:
-        return propio
     primero = None
     for extra in range(DIAS_EXTRA_MAX + 1):
         r = con(extra)

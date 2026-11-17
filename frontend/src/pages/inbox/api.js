@@ -41,6 +41,20 @@ export const inboxApi = {
     rapidas: () => api.get('/inbox/respuestas-rapidas').then((r) => r.data.respuestas),
     crearRapida: (r) => api.post('/inbox/respuestas-rapidas', r).then(datos),
     borrarRapida: (rid) => api.delete(`/inbox/respuestas-rapidas/${rid}`),
+    // Propuestas de cambios de estructura (ADR-W147): el setter propone, admin/operador/dirección aprueban.
+    paraProponer: (id) => api.get(`/inbox/flujos/${id}/para-proponer`).then(datos),
+    proponer: (id, grafo, nota) => api.post(`/inbox/flujos/${id}/propuestas`, { grafo, nota }).then(datos),
+    propuestas: () => api.get('/inbox/propuestas').then(datos),
+    propuesta: (pid) => api.get(`/inbox/propuestas/${pid}`).then(datos),
+    aprobarPropuesta: (pid, respuesta) => api.post(`/inbox/propuestas/${pid}/aprobar`, { respuesta }).then(datos),
+    rechazarPropuesta: (pid, respuesta) => api.post(`/inbox/propuestas/${pid}/rechazar`, { respuesta }).then(datos),
+    // La pregunta a Learnito con el contexto del lead (ADR-W150): `pedido` es lo escrito en la caja, si hay.
+    preguntaLearnito: (cid, pedido) => api.get(`/inbox/conversaciones/${cid}/learnito`, { params: { pedido } }).then(datos),
+    // Seguimiento condicional: `{ horas, texto | audio_id, pausar }`; sale si el lead no respondió.
+    programarSeguimiento: (cid, cuerpo) => api.post(`/inbox/conversaciones/${cid}/seguimientos`, cuerpo).then(datos),
+    cancelarSeguimiento: (sid) => api.delete(`/inbox/seguimientos/${sid}`).then(datos),
+    // Escribirle al lead: `{ texto }` o `{ audio_id }`, y `pausar` (el bot, por defecto sí).
+    escribir: (cid, cuerpo) => api.post(`/inbox/conversaciones/${cid}/escribir`, cuerpo).then(datos),
     audios: () => api.get('/inbox/audios').then((r) => r.data.audios),
     subirAudio: (form) => api.post('/inbox/audios', form).then(datos),
     archivoAudio: (aid) => api.get(`/inbox/audios/${aid}/archivo`, { responseType: 'blob' }).then(datos),

@@ -1,9 +1,12 @@
 import { useMemo, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { AlertTriangle, CalendarPlus, Check, Edit2, Loader2, MessageCircle, Radio, Trash2, Video } from 'lucide-react';
+import { AlertTriangle, CalendarPlus, Check, Edit2, Loader2, MessageCircle, Radio, Trash2, Users, Video } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../../../services/api';
+import { Button, Chip } from '../../../../components/standard';
 import { PanelCab } from '../../../comercial/components/Shared';
+import ChipTipo from '../planificar/ChipTipo';
+import ModalGruposTaller from '../planificar/ModalGruposTaller';
 import ModalPlan from '../planificar/ModalPlan';
 import { talleresPorDelante } from '../planificar/plan';
 import {
@@ -17,6 +20,9 @@ import {
  * Las landings leen de /api/public/workshops/proximos la fecha, el Google Meet y el grupo de
  * WhatsApp de cada taller. Acá se ven y se cargan en la hora de quien mira el panel; el que
  * está «en la landing» es el primero con hora que todavía no terminó.
+ *
+ * Desde el 17/11/2026 (ADR-W152) cada taller dice su tipo (frío o caliente) y cuántos grupos de
+ * WhatsApp por conjunto de anuncios tiene; «Grupos» los configura.
  */
 
 const MAX_SEMANAS = 26;
@@ -151,6 +157,7 @@ const Cuando = ({ taller }) => {
 
 const WorkshopProximosView = ({ events, onEdit, onDelete, onProgramado }) => {
     const [programando, setProgramando] = useState(false);
+    const [conGrupos, setConGrupos] = useState(null);
     const reducir = useReducedMotion();
     const ahora = new Date();
     const vigente = enLaLanding(events, ahora);
@@ -195,12 +202,23 @@ const WorkshopProximosView = ({ events, onEdit, onDelete, onProgramado }) => {
                                     </div>
                                     <p className="wp-taller-nom trunc" title={e.name}>{e.name}</p>
                                     <div className="wp-enlaces">
+                                        <ChipTipo tipo={e.tipo} aviso />
                                         <Enlace url={e.meet_url} icon={Video} nombre="Meet" heredado={i > 0} />
                                         <Enlace url={e.whatsapp_url} icon={MessageCircle} nombre="Grupo" heredado={i > 0} />
+                                        {e.grupos > 0 && (
+                                            <Chip color="var(--success)" icon={<Users aria-hidden="true" />}
+                                                data-tip="Grupos de WhatsApp por conjunto de anuncios">
+                                                {e.grupos} por conjunto
+                                            </Chip>
+                                        )}
                                     </div>
                                 </div>
 
                                 <div className="wp-taller-btns">
+                                    <Button icon={<Users aria-hidden="true" />} onClick={() => setConGrupos(e)}
+                                        aria-label={`Grupos de ${e.name}`}>
+                                        Grupos
+                                    </Button>
                                     <button type="button" className="ibtn ibtn--sm" onClick={() => onEdit(e)} title="Editar taller" aria-label={`Editar ${e.name}`}>
                                         <Edit2 aria-hidden="true" />
                                     </button>
@@ -216,6 +234,9 @@ const WorkshopProximosView = ({ events, onEdit, onDelete, onProgramado }) => {
 
             {programando && (
                 <ProgramarModal eventos={events} onClose={() => setProgramando(false)} onProgramado={onProgramado} />
+            )}
+            {conGrupos && (
+                <ModalGruposTaller taller={conGrupos} onCerrar={() => setConGrupos(null)} onGuardado={onProgramado} />
             )}
         </section>
     );

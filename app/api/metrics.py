@@ -43,6 +43,8 @@ def track_visit():
             utm_medium=data.get('utm_medium'),
             utm_campaign=data.get('utm_campaign'),
             utm_content=data.get('utm_content'),
+            # El conjunto de anuncios (`{{adset.id}}`) o el código del grupo de WhatsApp (ADR-W152).
+            utm_term=(str(data.get('utm_term') or '').strip()[:100] or None),
             page_path=raw_path,
             referrer=request.referrer,
             evento=data.get('evento') if data.get('evento') in EVENTOS_VALIDOS else EVENTO_VISITA
@@ -108,6 +110,7 @@ def get_track_visits():
             "utm_medium": v.utm_medium,
             "utm_campaign": v.utm_campaign,
             "utm_content": v.utm_content,
+            "utm_term": v.utm_term,
             "page_path": v.page_path,
             "referrer": v.referrer,
             "created_at": v.created_at.isoformat()

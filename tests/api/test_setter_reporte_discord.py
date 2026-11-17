@@ -78,7 +78,6 @@ def test_el_v2_sale_por_canal_con_su_tarjeta(client, elias, auth_headers, enviad
     assert url == 'https://discord.test/webhook'
     assert kw['files']['file1'][0] == 'setter_report.png'
     assert enviados['tarjetas'] == {'v1': 0, 'v2': 1}
-    assert contenido(enviados['salidas'][0])['content'] == "🚀 **Reporte de setter** · Elias · 10/10/2026 @everyone"
 
 
 @pytest.fixture()

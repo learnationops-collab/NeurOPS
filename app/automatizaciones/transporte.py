@@ -38,9 +38,9 @@ class TransporteSimulado:
         self.perfiles = {}  # igsid → {'username', 'name'} que devolvería Instagram
         self._contador = itertools.count(1)
 
-    def enviar(self, destinatario, cuerpo):
+    def enviar(self, destinatario, cuerpo, etiqueta=None):
         mid = f'sim-{next(self._contador)}-{uuid.uuid4().hex[:8]}'
-        self.enviados.append({'destinatario': destinatario, 'cuerpo': cuerpo, 'mid': mid})
+        self.enviados.append({'destinatario': destinatario, 'cuerpo': cuerpo, 'mid': mid, 'etiqueta': etiqueta})
         return mid
 
     def escribiendo(self, igsid, segundos):
@@ -73,9 +73,13 @@ class TransporteMeta:
         self.sesion = sesion or requests
         self._cuenta_ig = None
 
-    def enviar(self, destinatario, cuerpo):
-        datos = self._post('messages', {'recipient': destinatario, 'message': cuerpo})
-        return datos.get('message_id')
+    def enviar(self, destinatario, cuerpo, etiqueta=None):
+        """`etiqueta`: 'HUMAN_AGENT' para que una persona del equipo conteste hasta 7 días después del
+        último mensaje del contacto (fuera de las 24 h)."""
+        datos = {'recipient': destinatario, 'message': cuerpo}
+        if etiqueta:
+            datos.update(messaging_type='MESSAGE_TAG', tag=etiqueta)
+        return self._post('messages', datos).get('message_id')
 
     def escribiendo(self, igsid, segundos):
         """Muestra «escribiendo…» y espera, como una persona que tipea. Si Meta no muestra el indicador

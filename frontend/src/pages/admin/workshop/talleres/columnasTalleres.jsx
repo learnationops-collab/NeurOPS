@@ -3,6 +3,8 @@ import AgendasDelTaller from '../agendas/AgendasDelTaller';
 import { CifraConCuenta } from '../../../../components/standard';
 import { cuentaDeTaller } from '../registros/cuentaDeTaller';
 import { TITULOS } from '../registros/cuentas';
+import ChipTipo from '../planificar/ChipTipo';
+import { TIPOS } from '../planificar/grupos';
 import {
     cac, dinero, ESTADOS_GRABACION, estadoGrabacion, ganancia, mesDe, numero, porcentaje, roasRango, veces,
 } from './formato';
@@ -24,6 +26,7 @@ const Cifra = ({ texto, tono, solo = false, nota = null }) => (
 );
 
 const FALTA = <span className="wt-sin">—</span>;
+const tipoDe = (e) => TIPOS[e.tipo]?.texto || 'Sin tipo';
 const der = { alinear: 'der', width: 'minmax(96px,1fr)' };
 
 /** Todas las cifras comparan contra `total` solo si `comparar` está prendido. */
@@ -126,6 +129,12 @@ export const columnasDe = ({ formatDate, elegidos, onComparar, comparar, onVer =
                 return <span className="chip" style={{ '--c': `var(--${info.tono})` }}><span className="trunc">{info.texto}</span></span>;
             },
         },
+        {
+            // Frío o caliente (ADR-W152). Los talleres anteriores al 17/11/2026 no lo tienen.
+            key: 'tipo', header: 'Tipo', width: 'minmax(96px,1fr)', oculta: true,
+            valor: (e) => tipoDe(e),
+            render: (e) => (TIPOS[e.tipo] ? <ChipTipo tipo={e.tipo} /> : FALTA),
+        },
     ];
 };
 
@@ -143,6 +152,7 @@ export const VISTAS_TALLERES = [
 
 export const FACETAS_TALLERES = [
     { key: 'mes', label: 'Mes', de: (e) => mesDe(e.date) },
+    { key: 'tipo', label: 'Tipo', de: tipoDe },
     { key: 'ventas', label: 'Ventas', de: (e) => (e.sales > 0 ? 'Con ventas' : 'Sin ventas') },
     { key: 'roas', label: 'ROAS', de: (e) => roasRango(e.roas) },
     { key: 'grabacion', label: 'Grabación', de: (e) => ESTADOS_GRABACION[estadoGrabacion(e).tipo].corto },

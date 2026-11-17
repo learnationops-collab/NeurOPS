@@ -136,6 +136,9 @@ class IgMensaje(db.Model):
     ejecucion_id = db.Column(db.Integer, db.ForeignKey('aut_ejecuciones.id', ondelete='SET NULL'), nullable=True)
     nodo_id = db.Column(db.String(64), nullable=True)
     enviado_en = db.Column(db.DateTime, nullable=False, default=ahora, index=True)
+    # Quién del equipo lo mandó desde el Inbox (origen OTRO). Los ecos de Kommo o ManyChat no lo traen.
+    autor_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    autor = db.relationship('User', foreign_keys=[autor_id])
 
 
 class AutCampana(db.Model):
@@ -207,3 +210,59 @@ class AutCampanaSetter(db.Model):
     peso = db.Column(db.Integer, nullable=False, default=1, server_default='1')
 
     __table_args__ = (db.UniqueConstraint('campana_id', 'user_id', name='uq_aut_campana_setters'),)
+
+
+class AutPropuesta(db.Model):
+    """Un cambio de estructura de un flujo que propuso un setter y espera aprobación (ADR-W147). Parte de la
+    versión publicada (`version_base_id`): si se publica otra antes, ya no se puede aprobar sin revisarla."""
+    __tablename__ = 'aut_propuestas'
+
+    PENDIENTE = 'pendiente'
+    APROBADA = 'aprobada'
+    RECHAZADA = 'rechazada'
+
+    id = db.Column(db.Integer, primary_key=True)
+    flujo_id = db.Column(db.Integer, db.ForeignKey('aut_flujos.id', ondelete='CASCADE'), nullable=False, index=True)
+    version_base_id = db.Column(db.Integer, db.ForeignKey('aut_flujo_versiones.id', ondelete='SET NULL'), nullable=True)
+    grafo = db.Column(db.JSON, nullable=False)
+    nota = db.Column(db.Text, nullable=True)
+    estado = db.Column(db.String(12), nullable=False, default=PENDIENTE, index=True)
+    autor_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    revisor_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    respuesta = db.Column(db.Text, nullable=True)
+    version_numero = db.Column(db.Integer, nullable=True)  # la versión que publicó al aprobarse
+    creada_en = db.Column(db.DateTime, nullable=False, default=ahora)
+    revisada_en = db.Column(db.DateTime, nullable=True)
+
+    flujo = db.relationship('AutFlujo')
+    version_base = db.relationship('AutFlujoVersion')
+    autor = db.relationship('User', foreign_keys=[autor_id])
+    revisor = db.relationship('User', foreign_keys=[revisor_id])
+
+
+class AutSeguimiento(db.Model):
+    """«Si no responde en X horas, mandarle esto» (Estrategia 16/11/2026): lo programa una persona del equipo
+    desde el chat y lo manda el reloj del motor (`seguimientos.py`). Si el lead escribe antes, se cancela."""
+    __tablename__ = 'aut_seguimientos'
+
+    PROGRAMADO = 'programado'
+    ENVIADO = 'enviado'
+    CANCELADO = 'cancelado'
+    ERROR = 'error'
+
+    id = db.Column(db.Integer, primary_key=True)
+    contacto_id = db.Column(db.Integer, db.ForeignKey('ig_contactos.id', ondelete='CASCADE'), nullable=False, index=True)
+    autor_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    texto = db.Column(db.Text, nullable=True)
+    audio_id = db.Column(db.Integer, db.ForeignKey('audio_clips.id', ondelete='SET NULL'), nullable=True)
+    # El link firmado del audio se arma al programarlo: el reloj no tiene request para saber el dominio.
+    url_audio = db.Column(db.String(600), nullable=True)
+    nombre_audio = db.Column(db.String(120), nullable=True)
+    pausar = db.Column(db.Boolean, nullable=False, default=True)
+    enviar_en = db.Column(db.DateTime, nullable=False, index=True)
+    estado = db.Column(db.String(12), nullable=False, default=PROGRAMADO, index=True)
+    detalle = db.Column(db.String(300), nullable=True)
+    creado_en = db.Column(db.DateTime, nullable=False, default=ahora)
+    resuelto_en = db.Column(db.DateTime, nullable=True)
+
+    autor = db.relationship('User', foreign_keys=[autor_id])

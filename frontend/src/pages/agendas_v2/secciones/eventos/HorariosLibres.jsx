@@ -71,7 +71,8 @@ export default function HorariosLibres({ e, personas, onCerrar }) {
                 {google == null && <> Leyendo calendarios…</>}
                 {google === 'error' && <> No se pudieron leer los calendarios: puede haber menos libres.</>}
             </p>
-            {!r.nPersonas ? <p className="t-sm mut">Ningún closer tiene horario cargado.</p>
+            {/* Sin Google leído no se muestran horarios: aparecerían libres y después desaparecerían. */}
+            {google == null && r.nPersonas ? null : !r.nPersonas ? <p className="t-sm mut">Ningún closer tiene horario cargado.</p>
                 : !total ? <p className="t-sm mut">No queda ningún horario libre en los próximos {VENTANA_DIAS} días con esta configuración.</p> : (
                     <div className="hl-dias">
                         {r.dias.map(d => (

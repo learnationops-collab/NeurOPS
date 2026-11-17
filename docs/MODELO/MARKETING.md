@@ -112,3 +112,18 @@ El segmento de un lead lo calcula y guarda Thalamus (`segmento_service`, columna
 | `sales.appointment_id` | la agenda de la venta nueva: la última reunión de la persona hasta la venta (+1 día) |
 
 Renovación y upsell heredan el origen de la primera venta nueva de la persona (`origen_de_venta`). Pagos y suscripción cuelgan de la venta. Lo nuevo se fija cada 10 min (scheduler, `fijar_pendientes`, últimos 7 días; `ninguna` se reintenta en ese plazo); lo viejo con `scripts/backfill_origenes.py`.
+
+## Workshop por tipo y por conjunto de anuncios (ADR-W152)
+
+Fase 1, del 17/11/2026: el software guarda de qué tipo es cada taller y manda cada visita al grupo de WhatsApp de su conjunto. El cruce con las agendas y las cifras por conjunto todavía no existen (fases 2 a 4).
+
+| Dónde | Qué guarda |
+|---|---|
+| `workshop_events.tipo` | `frio` (anuncios a quien no sigue la cuenta) · `caliente` (a quien ya la sigue) · null = sin tipo (los talleres anteriores) |
+| `workshop_grupos` | un grupo de WhatsApp de un taller: `nombre` («CG1 21/11»), `whatsapp_url`, `conjunto_id` (el adset de Meta), `conjunto_nombre` y `codigo` («cg1», del principio del nombre) |
+| `workshop_events.whatsapp_url` | el grupo general: las visitas sin anuncio y las de un conjunto sin grupo |
+| `landing_trackings.utm_term` | el conjunto (`{{adset.id}}`) o el código del grupo con el que llegó la visita o el clic |
+
+**Qué grupo le toca a una visita** (`workshop_grupos_service.selector`, lo usa `/api/public/workshops/proximos` con los UTM de la visita), en orden: `utm_term` = `conjunto_id` de un grupo del taller → `utm_term` = `codigo` de un único grupo → el conjunto del anuncio de `utm_content` (el id de Meta, o una etiqueta escrita a mano traducida por `utm_etiquetas`) → el grupo general. Los grupos por conjunto no se heredan de un taller al siguiente; el general sí, como siempre.
+
+Se cargan en Workshop › Planificar › Próximos talleres › «Grupos». Los conjuntos que ofrece son los de los anuncios con `embudo = 'workshop'` que Meta ya sincronizó (`conjuntos_disponibles`); uno nuevo aparece cuando gasta y corre la sincronización, y mientras se puede pegar su id.
