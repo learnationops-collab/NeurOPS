@@ -40,7 +40,7 @@ function Chat({ datos, yo, onCambio }) {
             </div>
             <Tramos avance={avance} ejecucion={datos.ejecucion} contacto={contacto} asignado={asignado} yo={yo} onCambio={onCambio} />
             <Feed mensajes={datos.mensajes} notas={datos.notas || []} tareas={datos.tareas || []} />
-            <Composer contacto={contacto} ejecucion={datos.ejecucion} yo={yo} onCambio={onCambio} />
+            <Composer contacto={contacto} ejecucion={datos.ejecucion} seguimientos={datos.seguimientos} yo={yo} onCambio={onCambio} />
         </Panel>
     );
 }

@@ -25,9 +25,11 @@ ROLES_DE_LECTURA = (ROLE_SETTER,)
 # Lo único que el setter puede cambiar: el recorrido y el bot de una conversación (`api_acciones.py`)
 # sus etiquetas, incluido crear un grupo (`api_etiquetas.py`), los textos de los flujos (`api_mensajes.py`),
 # lo que trabaja sobre la conversación (`api_trabajo.py`), la biblioteca del equipo (`api_biblioteca.py`)
-# escribirle al lead (`api_escribir.py`) y proponer cambios de estructura (`api_propuestas.py`).
+# escribirle al lead (`api_escribir.py`) y programar seguimientos (`api_seguimientos.py`), y proponer cambios
+# de estructura (`api_propuestas.py`).
 ACCIONES_DEL_SETTER = {'inbox.mover_en_flujo', 'inbox.bot_de_conversacion', 'inbox.crear_grupo_etiquetas',
                        'inbox.escribir_al_lead', 'inbox.proponer_cambios',
+                       'inbox.programar_seguimiento', 'inbox.cancelar_seguimiento',
                        'inbox.poner_etiqueta', 'inbox.sacar_etiqueta', 'inbox.guardar_mensajes',
                        'inbox.marcar_leido', 'inbox.asignar_conversacion', 'inbox.mover_etapa', 'inbox.corregir_variable',
                        'inbox.crear_nota', 'inbox.crear_tarea', 'inbox.cambiar_tarea',
@@ -290,7 +292,9 @@ def ver_conversacion(contacto_id):
     elegidos = bandeja.elegidos(mensajes)
     from app.automatizaciones import api_trabajo  # cuelga de `bp`: importarlo arriba sería circular
     notas, tareas = api_trabajo.historial(contacto.id)
+    from app.automatizaciones import seguimientos
     return jsonify({
+        'seguimientos': seguimientos.de_contacto(contacto.id),
         'avance': progreso.uno(contacto, servicio.ahora(), current_user.id),
         'notas': notas,
         'tareas': tareas,

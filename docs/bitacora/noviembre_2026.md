@@ -573,3 +573,7 @@
 - En Flujos, el setter abre un flujo publicado con «Cambiar estructura», mueve o agrega pasos y lo manda con «Proponer cambios» y una nota. Admin, operador o dirección comercial lo ven arriba de la grilla, lo revisan en el lienzo y lo aprueban (se publica) o lo rechazan con el motivo ([api_propuestas.py](../../app/automatizaciones/api_propuestas.py), [AccionesPropuesta.jsx](../../frontend/src/pages/inbox/editor/AccionesPropuesta.jsx), [ADR-W147](../DECISIONS.md); acordado en la Estrategia del 16/11).
 - El operador entra al Inbox con los permisos de admin. Migración `e5f7a9b2c4d6`.
 - Investigado (sin cambios): los leads «argentinos» del 07/11 son argentinos de verdad (+54 11); en 4 meses hay 6 agendas, 4 cobros y 4 leads de Argentina.
+
+### 17/11/2026 · Audios en «/» y seguimientos si no responde
+- En el chat, «/» muestra los audios del equipo y tocar uno lo manda ([MenuRayo.jsx](../../frontend/src/pages/inbox/conversaciones/MenuRayo.jsx)).
+- El reloj de la caja programa un seguimiento: «si no responde en 1 h, 3 h, 24 h, 2 o 3 días, mandarle esto» (texto o audio). Sale solo; si el lead escribe antes, se cancela. Lo programado se ve arriba de la caja con su hora y se puede cancelar ([seguimientos.py](../../app/automatizaciones/seguimientos.py), [Seguimientos.jsx](../../frontend/src/pages/inbox/conversaciones/Seguimientos.jsx), [ADR-W148](../DECISIONS.md)). Migración `f6a8b1c3d5e7`.

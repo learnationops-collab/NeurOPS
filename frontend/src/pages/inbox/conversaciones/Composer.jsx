@@ -2,12 +2,13 @@
 // mensaje (o un audio del equipo) sale por Instagram a nombre de quien lo manda (17/11/2026); los pasos del
 // flujo los manda el bot. Ctrl+Enter envía.
 import { useEffect, useRef, useState } from 'react';
-import { CalendarCheck, MessageSquare, Mic, Send, StickyNote, Zap } from 'lucide-react';
+import { AlarmClock, CalendarCheck, MessageSquare, Mic, Send, StickyNote, Zap } from 'lucide-react';
 import { Button, IconButton, Input, Segmented, Select, TextArea, toast } from '../../../components/standard';
 import { inboxApi } from '../api';
 import Audios from './Audios';
 import MenuRayo, { NuevaRapida } from './MenuRayo';
 import ModalFlujo from './ModalFlujo';
+import { ListaSeguimientos, ProgramarSeguimiento } from './Seguimientos';
 import useEquipo from './useEquipo';
 import { ventanaDe } from './ventana';
 
@@ -52,13 +53,14 @@ function FormTarea({ contacto, yo, onHecho }) {
     );
 }
 
-export default function Composer({ contacto, ejecucion, yo, onCambio }) {
+export default function Composer({ contacto, ejecucion, seguimientos, yo, onCambio }) {
     const [modo, setModo] = useState('chat');
     const [texto, setTexto] = useState('');
     const [rayo, setRayo] = useState(false);
     const [audios, setAudios] = useState(false);
     const [nueva, setNueva] = useState(false);
     const [paso, setPaso] = useState(null);
+    const [programar, setProgramar] = useState(false);
     const [pausar, setPausar] = useState(true);
     const caja = useRef(null);
     const barra = texto.startsWith('/');
@@ -98,12 +100,15 @@ export default function Composer({ contacto, ejecucion, yo, onCambio }) {
         }
     };
     const puedeEnviar = ventana.estado !== 'cerrada' && !enviando;
+    const audioDelMenu = async (a) => { setRayo(false); setTexto((x) => (x.startsWith('/') ? '' : x)); if (await enviar({ audio_id: a.id })) toast(`Audio enviado: ${a.nombre}`); };
 
     return (
         <div className={`cv-composer cv-composer--${modo}`} ref={caja}>
+            <ListaSeguimientos items={seguimientos} onCambio={onCambio} />
             {menu && (
                 <MenuRayo contacto={contacto} filtro={barra ? texto.slice(1) : ''} onTexto={insertar}
-                    onPaso={(id) => { setRayo(false); setTexto(''); setPaso(id); }} onNueva={() => { setRayo(false); setNueva(true); }} />
+                    onPaso={(id) => { setRayo(false); setTexto(''); setPaso(id); }} onNueva={() => { setRayo(false); setNueva(true); }}
+                    onAudio={puedeEnviar ? audioDelMenu : null} />
             )}
             <div className="cv-comp-cab">
                 <Segmented size="sm" label="Modo" value={modo} onChange={(m) => { setModo(m); setRayo(false); }} options={MODOS} />
@@ -119,6 +124,8 @@ export default function Composer({ contacto, ejecucion, yo, onCambio }) {
                         <>
                             <IconButton size="sm" label="Respuestas rápidas, variables y pasos del flujo" data-tip="Respuestas rápidas y pasos|O escribí /" pressed={rayo} icon={<Zap size={15} />} onClick={() => setRayo((r) => !r)} />
                             <IconButton size="sm" label="Audios" data-tip="Audios del equipo" icon={<Mic size={15} />} onClick={() => setAudios(true)} />
+                            <IconButton size="sm" label="Seguimiento si no responde" data-tip="Seguimiento|Sale solo si no responde en el tiempo que elijas" icon={<AlarmClock size={15} />}
+                                disabled={ventana.estado === 'cerrada'} onClick={() => setProgramar(true)} />
                         </>
                     )}
                     <TextArea value={texto} onChange={(e) => setTexto(e.target.value)} aria-label={modo === 'nota' ? 'Nota interna' : 'Mensaje'}
@@ -131,6 +138,10 @@ export default function Composer({ contacto, ejecucion, yo, onCambio }) {
             )}
             {modo === 'chat' && ventana.aviso && <p className="t-cap mut40 cv-bloqueado">{ventana.aviso}</p>}
             {audios && <Audios onCerrar={() => setAudios(false)} onMandar={puedeEnviar ? async (a) => { if (await enviar({ audio_id: a.id })) setAudios(false); } : null} />}
+            {programar && (
+                <ProgramarSeguimiento contacto={contacto} textoInicial={texto.startsWith('/') ? '' : texto} pausar={pausar}
+                    onCerrar={() => setProgramar(false)} onHecho={() => { setProgramar(false); setTexto(''); onCambio(); }} />
+            )}
             {nueva && <NuevaRapida onCerrar={() => setNueva(false)} onCreada={() => { setNueva(false); toast('Respuesta rápida guardada'); }} />}
             {paso && (
                 <ModalFlujo accion="continuar" contacto={contacto} ejecucion={ejecucion} nodoInicial={paso}
