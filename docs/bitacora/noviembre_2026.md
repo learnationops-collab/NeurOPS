@@ -643,3 +643,7 @@
 ### 17/11/2026 · El avatar abre Configuración; todo lo demás está en Herramientas
 - Tocar el personaje del dock abre Configuración directo; el personaje se elige en Configuración › Datos ([MenuSesion.jsx](../../frontend/src/pages/comercial/components/MenuSesion.jsx), [ElegirPersonaje.jsx](../../frontend/src/components/mascota/ElegirPersonaje.jsx), [ADR-W162](../DECISIONS.md)).
 - Herramientas junta las herramientas (Nuevo, Turnos), las acciones de la pantalla, las secciones ocultas y lo de tu cuenta (Portal, avisos, reportes, cerrar sesión). «Nuevo» es una herramienta más y se puede fijar ([BotonHerramientas.jsx](../../frontend/src/ventanas/BotonHerramientas.jsx)).
+
+### 17/11/2026 · Barra lateral y Herramientas ordenadas, como en la Academia
+- Configuración › Dock: la navegación puede ir en una barra lateral, desplegada o solo con íconos ([DockLateral.jsx](../../frontend/src/pages/comercial/components/DockLateral.jsx), [ADR-W163](../DECISIONS.md)).
+- Herramientas se ordena por tipo (Crear, Agendas, Asistente, Pendientes, Esta pantalla, Ir a, Sesión), en dos columnas, con ícono en color y una línea de para qué sirve cada una ([catalogoHerramientas.js](../../frontend/src/ventanas/catalogoHerramientas.js)).

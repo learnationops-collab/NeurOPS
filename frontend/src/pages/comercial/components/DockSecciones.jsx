@@ -8,6 +8,9 @@ import useOpcionesDeHerramientas from '../../../ventanas/useOpcionesDeHerramient
 import { useNavegacionDock } from '../../../ventanas/navegacionDock';
 import { useAuth } from '../../../contexts/AuthContext';
 import DockEdicion from './DockEdicion';
+import DockLateral from './DockLateral';
+import { useModoDock } from '../../../ventanas/modoDock';
+import { agrupar } from '../../../ventanas/catalogoHerramientas';
 import { Bug, Plus } from 'lucide-react';
 import { abrirReporteDeBug } from '../../../utils/bugReportBus';
 import '../dock2.css';
@@ -79,6 +82,8 @@ const DockSecciones = ({ secciones: todasLasSecciones, activa, onElegir, ariaLab
     const nav = useNavegacionDock(usuario, ariaLabel, todasLasSecciones);
     const secciones = nav.visibles;
     const angosto = useAngosto();
+    const modo = useModoDock();
+    const lateral = modo.lateral && !angosto;
     const herramientas = useOpcionesDeHerramientas();
     // El indicador se mide del DOM porque su ancho es el del botón activo, y eso depende del texto
     // de cada sección y de si el label está visible (bajo 1120px se esconde el de los inactivos).
@@ -188,16 +193,11 @@ const DockSecciones = ({ secciones: todasLasSecciones, activa, onElegir, ariaLab
     const cosas = secciones.length + (antes ? 1 : 0) + (despues ? 1 : 0);
     const clases = ['dock', !angosto && 'dock--centro', cosas >= 6 && 'dock--denso', siempreNombres && 'dock--nombres',
         compacto && claseSinLugar, desborda && 'dock--desborda', nav.editando && 'dock--editando', 'caja'];
-    const fijadas = <DockFijadas usuario={fijables.usuario || usuario} opciones={opciones} onElegir={correr} sep={angosto ? 'despues' : null} />;
+    const fijadas = <DockFijadas usuario={fijables.usuario || usuario} opciones={opciones} onElegir={correr} sep={angosto && !lateral ? 'despues' : null} />;
     const herr = (
         <BotonHerramientas usuario={usuario} onEditar={todasLasSecciones.length > 1 && usuario ? () => nav.editar(true) : null}
             cuenta={sinLeer > 0 ? (sinLeer > 99 ? '99+' : sinLeer) : null}
-            grupos={[
-                { titulo: 'Herramientas', opciones: [nuevo, ...herramientas] },
-                { titulo: 'Acciones', opciones: deAccion },
-                { titulo: 'Secciones ocultas', opciones: ocultas },
-                { titulo: 'Tu cuenta', opciones: deCuenta },
-            ]} />
+            grupos={agrupar([nuevo, ...herramientas, ...deAccion, ...ocultas, ...deCuenta])} />
     );
     const centro = (
         <nav className={clases.filter(Boolean).join(' ')} aria-label={ariaLabel}>
@@ -241,6 +241,14 @@ const DockSecciones = ({ secciones: todasLasSecciones, activa, onElegir, ariaLab
             )}
         </nav>
     );
+    if (lateral) {
+        return (
+            <DockContexto.Provider value={contexto}>
+                <DockLateral secciones={secciones} activa={activa} onElegir={onElegir} ariaLabel={ariaLabel} antes={antes}
+                    despues={despues} herr={herr} fijadas={fijadas} nav={nav} modo={modo} marcasDe={marcasDe} claseDeMarca={claseDeMarca} />
+            </DockContexto.Provider>
+        );
+    }
     return (
         <DockContexto.Provider value={contexto}>
             {angosto ? centro : (

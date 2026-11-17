@@ -45,3 +45,49 @@
 .dc-shell .menu-herr-tx b{font-weight:700}
 .dc-shell .menu-herr-tx small{font-size:11px;font-weight:500;color:var(--text-muted-40)}
 
+
+/* Herramientas ordenadas como las de la Academia (ventanas/catalogoHerramientas.js): por tipo, en dos
+   columnas, cada una con su ícono en color, una línea de para qué sirve y la flecha si lleva a otra pantalla. */
+.dc-shell{--herr-rosa:#FF3FA4;--herr-azul:#3B82F6;--herr-violeta:#8B5CF6;--herr-ambar:#F59E0B;--herr-rojo:#EF4444;--herr-verde:#10B981;--herr-gris:var(--text-muted)}
+.dc-shell .menu.menu--herr{width:min(540px,calc(100vw - 32px))}
+.dc-shell .menu-herr-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px 4px}
+@media (max-width:640px){.dc-shell .menu-herr-grid{grid-template-columns:1fr}}
+.dc-shell .menu-herr-grid .menu-fila{min-width:0}
+.dc-shell .menu-item--herr{gap:10px;padding-top:6px;padding-bottom:6px}
+.dc-shell .menu-herr-ico{flex-shrink:0;display:grid;place-items:center;width:32px;height:32px;border-radius:10px;
+  background:var(--bg-element);border:1px solid var(--border-subtle);color:var(--c,var(--text-muted))}
+.dc-shell .menu-item--herr .menu-herr-ico svg{color:var(--c,var(--text-muted))}
+.dc-shell .menu-item--herr .menu-flecha{flex-shrink:0;color:var(--text-muted-40)}
+
+/* La barra lateral (DockLateral.jsx), como la de la Academia: plegada, solo íconos. */
+.dc-shell .dock-lado{position:fixed;left:16px;top:16px;bottom:16px;z-index:60;width:66px;
+  display:flex;flex-direction:column;gap:var(--s2);padding:5px;border-radius:24px;
+  background:var(--bg-surface);backdrop-filter:saturate(180%) blur(28px);
+  border:1px solid var(--border-main);border-top-color:var(--sheen);
+  box-shadow:var(--shadow-main),0 0 0 1px rgba(0,0,0,.25);
+  overflow-y:auto;overflow-x:hidden;scrollbar-width:none;transition:width .25s ease}
+.dc-shell .dock-lado::-webkit-scrollbar{display:none}
+.dc-shell .dock-lado--abierta{width:240px}
+.dc-shell .dock-lado-cab{display:flex;flex-direction:column;align-items:center;gap:2px;padding-bottom:var(--s2);
+  border-bottom:1px solid var(--border-subtle)}
+.dc-shell .dock-lado--abierta .dock-lado-cab{flex-direction:row;justify-content:space-between}
+.dc-shell .dock-lado .dock-sesion{width:54px;height:54px}
+.dc-shell .dock-lado .dock-fijada{width:54px;height:48px}
+.dc-shell .dock-lado-antes{display:flex;justify-content:center}
+.dc-shell .dock-lado-nav{display:flex;flex-direction:column;gap:2px}
+.dc-shell .dock-lado-item{position:relative;display:flex;align-items:center;gap:12px;height:46px;padding:0 15px;flex-shrink:0;
+  border-radius:15px;color:var(--text-muted);font-size:14px;font-weight:700;text-align:left;
+  transition:background-color .15s ease,color .15s ease}
+.dc-shell .dock-lado-item svg{flex-shrink:0}
+.dc-shell .dock-lado-item:hover{background:var(--mat-3);color:var(--text-on-surface)}
+.dc-shell .dock-lado-item[aria-current="page"]{background:var(--brand-secondary);color:var(--on-brand)}
+.dc-shell .dock-lado-item .dock-marca{margin:0 0 0 auto}
+.dc-shell .dock-lado:not(.dock-lado--abierta) .dock-lado-item{justify-content:center;padding:0}
+.dc-shell .dock-lado:not(.dock-lado--abierta) .dock-lado-item .dock-marca{position:absolute;top:3px;right:3px;margin:0}
+.dc-shell .dock-lado-fin{margin-top:auto;display:flex;flex-direction:column;align-items:center;gap:2px}
+.dc-shell .dock-lado .dock-fijadas{flex-direction:column}
+.dc-shell .dock-lado--abierta .dock-fijadas{flex-direction:row;flex-wrap:wrap;justify-content:center}
+.dc-shell .dock-lado .dock-sep{width:70%;height:1px;margin:4px auto}
+.dc-shell .dock-lado .dock-nav .dock-item--edit{justify-content:flex-start}
+html.dock-lateral #root{padding-left:98px;transition:padding-left .25s ease}
+html.dock-lateral.dock-lateral--abierta #root{padding-left:272px}

@@ -1847,3 +1847,7 @@
 .thalamus .cu-personaje-op{display:grid;place-items:center;width:58px;height:58px;border-radius:16px;border:1px solid var(--border-subtle);transition:background-color .15s ease,border-color .15s ease}
 .thalamus .cu-personaje-op:hover{background:var(--bg-element)}
 .thalamus .cu-personaje-op[aria-checked="true"]{border-color:var(--brand-secondary);background:var(--bg-element)}
+/* Configuración › Dock (sesion/TabDock.jsx). */
+.thalamus .cu-dock{display:grid;gap:var(--s4)}
+.thalamus .cu-dock-fila{display:flex;align-items:center;gap:var(--s3);flex-wrap:wrap}
+.thalamus .cu-dock-fila > b{min-width:120px}

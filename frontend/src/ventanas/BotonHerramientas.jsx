@@ -8,7 +8,7 @@
 // directo esa lista (`panelInicial`).
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal, flushSync } from 'react-dom';
-import { ArrowLeft, ChevronRight, Pencil, Pin, PinOff, Wrench } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, ChevronRight, Pencil, Pin, PinOff, Wrench } from 'lucide-react';
 import { subirACapa } from '../components/standard/capa';
 import { esFijable, useFijadas } from '../sesion/fijadas';
 
@@ -17,11 +17,13 @@ const Fila = ({ op, fijada, onAbrir, onFijar }) => {
     return (
         <div className="menu-fila">
             <button type="button" role="menuitem" aria-haspopup={op.panel ? 'menu' : undefined}
-                className={`menu-item menu-item--ico menu-item--herr${op.peligro ? ' menu-item--peligro' : ''}`} onClick={onAbrir}>
-                <op.Icono size={16} aria-hidden="true" />
-                <span className="menu-herr-tx"><b className="trunc">{op.label}</b>{op.titulo && <small className="trunc">{op.titulo}</small>}</span>
+                className={`menu-item menu-item--ico menu-item--herr${op.peligro ? ' menu-item--peligro' : ''}`} onClick={onAbrir}
+                style={{ '--c': `var(--herr-${op.color || 'gris'})` }}>
+                <span className="menu-herr-ico"><op.Icono size={16} aria-hidden="true" /></span>
+                <span className="menu-herr-tx"><b className="trunc">{op.label}</b>{(op.desc ?? op.titulo) && <small className="trunc">{op.desc ?? op.titulo}</small>}</span>
                 {op.cuenta != null && <span className="menu-cuenta">{op.cuenta}</span>}
                 {op.panel && <ChevronRight size={15} aria-hidden="true" className="menu-flecha" />}
+                {op.va && <ArrowUpRight size={13} aria-hidden="true" className="menu-flecha" />}
             </button>
             {onFijar && (
                 <button type="button" role="menuitemcheckbox" data-fijar="" aria-checked={fijada} aria-label={rotulo} title={rotulo}
@@ -73,6 +75,12 @@ export default function BotonHerramientas({ usuario, grupos = [], onEditar = nul
             subirACapa(m);
             const margen = 16;
             const ancho = m.offsetWidth;
+            // En la barra lateral abre a la derecha del botón, hacia abajo; en el dock, arriba.
+            if (boton.current.closest('.dock-lado')) {
+                const top = Math.max(margen, Math.min(b.top, window.innerHeight - margen - 240));
+                setPos({ left: b.right + 12, top, alto: window.innerHeight - top - margen });
+                return;
+            }
             const left = Math.min(Math.max(b.left + b.width / 2 - ancho / 2, margen), window.innerWidth - ancho - margen);
             setPos({ left, bottom: window.innerHeight - b.top + 10, alto: Math.max(160, b.top - 10 - margen) });
         };
@@ -143,7 +151,9 @@ export default function BotonHerramientas({ usuario, grupos = [], onEditar = nul
             {abierto && createPortal(
                 <div className="dc-shell menu-capa">
                     <div ref={menu} className="menu menu--sesion menu--herr" role="menu" aria-label={rotulo}
-                        style={pos ? { left: pos.left, bottom: pos.bottom, maxHeight: pos.alto } : { left: 0, bottom: 0, visibility: 'hidden' }}>
+                        style={pos
+                            ? { left: pos.left, ...(pos.top != null ? { top: pos.top, bottom: 'auto' } : { bottom: pos.bottom }), maxHeight: pos.alto }
+                            : { left: 0, bottom: 0, visibility: 'hidden' }}>
                         {vistaPanel || (
                             <>
                                 <div className="menu-herr-cab">
@@ -153,10 +163,12 @@ export default function BotonHerramientas({ usuario, grupos = [], onEditar = nul
                                 {conAlgo.map((g) => (
                                     <div key={g.titulo} role="group" aria-label={g.titulo}>
                                         <p className="menu-grupo">{g.titulo}</p>
-                                        {g.opciones.map((op) => (
-                                            <Fila key={op.id} op={op} fijada={fijadas.includes(op.id)} onAbrir={() => elegir(op)}
-                                                onFijar={usuario && esFijable(op) ? () => alternar(op.id) : null} />
-                                        ))}
+                                        <div className="menu-herr-grid">
+                                            {g.opciones.map((op) => (
+                                                <Fila key={op.id} op={op} fijada={fijadas.includes(op.id)} onAbrir={() => elegir(op)}
+                                                    onFijar={usuario && esFijable(op) ? () => alternar(op.id) : null} />
+                                            ))}
+                                        </div>
                                     </div>
                                 ))}
                                 {onEditar && (

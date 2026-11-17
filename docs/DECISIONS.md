@@ -1370,3 +1370,13 @@
   3. «Nuevo» es una herramienta con su lista (Nueva agenda, Referido manual donde los hay, y Reportar o pedir algo). Las opciones que abren una lista (Nuevo, Mis links) ahora se pueden fijar: fijadas, abren directo su lista. Los closers la tienen fijada de fábrica, junto a Learnito.
 - **Qué se pierde:** cerrar sesión o ir al Portal lleva un toque más (llave → opción) que antes desde el avatar, salvo que se fije. Quien ya había tocado sus fijadas no recibe «Nuevo» fijado: lo tiene en Herramientas.
 - **Consecuencias:** sin migración. `MenuSesion` ya no dibuja un menú: publica sus opciones al dock con `seccion` («acciones» o «cuenta»).
+
+## ADR-W163: barra lateral opcional y Herramientas ordenadas como en la Academia
+
+- **Fecha:** 2026-11-17 · **Subsistema:** Dock 2.0 (`DockLateral`, `ventanas/modoDock.js`, `ventanas/catalogoHerramientas.js`, `BotonHerramientas`, Configuración › Dock) · **Estado:** implementado.
+- **Contexto:** Santi pidió inspirarse más en la dockbar de la Academia (`dockbar/partials/vertical.blade.php`, `tools-menu.blade.php`, `config/staff_tools.php`): se puede cambiar a una barra lateral y ordena mejor sus herramientas.
+- **Decisión:**
+  1. Configuración › Dock: «Dock abajo» (de fábrica) o «Barra lateral», y la barra «Desplegada» o «Solo íconos» (también con su botón). Se guarda en el navegador. En la barra, de arriba abajo: plegar, tu personaje, Herramientas, las secciones y, al fondo, las ventanas y lo fijado. La página se corre a la derecha mientras está. En el celular siempre va abajo.
+  2. Herramientas se ordena por tipo, con un catálogo: Crear, Agendas, Asistente, Pendientes, Esta pantalla, Secciones ocultas, Ir a y Sesión. Va en dos columnas; cada opción tiene su ícono en color, una línea de para qué sirve y una flecha si lleva a otra pantalla. Lo que una opción dice en el momento (por ejemplo, «20 avisos sin leer») gana sobre la descripción fija. En la barra lateral, el menú abre a la derecha.
+- **Qué se pierde:** en la barra plegada no se ve el switch Closers/Setters de la dirección (aparece al desplegarla). La barra corre `#root`; una pantalla con algo `fixed` pegado a la izquierda puede quedar debajo.
+- **Consecuencias:** sin migración. Una opción nueva se ubica sumándola a `CATALOGO` (si no, cae en «Esta pantalla»).

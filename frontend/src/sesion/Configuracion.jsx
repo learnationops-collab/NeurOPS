@@ -24,6 +24,7 @@ import { puedeElegirTema } from '../context/AparienciaContext';
 import { useTemaDeHoja } from './temaDeHoja';
 import { Icono } from '../pages/agendas_v2/ui/base';
 import ElegirPersonaje from '../components/mascota/ElegirPersonaje';
+import TabDock from './TabDock';
 import '../pages/agendas_v2/thalamus.css';
 
 const RECIBEN_AGENDAS = ['closer', 'triage', 'director_comercial', 'admin'];
@@ -34,6 +35,7 @@ const PESTANAS = [
     { id: 'eventos', nombre: 'Mis eventos', icono: 'calendar', para: (rol) => rol === 'closer' },
     { id: 'equipo', nombre: 'Equipo', icono: 'users', para: (rol) => rol === 'admin' },
     { id: 'apariencia', nombre: 'Apariencia', icono: 'sol', para: (rol) => puedeElegirTema(rol) },
+    { id: 'dock', nombre: 'Dock', icono: 'capas', para: () => true },
 ];
 export const pestanasDe = (rol) => PESTANAS.filter(p => p.para(rol));
 
@@ -52,6 +54,7 @@ export default function Configuracion({ user = null, tabInicial = null, onTab = 
     else if (tab === 'eventos') cuerpo = <MisEventos />;
     else if (tab === 'equipo') cuerpo = <TeamManagementPage embebido />;
     else if (tab === 'apariencia') cuerpo = <TabApariencia />;
+    else if (tab === 'dock') cuerpo = <TabDock />;
     else cuerpo = user ? <><ElegirPersonaje /><DatosCuenta user={user} /></> : null;
     return (
         <div ref={raiz} className="thalamus cu-hoja" data-theme={dataTheme} aria-label="Configuración">
