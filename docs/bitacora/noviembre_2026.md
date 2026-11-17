@@ -584,3 +584,6 @@
 
 ### 17/11/2026 · El aviso de suscripción lleva el closer de la venta
 - Cada suscripción que Work manda a la Academia lleva `closer_email`, el closer de la venta más reciente. La Academia se lo deja al alumno que no tiene un closer de ventas: el que se inscribía después de la venta quedaba sin closer y su Momentum sin nadie que la diera (Luis Martínez, 13/11) ([subscription_sync.py](../../app/services/subscription_sync.py)).
+
+### 17/11/2026 · Learnito sugiere la respuesta del setter
+- En el chat, el botón ✨ deja en la caja la próxima respuesta para el lead y, debajo, por qué. Lo escrito en la caja va como borrador o pedido («más corto», «invitalo a agendar»). Lee la conversación, los datos del lead, las notas del equipo y el material del programa de la Academia ([sugerir.py](../../app/automatizaciones/sugerir.py), [ADR-W149](../DECISIONS.md), [LEARNITO.md](../MODELO/LEARNITO.md) §9; pedido de Mario en la Estrategia del 16/11).

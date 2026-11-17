@@ -1229,3 +1229,11 @@
   3. «Ayer» es el de la zona de cada persona. Si nadie debe nada, no sale mensaje.
 - **Qué se pierde:** quien tiene closer como rol adicional (Mario, Marlon, Santi) no entra. Un closer sin llamadas ayer no debe el reporte. El setter no recibe aviso por el domingo.
 - **Consecuencias:** sin migración. El canal se cambia con `DISCORD_REPORTES_VENTAS_CHANNEL_ID`.
+
+## ADR-W149: Learnito sugiere la respuesta del setter con una llamada directa desde Work
+
+- **Fecha:** 2026-11-17 · **Subsistema:** Inbox › Conversaciones y Learnito (`automatizaciones/sugerir.py`, `LEARNITO.md` §9) · **Estado:** implementado.
+- **Contexto:** en la Estrategia del 16/11 Mario pidió que Learnito le dé feedback a los setters con el conocimiento del programa, como base de un futuro setter IA. Todo Learnito de Work pasa por el cerebro de la Academia, que corre un repartidor y herramientas por pregunta: es lento para un chat y comparte el tope de US$ 8 por persona.
+- **Decisión:** (1) Santi eligió (17/11) que la sugerencia la genere Work con una sola llamada a Claude por `ClaudeService` (Opus 5.5, esfuerzo bajo, salida JSON con la respuesta y su porqué), y que el conocimiento sea el material de la Academia, pedido por `findMaterial` de su conector con lo último que escribió el lead. (2) Lee los últimos 25 mensajes, las variables del lead y las notas internas. (3) La respuesta queda en la caja para que el setter la edite y la mande; no se manda sola. (4) Tope de US$ 2 por persona por día.
+- **Qué se pierde:** paridad con el cerebro único: esta pieza no aprende del banco de planes ni comparte el historial de Learnito. El material se busca con texto del lead, así que a veces trae recursos que vienen poco a cuento (se muestran como «material consultado»). No hay respuesta de reemplazo si Claude declina: el setter ve el aviso y escribe él.
+- **Consecuencias:** sin migración. Fila «Distinto» en la tabla de paridad de `LEARNITO.md`. Medido en producción: US$ 0,017 y 4,6 s por sugerencia.

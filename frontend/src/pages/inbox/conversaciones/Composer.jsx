@@ -2,7 +2,7 @@
 // mensaje (o un audio del equipo) sale por Instagram a nombre de quien lo manda (17/11/2026); los pasos del
 // flujo los manda el bot. Ctrl+Enter envía.
 import { useEffect, useRef, useState } from 'react';
-import { AlarmClock, CalendarCheck, MessageSquare, Mic, Send, StickyNote, Zap } from 'lucide-react';
+import { AlarmClock, CalendarCheck, MessageSquare, Mic, Send, Sparkles, StickyNote, Zap } from 'lucide-react';
 import { Button, IconButton, Input, Segmented, Select, TextArea, toast } from '../../../components/standard';
 import { inboxApi } from '../api';
 import Audios from './Audios';
@@ -61,6 +61,7 @@ export default function Composer({ contacto, ejecucion, seguimientos, yo, onCamb
     const [nueva, setNueva] = useState(false);
     const [paso, setPaso] = useState(null);
     const [programar, setProgramar] = useState(false);
+    const [sugerencia, setSugerencia] = useState(null); // { por_que, fuentes } o 'pensando'
     const [pausar, setPausar] = useState(true);
     const caja = useRef(null);
     const barra = texto.startsWith('/');
@@ -89,7 +90,7 @@ export default function Composer({ contacto, ejecucion, seguimientos, yo, onCamb
         setEnviando(true);
         try {
             await inboxApi.escribir(contacto.id, { ...cuerpo, pausar });
-            if (cuerpo.texto) setTexto('');
+            if (cuerpo.texto) { setTexto(''); setSugerencia(null); }
             onCambio();
             return true;
         } catch (e) {
@@ -100,6 +101,18 @@ export default function Composer({ contacto, ejecucion, seguimientos, yo, onCamb
         }
     };
     const puedeEnviar = ventana.estado !== 'cerrada' && !enviando;
+    // Lo escrito en la caja va como pedido: un borrador a mejorar o una instrucción («más corto»).
+    const sugerir = async () => {
+        setSugerencia('pensando');
+        try {
+            const r = await inboxApi.sugerir(contacto.id, texto.startsWith('/') ? '' : texto);
+            setTexto(r.respuesta);
+            setSugerencia(r);
+        } catch (e) {
+            setSugerencia(null);
+            toast(e.response?.data?.message || 'Learnito no pudo sugerir', 'error');
+        }
+    };
     const audioDelMenu = async (a) => { setRayo(false); setTexto((x) => (x.startsWith('/') ? '' : x)); if (await enviar({ audio_id: a.id })) toast(`Audio enviado: ${a.nombre}`); };
 
     return (
@@ -124,6 +137,8 @@ export default function Composer({ contacto, ejecucion, seguimientos, yo, onCamb
                         <>
                             <IconButton size="sm" label="Respuestas rápidas, variables y pasos del flujo" data-tip="Respuestas rápidas y pasos|O escribí /" pressed={rayo} icon={<Zap size={15} />} onClick={() => setRayo((r) => !r)} />
                             <IconButton size="sm" label="Audios" data-tip="Audios del equipo" icon={<Mic size={15} />} onClick={() => setAudios(true)} />
+                            <IconButton size="sm" label="Sugerir con Learnito" data-tip="Learnito sugiere|Si escribiste algo, lo toma como borrador o como pedido" icon={<Sparkles size={15} />}
+                                disabled={sugerencia === 'pensando'} onClick={sugerir} />
                             <IconButton size="sm" label="Seguimiento si no responde" data-tip="Seguimiento|Sale solo si no responde en el tiempo que elijas" icon={<AlarmClock size={15} />}
                                 disabled={ventana.estado === 'cerrada'} onClick={() => setProgramar(true)} />
                         </>
@@ -135,6 +150,11 @@ export default function Composer({ contacto, ejecucion, seguimientos, yo, onCamb
                         ? <Button variant="primary" disabled={!texto.trim()} onClick={guardarNota}>Guardar</Button>
                         : <Button variant="primary" icon={<Send />} disabled={!texto.trim() || !puedeEnviar} data-tip="Enviar|Ctrl+Enter" onClick={() => enviar({ texto })}>Enviar</Button>}
                 </div>
+            )}
+            {modo === 'chat' && sugerencia && (
+                <p className="t-cap cv-sugerencia" data-tip={sugerencia.fuentes?.length ? `Material consultado|${sugerencia.fuentes.join(' · ')}` : undefined}>
+                    <Sparkles size={12} aria-hidden="true" />{sugerencia === 'pensando' ? 'Learnito está pensando…' : sugerencia.por_que}
+                </p>
             )}
             {modo === 'chat' && ventana.aviso && <p className="t-cap mut40 cv-bloqueado">{ventana.aviso}</p>}
             {audios && <Audios onCerrar={() => setAudios(false)} onMandar={puedeEnviar ? async (a) => { if (await enviar({ audio_id: a.id })) setAudios(false); } : null} />}

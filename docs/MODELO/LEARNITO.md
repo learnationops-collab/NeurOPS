@@ -28,6 +28,7 @@
 | Pantalla | `frontend/src/pages/copiloto/` (`LearnitoChat`, `Grafico`, `LearnitoModal`, `UsoMensual`, `useCopiloto`, `useDictado`, `Markdown`) |
 | Estado global y cómo abrirlo | `frontend/src/sesion/LearnitoContext.jsx`, `frontend/src/sesion/learnito.js` (roles, `abrirLearnito`) |
 | Entrada en el menú y el dock | `frontend/src/sesion/menuSesion.js`, `frontend/src/sesion/fijadas.js` (fijado de fábrica a closers) |
+| Sugerencias para el setter en el Inbox (§9) | `app/automatizaciones/sugerir.py`, `POST /api/inbox/conversaciones/<id>/sugerencia` (`api_sugerir.py`), botón ✨ de `Composer.jsx` |
 
 ## 2. Pantalla
 
@@ -119,6 +120,7 @@ Sobre quien pregunta, con los mismos servicios que sus pantallas. Están para to
 | Voz | Dictado y lectura en voz alta | Dictado | Falta: lectura |
 | Métricas del motor | Más: mediana, correlación, comparar grupos | `count`, `avg`, `sum`, `min`, `max`, `pct` | Falta |
 | Material académico | `buscar_material`, `leer_recurso` | No (no le toca a Work) | Distinto |
+| Sugerir la respuesta al lead (setters) | No existe | Llamada directa a Claude desde Work, con el material de la Academia por `findMaterial` (§9, ADR-W149) | Distinto |
 
 ### Reglas de coherencia
 
@@ -136,3 +138,11 @@ Sin orden comprometido; la prioridad la decide el usuario.
 - Más acciones (registrar un pago, delegar una tarea), siempre por el mismo camino que la ficha y con confirmación.
 - El closer en `/tablas` ahora que el motor filtra lo suyo (`tablas_required` todavía no lo deja).
 - Learnito de Cortex («Buscador con IA» sobre las transcripciones del Playbook): sigue «Pronto»; es otra pieza.
+
+## 9. Sugerencias para el setter en el Inbox (ADR-W149)
+
+- **Qué hace:** en el chat de una conversación, el botón ✨ pide la próxima respuesta para el lead y la deja en la caja para editarla y mandarla. Debajo aparece «por qué», en una oración, como feedback. Lo escrito en la caja va como pedido: un borrador a mejorar o una instrucción («más corto»). No manda nada solo.
+- **Por qué no usa el cerebro:** tiene que tardar segundos (una sola llamada, ~5 s) y es la base del futuro setter IA, que va a correr en el motor de Work. Es la única IA de Work fuera del cerebro; va por `ClaudeService` (registro en `ai_usage`, función `inbox_sugerencia`), con Opus 5.5 a esfuerzo bajo y salida JSON (`respuesta`, `por_que`).
+- **Qué lee:** los últimos 25 mensajes (lead, bot, equipo con su nombre), las variables del lead, las últimas 5 notas internas y el material del programa: `findMaterial` del conector de la Academia (`POST /api/v1/learnito/connector`, Learnation Resources) con los tres últimos mensajes del lead. Sin respuesta de la Academia en 8 s, sugiere sin material.
+- **Reglas del texto** (`GUIA`, estable para la caché): tono del equipo, un paso por mensaje, nunca precios, cupos, fechas ni promesas inventadas (lo que falta va entre corchetes), salida amable si no es médico.
+- **Tope:** US$ 2 por persona por día (unas 100 sugerencias). Medido el 17/11: US$ 0,017 y 4,6 s por sugerencia.
