@@ -1218,3 +1218,14 @@
 - **Decisión:** (1) el «/» suma la sección Audios: tocar uno lo manda al lead. No aparece si la ventana de Instagram está cerrada. (2) El reloj del chat programa «si no responde en 1 h, 3 h, 24 h, 2 o 3 días, mandarle este texto o este audio». Lo manda el reloj del motor en su vuelta (cada minuto como máximo) con las reglas de escribir a mano (ADR-W146). (3) La condición se mira al momento de mandar: si el lead escribió después de programarlo, se cancela solo. (4) Lo que Instagram rechaza queda como «No salió» con el motivo, arriba de la caja; lo programado se ve ahí con su hora y se puede cancelar. (5) Cada envío se guarda en el momento: si la vuelta se corta, lo que ya salió no se repite. (6) El link del audio se firma al programarlo, porque el reloj no tiene request para conocer el dominio.
 - **Qué se pierde:** la única condición es «no respondió». No hay seguimientos en cadena ni por etapa. El tope es de 6 días, porque después Instagram no deja escribir. Un seguimiento con error no se reintenta solo.
 - **Consecuencias:** migración `f6a8b1c3d5e7` (`aut_seguimientos`). Con el motor apagado no sale nada.
+
+## ADR-W150: aviso diario en Discord de los reportes que faltan
+
+- **Fecha:** 2026-11-17 · **Subsistema:** Avisos a Discord (`app/services/discord_avisos/reportes_faltantes.py`, `reminder_scheduler`) · **Estado:** implementado.
+- **Contexto:** reunión de estrategia del 16/11 (Mario, Kerwin, Santi): Discord tiene que etiquetar a quien tenga el reporte faltante o atrasado, con un envío automático a las 10:00 (Leadership 1405). En producción, el triage nunca mandó el reporte del día del mazo y el último de Jean Carlo era del 10/11.
+- **Decisión:**
+  1. Todos los días a las 14:00 UTC (`REPORTES_FALTANTES_HORA_UTC`; 10:00 en Caracas y Bolivia, 8:00 en México) sale un mensaje en #📋-reportes de adquisitions, por el bot, con cada persona etiquetada y lo que debe.
+  2. Closers y triage (rol principal): si ayer tuvieron llamadas y no hay `CloserDailyReport` de ese día, «falta el reporte de ayer»; aparte, las llamadas de los últimos 7 días que ya pasaron sin resultado. Setters: falta el `SetterDailyStats` de ayer, de lunes a sábado.
+  3. «Ayer» es el de la zona de cada persona. Si nadie debe nada, no sale mensaje.
+- **Qué se pierde:** quien tiene closer como rol adicional (Mario, Marlon, Santi) no entra. Un closer sin llamadas ayer no debe el reporte. El setter no recibe aviso por el domingo.
+- **Consecuencias:** sin migración. El canal se cambia con `DISCORD_REPORTES_VENTAS_CHANNEL_ID`.
