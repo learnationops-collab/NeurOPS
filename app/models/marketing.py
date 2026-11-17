@@ -261,6 +261,7 @@ class LandingTracking(db.Model):
     utm_medium = db.Column(db.String(100))
     utm_campaign = db.Column(db.String(100))
     utm_content = db.Column(db.String(100))
+    utm_term = db.Column(db.String(100), nullable=True)
     page_path = db.Column(db.String(255))
     referrer = db.Column(db.Text)
     # NULL o 'visita' = carga de la pagina; 'clic_whatsapp' = clic al grupo del evento.
