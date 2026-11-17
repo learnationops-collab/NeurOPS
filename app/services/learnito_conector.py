@@ -12,7 +12,7 @@ expedientes, y las mediciones de todo el equipo.
 Herramientas: las de datos (copiloto_datos.py), las del closer (copiloto_herramientas.py: sus agendas y quién le
 debe), buscar un cliente y leer su expediente, y proponer una acción. Acciones: un comentario en la ficha de un
 cliente o un aviso a alguien del equipo; el cerebro las muestra y se hacen recién cuando la persona confirma. Un
-cálculo que agrupa o mide vuelve con su gráfico (`card`). Material: Work no tiene.
+cálculo que agrupa o mide vuelve con su gráfico (`card`). Material: el de la Academia, pedido por su conector (`learnito_material.py`).
 """
 import json
 import logging
@@ -24,7 +24,7 @@ from sqlalchemy import and_, func, or_, select
 from app import db
 from app.models import Appointment, Client, User
 from app.models.person import Person
-from app.services import copiloto_datos, copiloto_herramientas
+from app.services import copiloto_datos, copiloto_herramientas, learnito_material
 from app.services.tablas import alcance, buscar, catalogo, diccionario, exclusion, motor
 from app.services.tablas.plan import normalize as normalizar_plan
 
@@ -120,12 +120,12 @@ EJEMPLOS = {
     'r_accion': 'dejar un comentario en la ficha de un cliente o avisarle algo a alguien del equipo',
     'r_redactar': 'redactar = true si la respuesta es un texto largo a partir de la historia de un cliente (preparar '
                   'una llamada, un mensaje de cobranza, por qué no cerró).',
-    'r_categoria': 'alumno (un cliente puntual), grupo (varios clientes, listas, rankings, métricas), material (Work '
-                   'no tiene: no la uses), ventas (ventas, pagos, cuotas, señas, deuda), equipo (agendas, show up, el '
+    'r_categoria': 'alumno (un cliente puntual), grupo (varios clientes, listas, rankings, métricas), material (lo que '
+                   'enseña Learnation: técnicas, lecciones, el programa; viene de la Academia), ventas (ventas, pagos, cuotas, señas, deuda), equipo (agendas, show up, el '
                    'trabajo de closers y setters), general (lo demás)',
     'r_tipo': 'dato (contar, listar o repartir algo de Work: agendas, ventas, pagos, cuotas, leads, clientes), alumno '
-              '(la historia o la ficha de un cliente puntual) u otro (charla, cómo se hace algo, lo demás; Work no '
-              'tiene material)',
+              '(la historia o la ficha de un cliente puntual), material (lo que enseña Learnation: técnicas, '
+              'lecciones, cómo estudiar) u otro (charla, cómo se hace algo, lo demás)',
     'r_intencion': '("por closer", "por mes")',
     'r_terminos': '("no show", "señó", "no pagó", "cerró")',
     'r_terminos_ej': '("¿qué closers tienen más no shows?": terminos de no shows, dimension closer)',
@@ -237,7 +237,8 @@ def _solo_work(t):
 
 
 def tools():
-    return [_api(t) for t in [*copiloto_datos.HERRAMIENTAS, *copiloto_herramientas.HERRAMIENTAS, *CLIENTES, PROPONER]]
+    # El material del programa es de la Academia: sus dos herramientas, tal cual las define ella (ADR-W150).
+    return [_api(t) for t in [*copiloto_datos.HERRAMIENTAS, *copiloto_herramientas.HERRAMIENTAS, *CLIENTES, PROPONER]]         + learnito_material.herramientas()
 
 
 def planner_tools():
@@ -251,6 +252,8 @@ def plan_schema():
 def run_tool(nombre, entrada, user, opciones=None):
     """{texto, plan?}: el texto va al modelo; el plan, al banco de planes del cerebro."""
     entrada = dict(entrada or {})
+    if nombre in learnito_material.NOMBRES:
+        return learnito_material.correr(nombre, entrada)
     if nombre == 'buscar_cliente':
         return {'texto': json.dumps(find_people(user, entrada.get('texto') or ''), ensure_ascii=False)}
     if nombre == 'expediente_cliente':
@@ -727,7 +730,7 @@ def handle(op, args, quien=None):
         'executeAction': lambda: execute_action(user, a.get('accion'), a.get('texto')),
         'actionLabel': lambda: ACCIONES.get(str(a.get('tipo') or '')),
         'openGoals': lambda: [],
-        'findMaterial': lambda: {'results': [], 'more': []},
+        'findMaterial': lambda: learnito_material.buscar(a.get('tema'), a.get('palabras')),
     }
     if op not in ops:
         raise ConectorError(f'Operación desconocida: {op}.')

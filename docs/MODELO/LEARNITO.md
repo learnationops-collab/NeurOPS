@@ -28,7 +28,8 @@
 | Pantalla | `frontend/src/pages/copiloto/` (`LearnitoChat`, `Grafico`, `LearnitoModal`, `UsoMensual`, `useCopiloto`, `useDictado`, `Markdown`) |
 | Estado global y cómo abrirlo | `frontend/src/sesion/LearnitoContext.jsx`, `frontend/src/sesion/learnito.js` (roles, `abrirLearnito`) |
 | Entrada en el menú y el dock | `frontend/src/sesion/menuSesion.js`, `frontend/src/sesion/fijadas.js` (fijado de fábrica a closers) |
-| Sugerencias para el setter en el Inbox (§9) | `app/automatizaciones/sugerir.py`, `POST /api/inbox/conversaciones/<id>/sugerencia` (`api_sugerir.py`), botón ✨ de `Composer.jsx` |
+| Preguntar desde una conversación del Inbox (§9) | `app/automatizaciones/learnito_inbox.py`, `GET /api/inbox/conversaciones/<id>/learnito` (`api_learnito.py`), botón ✨ de `Composer.jsx` |
+| Material del programa, pedido a la Academia | `app/services/learnito_material.py` |
 
 ## 2. Pantalla
 
@@ -69,7 +70,7 @@ La Academia le pide a Work cada dato con `POST {op, args, quien}` y el token `AC
   - Montos: como siempre, solo admin y director comercial (`exclusion.py`). Las herramientas del closer muestran la deuda de sus clientes, como su cartera.
 - **Acciones** (`proposeAction`, `executeAction`, `actionLabel`): `comentario` (una fila en `client_comments`, como el comentario de la ficha del lead) y `aviso` (una fila en `notifications` para una persona, con el cliente asociado si lo hay). La propuesta no escribe nada; la hace quien la propuso, sobre un cliente que puede ver, al confirmar.
 - **Gráfico** (`card`): de un plan que agrupa o mide, `{title, w: {tipo, pct}, data, error}`. Respeta el alcance.
-- **Material**: Work no tiene (`findMaterial` vacío).
+- **Material** (ADR-W150): el de la Academia (Learnation Resources). `findMaterial` y las herramientas `buscar_material` y `leer_recurso` se le piden a su conector (`learnito_material.py`); las definiciones vienen de ella tal cual, recordadas 10 minutos. Sin respuesta de la Academia, Learnito de Work sigue sin material.
 
 ## 4. Herramientas
 
@@ -119,8 +120,8 @@ Sobre quien pregunta, con los mismos servicios que sus pantallas. Están para to
 | Datos de un alumno | Expediente y ficha corta | Solo la dirección (agentes pares) | Distinto |
 | Voz | Dictado y lectura en voz alta | Dictado | Falta: lectura |
 | Métricas del motor | Más: mediana, correlación, comparar grupos | `count`, `avg`, `sum`, `min`, `max`, `pct` | Falta |
-| Material académico | `buscar_material`, `leer_recurso` | No (no le toca a Work) | Distinto |
-| Sugerir la respuesta al lead (setters) | No existe | Llamada directa a Claude desde Work, con el material de la Academia por `findMaterial` (§9, ADR-W149) | Distinto |
+| Material académico | `buscar_material`, `leer_recurso` | Las mismas, pedidas a la Academia (ADR-W150) | Igual |
+| Preguntar desde una conversación con un lead (setters) | No existe | El cerebro, con el contexto del lead en la pregunta (§9) | Solo Work |
 
 ### Reglas de coherencia
 
@@ -139,10 +140,10 @@ Sin orden comprometido; la prioridad la decide el usuario.
 - El closer en `/tablas` ahora que el motor filtra lo suyo (`tablas_required` todavía no lo deja).
 - Learnito de Cortex («Buscador con IA» sobre las transcripciones del Playbook): sigue «Pronto»; es otra pieza.
 
-## 9. Sugerencias para el setter en el Inbox (ADR-W149)
+## 9. Preguntar a Learnito desde una conversación del Inbox (ADR-W150)
 
-- **Qué hace:** en el chat de una conversación, el botón ✨ pide la próxima respuesta para el lead y la deja en la caja para editarla y mandarla. Debajo aparece «por qué», en una oración, como feedback. Lo escrito en la caja va como pedido: un borrador a mejorar o una instrucción («más corto»). No manda nada solo.
-- **Por qué no usa el cerebro:** tiene que tardar segundos (una sola llamada, ~5 s) y es la base del futuro setter IA, que va a correr en el motor de Work. Es la única IA de Work fuera del cerebro; va por `ClaudeService` (registro en `ai_usage`, función `inbox_sugerencia`), con Opus 5.5 a esfuerzo bajo y salida JSON (`respuesta`, `por_que`).
-- **Qué lee:** los últimos 25 mensajes (lead, bot, equipo con su nombre), las variables del lead, las últimas 5 notas internas y el material del programa: `findMaterial` del conector de la Academia (`POST /api/v1/learnito/connector`, Learnation Resources) con los tres últimos mensajes del lead. Sin respuesta de la Academia en 8 s, sugiere sin material.
-- **Reglas del texto** (`GUIA`, estable para la caché): tono del equipo, un paso por mensaje, nunca precios, cupos, fechas ni promesas inventadas (lo que falta va entre corchetes), salida amable si no es médico.
-- **Tope:** US$ 2 por persona por día (unas 100 sugerencias). Medido el 17/11: US$ 0,017 y 4,6 s por sugerencia.
+- **Qué hace:** en el chat de una conversación, el botón ✨ abre el Learnito de siempre y le pregunta qué información del programa o del material le sirve al setter para responderle a ese lead, y qué conviene preguntarle o evitar. No redacta el mensaje. Lo escrito en la caja del chat va como lo que se quiere saber («cómo le explico qué incluye Scale»).
+- **El mismo cerebro:** la pregunta la responde el cerebro de la Academia, con sus reglas de costo, tope por conversación y calificación. Work solo arma la pregunta (`learnito_inbox.pregunta`): lo que se sabe del lead, las últimas 3 notas del equipo y los últimos 20 mensajes. En el chat de Learnito se ve solo «Ayudame con @usuario»; el contexto viaja en la pregunta.
+- **Una conversación por lead:** preguntar por otro lead, o con la conversación agotada, arranca otra (`enviar(…, { nueva: true })` de `useCopiloto`); por el mismo lead, sigue la que está abierta. Con conversaciones sin calificar, el cerebro pide calificarlas antes, como siempre.
+- **El material** lo busca el cerebro con `buscar_material` (§3, Material).
+- Reemplazó a la sugerencia redactada por una llamada directa a Claude (ADR-W149), el mismo 17/11.

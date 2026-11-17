@@ -157,6 +157,3 @@
 .thalamus.inbox .cv-seg--error{color:var(--danger)}
 .thalamus.inbox .cv-seg-form{display:flex;flex-direction:column;gap:10px;margin-bottom:12px}
 
-/* El porqué de la sugerencia de Learnito, debajo de la caja (ADR-W149). */
-.thalamus.inbox .cv-sugerencia{margin:4px 0 0;display:flex;align-items:flex-start;gap:6px;color:var(--brand-secondary)}
-.thalamus.inbox .cv-sugerencia svg{flex:none;margin-top:2px}

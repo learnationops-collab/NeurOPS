@@ -587,3 +587,7 @@
 
 ### 17/11/2026 · Learnito sugiere la respuesta del setter
 - En el chat, el botón ✨ deja en la caja la próxima respuesta para el lead y, debajo, por qué. Lo escrito en la caja va como borrador o pedido («más corto», «invitalo a agendar»). Lee la conversación, los datos del lead, las notas del equipo y el material del programa de la Academia ([sugerir.py](../../app/automatizaciones/sugerir.py), [ADR-W149](../DECISIONS.md), [LEARNITO.md](../MODELO/LEARNITO.md) §9; pedido de Mario en la Estrategia del 16/11).
+
+### 17/11/2026 · Learnito en el Inbox: el mismo cerebro, con información en vez de un mensaje redactado
+- El botón ✨ del chat ya no redacta: abre el Learnito de siempre con el contexto del lead y le pregunta qué información del programa le sirve al setter y qué conviene preguntar o evitar ([learnito_inbox.py](../../app/automatizaciones/learnito_inbox.py), [Composer.jsx](../../frontend/src/pages/inbox/conversaciones/Composer.jsx), [ADR-W150](../DECISIONS.md)). Reemplaza la sugerencia de la mañana (ADR-W149).
+- El Learnito de Work tiene el material del programa: se lo pide a la Academia (`buscar_material`, `leer_recurso`, `findMaterial`) ([learnito_material.py](../../app/services/learnito_material.py), [LEARNITO.md](../MODELO/LEARNITO.md) §3 y §9).

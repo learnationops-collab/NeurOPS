@@ -48,8 +48,8 @@ export const inboxApi = {
     propuesta: (pid) => api.get(`/inbox/propuestas/${pid}`).then(datos),
     aprobarPropuesta: (pid, respuesta) => api.post(`/inbox/propuestas/${pid}/aprobar`, { respuesta }).then(datos),
     rechazarPropuesta: (pid, respuesta) => api.post(`/inbox/propuestas/${pid}/rechazar`, { respuesta }).then(datos),
-    // Learnito sugiere la próxima respuesta (ADR-W149): `pedido` es lo escrito en la caja, si hay.
-    sugerir: (cid, pedido) => api.post(`/inbox/conversaciones/${cid}/sugerencia`, { pedido }).then(datos),
+    // La pregunta a Learnito con el contexto del lead (ADR-W150): `pedido` es lo escrito en la caja, si hay.
+    preguntaLearnito: (cid, pedido) => api.get(`/inbox/conversaciones/${cid}/learnito`, { params: { pedido } }).then(datos),
     // Seguimiento condicional: `{ horas, texto | audio_id, pausar }`; sale si el lead no respondió.
     programarSeguimiento: (cid, cuerpo) => api.post(`/inbox/conversaciones/${cid}/seguimientos`, cuerpo).then(datos),
     cancelarSeguimiento: (sid) => api.delete(`/inbox/seguimientos/${sid}`).then(datos),
