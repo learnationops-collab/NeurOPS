@@ -614,3 +614,8 @@
 - La fila avisa cuándo se cierra la ventana de Instagram (últimas 24 h de los 7 días) y el próximo seguimiento programado; cola nueva «Se cierra la ventana» ([colas.js](../../frontend/src/pages/inbox/conversaciones/colas.js), [Fila.jsx](../../frontend/src/pages/inbox/conversaciones/Fila.jsx), [api.py](../../app/automatizaciones/api.py)).
 - Sin leer en el título de la pestaña y avisos del escritorio con la campana de la bandeja ([useAvisos.js](../../frontend/src/pages/inbox/conversaciones/useAvisos.js)).
 - Learnito en el panel derecho, en una pestaña al lado de la ficha ([PanelDerecho.jsx](../../frontend/src/pages/inbox/conversaciones/PanelDerecho.jsx)). En el menú «/», la vista previa resalta las variables completadas ([MenuRayo.jsx](../../frontend/src/pages/inbox/conversaciones/MenuRayo.jsx)).
+
+### 17/11/2026 · Cero superposiciones en las agendas
+- Mover una agenda que viene (reagendar desde la ficha o desde la triage, el mazo, reasignar, editar la agenda o el Tablero) revisa antes las agendas del closer con su margen y su Google Calendar: si choca, no se mueve y dice por qué ([manual.py](../../app/agendas_v2/manual.py), [ADR-W157](../DECISIONS.md)).
+- Pasar al triage solo va a una triage libre a esa hora. Sin ninguna libre, a mano se rechaza y la C/D desplazada sigue con el closer para reagendar ([a_triage.py](../../app/agendas_v2/a_triage.py)).
+- La Momentum mira Google al momento de reservarla, y la Academia pregunta si el horario está libre antes de moverla (`POST /api/external/academy/agenda/libre`).

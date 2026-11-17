@@ -169,26 +169,28 @@ def pasar(appt, usuario, ahora=None, motivo=None):
     if not filas:
         raise ValueError('No hay nadie del triage con su cuenta activa en Team.')
     triage, libre = filas[0]
+    if not libre:
+        # Cero superposiciones (Estrategia 16/11): sin una triage libre a esa hora no se pasa. La desplazada
+        # sigue con el closer y le llega el aviso para reagendarla (desplazar.pasar_al_triage).
+        raise ValueError('Ninguna persona del triage tiene libre ese horario: reagendala primero o dejala con el closer.')
 
     anterior = appt.closer.username if appt.closer else 'sin asignar'
     viejo = (appt.closer_id, appt.google_event_id, appt.calendar_id) if appt.google_event_id else None
     appt.closer_id = triage.id
     appt.google_event_id = None
     appt.agenda_payload = _payload_con_lead(appt)
-    reagendar = '' if libre else ' No tenía ese horario libre: hay que reagendarla.'
     nombre = (appt.client.full_name if appt.client else None) or 'un lead'
     cuando = appt.start_time.strftime('%d/%m/%Y %H:%M')
     if motivo:
-        # Con la triage libre a esa hora no hay nada que reagendar: se le saca la marca de desplazada.
-        if libre:
-            appt.desplazada_por_id = None
-        nota = f'{motivo} Pasa al triage: de {anterior} a {triage.username}.{reagendar}'
-        tipo, asunto = 'agenda_desplazada', f'Agenda del triage: {nombre}' if libre else f'Agenda para reagendar: {nombre}'
-        texto = f'{motivo} Te llega la agenda de {nombre} del {cuando} UTC.{reagendar}'
+        # La triage la toma a la misma hora: no hay nada que reagendar, se le saca la marca de desplazada.
+        appt.desplazada_por_id = None
+        nota = f'{motivo} Pasa al triage: de {anterior} a {triage.username}.'
+        tipo, asunto = 'agenda_desplazada', f'Agenda del triage: {nombre}'
+        texto = f'{motivo} Te llega la agenda de {nombre} del {cuando} UTC.'
     else:
-        nota = f'Pasada al triage: de {anterior} a {triage.username} (por {usuario.username}).{reagendar}'
+        nota = f'Pasada al triage: de {anterior} a {triage.username} (por {usuario.username}).'
         tipo, asunto = 'agenda_nueva', f'Agenda del triage: {nombre}'
-        texto = f'{anterior} te pasó la agenda de {nombre} del {cuando} UTC.{reagendar}'
+        texto = f'{anterior} te pasó la agenda de {nombre} del {cuando} UTC.'
     lead_log_service.nota(nota, usuario, appt=appt)
     avisos_service.avisar(tipo, 'user', triage.id, asunto, texto, 'appointment', appt.id, person_uuid=appt.person_uuid)
     db.session.commit()

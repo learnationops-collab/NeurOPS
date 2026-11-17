@@ -10,6 +10,31 @@ from app.services.agenda_time_service import parse_a_utc, zona_origen
 from . import bp
 
 
+def _verificar_horario(agenda, data):
+    """Cero superposiciones (Estrategia 16/11): si el Tablero cambia la fecha o el closer de una agenda que viene,
+    la cita de Work no puede pisar otra ni el Google del closer (manual.asegurar_libre). ValueError si choca."""
+    if not ({'date', 'closer'} & set(data)) or not agenda.date:
+        return
+    from datetime import timedelta
+
+    from app.agendas_v2.manual import AgendaManualError, asegurar_libre
+    from app.models import Appointment
+    from app.services.booking_service import BookingService
+
+    client = BookingService.cliente_de_agenda(agenda)
+    appt = Appointment.query.filter(
+        Appointment.client_id == client.id, Appointment.start_time >= agenda.date - timedelta(hours=12),
+        Appointment.start_time <= agenda.date + timedelta(hours=12)).first() if client else None
+    if not appt:
+        return
+    inicio = parse_a_utc(data['date'])[0] if data.get('date') else appt.start_time
+    closer = BookingService.resolve_user_by_name(BookingService.normalize_closer_name(data['closer']))         if data.get('closer') else appt.closer
+    try:
+        asegurar_libre(appt, closer.id if closer else appt.closer_id, inicio or appt.start_time)
+    except AgendaManualError as e:
+        raise ValueError(e.mensaje) from e
+
+
 @bp.route('/public/financial-agendas/<int:agenda_id>', methods=['PUT', 'OPTIONS'])
 def update_financial_agenda(agenda_id):
     # Actualiza una agenda financiera
@@ -31,6 +56,7 @@ def update_financial_agenda(agenda_id):
         if motivo is None and 'closer_result' in data:
             motivo = motivo_estado_service.para_correccion(None, data['closer_result'], data.get('note'))
         motivo_escrito = False  # `process_agenda` o la escritura directa ya lo dejaron en el hilo
+        _verificar_horario(agenda, data)
         if 'nombre' in data:
             agenda.nombre = data['nombre']
         # El lead, su instagram, whatsapp y mail corrigen a su persona (lo que se muestra sale de ella).

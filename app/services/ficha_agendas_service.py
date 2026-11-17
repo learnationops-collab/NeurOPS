@@ -232,6 +232,9 @@ def editar_agenda(appt, datos, usuario, *, desde='el historial de la ficha'):
             nombre = otra.client.full_name if otra.client else 'otro lead'
             raise ErrorDeAccion(f'{closer.username} ya tiene una llamada sin resolver con '
                                 f'{nombre} a esa misma hora.')
+        # Una agenda que viene tampoco puede pisar otra con su margen ni su Google (cero superposiciones).
+        from app.services.ficha_acciones_service import _asegurar_libre
+        _asegurar_libre(appt, closer.id, inicio)
 
     espejo = espejo_en_el_tablero(appt)
     zona = zona_del_usuario(usuario)

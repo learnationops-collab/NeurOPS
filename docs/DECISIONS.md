@@ -1306,3 +1306,14 @@
   8. En el menú «/», la vista previa de cada respuesta rápida resalta lo que se completó con la ficha y marca en rojo la variable que falta.
 - **Qué se pierde:** el borrador vive en el navegador de cada uno (no pasa a otra computadora). Enter ya no hace salto de línea (es Shift+Enter). Los avisos del escritorio dependen de que la pestaña de Work esté abierta.
 - **Consecuencias:** sin migración. La consulta de la lista suma una agrupación por contacto sobre `aut_seguimientos`.
+
+## ADR-W157: ninguna agenda se mueve ni se pasa sobre algo ocupado
+
+- **Fecha:** 2026-11-17 · **Subsistema:** Agendas 2.0 (`manual.asegurar_libre`, `a_triage.pasar`, `momentum.choca`, `/agenda/libre`) y la Academia (`ThalamusAgenda::salesSlotFree`) · **Estado:** implementado.
+- **Contexto:** Mario fijó cero superposiciones en las agendas, respetando las sesiones de coaching con Marlon (Estrategia 16/11, Leadership 1396). Una auditoría de todos los caminos encontró que el link de Tálamus, la agenda manual y el reagendado del reporte verificaban, pero mover una agenda que ya existe no: el resultado de la ficha con reagenda, la reagenda de la triage, el PATCH del mazo, reasignar, editar la agenda y el Tablero. El pase al triage asignaba aunque nadie estuviera libre, y la reserva de la Momentum no miraba lo ocupado en Google.
+- **Decisión:**
+  1. `manual.asegurar_libre(appt, closer_id, inicio)` (la verificación de la agenda manual: sus agendas con margen y su Google sin caché, con bloqueo) corre antes de mover o pasar una agenda que viene, en todos esos caminos. Una agenda que ya pasó no se revisa: moverla es corregir el historial.
+  2. Pasar al triage exige una triage libre a esa hora. Si no hay, a mano se rechaza con el motivo, y la C/D desplazada sigue con el closer marcada para reagendar (decisión de Santi, 17/11).
+  3. La Momentum, al reservar, cuenta lo ocupado en Google leído en el momento, sin las C/D que puede tomar. Antes de moverla, la Academia le pregunta a Work (`POST /agenda/libre`) si el closer tiene libre ese horario, sin contar la propia Momentum. Si Work no responde, no frena.
+- **Qué se pierde:** un reagendado sobre algo ocupado ya no se puede forzar: hay que liberar el horario primero. Quedan sin cubrir el editor de base de datos del admin, las agendas movidas a mano en Google (Work acepta lo que pasó) y el link viejo `/public/book`. Dari revisa solo el calendario del triage: su cuenta es la compartida de fulfillment y el principal la bloquearía con lo de todo el equipo.
+- **Consecuencias:** sin migración. `app/api/external/agenda.py` sigue pasando las 500 líneas (ya estaba en 908).

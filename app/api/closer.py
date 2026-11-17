@@ -583,6 +583,17 @@ def get_sale_metadata():
         return jsonify({"message": "Forbidden"}), 403
     return jsonify(CloserService.get_sale_metadata(current_user.id)), 200
 
+def _ocupado(appt, closer_id, inicio):
+    """409 si mover `appt` a `inicio` o pasársela a `closer_id` pisa algo ocupado (manual.asegurar_libre); None si no."""
+    from app.agendas_v2.manual import AgendaManualError, asegurar_libre
+
+    try:
+        asegurar_libre(appt, closer_id, inicio)
+    except AgendaManualError as e:
+        return jsonify({"error": e.mensaje, "codigo": e.codigo}), 409
+    return None
+
+
 @bp.route('/appointments/<int:id>', methods=['PATCH'])
 @login_required
 def update_appointment(id):
@@ -601,9 +612,14 @@ def update_appointment(id):
     if 'start_time' in data:
         try:
             # Format usually comes as ISO from frontend
-            appt.start_time = datetime.fromisoformat(data['start_time'].replace('Z', ''))
+            nuevo_inicio = datetime.fromisoformat(data['start_time'].replace('Z', ''))
         except ValueError:
             return jsonify({"error": "Invalid date format"}), 400
+        if nuevo_inicio != old_start_time:
+            ocupado = _ocupado(appt, appt.closer_id, nuevo_inicio)
+            if ocupado:
+                return ocupado
+        appt.start_time = nuevo_inicio
 
     db.session.commit()
     if 'start_time' in data and old_start_time != appt.start_time:
@@ -650,6 +666,9 @@ def reassign_appointment(id):
     if appt.closer_id == new_closer.id:
         return jsonify({"error": "Este lead ya pertenece a ese closer"}), 400
 
+    ocupado = _ocupado(appt, new_closer.id, appt.start_time)
+    if ocupado:
+        return ocupado
     old_closer_name = appt.closer.username if appt.closer else 'sin asignar'
     old_closer_id = appt.closer_id
     appt.closer_id = new_closer.id

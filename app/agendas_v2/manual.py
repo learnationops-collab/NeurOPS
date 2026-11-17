@@ -165,6 +165,15 @@ def verificar_horario(closer_id, inicio, payload, propia=None):
     return [i for i in fuera_de_google if propia is None or i != propia.id]
 
 
+def asegurar_libre(appt, closer_id, inicio):
+    """Antes de mover `appt` a `inicio` o pasársela a `closer_id`: lanza AgendaManualError('ocupado') si
+    pisa otra agenda suya o su Google Calendar (cero superposiciones, Estrategia 16/11). Una agenda que ya
+    pasó no se revisa: moverla es una corrección del historial. Llamar ANTES de cambiar nada."""
+    if not closer_id or inicio is None or inicio <= datetime.utcnow():
+        return
+    verificar_horario(closer_id, inicio, appt.agenda_payload or {}, propia=appt if appt.closer_id == closer_id else None)
+
+
 def agendar(cliente, closer, inicio, usuario, via, fuente=None, decision=None, anterior=None, ahora=None,
             sesion=None):
     """Crea la agenda de `cliente` con `closer` a las `inicio` (UTC sin zona), y después crea el evento

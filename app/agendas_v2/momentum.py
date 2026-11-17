@@ -31,7 +31,12 @@ def choca(user, inicio_ms, fin_ms, libres):
     próximo commit, para que dos reservas a la vez no tomen el mismo hueco."""
     from app.models import User
 
+    from app.agendas_v2 import desplazar
+
     desde = inicio_ms - LEIDO_ANTES_MS
-    franjas = servicio._franjas_google(user.id, desde, fin_ms)  # antes del bloqueo: leer Google puede hacer commit
+    # Google sin caché y antes del bloqueo (leerlo puede hacer commit): un coaching que le pusieron después
+    # de que la Academia leyó los horarios también cuenta (cero superposiciones, Estrategia 16/11).
+    franjas = servicio._franjas_frescas(user.id, desde, fin_ms)
     db.session.query(User).filter_by(id=user.id).with_for_update().first()
-    return se_solapa(ocupado_en_work(user, desde, franjas, libres), inicio_ms, (fin_ms - inicio_ms) // 60000)
+    en_google = [{'inicio': a, 'fin': b} for a, b in desplazar.restar(franjas, libres)] if franjas else []
+    return se_solapa(ocupado_en_work(user, desde, franjas, libres) + en_google, inicio_ms, (fin_ms - inicio_ms) // 60000)
