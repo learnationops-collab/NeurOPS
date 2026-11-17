@@ -4,19 +4,21 @@
 
 import { useEffect, useState } from 'react';
 import {
-  ArrowLeft, ArrowRight, CheckCircle2, Clock, DollarSign, EyeOff, Pencil,
-  RotateCcw, ThumbsDown, ThumbsUp, Trash2,
+  ArrowLeft, ArrowRight, CalendarX, CheckCircle2, Clock, DollarSign, EyeOff, MessageSquare, MoreHorizontal, Pencil,
+  RotateCcw, ThumbsDown, ThumbsUp, Trash2, Wallet,
 } from 'lucide-react';
 import { Button, Chip, Input, Select, TextArea } from '../../standard';
 import api from '../../../services/api';
 import { browserTimezone } from '../../../utils/datetime';
 import { zonedToUtc } from '../../../pages/agendas_v2/core/tiempo';
 import { MINIMO_MOTIVO } from '../../../utils/motivoEstado';
+import { MOTIVOS, motivoDe } from '../../../utils/motivosTriage';
 import { MINIMO_NOTA, esTransferencia, faltan as faltanDe } from './recorrido';
 
 const ICONOS = {
   calificado: ThumbsUp, descalificado: ThumbsDown,
   cerrado: DollarSign, no_cerrado: ThumbsDown, seguimiento: Clock, descartado: Trash2, no_pitch: EyeOff,
+  sin_dinero: Wallet, sin_horario: CalendarX, objecion: MessageSquare, otro: MoreHorizontal,
 };
 
 export const Titulo = ({ texto, ayuda }) => (
@@ -107,6 +109,31 @@ export const Nota = ({ paso, r, campo, texto, ayuda, placeholder, minimo = MINIM
     {minimo && <Minimo texto={r[campo]} minimo={minimo} />}
   </Campos>
 );
+
+/** Por qué no pasó a closing: el motivo y su texto en la misma pantalla. Elegir no avanza, porque dos de
+ *  los motivos piden contar cuál fue. A lo sumo dos columnas: cuatro opciones nunca quedan 3 + 1. */
+export const Motivo = ({ paso, r, onCambiar, nav }) => {
+  const elegido = motivoDe(r.motivo);
+  return (
+    <Campos paso={paso} r={r} texto="¿Por qué no pasó a closing?" ayuda="Elegí el motivo principal." nav={nav}>
+      <div role="group" aria-label="Motivo" style={{ display: 'grid', gap: 'var(--space-3)',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(max(200px, calc(50% - var(--space-3))), 1fr))' }}>
+        {MOTIVOS.map((o) => (
+          <Opcion key={o.valor} label={o.label} sub={o.sub} Icono={ICONOS[o.valor]}
+            activa={r.motivo === o.valor} onClick={() => onCambiar({ motivo: o.valor })} />
+        ))}
+      </div>
+      {elegido && (
+        <div style={{ display: 'grid', gap: 'var(--space-2)' }}>
+          <small className="ln-field-label">{elegido.pregunta}{elegido.pideTexto ? '' : ' (opcional)'}</small>
+          <TextArea value={r.nota || ''} onChange={(e) => onCambiar({ nota: e.target.value })}
+            placeholder={elegido.pideTexto ? 'Qué dijo y qué le respondiste.' : 'Qué dijo, qué le ofreciste y cómo quedó.'} />
+          {elegido.pideTexto && <Minimo texto={r.nota} />}
+        </div>
+      )}
+    </Campos>
+  );
+};
 
 export const Fecha = ({ paso, r, campo, texto, ayuda, conHora = false, atajos = [], onCambiar, nav }) => (
   <Campos paso={paso} r={r} texto={texto} ayuda={ayuda} nav={nav}>
