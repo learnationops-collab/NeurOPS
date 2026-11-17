@@ -130,6 +130,8 @@ export function filtrar(lista, { ahora, ...f }) {
     return salida;
 }
 
+// Sin usuario: Instagram no da el perfil de quien nunca escribió (solo le escribimos nosotros); al responder se completa.
 export function quien(c) {
-    return c.username ? `@${c.username}` : c.nombre || 'Sin usuario';
+    if (c.username) return `@${c.username}`;
+    return c.nombre || (c.ultimo_entrante_en ? 'Sin usuario' : 'Todavía no respondió');
 }
