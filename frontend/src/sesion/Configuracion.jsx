@@ -23,6 +23,7 @@ import TabApariencia from '../temas/TabApariencia';
 import { puedeElegirTema } from '../context/AparienciaContext';
 import { useTemaDeHoja } from './temaDeHoja';
 import { Icono } from '../pages/agendas_v2/ui/base';
+import ElegirPersonaje from '../components/mascota/ElegirPersonaje';
 import '../pages/agendas_v2/thalamus.css';
 
 const RECIBEN_AGENDAS = ['closer', 'triage', 'director_comercial', 'admin'];
@@ -51,7 +52,7 @@ export default function Configuracion({ user = null, tabInicial = null, onTab = 
     else if (tab === 'eventos') cuerpo = <MisEventos />;
     else if (tab === 'equipo') cuerpo = <TeamManagementPage embebido />;
     else if (tab === 'apariencia') cuerpo = <TabApariencia />;
-    else cuerpo = user ? <DatosCuenta user={user} /> : null;
+    else cuerpo = user ? <><ElegirPersonaje /><DatosCuenta user={user} /></> : null;
     return (
         <div ref={raiz} className="thalamus cu-hoja" data-theme={dataTheme} aria-label="Configuración">
             <div className="tabs" role="tablist" aria-label="Configuración">

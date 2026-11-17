@@ -113,11 +113,18 @@ const DockSecciones = ({ secciones: todasLasSecciones, activa, onElegir, ariaLab
     const correr = useCallback((id) => (accionesRef.current.find(o => o.id === id)
         || opcionesRef.current.find(o => o.id === id))?.onClick(), []);
     const acciones = fijables.opciones.map(o => ({ ...o, onClick: () => correr(o.id) }));
-    // «Nuevo» (isla izquierda): lo que crea algo en esta pantalla, y reportar o pedir algo, que va en todas.
-    const reportar = { id: 'reportar-bug', label: 'Reportar o pedir algo', titulo: 'Un problema o un pedido al equipo técnico',
-        Icono: Bug, onClick: abrirReporteDeBug };
+    // «Nuevo», una herramienta más (se fija como cualquiera): abre la lista de lo que crea algo en esta
+    // pantalla (las acciones con `nuevo`) y «Reportar o pedir algo», que va en todas.
+    const reportar = { id: 'reportar-bug', label: 'Reportar o pedir algo', Icono: Bug, onClick: abrirReporteDeBug };
     const nuevos = [...acciones.filter(o => o.nuevo), reportar];
-    const opciones = [...acciones, reportar, ...herramientas, ...ocultas];
+    const nuevosRef = useRef(nuevos);
+    nuevosRef.current = nuevos;
+    const nuevo = { id: 'nuevo', label: 'Nuevo', Icono: Plus, titulo: nuevos.map(o => o.label).join(' · '),
+        panel: { titulo: 'Nuevo', vacio: 'Nada para crear acá.', cargar: () => nuevosRef.current } };
+    const deCuenta = acciones.filter(o => o.seccion === 'cuenta');
+    const deAccion = acciones.filter(o => o.seccion !== 'cuenta' && !o.nuevo);
+    const sinLeer = deCuenta.reduce((n, o) => n + (Number(o.cuenta) || 0), 0);
+    const opciones = [nuevo, ...acciones, reportar, ...herramientas, ...ocultas];
     opcionesRef.current = opciones;
     const contexto = useMemo(() => ({ publicar }), [publicar]);
     useEffect(() => {
@@ -181,23 +188,20 @@ const DockSecciones = ({ secciones: todasLasSecciones, activa, onElegir, ariaLab
     const cosas = secciones.length + (antes ? 1 : 0) + (despues ? 1 : 0);
     const clases = ['dock', !angosto && 'dock--centro', cosas >= 6 && 'dock--denso', siempreNombres && 'dock--nombres',
         compacto && claseSinLugar, desborda && 'dock--desborda', nav.editando && 'dock--editando', 'caja'];
-    const fijadas = <DockFijadas usuario={fijables.usuario || usuario} opciones={opciones} onElegir={correr} sep={angosto ? 'despues' : 'antes'} />;
-    const nuevo = usuario && (
-        <BotonHerramientas usuario={usuario} Icono={Plus} rotulo="Nuevo" clase="dock-nuevo" pista={null}
-            grupos={[{ titulo: 'Crear', opciones: nuevos }]} />
-    );
+    const fijadas = <DockFijadas usuario={fijables.usuario || usuario} opciones={opciones} onElegir={correr} sep={angosto ? 'despues' : null} />;
     const herr = (
         <BotonHerramientas usuario={usuario} onEditar={todasLasSecciones.length > 1 && usuario ? () => nav.editar(true) : null}
+            cuenta={sinLeer > 0 ? (sinLeer > 99 ? '99+' : sinLeer) : null}
             grupos={[
-                { titulo: 'Herramientas', opciones: herramientas },
-                { titulo: 'Acciones', opciones: acciones.filter(o => !o.nuevo) },
+                { titulo: 'Herramientas', opciones: [nuevo, ...herramientas] },
+                { titulo: 'Acciones', opciones: deAccion },
                 { titulo: 'Secciones ocultas', opciones: ocultas },
+                { titulo: 'Tu cuenta', opciones: deCuenta },
             ]} />
     );
     const centro = (
         <nav className={clases.filter(Boolean).join(' ')} aria-label={ariaLabel}>
             <Humo colores={HUMO_DOCK} />
-            {angosto && nuevo}
             {angosto && fijadas}
             {antes}
             {antes && <span className="dock-sep" />}
@@ -241,7 +245,7 @@ const DockSecciones = ({ secciones: todasLasSecciones, activa, onElegir, ariaLab
         <DockContexto.Provider value={contexto}>
             {angosto ? centro : (
                 <div className="dock-barra">
-                    <div className="dock-isla dock-isla--izq">{nuevo}{fijadas}</div>
+                    <div className="dock-isla dock-isla--izq">{fijadas}</div>
                     {centro}
                     <div className="dock-isla dock-isla--der">
                         {herr}

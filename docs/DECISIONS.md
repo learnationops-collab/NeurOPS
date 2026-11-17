@@ -1359,3 +1359,14 @@
   3. «Nuevo» (+) abre la isla izquierda: lo que crea algo en esa pantalla (las acciones con `nuevo`: Nueva agenda, Referido manual) y «Reportar o pedir algo». Las demás acciones (Learnito, Quiero procrastinar…) van a Herramientas. Dentro de un dock, el avatar ya no las repite: queda con Configuración, Portal, avisos, reportes y la salida. Las que abren una lista (Mis links de agendamiento) siguen en el avatar porque no se pueden fijar.
 - **Qué se pierde:** Turnos no muestra a alguien con usuario activo pero sin Google o WhatsApp conectado, aunque tenga horario cargado: es lo que la reserva hace.
 - **Consecuencias:** sin migración. Una acción nueva de crear lleva `nuevo: true` en `acciones` de `armarMenuSesion`.
+
+## ADR-W162: el avatar abre Configuración; todo lo demás, y «Nuevo», es Herramientas
+
+- **Fecha:** 2026-11-17 · **Subsistema:** Dock 2.0 (`MenuSesion`, `BotonHerramientas`, `DockFijadas`, `DockSecciones`, `sesion/fijadas.js`, Configuración) · **Estado:** implementado. Reemplaza el punto 3 de ADR-W161.
+- **Contexto:** Santi revisó el dock de ADR-W161: «Nuevo» tiene que ser una herramienta y no un botón fijo, y del avatar no sale nada: abre la configuración directo, como «tu cara» de Leadership. Todo lo demás son herramientas.
+- **Decisión:**
+  1. El avatar abre Configuración. Conserva el «!» cuando falta configurar algo. El menú del avatar desaparece, y el personaje se elige en Configuración › Datos (`ElegirPersonaje`).
+  2. Herramientas junta todo: **Herramientas** (Nuevo y las de ventana, como Turnos), **Acciones** (las de la pantalla: Learnito, Mis links, Quiero procrastinar…), **Secciones ocultas** y **Tu cuenta** (Portal, Avisos, Conflictos, Mis reportes, Volver a mi sesión, Cerrar sesión). Lo sin leer de Tu cuenta va en el globito de la llave.
+  3. «Nuevo» es una herramienta con su lista (Nueva agenda, Referido manual donde los hay, y Reportar o pedir algo). Las opciones que abren una lista (Nuevo, Mis links) ahora se pueden fijar: fijadas, abren directo su lista. Los closers la tienen fijada de fábrica, junto a Learnito.
+- **Qué se pierde:** cerrar sesión o ir al Portal lleva un toque más (llave → opción) que antes desde el avatar, salvo que se fije. Quien ya había tocado sus fijadas no recibe «Nuevo» fijado: lo tiene en Herramientas.
+- **Consecuencias:** sin migración. `MenuSesion` ya no dibuja un menú: publica sus opciones al dock con `seccion` («acciones» o «cuenta»).

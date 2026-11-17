@@ -5,12 +5,13 @@ import { useCallback, useSyncExternalStore } from 'react';
 
 const clave = (userId) => `dock-fijadas:${userId}`;
 
-// Lo que no se fija: salir de la sesión y las opciones que abren una lista dentro del menú.
+// Lo que no se fija: salir de la sesión y volver a la propia.
 const NO_FIJABLES = new Set(['salir', 'volver']);
-export const esFijable = (op) => !!op && !NO_FIJABLES.has(op.id) && !op.panel && typeof op.onClick === 'function';
+// Una que abre una lista (`panel`: Nuevo, Mis links) también: fijada, abre su lista desde el dock.
+export const esFijable = (op) => !!op && !NO_FIJABLES.has(op.id) && (!!op.panel || typeof op.onClick === 'function');
 
-// De fábrica: Learnito para los closers; Turnos (la ventana, ventanas/herramientas.js) para los setters.
-const DE_FABRICA = { closer: ['learnito'], setter: ['tool:turnos'] };
+// De fábrica: Nuevo y Learnito para los closers; Turnos (la ventana, ventanas/herramientas.js) para los setters.
+const DE_FABRICA = { closer: ['nuevo', 'learnito'], setter: ['tool:turnos'] };
 export const fijadasDeFabrica = (role) => DE_FABRICA[role] || [];
 
 const oyentes = new Set();

@@ -1,10 +1,12 @@
 import { useFijadas } from '../../../sesion/fijadas';
+import BotonHerramientas from '../../../ventanas/BotonHerramientas';
 
 /**
- * La sección de la izquierda del dock: las acciones del menú de sesión que el usuario fijó (Learnito,
- * Nueva agenda…), como accesos de un toque. Las opciones salen del `MenuSesion` del mismo dock (se las
- * pasa por `DockContexto`), así cada pantalla aporta las suyas y una fijada que no existe en esta
- * pantalla no se dibuja. El orden es el de cuándo se fijaron. Sin ninguna, no ocupa lugar.
+ * Lo fijado en el dock (isla izquierda): las opciones de Herramientas que el usuario fijó (Nuevo,
+ * Learnito, Turnos…), como accesos de un toque. Las opciones las arma `DockSecciones` (las de la pantalla
+ * le llegan del `MenuSesion` por `DockContexto`), así una fijada que no existe en esta pantalla no se
+ * dibuja. Una que abre una lista (Nuevo) abre directo esa lista. El orden es el de cuándo se fijaron.
+ * Sin ninguna, no ocupa lugar. `sep`: dónde va la línea que la separa ('antes', 'despues' o null).
  */
 const DockFijadas = ({ usuario, opciones, onElegir, sep = 'despues' }) => {
     const { fijadas } = useFijadas(usuario);
@@ -15,13 +17,15 @@ const DockFijadas = ({ usuario, opciones, onElegir, sep = 'despues' }) => {
         <>
             {sep === 'antes' && <span className="dock-sep" />}
             <div className="dock-fijadas" role="group" aria-label="Accesos fijados">
-                {visibles.map((op) => (
+                {visibles.map((op) => (op.panel ? (
+                    <BotonHerramientas key={op.id} usuario={usuario} Icono={op.Icono} rotulo={op.label} panelInicial={op} />
+                ) : (
                     <button key={op.id} type="button" className="dock-fijada" onClick={() => onElegir(op.id)}
                         aria-label={op.titulo ? `${op.label}, ${op.titulo}` : op.label} title={op.label}>
                         <op.Icono size={19} aria-hidden="true" />
                         {op.cuenta != null && <span className="dock-sesion-aviso" aria-hidden="true">{op.cuenta}</span>}
                     </button>
-                ))}
+                )))}
             </div>
             {sep === 'despues' && <span className="dock-sep" />}
         </>

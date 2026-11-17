@@ -639,3 +639,7 @@
 - Turnos cuenta solo a quienes la reserva ofrece (usuario activo, Google y WhatsApp). Juliana Avila quedó desactivada en Work ([ADR-W161](../DECISIONS.md)).
 - En Turnos, tocar un número muestra los horarios libres de ese día, y la ventana deja elegir en qué hora verlos ([TurnosEquipo.jsx](../../frontend/src/pages/agendas_v2/secciones/team/TurnosEquipo.jsx), [TurnosVentana.jsx](../../frontend/src/ventanas/herramientas/TurnosVentana.jsx)).
 - Botón «Nuevo» en la isla izquierda del dock (Nueva agenda, Referido manual, Reportar o pedir algo); el avatar queda con la cuenta ([DockSecciones.jsx](../../frontend/src/pages/comercial/components/DockSecciones.jsx), [MenuSesion.jsx](../../frontend/src/pages/comercial/components/MenuSesion.jsx)).
+
+### 17/11/2026 · El avatar abre Configuración; todo lo demás está en Herramientas
+- Tocar el personaje del dock abre Configuración directo; el personaje se elige en Configuración › Datos ([MenuSesion.jsx](../../frontend/src/pages/comercial/components/MenuSesion.jsx), [ElegirPersonaje.jsx](../../frontend/src/components/mascota/ElegirPersonaje.jsx), [ADR-W162](../DECISIONS.md)).
+- Herramientas junta las herramientas (Nuevo, Turnos), las acciones de la pantalla, las secciones ocultas y lo de tu cuenta (Portal, avisos, reportes, cerrar sesión). «Nuevo» es una herramienta más y se puede fijar ([BotonHerramientas.jsx](../../frontend/src/ventanas/BotonHerramientas.jsx)).
