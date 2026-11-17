@@ -619,3 +619,6 @@
 - Mover una agenda que viene (reagendar desde la ficha o desde la triage, el mazo, reasignar, editar la agenda o el Tablero) revisa antes las agendas del closer con su margen y su Google Calendar: si choca, no se mueve y dice por qué ([manual.py](../../app/agendas_v2/manual.py), [ADR-W157](../DECISIONS.md)).
 - Pasar al triage solo va a una triage libre a esa hora. Sin ninguna libre, a mano se rechaza y la C/D desplazada sigue con el closer para reagendar ([a_triage.py](../../app/agendas_v2/a_triage.py)).
 - La Momentum mira Google al momento de reservarla, y la Academia pregunta si el horario está libre antes de moverla (`POST /api/external/academy/agenda/libre`).
+
+### 17/11/2026 · Inbox: los leads ya no aparecen «Sin usuario»
+- El usuario y el nombre de Instagram se pedían solo cuando el lead arrancaba un flujo: los que escribían sin palabra clave (1172 de 3104) quedaban «Sin usuario». Ahora se piden con su primer mensaje y, si Instagram no los da, se reintenta a las 24 h ([perfil.py](../../app/automatizaciones/perfil.py), [motor.py](../../app/automatizaciones/motor.py)). Los que faltaban se completaron con un script en el servidor.
