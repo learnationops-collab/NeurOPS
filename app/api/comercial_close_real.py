@@ -16,3 +16,6 @@ def comparativas_reales():
         return jsonify({'filas': {}, 'equipo': None}), 200
     start, end, prev_start, prev_end = _rangos()
     return jsonify(comercial_close_real.reales_por_closer(start, end, prev_start, prev_end)), 200
+
+
+from app.api import comercial_llamadas  # noqa: E402,F401  (listas de «Destino de las agendas» y «Por llamada», ADR-W144)

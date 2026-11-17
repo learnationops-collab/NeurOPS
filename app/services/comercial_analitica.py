@@ -18,7 +18,7 @@ from app.services.comercial_service import (
     DIAS_SENA_CAIDA, POST_CALL, ROL_CLOSERS, ROL_SETTERS, TIPOS_PAGO_COBROS, ComercialService,
     chip, pct,
 )
-from app.services import descalificados_service, setter_analitica
+from app.services import comercial_llamadas, descalificados_service, setter_analitica
 from app.services.commission_service import CLOSER_RATE, cash_neto
 from app.services.procedencia_ingresos_service import agendas_para_atribuir, procedencia_de_ventas
 from app.services.senas_conversion import claves_de_fila, conversion_de, pagos_posteriores
@@ -375,19 +375,18 @@ def bloque_closers(start, end, closer_id=None, closer_nombre=None, con_reales=Tr
 
     `segmento`: un conjunto de segmentos (A, B, C, D, sin): el bloque se calcula solo con las agendas y los cobros de
     esos leads (`segmentos_comercial`). Lo que no es de un lead (las deudas por cobrar, las fuentes) no se filtra."""
-    agendas = _sin_triage(ComercialService.agendas(start, end, closer_id=closer_id), closer_id)
+    # Las agendas, con los mismos filtros que las listas de sus cifras (`comercial_llamadas`, ADR-W144).
+    agendas = comercial_llamadas.filas_de_closing(start, end, closer_id, segmento, paises, sin_excluidos, con_reales)
     ventas = ComercialService.ventas(start, end, closer_nombre=closer_nombre)
     if sin_excluidos:
-        # La fila «Equipo» de las Comparativas: todo el equipo menos quienes no cuentan ahí.
-        agendas = [f for f in agendas if ComercialService.comparable(f['closer'])]
         ventas = [f for f in ventas if ComercialService.comparable(f['closer'])]
     if segmento:
         from app.services.segmentos_comercial import filtrar
-        agendas, ventas = filtrar(agendas, segmento), filtrar(ventas, segmento)
+        ventas = filtrar(ventas, segmento)
     if paises:
         # El país del lead (`paises_lectura`): como el segmento, acota agendas y cobros.
         from app.services import paises_lectura
-        agendas, ventas = paises_lectura.filtrar(agendas, paises), paises_lectura.filtrar(ventas, paises)
+        ventas = paises_lectura.filtrar(ventas, paises)
     tot_a = ComercialService.totales_agendas(agendas)
     tot_v = ComercialService.totales_ventas(ventas)
     estados = estados_de(agendas)
@@ -423,9 +422,6 @@ def bloque_closers(start, end, closer_id=None, closer_nombre=None, con_reales=Tr
 
     dias, mejor_dia = _cash_por_dia(ventas, start, end)
 
-    segundas = [f for f in agendas if f.get('tipo_llamada') == 'segunda']
-    primeras = [f for f in agendas if f.get('tipo_llamada') != 'segunda']
-
     return {
         'agendas': tot_a['agendas'],
         'realizadas': tot_a['realizadas'],
@@ -433,11 +429,9 @@ def bloque_closers(start, end, closer_id=None, closer_nombre=None, con_reales=Tr
         # Por agenda, sobre los cuatro destinos (regla de Mario, ADR-W112): la 2ª llamada se mide igual.
         'show_up': tot_a['show_up'],
         'base_show_up': tot_a['base_show_up'],
-        # Los estados de las primeras llamadas (y las Momentum) y los de las segundas, aparte.
-        'estados_por_llamada': {
-            'primera': {'agendas': len(primeras), 'estados': estados_de(primeras)},
-            'segunda': {'agendas': len(segundas), 'estados': estados_de(segundas)},
-        },
+        # Los estados y el cierre por orden de llamada (1ª / 2ª o más, ADR-W144); None sin el orden.
+        'estados_por_llamada': comercial_llamadas.estados_por_llamada(agendas) if con_reales else None,
+        'cierres_llamada': comercial_llamadas.cierres_por_llamada(agendas) if con_reales else None,
         # El close rate se mide sobre las AGENDAS, no sobre las filas de venta del período: la
         # pregunta es "de los que asistieron, cuántos compraron", y eso solo lo puede contestar
         # el conjunto de llamadas. Las dos cifras no son la misma — una venta del período puede
