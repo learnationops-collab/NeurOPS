@@ -24,8 +24,12 @@ const Fila = ({ op, fijada, onAbrir, onFijar }) => {
     );
 };
 
-/** `grupos`: [{ titulo, opciones: [{ id, label, titulo?, Icono, onClick }] }]. Los vacíos no se ven. */
-export default function BotonHerramientas({ usuario, grupos, onEditar }) {
+/**
+ * `grupos`: [{ titulo, opciones: [{ id, label, titulo?, Icono, onClick }] }]. Los vacíos no se ven.
+ * Sirve también para «Nuevo» (isla izquierda): otro `Icono`, `rotulo` y `pista`, y `clase` para el botón.
+ */
+export default function BotonHerramientas({ usuario, grupos, onEditar = null, Icono = Wrench, rotulo = 'Herramientas',
+    pista = 'Fijá lo que más usás: va a la izquierda del dock', clase = '' }) {
     const [abierto, setAbierto] = useState(false);
     const [pos, setPos] = useState(null);
     const boton = useRef(null);
@@ -70,17 +74,17 @@ export default function BotonHerramientas({ usuario, grupos, onEditar }) {
 
     return (
         <>
-            <button ref={boton} type="button" className="dock-fijada" aria-label="Herramientas" title="Herramientas"
+            <button ref={boton} type="button" className={`dock-fijada ${clase}`.trim()} aria-label={rotulo} title={rotulo}
                 aria-haspopup="menu" aria-expanded={abierto} onClick={() => (abierto ? cerrar() : setAbierto(true))}>
-                <Wrench size={19} aria-hidden="true" />
+                <Icono size={19} aria-hidden="true" />
             </button>
             {abierto && createPortal(
                 <div className="dc-shell menu-capa">
-                    <div ref={menu} className="menu menu--sesion menu--herr" role="menu" aria-label="Herramientas"
+                    <div ref={menu} className="menu menu--sesion menu--herr" role="menu" aria-label={rotulo}
                         style={pos ? { left: pos.left, bottom: pos.bottom, maxHeight: pos.alto } : { left: 0, bottom: 0, visibility: 'hidden' }}>
                         <div className="menu-herr-cab">
-                            <b>Herramientas</b>
-                            <small><Pin size={11} aria-hidden="true" /> Fijá lo que más usás: va a la izquierda del dock</small>
+                            <b>{rotulo}</b>
+                            {pista && <small><Pin size={11} aria-hidden="true" /> {pista}</small>}
                         </div>
                         {conAlgo.map((g) => (
                             <div key={g.titulo} role="group" aria-label={g.titulo}>

@@ -634,3 +634,8 @@
 - El dock pasa a tres islas, como la Academia y Leadership: lo fijado a la izquierda, las secciones en el centro y, a la derecha, el botón **Herramientas** y la sesión ([DockSecciones.jsx](../../frontend/src/pages/comercial/components/DockSecciones.jsx), [ADR-W160](../DECISIONS.md)).
 - Herramientas junta las herramientas en ventana (Turnos), las acciones de la pantalla y las secciones ocultas, cada una con su 📌 para fijarla ([BotonHerramientas.jsx](../../frontend/src/ventanas/BotonHerramientas.jsx)).
 - «Editar navegación»: arrastrar para ordenar, el ojo para ocultar y doble clic para renombrar las secciones ([DockEdicion.jsx](../../frontend/src/pages/comercial/components/DockEdicion.jsx)).
+
+### 17/11/2026 · Turnos con horarios y zona; «Nuevo» en el dock
+- Turnos cuenta solo a quienes la reserva ofrece (usuario activo, Google y WhatsApp). Juliana Avila quedó desactivada en Work ([ADR-W161](../DECISIONS.md)).
+- En Turnos, tocar un número muestra los horarios libres de ese día, y la ventana deja elegir en qué hora verlos ([TurnosEquipo.jsx](../../frontend/src/pages/agendas_v2/secciones/team/TurnosEquipo.jsx), [TurnosVentana.jsx](../../frontend/src/ventanas/herramientas/TurnosVentana.jsx)).
+- Botón «Nuevo» en la isla izquierda del dock (Nueva agenda, Referido manual, Reportar o pedir algo); el avatar queda con la cuenta ([DockSecciones.jsx](../../frontend/src/pages/comercial/components/DockSecciones.jsx), [MenuSesion.jsx](../../frontend/src/pages/comercial/components/MenuSesion.jsx)).

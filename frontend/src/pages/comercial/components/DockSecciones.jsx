@@ -8,6 +8,8 @@ import useOpcionesDeHerramientas from '../../../ventanas/useOpcionesDeHerramient
 import { useNavegacionDock } from '../../../ventanas/navegacionDock';
 import { useAuth } from '../../../contexts/AuthContext';
 import DockEdicion from './DockEdicion';
+import { Bug, Plus } from 'lucide-react';
+import { abrirReporteDeBug } from '../../../utils/bugReportBus';
 import '../dock2.css';
 
 const HUMO_DOCK = ['var(--brand-secondary)', 'var(--brand-primary)',
@@ -111,7 +113,11 @@ const DockSecciones = ({ secciones: todasLasSecciones, activa, onElegir, ariaLab
     const correr = useCallback((id) => (accionesRef.current.find(o => o.id === id)
         || opcionesRef.current.find(o => o.id === id))?.onClick(), []);
     const acciones = fijables.opciones.map(o => ({ ...o, onClick: () => correr(o.id) }));
-    const opciones = [...acciones, ...herramientas, ...ocultas];
+    // «Nuevo» (isla izquierda): lo que crea algo en esta pantalla, y reportar o pedir algo, que va en todas.
+    const reportar = { id: 'reportar-bug', label: 'Reportar o pedir algo', titulo: 'Un problema o un pedido al equipo técnico',
+        Icono: Bug, onClick: abrirReporteDeBug };
+    const nuevos = [...acciones.filter(o => o.nuevo), reportar];
+    const opciones = [...acciones, reportar, ...herramientas, ...ocultas];
     opcionesRef.current = opciones;
     const contexto = useMemo(() => ({ publicar }), [publicar]);
     useEffect(() => {
@@ -175,18 +181,23 @@ const DockSecciones = ({ secciones: todasLasSecciones, activa, onElegir, ariaLab
     const cosas = secciones.length + (antes ? 1 : 0) + (despues ? 1 : 0);
     const clases = ['dock', !angosto && 'dock--centro', cosas >= 6 && 'dock--denso', siempreNombres && 'dock--nombres',
         compacto && claseSinLugar, desborda && 'dock--desborda', nav.editando && 'dock--editando', 'caja'];
-    const fijadas = <DockFijadas usuario={fijables.usuario || usuario} opciones={opciones} onElegir={correr} separador={angosto} />;
+    const fijadas = <DockFijadas usuario={fijables.usuario || usuario} opciones={opciones} onElegir={correr} sep={angosto ? 'despues' : 'antes'} />;
+    const nuevo = usuario && (
+        <BotonHerramientas usuario={usuario} Icono={Plus} rotulo="Nuevo" clase="dock-nuevo" pista={null}
+            grupos={[{ titulo: 'Crear', opciones: nuevos }]} />
+    );
     const herr = (
         <BotonHerramientas usuario={usuario} onEditar={todasLasSecciones.length > 1 && usuario ? () => nav.editar(true) : null}
             grupos={[
                 { titulo: 'Herramientas', opciones: herramientas },
-                { titulo: 'Acciones', opciones: acciones },
+                { titulo: 'Acciones', opciones: acciones.filter(o => !o.nuevo) },
                 { titulo: 'Secciones ocultas', opciones: ocultas },
             ]} />
     );
     const centro = (
         <nav className={clases.filter(Boolean).join(' ')} aria-label={ariaLabel}>
             <Humo colores={HUMO_DOCK} />
+            {angosto && nuevo}
             {angosto && fijadas}
             {antes}
             {antes && <span className="dock-sep" />}
@@ -230,7 +241,7 @@ const DockSecciones = ({ secciones: todasLasSecciones, activa, onElegir, ariaLab
         <DockContexto.Provider value={contexto}>
             {angosto ? centro : (
                 <div className="dock-barra">
-                    <div className="dock-isla dock-isla--izq">{fijadas}</div>
+                    <div className="dock-isla dock-isla--izq">{nuevo}{fijadas}</div>
                     {centro}
                     <div className="dock-isla dock-isla--der">
                         {herr}

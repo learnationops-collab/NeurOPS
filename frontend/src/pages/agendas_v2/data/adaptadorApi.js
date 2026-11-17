@@ -84,6 +84,7 @@ export function crearAdaptadorApi() {
             return {
                 cols, perfil: data.perfil || null, integ: data.integ || null, reservas: Array.isArray(data.reservas) ? data.reservas : [],
                 zona: data.zona || null, lectura: data.solo_lectura === true,
+                elegibles: Array.isArray(data.elegibles) ? data.elegibles : null,
             };
         },
 

@@ -1348,3 +1348,14 @@
   3. «Editar navegación» (al pie de Herramientas): se arrastran las secciones para ordenarlas, el ojo las oculta y doble clic las renombra; «Restablecer» vuelve a la de fábrica y Escape o «Listo» termina. Siempre queda una a la vista. Una oculta se abre desde Herramientas o fijada; la numeración cuenta solo las visibles.
 - **Qué se pierde:** lo editado vive en el navegador, por cuenta y por dock (`dock-nav:<usuario>:<dock>`), no en el servidor como en Leadership. Una sección oculta no se abre como ventana (Leadership usa un iframe): se navega a ella. Sin beta: Work no tiene canal beta, así que el dock nuevo es para todos (Leadership también lo abrió a todos); lo editable es opcional de cada uno.
 - **Consecuencias:** sin migración ni endpoints. Estilos en `pages/comercial/dock2.css`.
+
+## ADR-W161: Turnos con horarios, zona elegible y solo quien se ofrece; «Nuevo» en el dock y el avatar solo con la cuenta
+
+- **Fecha:** 2026-11-17 · **Subsistema:** Turnos (`TurnosEquipo`, `TurnosVentana`, `/agendas-v2/estado`) y Dock 2.0 (`DockSecciones`, `MenuSesion`, `menuSesion.js`) · **Estado:** implementado. Sigue a ADR-W158 y ADR-W160.
+- **Contexto:** Santi vio en Turnos los turnos de Juliana, que ya no trabaja: su cuenta de Work seguía activa, así que la reserva también la podía ofrecer. Pidió además ver a qué hora es cada turno y en qué zona horaria, y un solo botón «Nuevo» para todo lo que se crea, sacando del avatar lo que sobra.
+- **Decisión:**
+  1. `/agendas-v2/estado` devuelve `elegibles`: las personas de Team que la reserva ofrece (`solo_elegibles`: usuario activo, Google y WhatsApp). Turnos cuenta solo esas. La cuenta de Juliana se desactivó (no tenía agendas por venir).
+  2. En Turnos, tocar un número muestra los horarios libres de ese grupo ese día, con quiénes los tienen al pasar el mouse. La ventana tiene «Ver en hora de», con la propia por defecto y las zonas de la reserva; lo elegido se recuerda en el navegador.
+  3. «Nuevo» (+) abre la isla izquierda: lo que crea algo en esa pantalla (las acciones con `nuevo`: Nueva agenda, Referido manual) y «Reportar o pedir algo». Las demás acciones (Learnito, Quiero procrastinar…) van a Herramientas. Dentro de un dock, el avatar ya no las repite: queda con Configuración, Portal, avisos, reportes y la salida. Las que abren una lista (Mis links de agendamiento) siguen en el avatar porque no se pueden fijar.
+- **Qué se pierde:** Turnos no muestra a alguien con usuario activo pero sin Google o WhatsApp conectado, aunque tenga horario cargado: es lo que la reserva hace.
+- **Consecuencias:** sin migración. Una acción nueva de crear lleva `nuevo: true` en `acciones` de `armarMenuSesion`.

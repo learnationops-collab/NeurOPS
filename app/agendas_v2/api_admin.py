@@ -65,6 +65,8 @@ def estado():
     zona horaria de quien mira (zona_para_ver).
     `solo_lectura` le dice a la pantalla que esconda lo que se configura."""
     cols, reservas, lectura = servicio.colecciones(), servicio.reservas_para_estado(), _para_lectura()
+    # Las personas que la reserva ofrece de verdad (usuario activo, Google y WhatsApp): Turnos cuenta solo esas.
+    _, elegibles = servicio.solo_elegibles(cols)
     if lectura:
         # El email de cada persona de Team solo sirve para unirla a su cuenta, y eso es configurar.
         cols['personas'] = [{**p, 'email': ''} for p in cols['personas']]
@@ -78,6 +80,7 @@ def estado():
             'zona': servicio.zona_para_ver(current_user),
             'version': servicio.version(),
             'solo_lectura': lectura,
+            'elegibles': sorted(elegibles),
         }
     )
 

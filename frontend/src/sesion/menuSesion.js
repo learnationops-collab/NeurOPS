@@ -48,8 +48,9 @@ export function armarMenuSesion({
     const learnito = puedeUsarLearnito(user)
         ? [{ id: 'learnito', label: 'Learnito', Icono: iconoLearnito, onClick: abrirLearnito }]
         : [];
+    // `enDock`: dentro de un dock, estas van a «Nuevo» (las que llevan `nuevo`) o a Herramientas, no al avatar.
     return [
-        [...acciones, ...learnito],
+        [...acciones, ...learnito].map(op => ({ ...op, enDock: true })),
         [
             { id: 'configuracion', label: 'Configuración', Icono: Settings, onClick: configuracion?.onClick,
                 cuenta: avisos.length ? '!' : null, titulo: avisos.length ? avisos.join(' · ') : null },

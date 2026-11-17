@@ -6,13 +6,14 @@ import { useFijadas } from '../../../sesion/fijadas';
  * pasa por `DockContexto`), así cada pantalla aporta las suyas y una fijada que no existe en esta
  * pantalla no se dibuja. El orden es el de cuándo se fijaron. Sin ninguna, no ocupa lugar.
  */
-const DockFijadas = ({ usuario, opciones, onElegir, separador = true }) => {
+const DockFijadas = ({ usuario, opciones, onElegir, sep = 'despues' }) => {
     const { fijadas } = useFijadas(usuario);
     const porId = new Map(opciones.map((op) => [op.id, op]));
     const visibles = fijadas.map((id) => porId.get(id)).filter(Boolean);
     if (!visibles.length) return null;
     return (
         <>
+            {sep === 'antes' && <span className="dock-sep" />}
             <div className="dock-fijadas" role="group" aria-label="Accesos fijados">
                 {visibles.map((op) => (
                     <button key={op.id} type="button" className="dock-fijada" onClick={() => onElegir(op.id)}
@@ -22,7 +23,7 @@ const DockFijadas = ({ usuario, opciones, onElegir, separador = true }) => {
                     </button>
                 ))}
             </div>
-            {separador && <span className="dock-sep" />}
+            {sep === 'despues' && <span className="dock-sep" />}
         </>
     );
 };

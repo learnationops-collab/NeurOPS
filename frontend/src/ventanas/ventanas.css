@@ -28,3 +28,5 @@
 .vt-thalamus{display:grid;gap:12px;background:transparent;color:inherit}
 .vt-thalamus .vt-nav{flex-wrap:wrap}
 .vt-thalamus .tu--equipo{margin-bottom:0}
+.vt-thalamus .vt-zona{display:flex;align-items:center;gap:8px;margin-left:auto}
+.vt-thalamus .vt-zona select{max-width:220px}

@@ -236,6 +236,10 @@ const MenuSesion = ({ nombre, rol, aviso = null, grupos }) => {
     const dock = useContext(DockContexto);
     const fijables = todosLosGrupos.flat().filter(esFijable);
     useEffect(() => { dock?.publicar(usuario, fijables); });
+    // Dentro de un dock, las acciones de la pantalla viven en «Nuevo» y Herramientas: el avatar queda con la cuenta.
+    const gruposAVer = dock
+        ? todosLosGrupos.map(g => g.filter(op => !(op.enDock && esFijable(op)))).filter(g => g.length)
+        : todosLosGrupos;
 
     return (
         <>
@@ -322,7 +326,7 @@ const MenuSesion = ({ nombre, rol, aviso = null, grupos }) => {
                                         {rol && <small>{rol}</small>}
                                     </span>
                                 </div>
-                                {todosLosGrupos.map((grupo, i) => (
+                                {gruposAVer.map((grupo, i) => (
                                     <div key={grupo[0].id} role="group">
                                         {i > 0 && <hr className="menu-sep" />}
                                         {grupo.map(op => {

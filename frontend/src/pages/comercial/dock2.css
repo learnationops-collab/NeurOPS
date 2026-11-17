@@ -44,3 +44,8 @@
 .dc-shell .menu-herr-tx{display:grid;min-width:0;text-align:left;line-height:1.25}
 .dc-shell .menu-herr-tx b{font-weight:700}
 .dc-shell .menu-herr-tx small{font-size:11px;font-weight:500;color:var(--text-muted-40)}
+
+/* «Nuevo», el primero de la isla izquierda: el único botón con el color de marca. */
+.dc-shell .dock-fijada.dock-nuevo{width:44px;height:44px;margin:6px 2px;border-radius:14px;
+  background:var(--brand-secondary);color:var(--on-brand)}
+.dc-shell .dock-fijada.dock-nuevo:hover,.dc-shell .dock-fijada.dock-nuevo[aria-expanded="true"]{background:var(--brand-secondary);color:var(--on-brand);filter:brightness(1.08)}

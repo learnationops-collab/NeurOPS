@@ -1754,6 +1754,15 @@
 .thalamus .tu--equipo .tu-cab > button{margin-left:auto}
 .thalamus .tu--equipo .tu-tabla{min-width:520px}
 .thalamus .tu--equipo .tu-tabla td.tu-cero b{color:var(--error)}
+.thalamus .tu-celda{min-width:40px;padding:4px 8px;border-radius:10px;font:inherit;color:inherit;cursor:pointer;transition:background-color .15s ease}
+.thalamus .tu-celda:hover:not(:disabled),.thalamus .tu-celda[aria-pressed="true"]{background:var(--brand-secondary);color:var(--on-brand)}
+.thalamus .tu-celda[aria-pressed="true"] b{color:inherit}
+.thalamus .tu-celda:disabled{cursor:default}
+.thalamus .tu-pista{margin:var(--s2) 0 0}
+.thalamus .tu-horarios{display:grid;gap:var(--s2);margin-top:var(--s3)}
+.thalamus .tu-horas{display:flex;flex-wrap:wrap;gap:6px}
+.thalamus .tu-hora{display:inline-flex;align-items:baseline;gap:4px;padding:5px 10px;border-radius:999px;border:1px solid var(--border-subtle);background:var(--bg-element);font-size:13px}
+.thalamus .tu-hora small{font-size:10.5px;font-weight:800;color:var(--text-muted)}
 .thalamus .tu-detalle{display:grid;gap:var(--s2);padding-top:var(--s3);border-top:1px solid var(--border-subtle)}
 .thalamus .ev-conf{display:grid;gap:var(--s4);min-width:0}
 /* Available: cada tramo es una tarjeta con título y hora, como en Google Calendar */
