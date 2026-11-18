@@ -3,11 +3,13 @@
 // en markdown, botones, opciones, gráficos adjuntos y la acción propuesta, si hay) y el uso: del mes y de la
 // conversación (`uso.conversacion`: {porcentaje, agotada}). Dos reglas del cerebro (24/10): una conversación agotada
 // no acepta más preguntas, y para abrir otra hay que calificar las anteriores (`pendientes`, se califican acá).
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import api from '../../services/api';
 
 export function useCopiloto() {
     const [mensajes, setMensajes] = useState([]);
+    // El texto de la última respuesta, para quien la necesita apenas termina `enviar` (el @Learnito del chat, ADR-W174).
+    const ultima = useRef('');
     const [enviando, setEnviando] = useState(false);
     const [uso, setUso] = useState(null);
     const [conversacion, setConversacion] = useState(null);
@@ -39,6 +41,7 @@ export function useCopiloto() {
         try {
             const { data } = await api.post('/copiloto/learnito', { ...pedido, conversacion_id: (!nueva && conversacion) || undefined });
             setConversacion(data.conversacion_id);
+            ultima.current = data.mensaje?.text || '';
             setMensajes([...anteriores, { role: 'user', content: muestra },
                 { role: 'assistant', content: data.mensaje?.text || '', mensaje: data.mensaje, indice: data.mensaje_indice }]);
             if (data.uso) setUso(data.uso);
@@ -100,12 +103,13 @@ export function useCopiloto() {
     }, [cargarPendientes]);
 
     const agotada = Boolean(conversacion && uso?.conversacion?.agotada);
+    const ultimaRespuesta = useCallback(() => ultima.current, []);
     return useMemo(() => ({
-        mensajes, enviando, enviar, tocar, confirmar, reiniciar, uso, calificacion, calificar,
+        mensajes, enviando, enviar, tocar, confirmar, reiniciar, uso, calificacion, calificar, ultimaRespuesta,
         pendientes, cargarPendientes, calificarPendiente, agotada,
         // Sin conversación abierta, las anteriores sin calificar traban la nueva.
         trabado: !conversacion && pendientes.length > 0,
         agotado: (uso?.porcentaje ?? 0) >= 100 || agotada,
-    }), [mensajes, enviando, enviar, tocar, confirmar, reiniciar, uso, calificacion, calificar,
+    }), [mensajes, enviando, enviar, tocar, confirmar, reiniciar, uso, calificacion, calificar, ultimaRespuesta,
         pendientes, cargarPendientes, calificarPendiente, agotada, conversacion]);
 }

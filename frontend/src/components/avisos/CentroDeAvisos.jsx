@@ -5,6 +5,7 @@ import { Button, EmptyState, Modal, ModalHeader } from '../standard';
 import { useAuth } from '../../contexts/AuthContext';
 import { AVISOS_EVENT, publicarSinLeer } from '../../utils/avisosBus';
 import api from '../../services/api';
+import { abrirVentana } from '../../ventanas/ventanasStore';
 import './avisos.css';
 
 // La ficha se baja recién al tocar un aviso: App la monta en todas las pantallas.
@@ -56,6 +57,12 @@ const CentroDeAvisos = () => {
         if (!aviso.leido) {
             setAvisos((lista) => lista.map((a) => (a.id === aviso.id ? { ...a, leido: true } : a)));
             api.post(`/avisos/${aviso.id}/leido`).then(contar).catch(() => {});
+        }
+        // Una etiqueta del chat del equipo (ADR-W174): abre la ventana Chat.
+        if (aviso.origen === 'chat') {
+            setAbierto(false);
+            abrirVentana('chat');
+            return;
         }
         if (aviso.person_uuid) {
             setAbierto(false);

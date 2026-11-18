@@ -697,3 +697,7 @@
 - Anotar algo y dejarlo definido con un arquetipo (Quick o Project, cuánto lleva o sus pasos, fecha, quién la hace); lo que falte va al Inbox de Leadership.
 - **Lo mío:** lo que te pasaron para definir, los rituals de hoy y lo que sigue en el orden de tu Momentum: completar (con la entrega ahí mismo si la pide), cambiar la fecha, ajustar o pasársela a otro, con «Deshacer». **Lo que pedí:** lo repartido, con su estado y «Pedir un update».
 - Work firma un pase por pedido y lo pasa a la API `v1/rapido` de Leadership ([leadership_rapido.py](../../app/api/leadership_rapido.py)); «Abrir en Leadership» abre esa ficha en otra pestaña (`/api/leadership/entrar?abrir=`).
+
+### 17/11/2026 · Chat: reacciones, etiquetas, búsqueda y Learnito en el canal
+- En el chat del equipo se reacciona, se etiqueta con @ (llega el aviso a la campanita o a la Academia) y se busca en la conversación ([Mensaje.jsx](../../frontend/src/ventanas/herramientas/chat/Mensaje.jsx), [Escribir.jsx](../../frontend/src/ventanas/herramientas/chat/Escribir.jsx), [ADR-W174](../DECISIONS.md)).
+- @Learnito responde en el canal, y la chispa de un mensaje abre Learnito al costado con ese mensaje; su respuesta se puede compartir en el canal ([LearnitoAlCostado.jsx](../../frontend/src/ventanas/herramientas/chat/LearnitoAlCostado.jsx)).

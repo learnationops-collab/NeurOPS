@@ -1550,3 +1550,16 @@
   5. **Sin tokens compartidos:** Work firma un pase por pedido (el mismo del ingreso, `LEADERSHIP_HANDOFF_SECRET`, 60 s, un solo uso) con el email de la sesión y reenvía solo las rutas de la API. Leadership anota cada cambio con la persona y la plataforma. Simulando no se usa.
 - **Qué se pierde:** la ventana depende de Leadership; si no responde, lo dice y no abre el aviso de bugs. Crear no se deshace desde acá (sería borrar): se corrige en Leadership. Sin cuenta en Leadership con el mismo email, la ventana no carga.
 - **Consecuencias:** sin migración. La tarjeta todavía no muestra la cuenta de lo urgente en el botón (pediría consultar Leadership desde todas las pantallas). El registro central del staff (vínculos de cuentas entre plataformas) quedó para más adelante.
+
+## ADR-W174: el chat de Work como el mockup, primera parte (reacciones, etiquetas, búsqueda y Learnito en el canal)
+
+- **Fecha:** 2026-11-17 · **Subsistema:** Chat (`frontend/src/ventanas/herramientas/chat/`, `app/api/chat.py`, `avisos_service` tipo `chat_mencion`, `useCopiloto.ultimaRespuesta`) · **Estado:** implementado. Sigue a ADR-W171; en la Academia, ADR-222.
+- **Contexto:** Santi vio que la ventana Chat había quedado muy corta frente al mockup (ADR-W170) y que se estaba llevando así a la Academia y Leadership. Pidió dejar Work igual al mockup primero, en tres partes: lo de pantalla, lo que necesita a la Academia y lo más pesado. Lo que ya estaba hecho para la Academia y Leadership quedó guardado en el tag `archivo/chat-cruzado-paso2` de cada repo.
+- **Decisión (primera parte):**
+  1. **Reacciones:** al pasar el mouse, tres a mano y las otras tres con «más»; tocar una reacción del mensaje la pone o la saca. Son las seis de la Academia, con íconos.
+  2. **Etiquetas:** «@» abre arriba del campo la lista del equipo (la Academia y la gente activa de Work, sin repetir el correo). Quien queda nombrado recibe el aviso: en la Academia, el suyo; en Work, la campanita (`chat_mencion`), que abre el Chat. El texto resalta cada @Nombre.
+  3. **@Learnito en el canal:** la pregunta va a la conversación de Learnito de quien pregunta (sale de su tope y la ve en su Learnito) y la respuesta se publica en el canal firmada por Learnito, colgada del mensaje y con quién la pidió. Mientras piensa, el canal muestra «Learnito está respondiendo».
+  4. **Learnito al costado:** la chispa de un mensaje abre Learnito a la derecha con ese mensaje citado y el comienzo de la pregunta en el campo, sin mandarla. «Compartir la última respuesta en el canal» la publica firmada por Learnito.
+  5. **Buscar en la conversación:** con 2 letras o más, los 50 mensajes más recientes del canal que lo tienen.
+- **Qué se pierde:** las reacciones de otros sobre mensajes ya cargados no se actualizan hasta reabrir el chat (la consulta trae mensajes nuevos, no cambios).
+- **Consecuencias:** sin migración. Siguen la segunda parte (canales según el rol, conversaciones directas, Bugs y estudiantes) y la tercera («En llamada» desde la agenda, desconectados con «visto hace…»).

@@ -10,7 +10,9 @@ import logging
 from flask import Blueprint, jsonify, request
 from flask_login import current_user, login_required
 
+from app import db
 from app.models import User
+from app.services import avisos_service
 from app.services.learnation_service import LearnationAPIError, LearnationService
 
 bp = Blueprint('chat_api', __name__)
@@ -36,25 +38,76 @@ def _a_la_academia(accion, cuerpo):
 @bp.route('/canal', methods=['GET'])
 @login_required
 def canal():
-    desde = request.args.get('desde', type=int) or 0
-    datos, estado = _a_la_academia('canal', {'canal': CANAL, 'desde_id': desde})
+    """Los mensajes nuevos desde `desde`, o con `buscar` (2 letras o más) los 50 más recientes que lo tienen."""
+    pedido = {'canal': CANAL, 'desde_id': request.args.get('desde', type=int) or 0}
+    buscar = (request.args.get('buscar') or '').strip()[:80]
+    if len(buscar) >= 2:
+        pedido['buscar'] = buscar
+    datos, estado = _a_la_academia('canal', pedido)
     return jsonify(datos), estado
 
 
 @bp.route('/enviar', methods=['POST'])
 @login_required
 def enviar():
+    """Un mensaje: {texto, parent_id?, menciones?: [email], como?: 'learnito'}. `como: learnito` comparte en el canal
+    una respuesta de Learnito que pidió quien manda (la firma Learnito)."""
     cuerpo = request.get_json(silent=True) or {}
     texto = str(cuerpo.get('texto') or '').strip()
+    como = 'learnito' if cuerpo.get('como') == 'learnito' else None
+    tope = MAX_CARACTERES * 2 if como else MAX_CARACTERES
     if not texto:
         return jsonify({'error': 'El mensaje está vacío.'}), 400
-    if len(texto) > MAX_CARACTERES:
-        return jsonify({'error': f'El mensaje pasa los {MAX_CARACTERES} caracteres.'}), 400
-    pedido = {'canal': CANAL, 'texto': texto}
+    if len(texto) > tope:
+        return jsonify({'error': f'El mensaje pasa los {tope} caracteres.'}), 400
+    menciones = [str(e).strip().lower() for e in (cuerpo.get('menciones') or []) if '@' in str(e)][:10]
+    pedido = {'canal': CANAL, 'texto': texto, 'menciones': menciones or None, 'como': como}
     if cuerpo.get('parent_id'):
         pedido['parent_id'] = int(cuerpo['parent_id'])
-    datos, estado = _a_la_academia('enviar', pedido)
+    datos, estado = _a_la_academia('enviar', {k: v for k, v in pedido.items() if v is not None})
+    if estado == 200 and menciones and not como:
+        _avisar_menciones(menciones, texto)
     return jsonify(datos), 201 if estado == 200 else estado
+
+
+def _avisar_menciones(correos, texto):
+    """A la gente de Work etiquetada con @, el aviso en la campanita (la Academia avisa a la suya)."""
+    try:
+        quien = current_user.username or current_user.email
+        etiquetados = User.query.filter(User.email.in_(correos), User.is_active.is_(True),
+                                        User.id != current_user.id).all()
+        for u in etiquetados:
+            avisos_service.avisar('chat_mencion', 'user', u.id, f'{quien} te etiquetó en Equipo', texto[:300],
+                                  origen='chat', payload={'abrir': 'chat'})
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"chat menciones: {e}")
+
+
+@bp.route('/reaccion', methods=['POST'])
+@login_required
+def reaccion():
+    """Pone o saca una reacción: {id, clave} (las de la Academia: fire, heart, thumb, check, bolt, smile)."""
+    cuerpo = request.get_json(silent=True) or {}
+    if not str(cuerpo.get('id') or '').isdigit() or not cuerpo.get('clave'):
+        return jsonify({'error': 'Falta el mensaje o la reacción.'}), 400
+    datos, estado = _a_la_academia('reaccion', {'id': int(cuerpo['id']), 'clave': str(cuerpo['clave'])})
+    return jsonify(datos), estado
+
+
+@bp.route('/personas', methods=['GET'])
+@login_required
+def personas():
+    """A quién se puede etiquetar: el equipo de la Academia y la gente activa de Work, sin repetir el correo."""
+    datos, estado = _a_la_academia('personas', {})
+    gente = {p['email']: p for p in (datos.get('personas') or []) if p.get('email')} if estado == 200 else {}
+    for u in User.query.filter(User.is_active.is_(True), User.email.isnot(None)).all():
+        correo = u.email.lower()
+        if correo != current_user.email.lower():
+            gente.setdefault(correo, {'nombre': u.username or correo, 'email': correo, 'foto': None})
+    gente.pop(current_user.email.lower(), None)
+    return jsonify({'personas': sorted(gente.values(), key=lambda p: p['nombre'].lower())})
 
 
 @bp.route('/conectados', methods=['GET'])
