@@ -142,8 +142,10 @@ def conectados():
     """Marca a quien pregunta como conectado en Work y devuelve a todos, con el rol de Work si es de acá y lo que
     está haciendo (ADR-W176): «En llamada» si tiene una agenda en curso en Work, o lo que diga su agenda de la
     Academia (en sesión, en clase, en reunión). También los desconectados de los últimos 30 días, con cuándo se
-    los vio."""
-    datos, estado = _a_la_academia('conectados', {})
+    los vio. Le pasa a la Academia el «En llamada» de quien pregunta (o nada), así lo ven también la Academia y
+    Leadership (Academia ADR-226)."""
+    mio = _en_llamada([current_user.id]).get(current_user.id)
+    datos, estado = _a_la_academia('conectados', {'estado': mio})
     if estado != 200:
         return jsonify(datos), estado
     gente = datos.get('conectados') or []
