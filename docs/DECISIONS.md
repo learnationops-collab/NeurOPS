@@ -1507,3 +1507,22 @@
   - Convertir un mensaje en tarea de Leadership.
   - Más adelante, usar la presencia con la sección en la que está cada persona (como la registra la Academia) para medir el trabajo activo y pasivo.
 - **Consecuencias:** quedan por decidir si los hilos de los alumnos se ven desde Work y Leadership, si el tiempo real (Reverb) va desde el principio, si las tareas de Leadership entran solas al chat y de qué tope sale lo que responde Learnito en un canal.
+
+## ADR-W171: el chat del equipo dentro de Work, conectado al de la Academia (primer paso)
+
+- **Fecha:** 2026-11-17 · **Subsistema:** Chat (`app/api/chat.py`, `LearnationService.chat`, `frontend/src/ventanas/herramientas/chat/`) · **Estado:** implementado. Implementa el primer paso de ADR-W170; en la Academia, su ADR-220.
+- **Contexto:** Santi aprobó el mockup del chat cruzado (ADR-W170) y respondió las preguntas abiertas.
+- **Decisiones de Santi sobre el mockup:**
+  1. Los hilos con los alumnos los ven los mismos roles que en la Academia, desde cualquier servicio. El permiso sale del rol, no del servicio.
+  2. Primero, actualización cada 4 s; el tiempo real (Reverb) viene después.
+  3. **Un mensaje se puede convertir en tarea de Leadership, pero no al revés:** las tareas no entran a los canales. Como mucho, una delegación en Leadership le deja un mensaje en la conversación directa a la persona. Se descarta la tarjeta de tarea en un canal que mostraba el mockup.
+  4. Lo que responde Learnito en un canal sale del tope de quien preguntó.
+- **Decisión (lo implementado):**
+  1. **Chat** es una ventana más del catálogo (`chat`, todos los roles), en Herramientas y fijable en el dock.
+  2. Tiene el canal General · Equipo de la Academia, con sus avisos de Work como tarjeta, las respuestas y las reacciones (solo se ven), y el servicio desde el que escribió cada uno. Se responde a un mensaje y se copia.
+  3. **Learnito** va arriba de la lista y abre la conversación de siempre (`LearnitoChat`, la de `LearnitoContext`) dentro de la ventana.
+  4. **Conectados:** la fila de fotos y la columna de la derecha, por servicio (W, A, L), con el rol de Work si es de acá. Cada sesión de Work avisa una vez por minuto, aunque no tenga el chat abierto (`usePresencia`, en `HostVentanas`).
+  5. Work no guarda mensajes: `app/api/chat.py` le pasa a la Academia quién pregunta (por correo) y devuelve lo que ella responde. Si la Academia no responde, el chat lo dice en su barra y no abre el aviso de bugs.
+- **Qué se pierde:** el chat de Work depende de la Academia. Sin `ACADEMY_API_TOKEN` (el servidor develop) el chat no carga.
+- **Consecuencias:** sin migración. Siguen: más canales según el rol, conversaciones directas, `@Learnito` en un canal (la Academia tiene que aceptar una pregunta suelta sin abrir una conversación por calificar), etiquetas, reacciones, hilos, convertir un mensaje en tarea y la presencia con la sección, para medir el trabajo activo y pasivo.
+- **Modelo vivo:** `docs/MODELO/CHAT.md`.

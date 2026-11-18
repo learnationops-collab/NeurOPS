@@ -679,3 +679,8 @@
 
 ### 17/11/2026 · «Pasar a triage» ya no acepta una agenda que viene del triage
 - Un closer devolvió al triage, sin querer, la agenda de un lead que ya había calificado (13/11): quedó como llamada de triage sin reportar de quien la recibió, y el pase de quien la calificó apuntaba a una triage. Ahora la acción se rechaza con «Este lead ya pasó por el triage y calificó: reagendala o pasala a otro closer» ([a_triage.py](../../app/agendas_v2/a_triage.py)). La Momentum ya se rechazaba.
+
+### 17/11/2026 · Chat del equipo dentro de Work (primer paso)
+- Nueva herramienta **Chat** (en Herramientas, se puede fijar en el dock): el canal General · Equipo de la Academia, con los avisos de Work como tarjeta y desde qué servicio escribió cada uno ([ChatVentana.jsx](../../frontend/src/ventanas/herramientas/chat/ChatVentana.jsx), [chat.py](../../app/api/chat.py), [ADR-W171](../DECISIONS.md)).
+- Quién está conectado en Work, la Academia y Leadership. Cada sesión de Work avisa una vez por minuto ([usePresencia.js](../../frontend/src/ventanas/herramientas/chat/usePresencia.js)).
+- Learnito se abre dentro del chat, con la conversación de siempre.

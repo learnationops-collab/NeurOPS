@@ -1,0 +1,111 @@
+/* La ventana Chat (ChatVentana.jsx, ADR-W171): lista | conversación | conectados, con los tokens --ln-* del tema. */
+.vt-cuerpo:has(> .ch){padding:0;overflow:hidden}
+.ch{--w-work:#4E8BD8;--w-academy:#2FBF8F;--w-leadership:#A78BFA;--w-bot:#D9A441;
+  display:grid;grid-template-columns:250px minmax(0,1fr) 230px;height:min(680px,calc(100vh - 200px));min-height:380px}
+.vt--max .ch{height:calc(100vh - 160px)}
+.ch--sin-lista{grid-template-columns:0 minmax(0,1fr) 230px}
+.ch--sin-lado{grid-template-columns:250px minmax(0,1fr) 0}
+.ch--sin-lista.ch--sin-lado{grid-template-columns:0 minmax(0,1fr) 0}
+.ch-lista,.ch-lado{min-width:0;overflow:auto;background:var(--ln-inset-bg);scrollbar-width:thin}
+.ch-lista{border-right:1px solid var(--ln-border-subtle);padding:8px 6px}
+.ch-lado{border-left:1px solid var(--ln-border-subtle);padding:10px 6px}
+.ch--sin-lista .ch-lista,.ch--sin-lado .ch-lado{visibility:hidden;padding:0;border:0}
+.ch-detalle{display:flex;flex-direction:column;min-width:0;min-height:0}
+
+/* Lista */
+.ch-sec{display:flex;align-items:center;gap:6px;margin:12px 8px 4px;font-size:10.5px;font-weight:800;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ln-text-faint)}
+.ch-fila{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border-radius:12px;text-align:left;font-size:13.5px;
+  font-weight:700;color:var(--ln-text-muted)}
+.ch-fila:hover{background:var(--ln-ct3-bg);color:var(--ln-text-out)}
+.ch-fila[aria-current="true"]{background:var(--ln-ct3-hover);color:var(--ln-text-out)}
+.ch-fila__nom{flex:1;min-width:0;display:flex;flex-direction:column;white-space:nowrap;overflow:hidden}
+.ch-fila__nom small{font-size:11px;font-weight:600;color:var(--ln-text-faint);overflow:hidden;text-overflow:ellipsis}
+.ch-fila--learnito{background:linear-gradient(135deg,rgba(91,124,255,.16),rgba(255,63,164,.12));color:var(--ln-text-out)}
+.ch-fila__l{display:grid;place-items:center;width:28px;height:28px;border-radius:9px;color:#fff;background:linear-gradient(135deg,#5B7CFF,#FF3FA4)}
+.ch-cuenta{min-width:20px;height:20px;padding:0 6px;border-radius:999px;display:grid;place-items:center;font-size:11px;font-weight:800;
+  background:var(--ln-brand);color:var(--ln-brand-content)}
+.ch-fotos{display:flex;gap:8px;padding:2px 8px 6px;overflow-x:auto;scrollbar-width:none}
+.ch-fotos__p{display:flex;flex-direction:column;align-items:center;gap:3px;width:40px;font-size:10px;font-weight:700;color:var(--ln-text-muted)}
+.ch-fotos__p small{max-width:44px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ch-foto{position:relative;display:inline-flex}
+.ch-foto__punto{position:absolute;right:-2px;bottom:-2px;width:10px;height:10px;border-radius:50%;background:var(--ln-success);
+  border:2px solid var(--ln-popover-bg)}
+.ch-foto__donde{position:absolute;left:-5px;top:-5px;min-width:15px;height:15px;padding:0 3px;border-radius:5px;display:grid;place-items:center;
+  font-size:9px;font-style:normal;font-weight:900;color:#fff;border:2px solid var(--ln-popover-bg)}
+
+/* Etiquetas de servicio y de bot */
+.ch-tag{display:inline-flex;align-items:center;padding:1px 6px;border-radius:6px;font-size:10px;font-weight:800;color:#fff}
+.ch-tag--work{background:var(--w-work)} .ch-tag--academy{background:var(--w-academy)} .ch-tag--leadership{background:var(--w-leadership)}
+.ch-tag--bot{background:rgba(217,164,65,.16);color:var(--w-bot)}
+
+/* Cabecera y conversación */
+.ch-cab{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--ln-border-subtle)}
+.ch-cab__txt{flex:1;min-width:0;display:flex;flex-direction:column}
+.ch-cab__txt b{display:flex;align-items:center;gap:6px;font-size:14px}
+.ch-cab__txt small{font-size:11.5px;color:var(--ln-text-muted);font-weight:600}
+.ch-error{margin:8px 12px 0;padding:8px 12px;border-radius:10px;font-size:12.5px;font-weight:700;background:var(--ln-warning-bg);color:var(--ln-warning)}
+.ch-linea{flex:1;min-height:0;overflow:auto;padding:10px 12px 14px;scrollbar-width:thin}
+.ch-dia{display:flex;align-items:center;gap:10px;margin:10px 0 8px;font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--ln-text-faint)}
+.ch-dia::before,.ch-dia::after{content:"";flex:1;height:1px;background:var(--ln-border-subtle)}
+.ch-msg{position:relative;display:flex;gap:10px;padding:6px 8px;border-radius:12px}
+.ch-msg--seguido{padding-top:1px}
+.ch-msg:hover{background:var(--ln-ct3-bg)}
+.ch-msg__av{width:28px;flex-shrink:0}
+.ch-av-bot{--c:var(--w-bot)}
+.ch-msg__cuerpo{flex:1;min-width:0}
+.ch-msg__cab{display:flex;align-items:center;flex-wrap:wrap;gap:6px;font-size:13px}
+.ch-msg__cab time{font-size:11px;font-weight:600;color:var(--ln-text-faint)}
+.ch-msg__txt{font-size:14px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
+.ch-msg__cita{display:flex;align-items:center;gap:5px;margin:2px 0;font-size:12px;color:var(--ln-text-muted);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.ch-msg__adj{display:flex;align-items:center;gap:5px;margin-top:4px;font-size:12px;color:var(--ln-text-faint)}
+.ch-msg__reacs{display:flex;flex-wrap:wrap;gap:6px;margin-top:5px}
+.ch-msg__reacs span{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;border:1px solid var(--ln-border-main);
+  font-size:11.5px;font-weight:700;color:var(--ln-text-muted)}
+.ch-msg__acciones{position:absolute;top:-10px;right:10px;display:none;gap:2px;padding:2px;border-radius:9px;background:var(--ln-popover-bg);
+  border:1px solid var(--ln-border-main);box-shadow:var(--ln-shadow)}
+.ch-msg:hover .ch-msg__acciones,.ch-msg:focus-within .ch-msg__acciones{display:flex}
+
+/* Tarjeta de un aviso (Work): ámbar, como en la Academia */
+.ch-aviso{margin-top:4px;max-width:440px;padding:10px 12px 10px 14px;border-radius:12px;border:1px solid var(--ln-border-main);
+  border-left:4px solid var(--w-bot);background:var(--ln-ct2-bg)}
+.ch-aviso--verde{border-left-color:var(--ln-success)} .ch-aviso--rojo{border-left-color:var(--ln-danger)} .ch-aviso--azul{border-left-color:var(--ln-info)}
+.ch-aviso__tit{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--w-bot)}
+.ch-aviso__nom{margin-top:2px;font-size:14.5px;font-weight:800}
+.ch-aviso__sub{font-size:12px;font-weight:600;color:var(--ln-text-muted)}
+.ch-aviso__chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.ch-aviso__chips span{padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;background:var(--ln-ct3-bg);color:var(--ln-text-muted)}
+.ch-aviso__cajas{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:6px;margin-top:6px}
+.ch-aviso__cajas div{display:flex;flex-direction:column;padding:5px 9px;border-radius:9px;background:var(--ln-inset-bg);font-size:12.5px}
+.ch-aviso__cajas small{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ln-text-faint)}
+
+/* Escribir */
+.ch-escribir{padding:8px 12px 10px;border-top:1px solid var(--ln-border-subtle)}
+.ch-escribir__resp{display:flex;align-items:center;gap:6px;margin-bottom:6px;font-size:12px;color:var(--ln-text-muted)}
+.ch-escribir__resp .ui-ibtn,.ch-escribir__resp button{margin-left:auto}
+.ch-escribir__campo{display:flex;align-items:flex-end;gap:6px;padding:4px 4px 4px 10px;border-radius:14px;background:var(--ln-inset-bg);
+  border:1px solid var(--ln-border-main)}
+.ch-escribir__campo:focus-within{border-color:var(--ln-border-strong)}
+.ch-escribir__campo textarea{flex:1;min-width:0;max-height:140px;padding:7px 0;border:0;background:none;resize:none;outline:none;
+  font:inherit;font-size:14px;color:inherit}
+.ch-escribir__pie{margin:5px 2px 0;font-size:10.5px;color:var(--ln-text-faint)}
+
+/* Conectados */
+.ch-lado__tit{display:flex;flex-direction:column;margin:2px 8px 6px;font-size:13.5px;font-weight:800}
+.ch-lado__tit small{font-size:11px;font-weight:600;color:var(--ln-text-faint)}
+.ch-lado__vacio{margin:8px;font-size:12.5px;color:var(--ln-text-muted)}
+.ch-persona{display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:10px;font-size:13px;font-weight:700}
+.ch-persona span{display:flex;flex-direction:column;min-width:0}
+.ch-persona small{font-size:11px;font-weight:600;color:var(--ln-text-faint)}
+
+/* Learnito adentro: su chat ocupa la conversación */
+.ch-learnito{flex:1;min-height:0;display:flex;flex-direction:column;padding:10px 12px;background:transparent}
+.ch-learnito .learnito{flex:1;min-height:0}
+
+/* Teléfono: una columna; la lista se abre con el botón de la cabecera y tapa la conversación */
+@media (max-width:640px){
+  .ch,.ch--sin-lado,.ch--sin-lista,.ch--sin-lista.ch--sin-lado{grid-template-columns:minmax(0,1fr);height:calc(82vh - 60px);position:relative}
+  .ch-lado{display:none}
+  .ch-lista{position:absolute;inset:0;z-index:2;border-right:0}
+  .ch--sin-lista .ch-lista{display:none}
+}
