@@ -143,6 +143,10 @@ def _validar(appt, ahora):
         raise ValueError('Esta agenda ya es del triage.')
     if appt.origin == 'Momentum':
         raise ValueError('Una Momentum es una sesión del closer con su alumno: no pasa al triage.')
+    if appt.agenda_triage_id:
+        # Ya calificó en el triage: devolverla la contaba como una llamada de triage sin reportar de quien
+        # la recibía y le sacaba el pase a quien la había calificado (13/11/2026).
+        raise ValueError('Este lead ya pasó por el triage y calificó: reagendala o pasala a otro closer.')
     if not servicio._vigente(appt):
         raise ValueError('La agenda ya no está vigente.')
     if not appt.start_time or appt.start_time <= ahora:
