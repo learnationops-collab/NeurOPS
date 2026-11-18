@@ -55,8 +55,22 @@ DESDE_REGLA_CUOTAS = date(2026, 10, 28)
 DEMORA_DIAS = 30
 
 
-def slug_de(programa):
-    return (AcademyAccessService.get_product_mapping() or {}).get((programa or '').upper()) if programa else None
+# Un código cuyo producto de la Academia se reemplazó por otro (academy ADR-229, 18/11/2026): {código: slug de
+# antes}. Quien ya tiene una suscripción del de antes sigue en él (renovaciones, cuotas, correcciones); el resto
+# va al del mapeo. AL: Elite Learners (`ace-learners`, el Ace de antes) y Ace Learners (`ace-learners-v2`).
+CONSERVAN = {'AL': 'ace-learners'}
+
+
+def slug_de(programa, client_id=None):
+    """El producto de la Academia del código de programa para este cliente (sin cliente, el del mapeo)."""
+    codigo = (programa or '').strip().upper()
+    if not codigo:
+        return None
+    slug = (AcademyAccessService.get_product_mapping() or {}).get(codigo)
+    antes = CONSERVAN.get(codigo)
+    if slug and antes and slug != antes and client_id and _de(db.session, client_id, antes) is not None:
+        return antes
+    return slug
 
 
 def _dia(valor):
@@ -126,7 +140,7 @@ def otorgar(session, client_id, slug, hasta, kind, *, programa=None, desde=None,
 
 def al_ubicar_pago(session, sale, fila, pago, abre, abierta):
     """Lo que un pago NUEVO le hace a la suscripción, ya ubicado en su venta (`sale_service`)."""
-    slug = slug_de(pago.programa)
+    slug = slug_de(pago.programa, fila.client_id)
     if not slug or not fila.client_id:
         return None
     dia = _dia(fila.date)
@@ -199,7 +213,7 @@ def cambiar(client, programa, hasta, reason, usuario=None, kind=None):
     """Un cambio a mano desde Work (Fulfillment). Acortar, siempre; alargar, con una venta nueva
     (`venta_que_extiende`, levanta ValueError). Sin `kind`: «alta» si no tenía, «renovacion» o
     «extension» si la alarga, «correccion» si la acorta."""
-    slug = slug_de(programa)
+    slug = slug_de(programa, client.id)
     venta = None
     if kind is None:
         actual = _de(db.session, client.id, slug) if slug else None
@@ -297,7 +311,7 @@ def ajustar_por_plan(client_id, programa):
     acceso dado a mano)."""
     from app.models import InstallmentPlan
 
-    slug = slug_de(programa)
+    slug = slug_de(programa, client_id)
     sub = _de(db.session, client_id, slug) if slug and client_id else None
     # El upsell da su acceso entero aunque deba cuotas (Santiago, 31/10/2026).
     if sub is None or sub.is_deposit or (sub.sale is not None and sub.sale.kind == 'upsell'):
@@ -332,7 +346,7 @@ def del_cliente(client_id):
 
 def vencimiento_de(client_id, programa):
     """Hasta cuándo tiene acceso al producto de `programa`, según su suscripción; None si no tiene."""
-    slug = slug_de(programa)
+    slug = slug_de(programa, client_id)
     if not client_id or not slug:
         return None
     sub = _de(db.session, client_id, slug)

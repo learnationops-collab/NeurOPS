@@ -139,3 +139,23 @@ def test_la_academia_lee_las_suscripciones_y_las_duraciones_recomendadas(client,
     assert r.json['subscriptions'][0]['product_slug'] == 'ace-learners'
     assert {'semana', 'cortesia'} <= {t['value'] for t in r.json['tipos']}
     assert client.get('/api/external/academy/subscriptions?email=nadie@x.com', headers=H).status_code == 404
+
+
+def test_al_va_al_ace_nuevo_salvo_quien_ya_tenia_elite(db, ana):
+    """Academy ADR-229: AL pasa a Ace Learners (`ace-learners-v2`); quien ya tiene Elite (`ace-learners`) sigue ahí."""
+    cobro(db, ana, 'AL - Parcial', datetime(2026, 9, 1))  # Ana entró con el mapeo de antes: Elite.
+    AcademyAccessService.set_product_mapping({'AL': 'ace-learners-v2', 'RR': 'residency-roadmap'})
+    db.session.commit()
+    beto = Client(full_name='Beto', email='beto@x.com')
+    db.session.add(beto)
+    db.session.commit()
+
+    assert subs.slug_de('AL', ana.id) == 'ace-learners'
+    assert subs.slug_de('al', beto.id) == 'ace-learners-v2'
+    assert subs.slug_de('AL') == 'ace-learners-v2'
+    assert subs.slug_de('RR', ana.id) == 'residency-roadmap'
+
+    cobro(db, ana, 'AL - Cuota', datetime(2026, 10, 1))
+    cobro(db, beto, 'AL - Completo', datetime(2026, 10, 10))
+    assert Subscription.query.filter_by(client_id=ana.id).count() == 1
+    assert suscripcion(beto, 'ace-learners-v2').expires_at == date(2027, 2, 7)

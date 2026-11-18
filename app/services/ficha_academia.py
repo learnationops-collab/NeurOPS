@@ -44,7 +44,8 @@ def _producto(client):
         raise ErrorDeAccion('NeurOPS no tiene cargado qué programa pagó este cliente: elegilo en '
                             'Acciones, en «Programa», y después dale el acceso.')
     nombre = PROGRAM_CODE_NAMES.get(codigo, codigo)
-    slug = (AcademyAccessService.get_product_mapping() or {}).get(codigo)
+    from app.services.subscription_service import slug_de
+    slug = slug_de(codigo, client.id)
     if not slug:
         raise ErrorDeAccion(f'El programa {nombre} no está vinculado a ningún producto de la '
                             'Academia. Un admin lo vincula en Configuración de Ventas → Integraciones.')

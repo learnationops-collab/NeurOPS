@@ -22,7 +22,7 @@ from flask import current_app
 from sqlalchemy import func
 
 from app import db
-from app.services.academy_access_service import AcademyAccessService, _add_months
+from app.services.academy_access_service import AcademyAccessService, _add_months  # noqa: F401 (los tests lo parchean acá)
 
 GRACE_DAYS = 5
 
@@ -94,7 +94,7 @@ def build_payment_payload(sale):
     fecha = sale.date or datetime.utcnow()
     # La suscripción de Work manda (20/10/2026): un pago ya no compra días por su cuenta. Sin
     # suscripción (programa sin producto vinculado, datos viejos) queda la regla de antes.
-    from app.services.subscription_service import vencimiento_de
+    from app.services.subscription_service import slug_de, vencimiento_de
     expires_at = (vencimiento_de(client.id if client else None, programa)
                   or compute_payment_expiration(client.id if client else None, programa, tipo, fecha))
 
@@ -107,7 +107,7 @@ def build_payment_payload(sale):
         'fecha': fecha.date().isoformat() if isinstance(fecha, datetime) else str(fecha),
         'monto': sale.monto,
         'tipo_pago': tipo_pago,
-        'product_slug': AcademyAccessService.get_product_mapping().get(programa) if programa else None,
+        'product_slug': slug_de(programa, client.id if client else None),
         'is_deposit_payment': tipo == 'seña',
         # Entró pagando de a partes (seña, parcial o cuota de una venta nueva o upsell): en la Academia
         # le toca la Momentum de seña aunque hoy ya no sea seña. La renovación en cuotas no cuenta.
