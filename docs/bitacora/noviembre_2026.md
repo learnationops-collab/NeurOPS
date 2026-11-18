@@ -676,3 +676,6 @@
 
 ### 17/11/2026 · Mockup del chat cruzado
 - Mockup de un solo chat del equipo para Work, Academy y Leadership, sobre el chat de la Academia: canales por área, quién está conectado y en qué servicio, y Learnito adentro (su conversación, `@Learnito` en un canal y al costado de un mensaje) ([chat-cruzado](../mockups/chat-cruzado/index.html), [ADR-W170](../DECISIONS.md)).
+
+### 17/11/2026 · «Pasar a triage» ya no acepta una agenda que viene del triage
+- Un closer devolvió al triage, sin querer, la agenda de un lead que ya había calificado (13/11): quedó como llamada de triage sin reportar de quien la recibió, y el pase de quien la calificó apuntaba a una triage. Ahora la acción se rechaza con «Este lead ya pasó por el triage y calificó: reagendala o pasala a otro closer» ([a_triage.py](../../app/agendas_v2/a_triage.py)). La Momentum ya se rechazaba.
