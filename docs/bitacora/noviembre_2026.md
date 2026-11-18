@@ -691,3 +691,7 @@
 - Nueva herramienta **Chat** (en Herramientas, se puede fijar en el dock): el canal General · Equipo de la Academia, con los avisos de Work como tarjeta y desde qué servicio escribió cada uno ([ChatVentana.jsx](../../frontend/src/ventanas/herramientas/chat/ChatVentana.jsx), [chat.py](../../app/api/chat.py), [ADR-W171](../DECISIONS.md)).
 - Quién está conectado en Work, la Academia y Leadership. Cada sesión de Work avisa una vez por minuto ([usePresencia.js](../../frontend/src/ventanas/herramientas/chat/usePresencia.js)).
 - Learnito se abre dentro del chat, con la conversación de siempre.
+
+### 17/11/2026 · Triage: una cuenta desactivada no borra sus llamadas del tablero
+- Las métricas del triage solo contaban a las personas con cuenta activa. Al desactivar la de Juliana Avila, sus llamadas salieron de Dirección comercial › Triage: del 26/10 al 17/11 el total bajó de 74 agendas a 44. Ahora cuentan también quienes atendieron llamadas en el período aunque hoy no tengan cuenta activa ([triage_service.py](../../app/services/triage_service.py), `_personas_del_periodo`). Los avisos de Discord siguen mencionando solo a las activas.
+- Datos: las dos agendas de Yulissa Jimenez, que habían quedado a nombre de Dari González por el «Pasar a triage» equivocado del 13/11, volvieron a Jean Carlo.
