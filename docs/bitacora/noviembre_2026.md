@@ -706,3 +706,7 @@
 - Tocar a alguien conectado, o elegirlo con «+» en Conversaciones, abre una conversación directa con esa persona; la lista las muestra con el último mensaje y lo no leído ([ListaConversaciones.jsx](../../frontend/src/ventanas/herramientas/chat/ListaConversaciones.jsx), [ADR-W175](../DECISIONS.md)).
 - Quien no tenía cuenta en la Academia (setters, triage, marketing) ya tiene una solo para el chat: se lo ve conectado y se le puede escribir directo (Academia ADR-224).
 - El botón Mensajes de la tarjeta de sesión muestra cuántos mensajes hay sin leer ([usePresencia.js](../../frontend/src/ventanas/herramientas/chat/usePresencia.js)).
+
+### 17/11/2026 · Chat: «En llamada» y los desconectados
+- Debajo de cada persona conectada se ve lo que está haciendo: «En llamada · hasta 16:30» si tiene una agenda en curso en Work, o «En sesión con…», «En clase», «En reunión» según su agenda de la Academia ([chat.py](../../app/api/chat.py), [ADR-W176](../DECISIONS.md)).
+- Debajo de los conectados, los desconectados de los últimos 30 días con cuándo se los vio; la cabecera de una conversación directa también lo dice ([Conectados.jsx](../../frontend/src/ventanas/herramientas/chat/Conectados.jsx)).

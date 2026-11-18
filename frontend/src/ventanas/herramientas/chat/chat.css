@@ -150,6 +150,10 @@
 .ch-lado__vacio{margin:8px;font-size:12.5px;color:var(--ln-text-muted)}
 .ch-persona{display:flex;align-items:center;gap:10px;width:100%;padding:6px 8px;border-radius:10px;font-size:13px;font-weight:700;text-align:left}
 .ch-persona:not(:disabled):hover{background:var(--ln-ct3-bg)}
+.ch-persona small.ch-persona__estado{color:var(--ln-warning)}
+.ch-persona--off{color:var(--ln-text-muted)}
+.ch-foto--off .ui-avatar{filter:grayscale(.7);opacity:.7}
+.ch-foto__punto--ocupado{background:var(--ln-warning)}
 .ch-persona span{display:flex;flex-direction:column;min-width:0}
 .ch-persona small{font-size:11px;font-weight:600;color:var(--ln-text-faint)}
 

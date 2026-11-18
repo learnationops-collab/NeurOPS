@@ -139,15 +139,57 @@ def personas():
 @bp.route('/conectados', methods=['GET'])
 @login_required
 def conectados():
-    """Marca a quien pregunta como conectado en Work y devuelve a todos, con el rol de Work si es de acá."""
+    """Marca a quien pregunta como conectado en Work y devuelve a todos, con el rol de Work si es de acá y lo que
+    está haciendo (ADR-W176): «En llamada» si tiene una agenda en curso en Work, o lo que diga su agenda de la
+    Academia (en sesión, en clase, en reunión). También los desconectados de los últimos 30 días, con cuándo se
+    los vio."""
     datos, estado = _a_la_academia('conectados', {})
     if estado != 200:
         return jsonify(datos), estado
     gente = datos.get('conectados') or []
-    correos = [p.get('email') for p in gente if p.get('email')]
-    roles = dict(User.query.with_entities(User.email, User.role).filter(User.email.in_(correos)).all()) if correos else {}
-    roles = {str(k).lower(): v for k, v in roles.items()}
-    for p in gente:
-        p['rol'] = roles.get(str(p.get('email')).lower())
-        p['yo'] = str(p.get('email')).lower() == str(current_user.email).lower()
-    return jsonify({'conectados': gente})
+    fuera = datos.get('desconectados') or []
+    correos = [str(p.get('email')).lower() for p in gente + fuera if p.get('email')]
+    usuarios = User.query.filter(db.func.lower(User.email).in_(correos)).all() if correos else []
+    por_correo = {u.email.lower(): u for u in usuarios}
+    en_linea = {str(p.get('email')).lower() for p in gente}
+    llamadas = _en_llamada([u.id for u in usuarios if u.email.lower() in en_linea])
+    yo = str(current_user.email).lower()
+    for p in gente + fuera:
+        u = por_correo.get(str(p.get('email')).lower())
+        p['rol'] = u.role if u else None
+        p['yo'] = str(p.get('email')).lower() == yo
+        p['baja'] = bool(u and not u.is_active)
+        if u and u.id in llamadas:
+            p['estado'] = llamadas[u.id]
+    # Los dados de baja en Work no aparecen como desconectados.
+    fuera = [p for p in fuera if not p['yo'] and not p['baja']]
+    return jsonify({'conectados': gente, 'desconectados': fuera})
+
+
+def _en_llamada(ids):
+    """{user_id: {texto, hasta}} de quienes tienen ahora una agenda en curso como closer (empezó y no terminó su
+    duración, sin cancelar ni reprogramar)."""
+    if not ids:
+        return {}
+    from datetime import datetime, timedelta
+
+    from app.agendas_v2.operacion import RESULTADOS_NO_VIGENTES
+    from app.models.booking import Appointment
+
+    ahora = datetime.utcnow()
+    try:
+        agendas = Appointment.query.filter(
+            Appointment.closer_id.in_(ids), Appointment.start_time <= ahora,
+            Appointment.start_time >= ahora - timedelta(hours=3),
+            db.or_(Appointment.result.is_(None), Appointment.result.notin_(RESULTADOS_NO_VIGENTES)),
+        ).all()
+    except Exception as e:
+        logger.error(f"chat en llamada: {e}")
+        return {}
+    salida = {}
+    for a in agendas:
+        payload = a.agenda_payload if isinstance(a.agenda_payload, dict) else {}
+        fin = a.start_time + timedelta(minutes=int(payload.get('duracion_min') or 60))
+        if fin > ahora and (a.closer_id not in salida or salida[a.closer_id]['hasta'] < fin.isoformat() + 'Z'):
+            salida[a.closer_id] = {'texto': 'En llamada', 'hasta': fin.isoformat() + 'Z'}
+    return salida

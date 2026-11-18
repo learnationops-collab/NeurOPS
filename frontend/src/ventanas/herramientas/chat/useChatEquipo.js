@@ -21,6 +21,7 @@ const reemplazar = (lista, m) => (lista || []).map(x => (x.id === m.id ? m : x))
 export default function useChatEquipo({ minimizada, con = null }) {
     const [mensajes, setMensajes] = useState(null);      // null = cargando
     const [conectados, setConectados] = useState(null);
+    const [desconectados, setDesconectados] = useState([]);   // vistos en los últimos 30 días, el más reciente arriba
     const [bandeja, setBandeja] = useState({ equipo: 0, directos: [] });
     const [personas, setPersonas] = useState([]);
     const [error, setError] = useState(null);
@@ -47,6 +48,7 @@ export default function useChatEquipo({ minimizada, con = null }) {
     const traerLista = useCallback(async () => {
         const [c, b] = await Promise.allSettled([api.get('/chat/conectados', SILENCIOSO), api.get('/chat/bandeja', SILENCIOSO)]);
         setConectados(c.status === 'fulfilled' ? c.value.data.conectados || [] : (prev => prev ?? []));
+        if (c.status === 'fulfilled') setDesconectados(c.value.data.desconectados || []);
         if (b.status === 'fulfilled') {
             const equipo = (b.value.data.canales || []).find(x => x.slug === 'equipo');
             setBandeja({ equipo: equipo?.sin_leer || 0, directos: b.value.data.directos || [] });
@@ -103,5 +105,5 @@ export default function useChatEquipo({ minimizada, con = null }) {
         return data.mensajes || [];
     }, [params]);
 
-    return { mensajes, conectados, bandeja: lista, personas, error, enviar, reaccionar, buscar };
+    return { mensajes, conectados, desconectados, bandeja: lista, personas, error, enviar, reaccionar, buscar };
 }

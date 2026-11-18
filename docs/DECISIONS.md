@@ -1576,3 +1576,15 @@
   5. **Bugs y Estudiantes** quedan fuera por ahora: ventas no ve los hilos de alumnos (los mismos roles que en la Academia).
 - **Qué se pierde:** el número del dock aparece en la tarjeta de sesión, no sobre el avatar del dock de abajo. Lo no leído tarda hasta un minuto en llegar con la ventana cerrada.
 - **Consecuencias:** sin migración. Sigue la tercera parte: «En llamada» desde la agenda y los desconectados con «visto hace…».
+
+## ADR-W176: el chat de Work como el mockup, tercera parte («En llamada» y los desconectados)
+
+- **Fecha:** 2026-11-17 · **Subsistema:** Chat (`app/api/chat.py` `conectados` y `_en_llamada`, `Conectados.jsx`, `formato.js`) · **Estado:** implementado. Sigue a ADR-W175; en la Academia, ADR-225.
+- **Contexto:** la tercera parte del mockup (ADR-W170): ver antes de escribirle a alguien si está en una llamada o en una sesión, y cuándo se vio a quien no está conectado.
+- **Decisión:**
+  1. **En llamada:** Work marca a su gente conectada que tiene ahora una agenda como closer que empezó y no terminó su duración (`agenda_payload.duracion_min`, 60 si falta), sin cancelar ni reprogramar (`RESULTADOS_NO_VIGENTES`): «En llamada · hasta 16:30». Gana a lo que diga la Academia.
+  2. **Agenda de la Academia:** «En sesión con Lucía R.», «En clase», «En reunión», que calcula ella (ADR-225).
+  3. El estado va debajo del nombre en la columna de conectados (en ámbar, con el punto ámbar en la foto), en el título de la fila de fotos y en la cabecera de una conversación directa.
+  4. **Desconectados:** debajo de los conectados, el equipo visto en los últimos 30 días, el más reciente arriba, con «visto hace 25 min», «ayer» o la fecha. Los dados de baja en Work no aparecen. Tocarlos abre la conversación directa igual. La cabecera de una directa dice «Visto hace…» si la persona no está.
+- **Qué se pierde:** una llamada que terminó antes de su duración sigue marcada hasta la hora de fin. Quien solo usó Work antes de este cambio no tiene «visto» hasta que vuelva a entrar.
+- **Consecuencias:** sin migración. Con esto el chat de Work queda como el mockup, salvo Bugs y Estudiantes (ventas no los ve). Sigue llevar este diseño a la Academia y Leadership (tag `archivo/chat-cruzado-paso2`).

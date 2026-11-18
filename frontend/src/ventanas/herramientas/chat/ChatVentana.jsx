@@ -15,17 +15,23 @@ import { Conectados, Foto } from './Conectados';
 import LearnitoAlCostado from './LearnitoAlCostado';
 import ListaConversaciones from './ListaConversaciones';
 import TemaLearnito from './TemaLearnito';
-import { SISTEMAS } from './formato';
+import { SISTEMAS, estadoDe, hace } from './formato';
 import useChatEquipo from './useChatEquipo';
 import './chat.css';
 
-function Titulo({ abierta }) {
+function Titulo({ abierta, chat }) {
     if (abierta.tipo === 'learnito') {
         return <><b><Sparkles size={14} aria-hidden="true" /> Learnito</b><small>Lo ves solo vos · el mismo de la ventana de Learnito</small></>;
     }
     if (abierta.tipo === 'directa') {
-        const s = SISTEMAS[abierta.con.sistema];
-        return <><b><Foto p={abierta.con} size="xs" conectado={!!s} /> {abierta.con.nombre}</b><small>{s ? `Conectado en ${s.nombre}` : 'Conversación directa'}</small></>;
+        // Dónde está ahora (no cuando se abrió): conectada, o cuándo se la vio.
+        const email = abierta.con.email;
+        const vivo = (chat.conectados || []).find(p => p.email === email);
+        const visto = chat.desconectados.find(p => p.email === email)?.visto
+            || chat.bandeja.directos.find(d => d.con.email === email)?.con.visto;
+        const s = SISTEMAS[vivo?.sistema];
+        const sub = s ? `Conectado en ${s.nombre}${vivo.estado ? ` · ${estadoDe(vivo.estado)}` : ''}` : visto ? `Visto ${hace(visto)}` : 'Conversación directa';
+        return <><b><Foto p={vivo || abierta.con} size="xs" conectado={!!s} /> {abierta.con.nombre}</b><small>{sub}</small></>;
     }
     return <><b><Hash size={14} aria-hidden="true" /> Equipo</b><small>El chat General de la Academia</small></>;
 }
@@ -64,7 +70,7 @@ export default function ChatVentana({ item }) {
                 <header className="ch-cab">
                     <IconButton size="sm" label={lista ? 'Ocultar la lista' : 'Mostrar la lista'} pressed={lista}
                         icon={<PanelLeft size={16} />} onClick={() => setLista(v => !v)} />
-                    <div className="ch-cab__txt"><Titulo abierta={abierta} /></div>
+                    <div className="ch-cab__txt"><Titulo abierta={abierta} chat={chat} /></div>
                     {conversando && (
                         <>
                             <IconButton size="sm" label="Buscar en la conversación" pressed={buscando} icon={<Search size={16} />} onClick={() => setBuscando(v => !v)} />
@@ -85,7 +91,7 @@ export default function ChatVentana({ item }) {
                 {/* Solo en una conversación: con la vista Learnito abierta, su chat no se monta dos veces */}
                 {conversando && (lado === 'learnito' && conLearnito
                     ? <LearnitoAlCostado cita={cita} donde={donde} onSinCita={() => setCita(null)} onCompartir={chat.enviar} />
-                    : <Conectados conectados={chat.conectados} onAbrir={abrirCon} />)}
+                    : <Conectados conectados={chat.conectados} desconectados={chat.desconectados} onAbrir={abrirCon} />)}
             </aside>
         </div>
     );
