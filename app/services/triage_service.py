@@ -416,6 +416,17 @@ def triages(solo=None):
     return q.order_by(User.username).all()
 
 
+def _personas_del_periodo(desde, hasta, solo=None):
+    """Quienes cuentan en las métricas: las del triage con cuenta activa y, además, quien ya no la tiene pero
+    atendió llamadas en esas fechas. Desactivar una cuenta no borra su historia del tablero (17/11/2026)."""
+    con_llamadas = db.session.query(Appointment.closer_id).filter(
+        Appointment.start_time >= desde, Appointment.start_time < hasta).distinct()
+    q = User.query.filter(User.role == 'triage', User.is_active.is_(False), User.id.in_(con_llamadas))
+    if solo is not None:
+        q = q.filter(User.id == solo)
+    return triages(solo) + q.order_by(User.username).all()
+
+
 def _dia(a, zona):
     """El día calendario de la llamada en la zona de quien mira (la hora de la base es UTC naive)."""
     return pytz.UTC.localize(a.start_time).astimezone(zona).date().isoformat()
@@ -447,7 +458,7 @@ def metricas(desde, hasta, solo=None, zona=None, segmentos=None):
     `zona`: la de quien mira, para cortar `por_dia` (por defecto la del negocio).
     `segmentos`: claves A/B/C/D/sin; vacío = todos (la misma lectura de segmento del dashboard comercial)."""
     zona = zona or zona_del_negocio()
-    personas = triages(solo)
+    personas = _personas_del_periodo(desde, hasta, solo)
     ids = [p.id for p in personas]
     agendas = _una_por_persona(Appointment.query.filter(
         Appointment.closer_id.in_(ids or [0]),
