@@ -3,14 +3,19 @@
 // pantalla, lo de tu cuenta (Portal, avisos, reportes, cerrar sesión) y las secciones ocultas, cada una
 // con su 📌 para fijarla a la izquierda. Al pie, «Editar navegación». El avatar solo abre Configuración.
 //
-// Una opción con `panel: { titulo, cargar, vacio }` abre su lista en el mismo menú (Nuevo, Mis links):
+// Se abre en una ventana centrada con lugar para todo (no en un menú pegado al botón, que no tenía espacio),
+// con un buscador arriba y los grupos en columnas. Una lista fijada en el dock (`panelInicial`) sigue
+// abriendo un menú chico al lado de su botón.
+//
+// Una opción con `panel: { titulo, cargar, vacio }` abre su lista en la misma ventana (Nuevo, Mis links):
 // `cargar` devuelve (o promete) `[{ id, label, Icono?, onClick }]`. Fijada en el dock, el botón abre
 // directo esa lista (`panelInicial`).
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal, flushSync } from 'react-dom';
-import { ArrowLeft, ArrowUpRight, ChevronRight, Pencil, Pin, PinOff, Wrench } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, ChevronRight, Pencil, Pin, PinOff, Search, Wrench, X } from 'lucide-react';
 import { subirACapa } from '../components/standard/capa';
 import { esFijable, useFijadas } from '../sesion/fijadas';
+import './herramientasModal.css';
 
 const Fila = ({ op, fijada, onAbrir, onFijar }) => {
     const rotulo = fijada ? `Quitar ${op.label} del dock` : `Fijar ${op.label} en el dock`;
@@ -45,7 +50,12 @@ export default function BotonHerramientas({ usuario, grupos = [], onEditar = nul
     const [pos, setPos] = useState(null);
     const [panel, setPanel] = useState(null);
     const [lista, setLista] = useState(null);
+    const [filtro, setFiltro] = useState('');
     const pedido = useRef(0);
+    const velo = useRef(null);
+    const buscador = useRef(null);
+    // La de Herramientas es una ventana; la de una lista fijada, un menú al lado de su botón.
+    const enVentana = !panelInicial;
     const boton = useRef(null);
     const menu = useRef(null);
     const { fijadas, alternar } = useFijadas(usuario);
@@ -62,7 +72,7 @@ export default function BotonHerramientas({ usuario, grupos = [], onEditar = nul
     }, []);
     const cerrar = useCallback(() => {
         pedido.current += 1;
-        setAbierto(false); setPos(null); setPanel(null); setLista(null);
+        setAbierto(false); setPos(null); setPanel(null); setLista(null); setFiltro('');
     }, []);
     const abrir = () => { setAbierto(true); if (panelInicial) abrirPanel(panelInicial); };
     // La llave del dock se abre también con Ctrl+J (DockSecciones avisa con 'abrir-herramientas').
@@ -75,6 +85,11 @@ export default function BotonHerramientas({ usuario, grupos = [], onEditar = nul
 
     useLayoutEffect(() => {
         if (!abierto) return undefined;
+        if (enVentana) {
+            subirACapa(velo.current);
+            buscador.current?.focus();
+            return undefined;
+        }
         const medir = () => {
             const b = boton.current?.getBoundingClientRect();
             const m = menu.current;
@@ -94,7 +109,7 @@ export default function BotonHerramientas({ usuario, grupos = [], onEditar = nul
         medir();
         window.addEventListener('resize', medir);
         return () => window.removeEventListener('resize', medir);
-    }, [abierto]);
+    }, [abierto, enVentana]);
 
     useEffect(() => {
         if (!abierto) return undefined;
@@ -105,6 +120,7 @@ export default function BotonHerramientas({ usuario, grupos = [], onEditar = nul
         const tecla = (e) => {
             if (e.key !== 'Escape') return;
             if (panel && !panelInicial) { setPanel(null); setLista(null); return; }
+            if (filtro) { setFiltro(''); return; }
             cerrar(); boton.current?.focus();
         };
         document.addEventListener('pointerdown', afuera);
@@ -113,11 +129,16 @@ export default function BotonHerramientas({ usuario, grupos = [], onEditar = nul
             document.removeEventListener('pointerdown', afuera);
             document.removeEventListener('keydown', tecla);
         };
-    }, [abierto, cerrar, panel, panelInicial]);
+    }, [abierto, cerrar, panel, panelInicial, filtro]);
 
     const correr = (fn) => { flushSync(() => cerrar()); fn?.(); };
     const elegir = (op) => (op.panel ? abrirPanel(op) : correr(op.onClick));
-    const conAlgo = grupos.filter((g) => g.opciones.length);
+    // El buscador filtra por nombre y por la línea de para qué sirve, sin importar tildes ni mayúsculas.
+    const plano = (t) => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    const q = plano(filtro.trim());
+    const conAlgo = grupos
+        .map((g) => ({ ...g, opciones: q ? g.opciones.filter((op) => plano(`${op.label} ${op.desc ?? op.titulo ?? ''}`).includes(q)) : g.opciones }))
+        .filter((g) => g.opciones.length);
 
     const vistaPanel = panel && (
         <div role="group" aria-label={panel.panel.titulo} aria-busy={lista?.estado === 'cargando'}>
@@ -148,15 +169,61 @@ export default function BotonHerramientas({ usuario, grupos = [], onEditar = nul
         </div>
     );
 
+    const grillaGrupos = conAlgo.map((g) => (
+        <div key={g.titulo} role="group" aria-label={g.titulo} className="herr-grupo">
+            <p className="menu-grupo">{g.titulo}</p>
+            <div className="menu-herr-grid">
+                {g.opciones.map((op) => (
+                    <Fila key={op.id} op={op} fijada={fijadas.includes(op.id)} onAbrir={() => elegir(op)}
+                        onFijar={usuario && esFijable(op) ? () => alternar(op.id) : null} />
+                ))}
+            </div>
+        </div>
+    ));
+
+    const ventana = (
+        <div ref={velo} className="dc-shell herr-velo">
+            <div className="herr-fondo" aria-hidden="true" />
+            <div ref={menu} className="herr-modal" role="dialog" aria-modal="true" aria-label={rotulo}>
+                <header className="herr-cab">
+                    <span className="herr-tit"><Icono size={18} aria-hidden="true" /><b>{panel ? panel.panel.titulo : rotulo}</b></span>
+                    {!panel && (
+                        <label className="herr-buscar">
+                            <Search size={15} aria-hidden="true" />
+                            <input ref={buscador} type="search" value={filtro} onChange={(e) => setFiltro(e.target.value)}
+                                placeholder="Buscar una herramienta" aria-label="Buscar una herramienta" />
+                        </label>
+                    )}
+                    <button type="button" className="herr-cerrar" onClick={cerrar} aria-label="Cerrar" title="Cerrar · Esc"><X size={16} aria-hidden="true" /></button>
+                </header>
+                <div className="herr-cuerpo" role="menu" aria-label={rotulo}>
+                    {vistaPanel || (conAlgo.length ? <div className="herr-grupos">{grillaGrupos}</div>
+                        : <p className="menu-nota">Nada coincide con «{filtro}».</p>)}
+                </div>
+                {!panel && (
+                    <footer className="herr-pie">
+                        {pista && <small><Pin size={12} aria-hidden="true" /> {pista}</small>}
+                        {onEditar && (
+                            <button type="button" className="menu-item menu-item--ico herr-editar" onClick={() => correr(onEditar)}>
+                                <Pencil size={15} aria-hidden="true" /><span>Editar navegación</span>
+                            </button>
+                        )}
+                    </footer>
+                )}
+            </div>
+        </div>
+    );
+
     return (
         <>
             <button ref={boton} type="button" className={`dock-fijada ${clase}`.trim()} aria-label={rotulo} title={rotulo}
-                aria-haspopup="menu" aria-expanded={abierto} onClick={() => (abierto ? cerrar() : abrir())}>
+                aria-haspopup={enVentana ? "dialog" : "menu"} aria-expanded={abierto} onClick={() => (abierto ? cerrar() : abrir())}>
                 <Icono size={19} aria-hidden="true" />
                 <span className="dock-fijada-nombre">{rotulo}</span>
                 {cuenta != null && <span className="dock-sesion-aviso" aria-hidden="true">{cuenta}</span>}
             </button>
-            {abierto && createPortal(
+            {abierto && enVentana && createPortal(ventana, document.body)}
+            {abierto && !enVentana && createPortal(
                 <div className="dc-shell menu-capa">
                     <div ref={menu} className="menu menu--sesion menu--herr" role="menu" aria-label={rotulo}
                         style={pos

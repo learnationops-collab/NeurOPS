@@ -1459,3 +1459,16 @@
   5. **Secciones nuevas:** Notificaciones (los avisos), Seguridad (cómo entrás) y Ayuda (reportar y tus reportes). Los ajustes propios de Notificaciones y Seguridad quedan como «pronto».
 - **Qué se pierde:** Classic, cuyas pequeñas diferencias con Modern desaparecen. En Baldosas, una sección se abre en la misma hoja y no en una ventana encima, como en el mockup.
 - **Consecuencias:** sin migración (las preferencias ya estaban en `users.dock_prefs`). Quien nunca eligió tema sigue sin `data-tema` y ve todo como siempre. Falta, para otro ADR: ancho, márgenes y densidad (hay que acordar qué contenedor de cada pantalla los toma), los ajustes reales de Notificaciones y Seguridad, y llevar todo esto a Academy y Leadership. Se borraron los tests que daban por hecho Classic y Modern.
+
+## ADR-W168: Herramientas se abre en una ventana con lugar, no en un menú
+
+- **Fecha:** 2026-11-17 · **Subsistema:** Dock 2.0 (`ventanas/BotonHerramientas.jsx`, `ventanas/herramientasModal.css`) · **Estado:** implementado.
+- **Contexto:** el menú de Herramientas, pegado al botón del dock o de la barra lateral, no tenía espacio: las descripciones se cortaban y había que scrollear. Santi pidió una ventana con lugar suficiente.
+- **Decisión:**
+  1. Herramientas (el botón, Ctrl+J y el de la tarjeta de sesión) abre una ventana centrada de hasta 1040 px de ancho, con el fondo oscurecido.
+  2. Arriba lleva un buscador, que filtra por nombre y por la descripción sin importar tildes. Esc limpia la búsqueda y, si no hay búsqueda, cierra.
+  3. Los grupos van en dos columnas y cada descripción tiene hasta dos líneas.
+  4. Al pie quedan la pista del 📌 y «Editar navegación». Una lista (Nuevo, Mis links) se abre en la misma ventana, con volver.
+  5. En el teléfono es una hoja que sube desde abajo.
+- **Qué se pierde:** el menú ya no queda al lado del botón: abrir Herramientas tapa la pantalla. Las listas fijadas en el dock (Nuevo fijado) siguen siendo un menú chico al lado de su botón, porque son cortas.
+- **Consecuencias:** sin migración.

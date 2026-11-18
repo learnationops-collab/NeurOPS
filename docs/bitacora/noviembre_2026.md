@@ -666,3 +666,6 @@
 - Cuatro temas en Configuración › Apariencia: Learnation (el Modern de antes, que absorbe a Classic), Sólido, Relámpago y Puro, cada uno claro u oscuro ([temas-unicos.css](../../frontend/src/temas/temas-unicos.css), [ADR-W167](../DECISIONS.md)).
 - Ajustes nuevos: modo «como el equipo», efectos, modo liviano (solo al simular) y tamaño de letra. La apariencia se guarda en la cuenta ([AparienciaContext.jsx](../../frontend/src/context/AparienciaContext.jsx)).
 - Configuración en pestañas a la izquierda o en baldosas como Academy, con Notificaciones, el Portal y Cerrar sesión arriba, y las secciones Notificaciones, Seguridad y Ayuda ([Configuracion.jsx](../../frontend/src/sesion/Configuracion.jsx)).
+
+### 17/11/2026 · Herramientas en una ventana
+- Herramientas se abre en una ventana centrada y ancha, con buscador y los grupos en dos columnas, en vez de un menú sin espacio ([BotonHerramientas.jsx](../../frontend/src/ventanas/BotonHerramientas.jsx), [ADR-W168](../DECISIONS.md)).
