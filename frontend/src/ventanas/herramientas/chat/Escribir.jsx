@@ -8,7 +8,8 @@ import { colorDe } from './formato';
 
 const LEARNITO = { nombre: 'Learnito', email: null, learnito: true };
 
-export default function Escribir({ personas, conLearnito, respondiendo, setRespondiendo, campo, onEnviar, pensando }) {
+// `directa`: el nombre de la otra persona en una conversación directa (ahí el @ solo trae a Learnito).
+export default function Escribir({ personas, directa, conLearnito, respondiendo, setRespondiendo, campo, onEnviar, pensando }) {
     const [texto, setTexto] = useState('');
     const [enviando, setEnviando] = useState(false);
     const [filtro, setFiltro] = useState(null);      // null = lista cerrada
@@ -78,12 +79,14 @@ export default function Escribir({ personas, conLearnito, respondiendo, setRespo
                 </div>
             )}
             <div className="ch-escribir__campo">
-                <TextArea bare ref={campo} value={texto} placeholder="Escribí en Equipo…" maxLength={4000} aria-label="Mensaje"
+                <TextArea bare ref={campo} value={texto} placeholder={directa ? `Escribile a ${directa}…` : 'Escribí en Equipo…'} maxLength={4000} aria-label="Mensaje"
                     onChange={(e) => cambiar(e.target.value)} onKeyDown={teclas} />
                 <IconButton label="Enviar" icon={<SendHorizontal size={16} />} onClick={enviar} disabled={!texto.trim() || enviando} />
             </div>
             <p className="ch-escribir__pie">
-                {pensando ? 'Learnito está respondiendo en el canal…' : `@ etiqueta a alguien${conLearnito ? ' · @Learnito le pregunta en el canal' : ''} · Lo ve todo el equipo, en Work, la Academia y Leadership`}
+                {pensando ? 'Learnito está respondiendo acá…' : directa
+                    ? `Lo ven solo ustedes dos${conLearnito ? ' · @Learnito le pregunta acá' : ''}`
+                    : `@ etiqueta a alguien${conLearnito ? ' · @Learnito le pregunta en el canal' : ''} · Lo ve todo el equipo, en Work, la Academia y Leadership`}
             </p>
         </div>
     );

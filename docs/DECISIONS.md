@@ -1563,3 +1563,16 @@
   5. **Buscar en la conversación:** con 2 letras o más, los 50 mensajes más recientes del canal que lo tienen.
 - **Qué se pierde:** las reacciones de otros sobre mensajes ya cargados no se actualizan hasta reabrir el chat (la consulta trae mensajes nuevos, no cambios).
 - **Consecuencias:** sin migración. Siguen la segunda parte (canales según el rol, conversaciones directas, Bugs y estudiantes) y la tercera («En llamada» desde la agenda, desconectados con «visto hace…»).
+
+## ADR-W175: el chat de Work como el mockup, segunda parte (cuentas del equipo y conversaciones directas)
+
+- **Fecha:** 2026-11-17 · **Subsistema:** Chat (`frontend/src/ventanas/herramientas/chat/`, `app/api/chat.py`, `TarjetaSesion.jsx`) · **Estado:** implementado. Sigue a ADR-W174; en la Academia, ADR-224.
+- **Contexto:** la segunda parte del mockup pedía canales según el rol, conversaciones directas, Bugs y estudiantes. Una conversación directa en la Academia se arma con las dos cuentas, y los setters, triage y marketing no tenían cuenta allá. Santi decidió (17/11) crearles cuentas del equipo, así se los ve conectados siempre, y dejar solo lo que existe hoy: ventas ve solo General, no Fulfillment (el chat de la Academia es el espejo de Discord).
+- **Decisión:**
+  1. **Cuentas:** la Academia le crea a cada persona de Work sin cuenta una solo para el chat, la primera vez que aparece (la presencia de cada minuto alcanza). Work no cambia nada para eso: sigue mandando el correo.
+  2. **Conversaciones directas:** tocar a alguien conectado (en la fila de fotos o en la columna de la derecha) o elegirlo con «+» en Conversaciones abre la directa con esa persona (`con` = su correo en `/api/chat/canal` y `/enviar`). La lista muestra las directas con mensajes, la más reciente arriba, con el último mensaje y lo no leído; la recién abierta va arriba mientras está abierta.
+  3. **Lo no leído:** `GET /api/chat/bandeja` cada 30 s con la ventana abierta y cada minuto sin ella (junto con la presencia). Cuenta Equipo y cada directa; la abierta no cuenta. El botón Mensajes de la tarjeta de sesión muestra el total.
+  4. En una directa el @ trae solo a Learnito (las etiquetas no avisan entre dos) y @Learnito responde ahí mismo.
+  5. **Bugs y Estudiantes** quedan fuera por ahora: ventas no ve los hilos de alumnos (los mismos roles que en la Academia).
+- **Qué se pierde:** el número del dock aparece en la tarjeta de sesión, no sobre el avatar del dock de abajo. Lo no leído tarda hasta un minuto en llegar con la ventana cerrada.
+- **Consecuencias:** sin migración. Sigue la tercera parte: «En llamada» desde la agenda y los desconectados con «visto hace…».

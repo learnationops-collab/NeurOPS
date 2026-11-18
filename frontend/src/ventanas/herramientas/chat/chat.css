@@ -30,6 +30,12 @@
 .ch-fotos{display:flex;gap:8px;padding:2px 8px 6px;overflow-x:auto;scrollbar-width:none}
 .ch-fotos__p{display:flex;flex-direction:column;align-items:center;gap:3px;width:40px;font-size:10px;font-weight:700;color:var(--ln-text-muted)}
 .ch-fotos__p small{max-width:44px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ch-fotos__p:hover small{color:var(--ln-text-out)}
+.ch-sec .ui-ibtn,.ch-sec button{margin-left:auto}
+.ch-lista__vacio{margin:4px 10px;font-size:11.5px;color:var(--ln-text-faint)}
+.ch-nueva{margin:0 4px 6px}
+.ch-nueva .ch-buscar{margin:0 0 6px}
+.ch-nueva__vacio{padding:6px 8px;color:var(--ln-text-faint)}
 .ch-foto{position:relative;display:inline-flex}
 .ch-foto__punto{position:absolute;right:-2px;bottom:-2px;width:10px;height:10px;border-radius:50%;background:var(--ln-success);
   border:2px solid var(--ln-popover-bg)}
@@ -142,7 +148,8 @@
 .ch-lado__tit{display:flex;flex-direction:column;margin:2px 8px 6px;font-size:13.5px;font-weight:800}
 .ch-lado__tit small{font-size:11px;font-weight:600;color:var(--ln-text-faint)}
 .ch-lado__vacio{margin:8px;font-size:12.5px;color:var(--ln-text-muted)}
-.ch-persona{display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:10px;font-size:13px;font-weight:700}
+.ch-persona{display:flex;align-items:center;gap:10px;width:100%;padding:6px 8px;border-radius:10px;font-size:13px;font-weight:700;text-align:left}
+.ch-persona:not(:disabled):hover{background:var(--ln-ct3-bg)}
 .ch-persona span{display:flex;flex-direction:column;min-width:0}
 .ch-persona small{font-size:11px;font-weight:600;color:var(--ln-text-faint)}
 

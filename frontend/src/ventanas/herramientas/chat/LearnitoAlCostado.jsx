@@ -10,7 +10,7 @@ import TemaLearnito from './TemaLearnito';
 
 const sinMarcadores = (texto) => texto.replace(/\[\[[A-Z]\]\]/g, '').trim();
 
-export default function LearnitoAlCostado({ cita, onSinCita, onCompartir }) {
+export default function LearnitoAlCostado({ cita, donde = 'Equipo', onSinCita, onCompartir }) {
     const { mensajes } = useLearnito();
     const [compartiendo, setCompartiendo] = useState(false);
     const ultima = [...mensajes].reverse().find(m => m.role === 'assistant' && m.content);
@@ -20,7 +20,7 @@ export default function LearnitoAlCostado({ cita, onSinCita, onCompartir }) {
         setCompartiendo(true);
         try {
             await onCompartir(sinMarcadores(ultima.content), { como: 'learnito', parentId: cita?.id });
-            toast('Compartido en Equipo', 'success');
+            toast(`Compartido en ${donde}`, 'success');
         } catch {
             toast('No se pudo compartir. Probá de nuevo.', 'error');
         } finally {
@@ -41,7 +41,7 @@ export default function LearnitoAlCostado({ cita, onSinCita, onCompartir }) {
             )}
             <TemaLearnito className="ch-lcost__chat"><LearnitoChat /></TemaLearnito>
             <Button size="sm" icon={<Share2 size={14} />} onClick={compartir} disabled={!ultima || compartiendo}>
-                Compartir la última respuesta en el canal
+                Compartir la última respuesta acá
             </Button>
         </div>
     );

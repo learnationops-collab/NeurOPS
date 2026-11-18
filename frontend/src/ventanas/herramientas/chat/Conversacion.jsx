@@ -1,4 +1,4 @@
-// La conversación de General · Equipo: los mensajes (con el día y los seguidos agrupados), la búsqueda (2 letras o
+// Una conversación (General · Equipo o una directa, ADR-W175): los mensajes (con el día y los seguidos agrupados), la búsqueda (2 letras o
 // más: los 50 más recientes que lo tienen, en todo el canal) y el campo para escribir. Un mensaje con @Learnito
 // le pregunta en el canal (useLearnitoEnCanal). Baja sola al último mensaje si ya estabas abajo.
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
@@ -11,7 +11,7 @@ import useLearnitoEnCanal from './useLearnitoEnCanal';
 
 const escapar = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-function Buscador({ buscar, onCerrar, children }) {
+function Buscador({ buscar, donde, onCerrar, children }) {
     const [texto, setTexto] = useState('');
     const [hallados, setHallados] = useState(null);
     const corto = texto.trim().length < 2;
@@ -24,7 +24,7 @@ function Buscador({ buscar, onCerrar, children }) {
         <>
             <div className="ch-buscar">
                 <Search size={15} aria-hidden="true" />
-                <input autoFocus value={texto} onChange={(e) => setTexto(e.target.value)} placeholder="Buscar en Equipo (2 letras o más)"
+                <input autoFocus value={texto} onChange={(e) => setTexto(e.target.value)} placeholder={`Buscar en ${donde} (2 letras o más)`}
                     aria-label="Buscar en la conversación" onKeyDown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); onCerrar(); } }} />
                 <IconButton size="xs" label="Cerrar la búsqueda" icon={<X size={13} />} onClick={onCerrar} />
             </div>
@@ -33,12 +33,12 @@ function Buscador({ buscar, onCerrar, children }) {
     );
 }
 
-export default function Conversacion({ chat, conLearnito, buscando, onCerrarBusqueda, onPreguntar }) {
+export default function Conversacion({ chat, donde, directa, conLearnito, buscando, onCerrarBusqueda, onPreguntar }) {
     const caja = useRef(null);
     const abajo = useRef(true);
     const campo = useRef(null);
     const [respondiendo, setRespondiendo] = useState(null);
-    const { pensando, preguntar } = useLearnitoEnCanal(chat.enviar);
+    const { pensando, preguntar } = useLearnitoEnCanal(chat.enviar, donde);
     const responder = (m) => { setRespondiendo(m); campo.current?.focus(); };
 
     // «@Nombre» conocidos, del más largo al más corto (así «@Ana María» gana a «@Ana»).
@@ -72,7 +72,9 @@ export default function Conversacion({ chat, conLearnito, buscando, onCerrarBusq
             {chat.mensajes === null ? (
                 <Skeleton label="Cargando el chat…">{[0, 1, 2, 3, 4].map(i => <SkeletonRow key={i} avatar cells={['60%']} step={i} />)}</Skeleton>
             ) : chat.mensajes.length === 0 ? (
-                <EmptyState icon={<MessageCircle size={28} />} title="Todavía no hay mensajes">Escribí el primero: lo ve todo el equipo.</EmptyState>
+                <EmptyState icon={<MessageCircle size={28} />} title="Todavía no hay mensajes">
+                    {directa ? 'Escribí el primero: lo ven solo ustedes dos.' : 'Escribí el primero: lo ve todo el equipo.'}
+                </EmptyState>
             ) : lista(chat.mensajes)}
             {pensando && (
                 <div className="ch-msg ch-msg--l">
@@ -87,7 +89,7 @@ export default function Conversacion({ chat, conLearnito, buscando, onCerrarBusq
         <>
             {chat.error && <p className="ch-error" role="status">{chat.error}</p>}
             {buscando ? (
-                <Buscador buscar={chat.buscar} onCerrar={onCerrarBusqueda}>
+                <Buscador buscar={chat.buscar} donde={donde} onCerrar={onCerrarBusqueda}>
                     {(hallados) => (hallados === null ? linea : (
                         <div className="ch-linea">
                             {hallados.length ? lista(hallados) : <EmptyState icon={<Search size={26} />} title="Nada con ese texto" />}
@@ -95,7 +97,7 @@ export default function Conversacion({ chat, conLearnito, buscando, onCerrarBusq
                     ))}
                 </Buscador>
             ) : linea}
-            <Escribir personas={chat.personas} conLearnito={conLearnito} respondiendo={respondiendo} setRespondiendo={setRespondiendo}
+            <Escribir personas={directa ? [] : chat.personas} directa={directa} conLearnito={conLearnito} respondiendo={respondiendo} setRespondiendo={setRespondiendo}
                 campo={campo} onEnviar={enviar} pensando={pensando} />
         </>
     );

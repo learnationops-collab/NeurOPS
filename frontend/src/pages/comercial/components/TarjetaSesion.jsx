@@ -4,6 +4,7 @@ import Mascota from '../../../components/mascota/Mascota';
 import { mascotaDe } from '../../../components/mascota/mascotas';
 import { rotuloDeSesion } from '../../../sesion/menuSesion';
 import { abrirVentana } from '../../../ventanas/ventanasStore';
+import { useSinLeerChat } from '../../../ventanas/herramientas/chat/usePresencia';
 
 /**
  * La tarjeta de usuario del dock unificado (docs/mockups/dock-unificado, ADR-W165), igual en Work, Academy
@@ -40,11 +41,17 @@ export const NombreSesion = ({ usuario }) => (
     </span>
 );
 
+// Mensajes con lo no leído del chat (Equipo y conversaciones directas, ADR-W175).
+const BotonMensajes = () => {
+    const n = useSinLeerChat();
+    return <BotonFila Icono={MessageCircle} label={n ? `Mensajes · ${n} sin leer` : 'Mensajes'} onClick={abrirChat} cuenta={n ? (n > 99 ? '99+' : n) : null} />;
+};
+
 /** `herr`: el botón de Herramientas (BotonHerramientas), que ya trae su menú. */
 export const FilaSesion = ({ usuario, herr, configuracion, salir }) => (
     <div className="dock-lado-fila">
         {salir && <BotonFila Icono={LogOut} label={salir.label} onClick={salir.onClick} clase="dock-lado-salir" />}
-        <BotonFila Icono={MessageCircle} label="Mensajes" onClick={abrirChat} />
+        <BotonMensajes />
         <BotonFila Icono={Compass} label="Leadership" onClick={irALeadership(usuario)} />
         {herr && <span className="dock-lado-herr">{herr}</span>}
         {configuracion && (

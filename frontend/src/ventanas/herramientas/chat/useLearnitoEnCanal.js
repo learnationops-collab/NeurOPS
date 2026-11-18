@@ -7,18 +7,18 @@ import { useLearnito } from '../../../sesion/LearnitoContext';
 
 const sinMarcadores = (texto) => texto.replace(/\[\[[A-Z]\]\]/g, '').trim();
 
-export default function useLearnitoEnCanal(enviarAlCanal) {
+export default function useLearnitoEnCanal(enviarAlCanal, donde = 'Equipo') {
     const learnito = useLearnito();
     const [pensando, setPensando] = useState(false);
 
     const preguntar = useCallback(async (texto, mensajeId, cita) => {
         const pregunta = texto.replace(/@Learnito/gi, '').trim() || '¿Qué sabés de esto?';
         const contexto = cita
-            ? `En el chat Equipo del equipo, sobre este mensaje de ${cita.autor.nombre}: «${cita.texto || cita.tarjeta?.titulo || ''}». `
-            : 'En el chat Equipo del equipo: ';
+            ? `En el chat del equipo (${donde}), sobre este mensaje de ${cita.autor.nombre}: «${cita.texto || cita.tarjeta?.titulo || ''}». `
+            : `En el chat del equipo (${donde}): `;
         setPensando(true);
         try {
-            const error = await learnito.enviar(contexto + pregunta, `En Equipo: ${pregunta}`);
+            const error = await learnito.enviar(contexto + pregunta, `En ${donde}: ${pregunta}`);
             if (error) { toast(error, 'error'); return; }
             const respuesta = sinMarcadores(learnito.ultimaRespuesta());
             if (respuesta) await enviarAlCanal(respuesta, { como: 'learnito', parentId: mensajeId });
@@ -27,7 +27,7 @@ export default function useLearnitoEnCanal(enviarAlCanal) {
         } finally {
             setPensando(false);
         }
-    }, [learnito, enviarAlCanal]);
+    }, [learnito, enviarAlCanal, donde]);
 
     return { pensando, preguntar };
 }

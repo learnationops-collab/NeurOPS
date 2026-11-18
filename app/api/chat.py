@@ -1,9 +1,11 @@
-"""El chat del equipo en Work (ADR-W171): el mismo de la Academia, que guarda los canales y los mensajes (su
-docs/MODELO/CHAT.md y ADR-220). Work no guarda mensajes: le pasa a la Academia quién pregunta (por correo) y
-devuelve lo que ella responde. Quien no tiene cuenta en la Academia (setters, marketing) escribe igual.
+"""El chat del equipo en Work (ADR-W171, W175): el mismo de la Academia, que guarda los canales y los mensajes (su
+docs/MODELO/CHAT.md, ADR-220 y ADR-224). Work no guarda mensajes: le pasa a la Academia quién pregunta (por correo)
+y devuelve lo que ella responde. Quien no tiene cuenta del equipo en la Academia (setters, triage, marketing)
+recibe una solo para el chat la primera vez que aparece.
 
-Primer paso: el canal General · Equipo y quién está conectado en Work, la Academia y Leadership.
-El frontend consulta el canal cada 4 s (`desde` = el último id que tiene) y los conectados cada minuto.
+Conversaciones: General · Equipo (ventas no ve los canales de un área) y las directas con alguien del equipo
+(`con` = su correo). El frontend consulta la conversación abierta cada 4 s (`desde` = el último id que tiene),
+y los conectados y la bandeja (lo no leído) cada 30 s.
 """
 import logging
 
@@ -32,14 +34,26 @@ def _a_la_academia(accion, cuerpo):
         return LearnationService.chat(accion, {'quien': _quien(), **cuerpo}), 200
     except LearnationAPIError as e:
         logger.error(f"chat {accion}: {e}")
+        if e.status_code == 404:
+            return {'error': 'Esa conversación no está disponible.'}, 404
         return {'error': 'El chat de la Academia no responde. Probá en un rato.'}, e.status_code or 502
+
+
+def _donde(valor):
+    """La conversación: {'con': correo, 'con_nombre'} para una directa, o General · Equipo."""
+    correo = str(valor or '').strip().lower()
+    if '@' not in correo or correo == str(current_user.email).lower():
+        return {'canal': CANAL}
+    persona = User.query.filter(db.func.lower(User.email) == correo).first()
+    return {'con': correo, 'con_nombre': (persona.username if persona else None) or correo.split('@')[0]}
 
 
 @bp.route('/canal', methods=['GET'])
 @login_required
 def canal():
-    """Los mensajes nuevos desde `desde`, o con `buscar` (2 letras o más) los 50 más recientes que lo tienen."""
-    pedido = {'canal': CANAL, 'desde_id': request.args.get('desde', type=int) or 0}
+    """Los mensajes nuevos desde `desde`, o con `buscar` (2 letras o más) los 50 más recientes que lo tienen.
+    Con `con` (un correo), la conversación directa con esa persona."""
+    pedido = {**_donde(request.args.get('con')), 'desde_id': request.args.get('desde', type=int) or 0}
     buscar = (request.args.get('buscar') or '').strip()[:80]
     if len(buscar) >= 2:
         pedido['buscar'] = buscar
@@ -47,11 +61,20 @@ def canal():
     return jsonify(datos), estado
 
 
+@bp.route('/bandeja', methods=['GET'])
+@login_required
+def bandeja():
+    """Lo no leído de Equipo y las conversaciones directas, la más reciente arriba."""
+    datos, estado = _a_la_academia('bandeja', {})
+    return jsonify(datos), estado
+
+
 @bp.route('/enviar', methods=['POST'])
 @login_required
 def enviar():
-    """Un mensaje: {texto, parent_id?, menciones?: [email], como?: 'learnito'}. `como: learnito` comparte en el canal
-    una respuesta de Learnito que pidió quien manda (la firma Learnito)."""
+    """Un mensaje: {texto, con?, parent_id?, menciones?: [email], como?: 'learnito'}. `con` (un correo) lo manda a
+    la conversación directa con esa persona. `como: learnito` comparte una respuesta de Learnito que pidió quien
+    manda (la firma Learnito). Las etiquetas avisan solo en Equipo."""
     cuerpo = request.get_json(silent=True) or {}
     texto = str(cuerpo.get('texto') or '').strip()
     como = 'learnito' if cuerpo.get('como') == 'learnito' else None
@@ -61,8 +84,11 @@ def enviar():
     if len(texto) > tope:
         return jsonify({'error': f'El mensaje pasa los {tope} caracteres.'}), 400
     menciones = [str(e).strip().lower() for e in (cuerpo.get('menciones') or []) if '@' in str(e)][:10]
-    pedido = {'canal': CANAL, 'texto': texto, 'menciones': menciones or None, 'como': como}
-    if cuerpo.get('parent_id'):
+    donde = _donde(cuerpo.get('con'))
+    if 'con' in donde:
+        menciones = []
+    pedido = {**donde, 'texto': texto, 'menciones': menciones or None, 'como': como}
+    if str(cuerpo.get('parent_id') or '').isdigit():
         pedido['parent_id'] = int(cuerpo['parent_id'])
     datos, estado = _a_la_academia('enviar', {k: v for k, v in pedido.items() if v is not None})
     if estado == 200 and menciones and not como:

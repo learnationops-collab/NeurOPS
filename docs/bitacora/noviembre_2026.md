@@ -701,3 +701,8 @@
 ### 17/11/2026 · Chat: reacciones, etiquetas, búsqueda y Learnito en el canal
 - En el chat del equipo se reacciona, se etiqueta con @ (llega el aviso a la campanita o a la Academia) y se busca en la conversación ([Mensaje.jsx](../../frontend/src/ventanas/herramientas/chat/Mensaje.jsx), [Escribir.jsx](../../frontend/src/ventanas/herramientas/chat/Escribir.jsx), [ADR-W174](../DECISIONS.md)).
 - @Learnito responde en el canal, y la chispa de un mensaje abre Learnito al costado con ese mensaje; su respuesta se puede compartir en el canal ([LearnitoAlCostado.jsx](../../frontend/src/ventanas/herramientas/chat/LearnitoAlCostado.jsx)).
+
+### 17/11/2026 · Chat: conversaciones directas y lo no leído
+- Tocar a alguien conectado, o elegirlo con «+» en Conversaciones, abre una conversación directa con esa persona; la lista las muestra con el último mensaje y lo no leído ([ListaConversaciones.jsx](../../frontend/src/ventanas/herramientas/chat/ListaConversaciones.jsx), [ADR-W175](../DECISIONS.md)).
+- Quien no tenía cuenta en la Academia (setters, triage, marketing) ya tiene una solo para el chat: se lo ve conectado y se le puede escribir directo (Academia ADR-224).
+- El botón Mensajes de la tarjeta de sesión muestra cuántos mensajes hay sin leer ([usePresencia.js](../../frontend/src/ventanas/herramientas/chat/usePresencia.js)).
