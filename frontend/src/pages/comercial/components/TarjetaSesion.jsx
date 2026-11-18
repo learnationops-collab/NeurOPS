@@ -3,7 +3,6 @@ import { Bell, Compass, LogOut, MessageCircle, Settings } from 'lucide-react';
 import Mascota from '../../../components/mascota/Mascota';
 import { mascotaDe } from '../../../components/mascota/mascotas';
 import { rotuloDeSesion } from '../../../sesion/menuSesion';
-import { entrarALeadership } from '../../../utils/portal';
 import { abrirVentana } from '../../../ventanas/ventanasStore';
 
 /**
@@ -12,12 +11,14 @@ import { abrirVentana } from '../../../ventanas/ventanasStore';
  * Mensajes · Leadership · Herramientas · Configuración. La usa la barra lateral desplegada (DockLateral) y,
  * en el dock de abajo, aparece al pasar el mouse por el avatar (TarjetaFlotante).
  * Mensajes abre la ventana Chat: el chat del equipo de la Academia, los conectados y Learnito (ADR-W172).
+ * Leadership abre Leadership rápido (ADR-W173).
  */
 const abrirChat = () => abrirVentana('chat');
 
+// Leadership abre Leadership rápido (la ventana `leadership`); entrar a Leadership entero va adentro.
 const irALeadership = (usuario) => () => {
-    if (usuario?.is_impersonating) { toast.error('Simulando no se puede entrar a Leadership'); return; }
-    entrarALeadership().catch(() => toast.error('No se pudo entrar a Leadership'));
+    if (usuario?.is_impersonating) { toast.error('Simulando no se puede usar Leadership'); return; }
+    abrirVentana('leadership');
 };
 
 export const BotonFila = ({ Icono, label, onClick, cuenta = null, clase = '' }) => (

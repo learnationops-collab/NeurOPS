@@ -2,7 +2,7 @@
 // Academia y `DockTools` de Leadership. Cada una aparece en el menú de sesión (y se puede fijar en el dock)
 // y se abre encima de cualquier pantalla. Sumar una es agregar un item acá y su componente en ./herramientas/.
 import { lazy } from 'react';
-import { CalendarClock, MessageCircle, Search, Settings } from 'lucide-react';
+import { CalendarClock, Compass, MessageCircle, Search, Settings } from 'lucide-react';
 import AccionesConfiguracion from '../sesion/AccionesConfiguracion';
 
 export const HERRAMIENTAS = [
@@ -33,6 +33,17 @@ export const HERRAMIENTAS = [
         roles: null,
         ancho: 1080,
         Componente: lazy(() => import('./herramientas/chat/ChatVentana.jsx')),
+    },
+    // Leadership rápido: lo tuyo de Leadership sin salir de Work (app/api/leadership_rapido.py → /api/v1/rapido).
+    // Lo abre el botón Leadership de la tarjeta de sesión; también se fija en el dock.
+    {
+        key: 'leadership',
+        label: 'Leadership',
+        hint: 'Lo tuyo de Leadership: anotar, completar, entregar y pasarle algo a otro',
+        Icono: Compass,
+        roles: null,
+        ancho: 520,
+        Componente: lazy(() => import('./herramientas/leadership/LeadershipVentana.jsx')),
     },
     // Configuración también es una ventana (ADR-W169), para todos los roles (`roles: null`), pero no va en el
     // menú de Herramientas: se abre desde el avatar y la tarjeta de sesión. `Acciones` va en su cabecera.

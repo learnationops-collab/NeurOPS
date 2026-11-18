@@ -1537,3 +1537,16 @@
   3. **Leadership:** su Mensajes suma arriba Learnito y Equipo (el canal de la Academia, con los conectados por servicio), y Equipo es lo primero que se ve al abrir. Su chat propio (conversaciones directas, grupos, hilos sobre tareas) no cambia. Cada sesión de Leadership avisa a la Academia que está conectada, una vez por minuto.
 - **Qué se pierde:** Leadership tiene dos chats en la misma ventana: Equipo (de la Academia) y el suyo. Juntarlos queda para cuando las conversaciones directas pasen a la Academia.
 - **Consecuencias:** sin migración. Leadership usa `ACADEMY_STAFF_API_TOKEN`, que ya tiene configurado.
+
+## ADR-W173: Leadership rápido, lo tuyo de Leadership en una ventana de Work
+
+- **Fecha:** 2026-11-17 · **Subsistema:** Leadership (`app/api/leadership_rapido.py`, `frontend/src/ventanas/herramientas/leadership/`) · **Estado:** implementado. Del lado de Leadership: la API `v1/rapido` (su `RapidoController`) y el mockup `../learnation-leadership/docs/mockups/leadership-rapido.html`.
+- **Contexto:** el botón Leadership de la tarjeta de sesión (dock unificado, ADR-W165) solo llevaba a Leadership entero. Un miembro del equipo, en medio de su trabajo en Work, necesita anotar algo que surgió, ver lo suyo, completarlo o entregarlo y pasarle algo a un compañero sin dejar Work.
+- **Decisión:**
+  1. **Leadership** es una ventana más del catálogo (`leadership`, todos los roles), fijable en el dock; el botón Leadership de la tarjeta la abre. Entrar a Leadership entero queda adentro («Abrir Leadership», en otra pestaña, y «Abrir en Leadership» de cada fila, que llega a esa ficha con `?abrir=`).
+  2. Arriba, una línea para anotar: «Definir» abre una sola pantalla con preguntas cortas: Quick o Project, el arquetipo del Simpler Clarity (que pone el Clarity y sugiere la duración), cuánto lleva o los pasos, para cuándo y quién la hace (si es otra persona, qué te tiene que devolver). El área es la de tu puesto y la actividad sale del título. Lo que falte no frena: va a tu Inbox de Leadership.
+  3. **Lo mío:** lo que te pasaron para definir, los rituals de hoy y lo que sigue en el orden de tu Momentum. La casilla completa (en un project, el paso que sigue); si la tarea se entrega, pide ahí mismo el texto o el link. Cada fila cambia la fecha, se ajusta con el mismo formulario o se le pasa a otro. **Lo que pedí:** lo que repartiste, con su estado y «Pedir un update».
+  4. **Aprobar no tiene lugar:** es de quien dirige. Si te toca, el pie dice cuántas entregas esperan y lleva a Leadership.
+  5. **Sin tokens compartidos:** Work firma un pase por pedido (el mismo del ingreso, `LEADERSHIP_HANDOFF_SECRET`, 60 s, un solo uso) con el email de la sesión y reenvía solo las rutas de la API. Leadership anota cada cambio con la persona y la plataforma. Simulando no se usa.
+- **Qué se pierde:** la ventana depende de Leadership; si no responde, lo dice y no abre el aviso de bugs. Crear no se deshace desde acá (sería borrar): se corrige en Leadership. Sin cuenta en Leadership con el mismo email, la ventana no carga.
+- **Consecuencias:** sin migración. La tarjeta todavía no muestra la cuenta de lo urgente en el botón (pediría consultar Leadership desde todas las pantallas). El registro central del staff (vínculos de cuentas entre plataformas) quedó para más adelante.

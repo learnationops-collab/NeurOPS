@@ -132,6 +132,23 @@ export const entrarALeadership = async () => {
 };
 
 /**
+ * Leadership en otra pestaña, sin dejar Work (Leadership rápido): `abrir` = task:ID | project:ID | habit:ID |
+ * mapa:ID, lo que Leadership abre al llegar. La pestaña se abre antes de pedir el pase (si no, el navegador la
+ * bloquea por no venir del clic); sin pestaña, entra en esta.
+ */
+export const abrirEnLeadership = async (abrir = '') => {
+    const pestana = window.open('', '_blank');
+    try {
+        const res = await api.get('/leadership/entrar', { params: abrir ? { abrir } : {} });
+        if (pestana) pestana.location.href = res.data.url;
+        else window.location.href = res.data.url;
+    } catch (e) {
+        pestana?.close();
+        throw e;
+    }
+};
+
+/**
  * Pasa a otra cuenta de la persona en ESTA pestaña (en una aislada no toca la cookie) y entra a `destino`
  * o a donde entra esa cuenta.
  */
