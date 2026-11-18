@@ -87,6 +87,7 @@ export default function Ventana({ item, h, children }) {
                 <header className="vt-cab" onPointerDown={empezar} onDoubleClick={() => !movil && maximizarVentana(item.key, !item.max)}>
                     <h.Icono size={16} aria-hidden="true" />
                     <b className="vt-titulo">{h.label}</b>
+                    {h.Acciones && <span className="vt-acciones"><h.Acciones onCerrar={() => minimizarVentana(item.key)} /></span>}
                     <span className="vt-controles">
                         <IconButton size="sm" label="Minimizar al dock" icon={<Minus size={15} />} onClick={() => minimizarVentana(item.key)} />
                         {!movil && (

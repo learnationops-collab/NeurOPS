@@ -669,3 +669,7 @@
 
 ### 17/11/2026 · Herramientas en una ventana
 - Herramientas se abre en una ventana centrada y ancha, con buscador y los grupos en dos columnas, en vez de un menú sin espacio ([BotonHerramientas.jsx](../../frontend/src/ventanas/BotonHerramientas.jsx), [ADR-W168](../DECISIONS.md)).
+
+### 17/11/2026 · Configuración como ventana
+- Configuración se abre en una ventana que se minimiza al dock, se maximiza y se arrastra, como Turnos y Buscar lead, con Notificaciones, Portal y Cerrar sesión en su barra ([ConfiguracionContext.jsx](../../frontend/src/sesion/ConfiguracionContext.jsx), [ADR-W169](../DECISIONS.md)).
+- Baldosas más prolijas. Los cinco botones de la tarjeta de la barra lateral ya no se salen ([dock2.css](../../frontend/src/pages/comercial/dock2.css)).

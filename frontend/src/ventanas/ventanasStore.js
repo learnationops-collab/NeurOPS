@@ -25,10 +25,11 @@ const emitir = (nuevos) => {
 };
 const cambiar = (key, cambios) => emitir(items.map(x => (x.key === key ? { ...x, ...cambios } : x)));
 
-export function abrirVentana(key) {
+/** `extra`: datos de esa ventana (Configuración: `{ tab }`, la pestaña con la que abre). */
+export function abrirVentana(key, extra = {}) {
     arriba += 1;
-    if (items.some(x => x.key === key)) cambiar(key, { estado: 'abierta', z: arriba });
-    else emitir([...items, { key, estado: 'abierta', max: false, pos: null, z: arriba }]);
+    if (items.some(x => x.key === key)) cambiar(key, { ...extra, estado: 'abierta', z: arriba });
+    else emitir([...items, { ...extra, key, estado: 'abierta', max: false, pos: null, z: arriba }]);
 }
 export const enfocarVentana = (key) => { arriba += 1; cambiar(key, { z: arriba }); };
 export const minimizarVentana = (key) => cambiar(key, { estado: 'minimizada', max: false });

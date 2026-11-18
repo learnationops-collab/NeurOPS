@@ -86,8 +86,9 @@
 .dc-shell .dock-lado--abierta .dock-lado-plegar{left:8px}
 .dc-shell .dock-lado .dock-lado-notif{right:8px;color:var(--text-muted)}
 .dc-shell .dock-lado .dock-lado-notif .dock-sesion-aviso{top:-4px;right:-4px}
-.dc-shell .dock-lado-fila{display:flex;justify-content:center;gap:5px;width:100%}
-.dc-shell .dock-lado-fila .dock-fijada{width:40px;height:40px;border-radius:13px;background:var(--bg-element);border:1px solid var(--border-subtle)}
+.dc-shell .dock-lado-fila{display:flex;justify-content:center;gap:4px;width:100%}
+/* La fila de cinco: 38 px cada uno, para que entren en la tarjeta (le gana a los 44 px de la barra). */
+.dc-shell .dock-lado-fila .dock-fijada,.dc-shell .dock-lado .dock-lado-fila .dock-fijada{width:38px;height:38px;border-radius:12px;background:var(--bg-element);border:1px solid var(--border-subtle)}
 .dc-shell .dock-lado-herr{display:contents}
 .dc-shell .dock-lado-acciones{display:flex;flex-direction:column;align-items:center;gap:2px}
 .dc-shell .dock-lado .dock-fijada{width:44px;height:44px;border-radius:14px}

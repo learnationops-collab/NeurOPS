@@ -1,14 +1,14 @@
 // «Configuración», la de todos, igual en Work, Academy y Leadership (ADR-W167, mockup
-// docs/mockups/configuracion-unificada). Se abre en una hoja (HojaModal) desde el avatar o la tarjeta de
+// docs/mockups/configuracion-unificada). Se abre en una ventana flotante (ADR-W169: minimizar, maximizar, arrastrar) desde el avatar o la tarjeta de
 // sesión, por sesion/ConfiguracionContext.jsx. El mismo contenido en dos vistas (Apariencia › Vista):
 //   · Pestañas: las secciones a la izquierda, agrupadas (Vos / Trabajo / Cuenta), y el contenido a la derecha;
 //   · Baldosas, como Academy: tu identidad a la izquierda y una baldosa por sección con su resumen; tocar una
-//     la abre en la misma hoja, con «volver».
+//     la abre en la misma ventana, con «volver».
 // Las secciones dependen del rol (SECCIONES.para). Las tarjetas son las de la Configuración de Agendamiento
 // (agendas_v2/secciones/conf/cuenta.jsx). Google Calendar y el WhatsApp confirmado son obligatorios para
 // recibir agendas del sistema de agendas 2.0 (app/agendas_v2/servicio.py, solo_elegibles).
 //
-// Google vuelve del permiso a /closer/deck?vista=configuracion&google_connected=success: la hoja se abre en
+// Google vuelve del permiso a /closer/deck?vista=configuracion&google_connected=success: la ventana se abre en
 // Integraciones y la tarjeta de Calendar muestra el resultado.
 
 import { useState } from 'react';

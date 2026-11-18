@@ -2,14 +2,14 @@
 // del dock de la Academia: un acceso por ventana abierta. Tocarla la trae adelante si estaba minimizada
 // y la minimiza si estaba a la vista. Sin ventanas no ocupa lugar.
 import { useAuth } from '../contexts/AuthContext';
-import { herramienta } from './herramientas';
+import { herramienta, permitida } from './herramientas';
 import { abrirVentana, minimizarVentana, useVentanas } from './ventanasStore';
 
 export default function IslaVentanas() {
     const { user } = useAuth();
     const items = useVentanas()
         .map(item => ({ item, h: herramienta(item.key) }))
-        .filter(({ h }) => h && user && h.roles.includes(user.role));
+        .filter(({ h }) => permitida(h, user));
     if (!items.length) return null;
     return (
         <>

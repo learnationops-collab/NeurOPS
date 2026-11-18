@@ -1472,3 +1472,18 @@
   5. En el teléfono es una hoja que sube desde abajo.
 - **Qué se pierde:** el menú ya no queda al lado del botón: abrir Herramientas tapa la pantalla. Las listas fijadas en el dock (Nuevo fijado) siguen siendo un menú chico al lado de su botón, porque son cortas.
 - **Consecuencias:** sin migración.
+
+## ADR-W169: Configuración es una ventana flotante, como las demás
+
+- **Fecha:** 2026-11-17 · **Subsistema:** Configuración y ventanas (`sesion/ConfiguracionContext.jsx`, `sesion/ConfiguracionVentana.jsx`, `ventanas/herramientas.js`, `ventanas/Ventana.jsx`, `ventanas/ventanasStore.js`) · **Estado:** implementado. Sigue a ADR-W167.
+- **Contexto:** Configuración se abría en una hoja modal sin barra de título, mientras que las ventanas de Academy y las de Work (Turnos, Buscar lead) se minimizan, se maximizan y se arrastran. Además, la vista Baldosas se veía desarmada: la identidad pegada a las baldosas y unas baldosas enormes.
+- **Decisión:**
+  1. **Configuración es una ventana más del catálogo** (`configuracion`):
+     - Es para todos los roles (`roles: null`), pero no aparece en el menú de Herramientas (`enMenu: false`): se abre desde el avatar y la tarjeta de sesión.
+     - Se minimiza al dock, se maximiza, se arrastra y Esc la minimiza.
+     - `abrirVentana(key, extra)` lleva la sección con la que abre (`{ tab }`).
+  2. **Cabecera de una ventana:** puede traer `Acciones` propias. En Configuración son Notificaciones, Portal y Cerrar sesión, separadas de minimizar, maximizar y cerrar.
+  3. **Baldosas más prolijas:** la identidad separada y con el mismo fondo que las baldosas, y baldosas más compactas que se acomodan al ancho de la ventana.
+  4. **Barra lateral:** los cinco botones de la tarjeta miden 38 px. Antes la regla general de 44 px los desbordaba.
+- **Qué se pierde:** Configuración ya no oscurece la pantalla: se puede seguir trabajando debajo, como con las otras ventanas.
+- **Consecuencias:** sin migración. `?vista=configuracion` y la vuelta de Google la siguen abriendo sola, en Integraciones si viene de Google.

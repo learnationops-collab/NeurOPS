@@ -1,5 +1,5 @@
 /* Configuración unificada (Configuracion.jsx, ADR-W167): pestañas a la izquierda o baldosas. */
-.thalamus.cu-hoja--pestanas{display:grid;grid-template-columns:200px minmax(0,1fr);gap:var(--s5);align-items:start}
+.thalamus.cu-hoja--pestanas{display:grid;grid-template-columns:190px minmax(0,1fr);gap:24px;align-items:start}
 .thalamus .cu-pestanas{position:sticky;top:0;display:grid;gap:var(--s2)}
 .thalamus .cu-grupo{display:grid;gap:2px}
 .thalamus .cu-grupo-tit{margin:0 10px 2px;font-size:10px;font-weight:900;letter-spacing:.09em;text-transform:uppercase;color:var(--text-muted-40)}
@@ -15,26 +15,26 @@
 .thalamus .cu-botones{display:flex;flex-wrap:wrap;gap:var(--s2)}
 
 /* Baldosas: la identidad a la izquierda y una baldosa por sección. */
-.thalamus .cu-baldosas{display:grid;grid-template-columns:220px minmax(0,1fr);gap:var(--s5);align-items:stretch}
+.thalamus .cu-baldosas{display:grid;grid-template-columns:210px minmax(0,1fr);gap:16px;align-items:start}
 .thalamus .cu-yo{display:flex;flex-direction:column;align-items:center;text-align:center;gap:2px;padding:var(--s4) var(--s3);
-  border-radius:24px;background:var(--hundido);border:1px solid var(--border-subtle)}
-.thalamus .cu-yo-foto{display:grid;place-items:center;width:96px;height:96px;margin-bottom:var(--s2);border-radius:50%;
+  border-radius:20px;background:var(--mat-2,var(--mat-3));border:1px solid var(--border-subtle)}
+.thalamus .cu-yo-foto{display:grid;place-items:center;width:84px;height:84px;margin-bottom:8px;border-radius:50%;
   background:var(--mat-3);box-shadow:0 0 0 4px var(--ln-brand-soft,transparent)}
-.thalamus .cu-yo-foto > *{transform:scale(1.3)}
+.thalamus .cu-yo-foto > *{transform:scale(1.15)}
 .thalamus .cu-yo-hola{margin:0;font-size:12px;color:var(--text-muted)}
-.thalamus .cu-yo-nombre{margin:0;font-size:18px;font-weight:900;color:var(--text-on-surface)}
+.thalamus .cu-yo-nombre{margin:0;font-size:16px;font-weight:900;color:var(--text-on-surface)}
 .thalamus .cu-yo-dato{margin:0;max-width:100%;font-size:12px;color:var(--text-muted)}
 .thalamus .cu-yo-rol{margin-top:var(--s2);padding:4px 11px;border-radius:999px;font-size:11.5px;font-weight:800;
   background:var(--ln-brand-soft,var(--mat-3));color:var(--ln-brand,var(--text-on-surface));border:1px solid var(--ln-brand-soft-border,var(--border-subtle))}
-.thalamus .cu-yo-modo{margin-top:auto;padding-top:var(--s4)}
-.thalamus .cu-grilla{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s2);align-content:start}
+.thalamus .cu-yo-modo{padding-top:14px}
+.thalamus .cu-grilla{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;align-content:start}
 .thalamus .cu-baldosa{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-rows:auto auto;column-gap:12px;align-items:center;text-align:left;
-  padding:14px;border-radius:18px;background:var(--mat-2,var(--mat-3));border:1px solid var(--border-subtle);transition:background-color .15s ease,border-color .15s ease}
+  padding:10px 12px;border-radius:16px;background:var(--mat-2,var(--mat-3));border:1px solid var(--border-subtle);transition:background-color .15s ease,border-color .15s ease}
 .thalamus .cu-baldosa:hover{background:var(--mat-3);border-color:var(--border-main)}
-.thalamus .cu-baldosa-ico{grid-row:span 2;display:grid;place-items:center;width:38px;height:38px;border-radius:12px;
+.thalamus .cu-baldosa-ico{grid-row:span 2;display:grid;place-items:center;width:34px;height:34px;border-radius:11px;
   background:var(--ln-brand-soft,var(--mat-3));color:var(--ln-brand,var(--text-on-surface))}
-.thalamus .cu-baldosa b{font-size:14px;color:var(--text-on-surface)}
-.thalamus .cu-baldosa small{font-size:12px;color:var(--text-muted)}
+.thalamus .cu-baldosa b{font-size:13.5px;line-height:1.3;color:var(--text-on-surface)}
+.thalamus .cu-baldosa small{font-size:11.5px;line-height:1.3;color:var(--text-muted)}
 .thalamus .cu-detalle{display:grid;gap:var(--s3)}
 .thalamus .cu-volver{justify-self:start;display:inline-flex;align-items:center;gap:4px;height:30px;padding:0 10px 0 6px;border-radius:999px;
   font-size:12.5px;font-weight:700;color:var(--text-muted)}
@@ -62,9 +62,8 @@
   .thalamus .cu-yo-modo{margin-top:var(--s2);padding-top:0}
   .thalamus .cu-grilla{grid-template-columns:minmax(0,1fr)}
 }
-/* La hoja de Configuración, un poco más ancha que las demás: entran las pestañas o la identidad al costado. */
-@media (min-width:640px){ .hoja-panel:has(> .hoja-cuerpo > .cu-hoja){max-width:58rem} .hoja-panel--amplia:has(> .hoja-cuerpo > .cu-hoja){max-width:72rem} }
-/* La cabecera de la hoja (AccionesConfiguracion.jsx). */
+/* Notificaciones, Portal y Cerrar sesión en la cabecera de la ventana (AccionesConfiguracion.jsx). */
+.vt-acciones{display:flex;align-items:center;gap:2px;padding-right:6px;margin-right:2px;border-right:1px solid var(--ln-border-subtle,rgba(255,255,255,.08))}
 .cu-acc{transition:background-color .15s ease,color .15s ease}
 .cu-acc:hover{background:var(--ln-ct3-bg-hover,rgba(255,255,255,.1))}
 .cu-acc--salir:hover{background:var(--ln-danger-bg,rgba(232,92,74,.15));color:var(--ln-danger,#E85C4A)}

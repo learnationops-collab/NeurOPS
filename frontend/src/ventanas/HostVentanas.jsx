@@ -4,7 +4,7 @@
 
 import { Suspense } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { herramienta } from './herramientas';
+import { herramienta, permitida } from './herramientas';
 import Ventana from './Ventana';
 import { useVentanas } from './ventanasStore';
 import './ventanas.css';
@@ -15,11 +15,11 @@ export default function HostVentanas() {
     if (!user) return null;
     return items.map(item => {
         const h = herramienta(item.key);
-        if (!h || !h.roles.includes(user.role)) return null;
+        if (!permitida(h, user)) return null;
         return (
             <Ventana key={item.key} item={item} h={h}>
                 <Suspense fallback={<p className="vt-cargando">Cargando…</p>}>
-                    <h.Componente />
+                    <h.Componente item={item} />
                 </Suspense>
             </Ventana>
         );
