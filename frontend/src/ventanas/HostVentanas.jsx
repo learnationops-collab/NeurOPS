@@ -5,6 +5,7 @@
 import { Suspense } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { herramienta, permitida } from './herramientas';
+import usePresencia from './herramientas/chat/usePresencia';
 import Ventana from './Ventana';
 import { useVentanas } from './ventanasStore';
 import './ventanas.css';
@@ -12,6 +13,8 @@ import './ventanas.css';
 export default function HostVentanas() {
     const { user } = useAuth();
     const items = useVentanas();
+    // Conectado en Work, para el chat del equipo (ADR-W171): el host se monta una vez por sesión.
+    usePresencia(user);
     if (!user) return null;
     return items.map(item => {
         const h = herramienta(item.key);

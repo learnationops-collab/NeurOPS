@@ -135,6 +135,10 @@ def create_app(config_class=Config):
     from app.api.copiloto import bp as copiloto_api_bp
     app.register_blueprint(copiloto_api_bp, url_prefix='/api/copiloto')
 
+    # El chat del equipo, que vive en la Academia (ADR-W171, ver app/api/chat.py).
+    from app.api.chat import bp as chat_api_bp
+    app.register_blueprint(chat_api_bp, url_prefix='/api/chat')
+
     # Motor genérico de tablas (ver app/services/tablas/ y docs/plan_tablas_motor_generico.md).
     from app.api.tablas import bp as tablas_api_bp
     app.register_blueprint(tablas_api_bp, url_prefix='/api/tablas')

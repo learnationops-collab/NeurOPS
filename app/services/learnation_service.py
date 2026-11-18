@@ -151,3 +151,9 @@ class LearnationService:
         `confirm` o `rate`, con `sistema: work` y `quien`. Una Investigación puede tardar minutos."""
         return LearnationService._request('POST', f'/learnito/{accion}', json={'sistema': 'work', **cuerpo},
                                           timeout=240 if accion == 'ask' else 30)
+
+    @staticmethod
+    def chat(accion, cuerpo):
+        """El chat del equipo, que vive en la Academia (ADR-W171, su ADR-220): `canal` (los mensajes, o los nuevos
+        desde un id), `enviar` o `conectados`, con `sistema: work` y `quien`."""
+        return LearnationService._request('POST', f'/chat/{accion}', json={'sistema': 'work', **cuerpo}, timeout=10)
