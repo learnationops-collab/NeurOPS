@@ -688,3 +688,6 @@
 ### 17/11/2026 · Triage: una cuenta desactivada no borra sus llamadas del tablero
 - Las métricas del triage solo contaban a las personas con cuenta activa. Al desactivar la de Juliana Avila, sus llamadas salieron de Dirección comercial › Triage: del 26/10 al 17/11 el total bajó de 74 agendas a 44. Ahora cuentan también quienes atendieron llamadas en el período aunque hoy no tengan cuenta activa ([triage_service.py](../../app/services/triage_service.py), `_personas_del_periodo`). Los avisos de Discord siguen mencionando solo a las activas.
 - Datos: las dos agendas de Yulissa Jimenez, que habían quedado a nombre de Dari González por el «Pasar a triage» equivocado del 13/11, volvieron a Jean Carlo.
+
+### 17/11/2026 · Mensajes abre el chat del equipo
+- El botón Mensajes del dock abre la ventana Chat ([TarjetaSesion.jsx](../../frontend/src/pages/comercial/components/TarjetaSesion.jsx), [ADR-W172](../DECISIONS.md)). En la Academia ya lo abría; en Leadership, Mensajes suma el canal Equipo y Learnito.

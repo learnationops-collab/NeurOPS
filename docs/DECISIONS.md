@@ -1526,3 +1526,14 @@
 - **Qué se pierde:** el chat de Work depende de la Academia. Sin `ACADEMY_API_TOKEN` (el servidor develop) el chat no carga.
 - **Consecuencias:** sin migración. Siguen: más canales según el rol, conversaciones directas, `@Learnito` en un canal (la Academia tiene que aceptar una pregunta suelta sin abrir una conversación por calificar), etiquetas, reacciones, hilos, convertir un mensaje en tarea y la presencia con la sección, para medir el trabajo activo y pasivo.
 - **Modelo vivo:** `docs/MODELO/CHAT.md`.
+
+## ADR-W172: Mensajes abre el chat del equipo en Work, la Academia y Leadership
+
+- **Fecha:** 2026-11-17 · **Subsistema:** Chat y dock (`pages/comercial/components/TarjetaSesion.jsx`; en la Academia `AuthenticateStaffApi`; en Leadership `ChatCenter`, `EquipoAcademia`, `AcademyChat`) · **Estado:** implementado. Sigue a ADR-W171; en la Academia, ADR-220; en Leadership, ADR-043.
+- **Contexto:** Santi pidió que el chat se abra desde el botón Mensajes del dock y que esté en todos los servicios.
+- **Decisión:**
+  1. **Work:** el botón Mensajes de la tarjeta de sesión (dock y barra lateral) abre la ventana Chat. Antes decía «pronto».
+  2. **Academia:** su botón ya abría el chat (ChatCenter), que tiene el canal Equipo. La API del chat acepta ahora también el token de staff, el de Leadership.
+  3. **Leadership:** su Mensajes suma arriba Learnito y Equipo (el canal de la Academia, con los conectados por servicio), y Equipo es lo primero que se ve al abrir. Su chat propio (conversaciones directas, grupos, hilos sobre tareas) no cambia. Cada sesión de Leadership avisa a la Academia que está conectada, una vez por minuto.
+- **Qué se pierde:** Leadership tiene dos chats en la misma ventana: Equipo (de la Academia) y el suyo. Juntarlos queda para cuando las conversaciones directas pasen a la Academia.
+- **Consecuencias:** sin migración. Leadership usa `ACADEMY_STAFF_API_TOKEN`, que ya tiene configurado.

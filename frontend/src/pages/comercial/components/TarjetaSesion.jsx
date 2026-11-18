@@ -4,15 +4,16 @@ import Mascota from '../../../components/mascota/Mascota';
 import { mascotaDe } from '../../../components/mascota/mascotas';
 import { rotuloDeSesion } from '../../../sesion/menuSesion';
 import { entrarALeadership } from '../../../utils/portal';
+import { abrirVentana } from '../../../ventanas/ventanasStore';
 
 /**
  * La tarjeta de usuario del dock unificado (docs/mockups/dock-unificado, ADR-W165), igual en Work, Academy
  * y Leadership: Notificaciones arriba a la derecha, el personaje y el nombre, y la fila Cerrar sesión ·
  * Mensajes · Leadership · Herramientas · Configuración. La usa la barra lateral desplegada (DockLateral) y,
  * en el dock de abajo, aparece al pasar el mouse por el avatar (TarjetaFlotante).
- * Mensajes todavía no existe: es un lugar reservado (ahí va a vivir Learnito).
+ * Mensajes abre la ventana Chat: el chat del equipo de la Academia, los conectados y Learnito (ADR-W172).
  */
-const pronto = (que) => () => toast(`${que}: pronto`, { icon: '🛠️' });
+const abrirChat = () => abrirVentana('chat');
 
 const irALeadership = (usuario) => () => {
     if (usuario?.is_impersonating) { toast.error('Simulando no se puede entrar a Leadership'); return; }
@@ -42,7 +43,7 @@ export const NombreSesion = ({ usuario }) => (
 export const FilaSesion = ({ usuario, herr, configuracion, salir }) => (
     <div className="dock-lado-fila">
         {salir && <BotonFila Icono={LogOut} label={salir.label} onClick={salir.onClick} clase="dock-lado-salir" />}
-        <BotonFila Icono={MessageCircle} label="Mensajes (pronto)" onClick={pronto('Mensajes')} />
+        <BotonFila Icono={MessageCircle} label="Mensajes" onClick={abrirChat} />
         <BotonFila Icono={Compass} label="Leadership" onClick={irALeadership(usuario)} />
         {herr && <span className="dock-lado-herr">{herr}</span>}
         {configuracion && (
