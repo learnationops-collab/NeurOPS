@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="es" data-tema="learnation" data-modo="oscuro" data-efectos="si">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chat cruzado Learnation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="temas.css">
+<link rel="stylesheet" href="chat.css">
+</head>
+<body>
+<!--
+  Mockup del chat cruzado (17/11/2026): el chat de la Academia, el mismo en Work, Academy y Leadership,
+  con Learnito adentro y la gente conectada en los tres. Se inspira en ChatCenter de la Academia
+  (docs/MODELO/CHAT.md de academy). Todo es de mentira: no llama a ningún servidor.
+-->
+<header class="mk-barra" aria-label="Controles del mockup">
+  <b class="mk-titulo">Chat cruzado</b>
+  <label class="mk-campo"><span>Estás en</span>
+    <select id="mk-producto"><option value="work">Work</option><option value="academy">Academy</option><option value="leadership">Leadership</option></select>
+  </label>
+  <label class="mk-campo"><span>Mira</span>
+    <select id="mk-visor"><option value="santi">Santiago (operador)</option><option value="vale">Valentina (closer)</option><option value="andres">Andrés (CES)</option></select>
+  </label>
+  <label class="mk-campo"><span>Tema</span>
+    <select id="mk-tema"><option value="learnation">Learnation</option><option value="solido">Sólido</option><option value="relampago">Relámpago</option><option value="puro">Puro</option></select>
+  </label>
+  <div class="mk-seg" role="group" aria-label="Modo">
+    <button type="button" data-modo="oscuro">Oscuro</button>
+    <button type="button" data-modo="claro">Claro</button>
+  </div>
+  <button type="button" class="mk-btn" id="mk-notas">Notas</button>
+</header>
+
+<main class="app">
+  <div class="aura" aria-hidden="true"><i></i><i></i><i></i></div>
+  <div class="pagina"><p class="pagina-eyebrow" id="pg-producto"></p><h1 class="pagina-titulo" id="pg-titulo"></h1></div>
+</main>
+
+<nav class="dock" aria-label="Dock">
+  <button class="btn-ico" id="btn-chat" aria-pressed="true" title="Chat"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span class="badge">9</span></button>
+  <button class="btn-ico" id="btn-learnito" title="Learnito"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.8L20 11l-6.1 2.2L12 19l-1.9-5.8L4 11l6.1-2.2zM19 3v4M21 5h-4"/></svg></button>
+</nav>
+
+<section class="ventana" id="ventana" aria-label="Chat">
+  <div class="col lista" id="lista"></div>
+  <div class="col detalle" id="detalle"></div>
+  <aside class="col lado" id="lado"></aside>
+</section>
+
+<aside class="notas" id="notas" hidden>
+  <h2 style="margin:0;color:#fff;font-size:17px">Cómo funcionaría</h2>
+  <h3>Una sola fuente</h3>
+  <ul>
+    <li>Los canales, mensajes, reacciones y lecturas viven en la <b>Academia</b> (<code>chat_channels</code>, <code>chat_messages</code>, <code>chat_participants</code>), como hoy. Work y Leadership no guardan mensajes: leen y escriben por una API de staff de la Academia.</li>
+    <li>La persona se reconoce <b>por correo</b> en los tres servicios. Los setters y marketing, que no tienen cuenta en la Academia, entran igual, porque el chat los ve por su correo de Work.</li>
+    <li>Los canales que ve cada uno salen de su rol, como en la Academia (Ventas para closers y setters, Fulfillment para el equipo de alumnos, Desarrollo para admin y operador). Probá cambiar «Mira».</li>
+  </ul>
+  <h3>Conectados</h3>
+  <ul>
+    <li>Cada servicio avisa «estoy acá» a la Academia, a lo sumo una vez por minuto (la misma <code>Chat\Presence</code> de hoy, con el servicio). Conectado = 5 minutos.</li>
+    <li>La letra en la foto dice dónde está: <b>W</b> Work, <b>A</b> Academy, <b>L</b> Leadership. La columna de la derecha los agrupa así.</li>
+    <li>«En llamada» o «En sesión» sale de su agenda. Tocar a alguien abre la conversación directa.</li>
+  </ul>
+  <h3>Learnito en el chat</h3>
+  <ul>
+    <li><b>Su conversación</b>, fija arriba de la lista: la misma de la ventana de Learnito de hoy, con gráficos y confirmar.</li>
+    <li><b>@Learnito en un canal</b>: responde ahí, a la vista de todos, con el alcance de quien preguntó (un closer no ve clientes ajenos aunque pregunte en Ventas). Respondiendo a una tarjeta, usa esa tarjeta de contexto.</li>
+    <li><b>Al costado</b> (la chispa de cada mensaje): pregunta sobre ese mensaje o tarjeta sin que lo vea el canal. «Compartir en el canal» publica la última respuesta.</li>
+    <li>El cerebro es el de siempre, en la Academia. Learnito publica como bot, con su propio color.</li>
+  </ul>
+  <h3>Qué trae cada servicio</h3>
+  <ul>
+    <li><b>Work</b>: avisos (agenda, abandono, venta, resultado) como tarjetas ámbar, como hoy en Agendas.</li>
+    <li><b>Academy</b>: la bitácora del alumno (celeste) y los hilos con los alumnos (pestaña Estudiantes).</li>
+    <li><b>Leadership</b>: los bugs (ya están en el chat) y las <b>tareas</b>, que se pueden mandar a un canal y se responden ahí.</li>
+  </ul>
+  <h3>Para decidir</h3>
+  <ul>
+    <li>¿Los alumnos y sus hilos se ven desde Work y Leadership, o solo desde Academy?</li>
+    <li>¿Tiempo real con Reverb desde el principio, o el poll de 4 s de hoy?</li>
+    <li>¿Las tareas de Leadership entran al chat solas o solo cuando alguien las comparte?</li>
+    <li>¿@Learnito en un canal cobra del tope de quien pregunta?</li>
+  </ul>
+</aside>
+
+<script src="datos.js"></script>
+<script src="iconos.js"></script>
+<script src="chat.js"></script>
+<script src="learnito.js"></script>
+<script src="eventos.js"></script>
+</body>
+</html>

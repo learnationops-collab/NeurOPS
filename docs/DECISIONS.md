@@ -1487,3 +1487,23 @@
   4. **Barra lateral:** los cinco botones de la tarjeta miden 38 px. Antes la regla general de 44 px los desbordaba.
 - **Qué se pierde:** Configuración ya no oscurece la pantalla: se puede seguir trabajando debajo, como con las otras ventanas.
 - **Consecuencias:** sin migración. `?vista=configuracion` y la vuelta de Google la siguen abriendo sola, en Integraciones si viene de Google.
+
+## ADR-W170: un solo chat del equipo para Work, Academy y Leadership, con Learnito adentro (mockup)
+
+- **Fecha:** 2026-11-17 · **Subsistema:** Chat (nuevo en Work; en Academy `ChatCenter`, ver su `docs/MODELO/CHAT.md`) y Learnito (`docs/MODELO/LEARNITO.md`) · **Estado:** propuesta. El mockup es `docs/mockups/chat-cruzado/`.
+- **Contexto:** Santi pidió un sistema de comunicación sencillo y cruzado entre Work, Academy y Leadership, con la gente conectada a la vista. Para empezar, el chat de Work se conecta al chat general de la Academia y Learnito se usa desde ese mismo chat. La Academia ya tiene canales del equipo por área, conversaciones directas, conectados de 5 minutos, los bugs de Leadership y los avisos de Work como tarjetas.
+- **Decisión (propuesta):**
+  1. **Una sola fuente:** los canales y mensajes siguen en la Academia. Work y Leadership muestran la misma ventana y leen y escriben por una API de staff de la Academia. La persona se reconoce por correo, así entran también los que no tienen cuenta en la Academia (setters, marketing).
+  2. **Canales según el rol**, como en la Academia: General · Equipo, Ventas, Fulfillment, Desarrollo, Bugs y Conversaciones. Cada mensaje lleva el servicio desde el que se escribió.
+  3. **Conectados en los tres:** cada servicio avisa a la Academia cuando la persona lo usa (a lo sumo una vez por minuto). La foto lleva la letra del servicio (W, A, L) y, si la agenda lo dice, «En llamada» o «En sesión».
+  4. **Learnito en el chat**, de tres formas:
+     - Su conversación propia, fija arriba de la lista.
+     - `@Learnito` en un canal: responde en el canal con el alcance de quien preguntó.
+     - Al costado, sobre un mensaje o una tarjeta: solo lo ve quien pregunta, y se puede compartir en el canal.
+  5. **Qué aporta cada servicio:** Work, los avisos (tarjetas ámbar). Academy, la bitácora del alumno y los hilos con los alumnos. Leadership, los bugs y las tareas.
+- **Qué se pierde:** Work depende de la Academia para chatear: si la Academia no responde, el chat de Work queda sin mensajes nuevos.
+- **Revisión de Santi (17/11):** aprobado para implementar. Al implementarlo, además:
+  - Traer de la Academia lo que el mockup no muestra completo: los hilos (respuestas con `parent_id`) y las reacciones con su selector.
+  - Convertir un mensaje en tarea de Leadership.
+  - Más adelante, usar la presencia con la sección en la que está cada persona (como la registra la Academia) para medir el trabajo activo y pasivo.
+- **Consecuencias:** quedan por decidir si los hilos de los alumnos se ven desde Work y Leadership, si el tiempo real (Reverb) va desde el principio, si las tareas de Leadership entran solas al chat y de qué tope sale lo que responde Learnito en un canal.

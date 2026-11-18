@@ -673,3 +673,6 @@
 ### 17/11/2026 · Configuración como ventana
 - Configuración se abre en una ventana que se minimiza al dock, se maximiza y se arrastra, como Turnos y Buscar lead, con Notificaciones, Portal y Cerrar sesión en su barra ([ConfiguracionContext.jsx](../../frontend/src/sesion/ConfiguracionContext.jsx), [ADR-W169](../DECISIONS.md)).
 - Baldosas más prolijas. Los cinco botones de la tarjeta de la barra lateral ya no se salen ([dock2.css](../../frontend/src/pages/comercial/dock2.css)).
+
+### 17/11/2026 · Mockup del chat cruzado
+- Mockup de un solo chat del equipo para Work, Academy y Leadership, sobre el chat de la Academia: canales por área, quién está conectado y en qué servicio, y Learnito adentro (su conversación, `@Learnito` en un canal y al costado de un mensaje) ([chat-cruzado](../mockups/chat-cruzado/index.html), [ADR-W170](../DECISIONS.md)).
