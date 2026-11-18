@@ -713,3 +713,6 @@
 
 ### 17/11/2026 · Chat: «En llamada» también en la Academia y Leadership
 - Work le pasa a la Academia el «En llamada» de cada persona con su presencia de cada minuto, así lo ven también la Academia y Leadership ([chat.py](../../app/api/chat.py), Academia ADR-226).
+
+### 18/11/2026 · Chat de la Academia: error al abrirlo
+- El chat de la Academia daba error 500 al abrirse (código QCIEMADQ): faltaba importar una clase en ChatCenter, y lo mismo en Learnito para @Learnito en el chat. Arreglado en la Academia (`2fb08f40`).
