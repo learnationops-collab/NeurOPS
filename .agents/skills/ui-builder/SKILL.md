@@ -49,7 +49,7 @@ Cada tanto (por ejemplo, al cerrar cada integración de sección), revisar el ca
 
 ## Catálogo
 
-Página en vivo: **`/ui`** (admin y dirección comercial). Muestra cada componente en Modern o Classic, claro u oscuro, dentro de Thalamus o del dashboard comercial.
+Página en vivo: **`/ui`** (admin y dirección comercial). Muestra cada componente en cada tema único (Learnation, Sólido, Relámpago, Puro), claro u oscuro, dentro de Thalamus o del dashboard comercial.
 
 Import: `import { Button, … } from '<ruta>/components/standard';`
 

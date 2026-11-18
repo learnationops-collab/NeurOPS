@@ -9,6 +9,7 @@ import { createContext, useCallback, useContext, useMemo, useState } from 'react
 import { useAuth } from '../contexts/AuthContext';
 import HojaModal from '../components/ui/HojaModal';
 import Configuracion from './Configuracion';
+import AccionesConfiguracion from './AccionesConfiguracion';
 
 const ConfiguracionContext = createContext({ abierta: false, abrir: () => {}, cerrar: () => {} });
 
@@ -35,7 +36,7 @@ export function ConfiguracionProvider({ children }) {
         <ConfiguracionContext.Provider value={valor}>
             {children}
             {abierta && user && (
-                <HojaModal titulo="Configuración" onCerrar={cerrar} amplia={tab === 'equipo'}>
+                <HojaModal titulo="Configuración" onCerrar={cerrar} amplia={tab === 'equipo'} acciones={<AccionesConfiguracion user={user} onCerrar={cerrar} />}>
                     <Configuracion user={user} tabInicial={tab} onTab={setTab} />
                 </HojaModal>
             )}

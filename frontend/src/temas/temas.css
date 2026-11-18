@@ -1,9 +1,9 @@
 /* ============================================================================
    TEMAS — la apariencia de la app en un solo lugar.
 
-   Dos ejes, como en academy: el tema (Learnation Classic, el look de siempre del closer;
-   Learnation Modern, el de Agendamiento) y su modo, claro u oscuro. Cada combinación es un
-   bloque completo y cerrado. Viven en <html> como `data-tema` y `data-tema-modo`
+   Dos ejes, como en academy: el tema y su modo, claro u oscuro. Acá están los valores de base de
+   cada modo, que son los de Learnation (el Modern de antes, que absorbió a Classic, ADR-W167); los
+   otros temas únicos (Sólido, Relámpago, Puro) pisan lo que cambian en temas-unicos.css. Viven en <html> como `data-tema` y `data-tema-modo`
    (context/AparienciaContext.jsx); cualquier nodo con los dos atributos toma ese tema para su
    subárbol, así se pintan las vistas previas.
 
@@ -33,40 +33,10 @@
    map-*, medal-*            el lienzo de flujos y el podio de Agendamiento
    ============================================================================ */
 
-[data-tema="classic"][data-tema-modo="oscuro"]{
-  --ln-brand-2-accent:#4E8BD8; --ln-brand-text:#FFB3DE; --ln-brand-2-text:#8C99E0;
-  --ln-success-text:#7DEAC0; --ln-warning-text:#F3D08A; --ln-danger-text:#F5A99C; --ln-info-text:#93C5FD;
-  --ln-scheme:dark;
-  --ln-map-canvas:#070B2A; --ln-map-dot:rgba(255,255,255,.07); --ln-map-node:#0B1033; --ln-map-node-row:rgba(255,255,255,.06); --ln-map-edge:rgba(160,175,230,.42);
-  --ln-medal-gold:#F2C14E; --ln-medal-silver:#C5CEDB; --ln-medal-bronze:#DA8C5C;
-  --ln-page-base:#020617; --ln-page-bg:linear-gradient(135deg,#020617 0%,#0A0E3D 50%,#05082D 100%); --ln-text-out:#FFFFFF;
-  --ln-brand:#FF3FA4; --ln-brand-accent:#FF6AD5; --ln-brand-content:#020617;
-  --ln-brand-soft:rgba(255,63,164,.10); --ln-brand-soft-border:rgba(255,63,164,.35);
-  --ln-brand-2:#1323C6; --ln-brand-2-content:#FFFFFF;
-  --ln-ct2-bg-subtle:rgba(255,255,255,.02);
-  --ln-ct2-bg:rgba(255,255,255,.04); --ln-text-in:#FFFFFF;
-  --ln-ct3-bg:rgba(255,255,255,.08); --ln-ct3-bg-hover:rgba(255,255,255,.12); --ln-ct3-text:#FFFFFF;
-  --ln-inset-bg:rgba(0,0,0,.34); --ln-inset-text:#FFFFFF;
-  --ln-ct3-bg-strong:rgba(255,255,255,.12);
-  --ln-input-bg:rgba(0,0,0,.30);
-  --ln-window-bg:rgba(2,6,23,.90); --ln-window-text:#FFFFFF; --ln-popover-bg:#0B1030; --ln-scrim:rgba(2,6,23,.70);
-  --ln-inverse-bg:#FFFFFF; --ln-inverse-text:#020617;
-  --ln-text-muted:rgba(255,255,255,.60); --ln-text-faint:rgba(255,255,255,.40);
-  --ln-border-subtle:rgba(255,255,255,.05); --ln-border-main:rgba(255,255,255,.15); --ln-border-strong:rgba(255,255,255,.38);
-  --ln-sheen:rgba(255,255,255,.10); --ln-track:rgba(255,255,255,.12);
-  --ln-success:#2FBF8F;    --ln-success-bg:#071A24;    --ln-success-border:#10413D;
-  --ln-warning:#D9A441;    --ln-warning-bg:#1A171C;    --ln-warning-border:#473924;
-  --ln-danger:#E85C4A;    --ln-danger-bg:#1B0F1D;    --ln-danger-border:#4C2227;
-  --ln-info:#4E8BD8;     --ln-info-bg:#0A152C;     --ln-info-border:#1A3155;
-  --ln-idle:#7F8CA8; --ln-idle-bg:#0E1326; --ln-idle-border:#252C42;
-  --ln-on-status:#020617;
-  --ln-focus:#5B7CFF; --ln-focus-ring:0 0 0 3px rgba(91,124,255,.55);
-  --ln-shadow:0 8px 32px 0 rgba(0,0,0,.40); --ln-shadow-brand:0 10px 15px -3px rgba(19,35,198,.35);
-  --ln-radius:32px; --ln-radius-control:16px; --ln-blur:0px;
-  --ln-humo-blend:screen; --ln-humo-op:.42; --ln-humo-op-i:.62;
-}
 
-[data-tema="modern"][data-tema-modo="oscuro"]{
+
+/* Learnation: los valores de base de cada modo (los demás temas pisan lo que cambia). */
+[data-tema][data-tema-modo="oscuro"]{
   --ln-brand-2-accent:#4E8BD8; --ln-brand-text:#FFB3DE; --ln-brand-2-text:#8C99E0;
   --ln-success-text:#7DEAC0; --ln-warning-text:#F3D08A; --ln-danger-text:#F5A99C; --ln-info-text:#93C5FD;
   --ln-scheme:dark;
@@ -99,7 +69,7 @@
   --ln-humo-blend:screen; --ln-humo-op:.42; --ln-humo-op-i:.62;
 }
 
-[data-tema="modern"][data-tema-modo="claro"]{
+[data-tema][data-tema-modo="claro"]{
   --ln-brand-2-accent:#27599F; --ln-brand-text:#C9156F; --ln-brand-2-text:#1323C6;
   --ln-success-text:#0E7E5C; --ln-warning-text:#8F6310; --ln-danger-text:#BE3726; --ln-info-text:#27599F;
   --ln-scheme:light;
@@ -131,38 +101,7 @@
   --ln-radius:32px; --ln-radius-control:16px; --ln-blur:0px;
   --ln-humo-blend:multiply; --ln-humo-op:.20; --ln-humo-op-i:.55;
 }
-[data-tema="classic"][data-tema-modo="claro"]{
-  --ln-brand-2-accent:#27599F; --ln-brand-text:#C9156F; --ln-brand-2-text:#1323C6;
-  --ln-success-text:#0E7E5C; --ln-warning-text:#8F6310; --ln-danger-text:#BE3726; --ln-info-text:#27599F;
-  --ln-scheme:light;
-  --ln-map-canvas:#EEF1FA; --ln-map-dot:rgba(10,14,61,.10); --ln-map-node:#FFFFFF; --ln-map-node-row:rgba(10,14,61,.05); --ln-map-edge:rgba(60,75,140,.38);
-  --ln-medal-gold:#A87400; --ln-medal-silver:#66748A; --ln-medal-bronze:#A65427;
-  --ln-page-base:#F6F7FC; --ln-page-bg:linear-gradient(135deg,#F6F7FC 0%,#EAEEFA 50%,#F5F0F8 100%); --ln-text-out:#080C30;
-  --ln-brand:#C9156F; --ln-brand-accent:#E23E96; --ln-brand-content:#FFFFFF;
-  --ln-brand-soft:rgba(201,21,111,.09); --ln-brand-soft-border:rgba(201,21,111,.30);
-  --ln-brand-2:#1323C6; --ln-brand-2-content:#FFFFFF;
-  --ln-ct2-bg-subtle:rgba(10,14,61,.015);
-  --ln-ct2-bg:rgba(10,14,61,.035); --ln-text-in:#080C30;
-  --ln-ct3-bg:rgba(255,255,255,.82); --ln-ct3-bg-hover:#FFFFFF; --ln-ct3-text:#080C30;
-  --ln-inset-bg:rgba(10,14,61,.055); --ln-inset-text:#080C30;
-  --ln-ct3-bg-strong:rgba(10,14,61,.10);
-  --ln-input-bg:rgba(10,14,61,.05);
-  --ln-window-bg:rgba(255,255,255,.94); --ln-window-text:#080C30; --ln-popover-bg:#FFFFFF; --ln-scrim:rgba(10,14,61,.42);
-  --ln-inverse-bg:#080C30; --ln-inverse-text:#F6F7FC;
-  --ln-text-muted:rgba(8,12,48,.60); --ln-text-faint:rgba(8,12,48,.44);
-  --ln-border-subtle:rgba(10,14,61,.06); --ln-border-main:rgba(10,14,61,.14); --ln-border-strong:rgba(10,14,61,.30);
-  --ln-sheen:rgba(255,255,255,.9); --ln-track:rgba(10,14,61,.12);
-  --ln-success:#0E7E5C;    --ln-success-bg:#E4F5EE;    --ln-success-border:#AEDFCD;
-  --ln-warning:#8F6310;    --ln-warning-bg:#FAF0DC;    --ln-warning-border:#E5D0A0;
-  --ln-danger:#BE3726;    --ln-danger-bg:#FCEAE6;    --ln-danger-border:#F0C0B7;
-  --ln-info:#27599F;     --ln-info-bg:#E6EEFA;     --ln-info-border:#BAD2EE;
-  --ln-idle:#54617A; --ln-idle-bg:#ECEFF5; --ln-idle-border:#CFD7E4;
-  --ln-on-status:#FFFFFF;
-  --ln-focus:#5B7CFF; --ln-focus-ring:0 0 0 3px rgba(91,124,255,.55);
-  --ln-shadow:0 8px 32px 0 rgba(10,14,61,.12); --ln-shadow-brand:0 10px 15px -3px rgba(201,21,111,.28);
-  --ln-radius:32px; --ln-radius-control:16px; --ln-blur:0px;
-  --ln-humo-blend:multiply; --ln-humo-op:.20; --ln-humo-op-i:.55;
-}
+
 
 /* Vista previa de un tema en la pestaña Apariencia: cada tarjeta lleva su propio `data-tema` (en el
    modo elegido), así muestra sus colores aunque la app tenga otro puesto. */

@@ -661,3 +661,8 @@
 
 ### 17/11/2026 · Mockup de la Configuración unificada
 - Una sola Configuración para Work, Academy y Leadership, en Baldosas (como Academy) o en Pestañas a la izquierda (como Work), con los cuatro temas únicos y los ajustes de pantalla ([docs/mockups/configuracion-unificada](../mockups/configuracion-unificada/index.html), [ADR-W166](../DECISIONS.md)).
+
+### 17/11/2026 · Temas únicos y la Configuración nueva
+- Cuatro temas en Configuración › Apariencia: Learnation (el Modern de antes, que absorbe a Classic), Sólido, Relámpago y Puro, cada uno claro u oscuro ([temas-unicos.css](../../frontend/src/temas/temas-unicos.css), [ADR-W167](../DECISIONS.md)).
+- Ajustes nuevos: modo «como el equipo», efectos, modo liviano (solo al simular) y tamaño de letra. La apariencia se guarda en la cuenta ([AparienciaContext.jsx](../../frontend/src/context/AparienciaContext.jsx)).
+- Configuración en pestañas a la izquierda o en baldosas como Academy, con Notificaciones, el Portal y Cerrar sesión arriba, y las secciones Notificaciones, Seguridad y Ayuda ([Configuracion.jsx](../../frontend/src/sesion/Configuracion.jsx)).

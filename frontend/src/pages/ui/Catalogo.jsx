@@ -13,12 +13,11 @@ import {
     useVerRegistros, Stepper, Switch, Reveal, Skeleton, SkeletonBlock, SkeletonChart, SkeletonCircle, SkeletonKpi, SkeletonPanel, SkeletonRow, SkeletonText,
 } from '../../components/standard';
 
-const TEMAS = [
-    { v: 'modern-oscuro', n: 'Modern oscuro' },
-    { v: 'modern-claro', n: 'Modern claro' },
-    { v: 'classic-oscuro', n: 'Classic oscuro' },
-    { v: 'classic-claro', n: 'Classic claro' },
-];
+// Los temas únicos (ADR-W167) en sus dos modos.
+const TEMAS = ['learnation', 'solido', 'relampago', 'puro'].flatMap(t => [
+    { v: `${t}-oscuro`, n: `${{ learnation: 'Learnation', solido: 'Sólido', relampago: 'Relámpago', puro: 'Puro' }[t]} oscuro` },
+    { v: `${t}-claro`, n: `${{ learnation: 'Learnation', solido: 'Sólido', relampago: 'Relámpago', puro: 'Puro' }[t]} claro` },
+]);
 const CONTEXTOS = [
     { v: 'thalamus', n: 'Thalamus / Inbox' },
     { v: 'dc-shell', n: 'Dashboard comercial' },
@@ -445,7 +444,7 @@ const SECCIONES = [
 ];
 
 export default function Catalogo() {
-    const [tema, setTema] = useState('modern-oscuro');
+    const [tema, setTema] = useState('learnation-oscuro');
     const [contexto, setContexto] = useState('thalamus');
     const [nombreTema, modo] = tema.split('-');
     useEffect(() => { document.title = 'Componentes estándar · Learnation'; }, []);

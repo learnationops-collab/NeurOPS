@@ -1435,3 +1435,27 @@
      - Se guarda en la cuenta y vale para los tres servicios.
 - **Qué se pierde:** en Academy, la Configuración «sin scroll» de una sola pantalla pasa a ser una de dos vistas. En Work, las pestañas de arriba pasan al costado.
 - **Consecuencias:** al implementarla hace falta llevar la apariencia a la cuenta, como el dock (ADR-W164), y pasar Classic y Modern a Learnation.
+
+## ADR-W167: los temas únicos y la Configuración unificada en Work
+
+- **Fecha:** 2026-11-17 · **Subsistema:** Apariencia y Configuración (`context/AparienciaContext.jsx`, `temas/temas.css`, `temas/temas-unicos.css`, `temas/TabApariencia.jsx`, `sesion/Configuracion.jsx`, `sesion/configuracionSecciones.jsx`, `sesion/AccionesConfiguracion.jsx`) · **Estado:** implementado. Implementa ADR-W166.
+- **Contexto:** Santi pidió que la Configuración de todos los roles use los temas de Learnation descritos en el mockup del dock unificado, con los ajustes de apariencia, y empezar a implementar la Configuración unificada (ADR-W166).
+- **Decisión:**
+  1. **Cuatro temas, iguales en los tres servicios:**
+     - Learnation es la base de cada modo. Es el Modern de antes y absorbió a Classic.
+     - Sólido, Relámpago y Puro pisan solo lo que cambian.
+     - Lo guardado como Classic, Modern, «closing» o «thalamus» pasa a Learnation.
+  2. **Ajustes de apariencia:**
+     - Modo oscuro, claro o «como el equipo».
+     - Efectos: el humo y el vidrio; apagados, todo plano.
+     - Modo liviano: sin transparencias ni animaciones. Se prende solo al simular.
+     - Tamaño de letra: A−, A o A+.
+     - La vista de Configuración.
+     - Todo se guarda en el navegador y en la cuenta (parte «apariencia» de `users.dock_prefs`), como el dock.
+  3. **Configuración en dos vistas:**
+     - Pestañas a la izquierda, agrupadas en Vos / Trabajo / Cuenta (la vista de fábrica).
+     - Baldosas como Academy: tu identidad (personaje, saludo, nombre, mail, rol y modo) y una baldosa por sección; tocar una la abre en la misma hoja, con «volver».
+  4. **Cabecera de la hoja:** Notificaciones con la cuenta, el Portal (si hay más de un área o rol) y Cerrar sesión.
+  5. **Secciones nuevas:** Notificaciones (los avisos), Seguridad (cómo entrás) y Ayuda (reportar y tus reportes). Los ajustes propios de Notificaciones y Seguridad quedan como «pronto».
+- **Qué se pierde:** Classic, cuyas pequeñas diferencias con Modern desaparecen. En Baldosas, una sección se abre en la misma hoja y no en una ventana encima, como en el mockup.
+- **Consecuencias:** sin migración (las preferencias ya estaban en `users.dock_prefs`). Quien nunca eligió tema sigue sin `data-tema` y ve todo como siempre. Falta, para otro ADR: ancho, márgenes y densidad (hay que acordar qué contenedor de cada pantalla los toma), los ajustes reales de Notificaciones y Seguridad, y llevar todo esto a Academy y Leadership. Se borraron los tests que daban por hecho Classic y Modern.
