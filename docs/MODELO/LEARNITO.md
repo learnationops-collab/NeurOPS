@@ -146,4 +146,5 @@ Sin orden comprometido; la prioridad la decide el usuario.
 - **El mismo cerebro:** la pregunta la responde el cerebro de la Academia, con sus reglas de costo, tope por conversación y calificación. Work solo arma la pregunta (`learnito_inbox.pregunta`): lo que se sabe del lead, las últimas 3 notas del equipo y los últimos 20 mensajes. En el chat de Learnito se ve solo «Ayudame con @usuario»; el contexto viaja en la pregunta.
 - **Una conversación por lead:** preguntar por otro lead, o con la conversación agotada, arranca otra (`enviar(…, { nueva: true })` de `useCopiloto`); por el mismo lead, sigue la que está abierta. Con conversaciones sin calificar, el cerebro pide calificarlas antes, como siempre.
 - **El material** lo busca el cerebro con `buscar_material` (§3, Material).
+- **Dónde se ve:** en el panel derecho del chat, en la pestaña Learnito al lado de la Ficha (`PanelDerecho.jsx`, ADR-W156), no en el modal: el setter lee y escribe a la vez. Es el mismo `LearnitoChat` del modal y de /copiloto.
 - Reemplazó a la sugerencia redactada por una llamada directa a Claude (ADR-W149), el mismo 17/11.

@@ -701,6 +701,32 @@ def _momentum_de(u, event_id):
     return Appointment.query.filter_by(closer_id=u.id, google_event_id=event_id, origin=ORIGEN_MOMENTUM).first()
 
 
+@bp.route('/agenda/libre', methods=['POST'])
+@require_academy_token
+def agenda_libre():
+    """{email, inicio (ms), duracion, excluir_event_id?} → {libre}: si el closer tiene libre ese horario para una
+    Momentum (modo ventas), con Google sin caché, sus agendas de Work y su margen, como la reserva. Sin mirar su
+    horario de Team: la Academia lo pregunta antes de mover una Momentum (el staff puede moverla fuera de hora,
+    pero no encima de otra cosa). `excluir_event_id`: la Momentum que se mueve, que no choca consigo misma."""
+    datos = _cuerpo()
+    u = _cuenta(datos.get('email'), True)
+    if not u:
+        return _error('No existe esa persona del equipo', 404)
+    inicio, dur = datos.get('inicio'), _entero(datos.get('duracion'), 5, 240)
+    if not isinstance(inicio, int) or dur is None:
+        return _error('Datos inválidos (inicio o duracion)', 400)
+    margen = momentum.margen_de(u)
+    libres = desplazar.libres({u.id: u.id}, ahora_ms()).get(u.id, [])
+    propia = _momentum_de(u, datos.get('excluir_event_id')) if datos.get('excluir_event_id') else None
+    if propia:
+        viejo = servicio.dt_a_ms(propia.start_time)
+        largo = int((propia.agenda_payload or {}).get('duracion_min') or dur) + margen
+        libres = libres + [(propia.id, viejo, viejo + largo * 60000)]
+    choca = momentum.choca(u, inicio, inicio + (dur + margen) * 60000, libres)
+    db.session.rollback()  # solo lectura: suelta el bloqueo de choca
+    return jsonify({'libre': not choca}), 200
+
+
 @bp.route('/agenda/reservas/<event_id>', methods=['PATCH'])
 @require_academy_token
 def agenda_mover(event_id):

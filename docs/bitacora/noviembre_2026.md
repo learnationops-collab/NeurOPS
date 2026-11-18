@@ -586,7 +586,7 @@
 - El reloj de la caja programa un seguimiento: «si no responde en 1 h, 3 h, 24 h, 2 o 3 días, mandarle esto» (texto o audio). Sale solo; si el lead escribe antes, se cancela. Lo programado se ve arriba de la caja con su hora y se puede cancelar ([seguimientos.py](../../app/automatizaciones/seguimientos.py), [Seguimientos.jsx](../../frontend/src/pages/inbox/conversaciones/Seguimientos.jsx), [ADR-W148](../DECISIONS.md)). Migración `f6a8b1c3d5e7`.
 
 ### 17/11/2026 · Aviso diario de reportes que faltan
-- Todos los días a las 10:00 (Caracas y Bolivia) sale en #📋-reportes de adquisitions quién no mandó el reporte de ayer y quién tiene llamadas sin resultado, con la persona etiquetada: closers y triage con llamadas ayer, setters de lunes a sábado. Si no falta nada, no sale ([reportes_faltantes.py](../../app/services/discord_avisos/reportes_faltantes.py), [ADR-W150](../DECISIONS.md); acordado en la Estrategia del 16/11). Probado contra producción sin enviar: hoy etiquetaría a 3 personas.
+- Todos los días a las 10:00 (Caracas y Bolivia) sale en #📋-reportes de adquisitions quién no mandó el reporte de ayer y quién tiene llamadas sin resultado, con la persona etiquetada: closers y triage con llamadas ayer, setters de lunes a sábado. Si no falta nada, no sale ([reportes_faltantes.py](../../app/services/discord_avisos/reportes_faltantes.py), [ADR-W154](../DECISIONS.md); acordado en la Estrategia del 16/11). Probado contra producción sin enviar: hoy etiquetaría a 3 personas.
 - Revisado (sin cambios): la Momentum muestra horarios a los 212 alumnos activos (Jean Carlo, y Marlon a sus 10 alumnos). El «0 turnos» del 16/11 ya no pasa.
 
 ### 17/11/2026 · El aviso de suscripción lleva el closer de la venta
@@ -611,3 +611,78 @@
 - Planificar › Próximos talleres: cada taller muestra su tipo y cuántos grupos tiene, y el botón «Grupos» abre el modal para elegir frío o caliente, el grupo general y un grupo por conjunto de anuncios ([ModalGruposTaller.jsx](../../frontend/src/pages/admin/workshop/planificar/ModalGruposTaller.jsx), [workshop_grupos_service.py](../../app/services/workshop_grupos_service.py), ADR-W152). Talleres suma el filtro «Tipo».
 - `GET /api/public/workshops/proximos` acepta `utm_term`, `utm_content` y `utm_campaign` y devuelve el grupo del conjunto que trajo la visita; sin parámetros responde igual que antes. Las visitas guardan `utm_term`. Migración `b8d0f2a4c6e1` (`workshop_events.tipo`, `workshop_grupos`, `landing_trackings.utm_term`).
 - Falta para que funcione de punta a punta: que la landing mande los UTM al pedir los talleres (institute-site) y que los anuncios nuevos lleven `utm_term={{adset.id}}`. Las fases siguientes (CSV de miembros, cruce con agendas, métricas por conjunto) no están hechas.
+
+### 17/11/2026 · Grabación automática de las llamadas de venta de Jean Carlo
+- Cada 15 minutos, las llamadas de venta que vienen de Jean Carlo quedan con grabación, transcripción y notas de Gemini automáticas, prendidas con su cuenta, sin recrear nada. La nota llega a la ficha (con la transcripción) cuando su Drive esté conectado en Notas de Meet ([grabar_llamadas.py](../../app/agendas_v2/grabar_llamadas.py), [ADR-W155](../DECISIONS.md)). Para que arranque, Jean Carlo tiene que reconectar Google Calendar en Work (le falta el permiso de Meet) y conectar su Drive.
+
+### 17/11/2026 · Inbox: el chat se trabaja más rápido (ADR-W156)
+- Lo que manda el setter aparece al instante («enviando…»); si no sale, queda con el motivo y Reintentar ([useEnvio.js](../../frontend/src/pages/inbox/conversaciones/useEnvio.js), [Feed.jsx](../../frontend/src/pages/inbox/conversaciones/Feed.jsx)).
+- Borrador por conversación, visible en la fila ([borradores.js](../../frontend/src/pages/inbox/conversaciones/borradores.js)). Enter envía y Shift+Enter salta de línea; ↑↓ cambian de chat y Esc lo cierra ([Composer.jsx](../../frontend/src/pages/inbox/conversaciones/Composer.jsx), [Conversaciones.jsx](../../frontend/src/pages/inbox/Conversaciones.jsx)).
+- La fila avisa cuándo se cierra la ventana de Instagram (últimas 24 h de los 7 días) y el próximo seguimiento programado; cola nueva «Se cierra la ventana» ([colas.js](../../frontend/src/pages/inbox/conversaciones/colas.js), [Fila.jsx](../../frontend/src/pages/inbox/conversaciones/Fila.jsx), [api.py](../../app/automatizaciones/api.py)).
+- Sin leer en el título de la pestaña y avisos del escritorio con la campana de la bandeja ([useAvisos.js](../../frontend/src/pages/inbox/conversaciones/useAvisos.js)).
+- Learnito en el panel derecho, en una pestaña al lado de la ficha ([PanelDerecho.jsx](../../frontend/src/pages/inbox/conversaciones/PanelDerecho.jsx)). En el menú «/», la vista previa resalta las variables completadas ([MenuRayo.jsx](../../frontend/src/pages/inbox/conversaciones/MenuRayo.jsx)).
+
+### 17/11/2026 · Cero superposiciones en las agendas
+- Mover una agenda que viene (reagendar desde la ficha o desde la triage, el mazo, reasignar, editar la agenda o el Tablero) revisa antes las agendas del closer con su margen y su Google Calendar: si choca, no se mueve y dice por qué ([manual.py](../../app/agendas_v2/manual.py), [ADR-W157](../DECISIONS.md)).
+- Pasar al triage solo va a una triage libre a esa hora. Sin ninguna libre, a mano se rechaza y la C/D desplazada sigue con el closer para reagendar ([a_triage.py](../../app/agendas_v2/a_triage.py)).
+- La Momentum mira Google al momento de reservarla, y la Academia pregunta si el horario está libre antes de moverla (`POST /api/external/academy/agenda/libre`).
+
+### 17/11/2026 · Inbox: los leads ya no aparecen «Sin usuario»
+- El usuario y el nombre de Instagram se pedían solo cuando el lead arrancaba un flujo: los que escribían sin palabra clave (1172 de 3104) quedaban «Sin usuario». Ahora se piden con su primer mensaje y, si Instagram no los da, se reintenta a las 24 h ([perfil.py](../../app/automatizaciones/perfil.py), [motor.py](../../app/automatizaciones/motor.py)). Los que faltaban se completaron con un script en el servidor.
+
+### 17/11/2026 · Turnos que quedan, para los setters
+- Arriba de Tálamus › Team › Available (lo que abre el botón Tálamus del setter): cuántas llamadas quedan libres cada día de la semana para Triage y para Closers, con el detalle por persona al pasar el mouse y un «Por persona» que abre la tabla de cada grupo ([TurnosEquipo.jsx](../../frontend/src/pages/agendas_v2/secciones/team/TurnosEquipo.jsx), [ADR-W158](../DECISIONS.md)).
+
+### 17/11/2026 · Ventanas y herramientas en el dock; Turnos para los setters
+- Work suma ventanas flotantes, como la Academia y Leadership: se abren encima de cualquier pantalla, se arrastran, se maximizan soltándolas arriba y se minimizan al dock soltándolas abajo; el dock muestra las abiertas ([ventanas/](../../frontend/src/ventanas/), [ADR-W159](../DECISIONS.md)).
+- Las herramientas van por rol en el menú de sesión y se fijan en el dock. La primera es **Turnos**: los turnos que quedan de triage y de closers por día. El setter la tiene fijada y con un botón en su encabezado.
+
+### 17/11/2026 · Dock 2.0: tres islas, Herramientas y navegación editable
+- El dock pasa a tres islas, como la Academia y Leadership: lo fijado a la izquierda, las secciones en el centro y, a la derecha, el botón **Herramientas** y la sesión ([DockSecciones.jsx](../../frontend/src/pages/comercial/components/DockSecciones.jsx), [ADR-W160](../DECISIONS.md)).
+- Herramientas junta las herramientas en ventana (Turnos), las acciones de la pantalla y las secciones ocultas, cada una con su 📌 para fijarla ([BotonHerramientas.jsx](../../frontend/src/ventanas/BotonHerramientas.jsx)).
+- «Editar navegación»: arrastrar para ordenar, el ojo para ocultar y doble clic para renombrar las secciones ([DockEdicion.jsx](../../frontend/src/pages/comercial/components/DockEdicion.jsx)).
+
+### 17/11/2026 · Turnos con horarios y zona; «Nuevo» en el dock
+- Turnos cuenta solo a quienes la reserva ofrece (usuario activo, Google y WhatsApp). Juliana Avila quedó desactivada en Work ([ADR-W161](../DECISIONS.md)).
+- En Turnos, tocar un número muestra los horarios libres de ese día, y la ventana deja elegir en qué hora verlos ([TurnosEquipo.jsx](../../frontend/src/pages/agendas_v2/secciones/team/TurnosEquipo.jsx), [TurnosVentana.jsx](../../frontend/src/ventanas/herramientas/TurnosVentana.jsx)).
+- Botón «Nuevo» en la isla izquierda del dock (Nueva agenda, Referido manual, Reportar o pedir algo); el avatar queda con la cuenta ([DockSecciones.jsx](../../frontend/src/pages/comercial/components/DockSecciones.jsx), [MenuSesion.jsx](../../frontend/src/pages/comercial/components/MenuSesion.jsx)).
+
+### 17/11/2026 · El avatar abre Configuración; todo lo demás está en Herramientas
+- Tocar el personaje del dock abre Configuración directo; el personaje se elige en Configuración › Datos ([MenuSesion.jsx](../../frontend/src/pages/comercial/components/MenuSesion.jsx), [ElegirPersonaje.jsx](../../frontend/src/components/mascota/ElegirPersonaje.jsx), [ADR-W162](../DECISIONS.md)).
+- Herramientas junta las herramientas (Nuevo, Turnos), las acciones de la pantalla, las secciones ocultas y lo de tu cuenta (Portal, avisos, reportes, cerrar sesión). «Nuevo» es una herramienta más y se puede fijar ([BotonHerramientas.jsx](../../frontend/src/ventanas/BotonHerramientas.jsx)).
+
+### 17/11/2026 · Barra lateral y Herramientas ordenadas, como en la Academia
+- Configuración › Dock: la navegación puede ir en una barra lateral, desplegada o solo con íconos ([DockLateral.jsx](../../frontend/src/pages/comercial/components/DockLateral.jsx), [ADR-W163](../DECISIONS.md)).
+- Herramientas se ordena por tipo (Crear, Agendas, Asistente, Pendientes, Esta pantalla, Ir a, Sesión), en dos columnas, con ícono en color y una línea de para qué sirve cada una ([catalogoHerramientas.js](../../frontend/src/ventanas/catalogoHerramientas.js)).
+
+### 17/11/2026 · Barra lateral en secciones, Buscar lead, atajos y el dock en la cuenta
+- La barra lateral se ordena en la tarjeta de usuario (personaje grande, Herramientas, cerrar sesión y lo fijado), la navegación alineada a la izquierda y las ventanas al fondo ([DockLateral.jsx](../../frontend/src/pages/comercial/components/DockLateral.jsx), [ADR-W164](../DECISIONS.md)).
+- Herramienta **Buscar lead** (Ctrl+K): cualquier lead y su ficha, desde cualquier pantalla ([BuscarLeadVentana.jsx](../../frontend/src/ventanas/herramientas/BuscarLeadVentana.jsx)). Nuevo suma «Registrar un pago» y «Declarar una venta». Playbook y Simular pasan a ser herramientas. Ctrl+L abre Learnito y Ctrl+J, Herramientas.
+- Lo fijado, la navegación editada y el modo del dock se guardan en la cuenta: otra compu arranca igual ([dockServidor.js](../../frontend/src/sesion/dockServidor.js), migración `c4e7a9d1f3b2`).
+
+### 17/11/2026 · Dock unificado: la tarjeta de sesión y la barra en dos contenedores
+- Mockup de referencia del dock y los temas para Work, Academy y Leadership ([docs/mockups/dock-unificado](../mockups/dock-unificado/index.html), [ADR-W165](../DECISIONS.md)).
+- Tarjeta de sesión: Avisos arriba a la derecha, el personaje grande y el nombre, y la fila Cerrar sesión · Mensajes (pronto) · Leadership · Herramientas · Configuración. En el dock de abajo aparece al pasar el mouse por el avatar ([TarjetaSesion.jsx](../../frontend/src/pages/comercial/components/TarjetaSesion.jsx)).
+- La barra lateral separa la tarjeta de la navegación. Plegada muestra hasta 3 fijadas y 5 secciones, con «+N» para el resto ([DockLateral.jsx](../../frontend/src/pages/comercial/components/DockLateral.jsx)).
+- Las secciones ya no llevan número. El texto de cada herramienta del menú ya no se aplasta ([dock2.css](../../frontend/src/pages/comercial/dock2.css)).
+
+### 17/11/2026 · Mockup de la Configuración unificada
+- Una sola Configuración para Work, Academy y Leadership, en Baldosas (como Academy) o en Pestañas a la izquierda (como Work), con los cuatro temas únicos y los ajustes de pantalla ([docs/mockups/configuracion-unificada](../mockups/configuracion-unificada/index.html), [ADR-W166](../DECISIONS.md)).
+
+### 17/11/2026 · Temas únicos y la Configuración nueva
+- Cuatro temas en Configuración › Apariencia: Learnation (el Modern de antes, que absorbe a Classic), Sólido, Relámpago y Puro, cada uno claro u oscuro ([temas-unicos.css](../../frontend/src/temas/temas-unicos.css), [ADR-W167](../DECISIONS.md)).
+- Ajustes nuevos: modo «como el equipo», efectos, modo liviano (solo al simular) y tamaño de letra. La apariencia se guarda en la cuenta ([AparienciaContext.jsx](../../frontend/src/context/AparienciaContext.jsx)).
+- Configuración en pestañas a la izquierda o en baldosas como Academy, con Notificaciones, el Portal y Cerrar sesión arriba, y las secciones Notificaciones, Seguridad y Ayuda ([Configuracion.jsx](../../frontend/src/sesion/Configuracion.jsx)).
+
+### 17/11/2026 · Herramientas en una ventana
+- Herramientas se abre en una ventana centrada y ancha, con buscador y los grupos en dos columnas, en vez de un menú sin espacio ([BotonHerramientas.jsx](../../frontend/src/ventanas/BotonHerramientas.jsx), [ADR-W168](../DECISIONS.md)).
+
+### 17/11/2026 · Configuración como ventana
+- Configuración se abre en una ventana que se minimiza al dock, se maximiza y se arrastra, como Turnos y Buscar lead, con Notificaciones, Portal y Cerrar sesión en su barra ([ConfiguracionContext.jsx](../../frontend/src/sesion/ConfiguracionContext.jsx), [ADR-W169](../DECISIONS.md)).
+- Baldosas más prolijas. Los cinco botones de la tarjeta de la barra lateral ya no se salen ([dock2.css](../../frontend/src/pages/comercial/dock2.css)).
+
+### 17/11/2026 · Mockup del chat cruzado
+- Mockup de un solo chat del equipo para Work, Academy y Leadership, sobre el chat de la Academia: canales por área, quién está conectado y en qué servicio, y Learnito adentro (su conversación, `@Learnito` en un canal y al costado de un mensaje) ([chat-cruzado](../mockups/chat-cruzado/index.html), [ADR-W170](../DECISIONS.md)).
+
+### 17/11/2026 · «Pasar a triage» ya no acepta una agenda que viene del triage
+- Un closer devolvió al triage, sin querer, la agenda de un lead que ya había calificado (13/11): quedó como llamada de triage sin reportar de quien la recibió, y el pase de quien la calificó apuntaba a una triage. Ahora la acción se rechaza con «Este lead ya pasó por el triage y calificó: reagendala o pasala a otro closer» ([a_triage.py](../../app/agendas_v2/a_triage.py)). La Momentum ya se rechazaba.

@@ -1,67 +1,123 @@
-// «Configuración», la de todos: se abre en una hoja (HojaModal) desde «Configuración» del menú de sesión
-// (sesion/menuSesion.js) en cualquier pantalla, a través de sesion/ConfiguracionContext.jsx. Las
-// pestañas dependen del rol:
-//   Datos (foto, email)                      todos
-//   Disponibilidad (y Mis sesiones, closer) · Integraciones   quienes reciben agendas (closer, dirección comercial, admin)
-//   Mis eventos (sus propios links)          closer
-//   Equipo (alta, roles, contraseñas)        admin
-//   Apariencia (tema y modo)                 todos
-// Las tarjetas son las mismas de la Configuración de Agendamiento (agendas_v2/secciones/conf/cuenta.jsx).
-// Google Calendar y el WhatsApp confirmado son obligatorios para recibir agendas del sistema de
-// agendas 2.0 (sin ellos, sus horarios no se ofrecen a los leads; ver app/agendas_v2/servicio.py,
-// solo_elegibles).
+// «Configuración», la de todos, igual en Work, Academy y Leadership (ADR-W167, mockup
+// docs/mockups/configuracion-unificada). Se abre en una ventana flotante (ADR-W169: minimizar, maximizar, arrastrar) desde el avatar o la tarjeta de
+// sesión, por sesion/ConfiguracionContext.jsx. El mismo contenido en dos vistas (Apariencia › Vista):
+//   · Pestañas: las secciones a la izquierda, agrupadas (Vos / Trabajo / Cuenta), y el contenido a la derecha;
+//   · Baldosas, como Academy: tu identidad a la izquierda y una baldosa por sección con su resumen; tocar una
+//     la abre en la misma ventana, con «volver».
+// Las secciones dependen del rol (SECCIONES.para). Las tarjetas son las de la Configuración de Agendamiento
+// (agendas_v2/secciones/conf/cuenta.jsx). Google Calendar y el WhatsApp confirmado son obligatorios para
+// recibir agendas del sistema de agendas 2.0 (app/agendas_v2/servicio.py, solo_elegibles).
 //
-// Google vuelve del permiso a /closer/deck?vista=configuracion&google_connected=success
-// (app/api/google_calendar.py): la hoja se abre en Integraciones y la tarjeta de Calendar muestra el
-// resultado.
+// Google vuelve del permiso a /closer/deck?vista=configuracion&google_connected=success: la ventana se abre en
+// Integraciones y la tarjeta de Calendar muestra el resultado.
 
 import { useState } from 'react';
-import { DatosCuenta, TarjetaCalendar, TarjetaDisponibilidad, TarjetaSesiones, TarjetaWhatsapp } from '../pages/agendas_v2/secciones/conf/cuenta';
+import { Bell, CalendarDays, ChevronLeft, Clock, KeyRound, LifeBuoy, Palette, PanelBottom, Plug, User, Users } from 'lucide-react';
+import { TarjetaCalendar, TarjetaDisponibilidad, TarjetaSesiones, TarjetaWhatsapp } from '../pages/agendas_v2/secciones/conf/cuenta';
 import MisEventos from '../pages/agendas_v2/secciones/conf/MisEventos';
 import TeamManagementPage from '../pages/admin/team/TeamManagementPage';
 import TabApariencia from '../temas/TabApariencia';
-import { puedeElegirTema } from '../context/AparienciaContext';
+import { puedeElegirTema, useApariencia } from '../context/AparienciaContext';
 import { useTemaDeHoja } from './temaDeHoja';
-import { Icono } from '../pages/agendas_v2/ui/base';
+import TabDock from './TabDock';
+import { TabAyuda, TabCuenta, TabNotificaciones, TabSeguridad, IdentidadConfiguracion, resumenDe } from './configuracionSecciones';
 import '../pages/agendas_v2/thalamus.css';
+import './configuracion.css';
 
 const RECIBEN_AGENDAS = ['closer', 'triage', 'director_comercial', 'admin'];
-const PESTANAS = [
-    { id: 'datos', nombre: 'Datos', icono: 'user', para: () => true },
-    { id: 'disponibilidad', nombre: 'Disponibilidad', icono: 'clock', para: (rol) => RECIBEN_AGENDAS.includes(rol) },
-    { id: 'integraciones', nombre: 'Integraciones', icono: 'enchufe', para: (rol) => RECIBEN_AGENDAS.includes(rol) },
-    { id: 'eventos', nombre: 'Mis eventos', icono: 'calendar', para: (rol) => rol === 'closer' },
-    { id: 'equipo', nombre: 'Equipo', icono: 'users', para: (rol) => rol === 'admin' },
-    { id: 'apariencia', nombre: 'Apariencia', icono: 'sol', para: (rol) => puedeElegirTema(rol) },
+const SECCIONES = [
+    { id: 'datos', nombre: 'Tu cuenta', desc: 'Tu personaje, tu email y tus roles', Icono: User, grupo: 'Vos', para: () => true },
+    { id: 'apariencia', nombre: 'Apariencia', desc: 'Tema, modo, efectos y letra', Icono: Palette, grupo: 'Vos', para: (rol) => puedeElegirTema(rol) },
+    { id: 'dock', nombre: 'Dock', desc: 'Abajo o barra lateral', Icono: PanelBottom, grupo: 'Vos', para: () => true },
+    { id: 'notificaciones', nombre: 'Notificaciones', desc: 'Qué te avisa y por dónde', Icono: Bell, grupo: 'Vos', para: () => true },
+    { id: 'disponibilidad', nombre: 'Disponibilidad', desc: 'Tus horarios para recibir agendas', Icono: Clock, grupo: 'Trabajo', para: (rol) => RECIBEN_AGENDAS.includes(rol) },
+    { id: 'integraciones', nombre: 'Integraciones', desc: 'Google Calendar y WhatsApp', Icono: Plug, grupo: 'Trabajo', para: (rol) => RECIBEN_AGENDAS.includes(rol) },
+    { id: 'eventos', nombre: 'Mis eventos', desc: 'Tus links de agendamiento', Icono: CalendarDays, grupo: 'Trabajo', para: (rol) => rol === 'closer' },
+    { id: 'equipo', nombre: 'Equipo', desc: 'Altas, roles y contraseñas', Icono: Users, grupo: 'Trabajo', para: (rol) => rol === 'admin' },
+    { id: 'seguridad', nombre: 'Seguridad', desc: 'Cómo entrás y tus sesiones', Icono: KeyRound, grupo: 'Cuenta', para: () => true },
+    { id: 'ayuda', nombre: 'Ayuda', desc: 'Reportar un problema y tus reportes', Icono: LifeBuoy, grupo: 'Cuenta', para: () => true },
 ];
-export const pestanasDe = (rol) => PESTANAS.filter(p => p.para(rol));
+export const pestanasDe = (rol) => SECCIONES.filter(p => p.para(rol));
 
 // Volviendo de Google se abre en Integraciones, donde está el resultado.
-const tabDeLaUrl = () => (new URLSearchParams(window.location.search).get('google_connected') ? 'integraciones' : 'datos');
+const tabDeLaUrl = () => (new URLSearchParams(window.location.search).get('google_connected') ? 'integraciones' : null);
+
+function Cuerpo({ id, user }) {
+    if (id === 'disponibilidad') return <><TarjetaDisponibilidad />{['closer', 'triage'].includes(user?.role) && <TarjetaSesiones />}</>;
+    if (id === 'integraciones') return <><TarjetaCalendar /><TarjetaWhatsapp /></>;
+    if (id === 'eventos') return <MisEventos />;
+    if (id === 'equipo') return <TeamManagementPage embebido />;
+    if (id === 'apariencia') return <TabApariencia />;
+    if (id === 'dock') return <TabDock />;
+    if (id === 'notificaciones') return <TabNotificaciones />;
+    if (id === 'seguridad') return <TabSeguridad user={user} />;
+    if (id === 'ayuda') return <TabAyuda />;
+    return <TabCuenta user={user} />;
+}
+
+const Cabeza = ({ s }) => (
+    <header className="cu-cab"><h2>{s.nombre}</h2><p>{s.desc}</p></header>
+);
 
 export default function Configuracion({ user = null, tabInicial = null, onTab = () => {} }) {
-    const pestanas = pestanasDe(user?.role);
+    const secciones = pestanasDe(user?.role);
+    const { ajustes } = useApariencia();
+    const vista = ajustes?.vista === 'baldosas' ? 'baldosas' : 'pestanas';
     const [elegida, setElegida] = useState(() => tabInicial || tabDeLaUrl());
-    const tab = pestanas.some(p => p.id === elegida) ? elegida : 'datos';
+    const actual = secciones.find(p => p.id === elegida) || null;
     const elegir = (id) => { setElegida(id); onTab(id); };
     const [raiz, dataTheme] = useTemaDeHoja();
-    let cuerpo;
-    if (tab === 'disponibilidad') cuerpo = <><TarjetaDisponibilidad />{['closer', 'triage'].includes(user?.role) && <TarjetaSesiones />}</>;
-    else if (tab === 'integraciones') cuerpo = <><TarjetaCalendar /><TarjetaWhatsapp /></>;
-    else if (tab === 'eventos') cuerpo = <MisEventos />;
-    else if (tab === 'equipo') cuerpo = <TeamManagementPage embebido />;
-    else if (tab === 'apariencia') cuerpo = <TabApariencia />;
-    else cuerpo = user ? <DatosCuenta user={user} /> : null;
-    return (
-        <div ref={raiz} className="thalamus cu-hoja" data-theme={dataTheme} aria-label="Configuración">
-            <div className="tabs" role="tablist" aria-label="Configuración">
-                {pestanas.map(p => (
-                    <button key={p.id} type="button" className="tab" role="tab" aria-selected={tab === p.id} aria-controls="cu-cuerpo" onClick={() => elegir(p.id)}>
-                        <Icono n={p.icono} />{p.nombre}
-                    </button>
-                ))}
+
+    if (vista === 'baldosas') {
+        return (
+            <div ref={raiz} className="thalamus cu-hoja cu-hoja--baldosas" data-theme={dataTheme} aria-label="Configuración">
+                {actual ? (
+                    <div className="cu-detalle">
+                        <button type="button" className="cu-volver" onClick={() => elegir(null)}>
+                            <ChevronLeft size={16} aria-hidden="true" />Configuración
+                        </button>
+                        <Cabeza s={actual} />
+                        <div className="cu-cuerpo"><Cuerpo id={actual.id} user={user} /></div>
+                    </div>
+                ) : (
+                    <div className="cu-baldosas">
+                        <IdentidadConfiguracion user={user} onElegir={elegir} />
+                        <div className="cu-grilla">
+                            {secciones.filter(s => s.id !== 'datos').map(s => (
+                                <button key={s.id} type="button" className="cu-baldosa" onClick={() => elegir(s.id)}>
+                                    <span className="cu-baldosa-ico"><s.Icono size={19} aria-hidden="true" /></span>
+                                    <b>{s.nombre}</b>
+                                    <small className="trunc">{resumenDe(s.id, { user, ajustes }) || s.desc}</small>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
-            <div className="cu-cuerpo" id="cu-cuerpo" role="tabpanel">{cuerpo}</div>
+        );
+    }
+
+    const enPestana = actual || secciones[0];
+    const grupos = [...new Set(secciones.map(s => s.grupo))];
+    return (
+        <div ref={raiz} className="thalamus cu-hoja cu-hoja--pestanas" data-theme={dataTheme} aria-label="Configuración">
+            <nav className="cu-pestanas" role="tablist" aria-orientation="vertical" aria-label="Secciones de Configuración">
+                {grupos.map(g => (
+                    <div key={g} className="cu-grupo" role="presentation">
+                        <p className="cu-grupo-tit">{g}</p>
+                        {secciones.filter(s => s.grupo === g).map(s => (
+                            <button key={s.id} type="button" className="cu-pest" role="tab" aria-selected={enPestana.id === s.id}
+                                aria-controls="cu-cuerpo" onClick={() => elegir(s.id)}>
+                                <s.Icono size={17} aria-hidden="true" /><span className="trunc">{s.nombre}</span>
+                            </button>
+                        ))}
+                    </div>
+                ))}
+            </nav>
+            <div className="cu-panel" id="cu-cuerpo" role="tabpanel">
+                <Cabeza s={enPestana} />
+                <div className="cu-cuerpo"><Cuerpo id={enPestana.id} user={user} /></div>
+            </div>
         </div>
     );
 }

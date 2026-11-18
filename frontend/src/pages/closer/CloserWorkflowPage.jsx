@@ -1688,8 +1688,8 @@ const CloserWorkflowPage = () => {
         user, logout, navigate: (ruta) => window.location.assign(ruta),
         acciones: [
             ...(esTriage ? [] : [
-                { id: 'agenda', label: 'Nueva agenda', Icono: CalendarPlus, onClick: abrirNuevaAgenda },
-                { id: 'referido', label: 'Referido manual', Icono: Gift, onClick: () => setManualRefModalOpen(true) },
+                { id: 'agenda', label: 'Nueva agenda', Icono: CalendarPlus, onClick: abrirNuevaAgenda, nuevo: true },
+                { id: 'referido', label: 'Referido manual', Icono: Gift, onClick: () => setManualRefModalOpen(true), nuevo: true },
             ]),
             ...(counts.seguimientos > 0
                 ? [{ id: 'procrastinar', label: 'Quiero procrastinar', Icono: Hourglass, onClick: () => setShowProcrastinar(true) }]

@@ -53,6 +53,16 @@ def de_contacto(contacto_id, ultimos=5):
     return [resumen(s) for s in programados + resueltos]
 
 
+def proximos(contacto_ids):
+    """{contacto_id: el próximo programado (iso)}: la bandeja marca la fila de quien ya tiene uno."""
+    if not contacto_ids:
+        return {}
+    filas = (db.session.query(AutSeguimiento.contacto_id, db.func.min(AutSeguimiento.enviar_en))
+             .filter(AutSeguimiento.contacto_id.in_(contacto_ids), AutSeguimiento.estado == AutSeguimiento.PROGRAMADO)
+             .group_by(AutSeguimiento.contacto_id).all())
+    return {cid: en.isoformat() + 'Z' for cid, en in filas}
+
+
 def _cerrar(s, estado, ahora, detalle=None):
     s.estado, s.resuelto_en, s.detalle = estado, ahora, (detalle or '')[:300] or None
 

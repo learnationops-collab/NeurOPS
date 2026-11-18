@@ -126,7 +126,7 @@ export const TARJETA_CORTEX = { clave: 'cortex', titulo: CORTEX.label, Icono: CO
  */
 export const TARJETA_LEADERSHIP = { clave: 'leadership', titulo: 'Leadership', Icono: Compass, comun: true, externa: true };
 
-const entrarALeadership = async () => {
+export const entrarALeadership = async () => {
     const res = await api.get('/leadership/entrar');
     window.location.href = res.data.url;
 };

@@ -18,7 +18,7 @@ Reglas que garantiza:
 from datetime import timedelta
 
 from app import db
-from app.automatizaciones import acciones, campanas, efectos, etapas, registro, reparto
+from app.automatizaciones import acciones, campanas, efectos, etapas, perfil, registro, reparto
 from app.automatizaciones.modelos import AutEjecucion, AutFlujo, AutFlujoVersion, IgContacto, IgMensaje
 from app.automatizaciones.nucleo import eventos as ev
 from app.automatizaciones.nucleo import grafo as g
@@ -53,6 +53,8 @@ class Motor:
             return self._eco(contacto, evento)
         if not self._registrar_entrante(contacto, evento):
             return 'repetido'
+        if not contacto.username:
+            perfil.si_falta(self.transporte, contacto, self.ahora)
         if evento.payload:
             datos = mensajes.leer_payload(evento.payload)
             if datos is None:
@@ -262,7 +264,7 @@ class Motor:
         db.session.add(ejecucion)
         db.session.flush()
         if campana or not contacto.username:
-            self._completar_perfil(contacto)
+            perfil.completar(self.transporte, contacto)
         if campana:
             setter = reparto.elegir(campana, contacto.id, self.ahora)
             ejecucion.setter_id = setter.id if setter else None
@@ -271,18 +273,6 @@ class Motor:
         self._correr(ejecucion)
         efectos.anotar(self._entrante, ejecucion, tipo='inicio', clave=clave)
         return ejecucion
-
-    def _completar_perfil(self, contacto):
-        """El usuario, el nombre y si sigue a la cuenta (un DM no los trae), como el `lead_ig` y el
-        `follower` de ManyChat: con el usuario los tableros cruzan a la persona con sus agendas y ventas;
-        «Seguidor» se ve en Entrantes. En cada entrada por campaña, porque seguir a la cuenta cambia."""
-        perfil = self.transporte.perfil(contacto.igsid)
-        if perfil.get('username'):
-            contacto.username = perfil['username'][:100]
-        if perfil.get('name') and not contacto.nombre:
-            contacto.nombre = perfil['name'][:150]
-        if 'is_user_follow_business' in perfil:
-            self._guardar(contacto, {SIGUE: bool(perfil['is_user_follow_business'])})
 
     def _boton(self, contacto, version_id, nodo_id, boton_id, pausado=False):
         version = db.session.get(AutFlujoVersion, version_id)

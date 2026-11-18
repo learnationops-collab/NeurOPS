@@ -1,0 +1,116 @@
+/* ============================================================================
+   Los temas únicos de Learnation (ADR-W167, el mockup docs/mockups/dock-unificado/temas.css): los mismos
+   en Work, Academy y Leadership. Learnation son los valores de base de temas.css (el Modern de antes, que
+   absorbió a Classic); acá, lo que cada uno de los otros tres cambia sobre esa base.
+     solido     Academy solid: pizarra, sin vidrio
+     relampago  Leadership future-lightning: índigo y cian
+     puro       Leadership solid-pure: negro y blanco, máximo contraste
+   Y dos ajustes que valen para cualquiera (Configuración › Apariencia):
+     data-efectos="no"   sin humo ni vidrio, todo plano
+     data-liviano="si"   además, sin transiciones ni animaciones (se prende solo al simular)
+   ============================================================================ */
+
+/* ─── Sólido ─── */
+[data-tema="solido"][data-tema-modo]{ --ln-radius:16px; --ln-radius-control:10px; --ln-blur:0px; --ln-humo-op:0; --ln-humo-op-i:0; }
+[data-tema="solido"][data-tema-modo="oscuro"]{
+  --ln-page-base:#020617; --ln-page-bg:#020617; --ln-text-out:#F8FAFC;
+  --ln-brand-2:#5B7CFF; --ln-brand-2-text:#A5B4FC;
+  --ln-ct2-bg-subtle:#0B1220; --ln-ct2-bg:#0F172A; --ln-text-in:#F8FAFC;
+  --ln-ct3-bg:#1E293B; --ln-ct3-bg-hover:#273449; --ln-ct3-text:#F8FAFC; --ln-ct3-bg-strong:#334155;
+  --ln-inset-bg:#0B1220; --ln-inset-text:#F8FAFC; --ln-input-bg:#0B1220;
+  --ln-window-bg:#0F172A; --ln-window-text:#F8FAFC; --ln-popover-bg:#111A2E;
+  --ln-text-muted:#94A3B8; --ln-text-faint:#7C8AA0;
+  --ln-border-subtle:rgba(255,255,255,.06); --ln-border-main:rgba(255,255,255,.12); --ln-border-strong:rgba(255,255,255,.30);
+  --ln-sheen:rgba(255,255,255,.06);
+  --ln-shadow:0 6px 20px rgba(0,0,0,.35);
+}
+[data-tema="solido"][data-tema-modo="claro"]{
+  --ln-page-base:#F1F5F9; --ln-page-bg:#F1F5F9; --ln-text-out:#0F172A;
+  --ln-ct2-bg-subtle:#F8FAFC; --ln-ct2-bg:#FFFFFF; --ln-text-in:#0F172A;
+  --ln-ct3-bg:#F1F5F9; --ln-ct3-bg-hover:#E2E8F0; --ln-ct3-text:#0F172A; --ln-ct3-bg-strong:#E2E8F0;
+  --ln-inset-bg:#F8FAFC; --ln-inset-text:#0F172A; --ln-input-bg:#F8FAFC;
+  --ln-window-bg:#FFFFFF; --ln-window-text:#0F172A; --ln-popover-bg:#FFFFFF; --ln-scrim:rgba(15,23,42,.30);
+  --ln-inverse-bg:#0F172A; --ln-inverse-text:#F8FAFC;
+  --ln-text-muted:#475569; --ln-text-faint:#64748B;
+  --ln-border-subtle:rgba(15,23,42,.07); --ln-border-main:rgba(15,23,42,.13); --ln-border-strong:rgba(15,23,42,.36);
+  --ln-sheen:rgba(255,255,255,.7);
+  --ln-shadow:0 1px 2px rgba(15,23,42,.06),0 6px 16px -6px rgba(15,23,42,.12);
+}
+
+/* ─── Relámpago ─── */
+[data-tema="relampago"][data-tema-modo]{ --ln-radius:22px; --ln-radius-control:12px; }
+[data-tema="relampago"][data-tema-modo="oscuro"]{
+  --ln-page-base:#090B15; --ln-page-bg:radial-gradient(1200px 600px at 80% -10%,rgba(79,70,229,.22),transparent 60%),#090B15;
+  --ln-text-out:#F8FAFC;
+  --ln-brand:#22D3EE; --ln-brand-accent:#67E8F9; --ln-brand-content:#04121A; --ln-brand-text:#67E8F9;
+  --ln-brand-soft:rgba(34,211,238,.12); --ln-brand-soft-border:rgba(34,211,238,.38);
+  --ln-brand-2:#6366F1; --ln-brand-2-accent:#818CF8; --ln-brand-2-text:#A5B4FC;
+  --ln-ct2-bg-subtle:rgba(18,21,38,.6); --ln-ct2-bg:rgba(18,21,38,.85); --ln-text-in:#F8FAFC;
+  --ln-ct3-bg:rgba(255,255,255,.06); --ln-ct3-bg-hover:rgba(255,255,255,.11); --ln-ct3-text:#F8FAFC;
+  --ln-inset-bg:rgba(0,0,0,.28); --ln-input-bg:rgba(0,0,0,.28);
+  --ln-window-bg:rgba(18,21,38,.96); --ln-popover-bg:#121526; --ln-scrim:rgba(9,11,21,.70);
+  --ln-text-muted:#A3B0C4; --ln-text-faint:#7F8BA0;
+  --ln-border-subtle:rgba(255,255,255,.06); --ln-border-main:rgba(255,255,255,.11);
+  --ln-focus:#22D3EE; --ln-focus-ring:0 0 0 3px rgba(34,211,238,.45);
+  --ln-shadow:0 8px 30px rgba(0,0,0,.45); --ln-shadow-brand:0 10px 15px -3px rgba(99,102,241,.35);
+  --ln-map-canvas:#0B0E1C;
+}
+[data-tema="relampago"][data-tema-modo="claro"]{
+  --ln-page-base:#F1F5F9; --ln-page-bg:radial-gradient(1200px 600px at 80% -10%,rgba(99,102,241,.10),transparent 60%),#F1F5F9;
+  --ln-text-out:#0F172A;
+  --ln-brand:#0E7490; --ln-brand-accent:#0891B2; --ln-brand-content:#FFFFFF; --ln-brand-text:#0E7490;
+  --ln-brand-soft:rgba(14,116,144,.09); --ln-brand-soft-border:rgba(14,116,144,.30);
+  --ln-brand-2:#4F46E5; --ln-brand-2-accent:#6366F1; --ln-brand-2-text:#4338CA;
+  --ln-ct2-bg:rgba(255,255,255,.88); --ln-text-in:#0F172A;
+  --ln-ct3-bg:rgba(15,23,42,.05); --ln-ct3-bg-hover:rgba(15,23,42,.09); --ln-ct3-text:#0F172A;
+  --ln-inset-bg:#F8FAFC; --ln-input-bg:#F8FAFC;
+  --ln-window-bg:rgba(255,255,255,.97); --ln-popover-bg:#FFFFFF; --ln-scrim:rgba(15,23,42,.30);
+  --ln-inverse-bg:#0F172A; --ln-inverse-text:#F8FAFC;
+  --ln-text-muted:#475569; --ln-text-faint:#64748B;
+  --ln-border-subtle:rgba(15,23,42,.07); --ln-border-main:rgba(15,23,42,.12); --ln-border-strong:rgba(15,23,42,.36);
+  --ln-focus:#0E7490; --ln-focus-ring:0 0 0 3px rgba(14,116,144,.35);
+  --ln-shadow:0 8px 24px rgba(15,23,42,.10); --ln-shadow-brand:0 10px 15px -3px rgba(79,70,229,.25);
+}
+
+/* ─── Puro: máximo contraste, sin color de fondo ─── */
+[data-tema="puro"][data-tema-modo]{ --ln-radius:12px; --ln-radius-control:8px; --ln-blur:0px; --ln-humo-op:0; --ln-humo-op-i:0; }
+[data-tema="puro"][data-tema-modo="oscuro"]{
+  --ln-page-base:#000000; --ln-page-bg:#000000; --ln-text-out:#FFFFFF;
+  --ln-brand:#FFFFFF; --ln-brand-accent:#E5E5E5; --ln-brand-content:#000000; --ln-brand-text:#FFFFFF;
+  --ln-brand-soft:rgba(255,255,255,.10); --ln-brand-soft-border:rgba(255,255,255,.45);
+  --ln-brand-2:#A3A3A3; --ln-brand-2-accent:#D4D4D4; --ln-brand-2-content:#000000; --ln-brand-2-text:#D4D4D4;
+  --ln-ct2-bg-subtle:#050505; --ln-ct2-bg:#0A0A0A; --ln-text-in:#FFFFFF;
+  --ln-ct3-bg:#171717; --ln-ct3-bg-hover:#262626; --ln-ct3-text:#FFFFFF; --ln-ct3-bg-strong:#262626;
+  --ln-inset-bg:#050505; --ln-inset-text:#FFFFFF; --ln-input-bg:#050505;
+  --ln-window-bg:#0A0A0A; --ln-window-text:#FFFFFF; --ln-popover-bg:#0D0D0D; --ln-scrim:rgba(0,0,0,.75);
+  --ln-inverse-bg:#FFFFFF; --ln-inverse-text:#000000;
+  --ln-text-muted:#B5B5B5; --ln-text-faint:#8F8F8F;
+  --ln-border-subtle:#1C1C1C; --ln-border-main:#2E2E2E; --ln-border-strong:#6B6B6B;
+  --ln-sheen:#2E2E2E; --ln-track:#262626;
+  --ln-focus:#FFFFFF; --ln-focus-ring:0 0 0 3px rgba(255,255,255,.55);
+  --ln-shadow:none; --ln-shadow-brand:none;
+  --ln-map-canvas:#000000; --ln-map-node:#0D0D0D;
+}
+[data-tema="puro"][data-tema-modo="claro"]{
+  --ln-page-base:#FFFFFF; --ln-page-bg:#FFFFFF; --ln-text-out:#09090B;
+  --ln-brand:#0369A1; --ln-brand-accent:#0284C7; --ln-brand-content:#FFFFFF; --ln-brand-text:#0369A1;
+  --ln-brand-soft:rgba(3,105,161,.08); --ln-brand-soft-border:rgba(3,105,161,.35);
+  --ln-brand-2:#000000; --ln-brand-2-accent:#27272A; --ln-brand-2-content:#FFFFFF; --ln-brand-2-text:#000000;
+  --ln-ct2-bg-subtle:#FAFAFA; --ln-ct2-bg:#FFFFFF; --ln-text-in:#09090B;
+  --ln-ct3-bg:#F1F5F9; --ln-ct3-bg-hover:#E2E8F0; --ln-ct3-text:#09090B; --ln-ct3-bg-strong:#E2E8F0;
+  --ln-inset-bg:#F8FAFC; --ln-inset-text:#09090B; --ln-input-bg:#F8FAFC;
+  --ln-window-bg:#FFFFFF; --ln-window-text:#09090B; --ln-popover-bg:#FFFFFF; --ln-scrim:rgba(0,0,0,.35);
+  --ln-inverse-bg:#000000; --ln-inverse-text:#FFFFFF;
+  --ln-text-muted:#3F3F46; --ln-text-faint:#52525B;
+  --ln-border-subtle:#E2E8F0; --ln-border-main:#CBD5E1; --ln-border-strong:#64748B;
+  --ln-sheen:#FFFFFF; --ln-track:#E2E8F0;
+  --ln-focus:#0369A1; --ln-focus-ring:0 0 0 3px rgba(3,105,161,.40);
+  --ln-shadow:none; --ln-shadow-brand:none;
+  --ln-map-canvas:#FFFFFF;
+}
+
+/* Sin efectos: sin humo ni vidrio, en cualquier tema. Liviano: además, sin movimiento. */
+html[data-tema][data-efectos="no"]{ --ln-humo-op:0; --ln-humo-op-i:0; --ln-blur:0px; }
+html[data-tema][data-efectos="no"] *{ backdrop-filter:none !important; -webkit-backdrop-filter:none !important; }
+html[data-tema][data-liviano="si"] *,html[data-tema][data-liviano="si"] *::before,html[data-tema][data-liviano="si"] *::after{
+  transition:none !important; animation:none !important; backdrop-filter:none !important; -webkit-backdrop-filter:none !important; }

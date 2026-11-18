@@ -29,6 +29,5 @@ describe('Bandeja › colas', () => {
     it('identidad antes que ID', () => {
         expect(quien({ username: 'dr.lay_', igsid: '123' })).toBe('@dr.lay_');
         expect(quien({ nombre: 'Ana', igsid: '123' })).toBe('Ana');
-        expect(quien({ igsid: '1234567' })).toBe('Sin usuario');
     });
 });

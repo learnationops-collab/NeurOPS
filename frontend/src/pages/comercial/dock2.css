@@ -1,0 +1,143 @@
+/* Dock 2.0 (components/DockSecciones.jsx), como el de Leadership y la Academia: en una pantalla ancha,
+   tres islas sueltas. Izquierda, lo fijado; centro, la navegación; derecha, Herramientas y la sesión. */
+.dc-shell .dock-barra{position:fixed;left:0;right:0;bottom:calc(var(--s6) + env(safe-area-inset-bottom,0px));z-index:60;
+  display:grid;grid-template-columns:1fr minmax(0,max-content) 1fr;align-items:center;gap:var(--s4);
+  padding:0 var(--s6);pointer-events:none}
+.dc-shell .dock-barra > *{pointer-events:auto}
+.dc-shell .dock-barra .dock--centro{position:relative;left:auto;right:auto;bottom:auto;margin:0;width:auto;
+  max-width:100%;justify-self:center;grid-column:2;grid-row:1}
+.dc-shell .dock-isla{display:flex;align-items:center;gap:var(--s1);padding:7px;border-radius:24px;grid-row:1;
+  background:var(--bg-surface);backdrop-filter:saturate(180%) blur(28px);
+  border:1px solid var(--border-main);border-top-color:var(--sheen);
+  box-shadow:var(--shadow-main),0 0 0 1px rgba(0,0,0,.25)}
+.dc-shell .dock-isla--izq{justify-self:start;grid-column:1}
+.dc-shell .dock-isla--izq:empty{visibility:hidden;pointer-events:none}
+.dc-shell .dock-isla--der{justify-self:end;grid-column:3}
+
+/* Editar la navegación (DockEdicion.jsx). */
+.dc-shell .dock--editando{outline:2px dashed var(--brand-secondary);outline-offset:3px}
+.dc-shell .dock--editando .dock-item .dock-label{display:inline !important}
+.dc-shell .dock-item--edit{cursor:grab}
+.dc-shell .dock-item--edit:active{cursor:grabbing}
+.dc-shell .dock-item--oculta{opacity:.45}
+.dc-shell .dock-ojo{display:grid;place-items:center;width:26px;height:26px;margin-top:9px;border-radius:8px;
+  color:var(--text-muted);transition:background-color .15s ease,color .15s ease}
+.dc-shell .dock-ojo:hover,.dc-shell .dock-ojo:focus-visible{background:var(--mat-3);color:var(--text-on-surface)}
+.dc-shell .dock-renombrar{margin-top:9px;width:9em;height:28px;padding:0 8px;border-radius:8px;
+  border:1px solid var(--brand-secondary);background:var(--bg-element);color:var(--text-on-surface);font:inherit}
+.dc-shell.dock-editar-capa{position:fixed;top:0;left:0;width:0;height:0;z-index:70;
+  background:none;min-height:0;padding:0;overflow:visible}
+.dc-shell .dock-editar{position:fixed;left:50%;transform:translateX(-50%);
+  bottom:calc(var(--s6) + 92px + env(safe-area-inset-bottom,0px));max-width:calc(100vw - 32px);
+  display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2);padding:6px 6px 6px 14px;border-radius:16px;
+  background:var(--bg-flotante);border:1px solid var(--border-main);box-shadow:var(--shadow-main);
+  font-size:12.5px;color:var(--text-muted)}
+.dc-shell .dock-editar b{color:var(--text-on-surface)}
+
+/* El menú de Herramientas (ventanas/BotonHerramientas.jsx). */
+.dc-shell .menu.menu--herr{width:320px}
+.dc-shell .menu-herr-cab{display:grid;gap:2px;padding:6px 10px 8px}
+.dc-shell .menu-herr-cab b{font-size:14px;font-weight:800;color:var(--text-on-surface)}
+.dc-shell .menu-herr-cab small{display:flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:var(--text-muted-40)}
+.dc-shell .menu-grupo{margin:8px 10px 4px;font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--text-muted-40)}
+.dc-shell .menu-herr-tx{display:grid;min-width:0;text-align:left;line-height:1.25}
+.dc-shell .menu-herr-tx b{font-weight:700}
+.dc-shell .menu-herr-tx small{font-size:11px;font-weight:500;color:var(--text-muted-40)}
+
+
+/* Herramientas ordenadas como las de la Academia (ventanas/catalogoHerramientas.js): por tipo, en dos
+   columnas, cada una con su ícono en color, una línea de para qué sirve y la flecha si lleva a otra pantalla. */
+.dc-shell{--herr-rosa:#FF3FA4;--herr-azul:#3B82F6;--herr-violeta:#8B5CF6;--herr-ambar:#F59E0B;--herr-rojo:#EF4444;--herr-verde:#10B981;--herr-gris:var(--text-muted)}
+.dc-shell .menu.menu--herr{width:min(540px,calc(100vw - 32px))}
+.dc-shell .menu-herr-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px 4px}
+@media (max-width:640px){.dc-shell .menu-herr-grid{grid-template-columns:1fr}}
+.dc-shell .menu-herr-grid .menu-fila{min-width:0}
+.dc-shell .menu-item--herr{gap:10px;padding-top:6px;padding-bottom:6px}
+.dc-shell .menu-herr-ico{flex-shrink:0;display:grid;place-items:center;width:32px;height:32px;border-radius:10px;
+  background:var(--bg-element);border:1px solid var(--border-subtle);color:var(--c,var(--text-muted))}
+.dc-shell .menu-item--herr .menu-herr-ico svg{color:var(--c,var(--text-muted))}
+.dc-shell .menu-item--herr .menu-flecha{flex-shrink:0;color:var(--text-muted-40)}
+
+/* La barra lateral (DockLateral.jsx), como el mockup del dock unificado: dos contenedores separados, la
+   tarjeta de usuario y la navegación. Plegada, una columna centrada de botones de 44 px. */
+.dc-shell .dock-fijada-nombre{display:none}
+.dc-shell .dock-lado{position:fixed;left:16px;top:16px;bottom:16px;z-index:60;width:68px;
+  display:flex;flex-direction:column;gap:12px;transition:width .25s ease}
+.dc-shell .dock-lado--abierta{width:248px}
+.dc-shell .dock-lado-tarjeta,.dc-shell .dock-lado-nav{border-radius:24px;background:var(--bg-surface);
+  backdrop-filter:saturate(180%) blur(28px);border:1px solid var(--border-main);border-top-color:var(--sheen);
+  box-shadow:var(--shadow-main),0 0 0 1px rgba(0,0,0,.25)}
+
+/* 1 · La tarjeta. */
+.dc-shell .dock-lado-tarjeta{position:relative;flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 6px}
+.dc-shell .dock-lado-quien{display:flex;flex-direction:column;align-items:center;gap:8px;width:100%;min-width:0;text-align:center}
+.dc-shell .dock-lado-nombre{width:100%;min-width:0;display:grid;line-height:1.25}
+.dc-shell .dock-lado-nombre b{font-size:14.5px;font-weight:800;color:var(--text-on-surface)}
+.dc-shell .dock-lado-nombre small{font-size:11.5px;font-weight:600;color:var(--text-muted-40)}
+.dc-shell .dock-lado .dock-sesion{width:44px;height:44px;flex-shrink:0}
+.dc-shell .dock-lado--abierta .dock-lado-quien{padding-top:8px}
+.dc-shell .dock-lado--abierta .dock-sesion{width:88px;height:88px;border-radius:50%}
+.dc-shell .dock-lado--abierta .dock-sesion > :first-child{transform:scale(1.6)}
+.dc-shell .dock-lado-plegar{flex-shrink:0;display:grid;place-items:center;width:44px;height:44px;border-radius:14px;
+  color:var(--text-muted);transition:background-color .15s ease,color .15s ease}
+.dc-shell .dock-lado-plegar:hover{background:var(--mat-3);color:var(--text-on-surface)}
+.dc-shell .dock-lado--abierta .dock-lado-plegar,.dc-shell .dock-lado .dock-lado-notif{position:absolute;top:8px;width:30px;height:30px;border-radius:10px}
+.dc-shell .dock-lado--abierta .dock-lado-plegar{left:8px}
+.dc-shell .dock-lado .dock-lado-notif{right:8px;color:var(--text-muted)}
+.dc-shell .dock-lado .dock-lado-notif .dock-sesion-aviso{top:-4px;right:-4px}
+.dc-shell .dock-lado-fila{display:flex;justify-content:center;gap:4px;width:100%}
+/* La fila de cinco: 38 px cada uno, para que entren en la tarjeta (le gana a los 44 px de la barra). */
+.dc-shell .dock-lado-fila .dock-fijada,.dc-shell .dock-lado .dock-lado-fila .dock-fijada{width:38px;height:38px;border-radius:12px;background:var(--bg-element);border:1px solid var(--border-subtle)}
+.dc-shell .dock-lado-herr{display:contents}
+.dc-shell .dock-lado-acciones{display:flex;flex-direction:column;align-items:center;gap:2px}
+.dc-shell .dock-lado .dock-fijada{width:44px;height:44px;border-radius:14px}
+.dc-shell .dock-lado-salir:hover{background:var(--error-surface) !important;color:var(--error)}
+.dc-shell .dock-lado-volver{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:36px;padding:0 10px;
+  border-radius:12px;background:var(--warning-surface,var(--bg-element));color:var(--text-on-surface);font-size:12.5px;font-weight:700}
+.dc-shell .dock-lado-fijadas{width:100%;padding-top:6px;border-top:1px solid var(--border-subtle)}
+.dc-shell .dock-lado-fijadas:empty{display:none}
+.dc-shell .dock-lado .dock-fijadas{flex-direction:column;align-items:center;gap:2px}
+.dc-shell .dock-lado--abierta .dock-fijadas{flex-direction:row;flex-wrap:wrap;justify-content:flex-start}
+.dc-shell .dock-mas{font-size:12.5px;font-weight:900;color:var(--text-muted)}
+
+/* 2 · La navegación, con las ventanas abiertas al fondo. */
+.dc-shell .dock-lado-nav{flex:1;min-height:0;display:flex;flex-direction:column;align-items:stretch;gap:2px;padding:8px;
+  overflow-y:auto;overflow-x:hidden;scrollbar-width:none}
+.dc-shell .dock-lado-nav::-webkit-scrollbar{display:none}
+.dc-shell .dock-lado:not(.dock-lado--abierta) .dock-lado-nav{padding:8px 4px;align-items:center}
+.dc-shell .dock-lado-antes{display:flex;justify-content:flex-start;margin-bottom:4px}
+.dc-shell .dock-lado-item{position:relative;display:flex;align-items:center;justify-content:flex-start;gap:12px;height:44px;
+  padding:0 12px;flex-shrink:0;border-radius:14px;color:var(--text-muted);font-size:14px;font-weight:700;text-align:left;
+  transition:background-color .15s ease,color .15s ease}
+.dc-shell .dock-lado:not(.dock-lado--abierta) .dock-lado-item{width:44px;justify-content:center;padding:0}
+.dc-shell .dock-lado-item svg{flex-shrink:0}
+.dc-shell .dock-lado-item:hover{background:var(--mat-3);color:var(--text-on-surface)}
+.dc-shell .dock-lado-item[aria-current="page"]{background:var(--brand-secondary);color:var(--on-brand)}
+.dc-shell .dock-lado-item .dock-marca{margin:0 0 0 auto}
+.dc-shell .dock-lado:not(.dock-lado--abierta) .dock-lado-item .dock-marca{position:absolute;top:3px;right:3px}
+.dc-shell .dock-lado-editar{flex-direction:column;align-items:stretch}
+.dc-shell .dock-lado-fin{margin-top:auto;display:flex;flex-direction:column;align-items:flex-start;gap:2px}
+.dc-shell .dock-lado:not(.dock-lado--abierta) .dock-lado-fin{align-items:center}
+.dc-shell .dock-lado-fin:empty{display:none}
+.dc-shell .dock-lado .dock-sep{width:100%;height:1px;margin:4px 0}
+html.dock-lateral #root{padding-left:100px;transition:padding-left .25s ease}
+html.dock-lateral.dock-lateral--abierta #root{padding-left:280px}
+/* Dock: la tarjeta de usuario al pasar el mouse por el avatar (TarjetaSesion.jsx), arriba a la derecha. */
+.dc-shell .dock-av-hover{position:relative;display:grid}
+.dc-shell .dock-tarjeta-flot{position:absolute;right:-8px;bottom:calc(100% + 16px);z-index:2;width:264px;padding:10px;
+  background:var(--bg-flotante,var(--bg-surface));border:1px solid var(--border-main);box-shadow:var(--shadow-main);
+  opacity:0;visibility:hidden;transform:translateY(6px);transition:opacity .15s ease .25s,transform .15s ease .25s,visibility 0s linear .4s}
+.dc-shell .dock-tarjeta-flot::after{content:"";position:absolute;left:0;right:0;top:100%;height:18px}
+.dc-shell .dock-av-hover:hover .dock-tarjeta-flot,.dc-shell .dock-av-hover:focus-within .dock-tarjeta-flot{opacity:1;visibility:visible;
+  transform:none;transition:opacity .15s ease .15s,transform .15s ease .15s,visibility 0s linear .15s}
+.dc-shell .dock-tarjeta-flot .dock-lado-quien{padding-top:8px}
+.dc-shell .dock-tarjeta-flot .dock-sesion--grande{width:88px;height:88px;border-radius:50%}
+.dc-shell .dock-tarjeta-flot .dock-sesion--grande > :first-child{transform:scale(1.6)}
+.dc-shell .dock-tarjeta-flot .dock-lado-notif{position:absolute;top:8px;right:8px;width:30px;height:30px;border-radius:10px;color:var(--text-muted)}
+.dc-shell .dock-tarjeta-flot .dock-lado-notif .dock-sesion-aviso{top:-4px;right:-4px}
+.dc-shell .dock-lado-volver:hover{filter:brightness(1.08)}
+/* El texto de cada herramienta ocupa lo que queda de la fila (si no, se aplastaba a una letra). */
+.dc-shell .menu-item--herr{align-items:center}
+.dc-shell .menu-item--herr .menu-herr-tx{flex:1 1 0;min-width:0;grid-template-columns:minmax(0,1fr)}
+.dc-shell .menu-item--herr .menu-cuenta{margin-left:0}

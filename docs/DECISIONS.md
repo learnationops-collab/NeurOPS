@@ -1230,7 +1230,7 @@
 - **Qué se pierde:** la única condición es «no respondió». No hay seguimientos en cadena ni por etapa. El tope es de 6 días, porque después Instagram no deja escribir. Un seguimiento con error no se reintenta solo.
 - **Consecuencias:** migración `f6a8b1c3d5e7` (`aut_seguimientos`). Con el motor apagado no sale nada.
 
-## ADR-W150: aviso diario en Discord de los reportes que faltan
+## ADR-W154: aviso diario en Discord de los reportes que faltan
 
 - **Fecha:** 2026-11-17 · **Subsistema:** Avisos a Discord (`app/services/discord_avisos/reportes_faltantes.py`, `reminder_scheduler`) · **Estado:** implementado.
 - **Contexto:** reunión de estrategia del 16/11 (Mario, Kerwin, Santi): Discord tiene que etiquetar a quien tenga el reporte faltante o atrasado, con un envío automático a las 10:00 (Leadership 1405). En producción, el triage nunca mandó el reporte del día del mazo y el último de Jean Carlo era del 10/11.
@@ -1291,3 +1291,230 @@
   - Distinto del plan: en lugar de alta, edición y baja de a un grupo y un `PUT` aparte para el tipo, hay un solo `PUT` con todo. El modal tiene un único «Guardar», y dos filas que intercambian conjunto no se pueden escribir de a una sin chocar con los únicos.
 - **Qué se pierde:** nada de lo que ya se veía. El conjunto se sabe solo si el anuncio lleva `utm_term={{adset.id}}` o si Meta ya sincronizó el anuncio de `utm_content`; un anuncio recién publicado sin `utm_term` manda sus primeras visitas al grupo general. Quien agenda sin pasar por el grupo, o entra a un grupo por un enlace reenviado, queda en el conjunto equivocado: el cruce de la fase 2 hereda ese error.
 - **Consecuencias:** migración `b8d0f2a4c6e1` (sobre `c7d9e1f3a5b8`), idempotente; `develop` va a necesitar otra revisión de unión con `e3a9c5b17d40`. Falta el cambio en institute-site para que la landing mande los UTM al pedir los próximos talleres (hasta entonces todos reciben el grupo general) y que Mario sume `utm_term={{adset.id}}` a los anuncios nuevos. El listado de talleres hace una consulta más (los grupos de todos, `selectin`) y expone `tipo` y `grupos` (la cuenta). Pendientes: fase 2 (CSV de miembros de cada grupo y cruce por los últimos 8 dígitos del teléfono), fase 3 (el closer completa en la ficha el grupo de quien no cruzó) y fase 4 (gasto, agendas, ventas y ROAS por conjunto, y frío contra caliente en el Resumen).
+## ADR-W155: las llamadas de venta de Jean Carlo se graban y transcriben solas
+
+- **Fecha:** 2026-11-17 · **Subsistema:** Agendas 2.0 (`app/agendas_v2/grabar_llamadas.py`, `reminder_scheduler`) · **Estado:** implementado; falta que Jean Carlo reconecte Google y conecte su Drive.
+- **Contexto:** Sales Team 14/11: Mario quiere grabar las llamadas de venta desde la cuenta de Jean Carlo para el call review de Marlon, sin borrar ni recrear sesiones, y Marlon pidió la transcripción literal (Leadership 1394). Las Momentum ya salen con todo porque las organiza team@ (ADR-W127, W128).
+- **Decisión:**
+  1. Cada 15 minutos, Work busca las agendas de los próximos 14 días de los closers de `GRABAR_LLAMADAS_EMAILS` (por defecto, Jean Carlo) y prende la grabación, la transcripción y las notas de Gemini de su Meet con la cuenta del closer, que organiza el evento. Marca la agenda (`agenda_payload.grabacion_auto`) para no repetirla.
+  2. No toca la creación de agendas: cubre cualquier camino y las ya agendadas. La Momentum no entra.
+  3. La nota (con la transcripción) cae en el Drive del closer; con ese Drive conectado en Notas de Meet, Work la cuelga de la agenda y Marlon la lee en la ficha.
+- **Qué se pierde:** sin el permiso de Meet en su conexión de Google no prende nada (queda en el log). La grabación vive en el Drive del closer: Marlon la abre si se la comparten.
+- **Consecuencias:** sin migración. Sumar otro closer es agregar su email a la variable.
+
+## ADR-W156: el chat del Inbox se trabaja más rápido: envío al instante, borradores, teclado, avisos y Learnito al costado
+
+- **Fecha:** 2026-11-17 · **Subsistema:** Inbox (`frontend/src/pages/inbox/conversaciones`, `app/automatizaciones/api.py`) · **Estado:** implementado.
+- **Contexto:** con escribir, audios, seguimientos y Learnito ya en el chat (ADR-W146, W148, W150), Santi aprobó sobre un mockup las mejoras para que el setter trabaje como en Kommo sin perder tiempo ni leads.
+- **Decisión:**
+  1. Lo que manda el setter aparece al instante como «enviando…»; si Instagram no lo acepta queda «no salió» con el motivo, Reintentar y Descartar (`useEnvio`).
+  2. Cada conversación guarda su borrador en el navegador (`borradores.js`, localStorage) y la fila lo muestra.
+  3. Enter envía (o guarda la nota) y Shift+Enter salta de línea; en la bandeja ↑↓ cambian de chat y Esc lo cierra.
+  4. La fila avisa «se cierra en X» en las últimas 24 h antes de los 7 días en que Instagram deja escribirle, y hay una cola «Se cierra la ventana» ordenada por lo que se cierra antes. Se toman los 7 días y no las 24 h porque desde el Inbox se le escribe como respuesta humana hasta ese límite (ADR-W146).
+  5. Las conversaciones sin leer van al título de la pestaña («(3) …») y, con permiso del navegador, un aviso del escritorio por cada mensaje nuevo (las del setter; todas para el resto). Tocarlo abre el chat.
+  6. Learnito se ve en el panel derecho, en una pestaña al lado de la ficha, en lugar del modal.
+  7. La fila marca el próximo seguimiento programado; la lista trae `seguimiento` y `ultimo_entrante_en` (`seguimientos.proximos`).
+  8. En el menú «/», la vista previa de cada respuesta rápida resalta lo que se completó con la ficha y marca en rojo la variable que falta.
+- **Qué se pierde:** el borrador vive en el navegador de cada uno (no pasa a otra computadora). Enter ya no hace salto de línea (es Shift+Enter). Los avisos del escritorio dependen de que la pestaña de Work esté abierta.
+- **Consecuencias:** sin migración. La consulta de la lista suma una agrupación por contacto sobre `aut_seguimientos`.
+
+## ADR-W157: ninguna agenda se mueve ni se pasa sobre algo ocupado
+
+- **Fecha:** 2026-11-17 · **Subsistema:** Agendas 2.0 (`manual.asegurar_libre`, `a_triage.pasar`, `momentum.choca`, `/agenda/libre`) y la Academia (`ThalamusAgenda::salesSlotFree`) · **Estado:** implementado.
+- **Contexto:** Mario fijó cero superposiciones en las agendas, respetando las sesiones de coaching con Marlon (Estrategia 16/11, Leadership 1396). Una auditoría de todos los caminos encontró que el link de Tálamus, la agenda manual y el reagendado del reporte verificaban, pero mover una agenda que ya existe no: el resultado de la ficha con reagenda, la reagenda de la triage, el PATCH del mazo, reasignar, editar la agenda y el Tablero. El pase al triage asignaba aunque nadie estuviera libre, y la reserva de la Momentum no miraba lo ocupado en Google.
+- **Decisión:**
+  1. `manual.asegurar_libre(appt, closer_id, inicio)` (la verificación de la agenda manual: sus agendas con margen y su Google sin caché, con bloqueo) corre antes de mover o pasar una agenda que viene, en todos esos caminos. Una agenda que ya pasó no se revisa: moverla es corregir el historial.
+  2. Pasar al triage exige una triage libre a esa hora. Si no hay, a mano se rechaza con el motivo, y la C/D desplazada sigue con el closer marcada para reagendar (decisión de Santi, 17/11).
+  3. La Momentum, al reservar, cuenta lo ocupado en Google leído en el momento, sin las C/D que puede tomar. Antes de moverla, la Academia le pregunta a Work (`POST /agenda/libre`) si el closer tiene libre ese horario, sin contar la propia Momentum. Si Work no responde, no frena.
+- **Qué se pierde:** un reagendado sobre algo ocupado ya no se puede forzar: hay que liberar el horario primero. Quedan sin cubrir el editor de base de datos del admin, las agendas movidas a mano en Google (Work acepta lo que pasó) y el link viejo `/public/book`. Dari revisa solo el calendario del triage: su cuenta es la compartida de fulfillment y el principal la bloquearía con lo de todo el equipo.
+- **Consecuencias:** sin migración. `app/api/external/agenda.py` sigue pasando las 500 líneas (ya estaba en 908).
+
+## ADR-W158: los turnos que quedan de triage y de closers, arriba de Team › Available
+
+- **Fecha:** 2026-11-17 · **Subsistema:** Tálamus › Team › Available (`secciones/team/TurnosEquipo.jsx`) · **Estado:** implementado.
+- **Contexto:** Estrategia 16/11 y Resultad-OS 14/11: Mario quiere que los setters vean claro y en tiempo real los espacios de Triage y de Closers (Leadership 1397). El botón Tálamus del setter ya abría Team › Available, pero ahí había que leer el calendario de cada uno.
+- **Decisión:** arriba de Available (vista del equipo), una tabla de dos filas, Triage y Closers, con los turnos libres de cada día de la semana sumados entre las personas del grupo. Se cuentan como `TablaTurnos`: sesiones encadenadas con su margen, desde ahora, sin las agendas ni lo ocupado en Google. El triage usa la Sesión diagnóstica y los closers la Sesión de Aceleración, con la duración de cada persona. Un día en cero va en rojo; al pasar el mouse, cuántos tiene cada uno; «Por persona» abre la tabla de cada grupo.
+- **Qué se pierde:** los bloqueos de Leadership que todavía no llegaron a Google no se descuentan. Los turnos son por el horario de Team de cada uno, no por el ruteo por segmento: un día con turnos de closers puede no tener lugar para un C/D.
+- **Consecuencias:** sin migración ni pedidos nuevos (usa lo que ya leyó Available). No cambia ningún componente estándar.
+
+## ADR-W159: ventanas flotantes y herramientas por rol en el dock, como la Academia y Leadership
+
+- **Fecha:** 2026-11-17 · **Subsistema:** Dock y navegación (`frontend/src/ventanas/`, `DockSecciones`, `MenuSesion`, `sesion/fijadas.js`) · **Estado:** implementado.
+- **Contexto:** Santi pidió para Work el sistema de dock de la Academia (Ventanas v2, `modal/sheet.blade.php`, `config/staff_tools.php`) y el Dock 2.0 de Leadership (islas, `DockTools`, `dockModals`), y resolver con eso el panel de turnos para los setters (ADR-W158) como herramienta. Work tenía el dock de secciones y las fijadas, pero ninguna ventana flotante: los turnos estaban en Tálamus › Team › Available.
+- **Decisión:**
+  1. **Ventanas:** flotan encima de cualquier pantalla, no tapan (no son modales) y sobreviven a la navegación (`HostVentanas` en `App.jsx`) y, en la pestaña, a recargar (`sessionStorage`). Se arrastran por la cabecera; a menos de 24 px del borde de arriba pasan a pantalla completa y del de abajo se minimizan al dock, con una guía mientras se arrastra; doble clic maximiza; Escape minimiza. En el teléfono, hoja de abajo.
+  2. **Catálogo por rol:** `ventanas/herramientas.js`. Cada herramienta aparece en el menú de sesión en su propio grupo y se fija en el dock con el mismo 📌 de siempre (sin inventar otro sistema de pins).
+  3. **Isla de ventanas en el dock:** a la derecha de la navegación, un acceso por ventana abierta: la trae si estaba minimizada y la minimiza si estaba a la vista.
+  4. **Primera herramienta, Turnos:** el bloque de ADR-W158 con su semana, leyendo el almacén de Tálamus. Para el setter viene fijada de fábrica y su encabezado suma el botón «Turnos» al lado de «Tálamus».
+- **Qué se pierde:** la posición y el estado no se guardan en el servidor por rol, como en Leadership: viven en esta pestaña; las fijadas siguen en el navegador. Un setter que ya había cambiado sus fijadas no recibe Turnos fijado (lo tiene en el botón del encabezado y en el menú). Las secciones ocultas como ventana (iframe) de Leadership no se portaron.
+- **Consecuencias:** sin migración ni endpoints. Sumar una herramienta es un item del catálogo y su componente (`.agents/skills/ui-builder/SKILL.md`, «Herramientas en ventana»).
+
+## ADR-W160: Dock 2.0 en Work: tres islas, Herramientas y navegación editable
+
+- **Fecha:** 2026-11-17 · **Subsistema:** Dock y navegación (`DockSecciones`, `DockEdicion`, `ventanas/BotonHerramientas.jsx`, `ventanas/navegacionDock.js`) · **Estado:** implementado. Corrige ADR-W159.
+- **Contexto:** con ADR-W159 el dock de Work no cambiaba a la vista: las herramientas quedaban escondidas en el menú de sesión. Santi pidió el dock de la Academia (tres islas: lo fijado, la navegación, el sistema) y el Dock 2.0 de Leadership (`components/dockbar/islas.blade.php`), que deja editar la navegación y abrir desde Herramientas las secciones ocultas.
+- **Decisión:**
+  1. En una pantalla ancha el dock son tres islas: a la izquierda lo fijado (sin nada, no se ve), en el centro las secciones y las ventanas abiertas, a la derecha «Herramientas» (llave) y la sesión. En el teléfono (≤ 640 px) sigue siendo una sola barra, con la llave al lado de la sesión.
+  2. «Herramientas» lista las herramientas en ventana del rol, las acciones de la pantalla (las del menú de sesión) y las secciones ocultas, cada una con su 📌 para fijarla a la izquierda. Las herramientas salen del menú de sesión.
+  3. «Editar navegación» (al pie de Herramientas): se arrastran las secciones para ordenarlas, el ojo las oculta y doble clic las renombra; «Restablecer» vuelve a la de fábrica y Escape o «Listo» termina. Siempre queda una a la vista. Una oculta se abre desde Herramientas o fijada; la numeración cuenta solo las visibles.
+- **Qué se pierde:** lo editado vive en el navegador, por cuenta y por dock (`dock-nav:<usuario>:<dock>`), no en el servidor como en Leadership. Una sección oculta no se abre como ventana (Leadership usa un iframe): se navega a ella. Sin beta: Work no tiene canal beta, así que el dock nuevo es para todos (Leadership también lo abrió a todos); lo editable es opcional de cada uno.
+- **Consecuencias:** sin migración ni endpoints. Estilos en `pages/comercial/dock2.css`.
+
+## ADR-W161: Turnos con horarios, zona elegible y solo quien se ofrece; «Nuevo» en el dock y el avatar solo con la cuenta
+
+- **Fecha:** 2026-11-17 · **Subsistema:** Turnos (`TurnosEquipo`, `TurnosVentana`, `/agendas-v2/estado`) y Dock 2.0 (`DockSecciones`, `MenuSesion`, `menuSesion.js`) · **Estado:** implementado. Sigue a ADR-W158 y ADR-W160.
+- **Contexto:** Santi vio en Turnos los turnos de Juliana, que ya no trabaja: su cuenta de Work seguía activa, así que la reserva también la podía ofrecer. Pidió además ver a qué hora es cada turno y en qué zona horaria, y un solo botón «Nuevo» para todo lo que se crea, sacando del avatar lo que sobra.
+- **Decisión:**
+  1. `/agendas-v2/estado` devuelve `elegibles`: las personas de Team que la reserva ofrece (`solo_elegibles`: usuario activo, Google y WhatsApp). Turnos cuenta solo esas. La cuenta de Juliana se desactivó (no tenía agendas por venir).
+  2. En Turnos, tocar un número muestra los horarios libres de ese grupo ese día, con quiénes los tienen al pasar el mouse. La ventana tiene «Ver en hora de», con la propia por defecto y las zonas de la reserva; lo elegido se recuerda en el navegador.
+  3. «Nuevo» (+) abre la isla izquierda: lo que crea algo en esa pantalla (las acciones con `nuevo`: Nueva agenda, Referido manual) y «Reportar o pedir algo». Las demás acciones (Learnito, Quiero procrastinar…) van a Herramientas. Dentro de un dock, el avatar ya no las repite: queda con Configuración, Portal, avisos, reportes y la salida. Las que abren una lista (Mis links de agendamiento) siguen en el avatar porque no se pueden fijar.
+- **Qué se pierde:** Turnos no muestra a alguien con usuario activo pero sin Google o WhatsApp conectado, aunque tenga horario cargado: es lo que la reserva hace.
+- **Consecuencias:** sin migración. Una acción nueva de crear lleva `nuevo: true` en `acciones` de `armarMenuSesion`.
+
+## ADR-W162: el avatar abre Configuración; todo lo demás, y «Nuevo», es Herramientas
+
+- **Fecha:** 2026-11-17 · **Subsistema:** Dock 2.0 (`MenuSesion`, `BotonHerramientas`, `DockFijadas`, `DockSecciones`, `sesion/fijadas.js`, Configuración) · **Estado:** implementado. Reemplaza el punto 3 de ADR-W161.
+- **Contexto:** Santi revisó el dock de ADR-W161: «Nuevo» tiene que ser una herramienta y no un botón fijo, y del avatar no sale nada: abre la configuración directo, como «tu cara» de Leadership. Todo lo demás son herramientas.
+- **Decisión:**
+  1. El avatar abre Configuración. Conserva el «!» cuando falta configurar algo. El menú del avatar desaparece, y el personaje se elige en Configuración › Datos (`ElegirPersonaje`).
+  2. Herramientas junta todo: **Herramientas** (Nuevo y las de ventana, como Turnos), **Acciones** (las de la pantalla: Learnito, Mis links, Quiero procrastinar…), **Secciones ocultas** y **Tu cuenta** (Portal, Avisos, Conflictos, Mis reportes, Volver a mi sesión, Cerrar sesión). Lo sin leer de Tu cuenta va en el globito de la llave.
+  3. «Nuevo» es una herramienta con su lista (Nueva agenda, Referido manual donde los hay, y Reportar o pedir algo). Las opciones que abren una lista (Nuevo, Mis links) ahora se pueden fijar: fijadas, abren directo su lista. Los closers la tienen fijada de fábrica, junto a Learnito.
+- **Qué se pierde:** cerrar sesión o ir al Portal lleva un toque más (llave → opción) que antes desde el avatar, salvo que se fije. Quien ya había tocado sus fijadas no recibe «Nuevo» fijado: lo tiene en Herramientas.
+- **Consecuencias:** sin migración. `MenuSesion` ya no dibuja un menú: publica sus opciones al dock con `seccion` («acciones» o «cuenta»).
+
+## ADR-W163: barra lateral opcional y Herramientas ordenadas como en la Academia
+
+- **Fecha:** 2026-11-17 · **Subsistema:** Dock 2.0 (`DockLateral`, `ventanas/modoDock.js`, `ventanas/catalogoHerramientas.js`, `BotonHerramientas`, Configuración › Dock) · **Estado:** implementado.
+- **Contexto:** Santi pidió inspirarse más en la dockbar de la Academia (`dockbar/partials/vertical.blade.php`, `tools-menu.blade.php`, `config/staff_tools.php`): se puede cambiar a una barra lateral y ordena mejor sus herramientas.
+- **Decisión:**
+  1. Configuración › Dock: «Dock abajo» (de fábrica) o «Barra lateral», y la barra «Desplegada» o «Solo íconos» (también con su botón). Se guarda en el navegador. En la barra, de arriba abajo: plegar, tu personaje, Herramientas, las secciones y, al fondo, las ventanas y lo fijado. La página se corre a la derecha mientras está. En el celular siempre va abajo.
+  2. Herramientas se ordena por tipo, con un catálogo: Crear, Agendas, Asistente, Pendientes, Esta pantalla, Secciones ocultas, Ir a y Sesión. Va en dos columnas; cada opción tiene su ícono en color, una línea de para qué sirve y una flecha si lleva a otra pantalla. Lo que una opción dice en el momento (por ejemplo, «20 avisos sin leer») gana sobre la descripción fija. En la barra lateral, el menú abre a la derecha.
+- **Qué se pierde:** en la barra plegada no se ve el switch Closers/Setters de la dirección (aparece al desplegarla). La barra corre `#root`; una pantalla con algo `fixed` pegado a la izquierda puede quedar debajo.
+- **Consecuencias:** sin migración. Una opción nueva se ubica sumándola a `CATALOGO` (si no, cae en «Esta pantalla»).
+
+## ADR-W164: barra lateral en tres secciones, herramientas nuevas, atajos y el dock guardado en la cuenta
+
+- **Fecha:** 2026-11-17 · **Subsistema:** Dock 2.0 (`DockLateral`, `BuscarLeadVentana`, `DockSecciones`, `sesion/dockServidor.js`, `users.dock_prefs`, `PUT /auth/me/dock`) · **Estado:** implementado. Sigue a ADR-W163.
+- **Contexto:** Santi pidió ordenar la barra lateral en secciones: la tarjeta de usuario (personaje más grande, cerrar sesión, Herramientas y lo fijado) y la navegación, todo alineado a la izquierda. Aprobó las mejoras propuestas a las herramientas.
+- **Decisión:**
+  1. **Barra lateral, tres secciones:** la tarjeta (personaje grande que abre Configuración, nombre y rol, plegar, Herramientas con su nombre, cerrar sesión, volver a tu sesión si simulás, y lo fijado); la navegación, alineada a la izquierda y con su número; y al fondo las ventanas abiertas.
+  2. **Buscar lead** (Ctrl+K): ventana que busca cualquier lead por nombre, mail, Instagram o teléfono (`/closer/leads/search`, ahora también para la dirección comercial) y abre su ficha. Al abrir la ficha, la ventana se minimiza.
+  3. **Nuevo** suma «Registrar un pago» y «Declarar una venta» (closer, triage, admin y dirección comercial). Buscan el lead y abren la ficha en Acciones o en «Registrar una venta».
+  4. **Playbook**, con los videos pendientes, y **Simular a alguien** pasan a ser herramientas propias, en todas las pantallas. Ya no hace falta entrar al Portal.
+  5. **Atajos:** Ctrl+K busca un lead (salvo en Talent, que ya lo usa), Ctrl+L abre Learnito y Ctrl+J, Herramientas.
+  6. **El dock en la cuenta:** lo fijado, la navegación editada de cada pantalla y el modo (abajo o lateral) se guardan en `users.dock_prefs`. Al entrar, lo de la cuenta pisa lo del navegador. Si la cuenta todavía no tiene nada, se le sube lo que había en el navegador. Simulando no se lee ni se guarda.
+- **Qué se pierde:** un lead que solo está en la planilla vieja (sin cliente ni persona) aparece en Buscar pero no abre ficha. Las preferencias son por persona, no por rol como en Leadership.
+- **Consecuencias:** migración `c4e7a9d1f3b2` (columna `users.dock_prefs`, idempotente; corre sola en el deploy).
+
+## ADR-W165: el dock unificado de Learnation, primer paso en Work (tarjeta de sesión, barra en dos contenedores, sin números)
+
+- **Fecha:** 2026-11-17 · **Subsistema:** Dock 2.0 (`DockLateral`, `TarjetaSesion`, `DockSecciones`, `DockFijadas`, `MenuSesion`) · **Estado:** implementado en Work. El mockup (`docs/mockups/dock-unificado/`) es la referencia para Academy y Leadership. Sigue a ADR-W164.
+- **Contexto:** Santi quiere una sola navegación para Work, Academy y Leadership. Se armó un mockup que junta lo de los tres. Las decisiones tomadas sobre ese mockup: el avatar abre Configuración, la navegación se edita, el dock se auto-oculta, una sección oculta se abre en una ventana desde Herramientas, las secciones no se numeran pero conservan su señal, se mide el uso de cada herramienta y hay un solo sistema de temas. Este ADR implementa en Work la tarjeta de sesión y la barra lateral.
+- **Decisión:**
+  1. **Tarjeta de sesión, igual en los tres:**
+     - Arriba a la derecha, Notificaciones (Avisos, con la cuenta).
+     - Al centro, el personaje grande (abre Configuración) y el nombre y el rol debajo.
+     - Una fila de botones: Cerrar sesión · Mensajes · Leadership · Herramientas · Configuración.
+     - Mensajes y Leadership son transversales. Mensajes todavía es un lugar reservado (avisa «pronto»), y ahí va a vivir Learnito. Leadership entra con el pase firmado del Portal, y simulando no se puede.
+  2. **Barra lateral en dos contenedores separados:**
+     - La tarjeta, con plegar arriba a la izquierda, «Volver a mi sesión» si simulás y lo fijado.
+     - La navegación, con las ventanas abiertas al fondo.
+     - Plegada, una columna de íconos: hasta 3 fijadas y 5 secciones, con la activa siempre adentro. El resto va a un «+N»: el de las fijadas abre Herramientas y el de las secciones despliega la barra.
+  3. **Dock de abajo:** al pasar el mouse por el avatar (o al llegar con Tab) aparece la misma tarjeta, arriba. Su Herramientas abre el menú de la isla.
+  4. **Sin números** en las secciones, abajo y en la barra. Las señales (✓, cuentas, avisos) quedan.
+- **Qué se pierde:** el número de cada sección, que nadie usaba como atajo. Mensajes es un botón que todavía no hace nada.
+- **Consecuencias:** sin migración. `MenuSesion` ahora también publica Configuración (`seccion: 'config'`). `DockSecciones` la saca de Herramientas y la pasa a la tarjeta. Falta, para otros ADR: el auto-ocultar, el iframe de las secciones ocultas, los grupos comunes y el buscador del menú, la medición de uso y el tema único.
+
+## ADR-W166: Configuración unificada para Work, Academy y Leadership (mockup)
+
+- **Fecha:** 2026-11-17 · **Subsistema:** Configuración (`sesion/Configuracion.jsx`, `temas/TabApariencia.jsx`; en Academy `settings-modal`; en Leadership «Tu cuenta») · **Estado:** propuesta. El mockup es `docs/mockups/configuracion-unificada/`.
+- **Contexto:** con el dock unificado (ADR-W165) y los temas únicos, Santi pidió una sola Configuración para los tres servicios. Tenía que estar inspirada en la de Academy (identidad y baldosas) y poder cambiarse a pestañas como la de Work, pero con las pestañas a la izquierda.
+- **Decisión (propuesta):**
+  1. **El mismo contenido, en dos vistas.** Se eligen en la cabecera o en Apariencia › Esta ventana:
+     - Baldosas: la identidad a la izquierda (foto o personaje, nombre, contacto, zona horaria, rol, Calendar y WhatsApp) y una baldosa por sección con su resumen. Cada baldosa abre su ventana encima.
+     - Pestañas: las secciones a la izquierda, agrupadas en Vos / Trabajo / Cuenta, y el contenido a la derecha.
+  2. **Cabecera común:** Notificaciones, Portal, Cerrar sesión y cerrar.
+  3. **Secciones según el rol:**
+     - Para todos: Tu cuenta, Apariencia, Dock, Notificaciones, Seguridad y Ayuda.
+     - Según el rol: Disponibilidad, Integraciones, Mis eventos, Tu examen y Equipo.
+  4. **Apariencia:**
+     - Los cuatro temas únicos (Learnation, Sólido, Relámpago y Puro), con su vista previa.
+     - El modo: oscuro, claro o el del equipo.
+     - Efectos y modo liviano.
+     - Ancho, márgenes, densidad y tamaño de letra.
+     - El fondo del Portal.
+     - Se guarda en la cuenta y vale para los tres servicios.
+- **Qué se pierde:** en Academy, la Configuración «sin scroll» de una sola pantalla pasa a ser una de dos vistas. En Work, las pestañas de arriba pasan al costado.
+- **Consecuencias:** al implementarla hace falta llevar la apariencia a la cuenta, como el dock (ADR-W164), y pasar Classic y Modern a Learnation.
+
+## ADR-W167: los temas únicos y la Configuración unificada en Work
+
+- **Fecha:** 2026-11-17 · **Subsistema:** Apariencia y Configuración (`context/AparienciaContext.jsx`, `temas/temas.css`, `temas/temas-unicos.css`, `temas/TabApariencia.jsx`, `sesion/Configuracion.jsx`, `sesion/configuracionSecciones.jsx`, `sesion/AccionesConfiguracion.jsx`) · **Estado:** implementado. Implementa ADR-W166.
+- **Contexto:** Santi pidió que la Configuración de todos los roles use los temas de Learnation descritos en el mockup del dock unificado, con los ajustes de apariencia, y empezar a implementar la Configuración unificada (ADR-W166).
+- **Decisión:**
+  1. **Cuatro temas, iguales en los tres servicios:**
+     - Learnation es la base de cada modo. Es el Modern de antes y absorbió a Classic.
+     - Sólido, Relámpago y Puro pisan solo lo que cambian.
+     - Lo guardado como Classic, Modern, «closing» o «thalamus» pasa a Learnation.
+  2. **Ajustes de apariencia:**
+     - Modo oscuro, claro o «como el equipo».
+     - Efectos: el humo y el vidrio; apagados, todo plano.
+     - Modo liviano: sin transparencias ni animaciones. Se prende solo al simular.
+     - Tamaño de letra: A−, A o A+.
+     - La vista de Configuración.
+     - Todo se guarda en el navegador y en la cuenta (parte «apariencia» de `users.dock_prefs`), como el dock.
+  3. **Configuración en dos vistas:**
+     - Pestañas a la izquierda, agrupadas en Vos / Trabajo / Cuenta (la vista de fábrica).
+     - Baldosas como Academy: tu identidad (personaje, saludo, nombre, mail, rol y modo) y una baldosa por sección; tocar una la abre en la misma hoja, con «volver».
+  4. **Cabecera de la hoja:** Notificaciones con la cuenta, el Portal (si hay más de un área o rol) y Cerrar sesión.
+  5. **Secciones nuevas:** Notificaciones (los avisos), Seguridad (cómo entrás) y Ayuda (reportar y tus reportes). Los ajustes propios de Notificaciones y Seguridad quedan como «pronto».
+- **Qué se pierde:** Classic, cuyas pequeñas diferencias con Modern desaparecen. En Baldosas, una sección se abre en la misma hoja y no en una ventana encima, como en el mockup.
+- **Consecuencias:** sin migración (las preferencias ya estaban en `users.dock_prefs`). Quien nunca eligió tema sigue sin `data-tema` y ve todo como siempre. Falta, para otro ADR: ancho, márgenes y densidad (hay que acordar qué contenedor de cada pantalla los toma), los ajustes reales de Notificaciones y Seguridad, y llevar todo esto a Academy y Leadership. Se borraron los tests que daban por hecho Classic y Modern.
+
+## ADR-W168: Herramientas se abre en una ventana con lugar, no en un menú
+
+- **Fecha:** 2026-11-17 · **Subsistema:** Dock 2.0 (`ventanas/BotonHerramientas.jsx`, `ventanas/herramientasModal.css`) · **Estado:** implementado.
+- **Contexto:** el menú de Herramientas, pegado al botón del dock o de la barra lateral, no tenía espacio: las descripciones se cortaban y había que scrollear. Santi pidió una ventana con lugar suficiente.
+- **Decisión:**
+  1. Herramientas (el botón, Ctrl+J y el de la tarjeta de sesión) abre una ventana centrada de hasta 1040 px de ancho, con el fondo oscurecido.
+  2. Arriba lleva un buscador, que filtra por nombre y por la descripción sin importar tildes. Esc limpia la búsqueda y, si no hay búsqueda, cierra.
+  3. Los grupos van en dos columnas y cada descripción tiene hasta dos líneas.
+  4. Al pie quedan la pista del 📌 y «Editar navegación». Una lista (Nuevo, Mis links) se abre en la misma ventana, con volver.
+  5. En el teléfono es una hoja que sube desde abajo.
+- **Qué se pierde:** el menú ya no queda al lado del botón: abrir Herramientas tapa la pantalla. Las listas fijadas en el dock (Nuevo fijado) siguen siendo un menú chico al lado de su botón, porque son cortas.
+- **Consecuencias:** sin migración.
+
+## ADR-W169: Configuración es una ventana flotante, como las demás
+
+- **Fecha:** 2026-11-17 · **Subsistema:** Configuración y ventanas (`sesion/ConfiguracionContext.jsx`, `sesion/ConfiguracionVentana.jsx`, `ventanas/herramientas.js`, `ventanas/Ventana.jsx`, `ventanas/ventanasStore.js`) · **Estado:** implementado. Sigue a ADR-W167.
+- **Contexto:** Configuración se abría en una hoja modal sin barra de título, mientras que las ventanas de Academy y las de Work (Turnos, Buscar lead) se minimizan, se maximizan y se arrastran. Además, la vista Baldosas se veía desarmada: la identidad pegada a las baldosas y unas baldosas enormes.
+- **Decisión:**
+  1. **Configuración es una ventana más del catálogo** (`configuracion`):
+     - Es para todos los roles (`roles: null`), pero no aparece en el menú de Herramientas (`enMenu: false`): se abre desde el avatar y la tarjeta de sesión.
+     - Se minimiza al dock, se maximiza, se arrastra y Esc la minimiza.
+     - `abrirVentana(key, extra)` lleva la sección con la que abre (`{ tab }`).
+  2. **Cabecera de una ventana:** puede traer `Acciones` propias. En Configuración son Notificaciones, Portal y Cerrar sesión, separadas de minimizar, maximizar y cerrar.
+  3. **Baldosas más prolijas:** la identidad separada y con el mismo fondo que las baldosas, y baldosas más compactas que se acomodan al ancho de la ventana.
+  4. **Barra lateral:** los cinco botones de la tarjeta miden 38 px. Antes la regla general de 44 px los desbordaba.
+- **Qué se pierde:** Configuración ya no oscurece la pantalla: se puede seguir trabajando debajo, como con las otras ventanas.
+- **Consecuencias:** sin migración. `?vista=configuracion` y la vuelta de Google la siguen abriendo sola, en Integraciones si viene de Google.
+
+## ADR-W170: un solo chat del equipo para Work, Academy y Leadership, con Learnito adentro (mockup)
+
+- **Fecha:** 2026-11-17 · **Subsistema:** Chat (nuevo en Work; en Academy `ChatCenter`, ver su `docs/MODELO/CHAT.md`) y Learnito (`docs/MODELO/LEARNITO.md`) · **Estado:** propuesta. El mockup es `docs/mockups/chat-cruzado/`.
+- **Contexto:** Santi pidió un sistema de comunicación sencillo y cruzado entre Work, Academy y Leadership, con la gente conectada a la vista. Para empezar, el chat de Work se conecta al chat general de la Academia y Learnito se usa desde ese mismo chat. La Academia ya tiene canales del equipo por área, conversaciones directas, conectados de 5 minutos, los bugs de Leadership y los avisos de Work como tarjetas.
+- **Decisión (propuesta):**
+  1. **Una sola fuente:** los canales y mensajes siguen en la Academia. Work y Leadership muestran la misma ventana y leen y escriben por una API de staff de la Academia. La persona se reconoce por correo, así entran también los que no tienen cuenta en la Academia (setters, marketing).
+  2. **Canales según el rol**, como en la Academia: General · Equipo, Ventas, Fulfillment, Desarrollo, Bugs y Conversaciones. Cada mensaje lleva el servicio desde el que se escribió.
+  3. **Conectados en los tres:** cada servicio avisa a la Academia cuando la persona lo usa (a lo sumo una vez por minuto). La foto lleva la letra del servicio (W, A, L) y, si la agenda lo dice, «En llamada» o «En sesión».
+  4. **Learnito en el chat**, de tres formas:
+     - Su conversación propia, fija arriba de la lista.
+     - `@Learnito` en un canal: responde en el canal con el alcance de quien preguntó.
+     - Al costado, sobre un mensaje o una tarjeta: solo lo ve quien pregunta, y se puede compartir en el canal.
+  5. **Qué aporta cada servicio:** Work, los avisos (tarjetas ámbar). Academy, la bitácora del alumno y los hilos con los alumnos. Leadership, los bugs y las tareas.
+- **Qué se pierde:** Work depende de la Academia para chatear: si la Academia no responde, el chat de Work queda sin mensajes nuevos.
+- **Revisión de Santi (17/11):** aprobado para implementar. Al implementarlo, además:
+  - Traer de la Academia lo que el mockup no muestra completo: los hilos (respuestas con `parent_id`) y las reacciones con su selector.
+  - Convertir un mensaje en tarea de Leadership.
+  - Más adelante, usar la presencia con la sección en la que está cada persona (como la registra la Academia) para medir el trabajo activo y pasivo.
+- **Consecuencias:** quedan por decidir si los hilos de los alumnos se ven desde Work y Leadership, si el tiempo real (Reverb) va desde el principio, si las tareas de Leadership entran solas al chat y de qué tope sale lo que responde Learnito en un canal.

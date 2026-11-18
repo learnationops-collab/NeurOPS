@@ -27,6 +27,17 @@ export function colorEspera(min) {
     return 'var(--text-muted)';
 }
 
+// Minutos hasta que Instagram ya no deja escribirle (7 días desde su último mensaje, `ventana.js`). null si ya se
+// cerró o nunca escribió. Se avisa desde las últimas 24 h.
+const CIERRE = 7 * 24 * HORA;
+export const AVISO_CIERRE = 24 * HORA;
+export function cierreMin(c, ahora) {
+    if (!c.ultimo_entrante_en) return null;
+    const falta = CIERRE - Math.floor((ahora - new Date(c.ultimo_entrante_en)) / 60000);
+    return falta > 0 ? falta : null;
+}
+const porCerrarse = (c, ahora) => { const m = cierreMin(c, ahora); return m != null && m <= AVISO_CIERRE; };
+
 // Sin ningún recorrido: escribió pero ninguna palabra clave arrancó un flujo.
 export const flujoCortado = (c) => !c.ejecucion || CORTADOS.includes(c.ejecucion.estado);
 
@@ -36,6 +47,7 @@ export const COLAS = [
     { value: 'esperan', label: 'Esperan respuesta', cumple: (c, ahora) => esperaMin(c, ahora) != null, porEspera: true },
     { value: 'esperan_hora', label: 'Esperan más de 1 h', cumple: (c, ahora) => esperaMin(c, ahora) >= HORA, porEspera: true },
     { value: 'sin_leer', label: 'Sin leer', cumple: (c) => c.sin_leer > 0 },
+    { value: 'por_cerrarse', label: 'Se cierra la ventana', cumple: porCerrarse, porCierre: true, alerta: true },
     { value: 'cortadas', label: 'Flujo cortado', cumple: flujoCortado, alerta: true },
     { value: 'bot_pausado', label: 'Bot pausado', cumple: (c) => c.etapas?.auto === 'pausada' },
     { value: 'tarea_vencida', label: 'Con tarea vencida', cumple: (c, ahora) => vencida(c.tarea, ahora), alerta: true },
@@ -114,9 +126,12 @@ export function filtrar(lista, { ahora, ...f }) {
     const def = COLAS.find((x) => x.value === f.cola) || COLAS[0];
     const salida = lista.filter((c) => def.cumple(c, ahora) && cumpleFiltro(c, f, ahora));
     if (def.porEspera) salida.sort((a, b) => esperaMin(b, ahora) - esperaMin(a, ahora));
+    if (def.porCierre) salida.sort((a, b) => cierreMin(a, ahora) - cierreMin(b, ahora));
     return salida;
 }
 
+// Sin usuario: Instagram no da el perfil de quien nunca escribió (solo le escribimos nosotros); al responder se completa.
 export function quien(c) {
-    return c.username ? `@${c.username}` : c.nombre || 'Sin usuario';
+    if (c.username) return `@${c.username}`;
+    return c.nombre || (c.ultimo_entrante_en ? 'Sin usuario' : 'Todavía no respondió');
 }

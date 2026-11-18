@@ -2,15 +2,18 @@
 // en este navegador, por cuenta: otra compu u otro navegador arranca con las de fábrica. Un mismo
 // almacén para el menú y el dock: fijar algo en uno se ve al instante en el otro.
 import { useCallback, useSyncExternalStore } from 'react';
+import { avisarCambio, registrarParte } from './dockServidor';
 
 const clave = (userId) => `dock-fijadas:${userId}`;
 
-// Lo que no se fija: salir de la sesión y las opciones que abren una lista dentro del menú.
+// Lo que no se fija: salir de la sesión y volver a la propia.
 const NO_FIJABLES = new Set(['salir', 'volver']);
-export const esFijable = (op) => !!op && !NO_FIJABLES.has(op.id) && !op.panel && typeof op.onClick === 'function';
+// Una que abre una lista (`panel`: Nuevo, Mis links) también: fijada, abre su lista desde el dock.
+export const esFijable = (op) => !!op && !NO_FIJABLES.has(op.id) && (!!op.panel || typeof op.onClick === 'function');
 
-// De fábrica: Learnito para los closers.
-export const fijadasDeFabrica = (role) => (role === 'closer' ? ['learnito'] : []);
+// De fábrica: Nuevo y Learnito para los closers; Turnos (la ventana, ventanas/herramientas.js) para los setters.
+const DE_FABRICA = { closer: ['nuevo', 'learnito'], setter: ['tool:turnos'] };
+export const fijadasDeFabrica = (role) => DE_FABRICA[role] || [];
 
 const oyentes = new Set();
 const cache = new Map();
@@ -28,11 +31,25 @@ function leer(userId, role) {
     return resultado;
 }
 
-function guardar(userId, ids) {
+function escribir(userId, ids) {
     cache.set(userId, ids);
     try { window.localStorage.setItem(clave(userId), JSON.stringify(ids)); } catch { /* queda solo en memoria */ }
     oyentes.forEach((fn) => fn());
 }
+
+function guardar(userId, ids) {
+    escribir(userId, ids);
+    avisarCambio('fijadas', userId);
+}
+
+// En la cuenta (sesion/dockServidor.js): sin nada elegido todavía, null (valen las de fábrica).
+registrarParte('fijadas', {
+    leer: (userId) => {
+        if (cache.has(userId)) return cache.get(userId);
+        try { const v = JSON.parse(window.localStorage.getItem(clave(userId)) || 'null'); return Array.isArray(v) ? v : null; } catch { return null; }
+    },
+    escribir: (userId, ids) => { if (Array.isArray(ids)) escribir(userId, ids.filter((x) => typeof x === 'string')); },
+});
 
 const suscribir = (fn) => {
     oyentes.add(fn);

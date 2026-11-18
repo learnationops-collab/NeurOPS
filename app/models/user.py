@@ -163,6 +163,9 @@ class User(UserMixin, db.Model):
     # El personaje que la persona eligió para su avatar del dock (uno de `MASCOTAS`). NULL: todavía no
     # eligió y el frontend le asigna uno fijo según su id.
     mascota = db.Column(db.String(20), nullable=True)
+    # El dock de cada uno (Dock 2.0, ADR-W164): lo fijado, la navegación editada por pantalla y el modo
+    # (abajo o lateral). {fijadas: [ids], nav: {dock: {orden, ocultos, nombres}}, modo: {lateral, desplegada}}.
+    dock_prefs = db.Column(db.JSON, nullable=True)
 
     # El rol activo de ESTE request (lo fija el loader con el claim `active_role` del token o la
     # sesión). Vive solo en la instancia: no se guarda en la base.

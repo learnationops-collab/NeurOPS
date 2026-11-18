@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="es" data-tema="learnation" data-modo="oscuro" data-efectos="si">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Configuración unificada</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../dock-unificado/temas.css">
+<link rel="stylesheet" href="conf.css">
+</head>
+<body>
+<!--
+  Mockup de referencia (17/11/2026): una sola Configuración para Work, Academy y Leadership, con los temas
+  únicos del dock unificado (../dock-unificado/temas.css). Dos vistas del mismo contenido:
+    · Baldosas, como Academy: la identidad a la izquierda y una baldosa por sección; cada una abre su ventana.
+    · Pestañas, como Work hoy, pero a la izquierda: las secciones agrupadas y el contenido a la derecha.
+  La vista se cambia en la cabecera de la ventana y en Apariencia › Esta ventana. Todo es de mentira.
+-->
+<header class="mk-barra" aria-label="Controles del mockup">
+  <b>Configuración unificada</b>
+  <label class="mk-campo"><span>Perfil</span><select id="mk-perfil"></select></label>
+  <div class="mk-seg" role="group" aria-label="Vista">
+    <button type="button" data-mk-vista="baldosas">Baldosas</button>
+    <button type="button" data-mk-vista="pestanas">Pestañas</button>
+  </div>
+  <button type="button" class="mk-btn" data-acc="abrir">Abrir Configuración</button>
+</header>
+
+<main class="pagina">
+  <div class="aura" aria-hidden="true"><i></i><i></i><i></i></div>
+  <div class="contenido">
+    <p class="eyebrow" id="pg-quien"></p>
+    <h1>La pantalla de siempre</h1>
+    <p class="pg-sub">Detrás de la ventana: el tema, el modo, el ancho, los márgenes, la densidad y la letra se ven acá al cambiarlos.</p>
+    <div class="pg-grilla">
+      <section class="pg-panel"><b>Panel (C2)</b><p>Un contenedor normal.</p><div class="pg-fila"><span class="pg-c3">Control (C3)</span><span class="pg-c1">Destacado (C1)</span></div></section>
+      <section class="pg-panel"><b>Hoy</b><table class="tabla"><tr><th>Lead</th><th>Hora</th><th>Estado</th></tr><tr><td>Ana Torres</td><td>10:00</td><td><span class="chip chip--ok">Confirmada</span></td></tr><tr><td>Luis Mora</td><td>11:30</td><td><span class="chip">Pendiente</span></td></tr><tr><td>Carla Ríos</td><td>15:00</td><td><span class="chip chip--ok">Confirmada</span></td></tr></table></section>
+    </div>
+  </div>
+  <div class="pg-dock" aria-hidden="true"><span></span><span class="on"></span><span></span><span></span><i data-acc="abrir" title="Configuración"></i></div>
+</main>
+
+<div id="conf"></div>
+<div id="aviso" class="aviso" role="status" hidden></div>
+
+<script src="datos.js"></script>
+<script src="secciones.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

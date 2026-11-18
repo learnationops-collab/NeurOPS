@@ -8,14 +8,16 @@ import { inboxApi } from '../api';
 import { recordado, recordar } from '../recuerdo';
 import Composer from './Composer';
 import Etiquetas from './Etiquetas';
-import FichaLead from './FichaLead';
 import Feed from './Feed';
+import PanelDerecho from './PanelDerecho';
+import useEnvio from './useEnvio';
 import { Asignado, Califica } from './Fila';
 import { Tramos } from './Progreso';
 import { REFRESCO, examenDe, quien } from './colas';
 
-function Chat({ datos, yo, onCambio }) {
+function Chat({ datos, yo, onCambio, onLearnito }) {
     const { contacto, asignado, avance } = datos;
+    const envio = useEnvio(contacto.id, onCambio);
     const examen = examenDe({ examen: contacto.variables?.examen });
     return (
         <Panel as="section" size="sm" className="cv-detalle" aria-label="Conversación">
@@ -39,13 +41,15 @@ function Chat({ datos, yo, onCambio }) {
                 )}
             </div>
             <Tramos avance={avance} ejecucion={datos.ejecucion} contacto={contacto} asignado={asignado} yo={yo} onCambio={onCambio} />
-            <Feed mensajes={datos.mensajes} notas={datos.notas || []} tareas={datos.tareas || []} />
-            <Composer contacto={contacto} ejecucion={datos.ejecucion} seguimientos={datos.seguimientos} yo={yo} onCambio={onCambio} />
+            <Feed mensajes={datos.mensajes} notas={datos.notas || []} tareas={datos.tareas || []}
+                pendientes={envio.pendientes} onReintentar={envio.reintentar} onDescartar={envio.descartar} />
+            <Composer contacto={contacto} ejecucion={datos.ejecucion} seguimientos={datos.seguimientos} yo={yo} onCambio={onCambio}
+                onEnviar={envio.enviar} onLearnito={onLearnito} />
         </Panel>
     );
 }
 
-export default function Detalle({ id, yo, onLeido }) {
+export default function Detalle({ id, yo, onLeido, panel, onPanel }) {
     const [datos, setDatos] = useState(() => recordado(`chat:${id}`));
     const [error, setError] = useState(null);
     // Cada conversación monta un Detalle nuevo (key={id}): arranca con lo último que se vio de ese chat (recuerdo.js). Se vuelve a pedir cada
@@ -70,8 +74,8 @@ export default function Detalle({ id, yo, onLeido }) {
     if (!datos) return <Panel size="sm" className="cv-detalle"><EmptyState>Cargando…</EmptyState></Panel>;
     return (
         <>
-            <Chat datos={datos} yo={yo} onCambio={pedir} />
-            <FichaLead contacto={datos.contacto} avance={datos.avance} asignado={datos.asignado} tareas={datos.tareas || []}
+            <Chat datos={datos} yo={yo} onCambio={pedir} onLearnito={() => onPanel('learnito')} />
+            <PanelDerecho panel={panel} onPanel={onPanel} contacto={datos.contacto} avance={datos.avance} asignado={datos.asignado} tareas={datos.tareas || []}
                 recorrido={datos.recorrido || []} yo={yo} onCambio={pedir} />
         </>
     );

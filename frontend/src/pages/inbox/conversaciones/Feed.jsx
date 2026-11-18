@@ -1,8 +1,10 @@
 // El chat como historial, igual que en Kommo: los mensajes y, intercalados por hora, las notas internas
 // (amarillas, el lead no las ve), las tareas y los eventos (reasignada, cambió la sub-etapa, corrigió una
-// variable). Debajo de cada respuesta del lead, qué activó en el flujo.
+// variable). Debajo de cada respuesta del lead, qué activó en el flujo. Al final, lo que el setter acaba de
+// mandar y todavía no confirmó Instagram (`useEnvio`): «enviando…» o «no salió» con Reintentar.
 import { useEffect, useRef } from 'react';
-import { Bot, CalendarCheck, Check, History, StickyNote, Zap } from 'lucide-react';
+import { Bot, CalendarCheck, Check, History, RotateCcw, StickyNote, X, Zap } from 'lucide-react';
+import { Button, IconButton } from '../../../components/standard';
 import { rotuloPaso } from '../estadoFlujo';
 
 const ABIERTA = ['en_curso', 'esperando_respuesta', 'esperando_tiempo'];
@@ -77,15 +79,36 @@ function Item({ x }) {
     );
 }
 
-export default function Feed({ mensajes, notas, tareas }) {
+function Pendiente({ p, onReintentar, onDescartar }) {
+    const error = p.estado === 'error';
+    return (
+        <li className={`cv-burbuja cv-burbuja--saliente cv-burbuja--otro cv-pendiente${error ? ' cv-pendiente--error' : ''}`}>
+            <p>{p.rotulo}</p>
+            {error ? (
+                <span className="cv-pendiente-error" role="alert">
+                    No salió: {p.motivo}
+                    <Button size="sm" icon={<RotateCcw size={12} />} onClick={() => onReintentar(p)}>Reintentar</Button>
+                    <IconButton size="xs" label="Descartar" icon={<X size={12} />} onClick={() => onDescartar(p.id)} />
+                </span>
+            ) : <span className="cv-meta">Vos · enviando…</span>}
+        </li>
+    );
+}
+
+export default function Feed({ mensajes, notas, tareas, pendientes = [], onReintentar, onDescartar }) {
     const lista = useRef(null);
     const items = [
         ...mensajes.map((m) => ({ tipo: 'mensaje', en: m.en, key: `m${m.id}`, m })),
         ...notas.map((n) => ({ tipo: n.tipo, en: n.en, key: `n${n.id}`, n })),
         ...tareas.map((t) => ({ tipo: 'tarea', en: t.en, key: `t${t.id}`, t })),
     ].sort((a, b) => new Date(a.en) - new Date(b.en));
-    const cantidad = items.length;
+    const cantidad = items.length + pendientes.length;
     // Abre en lo último, como cualquier chat, y baja cuando llega algo nuevo.
     useEffect(() => { if (lista.current) lista.current.scrollTop = lista.current.scrollHeight; }, [cantidad]);
-    return <ol className="cv-mensajes" ref={lista}>{items.map((x) => <Item key={x.key} x={x} />)}</ol>;
+    return (
+        <ol className="cv-mensajes" ref={lista}>
+            {items.map((x) => <Item key={x.key} x={x} />)}
+            {pendientes.map((p) => <Pendiente key={p.id} p={p} onReintentar={onReintentar} onDescartar={onDescartar} />)}
+        </ol>
+    );
 }

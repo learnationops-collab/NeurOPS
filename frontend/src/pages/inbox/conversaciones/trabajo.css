@@ -157,3 +157,20 @@
 .thalamus.inbox .cv-seg--error{color:var(--danger)}
 .thalamus.inbox .cv-seg-form{display:flex;flex-direction:column;gap:10px;margin-bottom:12px}
 
+/* Mejoras del chat (17/11/2026): envío al instante, borradores, teclado, panel derecho con Learnito, vista previa del «/» */
+.thalamus.inbox .cv-pendiente{opacity:.75}
+.thalamus.inbox .cv-pendiente--error{opacity:1;background:var(--error-surface);border-color:var(--error-border)}
+.thalamus.inbox .cv-pendiente-error{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:6px;font-size:11.5px;color:var(--error)}
+.thalamus.inbox .cv-borrador{flex:1;min-width:0;display:inline-flex;align-items:center;gap:4px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:var(--brand-primary);font-style:italic}
+.thalamus.inbox .cv-borrador svg{flex-shrink:0}
+.thalamus.inbox .cv-lista-pie{margin:0;padding:8px;text-align:center}
+.thalamus.inbox kbd{font:inherit;font-size:10.5px;padding:0 5px;border-radius:5px;border:1px solid var(--border-main);background:var(--bg-element)}
+.thalamus.inbox .cv-derecha{display:flex;flex-direction:column;gap:8px;min-height:0;min-width:0}
+.thalamus.inbox .cv-derecha > .cv-ficha,.thalamus.inbox .cv-derecha > .cv-learnito{flex:1;min-height:0}
+.thalamus.inbox .cv-learnito{display:flex;flex-direction:column;overflow:hidden}
+.thalamus.inbox .cv-learnito .learnito{flex:1;min-height:0}
+.thalamus.inbox .cv-var-ok{background:var(--warning-surface);color:inherit;border-radius:4px;padding:0 2px}
+.thalamus.inbox .cv-var-falta{color:var(--error)}
+@media (max-width: 1300px){
+  .thalamus.inbox .cv-learnito{min-height:420px}
+}

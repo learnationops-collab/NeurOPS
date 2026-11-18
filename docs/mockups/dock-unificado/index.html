@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="es" data-tema="learnation" data-modo="oscuro" data-efectos="si">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dock unificado de Learnation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="temas.css">
+<link rel="stylesheet" href="dock.css">
+</head>
+<body>
+<!--
+  Mockup de referencia para Work, Academy y Leadership (17/11/2026). Una sola navegación y un solo
+  sistema de temas para los tres. Las decisiones de Santi:
+    · el avatar abre Configuración;
+    · la navegación se edita (ordenar, ocultar, renombrar);
+    · el dock se auto-oculta;
+    · una sección oculta se abre en una ventana (iframe) desde Herramientas;
+    · las secciones no se numeran, pero conservan su señal (lo que piden, la cuenta, el ✓, el aviso);
+    · se mide el uso de cada herramienta.
+  El contrato (anatomía, formato de cada herramienta, atajos, preferencias, temas) está en el panel
+  «Contrato» de la barra de arriba. Todo es de mentira: no llama a ningún servidor.
+-->
+<header class="mk-barra" aria-label="Controles del mockup">
+  <b class="mk-titulo">Dock unificado</b>
+  <label class="mk-campo"><span>Producto</span>
+    <select id="mk-producto"></select>
+  </label>
+  <div class="mk-seg" role="group" aria-label="Navegación">
+    <button type="button" data-modo-nav="dock">Dock</button>
+    <button type="button" data-modo-nav="lateral">Barra lateral</button>
+  </div>
+  <label class="mk-campo"><span>Tema</span>
+    <select id="mk-tema">
+      <option value="learnation">Learnation</option>
+      <option value="solido">Sólido</option>
+      <option value="relampago">Relámpago</option>
+      <option value="puro">Puro</option>
+    </select>
+  </label>
+  <div class="mk-seg" role="group" aria-label="Modo">
+    <button type="button" data-modo="oscuro">Oscuro</button>
+    <button type="button" data-modo="claro">Claro</button>
+  </div>
+  <label class="mk-check"><input type="checkbox" id="mk-simular"> Simulando</label>
+  <button type="button" class="mk-btn" id="mk-contrato">Contrato</button>
+</header>
+
+<main class="app" id="app">
+  <div class="aura" aria-hidden="true"><i></i><i></i><i></i></div>
+  <div class="pagina">
+    <p class="pagina-eyebrow" id="pg-producto"></p>
+    <h1 class="pagina-titulo" id="pg-titulo"></h1>
+    <p class="pagina-sub" id="pg-sub"></p>
+    <div class="pagina-grilla">
+      <section class="ct2 bloque"><b>Panel (C2)</b><p>Un contenedor normal: contrasta con el fondo sin llamar la atención.</p>
+        <div class="fila-ct3"><span class="ct3">Control (C3)</span><span class="ct3">Otro control</span><span class="ct1">Destacado (C1)</span></div></section>
+      <section class="ct2 bloque"><b>Estados</b><p>Los cinco de siempre, iguales en todos los temas.</p>
+        <div class="fila-ct3"><span class="chip chip--success">Hecho</span><span class="chip chip--warning">Atención</span><span class="chip chip--danger">Error</span><span class="chip chip--info">Info</span><span class="chip chip--idle">Inactivo</span></div></section>
+      <section class="ct2 bloque bloque--alto"><b>Contenido de la sección</b><p>Probá: Ctrl+K busca, Ctrl+J abre Herramientas, Ctrl+` las ventanas, Ctrl+N crea. Quedate quieto 10 segundos y el dock se esconde.</p></section>
+    </div>
+  </div>
+</main>
+
+<div id="dock"></div>
+<div id="capa"></div>
+<div id="ventanas"></div>
+<aside class="contrato" id="contrato" hidden aria-label="Contrato del dock"></aside>
+
+<script src="datos.js"></script>
+<script src="contrato.js"></script>
+<script src="dock.js"></script>
+<script src="capas.js"></script>
+<script src="eventos.js"></script>
+</body>
+</html>

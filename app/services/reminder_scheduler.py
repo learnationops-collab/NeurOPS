@@ -152,6 +152,18 @@ def start_scheduler(app):
             except Exception as e:
                 logger.error(f"[ReminderScheduler] Error trayendo las notas de Meet: {e}")
 
+    def _grabar_llamadas():
+        with app.app_context():
+            from app.agendas_v2.grabar_llamadas import correr
+            try:
+                if not soy_lider(CLAVE_DEL_SCHEDULER):
+                    return
+                r = correr()
+                if r:
+                    logger.info(f"[ReminderScheduler] Grabación automática de llamadas de venta: {r}")
+            except Exception as e:
+                logger.error(f"[ReminderScheduler] Error prendiendo la grabación de las llamadas: {e}")
+
     def _llamadas_del_dia():
         with app.app_context():
             from app.services.discord_avisos.llamadas_del_dia import publicar
@@ -190,6 +202,8 @@ def start_scheduler(app):
                        id='agendas_abandonos', next_run_time=datetime.now() + timedelta(minutes=2))
     _scheduler.add_job(_notas_meet, 'interval', minutes=NOTAS_MEET_MINUTOS,
                        id='notas_meet', next_run_time=datetime.now() + timedelta(minutes=5))
+    _scheduler.add_job(_grabar_llamadas, 'interval', minutes=15,
+                       id='grabar_llamadas', next_run_time=datetime.now() + timedelta(minutes=7))
     _scheduler.add_job(_senas, 'interval', minutes=AVANCE_INTERVAL_MINUTES,
                        id='senas_sin_seguir', next_run_time=datetime.now() + timedelta(minutes=3))
     # Una vez por día; si el proceso arranca hasta 30 min tarde (un deploy), sale igual.

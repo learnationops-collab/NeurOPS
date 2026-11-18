@@ -33,6 +33,7 @@ import TriageWorkflowPage from './pages/triage/TriageWorkflowPage';
 import PixelTracker from './components/common/PixelTracker';
 import BugReportWidget from './components/feedback/BugReportWidget';
 import CentroDeAvisos from './components/avisos/CentroDeAvisos';
+import HostVentanas from './ventanas/HostVentanas';
 import { PlaybookProvider } from './contexts/PlaybookContext';
 import PlaybookOverlay from './components/playbook/PlaybookOverlay';
 import PlaybookNotification from './components/playbook/PlaybookNotification';
@@ -103,6 +104,7 @@ function App() {
           <Toaster position="top-right" />
           <SoloInterno>
             <BugReportWidget />
+            <HostVentanas />
             <CentroDeAvisos />
             <PlaybookOverlay />
             <PlaybookNotification />

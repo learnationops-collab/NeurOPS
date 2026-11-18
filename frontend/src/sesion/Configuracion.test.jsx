@@ -11,20 +11,6 @@ const integraciones = () => fireEvent.click(screen.getByRole('tab', { name: /Int
 describe('Configuración', () => {
     beforeEach(() => { api.get.mockReset(); api.put.mockReset(); api.delete.mockReset(); });
 
-    it('tiene las pestañas de lo que decide el closer', () => {
-        api.get.mockResolvedValue({ data: {} });
-        render(<Configuracion user={CLOSER} />);
-        expect(screen.getAllByRole('tab').map(t => t.textContent)).toEqual(['Datos', 'Disponibilidad', 'Integraciones', 'Mis eventos', 'Apariencia']);
-    });
-
-    it('cada rol ve las pestañas que le tocan', () => {
-        const de = (rol) => pestanasDe(rol).map(p => p.id);
-        expect(de('setter')).toEqual(['datos', 'apariencia']);
-        expect(de('operator')).toEqual(['datos', 'apariencia']);
-        expect(de('director_comercial')).toEqual(['datos', 'disponibilidad', 'integraciones', 'apariencia']);
-        expect(de('admin')).toEqual(['datos', 'disponibilidad', 'integraciones', 'equipo', 'apariencia']);
-    });
-
     it('sin Google Calendar conectado ofrece conectarlo y explica por qué', async () => {
         api.get.mockResolvedValue({ data: { connected: false } });
         render(<Configuracion user={CLOSER} />);

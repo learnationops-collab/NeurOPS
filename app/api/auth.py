@@ -24,6 +24,7 @@ def _usuario_json(u, **extra):
         "can_view_finance": getattr(u, 'can_view_finance', False),
         "cuentas_vinculadas": cuentas_de(u),
         "mascota": u.mascota,
+        "dock_prefs": u.dock_prefs or {},
         **extra,
     }
 
@@ -103,6 +104,7 @@ def login():
             "can_view_finance": getattr(user, 'can_view_finance', False),
             "cuentas_vinculadas": cuentas_de(user),
             "mascota": user.mascota,
+            "dock_prefs": user.dock_prefs or {},
         }
     }), 200
 
@@ -170,6 +172,23 @@ def elegir_mi_mascota():
     current_user.mascota = mascota
     db.session.commit()
     return jsonify({"mascota": mascota}), 200
+
+
+@bp.route('/auth/me/dock', methods=['PUT'])
+@login_required
+def guardar_mi_dock():
+    """El dock de cada uno (ADR-W164): PUT {dock_prefs}. Reemplaza lo guardado. Simulando no se guarda:
+    sería cambiarle el dock a la persona simulada."""
+    import json
+    from app.models import get_impersonation_state
+    if get_impersonation_state()[0]:
+        return jsonify({"message": "Simulando no se guarda el dock"}), 403
+    prefs = (request.get_json(silent=True) or {}).get('dock_prefs')
+    if not isinstance(prefs, dict) or len(json.dumps(prefs)) > 20000:
+        return jsonify({"message": "Preferencias del dock inválidas"}), 400
+    current_user.dock_prefs = prefs
+    db.session.commit()
+    return jsonify({"ok": True}), 200
 
 
 def _whatsapp_json(u):

@@ -16,6 +16,17 @@ export const completar = (texto, contacto) => texto.replace(/\{(\w+)\}/g, (m, k)
     return v == null || v === '' ? m : String(v);
 });
 
+// La vista previa: el texto con lo que salió de la ficha resaltado, para ver qué se completó y qué no.
+function Resaltado({ texto, contacto }) {
+    const partes = texto.split(/(\{\w+\})/);
+    return partes.map((p, i) => {
+        const m = /^\{(\w+)\}$/.exec(p);
+        if (!m) return p;
+        const v = (contacto.variables || {})[m[1]];
+        return v == null || v === '' ? <span key={i} className="cv-var-falta">{p}</span> : <mark key={i} className="cv-var-ok">{String(v)}</mark>;
+    });
+}
+
 export function NuevaRapida({ onCreada, onCerrar }) {
     const [r, setR] = useState({ atajo: '', titulo: '', texto: '' });
     const crear = async (e) => {
@@ -91,7 +102,7 @@ export default function MenuRayo({ contacto, filtro, onTexto, onPaso, onNueva, o
             {okR.map((r) => (
                 <div key={r.id} className="cv-rayo-fila">
                     <button type="button" className="cv-rayo-op" onClick={() => onTexto(completar(r.texto, contacto))}>
-                        <b>/{r.atajo} · {r.titulo}</b><span>{completar(r.texto, contacto)}</span>
+                        <b>/{r.atajo} · {r.titulo}</b><span><Resaltado texto={r.texto} contacto={contacto} /></span>
                     </button>
                     {r.puede_borrar && <button type="button" className="cv-rayo-x" aria-label={`Borrar /${r.atajo}`} onClick={() => borrar(r)}><Trash2 size={13} /></button>}
                 </div>

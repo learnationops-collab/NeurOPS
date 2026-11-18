@@ -26,6 +26,7 @@ import { VISUAL, apilar } from './tarjetas';
 import { FACETAS, agendasDe, aplicarFacetas, condiciones, fichaDe } from './filtro';
 import PanelConfigurar from '../../../comercial/components/PanelConfigurar';
 import { gruposDeSesion, turnosSemana } from './turnos';
+import TurnosEquipo from './TurnosEquipo.jsx';
 import { Button, Calendar, CalendarEvent, EmptyState, IconButton, Segmented } from '../../../../components/standard';
 
 const hm = (m) => pad(Math.floor(m / 60)) + ':' + pad(m % 60);
@@ -352,6 +353,7 @@ export default function Available({ solo = null }) {
 
     return (
         <>
+            {!solo && <TurnosEquipo vista={vista} google={google} semana={semana} ahora={ahora} tz={tzVista} />}
             <div className="av-kpis">
                 {turnos && <div className="av-kpi av-kpi--turnos"><span>Turnos libres</span><b className="num">{libresDe(diaSel)}<em>/{totalDe(diaSel)}</em></b></div>}
                 <div className="av-kpi"><span>{solo ? 'Tus horas' : 'Horas disponibles'}</span><b className="num">{fmt(kpi.hDisp, 0)}</b></div>

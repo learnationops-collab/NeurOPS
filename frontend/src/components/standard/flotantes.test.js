@@ -39,13 +39,6 @@ const declaracion = (css, selector, prop) => {
 };
 
 describe('los fondos de los menús son opacos', () => {
-    it('en los cuatro temas (classic y modern, claro y oscuro)', () => {
-        const temas = leer('temas/temas.css');
-        const valores = [...temas.matchAll(/--ln-popover-bg:([^;]+);/g)].map((m) => m[1]);
-        expect(valores).toHaveLength(4);
-        valores.forEach((v) => expect(opaco(v), v).toBe(true));
-    });
-
     it('sin tema elegido, cada token de menú cae a un color opaco', () => {
         const tokens = [
             [leer('pages/comercial/comercial.css'), '--bg-flotante'],

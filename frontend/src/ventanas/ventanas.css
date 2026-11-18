@@ -1,0 +1,45 @@
+/* Ventanas flotantes (ventanas/Ventana.jsx): opacas, con los tokens del tema (claro u oscuro, Classic o
+   Modern). Debajo de los menús (capa superior) y de los avisos. */
+.vt{position:fixed;display:flex;flex-direction:column;max-height:calc(100vh - 140px);min-width:0;
+  background:var(--ln-popover-bg,#0B1030);color:var(--ln-text-out,#fff);
+  border:1px solid var(--ln-border-main,rgba(255,255,255,.15));border-radius:16px;box-shadow:var(--ln-shadow,0 8px 32px rgba(0,0,0,.4));
+  animation:vt-entra .16s ease-out backwards}
+.vt[hidden]{display:none}
+.vt--max{inset:12px 12px 96px 12px;max-height:none;width:auto}
+.vt--arrastre{user-select:none;opacity:.96}
+.vt-cab{display:flex;align-items:center;gap:8px;padding:8px 8px 8px 14px;cursor:grab;touch-action:none;
+  border-bottom:1px solid var(--ln-border-subtle,rgba(255,255,255,.07))}
+.vt--arrastre .vt-cab{cursor:grabbing}
+.vt-titulo{flex:1;min-width:0;font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vt-controles{display:flex;gap:2px}
+.vt-cuerpo{flex:1;min-height:0;overflow:auto;padding:14px}
+.vt-cargando{margin:0;padding:24px;text-align:center;color:var(--ln-text-muted,rgba(255,255,255,.6));font-size:13px}
+.vt-guia{position:fixed;left:12px;right:12px;height:56px;display:grid;place-items:center;z-index:2147483000;pointer-events:none;
+  border:2px dashed var(--ln-brand,#FF3FA4);border-radius:14px;font-size:13px;font-weight:800;
+  background:var(--ln-brand-soft,rgba(255,63,164,.10));color:var(--ln-text-out,#fff)}
+.vt-guia--max{top:8px}
+.vt-guia--min{bottom:8px}
+/* En un teléfono, una hoja de abajo: todo el ancho, sin arrastre. */
+.vt--hoja{left:0;right:0;bottom:0;top:auto;width:auto;max-height:82vh;border-radius:18px 18px 0 0}
+.vt--hoja .vt-cab{cursor:default}
+@keyframes vt-entra{from{opacity:0;transform:translateY(8px)}}
+@media (prefers-reduced-motion:reduce){.vt{animation:none}}
+/* La ventana de Turnos (herramientas/TurnosVentana.jsx) usa las piezas de Tálamus. */
+.vt-thalamus{display:grid;gap:12px;background:transparent;color:inherit}
+.vt-thalamus .vt-nav{flex-wrap:wrap}
+.vt-thalamus .tu--equipo{margin-bottom:0}
+.vt-thalamus .vt-zona{display:flex;align-items:center;gap:8px;margin-left:auto}
+.vt-thalamus .vt-zona select{max-width:220px}
+/* Buscar lead (herramientas/BuscarLeadVentana.jsx). */
+.bl{display:grid;gap:10px}
+.bl-pista{margin:0;padding:8px 12px;border-radius:12px;font-size:12.5px;font-weight:600;
+  background:var(--ln-brand-soft,rgba(255,63,164,.10));color:var(--ln-text-out,#fff)}
+.bl-campo{display:flex;align-items:center;gap:8px;color:var(--ln-text-muted,rgba(255,255,255,.6))}
+.bl-campo > :last-child{flex:1}
+.bl-nota{margin:0;font-size:12.5px;color:var(--ln-text-muted,rgba(255,255,255,.6))}
+.bl-lista{list-style:none;margin:0;padding:0;display:grid;gap:2px}
+.bl-item{width:100%;display:grid;gap:1px;padding:8px 10px;border-radius:12px;text-align:left;color:inherit;transition:background-color .15s ease}
+.bl-item:hover:not(:disabled),.bl-item:focus-visible{background:var(--ln-border-subtle,rgba(255,255,255,.07))}
+.bl-item:disabled{opacity:.5;cursor:default}
+.bl-item b{font-size:13.5px;font-weight:700}
+.bl-item small{font-size:11.5px;color:var(--ln-text-muted,rgba(255,255,255,.6))}

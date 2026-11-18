@@ -2,6 +2,24 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Humo } from './Shared';
 import { DockContexto } from './dockContexto';
 import DockFijadas from './DockFijadas';
+import IslaVentanas from '../../../ventanas/IslaVentanas';
+import BotonHerramientas from '../../../ventanas/BotonHerramientas';
+import useOpcionesDeHerramientas from '../../../ventanas/useOpcionesDeHerramientas';
+import { useNavegacionDock } from '../../../ventanas/navegacionDock';
+import { useAuth } from '../../../contexts/AuthContext';
+import DockEdicion from './DockEdicion';
+import DockLateral from './DockLateral';
+import { BotonFila, TarjetaFlotante } from './TarjetaSesion';
+import { useModoDock } from '../../../ventanas/modoDock';
+import { agrupar } from '../../../ventanas/catalogoHerramientas';
+import { hidratarDock } from '../../../sesion/dockServidor';
+import { BookOpen, Bug, Eye, Banknote, Plus, Receipt, Wrench } from 'lucide-react';
+import { abrirBuscarLead } from '../../../ventanas/buscarLead';
+import { usePlaybook } from '../../../contexts/PlaybookContext';
+import { abrirSimulacion, puedeSimular } from '../../../sesion/simulacion';
+import { abrirLearnito, puedeUsarLearnito } from '../../../sesion/learnito';
+import { abrirReporteDeBug } from '../../../utils/bugReportBus';
+import '../dock2.css';
 
 const HUMO_DOCK = ['var(--brand-secondary)', 'var(--brand-primary)',
     'var(--brand-secondary-light)', 'var(--brand-navy)'];
@@ -38,14 +56,43 @@ const HUMO_DOCK = ['var(--brand-secondary)', 'var(--brand-primary)',
  * navegación y a la derecha la sesión. Las fijadas salen del `MenuSesion` que va en `despues`: se las
  * pasa por `DockContexto` con `publicar`, y el dock las guarda solo si cambiaron (se compara una firma,
  * no la lista, que es nueva en cada render). Tocar una corre la acción más reciente de esa opción.
+ *
+ * Dock 2.0 (17/11/2026, como el de Leadership y la Academia): en una pantalla ancha son tres islas
+ * sueltas. Izquierda, lo fijado; centro, la navegación; derecha, «Herramientas» (`BotonHerramientas`)
+ * y la sesión. La navegación se edita (ordenar, ocultar, renombrar: `ventanas/navegacionDock.js`), y
+ * una sección oculta se abre desde Herramientas o fijada a la izquierda. En un teléfono vuelve a ser
+ * una sola barra.
  */
+const ANGOSTO = '(max-width: 640px)';
+const useAngosto = () => {
+    const [angosto, setAngosto] = useState(() => typeof window !== 'undefined' && !!window.matchMedia?.(ANGOSTO).matches);
+    useEffect(() => {
+        const mq = window.matchMedia?.(ANGOSTO);
+        if (!mq) return undefined;
+        const cambio = (e) => setAngosto(e.matches);
+        mq.addEventListener('change', cambio);
+        return () => mq.removeEventListener('change', cambio);
+    }, []);
+    return angosto;
+};
+
 const marcasDe = (s) => s.marcas || (s.marca ? [s.marca] : []);
 
 const claseDeMarca = (m) => ['dock-marca', m.tipo && `dock-marca--${m.tipo}`, m.apagada && 'dock-marca--apagada']
     .filter(Boolean).join(' ');
 
-const DockSecciones = ({ secciones, activa, onElegir, ariaLabel, antes = null, despues = null,
+const DockSecciones = ({ secciones: todasLasSecciones, activa, onElegir, ariaLabel, antes = null, despues = null,
     siempreNombres = false }) => {
+    const auth = useAuth();
+    const usuario = auth?.user;
+    // El dock guardado en la cuenta pisa al del navegador (ADR-W164).
+    useEffect(() => { hidratarDock(usuario); }, [usuario]);
+    const nav = useNavegacionDock(usuario, ariaLabel, todasLasSecciones);
+    const secciones = nav.visibles;
+    const angosto = useAngosto();
+    const modo = useModoDock();
+    const lateral = modo.lateral && !angosto;
+    const herramientas = useOpcionesDeHerramientas();
     // El indicador se mide del DOM porque su ancho es el del botón activo, y eso depende del texto
     // de cada sección y de si el label está visible (bajo 1120px se esconde el de los inactivos).
     // Se remide al cambiar de sección, al cambiar la lista y al redimensionar.
@@ -71,13 +118,67 @@ const DockSecciones = ({ secciones, activa, onElegir, ariaLabel, antes = null, d
         const firma = `${usuario?.id ?? ''}#${opciones.map(o => `${o.id}:${o.label}:${o.cuenta ?? ''}:${o.titulo ?? ''}`).join('|')}`;
         setFijables(prev => (prev.firma === firma ? prev : { firma, usuario, opciones }));
     }, []);
-    const correr = useCallback((id) => accionesRef.current.find(o => o.id === id)?.onClick(), []);
+    // Lo que se puede fijar: las acciones del menú de sesión, las herramientas en ventana y las secciones ocultas.
+    const ocultas = nav.ocultas.map(s => ({ id: `sec:${s.id}`, label: s.label, titulo: 'Sección oculta', Icono: s.Icono,
+        onClick: () => onElegir(s.id) }));
+    // Las del menú corren su acción más reciente (accionesRef): la guardada en `fijables` puede ser vieja.
+    const opcionesRef = useRef([]);
+    const correr = useCallback((id) => (accionesRef.current.find(o => o.id === id)
+        || opcionesRef.current.find(o => o.id === id))?.onClick(), []);
+    const publicadas = fijables.opciones.map(o => ({ ...o, onClick: () => correr(o.id) }));
+    const configuracion = publicadas.find(o => o.seccion === 'config') || null;
+    const acciones = publicadas.filter(o => o.seccion !== 'config');
+    // «Nuevo», una herramienta más (se fija como cualquiera): abre la lista de lo que crea algo en esta
+    // pantalla (las acciones con `nuevo`) y «Reportar o pedir algo», que va en todas.
+    const reportar = { id: 'reportar-bug', label: 'Reportar o pedir algo', Icono: Bug, onClick: abrirReporteDeBug };
+    const venden = ['closer', 'triage', 'admin', 'director_comercial'].includes(usuario?.role);
+    const nuevos = [...acciones.filter(o => o.nuevo),
+        ...(venden ? [
+            { id: 'nuevo-pago', label: 'Registrar un pago', Icono: Receipt, onClick: () => abrirBuscarLead('pago') },
+            { id: 'nuevo-venta', label: 'Declarar una venta', Icono: Banknote, onClick: () => abrirBuscarLead('venta') },
+        ] : []),
+        reportar];
+    const nuevosRef = useRef(nuevos);
+    nuevosRef.current = nuevos;
+    const nuevo = { id: 'nuevo', label: 'Nuevo', Icono: Plus, titulo: nuevos.map(o => o.label).join(' · '),
+        panel: { titulo: 'Nuevo', vacio: 'Nada para crear acá.', cargar: () => nuevosRef.current } };
+    const deCuenta = acciones.filter(o => o.seccion === 'cuenta');
+    const deAccion = acciones.filter(o => o.seccion !== 'cuenta' && !o.nuevo);
+    const sinLeer = deCuenta.reduce((n, o) => n + (Number(o.cuenta) || 0), 0);
+    // Las que están en todas las pantallas: el Playbook (con lo pendiente) y Simular, que antes había que
+    // buscar dentro del Portal.
+    const playbook = usePlaybook();
+    const globales = [
+        { id: 'playbook', label: 'Playbook', Icono: BookOpen, onClick: () => playbook.openPlaybook('pending'),
+            cuenta: playbook.pendingCount > 0 ? playbook.pendingCount : null,
+            titulo: playbook.pendingCount > 0 ? `${playbook.pendingCount} ${playbook.pendingCount === 1 ? 'video pendiente' : 'videos pendientes'}` : null },
+        ...(puedeSimular(usuario) ? [{ id: 'simular', label: 'Simular a alguien', Icono: Eye, onClick: abrirSimulacion }] : []),
+    ];
+    const opciones = [nuevo, ...acciones, reportar, ...herramientas, ...globales, ...ocultas];
+    // Atajos, como en la Academia: Ctrl+K busca un lead, Ctrl+L abre Learnito y Ctrl+J, Herramientas.
+    useEffect(() => {
+        const tecla = (e) => {
+            if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey || e.defaultPrevented) return;
+            const k = e.key.toLowerCase();
+            if (k === 'k' && herramientas.some(h => h.id === 'tool:buscar') && !document.querySelector('.talent')) {
+                e.preventDefault(); abrirBuscarLead(null);
+            } else if (k === 'l' && puedeUsarLearnito(usuario)) {
+                e.preventDefault(); abrirLearnito();
+            } else if (k === 'j') {
+                e.preventDefault(); window.dispatchEvent(new CustomEvent('abrir-herramientas'));
+            }
+        };
+        document.addEventListener('keydown', tecla);
+        return () => document.removeEventListener('keydown', tecla);
+    }, [herramientas, usuario]);
+    opcionesRef.current = opciones;
     const contexto = useMemo(() => ({ publicar }), [publicar]);
     useEffect(() => {
         const medir = () => {
             const nav = navRef.current;
             const item = nav?.querySelector('[aria-current="page"]');
-            if (!nav || !item) return;
+            if (!nav) return;
+            if (!item) { setIndicador({ '--w': '0px', '--x': '0px' }); return; }
             const dock = nav.parentElement;
 
             // ¿Entra con todos los nombres? Se prueba sacando `dock--compacto` un instante: es
@@ -126,49 +227,93 @@ const DockSecciones = ({ secciones, activa, onElegir, ariaLabel, antes = null, d
             window.removeEventListener('resize', medir);
             observador?.disconnect();
         };
-    }, [activa, ids, compacto, claseSinLugar]);
+    }, [activa, ids, compacto, claseSinLugar, nav.editando, angosto]);
 
     // Con seis cosas o más en el dock (el mazo del closer, o la dirección con su switch y su sesión)
     // el aire de las cuatro secciones del dashboard no entra en una laptop: `dock--denso` las junta.
     const cosas = secciones.length + (antes ? 1 : 0) + (despues ? 1 : 0);
-    const clases = ['dock', cosas >= 6 && 'dock--denso', siempreNombres && 'dock--nombres',
-        compacto && claseSinLugar, desborda && 'dock--desborda', 'caja'];
-    return (
-        <DockContexto.Provider value={contexto}>
+    const clases = ['dock', !angosto && 'dock--centro', cosas >= 6 && 'dock--denso', siempreNombres && 'dock--nombres',
+        compacto && claseSinLugar, desborda && 'dock--desborda', nav.editando && 'dock--editando', 'caja'];
+    // Plegada, la barra lateral muestra hasta 3 fijadas; el resto, en Herramientas.
+    const plegada = lateral && !modo.desplegada;
+    const fijadas = <DockFijadas usuario={fijables.usuario || usuario} opciones={opciones} onElegir={correr} sep={angosto && !lateral ? 'despues' : null}
+        tope={plegada ? 3 : null} onMas={() => window.dispatchEvent(new CustomEvent('abrir-herramientas'))} />;
+    const herr = (
+        <BotonHerramientas usuario={usuario} onEditar={todasLasSecciones.length > 1 && usuario ? () => nav.editar(true) : null}
+            cuenta={sinLeer > 0 ? (sinLeer > 99 ? '99+' : sinLeer) : null}
+            principal grupos={agrupar([nuevo, ...herramientas, ...globales, ...deAccion, ...ocultas, ...deCuenta])} />
+    );
+    const centro = (
         <nav className={clases.filter(Boolean).join(' ')} aria-label={ariaLabel}>
             <Humo colores={HUMO_DOCK} />
-            <DockFijadas usuario={fijables.usuario} opciones={fijables.opciones} onElegir={correr} />
+            {angosto && fijadas}
             {antes}
             {antes && <span className="dock-sep" />}
             <div className="dock-nav" ref={navRef}>
-                {/* Indicador que se desliza hasta el item activo, en vez de que cada uno pinte su
-                    propio fondo: el movimiento dice de dónde a dónde se fue. */}
-                <span className="dock-ind" style={indicador} aria-hidden="true" />
-                {secciones.map((s, i) => {
-                    const marcas = marcasDe(s);
-                    return (
-                        <button key={s.id} type="button" className="dock-item"
-                            aria-current={activa === s.id ? 'page' : undefined}
-                            aria-label={[s.label, ...marcas.map(m => m.titulo)].join(', ')}
-                            onClick={() => onElegir(s.id)}>
-                            <span className="dock-num">{i + 1}</span>
-                            <s.Icono size={20} />
-                            <span className="dock-label">{s.label}</span>
-                            {s.pronto && <span className="dock-pronto">Pronto</span>}
-                            {marcas.map(m => (
-                                <span key={m.titulo} className={claseDeMarca(m)} aria-hidden="true">{m.texto}</span>
-                            ))}
-                        </button>
-                    );
-                })}
+                {nav.editando ? <DockEdicion nav={nav} /> : (
+                    <>
+                        {/* Indicador que se desliza hasta el item activo, en vez de que cada uno pinte su
+                            propio fondo: el movimiento dice de dónde a dónde se fue. */}
+                        <span className="dock-ind" style={indicador} aria-hidden="true" />
+                        {secciones.map((s) => {
+                            const marcas = marcasDe(s);
+                            return (
+                                <button key={s.id} type="button" className="dock-item"
+                                    aria-current={activa === s.id ? 'page' : undefined}
+                                    aria-label={[s.label, ...marcas.map(m => m.titulo)].join(', ')}
+                                    onClick={() => onElegir(s.id)}>
+                                    <s.Icono size={20} />
+                                    <span className="dock-label">{s.label}</span>
+                                    {s.pronto && <span className="dock-pronto">Pronto</span>}
+                                    {marcas.map(m => (
+                                        <span key={m.titulo} className={claseDeMarca(m)} aria-hidden="true">{m.texto}</span>
+                                    ))}
+                                </button>
+                            );
+                        })}
+                    </>
+                )}
             </div>
-            {despues && (
+            <IslaVentanas />
+            {angosto && (
                 <div className="dock-despues">
                     <span className="dock-sep" />
+                    {herr}
                     {despues}
                 </div>
             )}
         </nav>
+    );
+    const sesion = { configuracion, avisos: acciones.find(o => o.id === 'avisos'),
+        salir: acciones.find(o => o.id === 'salir'), volver: acciones.find(o => o.id === 'volver') };
+    if (lateral) {
+        return (
+            <DockContexto.Provider value={contexto}>
+                <DockLateral secciones={secciones} activa={activa} onElegir={onElegir} ariaLabel={ariaLabel} antes={antes}
+                    despues={despues} herr={herr} fijadas={fijadas} nav={nav} modo={modo} marcasDe={marcasDe} claseDeMarca={claseDeMarca}
+                    usuario={usuario} {...sesion} />
+            </DockContexto.Provider>
+        );
+    }
+    return (
+        <DockContexto.Provider value={contexto}>
+            {angosto ? centro : (
+                <div className="dock-barra">
+                    <div className="dock-isla dock-isla--izq">{fijadas}</div>
+                    {centro}
+                    <div className="dock-isla dock-isla--der">
+                        {herr}
+                        {despues && <span className="dock-sep" />}
+                        {despues && (
+                            // Al pasar el mouse por el avatar, la misma tarjeta que la barra lateral. Su Herramientas
+                            // abre el menú de la isla (el de la tarjeta se escondería al irse el mouse).
+                            <TarjetaFlotante avatar={despues} usuario={usuario} {...sesion}
+                                herr={<BotonFila Icono={Wrench} label="Herramientas · Ctrl+J" cuenta={sinLeer > 0 ? (sinLeer > 99 ? '99+' : sinLeer) : null}
+                                    onClick={() => window.dispatchEvent(new CustomEvent('abrir-herramientas'))} />} />
+                        )}
+                    </div>
+                </div>
+            )}
         </DockContexto.Provider>
     );
 };

@@ -1748,6 +1748,22 @@
 .thalamus .tu-tabla td.tu-nada{color:var(--text-muted-40)}
 .thalamus .tu-suma{min-width:96px}
 .thalamus .tu-suma .av-barra{margin-top:6px}
+/* Turnos que quedan por grupo, arriba de Available (secciones/team/TurnosEquipo.jsx) */
+.thalamus .tu--equipo{padding:var(--s3) var(--s4);border:1px solid var(--border-subtle);border-radius:14px;margin-bottom:var(--s3)}
+.thalamus .tu--equipo .tu-cab{justify-content:flex-start}
+.thalamus .tu--equipo .tu-cab > button{margin-left:auto}
+.thalamus .tu--equipo .tu-tabla{min-width:520px}
+.thalamus .tu--equipo .tu-tabla td.tu-cero b{color:var(--error)}
+.thalamus .tu-celda{min-width:40px;padding:4px 8px;border-radius:10px;font:inherit;color:inherit;cursor:pointer;transition:background-color .15s ease}
+.thalamus .tu-celda:hover:not(:disabled),.thalamus .tu-celda[aria-pressed="true"]{background:var(--brand-secondary);color:var(--on-brand)}
+.thalamus .tu-celda[aria-pressed="true"] b{color:inherit}
+.thalamus .tu-celda:disabled{cursor:default}
+.thalamus .tu-pista{margin:var(--s2) 0 0}
+.thalamus .tu-horarios{display:grid;gap:var(--s2);margin-top:var(--s3)}
+.thalamus .tu-horas{display:flex;flex-wrap:wrap;gap:6px}
+.thalamus .tu-hora{display:inline-flex;align-items:baseline;gap:4px;padding:5px 10px;border-radius:999px;border:1px solid var(--border-subtle);background:var(--bg-element);font-size:13px}
+.thalamus .tu-hora small{font-size:10.5px;font-weight:800;color:var(--text-muted)}
+.thalamus .tu-detalle{display:grid;gap:var(--s2);padding-top:var(--s3);border-top:1px solid var(--border-subtle)}
 .thalamus .ev-conf{display:grid;gap:var(--s4);min-width:0}
 /* Available: cada tramo es una tarjeta con título y hora, como en Google Calendar */
 .thalamus .av-card{position:absolute;left:3px;right:3px;min-height:3px;box-sizing:border-box;border-radius:7px;padding:3px 7px;overflow:hidden;display:flex;flex-direction:column;gap:1px;font-size:11.5px;line-height:1.25;z-index:1}
@@ -1825,3 +1841,13 @@
 .thalamus .av-condiciones{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .thalamus .av-fil--tag{border-color:var(--brand-secondary-border);background:var(--brand-secondary-surface);gap:5px}
 .thalamus .av-config .config-panel{max-height:min(560px,calc(100vh - 150px))}
+/* Configuración › Datos: el personaje de la cuenta (components/mascota/ElegirPersonaje.jsx). */
+.thalamus .cu-personaje{display:grid;gap:var(--s2);margin-bottom:var(--s4)}
+.thalamus .cu-personajes{display:flex;flex-wrap:wrap;gap:6px}
+.thalamus .cu-personaje-op{display:grid;place-items:center;width:58px;height:58px;border-radius:16px;border:1px solid var(--border-subtle);transition:background-color .15s ease,border-color .15s ease}
+.thalamus .cu-personaje-op:hover{background:var(--bg-element)}
+.thalamus .cu-personaje-op[aria-checked="true"]{border-color:var(--brand-secondary);background:var(--bg-element)}
+/* Configuración › Dock (sesion/TabDock.jsx). */
+.thalamus .cu-dock{display:grid;gap:var(--s4)}
+.thalamus .cu-dock-fila{display:flex;align-items:center;gap:var(--s3);flex-wrap:wrap}
+.thalamus .cu-dock-fila > b{min-width:120px}

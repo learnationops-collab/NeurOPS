@@ -1,13 +1,14 @@
 // La caja de abajo del chat, en tres modos: Chat, Nota interna (el lead no la ve) y Tarea. En Chat el
 // mensaje (o un audio del equipo) sale por Instagram a nombre de quien lo manda (17/11/2026); los pasos del
-// flujo los manda el bot. Ctrl+Enter envía.
+// flujo los manda el bot. Enter envía (Shift+Enter, salto de línea), y lo enviado se ve al instante (`useEnvio`).
+// Lo escrito y no mandado queda como borrador de esa conversación (`borradores.js`).
 import { useEffect, useRef, useState } from 'react';
 import { AlarmClock, CalendarCheck, MessageSquare, Mic, Send, Sparkles, StickyNote, Zap } from 'lucide-react';
 import { Button, IconButton, Input, Segmented, Select, TextArea, toast } from '../../../components/standard';
-import { abrirLearnito } from '../../../sesion/learnito';
 import { useLearnito } from '../../../sesion/LearnitoContext';
 import { inboxApi } from '../api';
 import Audios from './Audios';
+import { borradorDe, guardarBorrador } from './borradores';
 import MenuRayo, { NuevaRapida } from './MenuRayo';
 import ModalFlujo from './ModalFlujo';
 import { ListaSeguimientos, ProgramarSeguimiento } from './Seguimientos';
@@ -58,9 +59,9 @@ function FormTarea({ contacto, yo, onHecho }) {
 // El lead de la conversación de Learnito abierta desde el Inbox: preguntar por otro arranca una nueva.
 const conversacionDeLearnito = { contacto: null };
 
-export default function Composer({ contacto, ejecucion, seguimientos, yo, onCambio }) {
+export default function Composer({ contacto, ejecucion, seguimientos, yo, onCambio, onEnviar, onLearnito }) {
     const [modo, setModo] = useState('chat');
-    const [texto, setTexto] = useState('');
+    const [texto, setTexto] = useState(() => borradorDe(contacto.id));
     const [rayo, setRayo] = useState(false);
     const [audios, setAudios] = useState(false);
     const [nueva, setNueva] = useState(false);
@@ -80,33 +81,34 @@ export default function Composer({ contacto, ejecucion, seguimientos, yo, onCamb
         return () => document.removeEventListener('mousedown', fuera);
     }, [menu, barra]);
 
+    // El borrador se guarda al dejar de escribir, no en cada tecla (la lista se vuelve a pintar con cada cambio).
+    useEffect(() => {
+        const t = setTimeout(() => guardarBorrador(contacto.id, texto), 400);
+        return () => clearTimeout(t);
+    }, [contacto.id, texto]);
+
     const insertar = (t) => { setTexto((x) => (x.startsWith('/') ? t : x ? `${x} ${t}` : t)); setRayo(false); };
     const guardarNota = async () => {
         try {
             await inboxApi.crearNota(contacto.id, texto.trim());
             setTexto('');
+            guardarBorrador(contacto.id, '');
             onCambio();
         } catch (e) {
             toast(e.response?.data?.message || 'No se pudo guardar la nota', 'error');
         }
     };
-    const [enviando, setEnviando] = useState(false);
     const ventana = ventanaDe(contacto.ultimo_entrante_en);
-    const enviar = async (cuerpo) => {
-        setEnviando(true);
-        try {
-            await inboxApi.escribir(contacto.id, { ...cuerpo, pausar });
-            if (cuerpo.texto) setTexto('');
-            onCambio();
-            return true;
-        } catch (e) {
-            toast(e.response?.data?.message || 'No se pudo enviar', 'error');
-            return false;
-        } finally {
-            setEnviando(false);
+    // Sale al instante en el chat; si Instagram no lo acepta, queda ahí con Reintentar.
+    const enviar = (cuerpo, rotulo) => {
+        if (cuerpo.texto) {
+            setTexto('');
+            guardarBorrador(contacto.id, '');
         }
+        onEnviar({ ...cuerpo, pausar }, rotulo || cuerpo.texto);
     };
-    const puedeEnviar = ventana.estado !== 'cerrada' && !enviando;
+    const enviarAudio = (a) => enviar({ audio_id: a.id }, `🎤 ${a.nombre}`);
+    const puedeEnviar = ventana.estado !== 'cerrada';
     // Abre Learnito (el mismo cerebro de siempre) con el contexto del lead. Lo escrito en la caja va como lo que se
     // quiere saber. Con otro lead, o con la conversación agotada, arranca otra conversación de Learnito.
     const preguntarALearnito = async () => {
@@ -115,7 +117,7 @@ export default function Composer({ contacto, ejecucion, seguimientos, yo, onCamb
             const p = await inboxApi.preguntaLearnito(contacto.id, texto.startsWith('/') ? '' : texto);
             const nueva = conversacionDeLearnito.contacto !== contacto.id || Boolean(learnito.agotada);
             conversacionDeLearnito.contacto = contacto.id;
-            abrirLearnito();
+            onLearnito();
             const error = await learnito.enviar(p.pregunta, p.muestra, { nueva });
             if (error) toast(error, 'error');
         } catch (e) {
@@ -124,7 +126,15 @@ export default function Composer({ contacto, ejecucion, seguimientos, yo, onCamb
             setPreguntando(false);
         }
     };
-    const audioDelMenu = async (a) => { setRayo(false); setTexto((x) => (x.startsWith('/') ? '' : x)); if (await enviar({ audio_id: a.id })) toast(`Audio enviado: ${a.nombre}`); };
+    const audioDelMenu = (a) => { setRayo(false); setTexto((x) => (x.startsWith('/') ? '' : x)); enviarAudio(a); };
+    // Enter envía (o guarda la nota); Shift+Enter, salto de línea. Con el menú «/» abierto no manda el atajo.
+    const alTeclear = (e) => {
+        if (e.key !== 'Enter' || e.shiftKey || e.nativeEvent.isComposing) return;
+        e.preventDefault();
+        if (!texto.trim() || barra) return;
+        if (modo === 'nota') guardarNota();
+        else if (puedeEnviar) enviar({ texto });
+    };
 
     return (
         <div className={`cv-composer cv-composer--${modo}`} ref={caja}>
@@ -157,18 +167,18 @@ export default function Composer({ contacto, ejecucion, seguimientos, yo, onCamb
                         </>
                     )}
                     <TextArea value={texto} onChange={(e) => setTexto(e.target.value)} aria-label={modo === 'nota' ? 'Nota interna' : 'Mensaje'}
-                        onKeyDown={(e) => { if (modo === 'chat' && e.key === 'Enter' && (e.ctrlKey || e.metaKey) && texto.trim() && puedeEnviar) enviar({ texto }); }}
-                        placeholder={modo === 'nota' ? 'Nota para el equipo: el lead no la ve' : 'Escribile al lead: / para respuestas rápidas y pasos del flujo'} />
+                        onKeyDown={alTeclear}
+                        placeholder={modo === 'nota' ? 'Nota para el equipo: el lead no la ve · Enter guarda' : 'Escribile al lead · Enter envía, Shift+Enter salta de línea · / respuestas rápidas'} />
                     {modo === 'nota'
                         ? <Button variant="primary" disabled={!texto.trim()} onClick={guardarNota}>Guardar</Button>
-                        : <Button variant="primary" icon={<Send />} disabled={!texto.trim() || !puedeEnviar} data-tip="Enviar|Ctrl+Enter" onClick={() => enviar({ texto })}>Enviar</Button>}
+                        : <Button variant="primary" icon={<Send />} disabled={!texto.trim() || !puedeEnviar} data-tip="Enviar|Enter" onClick={() => enviar({ texto })}>Enviar</Button>}
                 </div>
             )}
             {modo === 'chat' && ventana.aviso && <p className="t-cap mut40 cv-bloqueado">{ventana.aviso}</p>}
-            {audios && <Audios onCerrar={() => setAudios(false)} onMandar={puedeEnviar ? async (a) => { if (await enviar({ audio_id: a.id })) setAudios(false); } : null} />}
+            {audios && <Audios onCerrar={() => setAudios(false)} onMandar={puedeEnviar ? (a) => { enviarAudio(a); setAudios(false); } : null} />}
             {programar && (
                 <ProgramarSeguimiento contacto={contacto} textoInicial={texto.startsWith('/') ? '' : texto} pausar={pausar}
-                    onCerrar={() => setProgramar(false)} onHecho={() => { setProgramar(false); setTexto(''); onCambio(); }} />
+                    onCerrar={() => setProgramar(false)} onHecho={() => { setProgramar(false); setTexto(''); guardarBorrador(contacto.id, ''); onCambio(); }} />
             )}
             {nueva && <NuevaRapida onCerrar={() => setNueva(false)} onCreada={() => { setNueva(false); toast('Respuesta rápida guardada'); }} />}
             {paso && (

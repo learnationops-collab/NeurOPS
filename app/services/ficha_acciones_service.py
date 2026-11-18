@@ -365,11 +365,22 @@ def _mover_la_llamada(appt, inicio, usuario):
     anterior = appt.start_time
     if anterior == inicio:
         return
+    _asegurar_libre(appt, appt.closer_id, inicio)
     appt.start_time = inicio
     antes = anterior.strftime('%d/%m/%Y %H:%M') if anterior else 'sin fecha'
     BookingService.log_lead_event(appt.id, usuario.id, 'reschedule',
                                   f"{usuario.username} reagendó la cita: {antes} → "
                                   f"{inicio.strftime('%d/%m/%Y %H:%M')}.")
+
+
+def _asegurar_libre(appt, closer_id, inicio):
+    """`manual.asegurar_libre` con el error de la ficha: no se mueve ni se pasa una agenda sobre algo ocupado."""
+    from app.agendas_v2.manual import AgendaManualError, asegurar_libre
+
+    try:
+        asegurar_libre(appt, closer_id, inicio)
+    except AgendaManualError as e:
+        raise ErrorDeAccion(e.mensaje) from e
 
 
 def _segunda_en_agenda_nueva(datos, usuario):
@@ -922,6 +933,7 @@ def reasignar(appt, datos, usuario):
     nuevo = closer_activo(datos.get('closer_id'))
     if appt.closer_id == nuevo.id:
         raise ErrorDeAccion('Este lead ya es de ese closer.')
+    _asegurar_libre(appt, nuevo.id, appt.start_time)
 
     from app.services import sale_service
 
