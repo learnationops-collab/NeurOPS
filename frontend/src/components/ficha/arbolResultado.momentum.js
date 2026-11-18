@@ -25,7 +25,7 @@ export function camposDelPlan(r) {
     },
     {
       campo: 'installmentMode', label: 'Fechas', tipo: 'opcion', requerido: true, opciones: ['monthly', 'custom'],
-      etiquetas: { monthly: 'Mismo día cada mes', custom: 'Fechas a mano' },
+      etiquetas: { monthly: 'Mismo día cada mes', custom: 'A medida: quincenal u otras fechas' },
     },
     ...(r.installmentMode === 'monthly' ? [{
       campo: 'dia_de_pago', label: 'Día de pago', tipo: 'dia_mes', requerido: true, resumir: (v) => `El ${v} de cada mes`,
