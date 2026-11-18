@@ -5606,6 +5606,50 @@
    }
   ]
  },
+ "meta_campana_programas": {
+  "significado": "El programa (AL, RR, SI o «general») que vende una campaña de Meta, elegido a mano en Marketing › Meta Ads. Vale para todos los anuncios de esa campaña.",
+  "uso": "alta",
+  "area": [
+   "marketing"
+  ],
+  "fila": "estado",
+  "autor": "equipo",
+  "fecha": "f.actualizado_at",
+  "palabras": "programa de la campaña, campaña de AL, campaña de RR, campaña de Specialist, gasto por programa, CAC por programa, ROAS por programa, etiqueta de campaña",
+  "notas": "Una fila por campaña etiquetada (sin fila = sin etiquetar). Se une con meta_anuncios por campana_id y de ahí con meta_gastos_diarios por meta_ad_id: así sale el gasto por programa de Programas y segmentos (ADR-W177). «general» = varios programas: su gasto no va al CAC de ninguno. No hay detección automática (SPI-TRIPODE-* parece Specialist, pero lo decide una persona).",
+  "columnas": {
+   "campana_id": {
+    "significado": "Id de la campaña de Meta (meta_anuncios.campana_id)."
+   },
+   "programa": {
+    "significado": "Qué programa vende la campaña.",
+    "valores": {
+     "AL": {
+      "label": "Ace Learners",
+      "significado": "Su gasto va al CAC y ROAS de AL."
+     },
+     "RR": {
+      "label": "Residency Roadmap",
+      "significado": "Su gasto va al CAC y ROAS de RR."
+     },
+     "SI": {
+      "label": "Specialist Initiative",
+      "significado": "Su gasto va al CAC y ROAS de SI."
+     },
+     "general": {
+      "label": "Varios programas",
+      "significado": "Revisada, pero vende más de un programa: su gasto no va a ninguno."
+     }
+    }
+   },
+   "actualizado_por": {
+    "significado": "Email de quien la etiquetó por última vez."
+   },
+   "actualizado_at": {
+    "significado": "Cuándo se etiquetó por última vez."
+   }
+  }
+ },
  "meta_gastos_diarios": {
   "significado": "Lo que gastó un anuncio de Meta en un día (día de la cuenta publicitaria), con sus impresiones, clics y leads del píxel.",
   "uso": "alta",

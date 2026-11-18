@@ -9,7 +9,9 @@ import EnlaceMeta from './EnlaceMeta';
 import { enlaceAdministrador } from './enlacesMeta';
 import { diaLocal, formatear } from './metricas';
 import { useDatosCacheados } from '../../../../services/cacheDeVistas';
-import { asignarClaveDeMeta, asignarEmbudoDeMeta, mensajeDeError, pedirAnunciosDeMeta, sincronizarMeta } from './marketingApi';
+import {
+    asignarClaveDeMeta, asignarEmbudoDeMeta, asignarProgramaDeCampana, mensajeDeError, pedirAnunciosDeMeta, sincronizarMeta,
+} from './marketingApi';
 
 /**
  * Marketing › Meta Ads: la conexión con Meta y los anuncios publicados, desglosados como en el
@@ -151,6 +153,22 @@ const ConexionMeta = ({ desde, hasta, filasTablero, moneda, cuentas, estadoMeta,
         }
     };
 
+    // El programa va por campaña: se pone a todos sus anuncios (ADR-W177).
+    const elegirPrograma = async (campana, programa) => {
+        setGuardando(`campana:${campana.campana_id}`);
+        try {
+            await asignarProgramaDeCampana(campana.campana_id, programa);
+            setDatos((d) => ({
+                ...d, anuncios: d.anuncios.map((a) => (a.campana_id === campana.campana_id ? { ...a, programa } : a)),
+            }));
+            onCambio?.();
+        } catch (e) {
+            toast.error(mensajeDeError(e, 'No se pudo guardar el programa.'));
+        } finally {
+            setGuardando(null);
+        }
+    };
+
     const leadsPorClave = useMemo(() => Object.fromEntries((filasTablero || [])
         .filter((f) => f.clave).map((f) => [f.clave, f.entrantes || 0])), [filasTablero]);
 
@@ -275,7 +293,7 @@ const ConexionMeta = ({ desde, hasta, filasTablero, moneda, cuentas, estadoMeta,
                 ) : (
                     <ArbolMeta anuncios={datos.anuncios} claves={datos.claves} leadsPorClave={leadsPorClave}
                         cuentas={listaCuentas} moneda={moneda} guardando={guardando}
-                        onElegirClave={elegirClave} onElegirEmbudo={elegirEmbudo} />
+                        onElegirClave={elegirClave} onElegirEmbudo={elegirEmbudo} onElegirPrograma={elegirPrograma} />
                 )}
             </section>
         </div>

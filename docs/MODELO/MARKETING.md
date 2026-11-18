@@ -72,7 +72,7 @@ El segmento de un lead lo calcula y guarda Thalamus (`segmento_service`, columna
 - **Comparación (VS):** mismo cálculo sobre otro período (`prev`, `month`, `year` o fechas libres, con `ComercialService.rango_comparado`, las del VS de Analizar). Cada fila y total trae `previo` y `delta {abs, pct}` (`segmentos_cortes`), también las tasas (en puntos). Un grupo que solo existe en uno de los dos períodos sale igual.
 - **Filtro de segmento:** lo aplica el backend (también el total y los `delta`); `cuentas` trae las agendas de todos los segmentos para los botones.
 - **Listas:** `GET /api/marketing/anuncios/registros?segmento=…&metrica=&corte=&grupo=&fuentes=` (o `fuente=` / `origen=` de las vistas de siempre), con columnas de segmento y fuente, y closer en los cobros.
-- **Leads de Workshop no se parten** y **costo por lead por segmento: no se calcula** (Leadership 839; ver [pendientes_santi.md](../pendientes_santi.md)).
+- **Leads de Workshop no se parten** y esta vista **no tiene gasto por segmento**. El CAC y el ROAS de Setting por segmento viven en «Programas y segmentos» (abajo), con el gasto repartido por agendas (decisión 839, ADR-W177).
 - Pantalla: vista «Segmentos» de Todos (`todos/SegmentosVista.jsx`): pestañas de fuente (Todos, Setting, Workshop, Otras), «Agrupar por», «Ver como» (una tabla por grupo o el **cruce** grupo × segmento de una cifra, ordenable), VS, filtro de segmento y columnas. Todo se recuerda por usuario (`mk_segmentos_fuente`; el filtro y el VS en la URL: `segmento`, `vs`, `vd`, `vh`).
 
 ### El filtro de segmento en el resto de Marketing
@@ -90,7 +90,7 @@ El segmento de un lead lo calcula y guarda Thalamus (`segmento_service`, columna
 
 ## Límites y pendientes
 
-- Costo por lead por segmento (decisión 839).
+- Costo por lead por segmento: no se muestra. Con el reparto por agendas (ADR-W177), «sin segmento» (casi todos los leads, pocas agendas) daría centavos.
 - Leads de Workshop por segmento (hoy no hay a quién mirarle el formulario).
 - Países en Marketing (pedido de Gabriela, 28/10).
 - Backfill del segmento de las agendas viejas: `scripts/backfill_segmentos.py` (acción sobre producción, la confirma Kerwin, Leadership 840).
@@ -113,6 +113,8 @@ El segmento de un lead lo calcula y guarda Thalamus (`segmento_service`, columna
 
 Renovación y upsell heredan el origen de la primera venta nueva de la persona (`origen_de_venta`). Pagos y suscripción cuelgan de la venta. Lo nuevo se fija cada 10 min (scheduler, `fijar_pendientes`, últimos 7 días; `ninguna` se reintenta en ese plazo); lo viejo con `scripts/backfill_origenes.py`.
 
+**A la Academia** (ADR-W178): el estado de pago (`academy_payment_status.estado`) lleva `origen` = `{tipo: setting | workshop | null, setter_email, setter, taller}`, de la venta activa más nueva del cliente (`origen_de_venta`, así renovación y upsell heredan) y el setter de esa agenda (`appointments.setter_id`). Sin venta o sin origen fijado, `tipo` null: la Academia muestra «Sin origen».
+
 ## Workshop por tipo y por conjunto de anuncios (ADR-W152)
 
 Fase 1, del 17/11/2026: el software guarda de qué tipo es cada taller y manda cada visita al grupo de WhatsApp de su conjunto. El cruce con las agendas y las cifras por conjunto todavía no existen (fases 2 a 4).
@@ -127,3 +129,22 @@ Fase 1, del 17/11/2026: el software guarda de qué tipo es cada taller y manda c
 **Qué grupo le toca a una visita** (`workshop_grupos_service.selector`, lo usa `/api/public/workshops/proximos` con los UTM de la visita), en orden: `utm_term` = `conjunto_id` de un grupo del taller → `utm_term` = `codigo` de un único grupo → el conjunto del anuncio de `utm_content` (el id de Meta, o una etiqueta escrita a mano traducida por `utm_etiquetas`) → el grupo general. Los grupos por conjunto no se heredan de un taller al siguiente; el general sí, como siempre.
 
 Se cargan en Workshop › Planificar › Próximos talleres › «Grupos». Los conjuntos que ofrece son los de los anuncios con `embudo = 'workshop'` que Meta ya sincronizó (`conjuntos_disponibles`); uno nuevo aparece cuando gasta y corre la sincronización, y mientras se puede pegar su id.
+
+## Programas y segmentos (ADR-W177, Leadership 1395 y 1403)
+
+Una vista para la dirección (admin, dirección comercial y de marketing): pestaña «Programas y segmentos» de Dirección comercial › Analizar (con el período del header) y vista del mismo nombre en Marketing › Todos. `GET /api/programas-segmentos?desde&hasta` (o `period&start_date&end_date`) y `GET /api/programas-segmentos/registros?metrica=&programa=|segmento=` (la lista de cada cifra, del mismo código). Pantalla: `frontend/src/pages/programas/`.
+
+**Por programa** (`programas_analitica.py`), AL, RR y SI (y «Otros» si cobró algo):
+
+| Cifra | Cómo se cuenta |
+|---|---|
+| Ventas, New Cash, Cash total | filas de Revisar › Ventas (`ComercialService.ventas`) por el programa del tipo de pago («AL - cuota»), como «programas» de Analizar. New Cash y Cash total, netos |
+| Ticket | el de Analizar por programa: bruto, con la primera cuota de cada venta (`ticket_service`) |
+| LTV | lo cobrado (neto) hasta el fin del período por cliente, de todas las ventas (`sales.program_code`) del programa hasta esa fecha, por `financial_sales.sale_id` |
+| % cobrado | de las ventas (`sales`) del período: cobrado ÷ acordado (`deuda_service.total_de` y `saldo`; un pago completo declarado es 100%). Fuera, y lo dice: sin total acordado (renovaciones, upsells) y canceladas o reembolsadas |
+| Gasto, CAC, ROAS | gasto de las campañas etiquetadas con el programa (`meta_campana_programas`); CAC = gasto ÷ compradores, ROAS = New Cash ÷ gasto. Sin campañas etiquetadas con gasto: «—» y «falta etiquetar campañas» |
+
+El programa de una campaña se elige en Marketing › Meta Ads, columna «Programa», en la fila de la campaña (`PUT /api/marketing/anuncios/meta/campana/<id>/programa`; `meta_programas_service`). Vale para todos sus anuncios, también los que Meta sume después. «Varios programas» (`general`) la da por revisada sin cargarle el gasto a ninguno. Contratación no cuenta como «sin etiquetar». **No hay detección automática** (SPI-TRIPODE-* parece Specialist, pero lo decide una persona). **No hay % de cierre por programa**: la agenda no sabe qué programa se va a vender.
+
+**Por segmento en Setting** (`segmentos_costos.py`): los hechos de Segmentos (`segmentos_marketing_service.hechos`, base alta; cada cobro trae `cliente` para contar compradores) y el gasto del embudo `setting`. A cada segmento le toca **gasto × sus agendas ÷ las agendas de Setting** (decisión 839, opción a). Es una estimación y la pantalla lo dice; el costo por agenda queda igual en todos. CAC = gasto estimado ÷ compradores, ROAS = New Cash ÷ gasto estimado. Workshop no entra (sus leads no se segmentan). Marketing › Segmentos y el filtro de segmento del resto de Marketing siguen sin gasto (`SIN_SEGMENTO_POSIBLE`).
+

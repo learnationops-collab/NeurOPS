@@ -112,8 +112,52 @@ def build_payment_payload(sale):
         # Entró pagando de a partes (seña, parcial o cuota de una venta nueva o upsell): en la Academia
         # le toca la Momentum de seña aunque hoy ya no sea seña. La renovación en cuotas no cuenta.
         'en_cuotas': en_cuotas(sale, tipo),
+        # El tipo de venta (new, renewal, upsell): las metas de upsell y reactivación en Deudores › Métricas.
+        'tipo_venta': tipo_venta(sale),
         'expires_at': expires_at.isoformat(),
     }
+
+
+def tipo_venta(pago):
+    """new, renewal o upsell, de la venta del pago; None si el pago no tiene venta."""
+    from app.models import Sale
+
+    venta = db.session.get(Sale, pago.sale_id) if pago.sale_id else None
+    return venta.kind if venta else None
+
+
+REENVIO_DIAS = 10
+REENVIO_PAUSA_S = 1.5  # la Academia tiene un tope de pedidos por minuto, compartido con las altas
+
+
+def reenviar_recientes(dias=REENVIO_DIAS):
+    """Vuelve a mandar los pagos de los últimos `dias`. Un pago de alguien sin cuenta en la Academia rebota
+    (404) y antes no se reintentaba; la Academia ignora los que ya tiene (por sale_id), así que solo entran
+    los que habían rebotado. Corre en el scheduler. Devuelve {enviados, registrados, rebotados}."""
+    import time
+    from app.models import FinancialSale
+    from app.services.learnation_service import LearnationService, LearnationAPIError
+
+    desde = datetime.utcnow() - timedelta(days=dias)
+    pagos = FinancialSale.query.filter(FinancialSale.date >= desde).order_by(FinancialSale.date).all()
+    r = {'enviados': 0, 'registrados': 0, 'rebotados': 0}
+    for pago in pagos:
+        payload = build_payment_payload(pago)
+        if not payload:
+            continue
+        r['enviados'] += 1
+        try:
+            res = LearnationService.report_payment(payload) or {}
+            if res.get('status') == 'recorded':
+                r['registrados'] += 1
+        except LearnationAPIError as e:
+            r['rebotados'] += 1
+            if e.status_code != 404:
+                current_app.logger.warning(f"[ACADEMY PAYMENTS] Reenvío de la venta {payload['sale_id']}: {e} ({e.status_code})")
+        except Exception as e:
+            current_app.logger.error(f"[ACADEMY PAYMENTS] Reenvío de la venta {payload['sale_id']}: {e}")
+        time.sleep(REENVIO_PAUSA_S)
+    return r
 
 
 def notify_academy_of_payments(sales):

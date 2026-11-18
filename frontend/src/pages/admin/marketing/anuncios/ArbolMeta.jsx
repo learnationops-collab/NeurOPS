@@ -10,6 +10,7 @@ import { useEstadoGuardado } from '../../../../hooks/useEstadoGuardado';
 import { useEnPantalla } from '../../../../components/ui/useEnPantalla';
 import EnlaceMeta from './EnlaceMeta';
 import MiniaturaAnuncio from './MiniaturaAnuncio';
+import SelectorPrograma, { etiquetaDePrograma } from './SelectorPrograma';
 import CajaDeTabla, { BotonPantallaCompleta } from './CajaDeTabla';
 import { usePantallaCompleta } from './usePantallaCompleta';
 import { armarDesglose, clavesAbribles, ordenarDesglose, totalDelDesglose } from './desgloseMeta';
@@ -93,6 +94,8 @@ const COLUMNAS = [
       valor: (n) => (n.tipo === 'anuncio' ? etiquetaDeEmbudo(n.anuncio.embudo) : embudosDeGrupo(n.embudos)) },
     { key: 'clave', header: 'Palabra clave', ayuda: 'La palabra clave de ManyChat a la que va el gasto.',
       valor: (n) => n.claves.join(', ') || null },
+    { key: 'programa', header: 'Programa', ayuda: 'Qué programa vende la campaña: su gasto entra al CAC y ROAS de ese programa (Programas y segmentos). Se elige por campaña.',
+      valor: (n) => etiquetaDePrograma(n.tipo === 'anuncio' ? n.anuncio.programa : n.programa) },
     { key: 'texto', header: 'Texto del anuncio', oculta: true, valor: (n) => n.anuncio?.texto || null },
     { key: 'destino', header: 'Lleva a', oculta: true, valor: (n) => textoDestino(n.anuncio?.destino) },
 ];
@@ -102,6 +105,7 @@ const FACETAS = [
     { key: 'embudo', label: 'Embudo', de: (a) => etiquetaDeEmbudo(a.embudo) },
     { key: 'clave', label: 'Palabra clave', de: (a) => a.clave || 'Sin palabra clave' },
     { key: 'campana', label: 'Campaña', de: (a) => a.campana || 'Sin campaña' },
+    { key: 'programa', label: 'Programa', de: (a) => etiquetaDePrograma(a.programa) },
 ];
 
 const normal = (t) => String(t ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
@@ -137,7 +141,7 @@ const MenuColumnas = ({ columnas, visibles, alternar, restablecer, onCerrar }) =
     );
 };
 
-const ArbolMeta = ({ anuncios, claves, leadsPorClave, cuentas, moneda, guardando, onElegirClave, onElegirEmbudo }) => {
+const ArbolMeta = ({ anuncios, claves, leadsPorClave, cuentas, moneda, guardando, onElegirClave, onElegirEmbudo, onElegirPrograma }) => {
     const quieto = useReducedMotion();
     const { visibles, alternar, restablecer } = useColumnasVisibles('mk-meta-columnas', COLUMNAS);
     // Los filtros se recuerdan por usuario (norma del 28/10/2026, `useEstadoGuardado`).
@@ -224,6 +228,9 @@ const ArbolMeta = ({ anuncios, claves, leadsPorClave, cuentas, moneda, guardando
                     </select>
                 </td>
             );
+        }
+        if (col.key === 'programa' && n.tipo === 'campana' && n.campana_id && onElegirPrograma) {
+            return <td key={col.key}><SelectorPrograma campana={n} guardando={guardando} onElegir={onElegirPrograma} /></td>;
         }
         if (col.key === 'clave' && n.tipo === 'anuncio') {
             const a = n.anuncio;

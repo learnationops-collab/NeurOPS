@@ -19,6 +19,7 @@ import MenuSesion from './components/MenuSesion';
 import Analizar from './components/Analizar';
 import Comparativas from './components/Comparativas';
 import Variabilidad from './components/Variabilidad';
+import ProgramasSegmentos from '../programas/ProgramasSegmentos';
 import Simulador from './components/simulador/Simulador';
 import Revisar, { TABLAS_POR_ROL, duplicadasDe } from './components/Revisar';
 import { puedeExportarRevisar } from './components/tablasDef';
@@ -118,7 +119,9 @@ const SECCIONES = [
     // la de su rol.
     { id: 'analizar', label: 'Analizar', Icono: Search, tabs: [{ key: 'dashboard', label: 'Dashboard' },
         { key: 'comparativas', label: 'Comparativas', permiso: 'puede_comparar' },
-        { key: 'variabilidad', label: 'Variabilidad' }] },
+        { key: 'variabilidad', label: 'Variabilidad' },
+        // Por programa y CAC/ROAS por segmento (ADR-W177): solo la dirección, como en Marketing › Todos.
+        { key: 'programas', label: 'Programas y segmentos', permiso: 'puede_reportar' }] },
     { id: 'revisar', label: 'Revisar', Icono: CheckCircle2, tabs: [] },
     // Proyectar y Simulador son uno solo desde el 24/10/2026: se parte de la proyección y se le
     // mueven palancas. Un link viejo a `?s=proyectar` abre el Simulador (ver `SECCION_ALIAS`).
@@ -861,6 +864,10 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                     {!esperaFechas && !vistaTriage && seccion === 'analizar' && tab === 'variabilidad' && (
                         <Variabilidad datos={variabilidad} rol={rol} irA={irADetalle}
                             fallo={fallas.variabilidad} onReintentar={cargarAnalizar} />
+                    )}
+                    {!esperaFechas && !vistaTriage && seccion === 'analizar' && tab === 'programas' && contexto.puede_reportar && (
+                        <ProgramasSegmentos periodo={filtros.period === 'custom'
+                            ? { period: 'custom', start_date: filtros.desde, end_date: filtros.hasta } : { period: filtros.period }} />
                     )}
                     {/* Cambiar de tabla o quitar el filtro a mano también lo saca de la URL: si
                         no, salir de Revisar y volver lo resucitaba, porque la URL es la que manda

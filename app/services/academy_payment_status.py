@@ -16,6 +16,9 @@ que no cambió.
 Para la carga inicial y para reparar, el masivo `GET /api/external/academy/payment-status` arma lo
 mismo para todos (`estado`), y la Academia lo lee solo desde un botón de su admin.
 
+El origen (`origen`: setting o workshop, el setter y el taller, ADR-W178) viaja para que la Academia filtre la
+cobranza por de dónde vino el alumno.
+
 La baja viaja acá: con la baja la Academia cierra el proceso del alumno (con el motivo), y con la
 reversión lo reabre. Desde el 19/10/2026 la baja ya NO le corta el acceso (antes vencía en el día,
 pedido del 30/09): es un indicador para el equipo y saca la deuda de lo que queda por cobrar.
@@ -107,6 +110,26 @@ def regla_estado(baja, vencidas, proxima_vence, tipo, hoy=None, saldo=0):
     return DEBE if (saldo or 0) > 0 else PAGADO
 
 
+def origen(client):
+    """De dónde vino el cliente (ADR-W178): el origen de su venta activa más nueva, con
+    `origen_service.origen_de_venta` (renovación y upsell heredan el de su primera venta nueva), y el setter de
+    esa agenda. Sin venta o sin origen fijado, `tipo` None: la Academia muestra «Sin origen», no lo adivina."""
+    from app.models import Appointment, Sale
+    from app.services.origen_service import origen_de_venta
+
+    vacio = {'tipo': None, 'setter_email': None, 'setter': None, 'taller': None}
+    suya = Sale.person_uuid == client.person_uuid if client.person_uuid else Sale.client_id == client.id
+    venta = Sale.query.filter(suya, Sale.status == 'active').order_by(Sale.sold_at.desc(), Sale.id.desc()).first()
+    if venta is None:
+        return vacio
+    o = origen_de_venta(venta)
+    appt = db.session.get(Appointment, o['appointment_id']) if o.get('appointment_id') else None
+    setter = appt.setter if appt else None
+    return {**vacio, 'tipo': o.get('tipo'), 'taller': o.get('taller'),
+            'setter_email': (setter.email or '').strip().lower() or None if setter else None,
+            'setter': setter.username if setter else None}
+
+
 def estado(client, hoy=None):
     """Todo lo que la Academia necesita saber del pago de un cliente. Una foto de AHORA.
 
@@ -174,6 +197,7 @@ def estado(client, hoy=None):
                         'monto': round(float(ultima.monto or 0), 2),
                         'tipo_pago': ultima.tipo_pago} if ultima else None,
         'baja': baja,
+        'origen': origen(client),
         'actualizado_at': datetime.utcnow().replace(microsecond=0).isoformat() + 'Z',
     }
 

@@ -1588,3 +1588,39 @@
   4. **Desconectados:** debajo de los conectados, el equipo visto en los últimos 30 días, el más reciente arriba, con «visto hace 25 min», «ayer» o la fecha. Los dados de baja en Work no aparecen. Tocarlos abre la conversación directa igual. La cabecera de una directa dice «Visto hace…» si la persona no está.
 - **Qué se pierde:** una llamada que terminó antes de su duración sigue marcada hasta la hora de fin. Quien solo usó Work antes de este cambio no tiene «visto» hasta que vuelva a entrar.
 - **Consecuencias:** sin migración. Con esto el chat de Work queda como el mockup, salvo Bugs y Estudiantes (ventas no los ve). Sigue llevar este diseño a la Academia y Leadership (tag `archivo/chat-cruzado-paso2`).
+
+## ADR-W178: el estado de pago lleva el origen del alumno (Setting o Workshop y su setter)
+
+- **Fecha:** 2026-11-18 · **Subsistema:** Integración con la Academia (`app/services/academy_payment_status.py` `origen`) · **Estado:** implementado. Leadership 1392; en la Academia, ADR-227.
+- **Contexto:** la cobranza de la Academia (tablas «Cuotas» y «Cobros del mes», Deudores) no podía separar a los alumnos por de dónde vinieron. El origen ya está guardado en Work (ADR-W101), pero no viajaba.
+- **Decisión:**
+  1. `estado()` suma `origen` = `{tipo, setter_email, setter, taller}`. Sale de la venta activa más nueva del cliente con `origen_service.origen_de_venta` (renovación y upsell heredan el de la primera venta nueva) y el setter es el de esa agenda (`appointments.setter_id`).
+  2. Sin venta o sin origen fijado, `tipo` null y la Academia muestra «Sin origen». No se adivina.
+  3. Viaja por el mismo camino de siempre (`POST /payment-status` y el masivo `GET /api/external/academy/payment-status`): sin endpoint ni migración.
+- **Qué se pierde:** con dos ventas activas de origen distinto (dos programas), cuenta solo la más nueva. El setter es el de la agenda; el texto libre `sales.setter` no se usa.
+- **Consecuencias:** como el aviso cambia, el primer reenvío de cada cliente se guarda en la Academia como estado nuevo. Para que lleguen todos de una vez, después del deploy se corre el masivo desde la Academia (botón «Resincronizar pagos con Work» de Avance).
+
+## ADR-W177: Programas y segmentos (AL/RR/SI y CAC/ROAS por segmento; decisión 839 por reparto de agendas)
+
+- **Fecha:** 2026-11-18 · **Subsistema:** Marketing y Dirección comercial (`app/services/programas_analitica.py`, `segmentos_costos.py`, `meta_programas_service.py`, `app/api/programas_segmentos.py`, tabla `meta_campana_programas`; pantalla `frontend/src/pages/programas/`, columna «Programa» de Marketing › Meta Ads) · **Estado:** implementado. Leadership 1395 y 1403; resuelve la decisión 839.
+- **Contexto:** la dirección no podía comparar los tres programas (ventas, ticket, cuánto deja cada cliente, cuánto se cobra de lo acordado, cuánto cuesta conseguir un comprador) ni saber qué segmento de lead de Setting rinde la plata de Meta. Meta no sabe qué programa vende una campaña ni el segmento del lead, y Segmentos tenía el gasto bloqueado (`SIN_SEGMENTO_POSIBLE`) hasta decidir cómo repartirlo (839).
+- **Decisión:**
+  1. **Una vista nueva, sin tocar las demás:** pestaña «Programas y segmentos» de Dirección comercial › Analizar (con el período del header) y vista de Marketing › Todos. Admin, dirección comercial y de marketing. Toda cifra abre su lista y todo %, costo o ROAS dice su cuenta.
+  2. **Por programa** reutiliza lo que ya existe: ventas, New Cash y ticket de Analizar (filas de Revisar › Ventas por el programa del tipo de pago); LTV = cobrado neto por cliente hasta el fin del período (`sales` + `financial_sales` por `sale_id`; `payments` no se usa, le falta feb–jul 2026); % cobrado = cobrado ÷ acordado de las ventas del período con `deuda_service` (fuera, y lo dice, las sin total acordado —renovaciones, upsells— y las canceladas).
+  3. **CAC y ROAS por programa con una etiqueta manual por campaña de Meta** (`meta_campana_programas`, una fila por `campana_id`: vale para los anuncios que Meta sume después, por eso no va en `meta_anuncios`). AL, RR, SI o «Varios programas» (revisada, su gasto no va a ninguno). Sin detección automática: SPI-TRIPODE-* parece Specialist pero lo decide una persona. Sin campañas etiquetadas: «—» y «falta etiquetar campañas».
+  4. **Decisión 839 → opción a, reparto por agendas:** el gasto de Setting se reparte entre A/B/C/D/sin segmento según sus agendas del período (base alta). La pantalla dice que es una estimación. CAC = gasto estimado ÷ compradores; ROAS = New Cash ÷ gasto estimado. Workshop no entra (sus leads no se segmentan). El reparto vive solo en esta vista: Marketing › Segmentos y el filtro de segmento siguen sin gasto.
+  5. **Sin % de cierre por programa:** la agenda no sabe qué programa se va a vender; lo dice el pie de la vista.
+- **Qué se pierde:** el costo por agenda es, por construcción, el mismo en todos los segmentos; tampoco se muestra costo por lead por segmento (con el reparto por agendas, «sin segmento» —casi todos los leads, pocas agendas— daría centavos). El CAC por programa depende de que alguien etiquete cada campaña nueva. Ventas y New Cash van por el programa del tipo de pago; LTV y % cobrado, por `sales.program_code`: si los dos no coinciden en una venta, cae en programas distintos.
+- **Consecuencias:** migración `d5f8b1c3e7a9` (tabla nueva, idempotente; la aplica el `releaseCommand` del deploy). Los hechos de Segmentos traen ahora `cliente` en cada cobro (para contar compradores). `deuda_service.cobrado_por_venta` sale de `deudas` para que lo usen las dos. Entrada nueva en el diccionario de datos (`meta_campana_programas`).
+
+## ADR-W179: los pagos que rebotan en la Academia se reintentan, llevan el tipo de venta, y el gasto de Meta se sincroniza desde Work
+
+- **Fecha:** 2026-11-18 · **Subsistema:** Integración con la Academia (`academy_payment_sync.py`) y Marketing (`meta_ads_service`), en `reminder_scheduler.py`.
+- **Contexto:** (1) De los 53 pagos desde el 13/10, 14 no llegaron a la Academia: el alumno todavía no tenía cuenta (404) y el aviso no se reintentaba. (2) Deudores › Métricas no podía medir las metas de upsell y reactivación porque el pago no decía de qué venta era. (3) El gasto de Meta dejó de entrar el 10/11: dependía de un cron externo a `/cron/meta` que dejó de llamar.
+- **Decisión:**
+  1. Cada pago lleva `tipo_venta` (`sales.kind`: new, renewal, upsell).
+  2. El scheduler reenvía cada 3 h los pagos de los últimos 10 días (`reenviar_recientes`), de a uno con 1,5 s de pausa por el tope de pedidos de la Academia. La Academia ignora los repetidos por `sale_id`.
+  3. El scheduler sincroniza el gasto de Meta (la última semana) cada 6 h, sin depender del cron externo, que puede seguir llamando sin problema. El hueco del 10 al 18/11 se cargó a mano el 18/11.
+  4. Los 14 pagos perdidos se cargaron en la Academia solo como registro (Academia ADR-230).
+- **Qué se pierde:** cada 3 h, unos 50 pedidos a la Academia que casi siempre vuelven como repetidos. Un pago que rebota más de 10 días seguidos deja de reintentarse.
+- **Consecuencias:** sin migración. `docs/integracion_learnation_api.md` §7 suma `tipo_venta`.

@@ -164,6 +164,31 @@ def start_scheduler(app):
             except Exception as e:
                 logger.error(f"[ReminderScheduler] Error prendiendo la grabación de las llamadas: {e}")
 
+    def _meta():
+        # El gasto de Meta de la última semana. Antes dependía de un cron externo que dejó de llamar el 10/11.
+        with app.app_context():
+            from app.services import meta_ads_service
+            try:
+                if not soy_lider(CLAVE_DEL_SCHEDULER) or not meta_ads_service.configurado():
+                    return
+                r = meta_ads_service.sincronizar()
+                logger.info(f"[ReminderScheduler] Gasto de Meta sincronizado: {r}")
+            except Exception as e:
+                logger.error(f"[ReminderScheduler] Error sincronizando el gasto de Meta: {e}")
+
+    def _pagos_a_la_academia():
+        # Reintenta los pagos recientes que rebotaron porque el alumno todavía no tenía cuenta.
+        with app.app_context():
+            from app.services.academy_payment_sync import reenviar_recientes
+            try:
+                if not soy_lider(CLAVE_DEL_SCHEDULER):
+                    return
+                r = reenviar_recientes()
+                if r['registrados']:
+                    logger.info(f"[ReminderScheduler] Pagos reenviados a la Academia: {r}")
+            except Exception as e:
+                logger.error(f"[ReminderScheduler] Error reenviando pagos a la Academia: {e}")
+
     def _llamadas_del_dia():
         with app.app_context():
             from app.services.discord_avisos.llamadas_del_dia import publicar
@@ -204,6 +229,10 @@ def start_scheduler(app):
                        id='notas_meet', next_run_time=datetime.now() + timedelta(minutes=5))
     _scheduler.add_job(_grabar_llamadas, 'interval', minutes=15,
                        id='grabar_llamadas', next_run_time=datetime.now() + timedelta(minutes=7))
+    _scheduler.add_job(_meta, 'interval', hours=6,
+                       id='meta_gasto', next_run_time=datetime.now() + timedelta(minutes=9))
+    _scheduler.add_job(_pagos_a_la_academia, 'interval', hours=3,
+                       id='pagos_a_la_academia', next_run_time=datetime.now() + timedelta(minutes=11))
     _scheduler.add_job(_senas, 'interval', minutes=AVANCE_INTERVAL_MINUTES,
                        id='senas_sin_seguir', next_run_time=datetime.now() + timedelta(minutes=3))
     # Una vez por día; si el proceso arranca hasta 30 min tarde (un deploy), sale igual.

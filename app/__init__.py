@@ -188,6 +188,10 @@ def create_app(config_class=Config):
     from app.api.marketing_anuncios import bp as marketing_anuncios_bp
     app.register_blueprint(marketing_anuncios_bp, url_prefix='/api/marketing/anuncios')
 
+    # Programas y segmentos (ADR-W177): admin y las dos direcciones, en su before_request.
+    from app.api.programas_segmentos import bp as programas_segmentos_bp
+    app.register_blueprint(programas_segmentos_bp, url_prefix='/api/programas-segmentos')
+
     from app.api.backup import bp as backup_bp
     app.register_blueprint(backup_bp, url_prefix='/api/backup')
     csrf.exempt(backup_bp) # Exento para tareas externas de backup

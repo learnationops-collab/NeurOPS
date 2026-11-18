@@ -267,3 +267,16 @@ class LandingTracking(db.Model):
     # NULL o 'visita' = carga de la pagina; 'clic_whatsapp' = clic al grupo del evento.
     evento = db.Column(db.String(30))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class MetaCampanaPrograma(db.Model):
+    """El programa (AL, RR, SI o «general») de una campaña de Meta, elegido a mano en Marketing › Meta Ads
+    (Leadership 1395, ADR-W177). Vale para todos sus anuncios, también los que Meta sume después: por eso
+    va por `campana_id` y no en `MetaAnuncio`. Sin fila = sin etiquetar (CAC y ROAS por programa no la
+    cuentan). No se detecta solo: SPI-TRIPODE-* parece Specialist, pero lo decide una persona."""
+    __tablename__ = 'meta_campana_programas'
+    id = db.Column(db.Integer, primary_key=True)
+    campana_id = db.Column(db.String(40), unique=True, nullable=False)
+    programa = db.Column(db.String(10), nullable=False)
+    actualizado_por = db.Column(db.String(255), nullable=True)
+    actualizado_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
