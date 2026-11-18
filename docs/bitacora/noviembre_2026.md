@@ -691,3 +691,9 @@
 
 ### 17/11/2026 · Mensajes abre el chat del equipo
 - El botón Mensajes del dock abre la ventana Chat ([TarjetaSesion.jsx](../../frontend/src/pages/comercial/components/TarjetaSesion.jsx), [ADR-W172](../DECISIONS.md)). En la Academia ya lo abría; en Leadership, Mensajes suma el canal Equipo y Learnito.
+
+### 17/11/2026 · Leadership rápido: lo tuyo de Leadership sin salir de Work
+- El botón **Leadership** de la tarjeta de sesión abre una ventana nueva (también en Herramientas, se puede fijar en el dock) en vez de llevar a Leadership entero ([LeadershipVentana.jsx](../../frontend/src/ventanas/herramientas/leadership/LeadershipVentana.jsx), [ADR-W173](../DECISIONS.md)).
+- Anotar algo y dejarlo definido con un arquetipo (Quick o Project, cuánto lleva o sus pasos, fecha, quién la hace); lo que falte va al Inbox de Leadership.
+- **Lo mío:** lo que te pasaron para definir, los rituals de hoy y lo que sigue en el orden de tu Momentum: completar (con la entrega ahí mismo si la pide), cambiar la fecha, ajustar o pasársela a otro, con «Deshacer». **Lo que pedí:** lo repartido, con su estado y «Pedir un update».
+- Work firma un pase por pedido y lo pasa a la API `v1/rapido` de Leadership ([leadership_rapido.py](../../app/api/leadership_rapido.py)); «Abrir en Leadership» abre esa ficha en otra pestaña (`/api/leadership/entrar?abrir=`).
