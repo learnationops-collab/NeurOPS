@@ -716,3 +716,7 @@
 
 ### 18/11/2026 · Chat de la Academia: error al abrirlo
 - El chat de la Academia daba error 500 al abrirse (código QCIEMADQ): faltaba importar una clase en ChatCenter, y lo mismo en Learnito para @Learnito en el chat. Arreglado en la Academia (`2fb08f40`).
+
+### 18/11/2026 · Cuotas a medida, Learnito en Contacto y reporte diario
+- En el plan de cuotas (venta con saldo y Momentum), la opción «Fechas a mano» ahora dice «A medida: quincenal u otras fechas», para que se vea que ahí se cargan los planes quincenales y los montos distintos ([arbolResultado.momentum.js](../../frontend/src/components/ficha/arbolResultado.momentum.js), Leadership 1312).
+- Academia: botón «Preguntar a Learnito» en Contacto, sin salir de la lista (Leadership 1318), y el reporte diario de Discord etiqueta a quien no cerró el día (Leadership 973). Informe del recontacto de los 19 inactivos en `academy/docs/AUDITORIA/2026-11-18_RECONTACTO_19_INACTIVOS.md` (Leadership 1356).
