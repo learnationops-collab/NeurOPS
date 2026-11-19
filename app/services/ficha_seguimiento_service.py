@@ -14,8 +14,20 @@ BITACORA_USO = 60
 REGISTROS = 8
 
 
+def _victorias(exp):
+    """Todas las victorias del alumno (ADR-W180), lo más nuevo primero: qué logró, por qué cuenta, quién y la prueba.
+
+    La captura llega como enlace firmado de la Academia (vive 30 minutos): alcanza para abrirla desde la ficha recién cargada.
+    """
+    vics = [{'fecha': v.get('fecha'), 'por': v.get('por'), 'texto': v.get('que_logro'), 'detalle': v.get('por_que_cuenta'),
+             'link': v.get('link'), 'captura': v.get('captura')}
+            for v in exp.get('victorias') or [] if v.get('fecha')]
+    vics.sort(key=lambda r: bitacora._utc(r['fecha']) or datetime.min, reverse=True)
+    return vics
+
+
 def _registros(exp):
-    """Lo último que anotó el equipo: acciones (con su respuesta), observaciones y victorias, lo más nuevo primero."""
+    """Lo último que anotó el equipo: acciones (con su respuesta) y observaciones, lo más nuevo primero. Las victorias van aparte."""
     seg = exp.get('seguimiento') or {}
     regs = [{'clase': 'accion', 'fecha': a.get('fecha'), 'por': a.get('por'), 'texto': a.get('texto'),
              'protocolo': a.get('protocolo'), 'respuesta': a.get('respuesta'),
@@ -24,19 +36,16 @@ def _registros(exp):
     regs += [{'clase': 'observacion', 'fecha': o.get('fecha'), 'por': o.get('por'), 'texto': o.get('texto'),
               'tipo': o.get('tipo')}
              for o in exp.get('observaciones') or [] if o.get('tipo') not in ('esperando_respuesta', 'sin_respuesta', 'devolucion')]
-    regs += [{'clase': 'victoria', 'fecha': v.get('fecha'), 'por': v.get('por'), 'texto': v.get('que_logro'),
-              'detalle': v.get('por_que_cuenta')}
-             for v in exp.get('victorias') or []]
     regs = [r for r in regs if r['fecha']]
     regs.sort(key=lambda r: bitacora._utc(r['fecha']) or datetime.min, reverse=True)
     return regs[:REGISTROS]
 
 
 def seguimiento(client, quien=None):
-    """`{recorrido, seguimiento, uso, registros, bitacora, aviso}`; sin vínculo o sin respuesta, todo vacío y el aviso."""
+    """`{recorrido, seguimiento, uso, registros, victorias, bitacora, aviso}`; sin vínculo o sin respuesta, todo vacío y el aviso."""
     exp, aviso = bitacora.expediente(client, quien)
     if exp is None:
-        return {'recorrido': None, 'seguimiento': None, 'uso': None, 'registros': [], 'bitacora': [], 'aviso': aviso}
+        return {'recorrido': None, 'seguimiento': None, 'uso': None, 'registros': [], 'victorias': [], 'bitacora': [], 'aviso': aviso}
     uso = [b for b in exp.get('bitacora') or [] if b.get('grupo') in GRUPOS_USO and b.get('fecha')]
     uso.sort(key=lambda b: bitacora._utc(b['fecha']) or datetime.min, reverse=True)
     return {
@@ -44,6 +53,7 @@ def seguimiento(client, quien=None):
         'seguimiento': {'objetivos': (exp.get('seguimiento') or {}).get('objetivos') or []},
         'uso': exp.get('uso'),
         'registros': _registros(exp),
+        'victorias': _victorias(exp),
         'bitacora': uso[:BITACORA_USO],
         'aviso': None,
     }

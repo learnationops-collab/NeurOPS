@@ -1,6 +1,7 @@
 // 3. Seguimiento del equipo (ADR-W016): cómo trabaja el equipo de la Academia con el alumno. No son comentarios:
 // objetivos (para qué, quién lo lleva) con su próximo paso, protocolos de contacto, y los últimos registros —acciones
-// con si el alumno respondió, observaciones y victorias—. Solo lectura: se registra en Contacto de la Academia.
+// con si el alumno respondió y observaciones—. Solo lectura: se registra en Contacto de la Academia.
+// Las victorias van primero y aparte (ADR-W180): todas, con por qué cuentan, quién y la prueba, para usarlas al cobrar.
 
 import { Chip } from '../../../standard';
 import { diaLegible } from '../../piezas';
@@ -63,11 +64,40 @@ function Registro({ r }) {
   );
 }
 
-export default function BloqueSeguimiento({ seguimiento, registros }) {
+function Victoria({ v }) {
+  return (
+    <li className="ful-reg victoria">
+      <span className="ful-reg-fecha">{diaLegible(v.fecha)}</span>
+      <i aria-hidden="true" />
+      <span>
+        {v.por && <small className="mut">{v.por}</small>}
+        <span className="ln-t-body-sm" style={{ display: 'block', whiteSpace: 'pre-line' }}>
+          <b>{v.texto}</b>
+          {v.detalle ? ` — ${v.detalle}` : ''}
+        </span>
+        {(v.link || v.captura) && (
+          <small className="t-cap">
+            {v.link && <a href={v.link} target="_blank" rel="noreferrer">Prueba</a>}
+            {v.link && v.captura && ' · '}
+            {v.captura && <a href={v.captura} target="_blank" rel="noreferrer">Captura</a>}
+          </small>
+        )}
+      </span>
+    </li>
+  );
+}
+
+export default function BloqueSeguimiento({ seguimiento, registros, victorias = [] }) {
   const objetivos = seguimiento?.objetivos || [];
   return (
     <section className="ln-panel ln-panel--sm ful-seccion" aria-labelledby="ful-seguimiento">
       <small id="ful-seguimiento" className="ln-t-eyebrow ln-muted">Seguimiento del equipo</small>
+      {victorias.length > 0 && (
+        <>
+          <small className="ful-sub">{`Victorias · ${victorias.length}`}</small>
+          <ul className="ful-regs">{victorias.map((v, i) => <Victoria key={`${v.fecha}-${i}`} v={v} />)}</ul>
+        </>
+      )}
       {objetivos.length ? (
         <>
           <small className="ful-sub">{`Objetivos abiertos · ${objetivos.length}`}</small>

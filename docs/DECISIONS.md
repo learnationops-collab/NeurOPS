@@ -1624,3 +1624,11 @@
   4. Los 14 pagos perdidos se cargaron en la Academia solo como registro (Academia ADR-230).
 - **Qué se pierde:** cada 3 h, unos 50 pedidos a la Academia que casi siempre vuelven como repetidos. Un pago que rebota más de 10 días seguidos deja de reintentarse.
 - **Consecuencias:** sin migración. `docs/integracion_learnation_api.md` §7 suma `tipo_venta`.
+
+## ADR-W180: las victorias del alumno, aparte y con su prueba, en Fulfillment
+
+- **Fecha:** 2026-11-18 · **Subsistema:** Ficha › Fulfillment (`ficha_seguimiento_service.py`, `BloqueSeguimiento.jsx`). Leadership 1401; Academia ADR-233.
+- **Contexto:** Estrategia 16/11: las victorias de cada alumno tienen que estar a mano del closer cuando cobra o renueva. La Academia ahora pide una victoria con prueba en cada cierre del día del staff, de un alumno con el que trabajó. En Fulfillment las victorias ya llegaban por el expediente (`agent/ask`), pero mezcladas en «Últimos registros», cortados en 8, y sin la prueba.
+- **Decisión:** el seguimiento del equipo trae `victorias` aparte: todas las del expediente, lo más nuevo primero, con qué logró, por qué cuenta, quién la registró, la fecha y los enlaces a la prueba (link y captura firmada de la Academia). Se muestran primero en el bloque «Seguimiento del equipo» («Victorias · N»). «Últimos registros» queda con acciones y observaciones.
+- **Qué se pierde:** la captura es un enlace firmado de 30 minutos: con la ficha abierta más tiempo hay que recargar Fulfillment para abrirla. Las victorias llegan dentro de las últimas 100 observaciones del alumno (tope del expediente).
+- **Consecuencias:** sin migración ni cambios de API: el expediente ya traía `victorias` con `link` y `captura`.

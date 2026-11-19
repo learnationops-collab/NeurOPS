@@ -720,3 +720,8 @@
 ### 18/11/2026 · Cuotas a medida, Learnito en Contacto y reporte diario
 - En el plan de cuotas (venta con saldo y Momentum), la opción «Fechas a mano» ahora dice «A medida: quincenal u otras fechas», para que se vea que ahí se cargan los planes quincenales y los montos distintos ([arbolResultado.momentum.js](../../frontend/src/components/ficha/arbolResultado.momentum.js), Leadership 1312).
 - Academia: botón «Preguntar a Learnito» en Contacto, sin salir de la lista (Leadership 1318), y el reporte diario de Discord etiqueta a quien no cerró el día (Leadership 973). Informe del recontacto de los 19 inactivos en `academy/docs/AUDITORIA/2026-11-18_RECONTACTO_19_INACTIVOS.md` (Leadership 1356).
+
+### 18/11/2026 · Programas y segmentos, cobranza por origen, pagos que faltaban y victorias
+- Vista nueva «Programas y segmentos» (Dirección comercial › Analizar y Marketing › Todos): por programa ventas, cash, ticket, LTV, % cobrado y CAC/ROAS con la etiqueta de programa de cada campaña (Marketing › Meta Ads); por segmento A/B/C/D, CAC y ROAS repartiendo el gasto de setting por agendas (ADR-W177, Leadership 1395 y 1403).
+- El estado de pago lleva el origen (setting o workshop) y el setter a la Academia (ADR-W178, Leadership 1392); los pagos llevan el tipo de venta, los que rebotan se reintentan cada 3 h y el gasto de Meta se sincroniza cada 6 h desde Work: faltaba desde el 10/11 (ADR-W179).
+- En la ficha › Fulfillment, las victorias del alumno van aparte y con su prueba, para usarlas al cobrar (ADR-W180, Leadership 1401).
