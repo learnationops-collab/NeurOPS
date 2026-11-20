@@ -39,6 +39,18 @@ def _con_motivo(filas):
             f['motivo'] = motivos[f['id']]
 
 
+def _con_motivo_no_cierre(filas):
+    """Suma `motivo_no_cierre` ({texto, oferta_presentada}) a las llamadas con show up que no cerraron:
+    lo que copia «Copiar motivos para IA» de Analizar junto a los de no show y cancelación (ADR-W190)."""
+    from app.services.motivos_no_cierre import motivos_por_agenda
+
+    motivos = motivos_por_agenda([f['id'] for f in filas if f['no_cerrada']])
+    for f in filas:
+        m = motivos.get(f['id'])
+        if m and m.get('texto'):
+            f['motivo_no_cierre'] = {'texto': m['texto'], 'oferta_presentada': m.get('oferta_presentada')}
+
+
 class ComercialAgendasMixin:
 
     # --- Agendas ------------------------------------------------------------------------------
@@ -212,9 +224,15 @@ class ComercialAgendasMixin:
                 'canal': canales[a.id],
                 # Quién hizo el triage (Dari, Juliana…), o None si llegó directa (06/11/2026).
                 'triage': triages[a.id],
+                # El seguimiento pendiente y en qué contacto de la cadencia va (1 a 4): la tarjeta
+                # «Seguimientos en curso» de Analizar (ADR-W190).
+                'en_seguimiento': con_seguimiento,
+                'seguimiento_intento': (a.seguimiento_intento or 1) if con_seguimiento else None,
+                'seguimiento_fecha': (a.fecha_seguimiento or '')[:10] or None if con_seguimiento else None,
             })
         _con_closing(appts, filas)
         _con_motivo(filas)
+        _con_motivo_no_cierre(filas)
         from app.services import noshow_descartado
         noshow_descartado.marcar(filas, es_no_show=lambda f: f['post_call']['key'] == 'no_show')
         return filas
