@@ -16,6 +16,7 @@ import { usePeriodoDeUrl } from './anuncios/usePeriodoDeUrl';
 import ResumenTodos, { EsqueletoResumen } from './todos/ResumenTodos';
 import MetricaPorMetrica from './todos/MetricaPorMetrica';
 import SegmentosVista from './todos/SegmentosVista';
+import ProgramasSegmentos from '../../programas/ProgramasSegmentos';
 import FiltroSegmentoMarketing, { segmentoDeUrl } from './todos/FiltroSegmentoMarketing';
 import LeyendaFuentes from './todos/LeyendaFuentes';
 import { SETTING, WORKSHOP, gruposDe } from './todos/comparacion';
@@ -33,6 +34,7 @@ import './todos/todos.css';
  *  - Resumen: las cuatro cifras que más separan a las dos fuentes y el embudo normalizado a 1.000 leads.
  *  - Métrica por métrica: cada cifra de las dos fuentes lado a lado, con quién gana (y por cuánto).
  *  - Segmentos: la matriz A/B/C/D × Setting/Workshop, con su filtro (28/10/2026).
+ *  - Programas y segmentos: AL/RR/SI y el CAC/ROAS de Setting por segmento (ADR-W177; también en Analizar).
  *  - Gasto en Meta: cuánto se gastó en cada embudo y día por día; debajo, el desplegable «Generar UTMs»
  *    (29/10/2026: las UTM son de las landings de Workshop y otras, no de Setting; se abre con `utm=1`).
  *
@@ -44,6 +46,7 @@ const VISTAS = [
     { key: 'resumen', label: 'Resumen' },
     { key: 'detalle', label: 'Métrica por métrica' },
     { key: 'segmentos', label: 'Segmentos' },
+    { key: 'programas', label: 'Programas y segmentos' },
     { key: 'meta', label: 'Gasto en Meta' },
 ];
 
@@ -62,7 +65,7 @@ const TodosPage = () => {
     const { datos, error: fallo, cargando } = useDatosCacheados(`mk:tablero:${base}:${rango.desde}:${rango.hasta}:${segmento}`,
         (signal) => pedirTablero(rango.desde, rango.hasta, { signal, base, segmento }),
         // Segmentos pide lo suyo y avisa sus propios errores: el del tablero no lo bloquea ni lo repite.
-        { version, onError: (e) => { if (vista !== 'segmentos') toast.error(mensajeDeError(e, 'No se pudo cargar la comparación.')); } });
+        { version, onError: (e) => { if (!['segmentos', 'programas'].includes(vista)) toast.error(mensajeDeError(e, 'No se pudo cargar la comparación.')); } });
     const error = fallo ? mensajeDeError(fallo, 'No se pudo cargar la comparación.') : null;
 
     const setting = datos?.fuentes?.fuentes?.find((f) => f.key === SETTING.key);
@@ -82,6 +85,13 @@ const TodosPage = () => {
     const contenido = () => {
         if (vista === 'segmentos') {
             return <SegmentosVista rango={rango} version={version} params={params} cambiar={cambiar} onReintentar={recargar} />;
+        }
+        if (vista === 'programas') {
+            return (
+                <div className="vista mk-vista">
+                    <ProgramasSegmentos periodo={{ desde: rango.desde, hasta: rango.hasta }} version={version} moneda={datos?.moneda} />
+                </div>
+            );
         }
         if (error && !datos) return <ErrorDeCarga titulo={error} onReintentar={recargar} />;
         if (vista === 'meta') {

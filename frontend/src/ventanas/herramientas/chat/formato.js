@@ -42,3 +42,18 @@ export const conSeparadores = (mensajes) => {
     }
     return filas;
 };
+
+/** Lo que está haciendo según su agenda: «En llamada · hasta 16:30». */
+export const estadoDe = (estado) => (estado ? `${estado.texto}${estado.hasta ? ` · hasta ${hora(estado.hasta)}` : ''}` : null);
+
+/** «hace 5 min», «hace 3 h», «ayer» o la fecha corta: cuándo se vio por última vez a alguien desconectado. */
+export const hace = (iso) => {
+    if (!iso) return null;
+    const min = Math.max(1, Math.round((Date.now() - new Date(iso)) / 60000));
+    if (min < 60) return `hace ${min} min`;
+    if (min < 12 * 60) return `hace ${Math.round(min / 60)} h`;
+    const d = dia(iso);
+    if (d === 'Hoy') return `hoy a las ${hora(iso)}`;
+    if (d === 'Ayer') return 'ayer';
+    return `el ${new Date(iso).toLocaleDateString('es', { day: 'numeric', month: 'short' })}`;
+};

@@ -695,3 +695,47 @@
 ### 17/11/2026 · Triage: una cuenta desactivada no borra sus llamadas del tablero
 - Las métricas del triage solo contaban a las personas con cuenta activa. Al desactivar la de Juliana Avila, sus llamadas salieron de Dirección comercial › Triage: del 26/10 al 17/11 el total bajó de 74 agendas a 44. Ahora cuentan también quienes atendieron llamadas en el período aunque hoy no tengan cuenta activa ([triage_service.py](../../app/services/triage_service.py), `_personas_del_periodo`). Los avisos de Discord siguen mencionando solo a las activas.
 - Datos: las dos agendas de Yulissa Jimenez, que habían quedado a nombre de Dari González por el «Pasar a triage» equivocado del 13/11, volvieron a Jean Carlo.
+
+### 17/11/2026 · Mensajes abre el chat del equipo
+- El botón Mensajes del dock abre la ventana Chat ([TarjetaSesion.jsx](../../frontend/src/pages/comercial/components/TarjetaSesion.jsx), [ADR-W172](../DECISIONS.md)). En la Academia ya lo abría; en Leadership, Mensajes suma el canal Equipo y Learnito.
+
+### 17/11/2026 · Leadership rápido: lo tuyo de Leadership sin salir de Work
+- El botón **Leadership** de la tarjeta de sesión abre una ventana nueva (también en Herramientas, se puede fijar en el dock) en vez de llevar a Leadership entero ([LeadershipVentana.jsx](../../frontend/src/ventanas/herramientas/leadership/LeadershipVentana.jsx), [ADR-W173](../DECISIONS.md)).
+- Anotar algo y dejarlo definido con un arquetipo (Quick o Project, cuánto lleva o sus pasos, fecha, quién la hace); lo que falte va al Inbox de Leadership.
+- **Lo mío:** lo que te pasaron para definir, los rituals de hoy y lo que sigue en el orden de tu Momentum: completar (con la entrega ahí mismo si la pide), cambiar la fecha, ajustar o pasársela a otro, con «Deshacer». **Lo que pedí:** lo repartido, con su estado y «Pedir un update».
+- Work firma un pase por pedido y lo pasa a la API `v1/rapido` de Leadership ([leadership_rapido.py](../../app/api/leadership_rapido.py)); «Abrir en Leadership» abre esa ficha en otra pestaña (`/api/leadership/entrar?abrir=`).
+
+### 17/11/2026 · Chat: reacciones, etiquetas, búsqueda y Learnito en el canal
+- En el chat del equipo se reacciona, se etiqueta con @ (llega el aviso a la campanita o a la Academia) y se busca en la conversación ([Mensaje.jsx](../../frontend/src/ventanas/herramientas/chat/Mensaje.jsx), [Escribir.jsx](../../frontend/src/ventanas/herramientas/chat/Escribir.jsx), [ADR-W174](../DECISIONS.md)).
+- @Learnito responde en el canal, y la chispa de un mensaje abre Learnito al costado con ese mensaje; su respuesta se puede compartir en el canal ([LearnitoAlCostado.jsx](../../frontend/src/ventanas/herramientas/chat/LearnitoAlCostado.jsx)).
+
+### 17/11/2026 · Chat: conversaciones directas y lo no leído
+- Tocar a alguien conectado, o elegirlo con «+» en Conversaciones, abre una conversación directa con esa persona; la lista las muestra con el último mensaje y lo no leído ([ListaConversaciones.jsx](../../frontend/src/ventanas/herramientas/chat/ListaConversaciones.jsx), [ADR-W175](../DECISIONS.md)).
+- Quien no tenía cuenta en la Academia (setters, triage, marketing) ya tiene una solo para el chat: se lo ve conectado y se le puede escribir directo (Academia ADR-224).
+- El botón Mensajes de la tarjeta de sesión muestra cuántos mensajes hay sin leer ([usePresencia.js](../../frontend/src/ventanas/herramientas/chat/usePresencia.js)).
+
+### 17/11/2026 · Chat: «En llamada» y los desconectados
+- Debajo de cada persona conectada se ve lo que está haciendo: «En llamada · hasta 16:30» si tiene una agenda en curso en Work, o «En sesión con…», «En clase», «En reunión» según su agenda de la Academia ([chat.py](../../app/api/chat.py), [ADR-W176](../DECISIONS.md)).
+- Debajo de los conectados, los desconectados de los últimos 30 días con cuándo se los vio; la cabecera de una conversación directa también lo dice ([Conectados.jsx](../../frontend/src/ventanas/herramientas/chat/Conectados.jsx)).
+
+### 17/11/2026 · Chat: «En llamada» también en la Academia y Leadership
+- Work le pasa a la Academia el «En llamada» de cada persona con su presencia de cada minuto, así lo ven también la Academia y Leadership ([chat.py](../../app/api/chat.py), Academia ADR-226).
+
+### 18/11/2026 · Chat de la Academia: error al abrirlo
+- El chat de la Academia daba error 500 al abrirse (código QCIEMADQ): faltaba importar una clase en ChatCenter, y lo mismo en Learnito para @Learnito en el chat. Arreglado en la Academia (`2fb08f40`).
+
+### 18/11/2026 · Cuotas a medida, Learnito en Contacto y reporte diario
+- En el plan de cuotas (venta con saldo y Momentum), la opción «Fechas a mano» ahora dice «A medida: quincenal u otras fechas», para que se vea que ahí se cargan los planes quincenales y los montos distintos ([arbolResultado.momentum.js](../../frontend/src/components/ficha/arbolResultado.momentum.js), Leadership 1312).
+- Academia: botón «Preguntar a Learnito» en Contacto, sin salir de la lista (Leadership 1318), y el reporte diario de Discord etiqueta a quien no cerró el día (Leadership 973). Informe del recontacto de los 19 inactivos en `academy/docs/AUDITORIA/2026-11-18_RECONTACTO_19_INACTIVOS.md` (Leadership 1356).
+
+### 18/11/2026 · Programas y segmentos, cobranza por origen, pagos que faltaban y victorias
+- Vista nueva «Programas y segmentos» (Dirección comercial › Analizar y Marketing › Todos): por programa ventas, cash, ticket, LTV, % cobrado y CAC/ROAS con la etiqueta de programa de cada campaña (Marketing › Meta Ads); por segmento A/B/C/D, CAC y ROAS repartiendo el gasto de setting por agendas (ADR-W177, Leadership 1395 y 1403).
+- El estado de pago lleva el origen (setting o workshop) y el setter a la Academia (ADR-W178, Leadership 1392); los pagos llevan el tipo de venta, los que rebotan se reintentan cada 3 h y el gasto de Meta se sincroniza cada 6 h desde Work: faltaba desde el 10/11 (ADR-W179).
+- En la ficha › Fulfillment, las victorias del alumno van aparte y con su prueba, para usarlas al cobrar (ADR-W180, Leadership 1401).
+
+### 19/11/2026 · Pedido a los devs
+- Herramienta nueva «Pedido a los devs» (Herramientas › Crear, fijable en el dock): un cambio, un error o una duda de la plataforma va directo al Inbox de Leadership del dev. Fijada en el dock de Jean Carlo (ADR-W181, Leadership 1430).
+
+### 19/11/2026 · Workshop: el nombre del taller es su fecha
+- El nombre de cada taller sale de su fecha y se actualiza solo al moverlo de día; el formulario ya no tiene el campo «Nombre del workshop». Se corrigieron los nombres que habían quedado atrás (p. ej. «19 de noviembre» con fecha 21/11).
+- Los talleres del 21/11 y del 28/11 tienen un grupo de WhatsApp por anuncio (G1–G8 Gral, U1–U6 US y TC1), por ahora con el grupo actual del taller.

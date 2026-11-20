@@ -14,10 +14,11 @@ import hashlib
 import hmac
 import json
 import os
+import re
 import time
 import uuid
 
-from flask import jsonify
+from flask import jsonify, request
 from flask_login import current_user, login_required
 
 from app.api import bp
@@ -29,7 +30,7 @@ def _b64(datos: bytes) -> str:
     return base64.urlsafe_b64encode(datos).rstrip(b'=').decode()
 
 
-def url_de_entrada(email: str, nombre: str, secreto: str, base: str) -> str:
+def url_de_entrada(email: str, nombre: str, secreto: str, base: str, abrir: str = '') -> str:
     cuerpo = _b64(json.dumps({
         'iss': 'work',
         'email': email,
@@ -38,7 +39,9 @@ def url_de_entrada(email: str, nombre: str, secreto: str, base: str) -> str:
         'jti': str(uuid.uuid4()),
     }).encode())
     firma = _b64(hmac.new(secreto.encode(), cuerpo.encode(), hashlib.sha256).digest())
-    return f"{base.rstrip('/')}/auth/handoff?token={cuerpo}.{firma}"
+    # `abrir` (task:ID | project:ID | habit:ID | mapa:ID): lo que Leadership abre al llegar.
+    extra = f'&abrir={abrir}' if re.fullmatch(r'(task|project|habit|mapa):\d+', abrir or '') else ''
+    return f"{base.rstrip('/')}/auth/handoff?token={cuerpo}.{firma}{extra}"
 
 
 @bp.route('/leadership/entrar', methods=['GET'])
@@ -55,4 +58,5 @@ def entrar_a_leadership():
         return jsonify({"message": "Tu cuenta no tiene email"}), 400
 
     base = os.environ.get('LEADERSHIP_URL', LEADERSHIP_URL_POR_DEFECTO)
-    return jsonify({"url": url_de_entrada(current_user.email, current_user.username, secreto, base)}), 200
+    abrir = request.args.get('abrir', '')
+    return jsonify({"url": url_de_entrada(current_user.email, current_user.username, secreto, base, abrir)}), 200

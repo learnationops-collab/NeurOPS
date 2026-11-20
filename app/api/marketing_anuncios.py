@@ -13,7 +13,8 @@ from flask_login import current_user
 from app.decorators import _acceso_denegado, require_cron_secret
 from app.models.user import ROLE_ADMIN, ROLE_DIRECTOR_MARKETING
 from app.services import (
-    anuncios_service, fuentes_registros_service, meta_ads_service, segmentos_marketing_service, workshop_meta_service,
+    anuncios_service, fuentes_registros_service, meta_ads_service, meta_programas_service, segmentos_marketing_service,
+    workshop_meta_service,
 )
 from app.services.comercial_service import ComercialService
 
@@ -150,8 +151,10 @@ def anuncios_de_meta():
         desde, hasta = _periodo()
     except ValueError as error:
         return jsonify({'error': str(error)}), 400
+    programas = meta_programas_service.mapa()
+    anuncios = [{**a, 'programa': programas.get(a['campana_id'])} for a in meta_ads_service.listado(desde, hasta)]
     return jsonify({
-        'anuncios': meta_ads_service.listado(desde, hasta),
+        'anuncios': anuncios,
         'claves': sorted(anuncios_service.claves_conocidas()),
         **_estado_de_meta(),
     }), 200
@@ -184,6 +187,20 @@ def asignar_embudo(meta_ad_id):
         return jsonify({'error': str(error)}), 400
     return jsonify({'meta_ad_id': anuncio.meta_ad_id, 'embudo': anuncio.embudo,
                     'embudo_mapeo': anuncio.embudo_mapeo}), 200
+
+
+@bp.route('/meta/campana/<campana_id>/programa', methods=['PUT'])
+def asignar_programa(campana_id):
+    """Body: {"programa": "AL"|"RR"|"SI"|"general"} o {"programa": null} (sin etiquetar). Vale para toda la campaña."""
+    datos = request.get_json(silent=True) or {}
+    try:
+        programa = meta_programas_service.asignar(campana_id, datos.get('programa') or None,
+                                                  getattr(current_user, 'email', None))
+    except LookupError as error:
+        return jsonify({'error': str(error)}), 404
+    except ValueError as error:
+        return jsonify({'error': str(error)}), 400
+    return jsonify({'campana_id': campana_id, 'programa': programa}), 200
 
 
 @bp.route('/meta/<meta_ad_id>', methods=['PUT'])

@@ -15,9 +15,9 @@ listas que se abren al tocarlas— son cuentas sobre esos hechos con `PERTENECE`
     NO se parte: sus leads son clics al grupo de WhatsApp, anónimos; su total va entero y por segmento queda en None.
   · **Origen de un cobro**: el detalle de su procedencia (el setter, «En vivo»/«Grabación» → Workshop, VSL…).
   · **Comparación**: el mismo cálculo sobre otro período; cada celda trae `previo` y `delta` (`segmentos_cortes`).
-  · **Costo por lead por segmento: pendiente** (decisión de negocio 839). Meta no conoce el segmento: o se
-    prorratea el gasto por la mezcla de segmentos, o se divide el gasto de la fuente por los leads del
-    segmento. No se calcula hasta que se decida; ver `docs/pendientes_santi.md`.
+  · **Gasto por segmento**: acá no (Meta no conoce al lead). La decisión 839 se resolvió por reparto según las
+    agendas de cada segmento (ADR-W177) y vive aparte, en `segmentos_costos` (Programas y segmentos): esta vista
+    y el filtro de segmento del resto de Marketing siguen sin gasto.
 """
 import time
 
@@ -135,7 +135,8 @@ def _hechos(desde, hasta):
         fuente = fuentes_service.fuente_de_cobro(c['por_clave'], c['balde']) or 'otras'
         salida.append({'t': 'cobro', 'id': str(cobro.id), 'fuente': fuente, 'origen': _origen_de_cobro(fuente, c),
                        'closer': resolver_nombre_closer(cobro.email_vendedor), 'monto': c['monto'],
-                       'es_venta': c['es_venta'], 'seg': de_cobro[cobro.id], 'pais': pais_de_cobro[cobro.id]})
+                       'es_venta': c['es_venta'], 'seg': de_cobro[cobro.id], 'pais': pais_de_cobro[cobro.id],
+                       'cliente': c['cliente']})  # la persona: compradores del CAC por segmento (`segmentos_costos`)
     salida.extend(_leads_de_setting(desde, hasta))
     return salida, fuentes_service._leads_de_workshop(desde, hasta)
 

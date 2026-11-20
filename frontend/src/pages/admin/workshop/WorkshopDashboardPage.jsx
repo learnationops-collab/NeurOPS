@@ -59,7 +59,6 @@ const initialFormData = {
     date: '',
     // Hora en la zona del navegador; viaja como `inicio_at` en UTC (ver agendaTaller.js)
     hora: '',
-    name: '',
     meet_url: '',
     whatsapp_url: '',
     inversion: 0.0,
@@ -176,7 +175,6 @@ const WorkshopDashboardPage = () => {
         setFormData({
             date: local.fecha || event.date,
             hora: local.hora,
-            name: event.name,
             meet_url: event.meet_url || '',
             whatsapp_url: event.whatsapp_url || '',
             inversion: event.inversion,

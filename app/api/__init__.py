@@ -7,7 +7,7 @@ def health_check():
     return jsonify({"status": "healthy", "service": "Learnation API"}), 200
 
 # Import sub-routes
-from app.api import auth, admin, leadership
+from app.api import auth, admin, leadership, leadership_rapido  # noqa: F401
 from app.api import auth_google_movil  # noqa: F401  (rutas sobre el mismo blueprint)
 
 @bp.after_request

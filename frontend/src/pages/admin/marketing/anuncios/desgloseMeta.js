@@ -75,6 +75,7 @@ export const armarDesglose = (anuncios, leadsPorClave = {}) => {
             cuenta_id: deConjunto[0].cuenta_id,
             campana_id: deConjunto[0].campana_id,
             conjunto_id: deConjunto[0].conjunto_id,
+            programa: deConjunto[0].programa || null,
             hijos: deConjunto.map((a) => ({
                 ...conMetricas(a),
                 tipo: 'anuncio',
@@ -95,6 +96,8 @@ export const armarDesglose = (anuncios, leadsPorClave = {}) => {
             estado: estadoDeGrupo(deCampana, 'campana'),
             cuenta_id: deCampana[0].cuenta_id,
             campana_id: deCampana[0].campana_id,
+            // El programa va por campaña (ADR-W177): todos sus anuncios traen el mismo.
+            programa: deCampana[0].programa || null,
             hijos,
         };
     });

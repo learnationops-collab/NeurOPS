@@ -61,6 +61,20 @@ def saldo(sale, cobrado, completo=False):
     return max(0.0, total - cobrado)
 
 
+def cobrado_por_venta(ids):
+    """({sale_id: cobrado bruto}, {sale_id con un pago completo declarado}) de los pagos completados de esas ventas."""
+    from app.services.comercial_vocabulario import venta_completada  # importa closer_followup_service
+    cobrado, completas = {}, set()
+    ids = list(ids)
+    for i in range(0, len(ids), 500):
+        for fila in FinancialSale.query.filter(FinancialSale.sale_id.in_(ids[i:i + 500])).all():
+            if venta_completada(fila):
+                cobrado[fila.sale_id] = cobrado.get(fila.sale_id, 0.0) + float(fila.monto or 0)
+                if es_pago_completo(fila):
+                    completas.add(fila.sale_id)
+    return cobrado, completas
+
+
 def deudas(clientes):
     """{client_id: deuda} de los `clientes` cuya persona (o, sin persona, el cliente) tiene ventas.
     Los que no tienen ninguna no aparecen: siguen con la cuenta de las inscripciones."""
@@ -77,13 +91,7 @@ def deudas(clientes):
     ventas = Sale.query.filter(or_(*filtro)).all()
     if not ventas:
         return {}
-    from app.services.comercial_vocabulario import venta_completada  # importa closer_followup_service
-    cobrado, completas = {}, set()
-    for fila in FinancialSale.query.filter(FinancialSale.sale_id.in_([v.id for v in ventas])).all():
-        if venta_completada(fila):
-            cobrado[fila.sale_id] = cobrado.get(fila.sale_id, 0.0) + float(fila.monto or 0)
-            if es_pago_completo(fila):
-                completas.add(fila.sale_id)
+    cobrado, completas = cobrado_por_venta([v.id for v in ventas])
     por_persona, por_cliente = {}, {}
     for v in ventas:
         deuda = saldo(v, cobrado.get(v.id, 0.0), completo=v.id in completas)

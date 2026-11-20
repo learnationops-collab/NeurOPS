@@ -272,7 +272,7 @@ function BloquesAcademia({ ficha, desempeno, vuelta }) {
     <>
       <div className="ful-dos">
         <BloqueAvance recorrido={datos.recorrido} />
-        <BloqueSeguimiento seguimiento={datos.seguimiento} registros={datos.registros || []} />
+        <BloqueSeguimiento seguimiento={datos.seguimiento} registros={datos.registros || []} victorias={datos.victorias || []} />
       </div>
       <BloqueUso uso={datos.uso} bitacora={datos.bitacora || []} desempeno={desempeno} />
     </>

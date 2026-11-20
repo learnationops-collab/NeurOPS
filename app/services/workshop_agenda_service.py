@@ -15,9 +15,7 @@ import pytz
 
 from app import db
 from app.models import WorkshopEvent
-
-MESES = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO',
-         'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE']
+from app.models.workshop import nombre_de_fecha
 
 LARGO_URL = 300
 MAX_SEMANAS = 26
@@ -33,8 +31,8 @@ class DatoInvalido(ValueError):
 
 
 def nombre_por_defecto(dia):
-    """'WEBINAR 19 DE OCTUBRE 2026', como se vienen llamando los talleres."""
-    return f'WEBINAR {dia.day} DE {MESES[dia.month - 1]} {dia.year}'
+    """El nombre de un taller es su fecha (lo pone el modelo al guardar)."""
+    return nombre_de_fecha(dia)
 
 
 def zona(nombre, respaldo='America/La_Paz'):

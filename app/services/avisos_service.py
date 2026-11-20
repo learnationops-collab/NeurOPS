@@ -30,6 +30,7 @@ TIPOS = {
     'google_desconectado': {'rotulo': 'Google Calendar desconectado', 'canales': ['centro'], 'obligatorio': True},
     'closer_sin_resolver': {'rotulo': 'Agenda con un closer que no existe', 'canales': ['centro'],
                             'obligatorio': False},
+    'chat_mencion': {'rotulo': 'Te etiquetaron en el chat del equipo', 'canales': ['centro'], 'obligatorio': False},
 }
 TARGETS = ('user', 'rol', 'grupo')
 # Lo que la campanita mira hacia atrás: un aviso de hace más de tres meses ya no se va a leer.

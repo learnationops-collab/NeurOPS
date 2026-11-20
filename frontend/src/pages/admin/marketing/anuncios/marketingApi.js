@@ -59,3 +59,7 @@ export const pedirRegistros = (fuente, metrica, desde, hasta, { base, origen, ..
     api.get('/marketing/anuncios/registros', {
         params: { fuente, metrica, desde, hasta, segmento, ...(base ? { base } : {}), ...(origen ? { origen } : {}) }, ...config,
     }).then((r) => r.data);
+
+/** El programa de una campaña de Meta (AL, RR, SI, «general» o null = sin etiquetar), para CAC y ROAS por programa. */
+export const asignarProgramaDeCampana = (campanaId, programa) =>
+    api.put(`/marketing/anuncios/meta/campana/${campanaId}/programa`, { programa }).then(cambia);

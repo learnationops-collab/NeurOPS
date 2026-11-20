@@ -229,9 +229,14 @@ def _programa_y_mapeo(client):
     El mapeo solo se lee si hay programa: es una consulta, y sin codigo no hay nada que traducir.
     """
     from app.services.academy_access_service import AcademyAccessService
+    from app.services.subscription_service import slug_de
 
-    codigo = CloserFollowUpService._client_program_code(getattr(client, 'id', None))
-    return codigo, (AcademyAccessService.get_product_mapping() if codigo else {})
+    client_id = getattr(client, 'id', None)
+    codigo = CloserFollowUpService._client_program_code(client_id)
+    if not codigo:
+        return codigo, {}
+    # El producto de este cliente: AL de alguien que ya tenía Elite sigue siendo Elite (academy ADR-229).
+    return codigo, {**AcademyAccessService.get_product_mapping(), codigo.strip().upper(): slug_de(codigo, client_id)}
 
 
 def _ahora_iso():

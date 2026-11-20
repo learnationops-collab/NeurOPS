@@ -1,0 +1,18 @@
+/* Programas y segmentos (ADR-W177): dos tablas de cifras, en Analizar y en Marketing › Todos. */
+.ps-vista{display:flex;flex-direction:column;gap:var(--s5,20px)}
+.ps-vista .ps-panel{display:flex;flex-direction:column;gap:var(--s4,16px)}
+.ps-vista .ps-cab .t-h3{margin:0}
+.ps-vista .ps-tabla{display:flex;flex-direction:column;gap:2px;overflow-x:auto}
+.ps-vista .ps-fila{display:grid;gap:var(--s3,12px);align-items:center;padding:var(--s3,12px);border-radius:var(--radius-control,10px)}
+.ps-vista .ps-fila--prog{grid-template-columns:minmax(150px,1.6fr) repeat(9,minmax(84px,1fr));min-width:1040px}
+.ps-vista .ps-fila--seg{grid-template-columns:minmax(120px,1.2fr) repeat(7,minmax(90px,1fr));min-width:840px}
+.ps-vista .ps-fila:not(.ps-fila--cab):not(.ps-fila--total){background:var(--bg-element)}
+.ps-vista .ps-fila:not(.ps-fila--cab):not(.ps-fila--total):hover{background:var(--bg-element-hover)}
+.ps-vista .ps-fila--cab{padding-block:0}
+.ps-vista .ps-fila--total{border-top:1px solid var(--border-subtle);border-radius:0;margin-top:var(--s2,8px)}
+.ps-vista .ps-celda{display:inline-flex;align-items:baseline;gap:6px;flex-wrap:wrap}
+.ps-vista .ps-seg{display:inline-flex;align-items:center;gap:8px}
+.ps-vista .ps-seg i{width:8px;height:8px;border-radius:50%;background:var(--c,var(--text-muted));flex:none}
+.ps-vista .ps-aviso{margin:0;padding:var(--s3,12px);border-radius:var(--radius-control,10px);
+  background:color-mix(in srgb,var(--warning) 10%,transparent);border:1px solid color-mix(in srgb,var(--warning) 30%,transparent)}
+.ps-vista .ps-nota,.ps-vista .ps-pie{margin:0}

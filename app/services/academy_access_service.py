@@ -155,8 +155,9 @@ class AcademyAccessService:
                 status_code=422
             )
 
-        mapping = AcademyAccessService.get_product_mapping()
-        product_slug = mapping.get((programa_code or '').strip().upper())
+        # El del mapeo, salvo que el cliente siga en el producto de antes del código (AL: Elite).
+        from app.services.subscription_service import slug_de
+        product_slug = slug_de(programa_code, client.id)
         if not product_slug:
             raise AcademyAccessError(
                 f"No hay un producto de la Academia vinculado al programa '{programa_code}'. "

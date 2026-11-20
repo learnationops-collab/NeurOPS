@@ -1537,3 +1537,117 @@
 - **Qué se pierde:** el chat de Work depende de la Academia. Sin `ACADEMY_API_TOKEN` (el servidor develop) el chat no carga.
 - **Consecuencias:** sin migración. Siguen: más canales según el rol, conversaciones directas, `@Learnito` en un canal (la Academia tiene que aceptar una pregunta suelta sin abrir una conversación por calificar), etiquetas, reacciones, hilos, convertir un mensaje en tarea y la presencia con la sección, para medir el trabajo activo y pasivo.
 - **Modelo vivo:** `docs/MODELO/CHAT.md`.
+
+## ADR-W172: Mensajes abre el chat del equipo en Work, la Academia y Leadership
+
+- **Fecha:** 2026-11-17 · **Subsistema:** Chat y dock (`pages/comercial/components/TarjetaSesion.jsx`; en la Academia `AuthenticateStaffApi`; en Leadership `ChatCenter`, `EquipoAcademia`, `AcademyChat`) · **Estado:** implementado. Sigue a ADR-W171; en la Academia, ADR-220; en Leadership, ADR-043.
+- **Contexto:** Santi pidió que el chat se abra desde el botón Mensajes del dock y que esté en todos los servicios.
+- **Decisión:**
+  1. **Work:** el botón Mensajes de la tarjeta de sesión (dock y barra lateral) abre la ventana Chat. Antes decía «pronto».
+  2. **Academia:** su botón ya abría el chat (ChatCenter), que tiene el canal Equipo. La API del chat acepta ahora también el token de staff, el de Leadership.
+  3. **Leadership:** su Mensajes suma arriba Learnito y Equipo (el canal de la Academia, con los conectados por servicio), y Equipo es lo primero que se ve al abrir. Su chat propio (conversaciones directas, grupos, hilos sobre tareas) no cambia. Cada sesión de Leadership avisa a la Academia que está conectada, una vez por minuto.
+- **Qué se pierde:** Leadership tiene dos chats en la misma ventana: Equipo (de la Academia) y el suyo. Juntarlos queda para cuando las conversaciones directas pasen a la Academia.
+- **Consecuencias:** sin migración. Leadership usa `ACADEMY_STAFF_API_TOKEN`, que ya tiene configurado.
+
+## ADR-W173: Leadership rápido, lo tuyo de Leadership en una ventana de Work
+
+- **Fecha:** 2026-11-17 · **Subsistema:** Leadership (`app/api/leadership_rapido.py`, `frontend/src/ventanas/herramientas/leadership/`) · **Estado:** implementado. Del lado de Leadership: la API `v1/rapido` (su `RapidoController`) y el mockup `../learnation-leadership/docs/mockups/leadership-rapido.html`.
+- **Contexto:** el botón Leadership de la tarjeta de sesión (dock unificado, ADR-W165) solo llevaba a Leadership entero. Un miembro del equipo, en medio de su trabajo en Work, necesita anotar algo que surgió, ver lo suyo, completarlo o entregarlo y pasarle algo a un compañero sin dejar Work.
+- **Decisión:**
+  1. **Leadership** es una ventana más del catálogo (`leadership`, todos los roles), fijable en el dock; el botón Leadership de la tarjeta la abre. Entrar a Leadership entero queda adentro («Abrir Leadership», en otra pestaña, y «Abrir en Leadership» de cada fila, que llega a esa ficha con `?abrir=`).
+  2. Arriba, una línea para anotar: «Definir» abre una sola pantalla con preguntas cortas: Quick o Project, el arquetipo del Simpler Clarity (que pone el Clarity y sugiere la duración), cuánto lleva o los pasos, para cuándo y quién la hace (si es otra persona, qué te tiene que devolver). El área es la de tu puesto y la actividad sale del título. Lo que falte no frena: va a tu Inbox de Leadership.
+  3. **Lo mío:** lo que te pasaron para definir, los rituals de hoy y lo que sigue en el orden de tu Momentum. La casilla completa (en un project, el paso que sigue); si la tarea se entrega, pide ahí mismo el texto o el link. Cada fila cambia la fecha, se ajusta con el mismo formulario o se le pasa a otro. **Lo que pedí:** lo que repartiste, con su estado y «Pedir un update».
+  4. **Aprobar no tiene lugar:** es de quien dirige. Si te toca, el pie dice cuántas entregas esperan y lleva a Leadership.
+  5. **Sin tokens compartidos:** Work firma un pase por pedido (el mismo del ingreso, `LEADERSHIP_HANDOFF_SECRET`, 60 s, un solo uso) con el email de la sesión y reenvía solo las rutas de la API. Leadership anota cada cambio con la persona y la plataforma. Simulando no se usa.
+- **Qué se pierde:** la ventana depende de Leadership; si no responde, lo dice y no abre el aviso de bugs. Crear no se deshace desde acá (sería borrar): se corrige en Leadership. Sin cuenta en Leadership con el mismo email, la ventana no carga.
+- **Consecuencias:** sin migración. La tarjeta todavía no muestra la cuenta de lo urgente en el botón (pediría consultar Leadership desde todas las pantallas). El registro central del staff (vínculos de cuentas entre plataformas) quedó para más adelante.
+
+## ADR-W174: el chat de Work como el mockup, primera parte (reacciones, etiquetas, búsqueda y Learnito en el canal)
+
+- **Fecha:** 2026-11-17 · **Subsistema:** Chat (`frontend/src/ventanas/herramientas/chat/`, `app/api/chat.py`, `avisos_service` tipo `chat_mencion`, `useCopiloto.ultimaRespuesta`) · **Estado:** implementado. Sigue a ADR-W171; en la Academia, ADR-222.
+- **Contexto:** Santi vio que la ventana Chat había quedado muy corta frente al mockup (ADR-W170) y que se estaba llevando así a la Academia y Leadership. Pidió dejar Work igual al mockup primero, en tres partes: lo de pantalla, lo que necesita a la Academia y lo más pesado. Lo que ya estaba hecho para la Academia y Leadership quedó guardado en el tag `archivo/chat-cruzado-paso2` de cada repo.
+- **Decisión (primera parte):**
+  1. **Reacciones:** al pasar el mouse, tres a mano y las otras tres con «más»; tocar una reacción del mensaje la pone o la saca. Son las seis de la Academia, con íconos.
+  2. **Etiquetas:** «@» abre arriba del campo la lista del equipo (la Academia y la gente activa de Work, sin repetir el correo). Quien queda nombrado recibe el aviso: en la Academia, el suyo; en Work, la campanita (`chat_mencion`), que abre el Chat. El texto resalta cada @Nombre.
+  3. **@Learnito en el canal:** la pregunta va a la conversación de Learnito de quien pregunta (sale de su tope y la ve en su Learnito) y la respuesta se publica en el canal firmada por Learnito, colgada del mensaje y con quién la pidió. Mientras piensa, el canal muestra «Learnito está respondiendo».
+  4. **Learnito al costado:** la chispa de un mensaje abre Learnito a la derecha con ese mensaje citado y el comienzo de la pregunta en el campo, sin mandarla. «Compartir la última respuesta en el canal» la publica firmada por Learnito.
+  5. **Buscar en la conversación:** con 2 letras o más, los 50 mensajes más recientes del canal que lo tienen.
+- **Qué se pierde:** las reacciones de otros sobre mensajes ya cargados no se actualizan hasta reabrir el chat (la consulta trae mensajes nuevos, no cambios).
+- **Consecuencias:** sin migración. Siguen la segunda parte (canales según el rol, conversaciones directas, Bugs y estudiantes) y la tercera («En llamada» desde la agenda, desconectados con «visto hace…»).
+
+## ADR-W175: el chat de Work como el mockup, segunda parte (cuentas del equipo y conversaciones directas)
+
+- **Fecha:** 2026-11-17 · **Subsistema:** Chat (`frontend/src/ventanas/herramientas/chat/`, `app/api/chat.py`, `TarjetaSesion.jsx`) · **Estado:** implementado. Sigue a ADR-W174; en la Academia, ADR-224.
+- **Contexto:** la segunda parte del mockup pedía canales según el rol, conversaciones directas, Bugs y estudiantes. Una conversación directa en la Academia se arma con las dos cuentas, y los setters, triage y marketing no tenían cuenta allá. Santi decidió (17/11) crearles cuentas del equipo, así se los ve conectados siempre, y dejar solo lo que existe hoy: ventas ve solo General, no Fulfillment (el chat de la Academia es el espejo de Discord).
+- **Decisión:**
+  1. **Cuentas:** la Academia le crea a cada persona de Work sin cuenta una solo para el chat, la primera vez que aparece (la presencia de cada minuto alcanza). Work no cambia nada para eso: sigue mandando el correo.
+  2. **Conversaciones directas:** tocar a alguien conectado (en la fila de fotos o en la columna de la derecha) o elegirlo con «+» en Conversaciones abre la directa con esa persona (`con` = su correo en `/api/chat/canal` y `/enviar`). La lista muestra las directas con mensajes, la más reciente arriba, con el último mensaje y lo no leído; la recién abierta va arriba mientras está abierta.
+  3. **Lo no leído:** `GET /api/chat/bandeja` cada 30 s con la ventana abierta y cada minuto sin ella (junto con la presencia). Cuenta Equipo y cada directa; la abierta no cuenta. El botón Mensajes de la tarjeta de sesión muestra el total.
+  4. En una directa el @ trae solo a Learnito (las etiquetas no avisan entre dos) y @Learnito responde ahí mismo.
+  5. **Bugs y Estudiantes** quedan fuera por ahora: ventas no ve los hilos de alumnos (los mismos roles que en la Academia).
+- **Qué se pierde:** el número del dock aparece en la tarjeta de sesión, no sobre el avatar del dock de abajo. Lo no leído tarda hasta un minuto en llegar con la ventana cerrada.
+- **Consecuencias:** sin migración. Sigue la tercera parte: «En llamada» desde la agenda y los desconectados con «visto hace…».
+
+## ADR-W176: el chat de Work como el mockup, tercera parte («En llamada» y los desconectados)
+
+- **Fecha:** 2026-11-17 · **Subsistema:** Chat (`app/api/chat.py` `conectados` y `_en_llamada`, `Conectados.jsx`, `formato.js`) · **Estado:** implementado. Sigue a ADR-W175; en la Academia, ADR-225.
+- **Contexto:** la tercera parte del mockup (ADR-W170): ver antes de escribirle a alguien si está en una llamada o en una sesión, y cuándo se vio a quien no está conectado.
+- **Decisión:**
+  1. **En llamada:** Work marca a su gente conectada que tiene ahora una agenda como closer que empezó y no terminó su duración (`agenda_payload.duracion_min`, 60 si falta), sin cancelar ni reprogramar (`RESULTADOS_NO_VIGENTES`): «En llamada · hasta 16:30». Gana a lo que diga la Academia.
+  2. **Agenda de la Academia:** «En sesión con Lucía R.», «En clase», «En reunión», que calcula ella (ADR-225).
+  3. El estado va debajo del nombre en la columna de conectados (en ámbar, con el punto ámbar en la foto), en el título de la fila de fotos y en la cabecera de una conversación directa.
+  4. **Desconectados:** debajo de los conectados, el equipo visto en los últimos 30 días, el más reciente arriba, con «visto hace 25 min», «ayer» o la fecha. Los dados de baja en Work no aparecen. Tocarlos abre la conversación directa igual. La cabecera de una directa dice «Visto hace…» si la persona no está.
+- **Qué se pierde:** una llamada que terminó antes de su duración sigue marcada hasta la hora de fin. Quien solo usó Work antes de este cambio no tiene «visto» hasta que vuelva a entrar.
+- **Consecuencias:** sin migración. Con esto el chat de Work queda como el mockup, salvo Bugs y Estudiantes (ventas no los ve). Sigue llevar este diseño a la Academia y Leadership (tag `archivo/chat-cruzado-paso2`).
+
+## ADR-W178: el estado de pago lleva el origen del alumno (Setting o Workshop y su setter)
+
+- **Fecha:** 2026-11-18 · **Subsistema:** Integración con la Academia (`app/services/academy_payment_status.py` `origen`) · **Estado:** implementado. Leadership 1392; en la Academia, ADR-227.
+- **Contexto:** la cobranza de la Academia (tablas «Cuotas» y «Cobros del mes», Deudores) no podía separar a los alumnos por de dónde vinieron. El origen ya está guardado en Work (ADR-W101), pero no viajaba.
+- **Decisión:**
+  1. `estado()` suma `origen` = `{tipo, setter_email, setter, taller}`. Sale de la venta activa más nueva del cliente con `origen_service.origen_de_venta` (renovación y upsell heredan el de la primera venta nueva) y el setter es el de esa agenda (`appointments.setter_id`).
+  2. Sin venta o sin origen fijado, `tipo` null y la Academia muestra «Sin origen». No se adivina.
+  3. Viaja por el mismo camino de siempre (`POST /payment-status` y el masivo `GET /api/external/academy/payment-status`): sin endpoint ni migración.
+- **Qué se pierde:** con dos ventas activas de origen distinto (dos programas), cuenta solo la más nueva. El setter es el de la agenda; el texto libre `sales.setter` no se usa.
+- **Consecuencias:** como el aviso cambia, el primer reenvío de cada cliente se guarda en la Academia como estado nuevo. Para que lleguen todos de una vez, después del deploy se corre el masivo desde la Academia (botón «Resincronizar pagos con Work» de Avance).
+
+## ADR-W177: Programas y segmentos (AL/RR/SI y CAC/ROAS por segmento; decisión 839 por reparto de agendas)
+
+- **Fecha:** 2026-11-18 · **Subsistema:** Marketing y Dirección comercial (`app/services/programas_analitica.py`, `segmentos_costos.py`, `meta_programas_service.py`, `app/api/programas_segmentos.py`, tabla `meta_campana_programas`; pantalla `frontend/src/pages/programas/`, columna «Programa» de Marketing › Meta Ads) · **Estado:** implementado. Leadership 1395 y 1403; resuelve la decisión 839.
+- **Contexto:** la dirección no podía comparar los tres programas (ventas, ticket, cuánto deja cada cliente, cuánto se cobra de lo acordado, cuánto cuesta conseguir un comprador) ni saber qué segmento de lead de Setting rinde la plata de Meta. Meta no sabe qué programa vende una campaña ni el segmento del lead, y Segmentos tenía el gasto bloqueado (`SIN_SEGMENTO_POSIBLE`) hasta decidir cómo repartirlo (839).
+- **Decisión:**
+  1. **Una vista nueva, sin tocar las demás:** pestaña «Programas y segmentos» de Dirección comercial › Analizar (con el período del header) y vista de Marketing › Todos. Admin, dirección comercial y de marketing. Toda cifra abre su lista y todo %, costo o ROAS dice su cuenta.
+  2. **Por programa** reutiliza lo que ya existe: ventas, New Cash y ticket de Analizar (filas de Revisar › Ventas por el programa del tipo de pago); LTV = cobrado neto por cliente hasta el fin del período (`sales` + `financial_sales` por `sale_id`; `payments` no se usa, le falta feb–jul 2026); % cobrado = cobrado ÷ acordado de las ventas del período con `deuda_service` (fuera, y lo dice, las sin total acordado —renovaciones, upsells— y las canceladas).
+  3. **CAC y ROAS por programa con una etiqueta manual por campaña de Meta** (`meta_campana_programas`, una fila por `campana_id`: vale para los anuncios que Meta sume después, por eso no va en `meta_anuncios`). AL, RR, SI o «Varios programas» (revisada, su gasto no va a ninguno). Sin detección automática: SPI-TRIPODE-* parece Specialist pero lo decide una persona. Sin campañas etiquetadas: «—» y «falta etiquetar campañas».
+  4. **Decisión 839 → opción a, reparto por agendas:** el gasto de Setting se reparte entre A/B/C/D/sin segmento según sus agendas del período (base alta). La pantalla dice que es una estimación. CAC = gasto estimado ÷ compradores; ROAS = New Cash ÷ gasto estimado. Workshop no entra (sus leads no se segmentan). El reparto vive solo en esta vista: Marketing › Segmentos y el filtro de segmento siguen sin gasto.
+  5. **Sin % de cierre por programa:** la agenda no sabe qué programa se va a vender; lo dice el pie de la vista.
+- **Qué se pierde:** el costo por agenda es, por construcción, el mismo en todos los segmentos; tampoco se muestra costo por lead por segmento (con el reparto por agendas, «sin segmento» —casi todos los leads, pocas agendas— daría centavos). El CAC por programa depende de que alguien etiquete cada campaña nueva. Ventas y New Cash van por el programa del tipo de pago; LTV y % cobrado, por `sales.program_code`: si los dos no coinciden en una venta, cae en programas distintos.
+- **Consecuencias:** migración `d5f8b1c3e7a9` (tabla nueva, idempotente; la aplica el `releaseCommand` del deploy). Los hechos de Segmentos traen ahora `cliente` en cada cobro (para contar compradores). `deuda_service.cobrado_por_venta` sale de `deudas` para que lo usen las dos. Entrada nueva en el diccionario de datos (`meta_campana_programas`).
+
+## ADR-W179: los pagos que rebotan en la Academia se reintentan, llevan el tipo de venta, y el gasto de Meta se sincroniza desde Work
+
+- **Fecha:** 2026-11-18 · **Subsistema:** Integración con la Academia (`academy_payment_sync.py`) y Marketing (`meta_ads_service`), en `reminder_scheduler.py`.
+- **Contexto:** (1) De los 53 pagos desde el 13/10, 14 no llegaron a la Academia: el alumno todavía no tenía cuenta (404) y el aviso no se reintentaba. (2) Deudores › Métricas no podía medir las metas de upsell y reactivación porque el pago no decía de qué venta era. (3) El gasto de Meta dejó de entrar el 10/11: dependía de un cron externo a `/cron/meta` que dejó de llamar.
+- **Decisión:**
+  1. Cada pago lleva `tipo_venta` (`sales.kind`: new, renewal, upsell).
+  2. El scheduler reenvía cada 3 h los pagos de los últimos 10 días (`reenviar_recientes`), de a uno con 1,5 s de pausa por el tope de pedidos de la Academia. La Academia ignora los repetidos por `sale_id`.
+  3. El scheduler sincroniza el gasto de Meta (la última semana) cada 6 h, sin depender del cron externo, que puede seguir llamando sin problema. El hueco del 10 al 18/11 se cargó a mano el 18/11.
+  4. Los 14 pagos perdidos se cargaron en la Academia solo como registro (Academia ADR-230).
+- **Qué se pierde:** cada 3 h, unos 50 pedidos a la Academia que casi siempre vuelven como repetidos. Un pago que rebota más de 10 días seguidos deja de reintentarse.
+- **Consecuencias:** sin migración. `docs/integracion_learnation_api.md` §7 suma `tipo_venta`.
+
+## ADR-W180: las victorias del alumno, aparte y con su prueba, en Fulfillment
+
+- **Fecha:** 2026-11-18 · **Subsistema:** Ficha › Fulfillment (`ficha_seguimiento_service.py`, `BloqueSeguimiento.jsx`). Leadership 1401; Academia ADR-233.
+- **Contexto:** Estrategia 16/11: las victorias de cada alumno tienen que estar a mano del closer cuando cobra o renueva. La Academia ahora pide una victoria con prueba en cada cierre del día del staff, de un alumno con el que trabajó. En Fulfillment las victorias ya llegaban por el expediente (`agent/ask`), pero mezcladas en «Últimos registros», cortados en 8, y sin la prueba.
+- **Decisión:** el seguimiento del equipo trae `victorias` aparte: todas las del expediente, lo más nuevo primero, con qué logró, por qué cuenta, quién la registró, la fecha y los enlaces a la prueba (link y captura firmada de la Academia). Se muestran primero en el bloque «Seguimiento del equipo» («Victorias · N»). «Últimos registros» queda con acciones y observaciones.
+- **Qué se pierde:** la captura es un enlace firmado de 30 minutos: con la ficha abierta más tiempo hay que recargar Fulfillment para abrirla. Las victorias llegan dentro de las últimas 100 observaciones del alumno (tope del expediente).
+- **Consecuencias:** sin migración ni cambios de API: el expediente ya traía `victorias` con `link` y `captura`.
+
+## ADR-W181: «Pedido a los devs», del dock al Inbox de Leadership
+
+- **Fecha:** 2026-11-19 · **Subsistema:** Herramientas en ventana (`ventanas/herramientas.js`, `PedidoDevsVentana.jsx`) sobre Leadership rápido (`app/api/leadership_rapido.py`). Leadership 1430.
+- **Contexto:** Reunión con Jean Carlo (19/11): necesita registrar cambios de la plataforma y consultas sobre funciones desde la misma interfaz. Leadership rápido ya permitía pasarle algo a otro, pero pide arquetipo, duración y responsable: demasiado para un pedido suelto.
+- **Decisión:** herramienta «Pedido a los devs» para todos los roles: qué pedís (una línea) y un detalle opcional. Va como quick al Inbox de Leadership del dev (`/crear` con `para`), sin definir: el dev lo define. Los devs son los de `LEADERSHIP_DEVS` de Leadership, que ahora salen en `/opciones` (`devs`); con más de uno, se elige a quién. Se le fijó en el dock a Jean Carlo.
+- **Qué se pierde:** no hay seguimiento desde la herramienta: lo pedido se ve en «Lo que pedí» de la ventana Leadership. Sin cuenta en Leadership no se puede mandar (la API pide la persona).
+- **Consecuencias:** sin migración. Leadership suma `devs` a `GET /api/v1/rapido/opciones`.
