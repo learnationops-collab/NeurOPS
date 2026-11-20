@@ -748,3 +748,4 @@
 - La tarjeta del lead junta lo que iba en la cabecera del chat (delegar, canal, etiquetas, etapa); arriba del chat queda cuánto espera y cuánto falta para que se cierre la ventana de Instagram.
 - Seleccionar parte de un mensaje del lead lo anota para la venta: aparece en la ficha del lead › Comunicación.
 
+- La tarjeta del lead ya no desborda la columna derecha: el canal con campaña larga se corta con «…».
