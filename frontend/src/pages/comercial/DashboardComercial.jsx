@@ -840,7 +840,8 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                     {vistaTriage && !esperaFechas && (
                         <TriageDireccion key={`${period}|${rango?.desde}|${rango?.hasta}|${segmento}|${miembroElegido}`} onAbrirFila={abrirFila}
                             period={period} rango={rango} triageId={miembroElegido} segmento={segmento}
-                            onElegirPersona={contexto.puede_elegir_equipo ? (id) => set({ m: id }) : null} />
+                            onElegirPersona={contexto.puede_elegir_equipo ? (id) => set({ m: id }) : null}
+                            onVerCobros={irADetalle ? () => irADetalle('ventas', { area: 'Triage' }) : null} />
                     )}
                     {!esperaFechas && !vistaTriage && seccion === 'analizar' && tab === 'dashboard' && (
                         <Analizar datos={resumen} rol={rol} irA={irADetalle}
