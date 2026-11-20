@@ -18,6 +18,7 @@ import ConciliacionAgendas from './ConciliacionAgendas';
 import { itemTotalAcademia } from './academia';
 import { useModoVista } from '../../../components/listas/useModoVista';
 import { useGruposElegidos } from '../../../components/listas/useGruposElegidos';
+import { aplicarFiltros, hayCondiciones, rotuloDe } from './filtroFacetas';
 
 // La definición de las tablas vive en `tablasDef.js` (ver su docstring). Se re-exporta lo que ya
 // importaban otros archivos por este camino, para no mover los imports de media pantalla.
@@ -51,33 +52,6 @@ export { ChipTono } from './RevisarLista';
  * de la tabla (closers/setters), que la dirección cambia con el switch del dock.
  */
 
-const texto = (fila) => [fila.cliente, fila.ig, fila.email, fila.telefono, fila.closer, fila.setter,
-    fila.fuente, fila.programa].filter(Boolean).join(' ').toLowerCase();
-
-/** Si alguna faceta de la tabla tiene al menos un valor puesto. */
-const hayCondiciones = (def, facetas) => def.facetas.some(fa => (facetas[fa.key] || []).length > 0);
-
-/**
- * El texto de una etiqueta de filtro: el valor solo, salvo en las facetas de sí/no. Un «Sí» suelto
- * no dice nada —lo que trae el número de Show up es «Asistió: Sí»—, y desde que no está el aviso
- * grande que nombraba la faceta, la etiqueta es lo único que lo cuenta.
- */
-const rotuloDe = (c) => (c.valor === 'Sí' || c.valor === 'No' ? `${c.faceta}: ${c.valor}` : c.valor);
-
-/**
- * Búsqueda + facetas. El filtro rápido se aplica aparte porque su menú cuenta cuántas filas deja
- * CADA opción sobre este mismo conjunto (el "Con deuda 9" del desplegable).
- */
-const aplicarFiltros = (filas, def, query, facetas, modo) => {
-    const q = query.trim().toLowerCase();
-    return filas.filter(f => {
-        if (q && !texto(f).includes(q)) return false;
-        const activas = def.facetas.filter(fa => (facetas[fa.key] || []).length > 0);
-        if (activas.length === 0) return true;
-        const cumple = activas.map(fa => facetas[fa.key].includes(fa.de(f)));
-        return modo === 'alguna' ? cumple.some(Boolean) : cumple.every(Boolean);
-    });
-};
 
 const mayuscula = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -151,10 +125,13 @@ const TotalesTira = ({ items, alcance, filtrada }) => (
 const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcance, onAbrirFila,
     filtroInicial, onOlvidarFiltro, puedeElegirEquipo = true, onSincronizarAcademia = null,
     tablas = null, puedeExportar = false, operacion = null, onRecargar = null, fallo = false,
-    conTodas = false }) => {
+    conTodas = false, compartido = null }) => {
     const [query, setQuery] = useState('');
-    const [facetas, setFacetas] = useState({});
-    const [modo, setModo] = useState('todas');
+    // `compartido` (ADR-W190): el Filtro completo de Agendas que Revisar comparte con Analizar,
+    // `{facetas, modo, onCambiar}`. Lo que se elige acá se ve allá y al revés.
+    const [facetas, setFacetas] = useState(() => compartido?.facetas || {});
+    const [modoPropio, setModoPropio] = useState(() => compartido?.modo || 'todas');
+    const modo = modoPropio;
     const [chip, setChip] = useState(null);
     const [menu, setMenu] = useState(null);
     // Los menús de la barra quedan enteros en la pantalla (ver `useEnPantalla`).
@@ -223,14 +200,14 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
      * entero (Cash, por ejemplo) lleva a la lista completa, sin etiquetas que explicar.
      */
     const token = filtroInicial?.__t ?? null;
-    const [origen, setOrigen] = useState({ tabla, token: null, de: null, soltado: false });
+    const [origen, setOrigen] = useState({ tabla, token: null, de: null, soltado: false, drill: {} });
     if (origen.tabla !== tabla || origen.token !== token) {
         if (origen.soltado && origen.tabla === tabla && token === null) {
             // La URL soltó el filtro porque esta lista se quedó sin etiquetas y lo pidió (ver
             // `olvidarOrigen`). Se anota y no se toca nada más: la búsqueda, la agrupación, el
             // orden y el panel abierto son del usuario, y antes quitar el filtro se los llevaba
             // puestos.
-            setOrigen({ tabla, token: null, de: null, soltado: false });
+            setOrigen({ tabla, token: null, de: null, soltado: false, drill: {} });
         } else {
             const nuevas = {};
             if (token !== null && token !== origen.token) {
@@ -244,8 +221,10 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                 });
             }
             const de = Object.keys(nuevas).length ? filtroInicial.__de || null : null;
-            setOrigen({ tabla, token, de, soltado: false });
-            setFacetas(nuevas);
+            setOrigen({ tabla, token, de, soltado: false, drill: nuevas });
+            // Con el filtro compartido, lo que trajo el número se suma a lo elegido (no lo reemplaza).
+            setFacetas(compartido ? { ...compartido.facetas, ...nuevas } : nuevas);
+            if (compartido) setModoPropio(compartido.modo || 'todas');
             // Un número del embudo puede pedir otro filtro rápido que el de por defecto (`__chip`).
             setChip(token !== null && token !== origen.token ? filtroInicial.__chip || null : null);
             setQuery('');
@@ -420,13 +399,31 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
      * Limpiar— porque quedarse sin ninguna es lo mismo que limpiar: la lista ya es la del
      * período, y lo que trajo el número se olvida.
      */
+    /**
+     * Lo que se elige acá vuelve al filtro compartido, sin lo que trajo el número clickeado en Analizar
+     * (`origen.drill`): eso explica la lista, no es parte del filtro con el que se mira el tablero.
+     */
+    const publicar = (nuevas, nuevoModo) => {
+        if (!compartido) return;
+        const drill = origen.drill || {};
+        const propias = Object.fromEntries(Object.entries(nuevas).filter(([k, v]) => (v || []).length
+            && !(k in drill && JSON.stringify(drill[k]) === JSON.stringify(v))));
+        compartido.onCambiar({ facetas: propias, modo: nuevoModo });
+    };
+    const setModo = (m) => {
+        setModoPropio(m);
+        publicar(facetas, m);
+    };
+
     const cambiarFacetas = (nuevas) => {
         setFacetas(nuevas);
+        publicar(nuevas, modo);
         if (!hayCondiciones(def, nuevas) && (origen.de || token !== null)) olvidarOrigen();
     };
 
     const limpiar = () => {
         setFacetas({});
+        publicar({}, modo);
         setChip(null);
         setQuery('');
         olvidarOrigen();

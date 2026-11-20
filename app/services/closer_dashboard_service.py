@@ -108,7 +108,7 @@ class CloserDashboardService:
         return prev_start, prev_end
 
     @staticmethod
-    def _pending_collections(closer_id, limit=15):
+    def _pending_collections(closer_id, limit=15, solo_clientes=None):
         """Deuda por cobrar, **por cliente**: lo que cada cliente todavía debe de sus ventas
         (`deuda_service`: lo acordado menos lo cobrado), la misma definición que usa
         `CloserFollowUpService._client_debt` en el pool de "Llamadas cerradas" desde donde el closer
@@ -192,6 +192,9 @@ class CloserDashboardService:
         for client_id, deuda in deuda_por_cliente.items():
             dueño_de_la_deuda = quien_cobra.id if quien_cobra else dueño.get(client_id)
             if closer_id and dueño_de_la_deuda != closer_id:
+                continue
+            # El Filtro completo de Analizar: solo las deudas de los leads filtrados (ADR-W190).
+            if solo_clientes is not None and client_id not in solo_clientes:
                 continue
 
             cuotas = cuotas_por_cliente.get(client_id, [])

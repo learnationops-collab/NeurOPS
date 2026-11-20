@@ -385,8 +385,23 @@ def sin_resultado(agendas):
             'filtros': [SIN_REPORTE['label'], ARCHIVADA_SIN_REPORTE]}
 
 
+def leads_de(agendas):
+    """(personas, clientes) de unas agendas: con qué se reconoce a sus leads en los cobros y las deudas."""
+    return ({f['person_uuid'] for f in agendas if f.get('person_uuid')},
+            {f['client_id'] for f in agendas if f.get('client_id')})
+
+
+def de_los_leads(filas, leads):
+    """Los cobros (filas o `FinancialSale`) de esos leads (`leads_de`): por su persona o por su cliente."""
+    personas, clientes = leads
+
+    def campo(f, k):
+        return f.get(k) if isinstance(f, dict) else getattr(f, k, None)
+    return [f for f in filas if (campo(f, 'person_uuid') in personas) or (campo(f, 'client_id') in clientes)]
+
+
 def bloque_closers(start, end, closer_id=None, closer_nombre=None, con_reales=True, segmento=None,
-                   sin_excluidos=False, paises=None):
+                   sin_excluidos=False, paises=None, ids=None, leads=None):
     """Todos los números de Analizar para closers, de un período. Se llama dos veces (período y
     período comparado) para sacar los deltas sin duplicar ninguna fórmula.
 
@@ -408,6 +423,10 @@ def bloque_closers(start, end, closer_id=None, closer_nombre=None, con_reales=Tr
         # El país del lead (`paises_lectura`): como el segmento, acota agendas y cobros.
         from app.services import paises_lectura
         ventas = paises_lectura.filtrar(ventas, paises)
+    if ids is not None:
+        # El Filtro completo de Analizar (ADR-W190): las agendas que dejó pasar y los cobros de sus leads.
+        agendas = [f for f in agendas if f['id'] in ids]
+        ventas = de_los_leads(ventas, leads or leads_de(agendas))
     tot_a = ComercialService.totales_agendas(agendas)
     tot_v = ComercialService.totales_ventas(ventas)
     estados = estados_de(agendas)
@@ -750,7 +769,26 @@ def _series_setters(dias, start, end, setter_id):
     return setter_analitica.series(dias, start, end, setter_id)
 
 
-def por_cobrar_de(closer_id=None):
+def _leads_por_ids(ids):
+    """(personas, clientes) de las agendas con esos ids, para acotar las deudas y las fuentes al filtro."""
+    from app import db
+    from app.models import Appointment, Client
+    personas, clientes = set(), set()
+    ids = list(ids or [])
+    for i in range(0, len(ids), 500):
+        for puuid, cid in db.session.query(Appointment.person_uuid, Appointment.client_id).filter(
+                Appointment.id.in_(ids[i:i + 500])):
+            if puuid:
+                personas.add(puuid)
+            if cid:
+                clientes.add(cid)
+    lista = list(personas)
+    for i in range(0, len(lista), 500):
+        clientes.update(c for (c,) in db.session.query(Client.id).filter(Client.person_uuid.in_(lista[i:i + 500])))
+    return personas, clientes
+
+
+def por_cobrar_de(closer_id=None, clientes=None):
     """Lo que falta cobrar, A HOY. Reusa `CloserDashboardService._pending_collections`, que es de
     donde sale la misma cifra en el dashboard del closer y en su pool de llamadas cerradas: tener
     dos definiciones de la deuda ya pasó una vez y la pantalla mostraba $0 mientras el pool del
@@ -768,13 +806,13 @@ def por_cobrar_de(closer_id=None):
     y por período comparado cuando lo pide `comparativas`, y esta consulta recorre todas las
     inscripciones del sistema.
     """
-    _, totales = CloserDashboardService._pending_collections(closer_id, limit=0)
+    _, totales = CloserDashboardService._pending_collections(closer_id, limit=0, solo_clientes=clientes)
     return {'total': totales['total'], 'vencido': totales['vencido'],
             'por_vencer': totales['por_vencer'], 'sin_plan': totales['sin_plan'],
             'clientes': totales['count'], 'clientes_vencido': totales['count_vencido']}
 
 
-def ingresos_por_fuente(start, end, closer_nombre=None, agendas=None):
+def ingresos_por_fuente(start, end, closer_nombre=None, agendas=None, leads=None):
     """El Cash collected del período abierto por la fuente que trajo cada cobro: workshop,
     setting, VSL, Fulfillment o sin procedencia (pedido del usuario, 09/10/2026).
 
@@ -789,10 +827,13 @@ def ingresos_por_fuente(start, end, closer_nombre=None, agendas=None):
     La atribución se calcula sobre las ventas de TODO el período aunque se mire a un closer (ver
     `procedencia_de_ventas`): así un cobro cae en el mismo balde en «Mis datos» y en el equipo."""
     del_periodo, propias = ComercialService.ventas_de(start, end, closer_nombre)
+    if leads is not None:
+        # El Filtro completo de Analizar: solo los cobros de los leads de las agendas filtradas.
+        propias = de_los_leads(propias, leads)
     return procedencia_de_ventas(cobros_de_closing(propias), contexto=del_periodo, base='neto', agendas=agendas)
 
 
-def fuentes_de(start, end, prev_start=None, prev_end=None, closer_nombre=None):
+def fuentes_de(start, end, prev_start=None, prev_end=None, closer_nombre=None, leads=None, leads_previo=None):
     """Analizar › «Ingresos por fuente»: `ingresos_por_fuente` del período y, si se compara, el
     monto del período comparado y el delta de cada fuente, con el mismo `delta` que los KPIs.
 
@@ -800,13 +841,13 @@ def fuentes_de(start, end, prev_start=None, prev_end=None, closer_nombre=None):
     en Comparativas y la atribución recorre todas las agendas. Acá se leen una sola vez para los
     dos períodos."""
     agendas = agendas_para_atribuir()
-    actual = ingresos_por_fuente(start, end, closer_nombre, agendas)
+    actual = ingresos_por_fuente(start, end, closer_nombre, agendas, leads)
     # Las claves van siempre, en None sin comparación: el frontend no tiene que preguntar si están.
     actual['previo'] = actual['delta'] = None
     for p in actual['procedencias']:
         p['previo'] = p['delta'] = None
     if prev_start:
-        previo = ingresos_por_fuente(prev_start, prev_end, closer_nombre, agendas)
+        previo = ingresos_por_fuente(prev_start, prev_end, closer_nombre, agendas, leads_previo)
         antes = {p['key']: p['monto'] for p in previo['procedencias']}
         for p in actual['procedencias']:
             p['previo'] = antes[p['key']]
@@ -842,8 +883,13 @@ def _deltas_etapas(actual, previo):
     return {e['key']: d for e in actual if (d := delta(e['n'], antes.get(e['key']), 'pct'))}
 
 
-def resumen(rol, start, end, prev_start=None, prev_end=None, miembro_id=None, segmento=None, paises=None):
-    """Todo lo que muestra la pestaña Analizar → Dashboard, con sus deltas."""
+def resumen(rol, start, end, prev_start=None, prev_end=None, miembro_id=None, segmento=None, paises=None,
+            ids=None, ids_previo=None):
+    """Todo lo que muestra la pestaña Analizar → Dashboard, con sus deltas.
+
+    `ids` / `ids_previo` (ADR-W190): las agendas que dejó pasar el Filtro completo en cada período (Revisar
+    filtra las filas y manda sus ids). Todo sale de ellas y de sus leads: cobros, deudas, fuentes y CAC."""
+    con_ids = rol == ROL_CLOSERS and ids is not None
     miembro = User.query.get(miembro_id) if miembro_id else None
     nombre = miembro.username if miembro else None
     bloque = _bloque_de(rol)
@@ -854,8 +900,14 @@ def resumen(rol, start, end, prev_start=None, prev_end=None, miembro_id=None, se
     if paises and rol == ROL_CLOSERS:
         kwargs['paises'] = paises
 
-    actual = bloque(start, end, **kwargs)
-    previo = bloque(prev_start, prev_end, **kwargs) if prev_start else None
+    # Los cobros del período son de los leads con una agenda filtrada en él o en el comparado: así entra la
+    # venta de una llamada del mes anterior (el close rate real la cuenta) y no solo la de este mes.
+    leads = _leads_por_ids(set(ids) | set(ids_previo or [])) if con_ids else None
+    leads_previo = _leads_por_ids(ids_previo or []) if con_ids and prev_start else None
+    actual = bloque(start, end, **kwargs, **({'ids': set(ids), 'leads': leads} if con_ids else {}))
+    previo = (bloque(prev_start, prev_end, **kwargs,
+                     **({'ids': set(ids_previo or []), 'leads': leads_previo} if con_ids else {}))
+              if prev_start else None)
 
     deltas = _deltas(actual, previo, DELTAS[rol]) if previo else {}
 
@@ -863,13 +915,13 @@ def resumen(rol, start, end, prev_start=None, prev_end=None, miembro_id=None, se
              'miembro': {'id': miembro.id, 'nombre': miembro.username} if miembro else None}
     # Fuera de `actual` a propósito: no es una cifra del período (ver `por_cobrar_de`).
     if rol == ROL_CLOSERS:
-        datos['por_cobrar'] = por_cobrar_de(miembro_id)
+        datos['por_cobrar'] = por_cobrar_de(miembro_id, leads[1] if leads else None)
         # Solo con closers, que es donde está el Cash collected con el que cierra.
-        datos['fuentes'] = fuentes_de(start, end, prev_start, prev_end, nombre)
+        datos['fuentes'] = fuentes_de(start, end, prev_start, prev_end, nombre, leads, leads_previo)
         # CAC (09/11/2026): el gasto de Meta en los embudos que traen ventas ÷ clientes nuevos.
         # Con un filtro, la parte del gasto que le toca por sus agendas (ver `_adquisicion`). Una persona de
         # triage no cierra: sin CAC.
-        filtrado = bool(miembro_id or segmento or paises)
+        filtrado = bool(miembro_id or segmento or paises or con_ids)
         if not (miembro and miembro.tiene_rol('triage')):
             datos['adquisicion'] = {
                 'actual': _adquisicion(start, end, actual, filtrado),

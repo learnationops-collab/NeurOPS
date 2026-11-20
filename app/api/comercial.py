@@ -140,15 +140,25 @@ def contexto():
     }), 200
 
 
-@bp.route('/resumen', methods=['GET'])
+def _ids(valor):
+    """Una lista de ids de agenda del cuerpo, o None si no vino (sin Filtro completo)."""
+    if not isinstance(valor, list):
+        return None
+    return [int(i) for i in valor if isinstance(i, int) or (isinstance(i, str) and i.isdigit())]
+
+
+@bp.route('/resumen', methods=['GET', 'POST'])
 def resumen():
-    """Analizar → Dashboard."""
+    """Analizar → Dashboard. Por POST, con `{agendas, agendas_previo}`: las agendas que dejó pasar el Filtro
+    completo en cada período (ADR-W190); los ids van en el cuerpo porque un período largo no entra en la URL."""
     rol, miembro_id, _ = _alcance()
     start, end, prev_start, prev_end = _rangos()
+    cuerpo = (request.get_json(silent=True) or {}) if request.method == 'POST' else {}
     # `segmento` (A, B, C, D, sin; varios por coma): el Analizar del closer sobre esos leads solamente.
     datos = analitica.resumen(rol, start, end, prev_start, prev_end, miembro_id,
                               segmento=segmentos_lectura.parsear(request.args.get('segmento')),
-                              paises=paises_lectura.parsear(request.args.get('pais')))
+                              paises=paises_lectura.parsear(request.args.get('pais')),
+                              ids=_ids(cuerpo.get('agendas')), ids_previo=_ids(cuerpo.get('agendas_previo')))
     return jsonify({**datos, 'dates': _fechas(start, end, prev_start, prev_end)}), 200
 
 
@@ -287,6 +297,7 @@ def tabla():
     basis = request.args.get('basis')
     if basis not in ('creacion', 'meet'):
         basis = 'creacion' if cual == 'generadas' else 'meet'
+    filas_previo = None
 
     if cual == 'clientes':
         # La cartera NO se acota al periodo: es un saldo a hoy, no un flujo (ver
@@ -329,6 +340,19 @@ def tabla():
         setter_id = miembro_id if rol == ROL_SETTERS else None
         filas = ComercialService.agendas(start, end, closer_id=closer_id, setter_id=setter_id, basis=basis)
         totales = ComercialService.totales_agendas(filas)
+        if request.args.get('previo') in ('1', 'true') and _prev_start:
+            # El Filtro completo de Analizar (ADR-W190): las agendas del período comparado, para filtrarlas
+            # igual y comparar contra lo mismo. Con su segmento y su país, como las del período.
+            filas_previo = ComercialService.agendas(_prev_start, _prev_end, closer_id=closer_id,
+                                                    setter_id=setter_id, basis=basis)
+            filas_previo = paises_lectura.filtrar(segmentos_comercial.filtrar(filas_previo, None), None)
+            # `de_triage`: la agenda la tomó alguien de triage, que Analizar deja afuera (`_sin_triage`). Con la
+            # misma regla del tablero, así «X de Y agendas de closing» cierra con la tarjeta Agendas.
+            if not closer_id:
+                from app.services.triage_service import nombres_de_triage
+                triage = nombres_de_triage()
+                for f in filas + filas_previo:
+                    f['de_triage'] = f['closer'] in triage
 
     # Agendas, generadas y ventas llevan el `segmento` de cada fila y se pueden filtrar (`?segmento=A,B`): los
     # totales se rehacen sobre lo que queda, como con cualquier filtro de Revisar.
@@ -343,8 +367,10 @@ def tabla():
         filas = paises_lectura.filtrar(filas, paises_elegidos)
         if paises_elegidos:
             totales = ComercialService.totales_ventas(filas) if cual == 'ventas' else ComercialService.totales_agendas(filas)
+    previas = filas_previo
     return jsonify({'tabla': cual, 'rol': rol, 'filas': filas, 'totales': totales,
-                    'dates': _fechas(start, end, None, None)}), 200
+                    **({'filas_previo': previas} if previas is not None else {}),
+                    'dates': _fechas(start, end, *((_prev_start, _prev_end) if previas is not None else (None, None)))}), 200
 
 
 @bp.route('/clientes/<int:client_id>', methods=['GET'])

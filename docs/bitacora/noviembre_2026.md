@@ -765,3 +765,10 @@
 - Revisar › Ventas suma la faceta «Área» (Closing / Triage); los números del Closing abren la lista con «Área: Closing».
 - Las Comparativas de closers ya no muestran a las personas de triage (revierte ADR-W062).
 - Triage: el cierre del low ticket es por cobro, con la llamada anterior en la base, como el close rate real del Closing (25 % la semana del 16/11). La tarjeta y el panel muestran lo cobrado y abren sus ventas (ADR-W189).
+
+### 20/11/2026 · Analizar con el Filtro completo de Revisar
+- Analizar (dirección comercial, closers) tiene arriba el mismo Filtro completo que Revisar › Agendas y lo comparte con esa tabla: lo que se elige en una se ve en la otra, y queda guardado por usuario. Segmento y País pasan a ser columnas del panel; sus barras se van de esas dos vistas (ADR-W190, Leadership «Analizar con el Filtro completo…»).
+- Con el filtro, todo el tablero se recalcula sobre esas agendas y sus leads: show up, close rate, embudo, cash, ticket, por cobrar, fuentes y CAC. Nueva tira con agendas y % de cancelaciones, reprogramaciones y no show. La barra dice «X de Y agendas de closing» y cuántas de triage suma Revisar.
+- «Seguimientos en curso»: las agendas filtradas con seguimiento pendiente por contacto de la cadencia (1 a 4) y las vencidas; cada fila abre Revisar.
+- «Motivos» y «Copiar motivos para IA»: los motivos de no show, cancelación, reprogramación y no cierre de lo filtrado, con un prompt listo para pegar en cualquier IA y sin nombre ni contacto del lead.
+- Probado en local con una copia de producción de hoy: sin filtro, el mes da lo mismo que producción (73 agendas, show up 39,1 %, close rate real 11,1 %, cash $6.982).

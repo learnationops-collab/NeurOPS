@@ -33,6 +33,9 @@ import TriageDireccion from './components/TriageDireccion';
 import BarraSegmento, { segmentoDeLaVista } from './components/BarraSegmento';
 import BarraPais, { paisDeLaVista } from './components/BarraPais';
 import PanelPaises from './components/PanelPaises';
+import FiltroAnalizar from './components/filtroAnalizar/FiltroAnalizar';
+import SeguimientosMotivos from './components/filtroAnalizar/SeguimientosMotivos';
+import useFiltroAnalizar from './components/filtroAnalizar/useFiltroAnalizar';
 import useEstadoGuardado from '../../hooks/useEstadoGuardado';
 import { leerCache } from '../../services/cacheDeVistas';
 import { corregirAgenda, eliminarAgenda as eliminarAgendaApi, getComparativas, getContexto, getResumen, getTabla, getVariabilidad, marcarAgendaDuplicada } from './comercialApi';
@@ -182,6 +185,13 @@ const FaltaFecha = ({ texto, children }) => (
  * pestañas de su espacio: su Ventas no es una tabla del rol setters para la dirección (ver
  * `TABLAS_POR_ROL`), así que por la URL sola no se podía abrir.
  */
+/** Una huella corta de los ids del Filtro completo, para la clave del caché del resumen. */
+const huellaIds = ({ agendas, agendas_previo: previo }) => {
+    let h = 0;
+    `${agendas.join(',')}|${previo.join(',')}`.split('').forEach((c) => { h = ((h << 5) - h + c.charCodeAt(0)) | 0; });
+    return `${agendas.length}.${previo.length}.${h}`;
+};
+
 const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion = null, onAbrirCliente = null, espacio = null, tablaFija = null, triage = false }) => {
     const [params, setParams] = useSearchParams();
     const [contexto, setContexto] = useState(null);
@@ -226,11 +236,11 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     // panel Segmentos. El panel pide todos los grupos y lo aplica él (ver `SegmentosPanel`).
     const segmentoUrl = params.get('seg') || '';
     const elegidosSeg = useMemo(() => segmentoUrl.split(',').filter(s => ['A', 'B', 'C', 'D', 'sin'].includes(s)), [segmentoUrl]);
-    const segmento = elegidosSeg.join(',');
+    const segmentoDeUrl = elegidosSeg.join(',');
     // El filtro de país (`pa=CL,MX`, 04/11/2026): el país del lead sale de su WhatsApp (`paises_lectura`).
     const paisUrl = params.get('pa') || '';
     const elegidosPais = useMemo(() => paisUrl.split(',').filter(Boolean), [paisUrl]);
-    const pais = elegidosPais.join(',');
+    const paisDeUrl = elegidosPais.join(',');
 
     const [tab, setTab] = useState('dashboard');
     // Finanzas se mira por mes o por un rango personalizado (queda el último elegido; las vistas
@@ -322,28 +332,28 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     useEffect(() => {
         if (!segRestaurado.current) {
             segRestaurado.current = true;
-            if (!segmento && segGuardado.seg && ['analizar', 'revisar'].includes(seccion)) {
+            if (!segmentoDeUrl && segGuardado.seg && ['analizar', 'revisar'].includes(seccion)) {
                 set({ seg: segGuardado.seg });
                 return;
             }
         }
-        guardarSeg({ seg: segmento, pa: pais });
+        guardarSeg({ seg: segmentoDeUrl, pa: paisDeUrl });
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [segmento]);
+    }, [segmentoDeUrl]);
 
     // El de país se recuerda igual: sin `pa` en el link, se vuelve al de la última vez.
     const paisRestaurado = useRef(false);
     useEffect(() => {
         if (!paisRestaurado.current) {
             paisRestaurado.current = true;
-            if (!pais && segGuardado.pa && ['analizar', 'revisar'].includes(seccion)) {
+            if (!paisDeUrl && segGuardado.pa && ['analizar', 'revisar'].includes(seccion)) {
                 set({ pa: segGuardado.pa });
                 return;
             }
         }
-        guardarSeg({ seg: segmento, pa: pais });
+        guardarSeg({ seg: segmentoDeUrl, pa: paisDeUrl });
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [pais]);
+    }, [paisDeUrl]);
 
     // Cada bloque espera solo SU pedido y, si falla, ofrece reintentar (ver `usePedidos`).
     const { pedir, pedirCacheado, fallas } = usePedidos();
@@ -370,10 +380,46 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     // también las no completadas, con su estado y su agenda (10/10/2026, ver `getTabla`).
     const operar = !!contexto?.puede_operar;
 
+    /**
+     * El Filtro completo compartido entre Analizar y Revisar › Agendas (ADR-W190), para la dirección mirando
+     * closers. Segmento y País son dos facetas más: de ahí salen el `segmento` y el `pais` que usan el resto de
+     * las vistas (Segmentos, Por país, Ventas…), en vez de las barras y de `seg`/`pa` de la URL.
+     */
+    const compartir = !embebido && !espacio && !tablaFija && !!contexto?.puede_elegir_equipo && rol === 'closers' && !vistaTriage;
+    const [filtroAgendas, guardarFiltroAgendas] = useEstadoGuardado('cm_filtro_agendas', { facetas: {}, modo: 'todas' });
+    const facetasCompartidas = filtroAgendas.facetas || {};
+    const segCompartido = useMemo(() => (facetasCompartidas.segmento || [])
+        .map(s => (s === 'Sin segmento' ? 'sin' : s)).filter(s => ['A', 'B', 'C', 'D', 'sin'].includes(s)),
+    [facetasCompartidas.segmento]);
+    const paisCompartido = useMemo(() => (facetasCompartidas.pais || [])
+        .map(n => (contexto?.paises || []).find(p => p.label === n)?.key).filter(Boolean),
+    [facetasCompartidas.pais, contexto?.paises]);
+    const segmento = compartir ? segCompartido.join(',') : segmentoDeUrl;
+    const pais = compartir ? paisCompartido.join(',') : paisDeUrl;
+    const elegirSeg = (lista) => (compartir
+        ? guardarFiltroAgendas({ facetas: { ...facetasCompartidas, segmento: lista.map(s => (s === 'sin' ? 'Sin segmento' : s)) } })
+        : set({ seg: lista.join(',') }));
+    const elegirPais = (lista) => (compartir
+        ? guardarFiltroAgendas({ facetas: { ...facetasCompartidas,
+            pais: lista.map(k => (contexto?.paises || []).find(p => p.key === k)?.label).filter(Boolean) } })
+        : set({ pa: lista.join(',') }));
+
     const filtros = useMemo(
         () => ({ period, compare, rol, miembroId, desde: rango?.desde, hasta: rango?.hasta,
             vsDesde: rangoVs?.desde, vsHasta: rangoVs?.hasta, segmento, pais }),
         [period, compare, rol, miembroId, rango?.desde, rango?.hasta, rangoVs?.desde, rangoVs?.hasta, segmento, pais]);
+
+    // Con el filtro compartido, Analizar y la tabla Agendas filtran segmento y país del lado del cliente (son
+    // facetas): se piden sin ellos, y el resumen va con los ids de lo que pasó el filtro (`useFiltroAnalizar`).
+    const filtrosSinAmplias = useMemo(() => ({ ...filtros, segmento: null, pais: null }), [filtros]);
+    const filtroAnalizar = useFiltroAnalizar({
+        activo: compartir && seccion === 'analizar' && tab === 'dashboard',
+        filtros, filtro: filtroAgendas, conPersona: !!miembroId,
+    });
+    const filtrosResumen = compartir ? filtrosSinAmplias : filtros;
+    const idsResumen = compartir ? filtroAnalizar.ids : null;
+    // Con condiciones, el resumen espera a tener los ids: si no, se vería un instante el tablero sin filtrar.
+    const esperaIds = compartir && filtroAnalizar.conCondiciones && !idsResumen;
 
     const seccionActual = SECCIONES.find(s => s.id === seccion) || SECCIONES[0];
 
@@ -439,8 +485,11 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     const traerAnalizar = useCallback((forzar) => {
         if (!rol || faltaPeriodo || faltaVs) return;
         const k = JSON.stringify(filtros);
-        pedirCacheado('resumen', `comercial:resumen:${k}`, () => getResumen(filtros), setResumen,
-            'No se pudieron cargar los KPIs', { forzar });
+        if (!esperaIds) {
+            const kr = `${JSON.stringify(filtrosResumen)}:${idsResumen ? huellaIds(idsResumen) : ''}`;
+            pedirCacheado('resumen', `comercial:resumen:${kr}`, () => getResumen(filtrosResumen, idsResumen), setResumen,
+                'No se pudieron cargar los KPIs', { forzar });
+        }
         if (tab === 'comparativas' && contexto?.puede_comparar) {
             pedirCacheado('comparativas', `comercial:comparativas:${k}`, () => getComparativas(filtros), setComparativas,
                 'No se pudieron cargar las comparativas', { forzar });
@@ -451,18 +500,19 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
             pedirCacheado('variabilidad', `comercial:variabilidad:${k}`, () => getVariabilidad(filtros),
                 (d) => setVariabilidad({ ...d, rol }), 'No se pudieron cargar las series por dia', { forzar });
         }
-    }, [filtros, rol, tab, contexto, pedirCacheado, faltaPeriodo, faltaVs]);
+    }, [filtros, filtrosResumen, idsResumen, esperaIds, rol, tab, contexto, pedirCacheado, faltaPeriodo, faltaVs]);
     const cargarAnalizar = useCallback(() => traerAnalizar(true), [traerAnalizar]);
 
+    const filtrosTabla = compartir && tablaActual === 'agendas' ? filtrosSinAmplias : filtros;
     const traerTabla = useCallback((forzar) => {
         if (!rol || !tablaActual || (faltaPeriodo && tablaActual !== 'clientes')) return;
-        const claveCache = `comercial:tabla:${tablaActual}:${basis}:${operar}:${JSON.stringify(filtros)}`;
+        const claveCache = `comercial:tabla:${tablaActual}:${basis}:${operar}:${JSON.stringify(filtrosTabla)}`;
         // Una tabla recordada se muestra al instante: no hay esqueleto que esperar.
         if (forzar || !leerCache(claveCache)) setCargandoTabla(true);
-        pedirCacheado('tabla', claveCache, () => getTabla(filtros, tablaActual, basis, { operar }), setDatosTabla,
+        pedirCacheado('tabla', claveCache, () => getTabla(filtrosTabla, tablaActual, basis, { operar }), setDatosTabla,
             'No se pudo cargar la tabla', { forzar })
             .finally(() => setCargandoTabla(false));
-    }, [filtros, rol, tablaActual, basis, operar, pedirCacheado, faltaPeriodo]);
+    }, [filtrosTabla, rol, tablaActual, basis, operar, pedirCacheado, faltaPeriodo]);
     const cargarTabla = useCallback(() => traerTabla(true), [traerTabla]);
 
     useEffect(() => { if (seccion === 'analizar') traerAnalizar(false); }, [seccion, traerAnalizar]);
@@ -552,32 +602,32 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     const marcarDuplicada = useCallback(async (fila) => {
         try {
             await marcarAgendaDuplicada(fila.id);
-            const datos = await getTabla(filtros, tablaActual, basis, { operar });
+            const datos = await getTabla(filtrosTabla, tablaActual, basis, { operar });
             setDatosTabla(datos);
             setFilaAbierta(null);
             toast.success('Agenda marcada como duplicada y cancelada');
-            getResumen(filtros).then(setResumen).catch(() => { /* el KPI viejo no rompe la acción */ });
+            getResumen(filtrosResumen, idsResumen).then(setResumen).catch(() => { /* el KPI viejo no rompe la acción */ });
         } catch (error) {
             toast.error(error?.response?.data?.message || 'No se pudo marcar la agenda como duplicada');
             throw error;
         }
-    }, [filtros, tablaActual, basis, operar]);
+    }, [filtrosTabla, filtrosResumen, idsResumen, tablaActual, basis, operar]);
 
     // `puede_reportar` es exactamente "es dirección" en el backend (ver /comercial/contexto), que
     // es el mismo permiso con el que la ruta DELETE responde 403 al resto. Un solo criterio.
     const eliminarAgenda = useCallback(async (fila) => {
         try {
             await eliminarAgendaApi(fila.id);
-            const datos = await getTabla(filtros, tablaActual, basis, { operar });
+            const datos = await getTabla(filtrosTabla, tablaActual, basis, { operar });
             setDatosTabla(datos);
             setFilaAbierta(null);
             toast.success('Agenda eliminada');
-            getResumen(filtros).then(setResumen).catch(() => { /* el KPI viejo no rompe la acción */ });
+            getResumen(filtrosResumen, idsResumen).then(setResumen).catch(() => { /* el KPI viejo no rompe la acción */ });
         } catch (error) {
             toast.error(error?.response?.data?.message || 'No se pudo eliminar la agenda');
             throw error;
         }
-    }, [filtros, tablaActual, basis, operar]);
+    }, [filtrosTabla, filtrosResumen, idsResumen, tablaActual, basis, operar]);
 
     /**
      * "Actualizar datos de la Academia" (solo la dirección): corre un lote de fotos y vuelve a pedir
@@ -599,10 +649,10 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     const corregir = useCallback(async (fila, campo, valor, motivo) => {
         try {
             await corregirAgenda(fila.id, campo, valor, motivo);
-            const datos = await getTabla(filtros, tablaActual, basis, { operar });
+            const datos = await getTabla(filtrosTabla, tablaActual, basis, { operar });
             setDatosTabla(datos);
             setFilaAbierta(datos.filas.find(f => f.id === fila.id && f.tipo === fila.tipo) || null);
-            getResumen(filtros).then(setResumen).catch(() => { /* el KPI viejo no rompe la corrección */ });
+            getResumen(filtrosResumen, idsResumen).then(setResumen).catch(() => { /* el KPI viejo no rompe la corrección */ });
         } catch (error) {
             toast.error(error?.response?.status === 403
                 ? 'Solo puede corregirla quien la atiende o la dirección comercial'
@@ -610,7 +660,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                     : 'No se pudo guardar la corrección');
             throw error;
         }
-    }, [filtros, tablaActual, basis, operar]);
+    }, [filtrosTabla, filtrosResumen, idsResumen, tablaActual, basis, operar]);
 
     if (mudadaA) {
         return <Navigate to={`${RUTA_DE_ESPACIO[mudadaA]}?${params.toString()}`} replace />;
@@ -819,14 +869,16 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                 {/* `.vista` es lo que separa las filas de paneles: sin el, cada seccion
                     renderiza sus filas como hermanas sueltas y quedan pegadas (medido: 0px
                     entre todas). Ademas trae la animacion de entrada de la referencia. */}
-                {!esperaFechas && (
-                    <BarraSegmento vista={segmentoDeLaVista({ seccion, tab, rol, tabla: tablaActual, triage: vistaTriage })} elegidos={elegidosSeg}
-                        onElegir={(lista) => set({ seg: lista.join(',') })} />
+                {/* Con el filtro compartido, segmento y país se eligen en el Filtro completo de Analizar y de
+                    Revisar › Agendas (ADR-W190): ahí las barras no van; en el resto de las tablas, eligen lo mismo. */}
+                {!esperaFechas && !(compartir && (seccion === 'analizar' || tablaActual === 'agendas')) && (
+                    <BarraSegmento vista={segmentoDeLaVista({ seccion, tab, rol, tabla: tablaActual, triage: vistaTriage })}
+                        elegidos={compartir ? segCompartido : elegidosSeg} onElegir={elegirSeg} />
                 )}
-                {!esperaFechas && (
+                {!esperaFechas && !(compartir && (seccion === 'analizar' || tablaActual === 'agendas')) && (
                     <BarraPais vista={paisDeLaVista({ seccion, tab, rol, tabla: tablaActual, triage: vistaTriage })}
-                        paises={contexto?.paises || []} elegidos={elegidosPais}
-                        onElegir={(lista) => set({ pa: lista.join(',') })} />
+                        paises={contexto?.paises || []} elegidos={compartir ? paisCompartido : elegidosPais}
+                        onElegir={elegirPais} />
                 )}
                 <div className="vista">
                     {/* Sin las dos fechas no se pide nada: se piden acá, en vez de mostrar los
@@ -843,20 +895,29 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                             onElegirPersona={contexto.puede_elegir_equipo ? (id) => set({ m: id }) : null}
                             onVerCobros={irADetalle ? () => irADetalle('ventas', { area: 'Triage' }) : null} />
                     )}
+                    {!esperaFechas && compartir && seccion === 'analizar' && tab === 'dashboard' && (
+                        <FiltroAnalizar filas={filtroAnalizar.filas} filtradas={filtroAnalizar.filtradas}
+                            listo={filtroAnalizar.listo} deTriage={filtroAnalizar.deTriage} filtro={filtroAgendas} onCambiar={guardarFiltroAgendas}
+                            datos={!esperaIds && resumen?.rol === rol ? resumen : null} irA={irADetalle} alcance={alcance}
+                            vsLabel={rangoVs ? textoRango(rangoVs) : contexto?.comparaciones?.find(c => c.key === compare)?.label} />
+                    )}
+                    {!esperaFechas && compartir && seccion === 'analizar' && tab === 'dashboard' && filtroAnalizar.listo && (
+                        <SeguimientosMotivos filtradas={filtroAnalizar.filtradas} irA={irADetalle} />
+                    )}
                     {!esperaFechas && !vistaTriage && seccion === 'analizar' && tab === 'dashboard' && (
-                        <Analizar datos={resumen} rol={rol} irA={irADetalle}
+                        <Analizar datos={esperaIds ? null : resumen} rol={rol} irA={irADetalle}
                             fallo={fallas.resumen} onReintentar={cargarAnalizar}
                             cargarNoCerradas={cargarNoCerradas} onAbrirFila={abrirFila} filtros={filtros}
                             canal={canal} onCanal={(c) => set({ canal: c })}
                             vsLabel={rangoVs ? textoRango(rangoVs) : contexto?.comparaciones?.find(c => c.key === compare)?.label} />
                     )}
                     {!esperaFechas && !vistaTriage && seccion === 'analizar' && tab === 'dashboard' && ['closers', 'setters'].includes(rol) && (
-                        <SegmentosPanel filtros={filtros} rol={rol} elegidos={elegidosSeg}
-                            onElegir={(lista) => set({ seg: lista.join(',') })} />
+                        <SegmentosPanel filtros={filtros} rol={rol} elegidos={compartir ? segCompartido : elegidosSeg}
+                            onElegir={elegirSeg} />
                     )}
                     {!esperaFechas && !vistaTriage && seccion === 'analizar' && tab === 'dashboard' && ['closers', 'setters'].includes(rol) && (
-                        <PanelPaises filtros={filtros} rol={rol} elegidos={elegidosPais}
-                            onElegir={(lista) => set({ pa: lista.join(',') })} />
+                        <PanelPaises filtros={filtros} rol={rol} elegidos={compartir ? paisCompartido : elegidosPais}
+                            onElegir={elegirPais} />
                     )}
                     {!esperaFechas && !vistaTriage && seccion === 'analizar' && tab === 'comparativas' && contexto.puede_comparar && (
                         // Un closer ve a sus compañeros pero no puede abrir sus listas (el backend
@@ -880,6 +941,8 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                             datos={datosVigentes} fallo={fallas.tabla && !datosVigentes}
                             onReintentar={cargarTabla} cargando={cargandoTabla || !datosVigentes} rol={rol} basis={basis} setBasis={setBasis}
                             alcance={alcance} filtroInicial={filtroInicial}
+                            compartido={compartir && tablaActual === 'agendas'
+                                ? { ...filtroAgendas, onCambiar: guardarFiltroAgendas } : null}
                             puedeElegirEquipo={!!contexto.puede_elegir_equipo}
                             tablas={tablaFija ? [tablaFija] : null}
                             onOlvidarFiltro={() => set({ f: null, ft: null })}
