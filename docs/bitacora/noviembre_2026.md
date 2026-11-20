@@ -739,3 +739,4 @@
 - Academia: la cuenta de Mario con el correo de Learnation se llamaba «Mario Testea» (así salía en el chat y en Leadership); ahora es «Mario Bühler», con su foto (Leadership 1444).
 - El día que un closer ya tiene una Momentum, a la siguiente solo se le ofrece el horario pegado (cuando termina la anterior con su margen), para que no le corten las sesiones de closing (ADR-W183).
 - Academia: canal Sesiones en el chat del equipo, con la nota del reporte de cada sesión, en reemplazo de Discord (Academia ADR-236, Leadership 1389).
+- Inbox › Conversaciones: el buscador pasa de la derecha de la cabecera a arriba de la lista de chats, donde lo ve el setter; en la vista Embudo sigue en la cabecera (Leadership 1434).

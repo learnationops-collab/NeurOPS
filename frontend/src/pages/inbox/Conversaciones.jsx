@@ -1,6 +1,7 @@
 // Sección Conversaciones, como bandeja de trabajo (estilo Kommo): la lista, el chat y la ficha del lead,
 // o la vista Embudo (una columna por sub-etapa). En la cabecera, al lado del título, los filtros guardados
-// y Chats | Embudo; a la derecha, el buscador, el filtro, Mis tareas y Stats. La lista y el chat abierto
+// y Chats | Embudo; a la derecha, el filtro, Mis tareas y Stats. El buscador va arriba de la lista, donde mira el
+// setter (Social Selling, 17/11); en el Embudo, que no tiene lista, en la cabecera. La lista y el chat abierto
 // se vuelven a pedir solos cada 20 s. Con el teclado: ↑↓ cambian de conversación y Esc la cierra. Las sin leer
 // van al título de la pestaña y, con permiso, como aviso del escritorio (`useAvisos`).
 import { useCallback, useEffect, useState } from 'react';
@@ -107,6 +108,13 @@ export default function Conversaciones() {
     // En lo propio no hace falta decir de quién es; en el resto, sí.
     const conAsignado = filtro.asignado !== yo;
 
+    const buscador = (
+        <InputGroup className="cv-buscar" prefix={<Search size={16} />}>
+            <label className="sr" htmlFor="cv-buscar">Buscar por usuario</label>
+            <input id="cv-buscar" value={buscar} onChange={(e) => setBuscar(e.target.value)} placeholder="Buscar por usuario o nombre" autoComplete="off" />
+        </InputGroup>
+    );
+
     let listado;
     if (error && !datos) listado = <EmptyState>{error}</EmptyState>;
     else if (!datos) listado = <EmptyState>Cargando…</EmptyState>;
@@ -140,10 +148,7 @@ export default function Conversaciones() {
                     <FiltrosGuardados lista={lista} filtro={filtro} onCambiar={setFiltro} ahora={ahora} yo={yo} />
                     <Segmented size="sm" label="Vista" value={vista} onChange={setVista} options={VISTAS} />
                     <div className="barra-der">
-                        <InputGroup className="cv-buscar" prefix={<Search size={16} />}>
-                            <label className="sr" htmlFor="cv-buscar">Buscar por usuario</label>
-                            <input id="cv-buscar" value={buscar} onChange={(e) => setBuscar(e.target.value)} placeholder="Buscar por usuario o nombre" autoComplete="off" />
-                        </InputGroup>
+                        {vista === 'embudo' && buscador}
                         <MacroFiltro lista={lista} filtro={filtro} onCambiar={setFiltro} ahora={ahora} yo={yo} />
                         <MisTareas onAbrir={abrir} marca={datos} />
                         {avisos.soportado && avisos.permiso === 'default' && (
@@ -156,6 +161,7 @@ export default function Conversaciones() {
             {vista === 'embudo' ? <Embudo lista={visibles} ahora={ahora} onAbrir={abrir} onMovida={recargar} /> : (
                 <div className={`cv${elegida ? ' cv--abierta' : ''}`}>
                     <Panel as="section" size="sm" className="cv-lista" aria-label="Conversaciones">
+                        <div className="cv-lista-buscar">{buscador}</div>
                         {datos && <Resumen lista={lista} filtro={filtro} onCambiar={setFiltro} yo={yo} />}
                         {listado}
                     </Panel>
