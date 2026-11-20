@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { Star, Trash2 } from 'lucide-react';
 import { Button, IconButton, InputGroup, Modal, ModalHeader, Select } from '../../../components/standard';
 import { filtrar } from './colas';
-import { guardarPropios, igual, predefinidos, propios } from './filtros';
+import { igual, predefinidos } from './filtros';
+import { useGuardados } from './guardados';
 
 function Guardar({ onGuardar, onCerrar }) {
     const [nombre, setNombre] = useState('');
@@ -27,21 +28,21 @@ function Guardar({ onGuardar, onCerrar }) {
 }
 
 export default function FiltrosGuardados({ lista, filtro, onCambiar, ahora, yo }) {
-    const [mios, setMios] = useState(propios);
+    const guardados = useGuardados();
+    const mios = guardados.lista;
     const [guardando, setGuardando] = useState(false);
     const todos = [...predefinidos(yo), ...mios];
     const actual = todos.find((g) => igual(g.filtro, filtro));
     const esPropio = actual && mios.some((g) => g.id === actual.id);
 
-    const cambiarMios = (lista_) => { setMios(lista_); guardarPropios(lista_); };
     const guardar = (label) => {
-        cambiarMios([...mios, { id: `f${Date.now()}`, label, filtro }]);
+        guardados.guardar(label, filtro);
         setGuardando(false);
     };
 
     const options = [
         ...(actual ? [] : [{ value: '', label: 'Filtro personalizado' }]),
-        ...todos.map((g) => ({ value: g.id, label: `${g.label} · ${filtrar(lista, { ...g.filtro, ahora }).length}` })),
+        ...todos.map((g) => ({ value: g.id, label: `${mios.includes(g) ? '★ ' : ''}${g.label} · ${filtrar(lista, { ...g.filtro, ahora }).length}` })),
     ];
     return (
         <>
@@ -49,7 +50,7 @@ export default function FiltrosGuardados({ lista, filtro, onCambiar, ahora, yo }
                 onChange={(id) => { const g = todos.find((x) => x.id === id); if (g) onCambiar({ ...g.filtro }); }} />
             {esPropio && (
                 <IconButton size="sm" label={`Borrar el filtro «${actual.label}»`} data-tip="Borrar este filtro guardado" icon={<Trash2 size={14} />}
-                    onClick={() => cambiarMios(mios.filter((g) => g.id !== actual.id))} />
+                    onClick={() => guardados.borrar(actual.id)} />
             )}
             {!actual && (
                 <IconButton size="sm" label="Guardar el filtro actual" data-tip="Guardar el filtro actual" icon={<Star size={14} />} onClick={() => setGuardando(true)} />

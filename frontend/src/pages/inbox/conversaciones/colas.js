@@ -109,9 +109,14 @@ export function etiquetasDe(lista) {
 // El último mensaje enviado: 'bot' o el setter asignado (Meta no dice quién del equipo lo mandó).
 const enviadoPor = (c) => (c.ultimo_envio?.de === 'bot' ? 'bot' : c.ultimo_envio ? c.asignado?.id ?? null : null);
 
-// `asignado`: null (todos) · 'ninguno' · el id de un setter. `califica`: 'si' · 'no'.
+// `asignado`: null (todos) · 'ninguno' · el id de un setter. `califica`: 'si' · 'no'. `fases` y `etiquetas`:
+// listas (alcanza con una). `envioPor`: 'lead' (lo último lo escribió el lead), 'bot' o el id del setter.
 export function cumpleFiltro(c, f, ahora) {
     if (f.etiqueta && !(c.etiquetas || []).some((e) => claveEtiqueta(e) === f.etiqueta)) return false;
+    if (f.etiquetas?.length && !(c.etiquetas || []).some((e) => f.etiquetas.includes(claveEtiqueta(e)))) return false;
+    if (f.fases?.length && !f.fases.includes(c.fase)) return false;
+    if (f.envioPor === 'lead') return c.ultimo_de === 'lead' && enRango(c.ultimo_en, f.envio, f.envioDesde, f.envioHasta, ahora)
+        && cumpleFiltro(c, { ...f, envioPor: null, envio: null }, ahora);
     if (f.asignado === 'ninguno' && c.asignado) return false;
     if (f.asignado != null && f.asignado !== 'ninguno' && c.asignado?.id !== f.asignado) return false;
     if (f.etapa && c.etapa !== f.etapa) return false;
@@ -121,13 +126,33 @@ export function cumpleFiltro(c, f, ahora) {
     return enRango(c.ultimo_envio?.en, f.envio, f.envioDesde, f.envioHasta, ahora);
 }
 
-// Las colas de espera van de la que más espera a la que menos; las demás, por el último mensaje.
+// Todo lo ordenable de la bandeja (ADR-W184). `null` en el filtro: el orden de la cola.
+const FASES_EN_ORDEN = ['apertura', 'conexion', 'dolor', 'consecuencia', 'compromiso', 'propuesta', 'link', 'confirmacion'];
+const nivel = (c) => FASES_EN_ORDEN.indexOf(c.fase);
+const vence = (c) => (c.tarea?.vence ? new Date(c.tarea.vence).getTime() : Infinity);
+const ultimo = (c) => (c.ultimo_en ? new Date(c.ultimo_en).getTime() : 0);
+export const ORDENES = [
+    { value: 'espera', label: 'Tiempo de espera', detalle: 'más espera primero', corto: 'por espera', por: (a, b, ahora) => (esperaMin(b, ahora) ?? -1) - (esperaMin(a, ahora) ?? -1) },
+    { value: 'cierre', label: 'Cierre de la ventana', detalle: 'la que se cierra antes', corto: 'por cierre de la ventana', por: (a, b, ahora) => (cierreMin(a, ahora) ?? Infinity) - (cierreMin(b, ahora) ?? Infinity) },
+    { value: 'fase', label: 'Etapa del setting', detalle: 'la más avanzada primero', corto: 'por etapa', por: (a, b) => nivel(b) - nivel(a) },
+    { value: 'fase_asc', label: 'Etapa del setting', detalle: 'la más nueva primero', corto: 'por etapa, de 1 a 8', por: (a, b) => nivel(a) - nivel(b) },
+    { value: 'ultimo', label: 'Último mensaje', detalle: 'el más reciente primero', corto: 'por último mensaje', por: (a, b) => ultimo(b) - ultimo(a) },
+    { value: 'sin_leer', label: 'Sin leer', detalle: 'primero las que tienen', corto: 'sin leer primero', por: (a, b) => (b.sin_leer || 0) - (a.sin_leer || 0) },
+    { value: 'tarea', label: 'Tarea', detalle: 'la que vence antes', corto: 'por tarea', por: (a, b) => vence(a) - vence(b) },
+];
+
+/** El orden en uso: el elegido o, sin elegir, el de la cola. */
+export function ordenDe(f) {
+    if (f.orden) return ORDENES.find((o) => o.value === f.orden) || ORDENES[0];
+    const def = COLAS.find((x) => x.value === f.cola) || COLAS[0];
+    return ORDENES.find((o) => o.value === (def.porEspera ? 'espera' : def.porCierre ? 'cierre' : 'ultimo'));
+}
+
 export function filtrar(lista, { ahora, ...f }) {
     const def = COLAS.find((x) => x.value === f.cola) || COLAS[0];
     const salida = lista.filter((c) => def.cumple(c, ahora) && cumpleFiltro(c, f, ahora));
-    if (def.porEspera) salida.sort((a, b) => esperaMin(b, ahora) - esperaMin(a, ahora));
-    if (def.porCierre) salida.sort((a, b) => cierreMin(a, ahora) - cierreMin(b, ahora));
-    return salida;
+    const orden = ordenDe(f);
+    return salida.sort((a, b) => orden.por(a, b, ahora));
 }
 
 // Sin usuario: Instagram no da el perfil de quien nunca escribió (solo le escribimos nosotros); al responder se completa.

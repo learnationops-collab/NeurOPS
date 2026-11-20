@@ -30,7 +30,7 @@ function textoEfecto(e) {
 
 function Burbuja({ m }) {
     return (
-        <li className={`cv-burbuja cv-burbuja--${m.direccion} cv-burbuja--${m.origen}`}>
+        <li className={`cv-burbuja cv-burbuja--${m.direccion} cv-burbuja--${m.origen}`} data-mensaje={m.id} data-direccion={m.direccion}>
             {m.texto && <p>{m.texto}</p>}
             {m.adjuntos.map((a, i) => <p key={i} className="mut">📎 {a}</p>)}
             {m.botones.length > 0 && (
@@ -95,7 +95,8 @@ function Pendiente({ p, onReintentar, onDescartar }) {
     );
 }
 
-export default function Feed({ mensajes, notas, tareas, pendientes = [], onReintentar, onDescartar }) {
+// `onSeleccion`: al soltar el mouse con texto seleccionado (Anotar resaltando, `Cita.jsx`).
+export default function Feed({ mensajes, notas, tareas, pendientes = [], onReintentar, onDescartar, onSeleccion }) {
     const lista = useRef(null);
     const items = [
         ...mensajes.map((m) => ({ tipo: 'mensaje', en: m.en, key: `m${m.id}`, m })),
@@ -106,7 +107,7 @@ export default function Feed({ mensajes, notas, tareas, pendientes = [], onReint
     // Abre en lo último, como cualquier chat, y baja cuando llega algo nuevo.
     useEffect(() => { if (lista.current) lista.current.scrollTop = lista.current.scrollHeight; }, [cantidad]);
     return (
-        <ol className="cv-mensajes" ref={lista}>
+        <ol className="cv-mensajes" ref={lista} onMouseUp={onSeleccion}>
             {items.map((x) => <Item key={x.key} x={x} />)}
             {pendientes.map((p) => <Pendiente key={p.id} p={p} onReintentar={onReintentar} onDescartar={onDescartar} />)}
         </ol>

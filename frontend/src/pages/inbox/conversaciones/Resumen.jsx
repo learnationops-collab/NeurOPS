@@ -4,6 +4,7 @@ import { X } from 'lucide-react';
 import { Chip } from '../../../components/standard';
 import { COLAS, ETAPAS, asignados, claveEtiqueta, etiquetasDe } from './colas';
 import { resumen } from './filtros';
+import { corto, faseDe } from './fasesSetting';
 
 export default function Resumen({ lista, filtro, onCambiar, yo }) {
     const setters = asignados(lista);
@@ -13,7 +14,7 @@ export default function Resumen({ lista, filtro, onCambiar, yo }) {
         const e = etiquetas.find((x) => claveEtiqueta(x) === k);
         return e ? (e.group ? `${e.group}: ${e.name}` : e.name) : k.split(':').slice(1).join(':');
     };
-    const partes = resumen(filtro, { colas: COLAS, etapas: ETAPAS, nombre, etiqueta });
+    const partes = resumen(filtro, { colas: COLAS, etapas: ETAPAS, nombre, etiqueta, fase: (id) => corto(faseDe(id)) });
     if (!partes.length) return null;
     return (
         <div className="cv-resumen" aria-label="Filtros puestos">

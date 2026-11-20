@@ -12,7 +12,7 @@ from app.automatizaciones.api import bp
 from app.automatizaciones.modelos import IgContacto
 from app.automatizaciones.registro import PREFIJO
 from app.models import Conversation, User
-from app.models.inbox_work import EVENT, NOTE, InboxRead, Note, Task
+from app.models.inbox_work import CITA, EVENT, NOTE, InboxRead, Note, Task
 from app.models.tag import TARGET_IG_CONTACT
 
 LARGO_NOTA = 2000
@@ -58,8 +58,9 @@ def tarea_json(t, contacto=None):
 
 def historial(contacto_id):
     """Notas, eventos y tareas de la conversación, para intercalar con los mensajes del chat."""
+    # Las citas van aparte (`api_fases.citas`): son para la venta, no parte del chat.
     notas = (Note.query.filter_by(target_type=TARGET_IG_CONTACT, target_id=str(contacto_id))
-             .order_by(Note.created_at).limit(300).all())
+             .filter(Note.kind != CITA).order_by(Note.created_at).limit(300).all())
     tareas = (Task.query.filter_by(target_type=TARGET_IG_CONTACT, target_id=str(contacto_id))
               .order_by(Task.created_at).limit(100).all())
     return [nota_json(n) for n in notas], [tarea_json(t) for t in tareas]

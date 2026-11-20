@@ -9,7 +9,7 @@ from flask import Blueprint, jsonify, request
 from flask_login import current_user, login_required
 
 from app import db
-from app.automatizaciones import bandeja, campanas, metricas, progreso, servicio
+from app.automatizaciones import bandeja, campanas, fases, metricas, progreso, servicio
 from app.automatizaciones.modelos import AutEjecucion, AutFlujo, IgContacto, IgMensaje
 from app.automatizaciones.nucleo import grafo as g
 from app.models.instagram import InstagramWebhookEvento
@@ -34,7 +34,8 @@ ACCIONES_DEL_SETTER = {'inbox.mover_en_flujo', 'inbox.bot_de_conversacion', 'inb
                        'inbox.poner_etiqueta', 'inbox.sacar_etiqueta', 'inbox.guardar_mensajes',
                        'inbox.marcar_leido', 'inbox.asignar_conversacion', 'inbox.mover_etapa', 'inbox.corregir_variable',
                        'inbox.crear_nota', 'inbox.crear_tarea', 'inbox.cambiar_tarea',
-                       'inbox.crear_rapida', 'inbox.borrar_rapida', 'inbox.subir_audio', 'inbox.borrar_audio'}
+                       'inbox.crear_rapida', 'inbox.borrar_rapida', 'inbox.subir_audio', 'inbox.borrar_audio',
+                       'inbox.mover_fase', 'inbox.marcar_canal', 'inbox.anotar_cita', 'inbox.etiquetar_varias'}
 MAX_BYTES_GRAFO = 300_000
 MAX_NODOS = 300
 MENSAJES_POR_CONVERSACION = 300
@@ -279,6 +280,7 @@ def listar_conversaciones():
             # El último recorrido, abierto o no: la bandeja marca los cortados (error, ventana vencida).
             'ejecucion': bandeja.resumen_ejecucion(ejecucion),
             'asignado': asignados.get(contacto.id),
+            'canal': fases.canal(contacto, asignados.get(contacto.id)),
             'etiquetas': etiquetas.get(str(contacto.id), []),
             **avance.get(contacto.id, {}),
         })
@@ -298,18 +300,23 @@ def ver_conversacion(contacto_id):
     elegidos = bandeja.elegidos(mensajes)
     from app.automatizaciones import api_trabajo  # cuelga de `bp`: importarlo arriba sería circular
     notas, tareas = api_trabajo.historial(contacto.id)
-    from app.automatizaciones import seguimientos
+    from app.automatizaciones import api_fases, seguimientos
+    asignado = bandeja.asignaciones([contacto.id]).get(contacto.id)
     return jsonify({
         'seguimientos': seguimientos.de_contacto(contacto.id),
         'avance': progreso.uno(contacto, servicio.ahora(), current_user.id),
         'notas': notas,
         'tareas': tareas,
+        # Lo del setting (ADR-W184): el canal, los cambios de fase y las citas para la venta.
+        'canal': fases.canal(contacto, asignado),
+        'fases': fases.historial(contacto.id),
+        'citas': api_fases.citas(contacto.id),
         'contacto': {
             'id': contacto.id, 'igsid': contacto.igsid, 'username': contacto.username, 'nombre': contacto.nombre,
             'variables': contacto.variables or {}, 'ultimo_entrante_en': _iso(contacto.ultimo_entrante_en),
             'bot_pausado_hasta': _iso(contacto.bot_pausado_hasta),
         },
-        'asignado': bandeja.asignaciones([contacto.id]).get(contacto.id),
+        'asignado': asignado,
         'etiquetas': tags_service.de(TARGET_IG_CONTACT, [contacto.id]).get(str(contacto.id), []),
         'ejecucion': recorrido[0] if recorrido else None,
         'recorrido': recorrido,

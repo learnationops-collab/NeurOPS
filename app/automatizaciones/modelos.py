@@ -72,6 +72,23 @@ class IgContacto(db.Model):
     # Setter asignado a mano. Manda sobre el reparto mientras no entre por otra campaña (`bandeja.asignaciones`).
     setter_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
     asignado_en = db.Column(db.DateTime, nullable=True)
+    # Fase del setting que marcó el equipo (`fases.py`); sin marcar, sale de lo que pasó. Y su canal para el reporte.
+    fase = db.Column(db.String(20), nullable=True)
+    canal = db.Column(db.String(20), nullable=True)
+
+
+class IgFase(db.Model):
+    """Cada cambio de fase del setting, con quién y cuándo: de acá sale el reporte del día (ADR-W184)."""
+    __tablename__ = 'ig_fases'
+
+    id = db.Column(db.Integer, primary_key=True)
+    contacto_id = db.Column(db.Integer, db.ForeignKey('ig_contactos.id', ondelete='CASCADE'), nullable=False, index=True)
+    fase = db.Column(db.String(20), nullable=False)
+    desde = db.Column(db.String(20), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    en = db.Column(db.DateTime, nullable=False, default=ahora, index=True)
+
+    usuario = db.relationship('User')
 
 
 class AutEjecucion(db.Model):

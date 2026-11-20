@@ -6,6 +6,7 @@ import { AlarmClock, Bot, Check, Clock, Hourglass, PencilLine, User, X } from 'l
 import { Avatar, Chip } from '../../../components/standard';
 import { AVISO_CIERRE, cierreMin, colorEspera, esperaMin, examenDe, quien, textoEspera } from './colas';
 import { Etiqueta } from './Etiquetas';
+import { colorDe, corto, faseDe } from './fasesSetting';
 import { Puntos } from './Progreso';
 
 export function hora(iso) {
@@ -38,13 +39,23 @@ export function Vence({ tarea, ahora }) {
     return <span className={`cv-vence${tarde ? ' cv-vence--tarde' : ''}`} data-tip={`Tarea|${tarea.titulo}`}><Clock size={11} aria-hidden="true" />{cuando}</span>;
 }
 
-export default function Fila({ c, elegida, ahora, yo, conAsignado, borrador, onElegir }) {
+// La fase del setting, con el color de su etapa (ADR-W184).
+export function ChipFase({ fase }) {
+    if (!fase) return null;
+    const f = faseDe(fase);
+    return <Chip subtle color={colorDe(f)} className="cv-fase" data-tip={`Etapa del setting|${f.n} · ${f.label}`}>{f.n} {corto(f)}</Chip>;
+}
+
+// `eligiendo`: con «Elegir» puesto, tocar la fila la marca para etiquetarla (1426) en lugar de abrirla.
+export default function Fila({ c, elegida, ahora, yo, conAsignado, borrador, onElegir, eligiendo, marcada, onMarcar }) {
     const espera = esperaMin(c, ahora);
     const cierre = cierreMin(c, ahora);
     const examen = examenDe(c);
     return (
         <li>
-            <button type="button" className={`cv-item${c.sin_leer ? ' cv-item--nuevo' : ''}`} aria-pressed={elegida} data-conversacion={c.id} onClick={() => onElegir(c.id)}>
+            <button type="button" className={`cv-item${c.sin_leer ? ' cv-item--nuevo' : ''}${marcada ? ' cv-item--marcada' : ''}`}
+                aria-pressed={eligiendo ? marcada : elegida} data-conversacion={c.id} onClick={() => (eligiendo ? onMarcar(c.id) : onElegir(c.id))}>
+                {eligiendo && <span className="cv-item-check" aria-hidden="true">{marcada && <Check size={12} strokeWidth={3} />}</span>}
                 <Avatar name={c.username || c.nombre || '?'} size="sm" />
                 <span className="cv-item-cuerpo">
                     <span className="cv-item-cab">
@@ -61,6 +72,7 @@ export default function Fila({ c, elegida, ahora, yo, conAsignado, borrador, onE
                     </span>
                     <span className="cv-item-chips">
                         <Puntos etapas={c.etapas} />
+                        <ChipFase fase={c.fase} />
                         <Califica valor={c.califica} />
                         {espera != null && (
                             <Chip subtle color={colorEspera(espera)} icon={<Clock />} data-tip={`Espera respuesta|Desde ${hora(c.ultimo_en)}`}>

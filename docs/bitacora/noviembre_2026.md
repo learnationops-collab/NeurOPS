@@ -740,3 +740,11 @@
 - El día que un closer ya tiene una Momentum, a la siguiente solo se le ofrece el horario pegado (cuando termina la anterior con su margen), para que no le corten las sesiones de closing (ADR-W183).
 - Academia: canal Sesiones en el chat del equipo, con la nota del reporte de cada sesión, en reemplazo de Discord (Academia ADR-236, Leadership 1389).
 - Inbox › Conversaciones: el buscador pasa de la derecha de la cabecera a arriba de la lista de chats, donde lo ve el setter; en la vista Embudo sigue en la cabecera (Leadership 1434).
+
+### 20/11/2026 · Inbox en el espacio del setter, con las fases del setting
+- Conversaciones es una sección del dock del setter: trabaja el Inbox sin salir a otro portal (Leadership 1435).
+- Las conversaciones tienen fase del setting (Apertura, Conexión, Dolor, Consecuencia, Compromiso, Propuesta, Link, Confirmación, No lead, In-abrible): se cambia desde la tarjeta del lead o con «Adelantar», y al pasar a una fase con varios mensajes se elige cuál pegar en la caja. El Embudo va por fase (ADR-W184).
+- Arriba de la lista: buscador, asignación, filtro en dos columnas (con fase y etiquetas), Ordenar (espera, cierre de la ventana, etapa…), filtros guardados como chips y «Elegir» para etiquetar varias de una vez (Leadership 1434 y 1426).
+- La tarjeta del lead junta lo que iba en la cabecera del chat (delegar, canal, etiquetas, etapa); arriba del chat queda cuánto espera y cuánto falta para que se cierre la ventana de Instagram.
+- Seleccionar parte de un mensaje del lead lo anota para la venta: aparece en la ficha del lead › Comunicación.
+

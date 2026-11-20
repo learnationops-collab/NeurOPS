@@ -219,9 +219,28 @@ def notas(client, appt):
 
     entradas = lead_log_service.notas_de(client.person_uuid if client else getattr(appt, 'person_uuid', None))
     notificados = avisos_service.destinatarios_de_log([e.id for e in entradas])
-    return [{'id': f'log-{e.id}', 'autor': e.user.username if e.user else 'Sistema',
-             'rol': e.user.role if e.user else 'system', 'fecha': _iso(e.created_at),
-             'texto': e.description, 'notificados': notificados.get(e.id, [])} for e in entradas]
+    salida = [{'id': f'log-{e.id}', 'autor': e.user.username if e.user else 'Sistema',
+               'rol': e.user.role if e.user else 'system', 'fecha': _iso(e.created_at),
+               'texto': e.description, 'notificados': notificados.get(e.id, [])} for e in entradas]
+    return sorted(salida + _citas_del_inbox(client), key=lambda n: n['fecha'] or '')
+
+
+def _citas_del_inbox(client):
+    """Lo que el setter resaltó de los mensajes del lead en el Inbox (ADR-W184), por su Instagram: va al hilo
+    como nota del setter, con la cita."""
+    from app.automatizaciones import api_fases
+    from app.automatizaciones.modelos import IgContacto
+    from app.automatizaciones.progreso import _usuario_ig
+
+    usuario = _usuario_ig(getattr(client, 'instagram', None))
+    if not usuario:
+        return []
+    contacto = IgContacto.query.filter(db.func.lower(IgContacto.username) == usuario).first()
+    if contacto is None:
+        return []
+    return [{'id': f'cita-{c["id"]}', 'autor': c['autor'] or 'Setter', 'rol': 'setter', 'fecha': c['en'],
+             'texto': f'{c["tipo"]}: «{c["texto"]}»' + (f'\n{c["comentario"]}' if c['comentario'] else ''),
+             'notificados': []} for c in api_fases.citas(contacto.id)]
 
 
 def equipo():
