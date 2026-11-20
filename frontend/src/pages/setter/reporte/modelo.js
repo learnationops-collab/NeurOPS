@@ -352,3 +352,31 @@ export function textoFecha(iso, hoy = hoyIso()) {
     const dm = d.toLocaleDateString('es', { day: 'numeric', month: 'short' }).replace('.', '') + anio;
     return iso === hoy ? `Hoy · ${dm}` : `${d.toLocaleDateString('es', { weekday: 'short' }).replace('.', '')} ${dm}`;
 }
+
+/**
+ * Lo que contó el Inbox (ADR-W185): de cada canal, nuevos mensajes, entrantes cualificados, no leads e
+ * in-abribles; el embudo y los follow-ups solo si vienen (el setter usó las fases). Como la precarga,
+ * nunca pisa lo que el setter tocó. Devuelve el estado y `autos`: {ruta: valor del Inbox}, para marcar
+ * cada número y mostrar cuál era si el setter lo corrige.
+ */
+export const CAMPOS_INBOX = ['entrantes', 'leads', 'no_lead', 'inabribles'];
+
+export function aplicarInbox(s, inbox, tocados) {
+    const autos = {};
+    if (!inbox) return { estado: s, autos };
+    const rutas = [
+        ...CANALES.flatMap(c => CAMPOS_INBOX.map(f => [`${c.k}.${f}`, inbox[c.k]?.[f]])),
+        ...['embudo', 'followups', 'followups_respondidos'].flatMap(sec => Object.entries(inbox[sec] || {})
+            .map(([k, v]) => [`${sec}.${k}`, v])),
+    ];
+    let out = s;
+    for (const [ruta, v] of rutas) {
+        if (v === undefined || v === null) continue;
+        autos[ruta] = entero(v);
+        if (!tocados.has(ruta)) out = conRuta(out, ruta, autos[ruta]);
+    }
+    return { estado: out, autos };
+}
+
+/** Lo que todavía no tiene definición acordada (20/11/2026): lo carga el setter, marcado «A confirmar». */
+export const aConfirmar = (ruta) => /\.ap_(entrantes|dolor)(_resp)?$/.test(ruta) || ruta.startsWith('bienvenidas.');

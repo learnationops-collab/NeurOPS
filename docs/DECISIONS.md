@@ -1670,3 +1670,16 @@
   6. El Embudo pasa a una columna por fase.
 - **Qué se pierde:** la sub-etapa deja de elegirse a mano (sale de la fase). Las citas de un lead sin cliente con Instagram no llegan a la ficha hasta que lo tenga. El guión es fijo en el código: cambiarlo es un deploy. El reporte todavía no se llena solo (entrega 2).
 - **Consecuencias:** migración `e6a1c3f5b7d9` (`ig_contactos.fase` y `canal`, tabla `ig_fases`, `notes.payload`; idempotente). Endpoints nuevos: `PUT /conversaciones/<id>/fase` y `/canal`, `POST /conversaciones/<id>/citas`, `POST /etiquetas/masivo`. La lista trae `fase` y `canal`; el detalle, `canal`, `fases` y `citas`.
+
+## ADR-W185: el reporte del setter, precargado con lo que contó el Inbox
+
+- **Fecha:** 2026-11-20 · **Subsistema:** reporte diario del setter (`pages/setter/reporte/`, `app/api/public/setter.py` › prefill) e Inbox (`app/automatizaciones/reporte_inbox.py`). Entrega 2 de ADR-W184. Mockup aprobado en `docs/mockups/reporte-setter-auto/`.
+- **Contexto:** Mario pidió que las fases del Inbox llenen solas el reporte y que al setter le quede revisar y escribir lo cualitativo. Desde el 17/10 (Kerwin) los entrantes los contaba el setter, porque ManyChat solo veía a quien escribía por primera vez; con el Inbox propio el sistema ve cada conversación. Comparado contra lo cargado a mano el 18 y 19/11: nuevos mensajes y cualificados en el mismo orden (Elias 32 contra 35, 24 contra 25), auditadas una por una; las aperturas respondidas no (12 contra 21), porque el setter cuenta otra cosa.
+- **Decisión:**
+  1. La precarga trae `inbox`: por canal, nuevos mensajes (primer mensaje del lead ese día, conversación asignada al setter), entrantes cualificados (contestaron algo, al bot o al equipo, sin in-abribles; incluye no leads, como el formulario), no leads (fase No lead o el bot no califica) e in-abribles (fase In-abrible). El día es el de la zona del setter.
+  2. Embudo (llegó ese día por primera vez a Dolor 3–5, Oferta 6 o Link 7) y follow-ups (mensaje del equipo tras 12 h sin respuesta, por la etapa en que estaba; respondidos, los que el lead contestó) solo si el setter usa las fases: sin ningún cambio en `ig_fases`, no vienen y los carga él.
+  3. **A confirmar:** aperturas (en entrantes y en dolor, y respondidas) y bienvenidas no se cuentan solas hasta acordar qué significan. Se cargan a mano con la marca «A confirmar».
+  4. Cada número contado lleva «Inbox ›», que abre en un modal la lista de conversaciones que suma (usuario, fase, hora, «Abrir chat»). Si el setter lo cambia queda «Corregido · era N». Nunca se pisa lo que tocó.
+  5. «Abrir chat» abre Conversaciones en esa conversación (`?step=conversaciones&c=<id>`).
+- **Qué se pierde:** el setter ya no arranca en cero en entrantes (vuelve el número del sistema, ahora del Inbox propio). La fase de la lista es la marcada: sin marcar, sale vacía. Los mensajes del equipo no traen autor, así que cuenta todo lo que pasa en sus conversaciones, lo mande quien lo mande.
+- **Consecuencias:** sin migración. `GET /public/setter-report/prefill` suma `inbox` (None si el usuario no es setter o si la cuenta falla, y el formulario sigue como antes).

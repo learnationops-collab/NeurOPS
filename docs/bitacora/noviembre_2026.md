@@ -749,3 +749,4 @@
 - Seleccionar parte de un mensaje del lead lo anota para la venta: aparece en la ficha del lead › Comunicación.
 
 - La tarjeta del lead ya no desborda la columna derecha: el canal con campaña larga se corta con «…».
+- Reporte del setter precargado con lo que contó el Inbox (ADR-W185): nuevos mensajes, cualificados, no leads e in-abribles por canal; embudo y follow-ups cuando el setter usa las fases. Cada número lleva «Inbox ›» con la lista de conversaciones en un modal, y «Corregido» si el setter lo cambia. Aperturas y bienvenidas siguen a mano, «A confirmar».

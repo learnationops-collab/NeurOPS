@@ -397,3 +397,24 @@
   .rd .rd-ok circle,.rd .rd-ok path{animation:none;stroke-dashoffset:0}
   .rd *{transition-duration:0s!important}
 }
+
+/* Lo que contó el Inbox (ADR-W185) */
+.rd .rd-marca{display:inline-flex;align-items:center;margin-left:6px;padding:1px 6px;border:0;border-radius:6px;font:inherit;font-size:9px;font-weight:900;
+  letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;vertical-align:middle;cursor:pointer;
+  background:color-mix(in srgb,var(--info) 14%,transparent);color:var(--info)}
+.rd button.rd-marca:hover{background:var(--info);color:#fff}
+.rd .rd-marca--corr{background:color-mix(in srgb,var(--warning) 16%,transparent);color:var(--warning)}
+.rd .rd-marca--conf{cursor:help;background:color-mix(in srgb,var(--text-muted) 16%,transparent);color:var(--text-muted)}
+.rd .rd-inbox-aviso{margin:0 0 var(--s3);padding:10px 14px;border-radius:14px;font-size:12.5px;color:var(--text-muted);
+  background:color-mix(in srgb,var(--info) 8%,transparent);border:1px solid color-mix(in srgb,var(--info) 25%,transparent)}
+.rd .rd-inbox-aviso b{color:var(--text-main)}
+.rd-lista-modal .rd-lista{list-style:none;margin:0;padding:4px 0;display:grid;gap:2px;max-height:60vh;overflow:auto}
+.rd-lista-modal .rd-lista li{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;gap:10px;align-items:center;padding:8px 10px;border-radius:12px}
+.rd-lista-modal .rd-lista li:hover{background:rgba(127,127,127,.08)}
+.rd-lista-modal .rd-lista b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rd-lista-modal .rd-lista-fase{padding:2px 8px;border-radius:999px;font-size:11px;font-weight:800;background:color-mix(in srgb,#7D63E6 14%,transparent);color:#7D63E6}
+.rd-lista-modal .rd-lista-fase.fuera{background:rgba(127,127,127,.15);color:inherit;opacity:.75}
+.rd-lista-modal .rd-lista-h{font-size:11px;opacity:.6;font-variant-numeric:tabular-nums}
+.rd-lista-modal .rd-lista a{font-size:11px;font-weight:800;text-decoration:none;color:var(--info);white-space:nowrap}
+.rd-lista-modal .rd-lista-vacia{opacity:.7;padding:12px 4px}
+@media (max-width:560px){.rd-lista-modal .rd-lista li{grid-template-columns:minmax(0,1fr) auto}.rd-lista-modal .rd-lista-h{display:none}}

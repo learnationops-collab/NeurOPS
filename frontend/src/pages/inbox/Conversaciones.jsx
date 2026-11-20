@@ -93,7 +93,8 @@ export default function Conversaciones() {
     // El setter arranca en lo suyo sin respuesta; el resto, en todo lo que espera.
     const [filtro, setFiltro] = useState(() => ({ ...VACIO, cola: 'esperan', asignado: user?.role === 'setter' ? yo : null }));
     const [vista, setVista] = useState('chats');
-    const [elegida, setElegida] = useState(null);
+    // `?c=<id>` abre esa conversación (el link «Abrir chat» de la lista del reporte del setter).
+    const [elegida, setElegida] = useState(() => Number(new URLSearchParams(window.location.search).get('c')) || null);
     const [leidas, setLeidas] = useState({});
     const [stats, setStats] = useState(false);
     // Etiquetar varias (1426): con «Elegir», tocar una fila la marca.
