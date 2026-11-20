@@ -1648,3 +1648,11 @@
 - **Decisión:** los inicios de cada closer son una grilla fija por franja de su horario: arranca al comienzo de la franja y avanza de a sesión + margen (los de ese closer en ese evento). Una franja ocupada o dentro de la antelación mínima se saltea; la siguiente sigue en la grilla. Es la cantidad máxima de sesiones que le entra al día, y siempre en los mismos horarios.
 - **Qué se pierde:** un evento de Google o una agenda vieja fuera de la grilla tapa la franja entera aunque deje un hueco donde antes entraba una sesión corrida. Eventos con distinta duración + margen tienen grillas distintas para el mismo closer.
 - **Consecuencias:** sin migración. La tabla de turnos (`TablaTurnos`) cuenta con la misma regla. La regla de las Momentum (los 30 minutos que siguen a una agenda, solo para otra Momentum) queda aparte.
+
+## ADR-W183: el día con Momentum, la siguiente va pegada
+
+- **Fecha:** 2026-11-20 · **Subsistema:** Agendas de la Academia en modo ventas (`app/api/external/agenda.py` `/agenda/horarios`, `agendas_v2/momentum.pegadas`). Sigue a ADR-W182.
+- **Contexto:** Revisión del inbox con setters (17/11): Marlon, con una sugerencia de Jean Carlo, pidió un espacio fijo para las Momentum. Hoy cada Momentum que agenda Dari puede caer en cualquier hueco del closer, y las sueltas cortan sus sesiones de closing o se cruzan con otros eventos.
+- **Decisión:** el día que el closer ya tiene una Momentum vigente, a las demás de ese día solo se les ofrece el horario pegado: cuando termina la anterior con su margen (con una a las 14:00 de 30 min y 15 de margen, solo las 14:45), si entra en su horario, respeta la antelación y está libre. Varias Momentum ese día dan un horario pegado cada una. Los días sin Momentum ofrecen las franjas fijas de siempre.
+- **Qué se pierde:** si el horario pegado está ocupado o fuera de su horario, ese día no se ofrece ninguna otra Momentum, aunque el closer tenga huecos. Las Momentum que se agendan por una fecha acordada (fuera de `/horarios`) no siguen la regla.
+- **Consecuencias:** sin migración. Solo cambia lo que devuelve `/agenda/horarios` en modo ventas.

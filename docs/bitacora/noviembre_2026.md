@@ -737,3 +737,5 @@
 - Los horarios que ve el lead son franjas fijas de a sesión + margen desde el comienzo del horario del closer: si una está ocupada se saltea y no se corre la cadena, así no aparecen inicios desalineados como 14:15 (ADR-W182, Leadership 1432).
 - La Momentum Session de Jean Carlo pasa de 45 a 30 minutos (dato del evento, Leadership 1433).
 - Academia: la cuenta de Mario con el correo de Learnation se llamaba «Mario Testea» (así salía en el chat y en Leadership); ahora es «Mario Bühler», con su foto (Leadership 1444).
+- El día que un closer ya tiene una Momentum, a la siguiente solo se le ofrece el horario pegado (cuando termina la anterior con su margen), para que no le corten las sesiones de closing (ADR-W183).
+- Academia: canal Sesiones en el chat del equipo, con la nota del reporte de cada sesión, en reemplazo de Discord (Academia ADR-236, Leadership 1389).

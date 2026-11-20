@@ -40,3 +40,40 @@ def choca(user, inicio_ms, fin_ms, libres):
     db.session.query(User).filter_by(id=user.id).with_for_update().first()
     en_google = [{'inicio': a, 'fin': b} for a, b in desplazar.restar(franjas, libres)] if franjas else []
     return se_solapa(ocupado_en_work(user, desde, franjas, libres) + en_google, inicio_ms, (fin_ms - inicio_ms) // 60000)
+
+
+def pegadas(u, slots, tz, horario, dur, margen, ocupado, minimo, desde_ms, hasta_ms):
+    """Franja fija de las Momentum (revisión del inbox con setters, 17/11; ADR-W183): el día que el closer ya
+    tiene una Momentum, a las demás solo se les ofrece el horario pegado a ella (cuando termina con su margen),
+    para que no se repartan por el día y le corten las sesiones de closing. Los días sin Momentum, `slots` igual.
+    `ocupado`: [{inicio, fin}] (ms) de lo que no se puede pisar; `minimo`: el primer inicio posible (antelación)."""
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    from app.agendas_v2.nucleo.catalogos import a_min
+    from app.agendas_v2.nucleo.normalizar import franjas as franjas_del_dia
+    from app.models import Appointment
+
+    zona = ZoneInfo(tz)
+    dia_de = lambda ms: datetime.fromtimestamp(ms / 1000, zona).date()  # noqa: E731
+    previas = Appointment.query.filter(
+        Appointment.closer_id == u.id, Appointment.origin == 'Momentum',
+        Appointment.start_time >= servicio.ms_a_dt(desde_ms), Appointment.start_time < servicio.ms_a_dt(hasta_ms)).all()
+    pegados = {}  # día local → inicios pegados a una Momentum de ese día
+    for a in previas:
+        if not servicio._vigente(a):
+            continue
+        t = servicio.dt_a_ms(a.start_time) + servicio._bloque_min(a) * 60000
+        pegados.setdefault(dia_de(servicio.dt_a_ms(a.start_time)), set()).add(t)
+    if not pegados:
+        return slots
+
+    def entra(t):
+        local = datetime.fromtimestamp(t / 1000, zona)
+        m = local.hour * 60 + local.minute
+        en_horario = any(a_min(r[0]) <= m and m + dur <= a_min(r[1]) for r in franjas_del_dia(horario, (local.weekday() + 1) % 7))
+        return en_horario and t >= minimo and not se_solapa(ocupado, t, dur + margen)
+
+    libres = [s for s in slots if dia_de(s) not in pegados]
+    libres += [t for ts in pegados.values() for t in ts if entra(t)]
+    return sorted(set(libres))

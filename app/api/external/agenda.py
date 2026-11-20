@@ -561,11 +561,13 @@ def agenda_horarios():
     o = agenda_opt({
         'reservas': {'modo': 'dias', 'n': dias, 'tipo': 'corridos', 'desde': '', 'hasta': ''},
         'antel': {'n': antel, 'u': 'min'},
-        # Las Momentum, de a 15 minutos: entran en los huecos cortos entre llamadas.
+        # Sin uso: los inicios son franjas fijas de a sesión + margen (ADR-W182).
         'paso': {'n': 15 if ventas else 30, 'u': 'min'},
     }, dur)
     slots = slots_persona({'id': f'f-{u.id}', 'tz': tz, 'horario': horario}, dur, o, ahora,
                           lambda pid, t, d: se_solapa(ocupado, t, d), margen)
+    if ventas:
+        slots = momentum.pegadas(u, slots, tz, horario, dur, margen, ocupado, ahora + o['ant'], desde, hasta)
     return jsonify({'slots': slots, 'google': franjas is not None}), 200
 
 
