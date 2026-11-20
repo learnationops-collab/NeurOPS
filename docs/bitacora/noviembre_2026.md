@@ -752,3 +752,9 @@
 - Reporte del setter precargado con lo que contó el Inbox (ADR-W185): nuevos mensajes, cualificados, no leads e in-abribles por canal; embudo y follow-ups cuando el setter usa las fases. Cada número lleva «Inbox ›» con la lista de conversaciones en un modal, y «Corregido» si el setter lo cambia. Aperturas y bienvenidas siguen a mano, «A confirmar».
 - Panel Cierre del dashboard comercial (ADR-W186): aviso de agendas sin resultado por closer (abre Revisar), el camino agendas → se presentaron → presentación → compraron, y el close rate por agenda como tercer anillo y en directas contra triage. No se sacó nada de lo que ya mostraba.
 - Dashboard comercial (ADR-W187): Segmentos suma el corte «Respuesta» (cuánto compra cada opción del formulario de agenda y si los puntos del segmento coinciden), y Analizar suma el panel «Por qué compran y por qué no» (decide × invierte y las objeciones de las llamadas que no cerraron, agrupadas).
+
+### 20/11/2026 · El low ticket sale del Closing y cuenta como cierre en el Triage
+- Closing (dirección comercial): el low ticket (programa LT) y lo que carga alguien con rol triage ya no cuentan en ventas, cash, close rate, ticket, CAC, fuentes, reporte diario, simulador ni proyección. Pedido del director comercial: la venta de $100 de Dari (Celia Salgado, 18/11) subía el close rate del equipo a 20 % contra 11,1 % de Jean Carlo y bajaba el ticket a $230; ahora el equipo da 11,1 % y $360 (ADR-W188, Leadership 1448).
+- Revisar › Ventas suma la faceta «Área» (Closing / Triage); los números del Closing abren la lista con «Área: Closing».
+- Las Comparativas de closers ya no muestran a las personas de triage (revierte ADR-W062).
+- Triage: el cierre del low ticket es por cobro, con la llamada anterior en la base, como el close rate real del Closing (25 % la semana del 16/11). La tarjeta y el panel muestran lo cobrado y abren sus ventas (ADR-W189).
