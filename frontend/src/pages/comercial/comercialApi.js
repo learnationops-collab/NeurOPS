@@ -103,6 +103,18 @@ export const getConstancia = (dias, fecha) =>
 /** Agendas del período por segmento A/B/C/D (el closer, show up y cierre; el setter, sus agendas), cortadas por `corte`
  *  (closer · setter · fuente · origen; sin él, todo junto) y con el VS del header como período comparado. El filtro de
  *  segmento (`filtros.segmento`) lo aplica el backend, también al total. */
+/** Segmentos › corte «Respuesta» (ADR-W187): cuánto compra cada opción del formulario de agenda. No sigue el período. */
+export const getSegmentosRespuestas = (config = {}) =>
+    api.get('/comercial/segmentos/respuestas', config).then(r => r.data);
+
+/** Quiénes eligieron una opción (solo la dirección). */
+export const getRespuestasPersonas = (q, op, config = {}) =>
+    api.get('/comercial/segmentos/respuestas/personas', { params: { q, op }, ...config }).then(r => r.data);
+
+/** Analizar › Por qué compran y por qué no (ADR-W187): el cruce decide × invierte y las objeciones del período. */
+export const getPorQueCompran = (filtros, config = {}) =>
+    api.get('/comercial/por-que-compran', { params: filtrosQuery(filtros), ...config }).then(r => r.data);
+
 export const getSegmentos = (filtros, config = {}, corte = 'closer') =>
     api.get('/comercial/segmentos', { params: { ...filtrosQuery(filtros), corte }, ...config }).then(r => r.data);
 

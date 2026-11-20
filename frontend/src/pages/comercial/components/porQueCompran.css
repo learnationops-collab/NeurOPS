@@ -1,0 +1,29 @@
+/* Analizar › Por qué compran y por qué no (PorQueCompran.jsx, ADR-W187) */
+.dc-shell .pq { display: grid; gap: 16px; }
+.dc-shell .pq-clave { display: grid; grid-template-columns: auto 1fr; gap: 18px; align-items: center; padding: 14px 16px; border-radius: 18px;
+    border: 1px solid var(--border-subtle);
+    background: linear-gradient(90deg, color-mix(in srgb, var(--success) 10%, transparent), color-mix(in srgb, var(--error) 8%, transparent)); }
+.dc-shell .pq-vs { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.dc-shell .pq-vs b { font-size: 30px; font-weight: 900; line-height: 1; letter-spacing: -.02em; }
+.dc-shell .pq-vs span { font-size: 11.5px; color: var(--text-muted); max-width: 130px; line-height: 1.25; }
+.dc-shell .pq-vs em { font-style: normal; font-size: 11px; color: var(--text-muted); }
+.dc-shell .pq-clave p { margin: 0; font-size: 13.5px; line-height: 1.5; }
+.dc-shell .pq-link { border: 0; background: none; padding: 0; font: inherit; font-weight: 800; color: var(--info); cursor: pointer; }
+.dc-shell .pq-obj { display: grid; gap: 4px; }
+.dc-shell .pq-obj-cab { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+.dc-shell .pq-obj-cab h4 { margin: 0; font-size: 13px; font-weight: 900; }
+.dc-shell .pq-obj-cab small { font-size: 11.5px; color: var(--text-muted); }
+.dc-shell .pq-fila { display: grid; grid-template-columns: minmax(150px, 1fr) minmax(80px, 2fr) 54px 34px; gap: 10px; align-items: center;
+    padding: 7px 10px; border-radius: 12px; border: 0; background: none; color: inherit; font: inherit; font-size: 12.5px; text-align: left; cursor: pointer; }
+.dc-shell .pq-fila:hover { background: color-mix(in srgb, var(--text-on-surface) 6%, transparent); }
+.dc-shell .pq-rot { font-weight: 700; }
+.dc-shell .pq-riel { height: 10px; border-radius: 5px; background: color-mix(in srgb, var(--text-on-surface) 8%, transparent); overflow: hidden; }
+.dc-shell .pq-riel i { display: block; height: 100%; border-radius: 5px; background: var(--error); }
+.dc-shell .pq-fila b { text-align: right; font-weight: 900; }
+.dc-shell .pq-fila small { text-align: right; color: var(--text-muted); }
+.dc-shell .pq-falta { margin: 8px 0 0; font-size: 11.5px; color: var(--text-muted); }
+@media (max-width: 760px) { .dc-shell .pq-clave { grid-template-columns: 1fr; } }
+.pq-modal .pq-textos { list-style: none; margin: 0; padding: 4px 0; display: grid; gap: 8px; max-height: 60vh; overflow: auto; }
+.pq-modal .pq-textos li { padding: 10px 12px; border-radius: 12px; background: rgba(127, 127, 127, .08); }
+.pq-modal .pq-textos p { margin: 0 0 4px; font-size: 13px; line-height: 1.45; }
+.pq-modal .pq-textos small { opacity: .65; font-size: 11px; }

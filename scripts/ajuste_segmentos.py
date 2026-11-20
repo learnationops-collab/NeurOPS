@@ -26,8 +26,6 @@ from app.agendas_v2.nucleo.normalizar import normal_form  # noqa: E402
 from app.agendas_v2.nucleo.segmento import segmentar  # noqa: E402
 from app.models.booking import Appointment  # noqa: E402
 from app.models.client import Client  # noqa: E402
-from app.models.financial import FinancialSale  # noqa: E402
-from app.models.sale import Sale  # noqa: E402
 from scripts.backfill_segmentos import FORM_ID, _de_thalamus, resp_de_form_data, resp_de_payload  # noqa: E402
 
 INV, ETA, EXA, DEC = 'qglxqqlsgya', 'qg8xclvqc4c', 'qg6raaks2pe', 'qgnajtuxkuz'
@@ -47,21 +45,8 @@ NIVEL = {
 QS = list(NIVEL)
 
 
-def _ventas():
-    v = defaultdict(list)
-    for s in Sale.query.filter(Sale.kind == 'new').all():
-        if s.status in ('cancelled', 'canceled', 'void', 'refunded'):
-            continue
-        for k in (('c', s.client_id), ('p', s.person_uuid)):
-            if k[1]:
-                v[k].append((s.sold_at, s.agreed_total or 0))
-    for f in FinancialSale.query.all():
-        if (f.estado or '').lower().startswith('cancel'):
-            continue
-        for k in (('c', f.client_id), ('p', f.person_uuid)):
-            if k[1]:
-                v[k].append((f.date or f.created_at, f.monto or 0))
-    return v
+# Las ventas nuevas se cuentan igual acá y en el corte «Respuesta» del panel Segmentos (ADR-W187).
+from app.services.segmentos_respuestas import ventas_nuevas as _ventas  # noqa: E402
 
 
 def dataset(desde):

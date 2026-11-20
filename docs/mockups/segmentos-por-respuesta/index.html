@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Segmentos por respuesta · mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#020617; --page:linear-gradient(135deg,#020617 0%,#0A0E3D 50%,#05082D 100%);
+  --surf:rgba(255,255,255,.04); --surf2:rgba(255,255,255,.08); --inset:rgba(0,0,0,.34);
+  --text:#fff; --muted:rgba(255,255,255,.62); --faint:rgba(255,255,255,.42);
+  --b1:rgba(255,255,255,.08); --b2:rgba(255,255,255,.16);
+  --A:#7DEAC0; --B:#93C5FD; --C:#F3D08A; --D:#FF3FA4; --sin:rgba(255,255,255,.35);
+  --ok:#7DEAC0; --bad:#F5A99C; --warn:#F3D08A; --info:#93C5FD;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);background-image:var(--page);background-attachment:fixed;color:var(--text);font-family:Montserrat,sans-serif;font-size:14px}
+button{font:inherit;color:inherit;cursor:pointer}
+.wrap{max-width:1100px;margin:0 auto;padding:20px 16px 80px;display:grid;gap:16px}
+.top{display:grid;gap:4px}
+.top h1{margin:0;font-size:22px;font-weight:900}
+.mut{color:var(--muted)} .faint{color:var(--faint)}
+.tabs{display:inline-flex;gap:4px;padding:4px;border-radius:999px;background:var(--inset);border:1px solid var(--b1);flex-wrap:wrap;justify-self:start}
+.tabs button{border:0;background:none;padding:7px 14px;border-radius:999px;font-size:12px;font-weight:800;color:var(--muted)}
+.tabs button.on{background:var(--text);color:#020617}
+.vista[hidden]{display:none}
+.ruta{font-size:12px;color:var(--muted);display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.ruta b{color:#fff}
+.panel{background:var(--surf);border:1px solid var(--b1);border-radius:24px;padding:18px;display:grid;gap:14px}
+.pcab{display:flex;align-items:center;gap:8px}
+.pcab h2{margin:0;font-size:15px;font-weight:900}
+.tip{width:16px;height:16px;border-radius:50%;border:1px solid var(--b2);display:inline-grid;place-items:center;font-size:10px;color:var(--muted)}
+.controles{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.seg{display:inline-flex;gap:3px;padding:3px;border-radius:999px;background:var(--inset);border:1px solid var(--b1);flex-wrap:wrap}
+.seg span{padding:5px 11px;border-radius:999px;font-size:12px;font-weight:700;color:var(--muted)}
+.seg span.on{background:var(--text);color:#020617}
+.seg span.nuevo{outline:2px dashed rgba(243,208,138,.7);outline-offset:1px;color:var(--warn)}
+.seg span.nuevo.on{color:#020617;background:var(--warn)}
+.seg.chico span{padding:4px 9px;font-size:11px}
+.fseg{display:flex;gap:4px}
+.fseg span{padding:4px 9px;border-radius:999px;font-size:11px;font-weight:800;background:var(--surf2);color:var(--muted)}
+/* General y filas (como hoy) */
+.general{display:grid;gap:8px;padding:14px;border-radius:18px;border:1px solid var(--b1)}
+.gcab{display:flex;align-items:baseline;gap:8px}
+.rot{font-size:10px;font-weight:900;letter-spacing:.16em;text-transform:uppercase;color:var(--faint)}
+.gcab b{font-size:26px;font-weight:900}
+.barra{display:flex;height:22px;border-radius:7px;overflow:hidden;gap:2px}
+.barra i{display:grid;place-items:center;font-size:10px;font-weight:900;color:#020617;font-style:normal}
+.barra.sm{height:5px;opacity:.55}
+.segs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.sg{padding:8px 10px;border-radius:12px;background:var(--surf);display:grid;gap:2px}
+.sg .h{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:800}
+.sg .h i{width:8px;height:8px;border-radius:3px;background:var(--c)}
+.sg b{font-size:18px;font-weight:900}
+.sg small{font-size:10.5px;color:var(--faint)}
+.filas{display:grid;gap:8px}
+.fila{display:grid;grid-template-columns:150px 1fr;gap:12px;align-items:center}
+.fila .nom{display:grid}
+.fila .nom b{font-size:13px}
+.fila .nom small{font-size:11px;color:var(--faint)}
+/* Lo nuevo: corte por respuesta */
+.pregs{display:flex;gap:6px;flex-wrap:wrap}
+.pregs span{padding:6px 12px;border-radius:12px;font-size:12px;font-weight:700;background:var(--surf2);color:var(--muted)}
+.pregs span.on{background:rgba(243,208,138,.16);color:var(--warn);outline:1px solid rgba(243,208,138,.45)}
+.resumen{display:flex;gap:14px;flex-wrap:wrap;align-items:baseline;padding:12px 14px;border-radius:16px;background:var(--surf);border:1px solid var(--b1)}
+.resumen b{font-size:24px;font-weight:900}
+.resumen small{color:var(--faint);font-size:12px}
+.tabla{display:grid;gap:4px}
+.tf{display:grid;grid-template-columns:minmax(150px,1.2fr) 74px minmax(120px,1.4fr) 62px 60px 108px minmax(110px,.9fr);gap:10px;align-items:center;padding:7px 10px;border-radius:12px;font-size:12.5px}
+.tf:not(.cab):hover{background:var(--surf2);cursor:pointer}
+.tf.cab{font-size:9.5px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);padding-bottom:2px}
+.tf .op{font-weight:800}
+.tf .n{font-variant-numeric:tabular-nums;color:var(--muted);text-align:right}
+.compra{position:relative;height:10px;border-radius:5px;background:var(--surf2)}
+.compra i{position:absolute;inset:0 auto 0 0;border-radius:5px;background:var(--c,var(--ok))}
+.compra u{position:absolute;top:-4px;bottom:-4px;border-left:1.5px dashed rgba(255,255,255,.55)}
+.tf .pct{font-weight:900;text-align:right}
+.tf .vs{font-size:11px;text-align:right}
+.up{color:var(--ok)} .dn{color:var(--bad)}
+.mezcla{display:flex;height:10px;border-radius:4px;overflow:hidden;gap:1px}
+.pts{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:800}
+.pts b{min-width:26px;padding:2px 6px;border-radius:6px;background:var(--surf2);text-align:center}
+.pts .ok{color:var(--ok)} .pts .rev{color:var(--warn)}
+.pocos{font-size:9px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);background:var(--surf2);border-radius:5px;padding:1px 5px;margin-left:6px}
+.lectura{font-size:12.5px;color:var(--muted);padding:12px 14px;border-radius:14px;background:var(--inset);line-height:1.5}
+.lectura b{color:#fff}
+.nuevo-borde{outline:2px dashed rgba(243,208,138,.5);outline-offset:4px;border-radius:16px}
+/* Por qué compran (reducido) */
+.clave{display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:center;padding:14px 16px;border-radius:18px;background:linear-gradient(90deg,rgba(125,234,192,.10),rgba(245,169,156,.08));border:1px solid var(--b1)}
+.clave .vs2{display:flex;gap:10px;align-items:center}
+.clave .vs2 b{font-size:30px;font-weight:900;line-height:1}
+.clave .vs2 span{font-size:11px;color:var(--muted);max-width:110px}
+.clave p{margin:0;font-size:13.5px;line-height:1.5}
+.clave a{color:var(--info);font-weight:800;text-decoration:none;white-space:nowrap}
+.dos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.bloque{padding:14px;border-radius:18px;background:var(--surf);border:1px solid var(--b1);display:grid;gap:8px;align-content:start}
+.bloque h4{margin:0;font-size:12.5px;font-weight:900}
+.bloque h4 small{display:block;font-weight:600;color:var(--faint);font-size:11px;margin-top:2px}
+.mcab,.mfila{display:grid;grid-template-columns:1fr minmax(110px,150px) 1fr;gap:8px;align-items:center}
+.mcab span{font-size:9px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+.mcab span:first-child{text-align:right}
+.mfila .r{text-align:center;font-size:12px;font-weight:700}
+.lado{display:flex;align-items:center;gap:6px}
+.lado.izq{justify-content:flex-end}
+.lado i{display:block;height:10px;border-radius:4px}
+.lado.izq i{background:var(--ok)} .lado.der i{background:var(--bad)}
+.lado b{font-size:12px;font-weight:900}
+.lf{display:grid;grid-template-columns:minmax(0,1fr) 64px 36px;gap:8px;align-items:center;font-size:12.5px}
+.lf .riel{height:8px;border-radius:4px;background:var(--surf2);overflow:hidden}
+.lf .riel i{display:block;height:100%;background:var(--ok)}
+.lf b{text-align:right;font-weight:900}
+.cita{margin:0;padding:10px 12px;border-radius:14px;background:var(--surf);border:1px solid var(--b1);font-size:12.5px;font-weight:600}
+.cita small{display:block;color:var(--faint);font-weight:600;font-size:11px;margin-top:6px}
+.notas{font-size:12.5px;color:var(--muted);border:1px dashed var(--b2);border-radius:18px;padding:14px 18px}
+.notas ul{margin:6px 0 0;padding-left:18px;display:grid;gap:5px}
+.notas b{color:#fff}
+@media (max-width:860px){.tf{grid-template-columns:minmax(120px,1fr) 56px 1fr 52px;}.tf .vs,.tf .mz,.tf .pt{display:none}.segs{grid-template-columns:repeat(2,1fr)}.dos{grid-template-columns:1fr}.clave{grid-template-columns:1fr}.fila{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <h1>Propuesta para la dirección comercial · Segmentos por respuesta</h1>
+    <span class="mut">Comercial › Analizar › Dashboard › panel Segmentos · datos reales: 909 personas que agendaron desde el 01/06 (con al menos 30 días para comprar)</span>
+  </div>
+  <div class="tabs" role="tablist">
+    <button class="on" data-v="antes">1 · Hoy (corte Closers)</button>
+    <button data-v="despues">2 · Nuevo corte «Respuesta»</button>
+    <button data-v="porque">3 · Panel «Por qué compran»</button>
+  </div>
+
+  <!-- 1. HOY -->
+  <div class="vista" id="v-antes">
+    <p class="ruta"><span>Así está hoy el panel Segmentos.</span><span class="faint">Barras al 100 % por segmento; cada grupo es un closer, el triage, un setter, una fuente o un origen.</span></p>
+    <section class="panel">
+      <div class="pcab"><h2>Segmentos</h2><span class="tip">?</span></div>
+      <div class="controles">
+        <div class="seg"><span class="on">Closers</span><span>Triage</span><span>Setters</span><span>Fuente</span><span>Origen</span></div>
+        <div class="seg chico"><span>Agendas</span><span>Asistieron</span><span class="on">Ventas</span></div>
+        <div class="fseg"><span>A</span><span>B</span><span>C</span><span>D</span><span>Sin</span></div>
+      </div>
+      <div class="general">
+        <div class="gcab"><span class="rot">General</span><b>66</b><small class="faint">ventas</small></div>
+        <div class="barra"><i style="flex:44;background:var(--A)">44%</i><i style="flex:23;background:var(--B)">23%</i><i style="flex:9;background:var(--C)">9%</i><i style="flex:6;background:var(--D)"></i><i style="flex:18;background:var(--sin)">18%</i></div>
+        <div class="segs">
+          <div class="sg" style="--c:var(--A)"><span class="h"><i></i>A</span><b>44%</b><small>29 ventas · CR 25%</small></div>
+          <div class="sg" style="--c:var(--B)"><span class="h"><i></i>B</span><b>23%</b><small>15 ventas · CR 19%</small></div>
+          <div class="sg" style="--c:var(--C)"><span class="h"><i></i>C</span><b>9%</b><small>6 ventas · CR 12%</small></div>
+          <div class="sg" style="--c:var(--D)"><span class="h"><i></i>D</span><b>6%</b><small>4 ventas · CR 4%</small></div>
+          <div class="sg" style="--c:var(--sin)"><span class="h"><i></i>Sin</span><b>18%</b><small>12 ventas</small></div>
+        </div>
+      </div>
+      <div class="filas">
+        <div class="fila"><span class="nom"><b>Jean Carlo</b><small>41 ventas</small></span><div class="barra"><i style="flex:49;background:var(--A)">49%</i><i style="flex:24;background:var(--B)">24%</i><i style="flex:7;background:var(--C)"></i><i style="flex:5;background:var(--D)"></i><i style="flex:15;background:var(--sin)">15%</i></div></div>
+        <div class="fila"><span class="nom"><b>Marlon Garcia</b><small>12 ventas</small></span><div class="barra"><i style="flex:42;background:var(--A)">42%</i><i style="flex:25;background:var(--B)">25%</i><i style="flex:8;background:var(--C)"></i><i style="flex:25;background:var(--sin)">25%</i></div></div>
+        <div class="fila"><span class="nom"><b>Triage</b><small>4 ventas</small></span><div class="barra"><i style="flex:50;background:var(--C)">50%</i><i style="flex:50;background:var(--D)">50%</i></div></div>
+      </div>
+      <p class="faint" style="font-size:11.5px;margin:0">(Los repartos por closer de esta pestaña son ilustrativos: la vista de hoy queda igual.)</p>
+    </section>
+  </div>
+
+  <!-- 2. NUEVO CORTE -->
+  <div class="vista" id="v-despues" hidden>
+    <p class="ruta"><span>Mismo panel, un corte más: <b>Respuesta</b>.</span><span class="faint">Lo nuevo va con borde punteado. Lo demás del panel no cambia.</span></p>
+    <section class="panel">
+      <div class="pcab"><h2>Segmentos</h2><span class="tip">?</span></div>
+      <div class="controles">
+        <div class="seg"><span>Closers</span><span>Triage</span><span>Setters</span><span>Fuente</span><span>Origen</span><span class="nuevo on">Respuesta</span></div>
+        <div class="fseg"><span>A</span><span>B</span><span>C</span><span>D</span><span>Sin</span></div>
+      </div>
+      <div class="pregs nuevo-borde"><span class="on">¿Puede invertir?</span><span>¿Quién decide?</span><span>¿En qué etapa está?</span><span>¿Qué examen rinde?</span></div>
+
+      <div class="resumen"><span class="rot">Promedio</span><b>10,5%</b><small>compran: 95 de 909 que agendaron, en los 60 días siguientes</small></div>
+
+      <div class="tabla nuevo-borde" id="tabla"></div>
+
+      <div class="lectura" id="lectura"></div>
+    </section>
+  </div>
+
+  <!-- 3. POR QUÉ COMPRAN, REDUCIDO -->
+  <div class="vista" id="v-porque" hidden>
+    <p class="ruta"><span>Panel nuevo en <b>Analizar › Dashboard</b>, debajo de Cierre.</span><span class="faint">Solo lo que no está en ningún otro lado: objeciones y lo cualitativo. Los números por respuesta quedan en Segmentos.</span></p>
+    <section class="panel">
+      <div class="pcab"><h2>Por qué compran y por qué no</h2><span class="tip">?</span></div>
+      <div class="clave">
+        <div class="vs2"><b style="color:var(--ok)">17,3%</b><span>deciden solos y pueden invertir</span><b style="color:var(--bad)">6,9%</b><span>con apoyo y sin poder invertir</span></div>
+        <p><b>Poder invertir es lo que más separa, y después quién decide.</b> En las llamadas que no cierran, la objeción más repetida es «lo pagan los papás o la pareja». <a href="#" data-ir="despues">Ver por respuesta en Segmentos →</a></p>
+      </div>
+      <div class="dos">
+        <div class="bloque"><h4>Objeciones: cuál apareció <small>compraron = lo que casi los frena, formulario de ingreso (15) · no compraron = por qué no cerró, closer (51)</small></h4>
+          <div class="mcab"><span>Compraron</span><span></span><span>No compraron</span></div>
+          <div class="mfila"><span class="lado izq"><b>60%</b><i style="width:60px"></i></span><span class="r">El dinero</span><span class="lado der"><i style="width:33px"></i><b>33%</b></span></div>
+          <div class="mfila"><span class="lado izq"><b>20%</b><i style="width:20px"></i></span><span class="r">Lo decide o lo paga otro</span><span class="lado der"><i style="width:53px"></i><b>53%</b></span></div>
+          <div class="mfila"><span class="lado izq"><b>40%</b><i style="width:40px"></i></span><span class="r">¿Me va a funcionar?</span><span class="lado der"><i style="width:14px"></i><b>14%</b></span></div>
+          <div class="mfila"><span class="lado izq"><b>20%</b><i style="width:20px"></i></span><span class="r">El tiempo</span><span class="lado der"><i style="width:10px"></i><b>10%</b></span></div>
+          <p class="faint" style="font-size:11.5px;margin:4px 0 0">El dinero y el miedo se resuelven en la llamada; «lo paga otro», casi nunca si esa persona no está.</p>
+        </div>
+        <div class="bloque"><h4>Cómo lo cuentan los que compraron <small>formulario de ingreso · 15 respuestas</small></h4>
+          <div class="lf"><span>Procrastinan</span><span class="riel"><i style="width:53%"></i></span><b>53%</b></div>
+          <div class="lf"><span>Se les olvida lo que estudian</span><span class="riel"><i style="width:53%"></i></span><b>53%</b></div>
+          <div class="lf"><span>El puntaje no sube</span><span class="riel"><i style="width:47%"></i></span><b>47%</b></div>
+          <div class="lf"><span>Desgaste emocional</span><span class="riel"><i style="width:47%"></i></span><b>47%</b></div>
+          <p class="cita">«Me preocupaba invertir dinero y que no cumpliera con mis expectativas. Decidí arriesgarme y adquirir solo una parte.»<small>Compró · ENARM</small></p>
+          <p class="cita">«Hay que esperar a los papás porque ella no trabaja.»<small>No compró · lo anotó el closer</small></p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="notas"><b>Notas</b>
+    <ul>
+      <li><b>No se reemplaza nada.</b> Segmentos suma un corte («Respuesta»); el panel «Por qué compran» es nuevo y no repite números de otro lado.</li>
+      <li><b>Corte «Respuesta»:</b> una fila por opción de la pregunta elegida, con cuántos agendaron, cuántos compraron, la mezcla de segmentos (como el resto del panel) y los <b>puntos que hoy le da esa opción al segmento</b>. Así se ve si los puntos siguen a los datos: «revisar» cuando la compra va para un lado y los puntos para el otro.</li>
+      <li><b>Compra</b> = venta nueva en los 60 días siguientes a la primera agenda (el criterio del ajuste de los segmentos; puede incluir señas). Los de los últimos 30 días todavía no entran. Por eso este corte usa una ventana larga (desde junio) aunque el dashboard esté en otro período.</li>
+      <li>Datos reales en la pestaña 2 y en la 3. La mezcla de segmentos de cada opción es aproximada en el mockup (la calcula el panel real).</li>
+      <li><b>Pocos datos:</b> se marcan las opciones con menos de 40 personas (por ejemplo «500 USD o más»: 11).</li>
+    </ul></div>
+</div>
+<script>
+const P={
+ inv:{t:'¿Puede invertir?',f:[
+  ['500 USD o más',11,2,4,'A',[100,0,0,0]],
+  ['200 a 500 USD',470,64,2,'',[45,40,8,7]],
+  ['No puede ahora',422,29,-3,'',[0,0,35,65]]],
+  l:'<b>Es la pregunta que más separa:</b> poder invertir duplica la compra (13,6 % contra 6,9 %). Los puntos van en la misma dirección (+4, +2, −3/−4): coinciden.'},
+ dec:{t:'¿Quién decide?',f:[
+  ['Solo yo',299,41,1,'',[40,30,15,15]],
+  ['Con apoyo (pareja, familia)',212,22,-1,'',[25,30,20,25]],
+  ['Sin respuesta',398,32,null,'',[30,25,15,30]]],
+  l:'Decidir solo suma (13,7 % contra 10,4 %) y los puntos acompañan (+1 / −1). <b>398 no la tienen</b>: es una pregunta nueva.'},
+ eta:{t:'¿En qué etapa está?',f:[
+  ['Rural / servicio social',97,14,1,'',[45,30,15,10]],
+  ['Médico general',539,68,1,'',[40,30,15,15]],
+  ['Residente',59,5,-2,'',[15,25,30,30]],
+  ['Especialista',39,3,-1,'',[20,25,25,30]],
+  ['Estudiante',169,5,-3,'',[0,10,30,60]]],
+  l:'<b>Los estudiantes casi no compran (3 %)</b> y ya tienen el castigo más fuerte (−3). Rural y general por encima del promedio, con +1: coinciden.'},
+ exa:{t:'¿Qué examen rinde?',f:[
+  ['Colombia',55,9,1,'',[45,30,15,10]],
+  ['MIR',125,18,0,'rev',[35,30,20,15]],
+  ['Perú',120,17,1,'',[40,30,15,15]],
+  ['Otro',195,20,0,'',[30,30,20,20]],
+  ['ENARM',191,18,-2,'rev',[20,25,25,30]],
+  ['USMLE',68,6,0,'',[30,30,20,20]]],
+  l:'Dos para revisar: <b>MIR compra 14,4 % y tiene 0 puntos</b> (Mario lo bajó el 24/10: España no es mercado prioritario), y <b>ENARM compra 9,4 %, cerca del promedio, pero tiene −2</b>. Si los puntos tienen que seguir a los datos, ENARM está castigado de más.'},
+};
+const PROM=10.5, ESC=5;
+const colores=['var(--A)','var(--B)','var(--C)','var(--D)'];
+function pintar(k){
+  const q=P[k];
+  document.querySelectorAll('.pregs span').forEach((s,i)=>s.classList.toggle('on',Object.keys(P)[i]===k));
+  let h='<div class="tf cab"><span>Opción</span><span style="text-align:right">Agendaron</span><span>Compran</span><span></span><span style="text-align:right">Compraron</span><span>Segmentos</span><span>Puntos hoy</span></div>';
+  for(const [op,n,y,pts,marca,mz] of q.f){
+    const p=Math.round(y/n*1000)/10, bajo=p<PROM;
+    const ptxt=pts==null?'—':(pts>0?'+':'')+pts;
+    const coincide=pts==null?'':(marca==='rev'?'<span class="rev">revisar</span>':'<span class="ok">coincide</span>');
+    h+=`<div class="tf" title="Tocar para ver las ${n} personas"><span class="op">${op}${n<40?'<span class="pocos">pocos datos</span>':''}</span>
+      <span class="n">${n.toLocaleString('es')}</span>
+      <span class="compra" style="--c:${bajo?'var(--bad)':'var(--ok)'}"><i style="width:${Math.min(100,p*ESC)}%"></i><u style="left:${PROM*ESC}%"></u></span>
+      <span class="pct">${(p+'').replace('.',',')}%</span>
+      <span class="vs faint">${y} de ${n}</span>
+      <span class="mezcla mz">${mz.map((v,i)=>v?`<i style="flex:${v};background:${colores[i]}"></i>`:'').join('')}</span>
+      <span class="pts pt"><b>${ptxt}</b>${coincide}</span></div>`;
+  }
+  document.getElementById('tabla').innerHTML=h;
+  document.getElementById('lectura').innerHTML=q.l;
+}
+document.querySelectorAll('.pregs span').forEach((s,i)=>s.onclick=()=>pintar(Object.keys(P)[i]));
+pintar('inv');
+function ver(v){document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+  document.querySelectorAll('.vista').forEach(x=>x.hidden=x.id!=='v-'+v);}
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>ver(b.dataset.v));
+document.querySelectorAll('[data-ir]').forEach(a=>a.onclick=e=>{e.preventDefault();ver(a.dataset.ir)});
+</script>
+</body>
+</html>

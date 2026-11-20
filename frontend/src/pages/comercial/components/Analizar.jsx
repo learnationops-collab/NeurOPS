@@ -3,6 +3,8 @@ import { ChevronDown, CreditCard, PieChart, Rows } from 'lucide-react';
 import Embudo from './Embudo';
 // «Destino de las agendas» y «Cierre»: los paneles que miran las llamadas (ADR-W144).
 import { PanelCierre, PanelEstados } from './PanelesLlamadas';
+import PorQueCompran from './PorQueCompran';
+import { EVENTO_CORTE } from './SegmentosPanel';
 import PanelCash from './PanelCash';
 import PanelPorCobrar from './PanelPorCobrar';
 import { canalesDe, partesDe } from './embudoCanales';
@@ -16,7 +18,7 @@ import MetricaClicable, { abrir } from '../../../components/dashboard/MetricaCli
 import { AYUDA_PROCEDENCIA } from './procedencias';
 import { DESTINOS_CLOSER as D, DESTINO_PROCEDENCIAS_TOTAL, PASOS_CLOSER, destinoProcedencia } from './destinos';
 // El tile, la barra gruesa y el panel los comparte el tablero de setters (10/10/2026).
-import { Panel, PanelCab, Riel, Tabs, Tile, Vacio, tasa, v } from './PiezasAnalizar';
+import { Panel, PanelCab, Riel, Tabs, Tile, Vacio, bajarA, tasa, v } from './PiezasAnalizar';
 import DashboardSetters, { VISTAS_CANAL } from './DashboardSetters';
 
 /**
@@ -622,6 +624,14 @@ const DashboardClosers = ({ bloque, previo, deltas, porCobrar, adquisicion, vsLa
                 onAbrirFila={onAbrirFila} filtros={filtros} />
             <PanelCash bloque={bloque} previo={previo} adquisicion={adquisicion} vsLabel={vsLabel} irA={irA} />
         </div>
+
+        {/* Por qué compran y por qué no (ADR-W187): «Ver por respuesta» baja a Segmentos con el corte «Respuesta». */}
+        {filtros && (
+            <PorQueCompran filtros={filtros} onVerSegmentos={() => {
+                window.dispatchEvent(new CustomEvent(EVENTO_CORTE, { detail: 'respuesta' }));
+                bajarA('p-segmentos');
+            }} />
+        )}
 
         {porCobrar && <PanelPorCobrar porCobrar={porCobrar} irA={irA} />}
 
