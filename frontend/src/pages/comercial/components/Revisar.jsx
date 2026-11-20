@@ -8,6 +8,7 @@ import Cifra from './Cifra';
 import { DIMENSION_PROPIA, TABLAS_POR_ROL, defDe, valoresVigentes, ventaSuma } from './tablasDef';
 import { defDeTabla } from './tablasSetter';
 import PanelConfigurar from './PanelConfigurar';
+import FiltrosGuardados from './FiltrosGuardados';
 import PanelExportar from './PanelExportar';
 import { useEnPantalla } from '../../../components/ui/useEnPantalla';
 import RevisarLista, { EsqueletoRevisar, claveDe } from './RevisarLista';
@@ -415,9 +416,9 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
         publicar(facetas, m);
     };
 
-    const cambiarFacetas = (nuevas) => {
+    const cambiarFacetas = (nuevas, nuevoModo = modo) => {
         setFacetas(nuevas);
-        publicar(nuevas, modo);
+        publicar(nuevas, nuevoModo);
         if (!hayCondiciones(def, nuevas) && (origen.de || token !== null)) olvidarOrigen();
     };
 
@@ -673,6 +674,10 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                             fechas={datos?.dates} onCerrar={cerrarExportar} />
                     )}
                 </div>
+
+                {/* Filtros guardados (20/11/2026): el filtro de esta tabla con un nombre, para ponerlo con un clic. */}
+                <FiltrosGuardados tabla={tabla} def={def} facetas={facetas} modo={modo}
+                    onAplicar={(g) => { setModoPropio(modoCumple(g.modo)); cambiarFacetas(g.facetas, modoCumple(g.modo)); }} />
 
                 {/* Las herramientas de Operaciones (Duplicados, …): botones sueltos de la barra que
                     abren su panel con las filas que muestra la lista. */}

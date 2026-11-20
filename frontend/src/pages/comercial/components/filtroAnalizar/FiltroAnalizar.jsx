@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ChevronDown, Copy, Plus, RotateCcw, SlidersHorizontal, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PanelConfigurar from '../PanelConfigurar';
+import FiltrosGuardados from '../FiltrosGuardados';
 import { Tip, fmt } from '../Shared';
 import { Tile, tasa, v } from '../PiezasAnalizar';
 import { MODOS_CUMPLE, criteriosDe, modoCumple, rotuloDe, rotuloModo } from '../filtroFacetas';
@@ -131,6 +132,7 @@ const FiltroAnalizar = ({ filas, filtradas, filtro, onCambiar, datos, vsLabel, i
                             onLimpiar={() => poner({})} onCerrar={() => setAbierto(false)} />
                     )}
                 </div>
+                <FiltrosGuardados tabla="agendas" def={DEF_AGENDAS} facetas={facetas} modo={modo} onAplicar={onCambiar} />
                 <button type="button" className="pastilla" onClick={copiar} disabled={!listo}
                     title="Copia los motivos de las agendas filtradas con un prompt para pegar en cualquier IA">
                     <Copy size={15} />
