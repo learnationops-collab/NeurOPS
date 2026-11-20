@@ -18,7 +18,7 @@ import ConciliacionAgendas from './ConciliacionAgendas';
 import { itemTotalAcademia } from './academia';
 import { useModoVista } from '../../../components/listas/useModoVista';
 import { useGruposElegidos } from '../../../components/listas/useGruposElegidos';
-import { aplicarFiltros, hayCondiciones, rotuloDe } from './filtroFacetas';
+import { MODOS_CUMPLE, aplicarFiltros, hayCondiciones, modoCumple, rotuloDe, rotuloModo } from './filtroFacetas';
 
 // La definición de las tablas vive en `tablasDef.js` (ver su docstring). Se re-exporta lo que ya
 // importaban otros archivos por este camino, para no mover los imports de media pantalla.
@@ -130,7 +130,7 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
     // `compartido` (ADR-W190): el Filtro completo de Agendas que Revisar comparte con Analizar,
     // `{facetas, modo, onCambiar}`. Lo que se elige acá se ve allá y al revés.
     const [facetas, setFacetas] = useState(() => compartido?.facetas || {});
-    const [modoPropio, setModoPropio] = useState(() => compartido?.modo || 'todas');
+    const [modoPropio, setModoPropio] = useState(() => modoCumple(compartido?.modo));
     const modo = modoPropio;
     const [chip, setChip] = useState(null);
     const [menu, setMenu] = useState(null);
@@ -224,7 +224,7 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
             setOrigen({ tabla, token, de, soltado: false, drill: nuevas });
             // Con el filtro compartido, lo que trajo el número se suma a lo elegido (no lo reemplaza).
             setFacetas(compartido ? { ...compartido.facetas, ...nuevas } : nuevas);
-            if (compartido) setModoPropio(compartido.modo || 'todas');
+            if (compartido) setModoPropio(modoCumple(compartido.modo));
             // Un número del embudo puede pedir otro filtro rápido que el de por defecto (`__chip`).
             setChip(token !== null && token !== origen.token ? filtroInicial.__chip || null : null);
             setQuery('');
@@ -662,7 +662,7 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                     )}
                     {menu === 'config' && (
                         <PanelConfigurar def={def} filas={filas} facetas={facetas} setFacetas={cambiarFacetas}
-                            modo={modo} setModo={setModo} tabla={tabla} basis={basis} setBasis={setBasis}
+                            modo={modo} setModo={setModo} modos={MODOS_CUMPLE} tabla={tabla} basis={basis} setBasis={setBasis}
                             onLimpiar={() => cambiarFacetas({})} onCerrar={() => setMenu(null)} />
                     )}
                     {/* Lo que estás viendo va en el orden de la lista (`visibles`), que tiene las
@@ -772,7 +772,7 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                 <div className="fila filtro-fila">
                     <span className="filtro-rotulo">
                         <span className="t-rotulo">
-                            {modo === 'alguna' ? 'Cumple alguna:' : 'Cumple todas:'}
+                            {rotuloModo(modo)}
                         </span>
                         {origen.de && (
                             <Tip titulo={`Filtro de ${origen.de}`} texto="Viene del número que tocaste." />

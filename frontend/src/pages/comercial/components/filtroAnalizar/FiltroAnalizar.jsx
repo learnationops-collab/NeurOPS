@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import PanelConfigurar from '../PanelConfigurar';
 import { Tip, fmt } from '../Shared';
 import { Tile, tasa, v } from '../PiezasAnalizar';
-import { criteriosDe, rotuloDe } from '../filtroFacetas';
+import { MODOS_CUMPLE, criteriosDe, modoCumple, rotuloDe, rotuloModo } from '../filtroFacetas';
 import { DEF_AGENDAS } from './useFiltroAnalizar';
 import { armarPrompt, motivosDe } from './motivosPrompt';
 
@@ -79,7 +79,7 @@ const FiltroAnalizar = ({ filas, filtradas, filtro, onCambiar, datos, vsLabel, i
     const [abierto, setAbierto] = useState(false);
     const caja = useRef(null);
     const facetas = filtro.facetas || {};
-    const modo = filtro.modo || 'todas';
+    const modo = modoCumple(filtro.modo);
     const criterios = criteriosDe(DEF_AGENDAS, facetas);
 
     useEffect(() => {
@@ -127,7 +127,7 @@ const FiltroAnalizar = ({ filas, filtradas, filtro, onCambiar, datos, vsLabel, i
                     </button>
                     {abierto && (
                         <PanelConfigurar def={DEF_AGENDAS} filas={filas} facetas={facetas} setFacetas={poner}
-                            modo={modo} setModo={(m) => onCambiar({ facetas, modo: m })} tabla="agendas"
+                            modo={modo} setModo={(m) => onCambiar({ facetas, modo: m })} modos={MODOS_CUMPLE} tabla="agendas"
                             onLimpiar={() => poner({})} onCerrar={() => setAbierto(false)} />
                     )}
                 </div>
@@ -155,7 +155,7 @@ const FiltroAnalizar = ({ filas, filtradas, filtro, onCambiar, datos, vsLabel, i
             {criterios.length > 0 && (
                 <div className="fila filtro-fila">
                     <span className="filtro-rotulo">
-                        <span className="t-rotulo">{modo === 'alguna' ? 'Cumple alguna:' : 'Cumple todas:'}</span>
+                        <span className="t-rotulo">{rotuloModo(modo)}</span>
                     </span>
                     {criterios.map(c => (
                         <button key={`${c.clave}-${c.valor}`} type="button" className="chip filtro-tag"
