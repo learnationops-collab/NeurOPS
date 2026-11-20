@@ -725,3 +725,6 @@
 - Vista nueva «Programas y segmentos» (Dirección comercial › Analizar y Marketing › Todos): por programa ventas, cash, ticket, LTV, % cobrado y CAC/ROAS con la etiqueta de programa de cada campaña (Marketing › Meta Ads); por segmento A/B/C/D, CAC y ROAS repartiendo el gasto de setting por agendas (ADR-W177, Leadership 1395 y 1403).
 - El estado de pago lleva el origen (setting o workshop) y el setter a la Academia (ADR-W178, Leadership 1392); los pagos llevan el tipo de venta, los que rebotan se reintentan cada 3 h y el gasto de Meta se sincroniza cada 6 h desde Work: faltaba desde el 10/11 (ADR-W179).
 - En la ficha › Fulfillment, las victorias del alumno van aparte y con su prueba, para usarlas al cobrar (ADR-W180, Leadership 1401).
+
+### 19/11/2026 · Pedido a los devs
+- Herramienta nueva «Pedido a los devs» (Herramientas › Crear, fijable en el dock): un cambio, un error o una duda de la plataforma va directo al Inbox de Leadership del dev. Fijada en el dock de Jean Carlo (ADR-W181, Leadership 1430).

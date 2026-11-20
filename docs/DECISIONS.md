@@ -1632,3 +1632,11 @@
 - **Decisión:** el seguimiento del equipo trae `victorias` aparte: todas las del expediente, lo más nuevo primero, con qué logró, por qué cuenta, quién la registró, la fecha y los enlaces a la prueba (link y captura firmada de la Academia). Se muestran primero en el bloque «Seguimiento del equipo» («Victorias · N»). «Últimos registros» queda con acciones y observaciones.
 - **Qué se pierde:** la captura es un enlace firmado de 30 minutos: con la ficha abierta más tiempo hay que recargar Fulfillment para abrirla. Las victorias llegan dentro de las últimas 100 observaciones del alumno (tope del expediente).
 - **Consecuencias:** sin migración ni cambios de API: el expediente ya traía `victorias` con `link` y `captura`.
+
+## ADR-W181: «Pedido a los devs», del dock al Inbox de Leadership
+
+- **Fecha:** 2026-11-19 · **Subsistema:** Herramientas en ventana (`ventanas/herramientas.js`, `PedidoDevsVentana.jsx`) sobre Leadership rápido (`app/api/leadership_rapido.py`). Leadership 1430.
+- **Contexto:** Reunión con Jean Carlo (19/11): necesita registrar cambios de la plataforma y consultas sobre funciones desde la misma interfaz. Leadership rápido ya permitía pasarle algo a otro, pero pide arquetipo, duración y responsable: demasiado para un pedido suelto.
+- **Decisión:** herramienta «Pedido a los devs» para todos los roles: qué pedís (una línea) y un detalle opcional. Va como quick al Inbox de Leadership del dev (`/crear` con `para`), sin definir: el dev lo define. Los devs son los de `LEADERSHIP_DEVS` de Leadership, que ahora salen en `/opciones` (`devs`); con más de uno, se elige a quién. Se le fijó en el dock a Jean Carlo.
+- **Qué se pierde:** no hay seguimiento desde la herramienta: lo pedido se ve en «Lo que pedí» de la ventana Leadership. Sin cuenta en Leadership no se puede mandar (la API pide la persona).
+- **Consecuencias:** sin migración. Leadership suma `devs` a `GET /api/v1/rapido/opciones`.
