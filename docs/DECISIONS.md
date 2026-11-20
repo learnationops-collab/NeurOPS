@@ -1718,3 +1718,11 @@
   5. El tablero de Triage recibe `lt_cobrado` (bruto), `lt_neto` y `lt_ventas` en el total y por persona, por la fecha del cobro.
 - **Qué se pierde:** el ranking de closers ya no compara al triage con los closers. Un cobro del área Triage que no cargó una persona de triage (un LT cargado por un closer) suma al total del Triage y a ninguna persona. Lo cobrado en el Triage es por fecha de pago y los cierres del low ticket por fecha de llamada: pueden no coincidir en un período (Celia: llamada el 10/11, pago el 18/11). El filtro de segmento no acota lo cobrado del Triage.
 - **Consecuencias:** semana del 16/11 en prod: equipo 11,1 % y ticket 360 (igual que Jean Carlo); Comparativas sin Dari; Triage con 100 USD cobrados. Sin migración.
+
+## ADR-W189: el cierre del low ticket se cuenta por cobro, como el close rate real del Closing
+
+- **Fecha:** 2026-11-20 · **Subsistema:** tablero de Triage (`triage_cobros.py`, `triage_service.metricas`). Sigue a ADR-W188.
+- **Contexto:** con el low ticket de Celia Salgado cobrado el 18/11, el Triage de esa semana decía 0 % de cierre: los cierres se contaban por el estado de las llamadas del período y la de Celia fue el 10/11 (lo pensó y pagó después). El director comercial: «esos $100 es un cierre, es una venta, es un ticket bajo».
+- **Decisión:** el cierre principal del low ticket es por cobro: cada venta del área Triage cobrada en el período es un cierre y se rastrea hasta la llamada de triage en la que se presentó el low ticket (hasta 90 días antes). Si esa llamada es de antes del período suma arriba y abajo: `(del período + anteriores) ÷ (presentaciones + anteriores)`, la misma cuenta que `cierres_reales`. Las métricas suman `lt_del_periodo`, `lt_anteriores`, `lt_sin_llamada`, `lt_cierres`, `lt_base` y `lt_cierre_pct`, en el total y por persona. Los cuatro estados (cerró, no cerró, seguimiento, perdido) siguen siendo de las llamadas del período.
+- **Qué se pierde:** la semana de la llamada ya no muestra el cierre si el pago llega después (9–16/11: estado «cerró» 1, cierre real 0 %). Una venta sin llamada de triage que la explique se cobra pero no entra en la tasa.
+- **Consecuencias:** en prod, semana del 16/11 = 25 % (1 de 4), noviembre = 4,8 % (1 de 21). Sin migración.
