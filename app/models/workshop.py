@@ -1,5 +1,16 @@
 from datetime import datetime
+
+from sqlalchemy import event as sa_event
+
 from app import db
+
+MESES = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO',
+         'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE']
+
+
+def nombre_de_fecha(dia):
+    """'WEBINAR 21 DE NOVIEMBRE 2026': el nombre del taller es su fecha, siempre."""
+    return f'WEBINAR {dia.day} DE {MESES[dia.month - 1]} {dia.year}'
 
 class WorkshopEvent(db.Model):
     """Representa el registro consolidado de un taller o webinar con sus métricas manuales e integradas."""
@@ -388,3 +399,10 @@ class WorkshopAction(db.Model):
             "completed_at": self.completed_at.isoformat() if self.completed_at else None
         }
 
+
+@sa_event.listens_for(WorkshopEvent, 'before_insert')
+@sa_event.listens_for(WorkshopEvent, 'before_update')
+def _nombre_sigue_la_fecha(_mapper, _conn, taller):
+    # Al mover el taller de día, el nombre viejo quedaba con la fecha anterior.
+    if taller.date:
+        taller.name = nombre_de_fecha(taller.date)

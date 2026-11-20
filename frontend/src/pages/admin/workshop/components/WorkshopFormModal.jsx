@@ -192,10 +192,6 @@ const WorkshopFormModal = ({
                                     <span className="field-control"><input type="time" {...field('hora')} /></span>
                                 </label>
                                 <label className="form-field wide">
-                                    <span>Nombre del workshop</span>
-                                    <span className="field-control"><input type="text" placeholder="Si lo dejás vacío: WEBINAR 19 DE OCTUBRE 2026" {...field('name')} /></span>
-                                </label>
-                                <label className="form-field wide">
                                     <span>Link de Google Meet</span>
                                     <span className="field-control"><input type="url" placeholder="https://meet.google.com/..." {...field('meet_url')} /></span>
                                 </label>
