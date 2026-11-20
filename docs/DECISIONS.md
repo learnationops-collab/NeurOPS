@@ -1640,3 +1640,11 @@
 - **Decisión:** herramienta «Pedido a los devs» para todos los roles: qué pedís (una línea) y un detalle opcional. Va como quick al Inbox de Leadership del dev (`/crear` con `para`), sin definir: el dev lo define. Los devs son los de `LEADERSHIP_DEVS` de Leadership, que ahora salen en `/opciones` (`devs`); con más de uno, se elige a quién. Se le fijó en el dock a Jean Carlo.
 - **Qué se pierde:** no hay seguimiento desde la herramienta: lo pedido se ve en «Lo que pedí» de la ventana Leadership. Sin cuenta en Leadership no se puede mandar (la API pide la persona).
 - **Consecuencias:** sin migración. Leadership suma `devs` a `GET /api/v1/rapido/opciones`.
+
+## ADR-W182: franjas fijas en las agendas, de a sesión + margen
+
+- **Fecha:** 2026-11-20 · **Subsistema:** Agendas 2.0, disponibilidad (`agendas_v2/nucleo/disponibilidad.py` y su port `frontend/src/pages/agendas_v2/core/disponibilidad.js`). Leadership 1432.
+- **Contexto:** Revisión del inbox con setters (17/11): Marlon marcó que los leads agendan en horarios desalineados (14:15, 14:30) que bloquean el turno siguiente. Los inicios se encadenaban, pero cuando uno estaba ocupado se buscaba el siguiente de a 5 minutos y la cadena se corría desde ahí.
+- **Decisión:** los inicios de cada closer son una grilla fija por franja de su horario: arranca al comienzo de la franja y avanza de a sesión + margen (los de ese closer en ese evento). Una franja ocupada o dentro de la antelación mínima se saltea; la siguiente sigue en la grilla. Es la cantidad máxima de sesiones que le entra al día, y siempre en los mismos horarios.
+- **Qué se pierde:** un evento de Google o una agenda vieja fuera de la grilla tapa la franja entera aunque deje un hueco donde antes entraba una sesión corrida. Eventos con distinta duración + margen tienen grillas distintas para el mismo closer.
+- **Consecuencias:** sin migración. La tabla de turnos (`TablaTurnos`) cuenta con la misma regla. La regla de las Momentum (los 30 minutos que siguen a una agenda, solo para otra Momentum) queda aparte.

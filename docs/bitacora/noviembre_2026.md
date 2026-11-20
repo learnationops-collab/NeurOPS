@@ -732,3 +732,8 @@
 ### 19/11/2026 · Workshop: el nombre del taller es su fecha
 - El nombre de cada taller sale de su fecha y se actualiza solo al moverlo de día; el formulario ya no tiene el campo «Nombre del workshop». Se corrigieron los nombres que habían quedado atrás (p. ej. «19 de noviembre» con fecha 21/11).
 - Los talleres del 21/11 y del 28/11 tienen un grupo de WhatsApp por anuncio (G1–G8 Gral, U1–U6 US y TC1), por ahora con el grupo actual del taller.
+
+### 20/11/2026 · Agendas: franjas fijas, Momentum de 30 y perfil de Mario
+- Los horarios que ve el lead son franjas fijas de a sesión + margen desde el comienzo del horario del closer: si una está ocupada se saltea y no se corre la cadena, así no aparecen inicios desalineados como 14:15 (ADR-W182, Leadership 1432).
+- La Momentum Session de Jean Carlo pasa de 45 a 30 minutos (dato del evento, Leadership 1433).
+- Academia: la cuenta de Mario con el correo de Learnation se llamaba «Mario Testea» (así salía en el chat y en Leadership); ahora es «Mario Bühler», con su foto (Leadership 1444).
