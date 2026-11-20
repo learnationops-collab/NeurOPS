@@ -7,6 +7,12 @@ import { destinoDe, filtroDe } from '../../../triage/components/triageFiltros';
 export const pct = (a, b) => (b ? Math.round((a / b) * 1000) / 10 : 0);
 export const pctTexto = (a, b) => (b ? `${Math.round((a / b) * 100)}%` : '—');
 
+/** El cierre del low ticket por cobro (ADR-W189): cada venta cobrada es un cierre; la de una llamada anterior suma
+ *  arriba y abajo. Sin los campos nuevos (`lt_*`) cae en el estado de las llamadas del período. */
+export const cierreLowTicket = (m) => (m.lt_base == null
+    ? { cierres: m.cerrado, base: m.pitch_low_ticket, anteriores: 0, cobrado: 0, ventas: 0, neto: 0 }
+    : { cierres: m.lt_cierres, base: m.lt_base, anteriores: m.lt_anteriores, cobrado: m.lt_cobrado, ventas: m.lt_ventas, neto: m.lt_neto });
+
 /** La base del % de asistencia, la misma de closing (ADR-W145): los cuatro destinos (se presentó, no show, canceló,
  *  reprogramó) y las ya pasadas sin reportar. Lo que aún no ocurre y los otros estados no cuentan. */
 export const conResultado = (m) => m.asistencias + m.no_show + m.canceladas + (m.reagendadas || 0) + m.sin_reporte;

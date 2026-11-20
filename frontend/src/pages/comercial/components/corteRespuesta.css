@@ -1,0 +1,44 @@
+/* Segmentos › corte «Respuesta» (CorteRespuesta.jsx, ADR-W187) */
+.dc-shell .cr { display: grid; gap: 14px; }
+.dc-shell .cr-preguntas { display: flex; gap: 6px; flex-wrap: wrap; }
+.dc-shell .cr-preguntas button { border: 1px solid var(--border-subtle); background: color-mix(in srgb, var(--text-on-surface) 5%, transparent);
+    color: var(--text-muted); font: inherit; font-size: 12px; font-weight: 700; padding: 7px 12px; border-radius: 12px; cursor: pointer; }
+.dc-shell .cr-preguntas button.on { color: var(--text-on-surface); border-color: color-mix(in srgb, var(--info) 55%, transparent);
+    background: color-mix(in srgb, var(--info) 14%, transparent); }
+.dc-shell .cr-resumen { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; padding: 12px 14px; border-radius: 16px;
+    border: 1px solid var(--border-subtle); }
+.dc-shell .cr-resumen b { font-size: 24px; font-weight: 900; }
+.dc-shell .cr-tabla { display: grid; gap: 2px; }
+.dc-shell .cr-fila { display: grid; grid-template-columns: minmax(140px, 1.3fr) 70px minmax(100px, 1.4fr) 56px 76px minmax(90px, .9fr) 110px;
+    gap: 10px; align-items: center; padding: 8px 10px; border-radius: 12px; font: inherit; font-size: 12.5px; color: inherit;
+    text-align: left; border: 0; background: none; width: 100%; }
+.dc-shell button.cr-fila { cursor: pointer; }
+.dc-shell button.cr-fila:hover { background: color-mix(in srgb, var(--text-on-surface) 6%, transparent); }
+.dc-shell .cr-cab { font-size: 9.5px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; color: var(--text-muted); padding-bottom: 2px; }
+.dc-shell .cr-op { font-weight: 800; min-width: 0; overflow-wrap: anywhere; }
+.dc-shell .cr-pocos { font-style: normal; margin-left: 6px; font-size: 9px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase;
+    padding: 1px 5px; border-radius: 5px; color: var(--text-muted); background: color-mix(in srgb, var(--text-on-surface) 8%, transparent); }
+.dc-shell .cr-n, .dc-shell .cr-de { text-align: right; color: var(--text-muted); }
+.dc-shell .cr-riel { position: relative; height: 10px; border-radius: 5px; background: color-mix(in srgb, var(--text-on-surface) 8%, transparent); }
+.dc-shell .cr-riel i { position: absolute; inset: 0 auto 0 0; border-radius: 5px; }
+.dc-shell .cr-riel u { position: absolute; top: -4px; bottom: -4px; border-left: 1.5px dashed color-mix(in srgb, var(--text-on-surface) 55%, transparent); }
+.dc-shell .cr-pct { text-align: right; font-weight: 900; }
+.dc-shell .cr-mezcla { display: flex; gap: 1px; height: 10px; border-radius: 4px; overflow: hidden; }
+.dc-shell .cr-mezcla i { display: block; height: 100%; }
+.dc-shell .cr-puntos { display: inline-flex; align-items: center; gap: 6px; }
+.dc-shell .cr-puntos b { min-width: 28px; text-align: center; padding: 2px 6px; border-radius: 6px; font-size: 11.5px;
+    background: color-mix(in srgb, var(--text-on-surface) 8%, transparent); }
+.dc-shell .cr-ok { color: var(--success); font-weight: 800; font-size: 11px; }
+.dc-shell .cr-rev { color: var(--warning); font-weight: 800; font-size: 11px; }
+@media (max-width: 860px) {
+    .dc-shell .cr-fila { grid-template-columns: minmax(110px, 1fr) 52px minmax(70px, 1fr) 52px; }
+    .dc-shell .cr-fila > :nth-child(n+5) { display: none; }
+}
+/* La lista de personas (Modal estándar) */
+.cr-modal .cr-personas { list-style: none; margin: 0; padding: 4px 0; display: grid; gap: 2px; max-height: 60vh; overflow: auto; }
+.cr-modal .cr-personas li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; gap: 10px; align-items: center; padding: 7px 10px; border-radius: 10px; }
+.cr-modal .cr-personas li:hover { background: rgba(127, 127, 127, .08); }
+.cr-modal .cr-seg { font-size: 11px; font-weight: 900; padding: 1px 7px; border-radius: 6px; color: var(--c); background: color-mix(in srgb, var(--c) 16%, transparent); }
+.cr-modal .cr-compro { font-size: 11px; font-weight: 800; opacity: .6; }
+.cr-modal .cr-compro.si { color: var(--success); opacity: 1; }
+.cr-modal .cr-vacio { opacity: .7; padding: 12px 4px; }

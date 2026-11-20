@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Por qué compran · mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#020617; --page:linear-gradient(135deg,#020617 0%,#0A0E3D 50%,#05082D 100%);
+  --surf:rgba(255,255,255,.04); --surf2:rgba(255,255,255,.08); --inset:rgba(0,0,0,.34);
+  --text:#fff; --muted:rgba(255,255,255,.62); --faint:rgba(255,255,255,.42);
+  --b1:rgba(255,255,255,.08); --b2:rgba(255,255,255,.16);
+  --si:#7DEAC0; --no:#F5A99C; --warn:#F3D08A; --info:#93C5FD; --prom:rgba(255,255,255,.5);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);background-image:var(--page);background-attachment:fixed;color:var(--text);font-family:Montserrat,sans-serif;font-size:14px}
+.wrap{max-width:1180px;margin:0 auto;padding:20px 16px 80px;display:grid;gap:16px}
+.top h1{margin:0;font-size:22px;font-weight:900}
+.mut{color:var(--muted)} .faint{color:var(--faint)}
+.donde{display:flex;gap:8px;align-items:center;font-size:12px;color:var(--muted);flex-wrap:wrap}
+.donde span{padding:4px 10px;border-radius:999px;background:var(--surf2)}
+.donde span.on{background:var(--text);color:#020617;font-weight:800}
+.panel{background:var(--surf);border:1px solid var(--b1);border-radius:24px;padding:20px;display:grid;gap:18px}
+.pcab{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.pcab h2{margin:0;font-size:16px;font-weight:900}
+.tip{width:16px;height:16px;border-radius:50%;border:1px solid var(--b2);display:inline-grid;place-items:center;font-size:10px;color:var(--muted)}
+.capa{display:grid;gap:12px}
+.capa-cab{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;border-bottom:1px solid var(--b1);padding-bottom:8px}
+.capa-cab .n{font-size:10px;font-weight:900;letter-spacing:.16em;color:#020617;background:var(--text);border-radius:6px;padding:2px 7px}
+.capa-cab h3{margin:0;font-size:14px;font-weight:900}
+.capa-cab small{color:var(--faint);font-size:11.5px}
+.clave{display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center;padding:16px 18px;border-radius:20px;
+  background:linear-gradient(90deg,rgba(125,234,192,.10),rgba(245,169,156,.08));border:1px solid var(--b1)}
+.clave .vs{display:flex;align-items:center;gap:10px}
+.clave .vs b{font-size:34px;font-weight:900;letter-spacing:-.03em;line-height:1}
+.clave .vs span{font-size:11.5px;color:var(--muted);max-width:120px;line-height:1.25}
+.clave .vs em{font-style:normal;color:var(--faint);font-size:12px}
+.clave p{margin:0;font-size:14px;line-height:1.5}
+.clave p b{color:#fff}
+.preguntas{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.preg{padding:14px 16px;border-radius:18px;background:var(--surf);border:1px solid var(--b1);display:grid;gap:7px;align-content:start}
+.preg h4{margin:0 0 4px;font-size:12.5px;font-weight:900;display:flex;justify-content:space-between;gap:8px}
+.preg h4 small{font-weight:600;color:var(--faint);font-size:11px}
+.op{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(60px,1fr) 46px 52px;gap:8px;align-items:center;font-size:12.5px;cursor:pointer;border-radius:8px;padding:2px 4px}
+.op:hover{background:var(--surf2)}
+.op .riel{position:relative;height:9px;border-radius:5px;background:var(--surf2)}
+.op .riel i{position:absolute;inset:0 auto 0 0;border-radius:5px;background:var(--c,var(--si))}
+.op .riel u{position:absolute;top:-3px;bottom:-3px;border-left:1.5px dashed var(--prom)}
+.op b{text-align:right;font-weight:900}
+.op small{text-align:right;color:var(--faint);font-size:11px}
+.op.bajo{--c:var(--no)}
+.prom{font-size:11px;color:var(--faint);display:flex;align-items:center;gap:6px}
+.prom i{display:inline-block;height:10px;border-left:1.5px dashed var(--prom)}
+.cruce{display:grid;grid-template-columns:110px repeat(2,minmax(0,1fr));gap:6px;font-size:12px;align-items:stretch}
+.cruce .h{font-size:9.5px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);display:flex;align-items:end;padding:0 4px 2px}
+.cruce .r{font-weight:700;color:var(--muted);display:flex;align-items:center}
+.cel{border-radius:12px;padding:10px;display:grid;gap:2px;background:color-mix(in srgb,var(--si) calc(var(--p) * 5%),transparent);border:1px solid var(--b1)}
+.cel b{font-size:20px;font-weight:900}
+.cel small{color:var(--faint);font-size:10.5px}
+.dos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.bloque{padding:16px;border-radius:20px;background:var(--surf);border:1px solid var(--b1);display:grid;gap:10px;align-content:start}
+.bloque h4{margin:0;font-size:12.5px;font-weight:900}
+.bloque h4 small{display:block;font-weight:600;color:var(--faint);font-size:11px;margin-top:2px}
+.mcab,.mfila{display:grid;grid-template-columns:1fr minmax(110px,160px) 1fr;gap:8px;align-items:center}
+.mcab span{font-size:9px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+.mcab span:first-child{text-align:right}
+.mfila{padding:3px 0;border-radius:10px;cursor:pointer}
+.mfila:hover{background:var(--surf2)}
+.mfila .rot{text-align:center;font-size:12px;font-weight:700;line-height:1.2}
+.lado{display:flex;align-items:center;gap:6px;height:16px}
+.lado.izq{justify-content:flex-end}
+.lado i{display:block;height:11px;border-radius:4px}
+.lado.izq i{background:var(--si)} .lado.der i{background:var(--no)}
+.lado b{font-size:12px;font-weight:900;min-width:32px}
+.lado.izq b{text-align:right}
+.lado .z{color:var(--faint);font-weight:600}
+.dif{font-size:12px;color:var(--muted);padding:10px 12px;border-radius:12px;background:var(--inset);line-height:1.45}
+.dif b{color:#fff}
+.lista{display:grid;gap:6px}
+.lf{display:grid;grid-template-columns:minmax(0,1fr) 70px 40px;gap:8px;align-items:center;font-size:12.5px}
+.lf .riel{height:8px;border-radius:4px;background:var(--surf2);overflow:hidden}
+.lf .riel i{display:block;height:100%;background:var(--si)}
+.lf b{text-align:right;font-weight:900}
+.citas{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.cita{margin:0;padding:12px 14px;border-radius:16px;background:var(--surf);border:1px solid var(--b1);display:grid;gap:8px}
+.cita blockquote{margin:0;font-size:13px;font-weight:600;line-height:1.45}
+.cita figcaption{font-size:11px;color:var(--faint);display:flex;gap:6px;align-items:center}
+.cita figcaption i{width:8px;height:8px;border-radius:3px;background:var(--c)}
+.fuentes{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--faint);border-top:1px solid var(--b1);padding-top:12px}
+.fuentes b{color:var(--muted)}
+.notas{font-size:12.5px;color:var(--muted);border:1px dashed var(--b2);border-radius:18px;padding:14px 18px}
+.notas ul{margin:6px 0 0;padding-left:18px;display:grid;gap:5px}
+.notas b{color:#fff}
+@media (max-width:860px){.preguntas,.dos,.citas{grid-template-columns:1fr}.clave{grid-template-columns:1fr}.cruce{grid-template-columns:90px repeat(2,minmax(0,1fr))}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><h1>Propuesta para la dirección comercial · panel nuevo</h1>
+    <span class="mut">Comercial › Analizar › Dashboard, debajo del panel Cierre · datos reales</span></div>
+  <div class="donde"><span>Embudo</span><span>Estados</span><span>Cierre</span><span class="on">Por qué compran</span><span>Cash</span><span>…</span></div>
+
+  <section class="panel" aria-label="Por qué compran y por qué no">
+    <div class="pcab"><h2>Por qué compran y por qué no</h2>
+      <span class="tip" title="1: el formulario de agenda de todos los que agendaron, cruzado con sus ventas. 2: la objeción del closer contra lo que casi frenó a los que compraron. 3: el formulario de ingreso de los que compraron.">?</span></div>
+
+    <div class="clave">
+      <div class="vs"><b style="color:var(--si)">17,3%</b><span>deciden solos y pueden invertir</span><em>contra</em><b style="color:var(--no)">6,9%</b><span>con apoyo y sin poder invertir</span></div>
+      <p><b>Lo que más separa a los que compran es poder invertir, y después quién decide.</b> Poder invertir duplica la compra (13,6 % contra 6,9 %); decidir solo la sube (13,7 % contra 10,4 %). Los estudiantes casi no compran (3 %). En las llamadas que no cierran, la objeción más repetida es «lo pagan los papás o la pareja» (53 %): coincide.</p>
+    </div>
+
+    <!-- CAPA 1: todos los que agendaron, con sus ventas reales -->
+    <div class="capa">
+      <div class="capa-cab"><span class="n">1</span><h3>Qué respondieron al agendar, y cuántos compraron</h3>
+        <small>909 personas que agendaron desde junio · 95 compraron (10,5 %) en los 60 días siguientes</small></div>
+      <div class="prom"><i></i>promedio 10,5 % · tocar una opción abre las personas</div>
+      <div class="preguntas">
+        <div class="preg"><h4>¿Puede invertir? <small>la que más separa</small></h4>
+          <div class="op"><span>500 USD o más</span><span class="riel"><i style="width:91%"></i><u style="left:52%"></u></span><b>18,2%</b><small>2/11</small></div>
+          <div class="op"><span>200 a 500 USD</span><span class="riel"><i style="width:68%"></i><u style="left:52%"></u></span><b>13,6%</b><small>64/470</small></div>
+          <div class="op bajo"><span>No puede ahora</span><span class="riel"><i style="width:35%"></i><u style="left:52%"></u></span><b>6,9%</b><small>29/422</small></div>
+        </div>
+        <div class="preg"><h4>¿Quién decide? <small>398 no la respondieron (es nueva)</small></h4>
+          <div class="op"><span>Solo yo</span><span class="riel"><i style="width:69%"></i><u style="left:52%"></u></span><b>13,7%</b><small>41/299</small></div>
+          <div class="op"><span>Con apoyo (pareja, familia)</span><span class="riel"><i style="width:52%"></i><u style="left:52%"></u></span><b>10,4%</b><small>22/212</small></div>
+          <div class="op bajo"><span>Sin respuesta</span><span class="riel"><i style="width:40%"></i><u style="left:52%"></u></span><b>8,0%</b><small>32/398</small></div>
+        </div>
+        <div class="preg"><h4>¿En qué etapa está?</h4>
+          <div class="op"><span>Rural / servicio social</span><span class="riel"><i style="width:72%"></i><u style="left:52%"></u></span><b>14,4%</b><small>14/97</small></div>
+          <div class="op"><span>Médico general</span><span class="riel"><i style="width:63%"></i><u style="left:52%"></u></span><b>12,6%</b><small>68/539</small></div>
+          <div class="op bajo"><span>Residente</span><span class="riel"><i style="width:43%"></i><u style="left:52%"></u></span><b>8,5%</b><small>5/59</small></div>
+          <div class="op bajo"><span>Especialista</span><span class="riel"><i style="width:39%"></i><u style="left:52%"></u></span><b>7,7%</b><small>3/39</small></div>
+          <div class="op bajo"><span>Estudiante</span><span class="riel"><i style="width:15%"></i><u style="left:52%"></u></span><b>3,0%</b><small>5/169</small></div>
+        </div>
+        <div class="preg"><h4>¿Qué examen rinde?</h4>
+          <div class="op"><span>Colombia</span><span class="riel"><i style="width:82%"></i><u style="left:52%"></u></span><b>16,4%</b><small>9/55</small></div>
+          <div class="op"><span>MIR</span><span class="riel"><i style="width:72%"></i><u style="left:52%"></u></span><b>14,4%</b><small>18/125</small></div>
+          <div class="op"><span>Perú</span><span class="riel"><i style="width:71%"></i><u style="left:52%"></u></span><b>14,2%</b><small>17/120</small></div>
+          <div class="op"><span>Otro</span><span class="riel"><i style="width:52%"></i><u style="left:52%"></u></span><b>10,3%</b><small>20/195</small></div>
+          <div class="op bajo"><span>ENARM</span><span class="riel"><i style="width:47%"></i><u style="left:52%"></u></span><b>9,4%</b><small>18/191</small></div>
+          <div class="op bajo"><span>USMLE</span><span class="riel"><i style="width:44%"></i><u style="left:52%"></u></span><b>8,8%</b><small>6/68</small></div>
+        </div>
+      </div>
+      <div class="preg"><h4>Dinero y decisión juntos <small>cuántos compraron en cada combinación</small></h4>
+        <div class="cruce">
+          <span></span><span class="h">Puede invertir</span><span class="h">No puede ahora</span>
+          <span class="r">Decide solo</span><span class="cel" style="--p:3.5"><b>17,3%</b><small>28 de 162</small></span><span class="cel" style="--p:1.7"><b>8,5%</b><small>11 de 129</small></span>
+          <span class="r">Con apoyo</span><span class="cel" style="--p:2.9"><b>14,7%</b><small>14 de 95</small></span><span class="cel" style="--p:1.4"><b>6,9%</b><small>8 de 116</small></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- CAPA 2: objeciones -->
+    <div class="capa">
+      <div class="capa-cab"><span class="n">2</span><h3>Objeciones: cuál apareció y si se resolvió</h3>
+        <small>compraron = lo que casi los frena (formulario de ingreso, 15) · no compraron = por qué no cerró (closer, 51)</small></div>
+      <div class="dos">
+        <div class="bloque">
+          <div class="mcab"><span>Compraron</span><span></span><span>No compraron</span></div>
+          <div class="mfila"><span class="lado izq"><b>60%</b><i style="width:60%"></i></span><span class="rot">El dinero</span><span class="lado der"><i style="width:33%"></i><b>33%</b></span></div>
+          <div class="mfila"><span class="lado izq"><b>20%</b><i style="width:20%"></i></span><span class="rot">Lo decide o lo paga otro</span><span class="lado der"><i style="width:53%"></i><b>53%</b></span></div>
+          <div class="mfila"><span class="lado izq"><b>40%</b><i style="width:40%"></i></span><span class="rot">¿Me va a funcionar?</span><span class="lado der"><i style="width:14%"></i><b>14%</b></span></div>
+          <div class="mfila"><span class="lado izq"><b>27%</b><i style="width:27%"></i></span><span class="rot">No ser capaz</span><span class="lado der"><b class="z">—</b></span></div>
+          <div class="mfila"><span class="lado izq"><b>20%</b><i style="width:20%"></i></span><span class="rot">El tiempo</span><span class="lado der"><i style="width:10%"></i><b>10%</b></span></div>
+        </div>
+        <div class="dif" style="align-self:start"><b>Tipo contra resolución.</b> El dinero y el miedo a que no funcione aparecen más entre los que compraron: se resolvieron en la llamada. «Lo paga otro» casi no se resuelve si esa persona no está. Coincide con la capa 1: con apoyo y sin poder invertir compran 6,9 %.<br><br><b>Para el equipo:</b> preguntar antes de la llamada quién decide y quién paga, e invitarlo.</div>
+      </div>
+    </div>
+
+    <!-- CAPA 3: cualitativo -->
+    <div class="capa">
+      <div class="capa-cab"><span class="n">3</span><h3>Cómo lo cuentan los que compraron</h3><small>formulario de ingreso a la Academia · 15 respuestas</small></div>
+      <div class="dos">
+        <div class="bloque"><h4>El dolor</h4>
+          <div class="lista">
+            <div class="lf"><span>Procrastinan</span><span class="riel"><i style="width:53%"></i></span><b>53%</b></div>
+            <div class="lf"><span>Se les olvida lo que estudian</span><span class="riel"><i style="width:53%"></i></span><b>53%</b></div>
+            <div class="lf"><span>El puntaje no sube</span><span class="riel"><i style="width:47%"></i></span><b>47%</b></div>
+            <div class="lf"><span>Desgaste emocional</span><span class="riel"><i style="width:47%"></i></span><b>47%</b></div>
+            <div class="lf"><span>El trabajo les come el tiempo</span><span class="riel"><i style="width:40%"></i></span><b>40%</b></div>
+          </div></div>
+        <div class="bloque"><h4>Lo que los hizo dar el paso</h4>
+          <div class="lista">
+            <div class="lf"><span>Querer cambiar</span><span class="riel"><i style="width:40%"></i></span><b>40%</b></div>
+            <div class="lf"><span>Su especialidad</span><span class="riel"><i style="width:33%"></i></span><b>33%</b></div>
+            <div class="lf"><span>Lo que vieron: el acompañamiento</span><span class="riel"><i style="width:40%"></i></span><b>40%</b></div>
+            <div class="lf"><span>Lo que vieron: el método</span><span class="riel"><i style="width:33%"></i></span><b>33%</b></div>
+          </div></div>
+      </div>
+      <div class="citas">
+        <figure class="cita" style="--c:var(--si)"><blockquote>«Me preocupaba invertir dinero y que no cumpliera con mis expectativas. Decidí arriesgarme y adquirir solo una parte.»</blockquote><figcaption><i></i>Compró · ENARM</figcaption></figure>
+        <figure class="cita" style="--c:var(--no)"><blockquote>«Hay que esperar a los papás porque ella no trabaja.»</blockquote><figcaption><i></i>No compró · lo anotó el closer</figcaption></figure>
+      </div>
+    </div>
+
+    <div class="fuentes">
+      <span><b>1.</b> Formulario de agenda + ventas nuevas a 60 días (909 personas, desde el 01/06)</span>
+      <span><b>2.</b> Objeciones de «No cerró» (51, 21/09–19/11) y formulario de ingreso</span>
+      <span><b>3.</b> Formulario de ingreso (15, 16–17/11)</span>
+    </div>
+  </section>
+
+  <div class="notas"><b>Notas del mockup</b>
+    <ul>
+      <li><b>Tres capas, de lo más sólido a lo más cualitativo.</b> La 1 son todos los que agendaron con sus ventas reales: es la que decide. La 2 y la 3 explican el porqué con lo que dicen ellos y lo que anota el closer.</li>
+      <li><b>Compra</b> = una venta nueva en los 60 días siguientes a su primera agenda, el mismo criterio que usa el ajuste de los segmentos A–D. Los de los últimos 30 días todavía no entran (no tuvieron tiempo de comprar).</li>
+      <li>«¿Quién decide?» es una pregunta nueva: 398 no la tienen. Con más respuestas el corte se va a afinar.</li>
+      <li>Las objeciones de los closers son texto libre: en el panel real las agrupa Learnito y cada fila abre las personas.</li>
+      <li>Respeta los filtros de arriba (período, closer, segmento, país) como el resto del dashboard.</li>
+    </ul></div>
+</div>
+</body>
+</html>

@@ -25,7 +25,7 @@ const Cargando = () => (
     </Skeleton>
 );
 
-export default function TriageDireccion({ onAbrirFila, period, rango, triageId, segmento, onElegirPersona }) {
+export default function TriageDireccion({ onAbrirFila, period, rango, triageId, segmento, onElegirPersona, onVerCobros = null }) {
     const [ver, setVer] = useState(null);
     const fechas = rangoDePeriodo(period, rango);
     // Recordado por período y segmento (cacheDeVistas): volver a Triage no lo vuelve a pedir.
@@ -58,11 +58,11 @@ export default function TriageDireccion({ onAbrirFila, period, rango, triageId, 
                 </EmptyState>
             ) : (
                 <>
-                    <Tarjetas m={m} onVer={verLista} />
+                    <Tarjetas m={m} onVer={verLista} onVerCobros={onVerCobros} />
                     <div style={FILA}><Estados m={m} onVer={verLista} /><Embudo m={m} onVer={verLista} closers={closers} colores={colores} /></div>
                     <PorCloser closers={closers} colores={colores} onVer={verLista} />
                     {m.descalificados > 0 && <Motivos m={m} onVer={verLista} />}
-                    <div style={FILA}><LowTicket m={m} onVer={verLista} /><Abandonos a={datos.abandonos} /></div>
+                    <div style={FILA}><LowTicket m={m} onVer={verLista} onVerCobros={onVerCobros} /><Abandonos a={datos.abandonos} /></div>
                     <div style={FILA}>
                         {!elegida && <PorPersona personas={personas} yo={yo}
                             onElegir={onElegirPersona ? (id) => onElegirPersona(String(id)) : null} />}

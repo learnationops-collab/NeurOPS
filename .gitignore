@@ -214,3 +214,4 @@ coverage.xml
 
 # Copia local de las variables de producción (Railway): nunca al repo
 .env.produccion
+.mockups/

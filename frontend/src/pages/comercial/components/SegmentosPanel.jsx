@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import useEstadoGuardado from '../../../hooks/useEstadoGuardado';
 import { useDatosCacheados } from '../../../services/cacheDeVistas';
 import { useVerRegistros } from '../../../components/standard';
@@ -6,6 +6,7 @@ import ContenidoRegistros from '../../admin/marketing/anuncios/ContenidoRegistro
 import FiltroSegmentos from '../../admin/marketing/todos/FiltroSegmentos';
 import { COLOR_SEGMENTO } from '../../admin/marketing/todos/segmentos';
 import { getSegmentos, getSegmentosRegistros } from '../comercialApi';
+import CorteRespuesta from './CorteRespuesta';
 import { Panel, PanelCab, Vacio } from './PiezasAnalizar';
 import { Segmented, fmt, useMontado } from './Shared';
 import '../../admin/marketing/todos/segmentos.css';
@@ -25,7 +26,11 @@ const CIFRAS = [
     { key: 'asistieron', label: 'Asistieron', lista: 'asistieron' },
     { key: 'ventas', label: 'Ventas', lista: 'ventas' },
 ];
-const CORTES = ['closer', 'triage', 'setter', 'fuente', 'origen'];
+const CORTES = ['closer', 'triage', 'setter', 'fuente', 'origen', 'respuesta'];
+// «Respuesta» (ADR-W187) no es un corte del backend de Segmentos: lo dibuja `CorteRespuesta` con sus propios datos.
+const RESPUESTA = { key: 'respuesta', label: 'Respuesta' };
+/** El evento con el que otro panel (Por qué compran) pide ver un corte: `{ detail: 'respuesta' }`. */
+export const EVENTO_CORTE = 'segmentos:corte';
 const INICIAL = { corte: 'closer', campo: 'agendas' };
 const normalizar = (m) => ({
     corte: CORTES.includes(m?.corte) ? m.corte : INICIAL.corte,
@@ -138,9 +143,17 @@ const SegmentosPanel = ({ filtros, rol, elegidos, onElegir, version = 0 }) => {
     const { corte, campo: campoKey } = guardado;
     const montado = useMontado();
     const registros = useVerRegistros();
-    const clave = JSON.stringify({ filtros, corte });
+    const porRespuesta = corte === RESPUESTA.key;
+    const corteDatos = porRespuesta ? 'ninguno' : corte;
+    const clave = JSON.stringify({ filtros, corte: corteDatos });
     const { datos, error: falla } = useDatosCacheados(`comercial:segmentos:${clave}`,
-        (signal) => getSegmentos(filtros, { signal }, corte), { version });
+        (signal) => getSegmentos(filtros, { signal }, corteDatos), { version });
+    useEffect(() => {
+        const ver = (e) => { if (CORTES.includes(e.detail)) poner({ corte: e.detail }); };
+        window.addEventListener(EVENTO_CORTE, ver);
+        return () => window.removeEventListener(EVENTO_CORTE, ver);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
     const campo = CIFRAS.find(c => c.key === campoKey) || CIFRAS[0];
 
     const abrir = useCallback((grupo, parte, esGeneral) => {
@@ -157,7 +170,7 @@ const SegmentosPanel = ({ filtros, rol, elegidos, onElegir, version = 0 }) => {
     if (falla && !datos) return null;
     const hayPrevio = Boolean(datos?.comparacion);
     const grupos = (datos?.grupos || []).filter(g => (g.total[campo.key] || 0) > 0 || (g.total.previo?.[campo.key] || 0) > 0);
-    const cortes = (datos?.cortes || []).filter(c => CORTES.includes(c.key));
+    const cortes = [...(datos?.cortes || []).filter(c => CORTES.includes(c.key)), RESPUESTA];
 
     return (
         <Panel id="p-segmentos" cab={
@@ -169,11 +182,11 @@ const SegmentosPanel = ({ filtros, rol, elegidos, onElegir, version = 0 }) => {
             {datos && (
                 <div className="sgp-controles">
                     <Segmented opciones={cortes} valor={corte} onChange={(key) => poner({ corte: key })} ariaLabel="Agrupar por" />
-                    <Segmented opciones={CIFRAS} valor={campo.key} onChange={(key) => poner({ campo: key })} ariaLabel="Cifra" chico />
-                    <FiltroSegmentos segmentos={datos.segmentos} elegidos={elegidos} cuentas={datos.cuentas} onCambiar={onElegir} />
+                    {!porRespuesta && <Segmented opciones={CIFRAS} valor={campo.key} onChange={(key) => poner({ campo: key })} ariaLabel="Cifra" chico />}
+                    {!porRespuesta && <FiltroSegmentos segmentos={datos.segmentos} elegidos={elegidos} cuentas={datos.cuentas} onCambiar={onElegir} />}
                 </div>
             )}
-            {!datos ? <Vacio texto="Cargando los segmentos…" /> : (
+            {datos && porRespuesta ? <CorteRespuesta version={version} /> : !datos ? <Vacio texto="Cargando los segmentos…" /> : (
                 <>
                     {datos.general && <General grupo={datos.general} campo={campo} onVer={abrir} montado={montado} hayPrevio={hayPrevio} />}
                     {hayPrevio && (

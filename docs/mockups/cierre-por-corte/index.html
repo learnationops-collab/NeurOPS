@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Panel Cierre · antes y después</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+/* Tokens del tema oscuro de Work, como el dashboard comercial */
+:root{
+  --bg:#020617; --page:linear-gradient(135deg,#020617 0%,#0A0E3D 50%,#05082D 100%);
+  --surf:rgba(255,255,255,.04); --surf2:rgba(255,255,255,.08); --inset:rgba(0,0,0,.34);
+  --text:#fff; --muted:rgba(255,255,255,.62); --faint:rgba(255,255,255,.42);
+  --b1:rgba(255,255,255,.08); --b2:rgba(255,255,255,.16);
+  --v:#93C5FD; --s:#FF3FA4; --ok:#7DEAC0; --bad:#F5A99C; --warn:#F3D08A;
+  --dir:#93C5FD; --tri:#C4B5FD;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);background-image:var(--page);background-attachment:fixed;color:var(--text);font-family:Montserrat,sans-serif;font-size:14px}
+button{font:inherit;color:inherit;cursor:pointer}
+.wrap{max-width:1500px;margin:0 auto;padding:20px 16px 80px;display:grid;gap:16px}
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.top h1{margin:0;font-size:22px;font-weight:900}
+.mut{color:var(--muted)} .faint{color:var(--faint)}
+.seg{display:inline-flex;gap:4px;padding:4px;border-radius:999px;background:var(--inset);border:1px solid var(--b1)}
+.seg button{border:0;background:none;padding:6px 14px;border-radius:999px;font-size:12px;font-weight:800;color:var(--muted)}
+.seg button.on{background:var(--text);color:#020617}
+.lado{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
+.lado[data-ver="antes"] .col-despues,.lado[data-ver="despues"] .col-antes{display:none}
+.lado[data-ver="antes"],.lado[data-ver="despues"]{grid-template-columns:minmax(0,760px);justify-content:center}
+.etq{font-size:11px;font-weight:900;letter-spacing:.18em;text-transform:uppercase;color:var(--faint);margin:0 0 8px 6px}
+.etq b{color:var(--text)}
+/* Panel */
+.panel{background:var(--surf);border:1px solid var(--b1);border-radius:24px;padding:18px;display:grid;gap:16px}
+.pcab{display:flex;align-items:center;gap:8px}
+.pcab h2{margin:0;font-size:15px;font-weight:900}
+.pcab .vs{margin-left:auto;font-size:11px;color:var(--muted);display:flex;gap:6px;align-items:center}
+.pcab .vs small{font-size:9px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+.tip{width:16px;height:16px;border-radius:50%;border:1px solid var(--b2);display:inline-grid;place-items:center;font-size:10px;color:var(--muted)}
+.conteos{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.conteo{padding:12px 14px;border-radius:16px;border:1px solid var(--b1);background:var(--surf);display:grid;gap:8px}
+.conteo .fila{display:flex;align-items:baseline;gap:8px}
+.conteo b{font-size:32px;font-weight:900;line-height:1;letter-spacing:-.03em}
+.conteo .r{font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.vsp{font-size:11px;color:var(--faint)}
+.up{color:var(--ok);font-weight:800} .dn{color:var(--bad);font-weight:800}
+.pres{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto auto;gap:10px;align-items:center;font-size:12px}
+.pres .riel{height:8px;border-radius:4px;background:var(--surf2);overflow:hidden}
+.pres .riel i{display:block;height:100%;background:var(--v)}
+.lecturas{display:grid;gap:10px}
+.lecturas.l2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.lecturas.l3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.lectura{border-radius:20px;border:1px solid var(--b1);padding:12px 10px 14px;display:grid;justify-items:center;gap:8px;
+  background:radial-gradient(120% 90% at 50% 0%,rgba(147,197,253,.12),transparent 70%);position:relative}
+.lectura .t{font-size:10px;font-weight:900;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);justify-self:stretch;display:flex;gap:6px;align-items:center}
+.anillo{position:relative;width:min(100%,136px);aspect-ratio:1}
+.anillo svg{width:100%;height:100%;transform:rotate(-90deg)}
+.anillo .pista{fill:none;stroke:rgba(255,255,255,.09);stroke-width:10}
+.anillo .arco{fill:none;stroke-width:10;stroke-linecap:round}
+.anillo .c{position:absolute;inset:0;display:grid;place-content:center;justify-items:center}
+.anillo .c b{font-size:26px;font-weight:900;letter-spacing:-.03em}
+.anillo .c small{font-size:11px;color:var(--muted)}
+.tabla{display:grid;gap:5px;justify-self:stretch;border-top:1px solid var(--b1);padding-top:8px;font-size:12px}
+.tasa{display:grid;grid-template-columns:minmax(52px,1fr) 46px 58px 46px;gap:4px;align-items:center}
+.tasa .n{text-align:right;font-weight:900}
+.tasa .a{text-align:right;color:var(--faint);font-size:11px}
+.tasa.cab span{font-size:9px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);text-align:right}
+.p{display:inline-block;width:8px;height:8px;border-radius:3px;margin-right:6px}
+.canales{display:grid;gap:6px;border-top:1px solid var(--b1);padding-top:12px}
+.canal{display:grid;align-items:center;gap:8px;font-size:12px}
+.c3{grid-template-columns:96px minmax(40px,1fr) 64px 64px 64px}
+.c4{grid-template-columns:96px minmax(30px,1fr) 58px 58px 58px 58px}
+.canal.cab small{font-size:9px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);text-align:right}
+.canal .nom{font-weight:800;display:flex;align-items:center}
+.canal .riel{height:8px;border-radius:4px;background:var(--surf2);display:flex;overflow:hidden}
+.canal .riel i{display:block;height:100%}
+.canal .cel{text-align:right;display:grid}
+.canal .cel b{font-weight:900}
+.canal .cel small{font-size:10px;color:var(--faint)}
+.tira{display:flex;gap:8px;flex-wrap:wrap;font-size:12px;color:var(--muted);border-top:1px solid var(--b1);padding-top:10px}
+.tira span{padding:4px 10px;border-radius:999px;background:var(--surf2)}
+/* Lo nuevo */
+.nuevo{outline:2px dashed rgba(243,208,138,.55);outline-offset:4px;border-radius:18px}
+.marca-nuevo{position:absolute;top:-10px;right:10px;font-size:9px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;background:var(--warn);color:#1a1300;padding:2px 7px;border-radius:6px}
+.rel{position:relative}
+.aviso{display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:14px;background:rgba(243,208,138,.08);border:1px solid rgba(243,208,138,.3);font-size:12.5px;color:var(--warn)}
+.aviso b{color:#fff}
+.aviso a{margin-left:auto;color:var(--v);font-weight:800;text-decoration:none;white-space:nowrap}
+.embudo{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:0;border-radius:16px;overflow:hidden;border:1px solid var(--b1)}
+.embudo>div{padding:10px 12px;display:grid;gap:2px;background:var(--surf);position:relative}
+.embudo>div+div{border-left:1px solid var(--b1)}
+.embudo .k{font-size:9px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+.embudo b{font-size:22px;font-weight:900}
+.embudo .pa{font-size:11px;color:var(--muted)}
+.embudo .pa em{font-style:normal;font-weight:800;color:var(--text)}
+.embudo .venta b{color:var(--v)}
+.notas{font-size:12.5px;color:var(--muted);border:1px dashed var(--b2);border-radius:18px;padding:14px 18px}
+.notas ul{margin:6px 0 0;padding-left:18px;display:grid;gap:5px}
+.notas b{color:#fff}
+@media (max-width:1100px){.lado{grid-template-columns:1fr}.lecturas.l3{grid-template-columns:1fr 1fr 1fr}}
+@media (max-width:640px){.lecturas.l3,.lecturas.l2,.conteos{grid-template-columns:1fr}.embudo{grid-template-columns:1fr 1fr}.c4,.c3{grid-template-columns:80px repeat(4,minmax(0,1fr))}.canal .riel{display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <h1>Propuesta para la dirección comercial · panel Cierre</h1>
+    <span class="mut">Comercial › Analizar › Dashboard · 21 oct – 19 nov 2026 · vs 21 sep – 20 oct · datos reales</span>
+    <span style="flex:1"></span>
+    <div class="seg" role="group" aria-label="Qué ver">
+      <button data-v="ambos" class="on">Lado a lado</button><button data-v="antes">Antes</button><button data-v="despues">Después</button>
+    </div>
+  </div>
+
+  <div class="lado" id="lado" data-ver="ambos">
+    <!-- ANTES: el panel como está hoy -->
+    <div class="col-antes">
+      <p class="etq"><b>Antes</b> · como está hoy</p>
+      <section class="panel" aria-label="Cierre, hoy">
+        <div class="pcab"><h2>Cierre</h2><span class="tip">?</span><span class="vs"><small>vs</small>21 sep – 20 oct</span></div>
+        <div class="conteos">
+          <div class="conteo"><div class="fila"><b style="color:var(--v)">6</b><span class="r">ventas</span></div><span class="vsp">17 · <span class="dn">−11</span></span></div>
+          <div class="conteo"><div class="fila"><b style="color:var(--s)">9</b><span class="r">señas</span></div><span class="vsp">8 · <span class="up">+1</span></span></div>
+          <div class="conteo"><div class="fila"><b style="color:var(--muted)">41</b><span class="r">no cerradas</span></div><span class="vsp">75 · <span class="up">−34</span></span></div>
+        </div>
+        <div class="pres"><span>Presentación</span><span class="riel"><i style="width:92.9%"></i></span><b>92,9%</b><small class="faint">52/56</small><small class="vsp">90% · <span class="up">+2,9</span></small></div>
+        <div class="lecturas l2" data-anillos='[["Por llamada",6,9,56,17,8,100],["Por presentación",6,9,52,17,8,90]]'></div>
+        <div class="canales">
+          <div class="canal c3 cab"><span></span><span></span><small>Llamada</small><small>Present.</small><small>+ Señas</small></div>
+          <div class="canal c3"><span class="nom"><i class="p" style="background:var(--dir)"></i>Directas</span><span class="riel"><i style="width:8.3%;background:var(--v)"></i><i style="width:14.6%;background:var(--s)"></i></span>
+            <span class="cel"><b>8,3%</b><small>17% <span class="dn">−8,7</span></small></span><span class="cel"><b>9,1%</b><small>18,9%</small></span><span class="cel"><b>22,9%</b><small>25%</small></span></div>
+          <div class="canal c3"><span class="nom"><i class="p" style="background:var(--tri)"></i>Triage</span><span class="riel"><i style="width:25%;background:var(--v)"></i><i style="width:25%;background:var(--s)"></i></span>
+            <span class="cel"><b>25%</b><small>—</small></span><span class="cel"><b>25%</b><small>—</small></span><span class="cel"><b>50%</b><small>—</small></span></div>
+        </div>
+        <div class="tira"><span>1ª llamada …</span><span>2ª llamada …</span><span class="faint">(la tira de ADR-W144 queda igual)</span></div>
+      </section>
+    </div>
+
+    <!-- DESPUÉS -->
+    <div class="col-despues">
+      <p class="etq"><b>Después</b> · lo nuevo, con borde punteado</p>
+      <section class="panel" aria-label="Cierre, propuesta">
+        <div class="pcab"><h2>Cierre</h2><span class="tip">?</span><span class="vs"><small>vs</small>21 sep – 20 oct</span></div>
+
+        <div class="aviso nuevo rel"><span class="marca-nuevo">Nuevo</span>
+          <span>⚠</span><span><b>9 agendas todavía sin resultado</b> (Jean Carlo 4, Marlon 3, Mario 2): no cuentan como tomadas y las tasas pueden estar más bajas de lo real.</span>
+          <a href="#">Ver en Revisar →</a></div>
+
+        <div class="conteos">
+          <div class="conteo"><div class="fila"><b style="color:var(--v)">6</b><span class="r">ventas</span></div><span class="vsp">17 · <span class="dn">−11</span></span></div>
+          <div class="conteo"><div class="fila"><b style="color:var(--s)">9</b><span class="r">señas</span></div><span class="vsp">8 · <span class="up">+1</span></span></div>
+          <div class="conteo"><div class="fila"><b style="color:var(--muted)">41</b><span class="r">no cerradas</span></div><span class="vsp">75 · <span class="up">−34</span></span></div>
+        </div>
+
+        <!-- La barra de presentación pasa a ser el camino entero: dónde se pierde -->
+        <div class="embudo nuevo rel"><span class="marca-nuevo">«Presentación», con los pasos de antes y después</span>
+          <div><span class="k">Agendas</span><b>150</b><span class="pa">antes 220</span></div>
+          <div><span class="k">Se presentaron</span><b>56</b><span class="pa"><em>37,3%</em> 56/150</span><span class="pa">antes 45,5% · <span class="dn">−8,2</span></span></div>
+          <div><span class="k">Presentación</span><b>52</b><span class="pa"><em>92,9%</em> 52/56</span><span class="pa">antes 90% · <span class="up">+2,9</span></span></div>
+          <div class="venta"><span class="k">Compraron</span><b>6</b><span class="pa"><em>11,5%</em> 6/52</span><span class="pa">antes 18,9% · <span class="dn">−7,4</span></span></div>
+        </div>
+
+        <div class="lecturas l3" id="tres" data-anillos='[["Por agenda",6,9,150,17,8,220,1],["Por llamada",6,9,56,17,8,100],["Por presentación",6,9,52,17,8,90]]'></div>
+
+        <div class="canales">
+          <div class="canal c4 cab"><span></span><span></span><small style="color:var(--warn)">Agenda</small><small>Llamada</small><small>Present.</small><small>+ Señas</small></div>
+          <div class="canal c4"><span class="nom"><i class="p" style="background:var(--dir)"></i>Directas</span><span class="riel"><i style="width:8.3%;background:var(--v)"></i><i style="width:14.6%;background:var(--s)"></i></span>
+            <span class="cel"><b>3,1%</b><small>7,7% <span class="dn">−4,6</span></small></span><span class="cel"><b>8,3%</b><small>17% <span class="dn">−8,7</span></small></span><span class="cel"><b>9,1%</b><small>18,9%</small></span><span class="cel"><b>22,9%</b><small>25%</small></span></div>
+          <div class="canal c4"><span class="nom"><i class="p" style="background:var(--tri)"></i>Triage</span><span class="riel"><i style="width:25%;background:var(--v)"></i><i style="width:25%;background:var(--s)"></i></span>
+            <span class="cel"><b>9,1%</b><small>—</small></span><span class="cel"><b>25%</b><small>—</small></span><span class="cel"><b>25%</b><small>—</small></span><span class="cel"><b>50%</b><small>—</small></span></div>
+          <span class="faint" style="font-size:11px">Triage: 8 llamadas en el período. Con tan pocas, una venta mueve el porcentaje 12 puntos.</span>
+        </div>
+        <div class="tira"><span>1ª llamada …</span><span>2ª llamada …</span><span class="faint">(igual)</span></div>
+      </section>
+    </div>
+  </div>
+
+  <div class="notas">
+    <b>Qué cambia y por qué</b>
+    <ul>
+      <li><b>De quién es:</b> el panel Cierre del dashboard comercial, la vista de la dirección comercial. Los closers ven el mismo panel con sus propios números, así que el cambio les llega también. Lo pidió Mario (loom del 19/11): close rate por agenda, llamada tomada y presentación, por canal y por tipo de lead, y que los reportes estén completos.</li>
+      <li><b>Aviso de reportes faltantes</b> arriba del panel: las agendas sin resultado no cuentan como tomadas ni como presentadas, así que mientras falten las tasas no son confiables. Lleva a Revisar con esas agendas filtradas. Si no falta ninguno, no se muestra.</li>
+      <li><b>No se reemplaza ninguna vista ni se saca ningún dato.</b> Es el mismo panel Cierre, en el mismo lugar, con agregados.</li>
+      <li><b>La barra «Presentación» suma los pasos de antes y después</b>: agendas → se presentaron → presentación → compraron. La presentación conserva todo lo que mostraba (92,9 %, 52/56, antes 90 %, +2,9) y se le agregan los otros pasos con el mismo formato. Responde dónde se pierde la venta: hoy, en que no se presentan (37 %, antes 45 %) y en el cierre (11,5 %, antes 18,9 %).</li>
+      <li><b>Tercer anillo: close rate por agenda</b>, antes de los otros dos (el orden que pidió Mario: agenda, llamada tomada, presentación). Mide todo lo agendado, también los que no vinieron.</li>
+      <li><b>Columna «Agenda» en directas contra triage</b>, con el aviso de pocos datos cuando el canal tiene menos de 10 llamadas.</li>
+      <li><b>Segmento A–D y por closer</b> no van en este panel: la barra de segmento de arriba ya filtra el panel entero, y Comparativas suma «Close rate · agenda» como métrica del ranking.</li>
+      <li>Los conteos, los anillos, la comparación con el período anterior y la tira de 1ª y 2ª llamada quedan como están.</li>
+    </ul>
+  </div>
+</div>
+<script>
+const pct=(a,b)=>b?Math.round(a/b*1000)/10:null;
+const fmt=v=>v==null?'—':(v+'').replace('.',',')+'%';
+const dif=(a,b)=>{if(a==null||b==null)return'';const d=Math.round((a-b)*10)/10;return `<span class="${d>=0?'up':'dn'}">${d>0?'+':''}${(d+'').replace('.',',')}</span>`};
+function anillo([t,v,s,den,pv,ps,pden,nuevo]){
+  const r=46,L=2*Math.PI*r,fv=den?v/den:0,fs=den?s/den:0;
+  const a=pct(v,den),as=pct(v+s,den),b=pct(pv,pden),bs=pct(pv+ps,pden);
+  return `<div class="lectura ${nuevo?'nuevo':''}">${nuevo?'<span class="marca-nuevo">Nuevo</span>':''}
+   <span class="t">${t} <span class="tip">?</span></span>
+   <div class="anillo"><svg viewBox="0 0 110 110"><circle class="pista" cx="55" cy="55" r="${r}"/>
+   <circle class="arco" style="stroke:var(--s)" cx="55" cy="55" r="${r}" stroke-dasharray="${L}" stroke-dashoffset="${L*(1-fv-fs)}"/>
+   <circle class="arco" style="stroke:var(--v)" cx="55" cy="55" r="${r}" stroke-dasharray="${L}" stroke-dashoffset="${L*(1-fv)}"/></svg>
+   <div class="c"><b>${fmt(a)}</b><small>${v}/${den}</small></div></div>
+   <div class="tabla"><div class="tasa cab"><span></span><span>Ahora</span><span>Antes</span><span></span></div>
+   <div class="tasa"><span><i class="p" style="background:var(--v)"></i>Ventas</span><span class="n">${fmt(a)}</span><span class="a">${fmt(b)} ${pv}/${pden}</span><span>${dif(a,b)}</span></div>
+   <div class="tasa"><span><i class="p" style="background:var(--s)"></i>+ Señas</span><span class="n" style="color:var(--s)">${fmt(as)}</span><span class="a">${fmt(bs)}</span><span>${dif(as,bs)}</span></div></div></div>`;
+}
+document.querySelectorAll('[data-anillos]').forEach(el=>el.innerHTML=JSON.parse(el.dataset.anillos).map(anillo).join(''));
+document.querySelectorAll('.seg button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.seg button').forEach(x=>x.classList.toggle('on',x===b));
+  document.getElementById('lado').dataset.ver=b.dataset.v;
+});
+</script>
+</body>
+</html>

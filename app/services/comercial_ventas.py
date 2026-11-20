@@ -193,7 +193,9 @@ class ComercialVentasMixin:
         if para_operar:
             filas = ComercialService._para_operar(filas, del_periodo, no_completadas, closer_nombre,
                                                   clientes, con_fuente)
-        return filas
+        # Closing o Triage (ADR-W188): las cifras del Closing cuentan solo las de Closing.
+        from app.services.area_venta import marcar
+        return marcar(filas)
 
     @staticmethod
     def _para_operar(filas, del_periodo, no_completadas, closer_nombre, clientes, con_fuente):

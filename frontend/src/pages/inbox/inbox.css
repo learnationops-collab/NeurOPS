@@ -163,6 +163,8 @@
 .thalamus.inbox .cv-barra .barra-der{flex-wrap:nowrap}
 .thalamus.inbox .cv-guardados.ui-select{min-width:190px;max-width:260px}
 .thalamus.inbox .cv-buscar.ui-entry{flex:0 1 260px;height:36px}
+.thalamus.inbox .cv-lista-buscar{padding:2px 2px 8px}
+.thalamus.inbox .cv-lista-buscar .cv-buscar.ui-entry{width:100%}
 .thalamus.inbox .cv{display:grid;grid-template-columns:360px minmax(0,1fr) 290px;gap:var(--s3);height:var(--inbox-alto);min-height:520px}
 .thalamus.inbox .cv > *{min-height:0}
 .thalamus.inbox .cv-detalle--vacio{grid-column:span 2}

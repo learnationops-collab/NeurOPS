@@ -1,57 +1,70 @@
-// La conversación abierta: el chat al centro y la ficha a la derecha. Arriba del chat, las tres etapas
-// (la automática despliega las acciones del bot); en el chat, los mensajes con las notas, las tareas y
-// los eventos intercalados; abajo, la caja de Chat, Nota interna y Tarea. Abrirla la marca como leída.
+// La conversación abierta (ADR-W184): el chat al centro y, a la derecha, la tarjeta del lead y su ficha. Arriba del
+// chat, una sola línea: quién es, los tres puntos, la etapa del setting, cuánto espera y cuánto queda para poder
+// responderle. En el chat, los mensajes con las notas, tareas y eventos intercalados; seleccionar parte de un mensaje
+// del lead lo anota para la venta. Abajo, la caja; al pasar a una etapa con varios mensajes, se elige cuál pegar.
+// Abrirla la marca como leída.
 import { useCallback, useEffect, useState } from 'react';
-import { Instagram, MessageSquare } from 'lucide-react';
-import { Avatar, EmptyState, IconButton, Panel } from '../../../components/standard';
+import { Clock, Hourglass, MessageSquare } from 'lucide-react';
+import { Chip, EmptyState, Panel, toast } from '../../../components/standard';
+import { abrirLearnito } from '../../../sesion/learnito';
 import { inboxApi } from '../api';
 import { recordado, recordar } from '../recuerdo';
+import GloboCita, { seleccionDelLead } from './Cita';
 import Composer from './Composer';
-import Etiquetas from './Etiquetas';
 import Feed from './Feed';
-import PanelDerecho from './PanelDerecho';
+import FichaLead from './FichaLead';
+import TarjetaLead from './TarjetaLead';
 import useEnvio from './useEnvio';
-import { Asignado, Califica } from './Fila';
-import { Tramos } from './Progreso';
-import { REFRESCO, examenDe, quien } from './colas';
+import { ChipFase } from './Fila';
+import { Puntos } from './Progreso';
+import { REFRESCO, cierreMin, colorEspera, esperaMin, quien, textoEspera } from './colas';
+import { completar, faseDe } from './fasesSetting';
 
-function Chat({ datos, yo, onCambio, onLearnito }) {
-    const { contacto, asignado, avance } = datos;
+function Linea({ contacto, avance, mensajes }) {
+    const ahora = new Date();
+    const ultimo = mensajes[mensajes.length - 1];
+    const espera = ultimo?.direccion === 'entrante' ? esperaMin({ ultimo_de: 'lead', ultimo_en: ultimo.en }, ahora) : null;
+    const queda = cierreMin(contacto, ahora);
+    return (
+        <div className="cv-chat-linea-sup">
+            <b>{quien(contacto)}</b>
+            <Puntos etapas={avance?.etapas} />
+            <ChipFase fase={avance?.fase} />
+            <span className="cv-chat-tiempos">
+                {espera != null && <Chip subtle color={colorEspera(espera)} icon={<Clock />} data-tip="Desde su último mensaje">espera {textoEspera(espera)}</Chip>}
+                {queda != null
+                    ? <Chip subtle color={queda <= 24 * 60 ? 'var(--error)' : 'var(--success)'} icon={<Hourglass />}
+                        data-tip="Para responder|Instagram deja escribirle hasta 7 días después de su último mensaje">quedan {textoEspera(queda)} para responder</Chip>
+                    : <Chip subtle color="var(--error)" icon={<Hourglass />}>ventana cerrada</Chip>}
+            </span>
+        </div>
+    );
+}
+
+function Chat({ datos, yo, onCambio, pegar, selector, onSelector }) {
+    const { contacto, avance } = datos;
     const envio = useEnvio(contacto.id, onCambio);
-    const examen = examenDe({ examen: contacto.variables?.examen });
+    const [seleccion, setSeleccion] = useState(null);
+    const cerrarSeleccion = useCallback(() => setSeleccion(null), []);
     return (
         <Panel as="section" size="sm" className="cv-detalle" aria-label="Conversación">
-            <div className="cv-chat-cab">
-                <Avatar name={contacto.username || contacto.nombre || '?'} />
-                <div className="cv-chat-quien">
-                    <h3 className="t-h3">{quien(contacto)}</h3>
-                    <span className="cv-chat-linea">
-                        {examen && <span className="t-cap mut">{examen}</span>}
-                        <Califica valor={contacto.variables?._califica} />
-                    </span>
-                    <Etiquetas contactoId={contacto.id} etiquetas={datos.etiquetas || []} onCambio={onCambio} />
-                </div>
-                <div className="cv-chat-asignado">
-                    <Asignado asignado={asignado} yo={yo} />
-                    <span className="t-cap mut40">{asignado?.a_mano ? 'asignada a mano' : asignado?.campana ? `entró por ${asignado.campana}` : 'Sin campaña'}</span>
-                </div>
-                {contacto.username && (
-                    <IconButton label={`Abrir @${contacto.username} en Instagram`} data-tip="Abrir en Instagram" icon={<Instagram size={16} />}
-                        onClick={() => window.open(`https://www.instagram.com/${encodeURIComponent(contacto.username)}/`, '_blank', 'noopener')} />
-                )}
-            </div>
-            <Tramos avance={avance} ejecucion={datos.ejecucion} contacto={contacto} asignado={asignado} yo={yo} onCambio={onCambio} />
+            <Linea contacto={contacto} avance={avance} mensajes={datos.mensajes} />
             <Feed mensajes={datos.mensajes} notas={datos.notas || []} tareas={datos.tareas || []}
-                pendientes={envio.pendientes} onReintentar={envio.reintentar} onDescartar={envio.descartar} />
+                pendientes={envio.pendientes} onReintentar={envio.reintentar} onDescartar={envio.descartar}
+                onSeleccion={() => setSeleccion(seleccionDelLead())} />
             <Composer contacto={contacto} ejecucion={datos.ejecucion} seguimientos={datos.seguimientos} yo={yo} onCambio={onCambio}
-                onEnviar={envio.enviar} onLearnito={onLearnito} />
+                onEnviar={envio.enviar} onLearnito={abrirLearnito} pegar={pegar} selector={selector} onSelector={onSelector} />
+            {seleccion && <GloboCita contactoId={contacto.id} seleccion={seleccion} onCerrar={cerrarSeleccion} onHecho={() => { setSeleccion(null); onCambio(); }} />}
         </Panel>
     );
 }
 
-export default function Detalle({ id, yo, onLeido, panel, onPanel }) {
+export default function Detalle({ id, yo, onLeido, onCambio }) {
     const [datos, setDatos] = useState(() => recordado(`chat:${id}`));
     const [error, setError] = useState(null);
+    // Al pasar de etapa: la etapa cuyos mensajes se eligen (`selector`) y el texto que se pega en la caja (`pegar`).
+    const [selector, setSelector] = useState(null);
+    const [pegar, setPegar] = useState(null);
     // Cada conversación monta un Detalle nuevo (key={id}): arranca con lo último que se vio de ese chat (recuerdo.js). Se vuelve a pedir cada
     // REFRESCO, y después de cada acción del setter, sin vaciar lo que se ve.
     const pedir = useCallback(() => inboxApi.conversacion(id)
@@ -70,13 +83,33 @@ export default function Detalle({ id, yo, onLeido, panel, onPanel }) {
             .catch(() => { /* sin marca: se reintenta con el próximo mensaje */ });
     }, [id, cantidad, onLeido]);
 
+    const cambio = useCallback(() => { pedir(); onCambio?.(); }, [pedir, onCambio]);
+    // Mover de etapa: con varios mensajes se elige cuál pegar; con uno, se pega directo. Nada sale solo.
+    const mover = async (fase) => {
+        try {
+            await inboxApi.moverFase(id, fase);
+            cambio();
+        } catch (e) {
+            toast(e.response?.data?.message || 'No se pudo mover de etapa', 'error');
+            return;
+        }
+        const f = faseDe(fase);
+        if (f.guion.length > 1) setSelector(fase);
+        else if (f.guion.length === 1) { setSelector(null); setPegar({ texto: completar(f.guion[0].t, datos?.contacto), n: Date.now() }); }
+    };
+
     if (error && !datos) return <Panel size="sm" className="cv-detalle"><EmptyState icon={<MessageSquare size={22} />}>{error}</EmptyState></Panel>;
     if (!datos) return <Panel size="sm" className="cv-detalle"><EmptyState>Cargando…</EmptyState></Panel>;
+    const fase = datos.avance?.fase;
     return (
         <>
-            <Chat datos={datos} yo={yo} onCambio={pedir} onLearnito={() => onPanel('learnito')} />
-            <PanelDerecho panel={panel} onPanel={onPanel} contacto={datos.contacto} avance={datos.avance} asignado={datos.asignado} tareas={datos.tareas || []}
-                recorrido={datos.recorrido || []} yo={yo} onCambio={pedir} />
+            <Chat datos={datos} yo={yo} onCambio={cambio} pegar={pegar} selector={selector}
+                onSelector={(texto) => { setSelector(null); if (texto) setPegar({ texto, n: Date.now() }); }} />
+            <div className="cv-derecha">
+                <TarjetaLead datos={datos} fase={fase} canal={datos.canal} yo={yo} onCambio={cambio} onMover={mover} />
+                <FichaLead contacto={datos.contacto} tareas={datos.tareas || []} recorrido={datos.recorrido || []}
+                    fases={datos.fases || []} citas={datos.citas || []} onCambio={cambio} />
+            </div>
         </>
     );
 }

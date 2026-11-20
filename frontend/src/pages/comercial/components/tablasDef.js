@@ -129,6 +129,9 @@ export const SENA_ESTADO = {
  * número. «Confirmada» ya no es un paso del embudo comercial (09/10/2026), pero la faceta queda:
  * la usan el dashboard del closer y quien filtra Revisar a mano.
  */
+/** El área de una venta (`area_venta.py`): Closing o Triage. */
+export const AREA_CLOSING = 'Closing';
+
 export const SI = 'Sí';
 export const NO = 'No';
 const siNo = (condicion) => (fila) => (condicion(fila) ? SI : NO);
@@ -373,6 +376,8 @@ export const TABLAS = {
         ],
         facetas: [
             { key: 'programa', label: 'Programa', de: (f) => f.programa },
+            // Closing o Triage (ADR-W188): el low ticket y lo que carga el triage no cuentan en Closing.
+            { key: 'area', label: 'Área', de: (f) => f.area ?? AREA_CLOSING },
             { key: 'tipo_pago', label: 'Tipo de pago', de: (f) => f.tipo_pago.label },
             { key: 'metodo', label: 'Método', de: (f) => f.metodo },
             { key: 'closer', label: 'Closer', de: (f) => f.closer },

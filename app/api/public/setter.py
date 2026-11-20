@@ -1,4 +1,4 @@
-from flask import request, jsonify, render_template_string
+from flask import current_app, request, jsonify, render_template_string
 from app.api.errores import error_interno
 from app.models import db, User
 from app.models.user import ROLE_ADMIN, ROLE_DIRECTOR_COMERCIAL, ROLE_SETTER
@@ -381,6 +381,7 @@ def prefill_public_setter_report():
     leads = ComercialService.totales_leads(filas_leads)
 
     return jsonify({
+        "inbox": _precarga_del_inbox(user, target_date) if es_setter else None,
         "inbox_entrantes": leads['leads'],
         "funnel_qualification": leads['respondieron'],
         "not_lead": leads['respondieron'] - leads['cualificados'],
@@ -388,6 +389,18 @@ def prefill_public_setter_report():
         "version": 2,
         **_precarga_por_canal(filas_leads, generadas),
     }), 200
+
+
+def _precarga_del_inbox(user, fecha):
+    """Lo que el Inbox contó de su día (ADR-W185, `reporte_inbox`). Si falla, el formulario sigue con
+    la precarga de siempre: no se pierde el reporte por esto."""
+    from app.automatizaciones import reporte_inbox
+    try:
+        return reporte_inbox.contar(user.id, fecha, user.timezone)
+    except Exception as e:
+        current_app.logger.error(f"precarga del inbox ({user.id}, {fecha}): {e}")
+        db.session.rollback()
+        return None
 
 
 def _leads_de_inbound(lead_ids):

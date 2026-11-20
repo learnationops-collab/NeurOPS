@@ -480,8 +480,10 @@ def metricas(desde, hasta, solo=None, zona=None, segmentos=None):
         _sumar(por_id[a.closer_id], a, pase, ahora, motivo)
         _sumar(por_dia.setdefault((_dia(a, zona), a.closer_id), _vacias()), a, pase, ahora, motivo)
     from app.agendas_v2 import abandonos
+    from app.services import triage_cobros
 
-    return {
+    # Lo cobrado en low ticket va al total y a cada persona (ADR-W188): salió del Closing.
+    return triage_cobros.agregar({
         'desde': desde.isoformat(), 'hasta': hasta.isoformat(), 'total': total,
         # Un renglón por día y por persona: la pantalla los suma para «todas» o se queda con una.
         'por_dia': [{'dia': dia, 'id': persona, **por_dia[(dia, persona)]} for dia, persona in sorted(por_dia)],
@@ -489,4 +491,4 @@ def metricas(desde, hasta, solo=None, zona=None, segmentos=None):
         'por_persona': [{'id': p.id, 'nombre': p.username, **por_id[p.id]} for p in personas],
         'por_closer': triage_filas.por_closer(agendas, pases),
         'leads': triage_filas.leads(agendas, pases, ahora, motivos),
-    }
+    }, desde, hasta, personas)

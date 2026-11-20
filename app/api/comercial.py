@@ -579,5 +579,6 @@ def simulador_base():
 from app.api import (
     comercial_agendas_lote,  # noqa: E402,F401  (Editar en lote desde Revisar, 10/10/2026)
     comercial_close_real,  # noqa: E402,F401  (Close rate real en Comparativas, 24/10/2026)
+    comercial_por_que,  # noqa: E402,F401  (Por qué compran y corte «Respuesta» de Segmentos, ADR-W187)
     comercial_tendencia,  # noqa: E402,F401  (Proyección con tendencia del Simulador, 06/11/2026)
 )

@@ -39,13 +39,11 @@ export function diasDelHorizonte(o, tz, ahora) {
 
 // Inicios libres (ms UTC, ordenados) de la persona `p` para un evento de `dur` minutos.
 // `ocupado(personaId, inicio, dur)` dice si ya tiene algo en ese rato (reservas, Google Calendar).
-// Las sesiones se encadenan una tras otra (sesión + margen). Si un inicio no está libre, se busca el
-// siguiente de a estos minutos: después de algo ocupado, la cadena sigue en el primer inicio libre.
-export const PASO_BUSQUEDA = 5;
-
-// Inicios de `p` en esos días ({y, m, d, dow}), encadenados para que le entren la mayor cantidad de
-// sesiones: cada una empieza donde termina el margen de la anterior. La sesión tiene que entrar en su
-// horario; el margen no (el del final del día puede pasarse), pero sí tiene que estar libre.
+// Inicios de `p` en esos días ({y, m, d, dow}): franjas fijas (ADR-W182) que salen del comienzo de su
+// horario de a sesión + margen, para que le entren la mayor cantidad de sesiones. Si una está ocupada se
+// saltea: la grilla no se corre (antes se buscaba el siguiente inicio de a 5 minutos y quedaban horarios
+// desalineados, como 14:15, que bloqueaban el turno siguiente). La sesión tiene que entrar en su horario;
+// el margen no (el del final del día puede pasarse), pero sí tiene que estar libre.
 export function iniciosEnDias(p, dur, dias, { margen = 0, minimo = -Infinity, ocupado = () => false } = {}) {
     const tz = p.tz || TZ_DEF, out = [];
     dias.forEach(dia => {
@@ -54,7 +52,8 @@ export function iniciosEnDias(p, dur, dias, { margen = 0, minimo = -Infinity, oc
             const fin = aMin(r[1]);
             while (m + dur <= fin) {
                 const t = zonedToUtc(dia.y, dia.m, dia.d, Math.floor(m / 60), m % 60, tz);
-                if (t >= minimo && !ocupado(p.id, t, dur + margen)) { out.push(t); m += dur + margen; } else m += PASO_BUSQUEDA;
+                if (t >= minimo && !ocupado(p.id, t, dur + margen)) out.push(t);
+                m += dur + margen;
             }
         });
     });

@@ -4,7 +4,7 @@
 import { Fragment } from 'react';
 
 import { CifraConCuenta } from '../../../../components/standard';
-import { COLOR_DE_ESTADO, calificacionDe, conResultado, destinosDe, embudoDe, fueraDe, motivosDe, pct, pctTexto } from './triageDatos';
+import { COLOR_DE_ESTADO, calificacionDe, cierreLowTicket, conResultado, destinosDe, embudoDe, fueraDe, motivosDe, pct, pctTexto } from './triageDatos';
 import './triageTarjetas.css';
 
 export const TARJETA = {
@@ -39,6 +39,17 @@ export function Porcentaje({ a, b, onVer }) {
     );
 }
 
+/** Un texto que abre la lista de cobros del low ticket (Revisar › Ventas, «Área: Triage»); sin `onVer`, queda quieto. */
+const Cobros = ({ children, onVer }) => (onVer
+    ? <button type="button" onClick={onVer} style={{ ...boton, textDecoration: 'underline dotted' }}>{children}</button>
+    : <>{children}</>);
+
+/** Lo cobrado en low ticket y las ventas de llamadas anteriores, cada parte abre los cobros. */
+const CobrosLowTicket = ({ c, onVer }) => (
+    <><Cobros onVer={c.ventas ? onVer : null}>{dinero(c.cobrado)} cobrados</Cobros>
+        {c.anteriores > 0 && <> · <Cobros onVer={onVer}>{c.anteriores} de {c.anteriores === 1 ? 'una llamada anterior' : 'llamadas anteriores'}</Cobros></>}</>
+);
+
 // Una línea de la tarjeta con partes que abren su lista: [[n, texto, clave], ...]. Con cero no hay nada que listar y queda quieta.
 const Partes = ({ partes, onVer }) => (
     <>{partes.map(([n, texto, clave], i) => (
@@ -52,7 +63,8 @@ const Partes = ({ partes, onVer }) => (
 );
 
 /** Las tarjetas de arriba (triage y closing); «Ver registros ›» abre su lista. */
-export function Tarjetas({ m, onVer }) {
+export function Tarjetas({ m, onVer, onVerCobros }) {
+    const lt = cierreLowTicket(m);
     // El % de asistencia es sobre las agendas con destino, la misma base de closing (ADR-W145).
     const base = conResultado(m);
     const conRes = { n: base, texto: 'con destino', clave: 'base', titulo: 'Agendas con destino' };
@@ -69,7 +81,9 @@ export function Tarjetas({ m, onVer }) {
             sub3: fuera.length ? <>No cuentan: <Partes onVer={onVer} partes={fuera} /></> : null,
             color: 'success', ver: 'asistencias' },
         { rotulo: 'CALIFICADOS', valor: pctTexto(m.calificados, m.asistencias), sub: `${m.calificados} pasados al closer · ${m.closer_asistieron} ya asistieron con él`, color: 'brand-secondary', ver: 'calificados' },
-        { rotulo: 'CIERRES LOW TICKET', valor: pctTexto(m.cerrado, m.pitch_low_ticket), sub: `${m.cerrado} de ${m.pitch_low_ticket} presentaciones`, color: 'error', ver: 'cerrado' },
+        // Por cobro (ADR-W189): la venta del low ticket es un cierre aunque la llamada sea de antes.
+        { rotulo: 'CIERRES LOW TICKET', valor: pctTexto(lt.cierres, lt.base), sub: `${lt.cierres} de ${lt.base}`,
+            sub2: <CobrosLowTicket c={lt} onVer={onVerCobros} />, color: lt.cierres ? 'success' : 'error', ver: 'cerrado' },
         { rotulo: 'ASISTENCIA AL CLOSER', valor: <Porcentaje onVer={onVer} a={closerAsistieron} b={closerConRes} />, ancha: true, barra: pct(m.closer_asistieron, closerConRes.n),
             sub: <Partes onVer={onVer} partes={[[m.closer_asistieron, 'asistieron', 'closer_asistieron'], [m.closer_no_asistieron, 'no asistieron', 'closer_no_asistieron']]} />,
             // La llamada que todavía no llega no es una falta: va aparte de la que ya pasó sin reporte.
@@ -241,18 +255,29 @@ export function Embudo({ m, onVer, closers = [], colores = {} }) {
     );
 }
 
-/** El low ticket de 100 USD de los descalificados: el cierre grande y los cuatro estados. */
-export function LowTicket({ m, onVer }) {
-    const cajas = [['CIERRES', m.cerrado, 'success', 'cerrado'], ['NO CIERRES', m.no_cerrado, 'error', 'no_cerrado'],
+/** El low ticket de 100 USD de los descalificados: el cierre por cobro (ADR-W189), lo cobrado y cómo quedaron las
+ *  presentaciones del período. */
+export function LowTicket({ m, onVer, onVerCobros }) {
+    const lt = cierreLowTicket(m);
+    const cajas = [['CERRÓ', m.cerrado, 'success', 'cerrado'], ['NO CERRÓ', m.no_cerrado, 'error', 'no_cerrado'],
         ['SEGUIMIENTO', m.seguimiento, 'info', 'seguimiento'], ['PERDIDO', m.descartado, 'idle', 'descartado']];
     return (
         <div style={TARJETA}>
             <div style={resplandor('warning', '0% 0%', '380px 240px', 14)} />
             <Titulo texto="Low ticket" lado="Descalificados · oferta de 100 USD" />
             <div style={{ ...CAJA, position: 'relative', display: 'flex', alignItems: 'baseline', gap: 12, padding: '20px 22px', borderRadius: 20 }}>
-                <span style={{ fontSize: 56, fontWeight: 900, lineHeight: 1, color: m.cerrado ? 'var(--success)' : 'var(--error)' }}>{Math.round(pct(m.cerrado, m.pitch_low_ticket))}%</span>
-                <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>cierre · {m.cerrado} de {m.pitch_low_ticket} presentaciones</span>
+                <span style={{ fontSize: 56, fontWeight: 900, lineHeight: 1, color: lt.cierres ? 'var(--success)' : 'var(--error)' }}>{Math.round(pct(lt.cierres, lt.base))}%</span>
+                <span style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, color: 'var(--text-muted)' }}>
+                    <span>cierre · {lt.cierres} {lt.cierres === 1 ? 'venta' : 'ventas'} de {lt.base}
+                        {lt.anteriores > 0 && ` (${m.pitch_low_ticket} presentaciones + ${lt.anteriores} de ${lt.anteriores === 1 ? 'una llamada anterior' : 'llamadas anteriores'})`}</span>
+                    <span style={{ color: 'var(--success)' }}>
+                        <Cobros onVer={lt.ventas ? onVerCobros : null}>{dinero(lt.cobrado)} cobrados</Cobros> · {dinero(lt.neto)} neto
+                    </span>
+                </span>
             </div>
+            <small style={{ ...ROTULO, position: 'relative', letterSpacing: '.12em', marginBottom: -12 }}>
+                Cómo quedaron las {m.pitch_low_ticket} presentaciones del período
+            </small>
             <div style={{ position: 'relative', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 24px' }}>
                 {cajas.map(([rotulo, n, color, ver]) => (
                     <button key={rotulo} type="button" onClick={() => onVer(ver)}

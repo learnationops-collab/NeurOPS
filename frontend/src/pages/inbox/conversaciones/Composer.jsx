@@ -1,10 +1,12 @@
 // La caja de abajo del chat, en tres modos: Chat, Nota interna (el lead no la ve) y Tarea. En Chat el
 // mensaje (o un audio del equipo) sale por Instagram a nombre de quien lo manda (17/11/2026); los pasos del
 // flujo los manda el bot. Enter envía (Shift+Enter, salto de línea), y lo enviado se ve al instante (`useEnvio`).
-// Lo escrito y no mandado queda como borrador de esa conversación (`borradores.js`).
+// Lo escrito y no mandado queda como borrador de esa conversación (`borradores.js`). Más baja (ADR-W184): modos,
+// seguimiento programado (un chip que despliega) y «Pausar el bot» en una sola fila; arriba, al pasar a una etapa
+// con varios mensajes, el guión para elegir cuál pegar (`selector`). `pegar`: {texto, n} que entra en la caja.
 import { useEffect, useRef, useState } from 'react';
-import { AlarmClock, CalendarCheck, MessageSquare, Mic, Send, Sparkles, StickyNote, Zap } from 'lucide-react';
-import { Button, IconButton, Input, Segmented, Select, TextArea, toast } from '../../../components/standard';
+import { AlarmClock, CalendarCheck, ChevronDown, ChevronUp, MessageSquare, Mic, ScrollText, Send, Sparkles, StickyNote, AlertTriangle, X, Zap } from 'lucide-react';
+import { Button, Chip, IconButton, Input, Segmented, Select, TextArea, toast } from '../../../components/standard';
 import { useLearnito } from '../../../sesion/LearnitoContext';
 import { inboxApi } from '../api';
 import Audios from './Audios';
@@ -13,11 +15,12 @@ import MenuRayo, { NuevaRapida } from './MenuRayo';
 import ModalFlujo from './ModalFlujo';
 import { ListaSeguimientos, ProgramarSeguimiento } from './Seguimientos';
 import useEquipo from './useEquipo';
+import { completar, faseDe } from './fasesSetting';
 import { ventanaDe } from './ventana';
 
 const MODOS = [
     { value: 'chat', label: 'Chat', icon: <MessageSquare size={13} /> },
-    { value: 'nota', label: 'Nota interna', icon: <StickyNote size={13} /> },
+    { value: 'nota', label: 'Nota', icon: <StickyNote size={13} /> },
     { value: 'tarea', label: 'Tarea', icon: <CalendarCheck size={13} /> },
 ];
 
@@ -59,7 +62,32 @@ function FormTarea({ contacto, yo, onHecho }) {
 // El lead de la conversación de Learnito abierta desde el Inbox: preguntar por otro arranca una nueva.
 const conversacionDeLearnito = { contacto: null };
 
-export default function Composer({ contacto, ejecucion, seguimientos, yo, onCambio, onEnviar, onLearnito }) {
+// Los mensajes de la etapa a la que se pasó: tocar uno lo pega en la caja (no sale solo).
+function Guion({ fase, contacto, onElegir }) {
+    const f = faseDe(fase);
+    return (
+        <div className="cv-guion">
+            <div className="cv-guion-cab">
+                <ScrollText size={14} aria-hidden="true" />
+                <b>Pasaste a {f.n} · {f.label}: elegí qué mandar</b>
+                <IconButton size="xs" label="Cerrar el guión" icon={<X size={12} />} onClick={() => onElegir(null)} />
+            </div>
+            {(f.ojo || []).map((o) => <p key={o} className="cv-guion-ojo"><AlertTriangle size={12} aria-hidden="true" />{o}</p>)}
+            <div className="cv-guion-ops">
+                {f.guion.map((g) => (
+                    <button key={g.v} type="button" className="cv-guion-op" onClick={() => onElegir(completar(g.t, contacto))}>
+                        <b>{g.v}</b><span>{g.t}</span>
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+const programados = (items) => (items || []).filter((s) => s.estado === 'programado' || s.estado === 'error');
+const cuando = (iso) => new Date(iso).toLocaleString('es-AR', { weekday: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+export default function Composer({ contacto, ejecucion, seguimientos, yo, onCambio, onEnviar, onLearnito, pegar, selector, onSelector }) {
     const [modo, setModo] = useState('chat');
     const [texto, setTexto] = useState(() => borradorDe(contacto.id));
     const [rayo, setRayo] = useState(false);
@@ -70,6 +98,10 @@ export default function Composer({ contacto, ejecucion, seguimientos, yo, onCamb
     const [preguntando, setPreguntando] = useState(false);
     const learnito = useLearnito();
     const [pausar, setPausar] = useState(true);
+    const [verSeguimientos, setVerSeguimientos] = useState(false);
+    // Lo que se eligió del guión entra en la caja (reemplaza lo escrito): se revisa y se manda.
+    useEffect(() => { if (pegar?.texto) { setModo('chat'); setTexto(pegar.texto); } }, [pegar]);
+    const pendientes = programados(seguimientos);
     const caja = useRef(null);
     const barra = texto.startsWith('/');
     const menu = modo === 'chat' && (rayo || barra);
@@ -138,7 +170,8 @@ export default function Composer({ contacto, ejecucion, seguimientos, yo, onCamb
 
     return (
         <div className={`cv-composer cv-composer--${modo}`} ref={caja}>
-            <ListaSeguimientos items={seguimientos} onCambio={onCambio} />
+            {verSeguimientos && <ListaSeguimientos items={seguimientos} onCambio={onCambio} />}
+            {selector && modo === 'chat' && <Guion fase={selector} contacto={contacto} onElegir={onSelector} />}
             {menu && (
                 <MenuRayo contacto={contacto} filtro={barra ? texto.slice(1) : ''} onTexto={insertar}
                     onPaso={(id) => { setRayo(false); setTexto(''); setPaso(id); }} onNueva={() => { setRayo(false); setNueva(true); }}
@@ -146,9 +179,16 @@ export default function Composer({ contacto, ejecucion, seguimientos, yo, onCamb
             )}
             <div className="cv-comp-cab">
                 <Segmented size="sm" label="Modo" value={modo} onChange={(m) => { setModo(m); setRayo(false); }} options={MODOS} />
+                {pendientes.length > 0 && (
+                    <Chip as="button" type="button" subtle color="#7D63E6" icon={<AlarmClock />} aria-expanded={verSeguimientos}
+                        data-tip="Seguimiento programado|Tocalo para verlo o cancelarlo" onClick={() => setVerSeguimientos((v) => !v)}>
+                        {pendientes.length > 1 ? `${pendientes.length} seguimientos` : pendientes[0].estado === 'error' ? 'No salió' : cuando(pendientes[0].enviar_en)}
+                        {verSeguimientos ? <ChevronDown size={11} /> : <ChevronUp size={11} />}
+                    </Chip>
+                )}
                 {modo === 'chat' && (
                     <label className="cv-comp-check" data-tip="Al enviar|El bot deja de hablarle 24 h y corta el flujo abierto">
-                        <input type="checkbox" checked={pausar} onChange={(e) => setPausar(e.target.checked)} />Pausar el bot al enviar
+                        <input type="checkbox" checked={pausar} onChange={(e) => setPausar(e.target.checked)} />Pausar el bot
                     </label>
                 )}
             </div>

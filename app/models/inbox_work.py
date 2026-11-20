@@ -15,6 +15,7 @@ from app import db
 
 NOTE = 'note'
 EVENT = 'event'
+CITA = 'cita'
 
 
 class Note(db.Model):
@@ -25,6 +26,8 @@ class Note(db.Model):
     target_id = db.Column(db.String(64), nullable=False)
     kind = db.Column(db.String(10), nullable=False, default=NOTE)
     body = db.Column(db.Text, nullable=False)
+    # Una cita (`kind = cita`, ADR-W184): {texto, tipo, mensaje_id}; `body` es el comentario del setter.
+    payload = db.Column(db.JSON, nullable=True)
     created_by = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 

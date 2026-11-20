@@ -81,7 +81,7 @@ class ComercialService(ComercialAgendasMixin, ComercialVentasMixin, ComercialLea
         return [{'id': u.id, 'nombre': u.username, 'rol': role} for u in usuarios if u.es_visible_a_direccion]
 
     # Quienes no cuentan en las Comparativas ni en su fila «Equipo» (Kerwin, 02/11/2026): Mario (dueño),
-    # Santiago (cuenta de pruebas) y los dos Gabriel. El triage SÍ cuenta: se compara con los closers.
+    # Santiago (cuenta de pruebas) y los dos Gabriel. El triage tampoco está: tiene su tablero (ADR-W188).
     EXCLUIDOS_DE_COMPARATIVAS = frozenset({
         'mario buhler', 'mario cierra', 'gabriel hernandez', 'gabriel cardozo', 'santiago',
     })
@@ -93,12 +93,9 @@ class ComercialService(ComercialAgendasMixin, ComercialVentasMixin, ComercialLea
 
     @staticmethod
     def miembros_comparativas(rol):
-        """Las filas de las Comparativas: lo de `miembros` más, con Closers, las personas de triage activas."""
-        base = [m for m in ComercialService.miembros(rol) if ComercialService.comparable(m['nombre'])]
-        if rol != ROL_CLOSERS:
-            return base
-        triage = User.query.filter_by(role='triage', is_active=True).order_by(User.username).all()
-        return base + [{'id': u.id, 'nombre': u.username, 'rol': 'triage'} for u in triage]
+        """Las filas de las Comparativas: lo de `miembros` sin los excluidos. El triage ya no se compara con
+        los closers (ADR-W188, revierte ADR-W062): se lo mide en su propio tablero."""
+        return [m for m in ComercialService.miembros(rol) if ComercialService.comparable(m['nombre'])]
 
     @staticmethod
     def miembros_triage():

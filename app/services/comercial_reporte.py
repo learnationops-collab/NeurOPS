@@ -83,7 +83,8 @@ def dia_del_equipo(fecha=None):
     dia = fecha or date.today()
 
     agendas = ComercialService.agendas(dia, dia)
-    ventas = ComercialService.ventas(dia, dia)
+    from app.services.area_venta import de_closing
+    ventas = de_closing(ComercialService.ventas(dia, dia))
     leads = ComercialService.leads(dia, dia)
     tot_a = ComercialService.totales_agendas(agendas)
     tot_v = ComercialService.totales_ventas(ventas)

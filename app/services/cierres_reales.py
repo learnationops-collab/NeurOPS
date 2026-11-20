@@ -134,7 +134,8 @@ def _cierres_por_cuota(start, end, closer_nombre, ventas_nuevas):
     from app.services.comercial_service import ComercialService
 
     cobros = ComercialService.ventas_del_periodo(start - relativedelta(months=1), end)
-    senas = [v for v in cobros if ComercialService.clasificar_venta(v)[1] == 'seña']
+    from app.services.area_venta import cobros_de_closing
+    senas = cobros_de_closing([v for v in cobros if ComercialService.clasificar_venta(v)[1] == 'seña'])
     if not senas:
         return []
     clientes = clientes_de_ventas(senas)
@@ -259,5 +260,6 @@ def cierres_reales_de_closer(closer_id, start_date, end_date, asistieron):
     if closer_id:
         closer = db.session.get(User, closer_id)
         nombre = closer.username if closer else ''
-    ventas = ComercialService.ventas(inicio, fin, closer_nombre=nombre)
+    from app.services.area_venta import de_closing
+    ventas = de_closing(ComercialService.ventas(inicio, fin, closer_nombre=nombre))
     return cierres_reales(inicio, fin, ventas, asistieron, closer_nombre=nombre)

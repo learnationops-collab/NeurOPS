@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Analizar · hoy y propuesta</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#020617; --page:linear-gradient(135deg,#020617 0%,#0A0E3D 50%,#05082D 100%);
+  --surf:rgba(255,255,255,.04); --surf2:rgba(255,255,255,.08); --inset:rgba(0,0,0,.34);
+  --text:#fff; --muted:rgba(255,255,255,.62); --faint:rgba(255,255,255,.42);
+  --b1:rgba(255,255,255,.08); --b2:rgba(255,255,255,.16);
+  --nuevo:#7DEAC0; --cambia:#F3D08A; --hecho:#93C5FD;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);background-image:var(--page);background-attachment:fixed;color:var(--text);font-family:Montserrat,sans-serif;font-size:14px}
+a{color:inherit}
+.wrap{max-width:1320px;margin:0 auto;padding:20px 16px 80px;display:grid;gap:18px}
+.top h1{margin:0 0 4px;font-size:22px;font-weight:900}
+.mut{color:var(--muted)} .faint{color:var(--faint)}
+.ley{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+.ley span{display:inline-flex;align-items:center;gap:6px}
+.ley i{width:12px;height:12px;border-radius:4px;border:2px solid var(--c)}
+.cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px;align-items:start}
+.col h2{margin:0 0 10px;font-size:12px;font-weight:900;letter-spacing:.18em;text-transform:uppercase;color:var(--faint)}
+.col h2 b{color:#fff}
+.pagina{display:grid;gap:8px;padding:12px;border-radius:22px;background:var(--surf);border:1px solid var(--b1)}
+.fila{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.fila.una{grid-template-columns:1fr}
+.blq{padding:10px 12px;border-radius:14px;background:var(--surf2);border:1.5px solid transparent;display:grid;gap:3px;min-height:58px;position:relative}
+.blq b{font-size:13px;font-weight:800}
+.blq small{font-size:11px;color:var(--muted);line-height:1.35}
+.blq.tiles{min-height:40px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.blq.tiles span{flex:1;min-width:60px;height:24px;border-radius:8px;background:rgba(255,255,255,.07);font-size:10px;color:var(--faint);display:grid;place-items:center}
+.blq.nuevo{border-color:var(--nuevo);background:rgba(125,234,192,.08)}
+.blq.cambia{border-color:var(--cambia);background:rgba(243,208,138,.07)}
+.blq.hecho{border-color:var(--hecho);background:rgba(147,197,253,.07)}
+.et{position:absolute;top:-9px;right:10px;font-size:9px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;padding:2px 7px;border-radius:6px;color:#020617;background:var(--c)}
+.blq ul{margin:4px 0 0;padding-left:16px;font-size:11.5px;color:var(--muted);display:grid;gap:2px}
+.blq ul li b{font-size:11.5px;color:#fff}
+.blq a{font-size:11px;font-weight:800;color:var(--hecho);text-decoration:none}
+.tabla{width:100%;border-collapse:collapse;font-size:13px}
+.tabla th{font-size:10px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);text-align:left;padding:8px 10px;border-bottom:1px solid var(--b1)}
+.tabla td{padding:10px;border-bottom:1px solid var(--b1);vertical-align:top;color:var(--muted)}
+.tabla td:first-child{color:#fff;font-weight:800;white-space:nowrap}
+.tabla td b{color:#fff}
+.chip{display:inline-block;font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:6px;color:#020617;background:var(--c)}
+.card{padding:16px 18px;border-radius:20px;background:var(--surf);border:1px solid var(--b1);display:grid;gap:10px}
+.card h3{margin:0;font-size:15px;font-weight:900}
+@media (max-width:900px){.cols{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <h1>Comercial › Analizar › Dashboard · hoy y propuesta</h1>
+    <span class="mut">La vista de la dirección comercial (y de cada closer con sus números). Cada caja es un panel, en el orden en que aparecen.</span>
+  </div>
+  <div class="ley">
+    <span><i style="--c:var(--hecho)"></i>Ya cambiado hoy (ADR-W186, en producción)</span>
+    <span><i style="--c:var(--cambia)"></i>Cambia: se le agrega algo</span>
+    <span><i style="--c:var(--nuevo)"></i>Panel nuevo</span>
+    <span><i style="--c:transparent;background:rgba(255,255,255,.08)"></i>Queda igual</span>
+  </div>
+
+  <div class="cols">
+    <div class="col">
+      <h2><b>Hoy</b></h2>
+      <div class="pagina">
+        <div class="blq tiles"><span>Cifras del período (… · Cash collected · Ticket promedio)</span></div>
+        <div class="fila"><div class="blq"><b>Destino de las agendas</b><small>En qué terminó cada agenda</small></div><div class="blq"><b>Embudo</b><small>Agendas → ventas, por canal</small></div></div>
+        <div class="fila"><div class="blq"><b>Cierre</b><small>Ventas, señas, no cerradas · close rate por llamada y por presentación · directas y triage</small></div><div class="blq"><b>Cash</b><small>Lo cobrado</small></div></div>
+        <div class="fila una"><div class="blq"><b>Por cobrar</b></div></div>
+        <div class="fila"><div class="blq"><b>Payment types</b></div><div class="blq"><b>Ingresos por fuente</b></div></div>
+        <div class="fila"><div class="blq"><b>Programas</b></div><div class="blq"><b>Señas</b></div></div>
+        <div class="fila una"><div class="blq"><b>Segmentos</b><small>A, B, C, D por closer, triage, setter, fuente u origen</small></div></div>
+        <div class="fila una"><div class="blq"><b>Por país</b></div></div>
+      </div>
+    </div>
+
+    <div class="col">
+      <h2><b>Propuesta</b></h2>
+      <div class="pagina">
+        <div class="blq tiles"><span>Cifras del período (… · Cash collected · Ticket promedio)</span></div>
+        <div class="fila"><div class="blq"><b>Destino de las agendas</b><small>igual</small></div><div class="blq"><b>Embudo</b><small>igual</small></div></div>
+        <div class="fila">
+          <div class="blq hecho" style="--c:var(--hecho)"><span class="et">Ya está</span><b>Cierre</b>
+            <ul><li><b>+</b> aviso de agendas sin resultado</li><li><b>+</b> camino agenda → venta</li><li><b>+</b> close rate por agenda</li></ul>
+            <a href="../cierre-por-corte/index.html">Ver antes y después →</a></div>
+          <div class="blq"><b>Cash</b><small>igual</small></div>
+        </div>
+        <div class="fila una">
+          <div class="blq nuevo" style="--c:var(--nuevo)"><span class="et">Nuevo</span><b>Por qué compran y por qué no</b>
+            <ul><li>Lo que más separa a los que compran (poder invertir, quién decide), con link a Segmentos</li>
+              <li>Objeciones: la que casi frenó a los que compraron contra la que anotó el closer en los que no</li>
+              <li>Dolor y frases del formulario de ingreso</li></ul>
+            <a href="../segmentos-por-respuesta/index.html">Ver mockup (pestaña 3) →</a></div>
+        </div>
+        <div class="fila una"><div class="blq"><b>Por cobrar</b><small>igual</small></div></div>
+        <div class="fila"><div class="blq"><b>Payment types</b><small>igual</small></div><div class="blq"><b>Ingresos por fuente</b><small>igual</small></div></div>
+        <div class="fila"><div class="blq"><b>Programas</b><small>igual</small></div><div class="blq"><b>Señas</b><small>igual</small></div></div>
+        <div class="fila una">
+          <div class="blq cambia" style="--c:var(--cambia)"><span class="et">Se agrega</span><b>Segmentos</b>
+            <ul><li>Todo lo de hoy, igual</li><li><b>+</b> corte «Respuesta»: cuánto compra cada opción del formulario de agenda (inversión, quién decide, etapa, examen) y los puntos que hoy le da al segmento</li></ul>
+            <a href="../segmentos-por-respuesta/index.html">Ver mockup (pestaña 2) →</a></div>
+        </div>
+        <div class="fila una"><div class="blq"><b>Por país</b><small>igual</small></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Qué se suma, qué pregunta responde y de dónde sale</h3>
+    <table class="tabla">
+      <thead><tr><th>Panel</th><th>Estado</th><th>Pregunta que responde</th><th>De dónde sale</th></tr></thead>
+      <tbody>
+        <tr><td>Cierre</td><td><span class="chip" style="--c:var(--hecho)">Ya está</span></td><td>¿Dónde se pierde la venta? ¿Los números están completos?</td><td>Las agendas y sus reportes</td></tr>
+        <tr><td>Por qué compran</td><td><span class="chip" style="--c:var(--nuevo)">Nuevo</span></td><td>¿Qué separa a los que compran de los que no? ¿Pesa el tipo de objeción o si se resolvió?</td><td>Objeción del closer al reportar «No cerró» + formulario de ingreso de la Academia</td></tr>
+        <tr><td>Segmentos · Respuesta</td><td><span class="chip" style="--c:var(--cambia)">Se agrega</span></td><td>¿Qué respuesta del formulario de agenda compra más? ¿Los puntos del segmento siguen a los datos?</td><td>Formulario de agenda + ventas nuevas a 60 días</td></tr>
+      </tbody>
+    </table>
+    <p class="faint" style="font-size:12px;margin:0">Nada se saca ni se mueve: los paneles que ya estaban quedan en el mismo lugar y con lo mismo. «Programas y segmentos» (la otra pestaña, CAC y ROAS) no se toca.</p>
+  </div>
+</div>
+</body>
+</html>

@@ -32,6 +32,11 @@ export const inboxApi = {
     leido: (id) => api.post(`/inbox/conversaciones/${id}/leido`, null, { conservarCache: true }),
     asignar: (id, setterId) => api.post(`/inbox/conversaciones/${id}/asignar`, { setter_id: setterId }).then(datos),
     moverEtapa: (id, etapa) => api.put(`/inbox/conversaciones/${id}/etapa`, { etapa }).then(datos),
+    // Fases del setting, canal, citas y etiquetado de varias (app/automatizaciones/api_fases.py, ADR-W184)
+    moverFase: (id, fase) => api.put(`/inbox/conversaciones/${id}/fase`, { fase }).then(datos),
+    marcarCanal: (id, canal) => api.put(`/inbox/conversaciones/${id}/canal`, { canal }).then(datos),
+    anotarCita: (id, cita) => api.post(`/inbox/conversaciones/${id}/citas`, cita).then(datos),
+    etiquetarVarias: (contactos, etiquetas) => api.post('/inbox/etiquetas/masivo', { contactos, etiquetas }).then(datos),
     corregirVariable: (id, campo, valor) => api.put(`/inbox/conversaciones/${id}/variables`, { campo, valor }).then(datos),
     crearNota: (id, texto) => api.post(`/inbox/conversaciones/${id}/notas`, { texto }).then(datos),
     crearTarea: (id, tarea) => api.post(`/inbox/conversaciones/${id}/tareas`, tarea).then(datos),

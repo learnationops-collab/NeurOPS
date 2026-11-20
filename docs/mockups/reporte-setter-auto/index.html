@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Reporte del setter · precargado del Inbox</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#EEF1F7;--panel:#fff;--item:#F3F5FA;--text:#1B2233;--muted:#5E6780;--muted40:#9AA2B8;--border:#E1E5EF;
+  --ads:#FF3FA4;--inb:#6F7BFF;--bnv:#9A7BE0;--brand:#127A9A;--ok:#1F9D6B;--warn:#D98A00;--auto:#127A9A}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0F1320;--panel:#171C2B;--item:#202638;--text:#EEF1F8;--muted:#A9B0C4;--muted40:#6C748C;--border:#2A3146}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:500 13px/1.45 Montserrat,system-ui,sans-serif;padding:24px 16px 60px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;gap:14px}
+.k{font-size:10px;font-weight:900;letter-spacing:.2em;text-transform:uppercase;color:var(--muted40)}
+.cab{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.cab h1{font-size:22px;margin:0;font-weight:900}
+.fecha{padding:6px 12px;border-radius:999px;background:var(--panel);border:1px solid var(--border);font-weight:700}
+.pasos{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
+.paso{padding:7px 12px;border-radius:999px;background:var(--panel);border:1px solid var(--border);font-weight:700;font-size:12px;color:var(--muted)}
+.paso.act{background:var(--text);color:var(--panel);border-color:var(--text)}
+.paso i{font-style:normal;display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;background:color-mix(in srgb,var(--auto) 18%,transparent);color:var(--auto);font-size:9px;font-weight:900;margin-left:6px}
+.paso.act i{background:var(--panel)}
+/* El aviso de arriba */
+.aviso{display:flex;gap:12px;align-items:center;padding:12px 16px;border-radius:16px;background:color-mix(in srgb,var(--auto) 9%,var(--panel));border:1px solid color-mix(in srgb,var(--auto) 30%,transparent)}
+.aviso b{font-weight:800}
+.aviso .ic{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;background:var(--auto);color:#fff;flex:none}
+.aviso .der{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.btn{border:1px solid var(--border);background:var(--panel);color:var(--text);border-radius:999px;padding:7px 12px;font:700 12px Montserrat;cursor:pointer}
+.btn.pri{background:var(--brand);border-color:var(--brand);color:#fff}
+/* El paso */
+.panel{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));background:var(--panel);border:1px solid var(--border);border-radius:22px;overflow:visible}
+.col{padding:20px 22px;display:grid;gap:14px;align-content:start;border-right:1px solid var(--border);min-width:0}
+.col:last-child{border-right:0}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-weight:800;font-size:11px;background:color-mix(in srgb,var(--c) 14%,transparent);color:var(--c)}
+.chip::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--c)}
+.rcab{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.sinr{font-size:11px;font-weight:700;color:var(--warn)}
+.campos{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.campo{display:grid;gap:6px;position:relative;min-width:0}
+.campo .k{color:var(--muted);display:flex;align-items:center;gap:6px;min-height:26px}
+.celda{position:relative;height:44px;border-radius:12px;background:var(--item);overflow:hidden;cursor:ew-resize;border:1px solid transparent}
+.celda .fill{position:absolute;inset:0 auto 0 0;background:color-mix(in srgb,var(--c) 26%,transparent)}
+.celda .n{position:relative;font-size:20px;font-weight:900;padding:0 12px;line-height:44px;font-variant-numeric:tabular-nums}
+/* Lo que puso el Inbox */
+.auto{border:0;font-family:inherit;display:inline-flex;align-items:center;gap:3px;padding:1px 6px;border-radius:6px;font-size:9px;font-weight:900;letter-spacing:.08em;background:color-mix(in srgb,var(--auto) 14%,transparent);color:var(--auto);cursor:pointer;text-transform:uppercase}
+.auto:hover{background:var(--auto);color:#fff}
+.auto.editado{background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn)}
+.celda .era{position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:11px;font-weight:700;color:var(--muted40)}
+.celda .era s{color:var(--muted)}
+/* A confirmar */
+.conf{display:inline-flex;align-items:center;gap:3px;padding:1px 6px;border-radius:6px;font-size:9px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;background:color-mix(in srgb,var(--muted40) 20%,transparent);color:var(--muted);cursor:help}
+.celda.mano{border:1px dashed var(--border);background:transparent}
+/* El popover de quiénes */
+.pop{position:absolute;z-index:5;top:34px;left:0;width:260px;padding:10px 12px;border-radius:14px;background:var(--panel);border:1px solid var(--border);box-shadow:0 16px 40px rgba(20,25,45,.18);display:none;gap:6px}
+.pop .t{font-weight:800;font-size:12px}
+.pop .regla{font-size:11px;color:var(--muted)}
+.pop ul{margin:0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:4px}
+.pop li{padding:2px 7px;border-radius:999px;background:var(--item);font-size:11px;font-weight:700}
+.pop a{font-size:11px;font-weight:800;color:var(--brand);text-decoration:none}
+.big{display:flex;align-items:baseline;gap:8px;padding-top:6px;border-top:1px solid var(--border)}
+.big b{font-size:32px;font-weight:900}
+.big span{color:var(--muted);font-weight:700}
+.flujo{display:flex;gap:6px;align-items:flex-end;height:70px}
+.flujo div{flex:1;border-radius:8px 8px 4px 4px;background:color-mix(in srgb,var(--c) 30%,transparent);display:grid;place-items:end center;padding-bottom:4px;font-size:10px;font-weight:800;color:var(--muted)}
+.vacia{display:grid;gap:8px;padding:14px;border-radius:14px;border:1px dashed var(--border);color:var(--muted);font-size:12px}
+/* Notas del mockup */
+.nota{font-size:12px;color:var(--muted);background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:14px 18px}
+.nota h2{font-size:13px;margin:0 0 6px;font-weight:900;color:var(--text)}
+.nota ul{margin:0;padding-left:18px;display:grid;gap:4px}
+.dos{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+.mini{background:var(--panel);border:1px solid var(--border);border-radius:22px;padding:18px 22px;display:grid;gap:12px}
+.fila{display:grid;grid-template-columns:110px repeat(2,minmax(0,1fr));gap:10px;align-items:center}
+.fila .k{min-height:0}
+@media (max-width:820px){.panel{grid-template-columns:1fr}.col{border-right:0;border-bottom:1px solid var(--border)}.dos{grid-template-columns:1fr}.pasos{margin-left:0}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="cab">
+    <h1>Reporte diario</h1>
+    <span class="fecha">mié 18 nov · Elias</span>
+    <div class="pasos">
+      <span class="paso act">Entrantes<i>4</i></span><span class="paso">Aperturas<i>2</i></span><span class="paso">Embudo<i>3</i></span>
+      <span class="paso">Follow-ups<i>8</i></span><span class="paso">Reflexión</span><span class="paso">Resumen</span>
+    </div>
+  </div>
+
+  <div class="aviso">
+    <span class="ic">✓</span>
+    <div><b>Lo contó el Inbox.</b> Revisá cada número: si algo no cuadra, cambialo y queda marcado como corregido. Te queda escribir la reflexión.<br>
+      <span style="color:var(--muted)">Tocá <button type="button" class="auto" data-stat>Inbox ›</button> en cualquier número para ver la lista de conversaciones que suma.</span></div>
+    <div class="der"><button class="btn">Volver a contar</button><button class="btn pri">Revisado, seguir →</button></div>
+  </div>
+
+  <!-- Paso Entrantes -->
+  <section class="panel" aria-label="Entrantes">
+    <div class="col" style="--c:var(--ads)">
+      <div class="rcab"><span class="chip">Anuncios</span><span class="sinr">8 sin respuesta</span></div>
+      <div class="campos">
+        <div class="campo"><span class="k">Nuevos mensajes <button type="button" class="auto" data-stat>Inbox ›</button></span>
+          <div class="celda"><div class="fill" style="width:90%"></div><span class="n">32</span></div>
+        </div>
+        <div class="campo"><span class="k">Entrantes cualificados <span class="auto editado" title="Corregido a mano">Corregido</span></span>
+          <div class="celda"><div class="fill" style="width:75%"></div><span class="n">25</span><span class="era">Inbox: <s>24</s></span></div>
+        </div>
+        <div class="campo"><span class="k">No leads <button type="button" class="auto" data-stat>Inbox ›</button></span>
+          <div class="celda"><div class="fill" style="width:25%"></div><span class="n">6</span></div>
+        </div>
+        <div class="campo"><span class="k">In-abribles <button type="button" class="auto" data-stat>Inbox ›</button></span>
+          <div class="celda"><div class="fill" style="width:0"></div><span class="n">0</span></div>
+        </div>
+      </div>
+      <div class="big"><b>59%</b><span>cualificación</span></div>
+      <div class="flujo"><div style="height:100%">32</div><div style="height:59%">19</div></div>
+    </div>
+
+    <div class="col" style="--c:var(--inb)">
+      <div class="rcab"><span class="chip">Inbound</span></div>
+      <div class="campos">
+        <div class="campo"><span class="k">Nuevos mensajes <button type="button" class="auto" data-stat>Inbox ›</button></span><div class="celda"><span class="n">0</span></div></div>
+        <div class="campo"><span class="k">Entrantes cualificados <button type="button" class="auto" data-stat>Inbox ›</button></span><div class="celda"><span class="n">0</span></div></div>
+        <div class="campo"><span class="k">No leads <button type="button" class="auto" data-stat>Inbox ›</button></span><div class="celda"><span class="n">0</span></div></div>
+        <div class="campo"><span class="k">In-abribles <button type="button" class="auto" data-stat>Inbox ›</button></span><div class="celda"><span class="n">0</span></div></div>
+      </div>
+      <div class="big"><b>—</b><span>cualificación</span></div>
+    </div>
+
+    <div class="col" style="--c:var(--bnv)">
+      <div class="rcab"><span class="chip">Bienvenidas</span><span class="conf" title="Falta definir qué es una bienvenida">A confirmar</span></div>
+      <div class="vacia"><b style="color:var(--text)">Las cargás vos, por ahora.</b>Falta definir qué cuenta como bienvenida para que el Inbox pueda contarlas. Hasta entonces, como siempre.</div>
+      <div class="campos">
+        <div class="campo"><span class="k">Hechas</span><div class="celda mano"><span class="n">0</span></div></div>
+        <div class="campo"><span class="k">Respondidas</span><div class="celda mano"><span class="n">0</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="dos">
+    <!-- Paso Aperturas, resumido -->
+    <section class="mini" aria-label="Aperturas">
+      <span class="k">Paso Aperturas</span>
+      <div class="fila"><span></span><span class="chip" style="--c:var(--ads)">Anuncios</span><span class="chip" style="--c:var(--inb)">Inbound</span></div>
+      <div class="fila"><span class="k">En entrantes <button type="button" class="auto" data-stat>Inbox ›</button></span><div class="celda" style="--c:var(--ads)"><div class="fill" style="width:75%"></div><span class="n">24</span></div><div class="celda"><span class="n">0</span></div></div>
+      <div class="fila"><span class="k">Respondieron <button type="button" class="auto" data-stat>Inbox ›</button></span><div class="celda" style="--c:var(--ads)"><div class="fill" style="width:50%"></div><span class="n">12</span></div><div class="celda"><span class="n">0</span></div></div>
+      <div class="fila"><span class="k">En dolor <span class="conf" title="Falta definir qué es «apertura en dolor»">A confirmar</span></span><div class="celda mano"><span class="n">0</span></div><div class="celda mano"><span class="n">0</span></div></div>
+      <div class="fila"><span class="k">Respondieron</span><div class="celda mano"><span class="n">0</span></div><div class="celda mano"><span class="n">0</span></div></div>
+    </section>
+
+    <!-- Paso Embudo y follow-ups, resumido -->
+    <section class="mini" aria-label="Embudo y follow-ups">
+      <span class="k">Pasos Embudo y Follow-ups</span>
+      <div class="fila" style="grid-template-columns:110px repeat(4,minmax(0,1fr))"><span></span><span class="k">Entrantes</span><span class="k">Dolor</span><span class="k">Oferta</span><span class="k">Link</span></div>
+      <div class="fila" style="grid-template-columns:110px repeat(4,minmax(0,1fr))"><span class="k">Embudo <button type="button" class="auto" data-stat>Inbox ›</button></span><span></span>
+        <div class="celda"><span class="n">7</span></div><div class="celda"><span class="n">4</span></div><div class="celda"><span class="n">3</span></div></div>
+      <div class="fila" style="grid-template-columns:110px repeat(4,minmax(0,1fr))"><span class="k">Follow-ups <button type="button" class="auto" data-stat>Inbox ›</button></span>
+        <div class="celda"><span class="n">62</span></div><div class="celda"><span class="n">26</span></div><div class="celda"><span class="n">3</span></div><div class="celda"><span class="n">5</span></div></div>
+      <div class="fila" style="grid-template-columns:110px repeat(4,minmax(0,1fr))"><span class="k">Respondidos <button type="button" class="auto" data-stat>Inbox ›</button></span>
+        <div class="celda"><span class="n">12</span></div><div class="celda"><span class="n">4</span></div><div class="celda"><span class="n">0</span></div><div class="celda"><span class="n">1</span></div></div>
+    </section>
+  </div>
+
+  <div class="nota">
+    <h2>Cómo cuenta el Inbox cada número (mockup, números reales de Elias del 18/11 donde existen)</h2>
+    <ul>
+      <li><b>Nuevos mensajes:</b> conversaciones suyas cuyo primer mensaje del lead llegó ese día. Inbox 32 · cargó 35.</li>
+      <li><b>Entrantes cualificados:</b> de esas, las que contestaron algo (al bot o a él), sin las in-abribles. Incluye los no leads, como hoy. Inbox 24 · cargó 25.</li>
+      <li><b>No leads / In-abribles:</b> las que marcó en esa fase desde la tarjeta del lead, o que el bot dio por no calificadas.</li>
+      <li><b>Aperturas en entrantes:</b> conversaciones donde el equipo escribió por primera vez ese día; respondieron, las que el lead contestó después.</li>
+      <li><b>Embudo:</b> las que llegaron ese día por primera vez a Dolor (3–5), Oferta (6) o Link (7), con las fases del inbox. Hoy nadie mueve fases todavía, así que saldría 0 hasta que las usen.</li>
+      <li><b>Follow-ups:</b> mensajes del equipo que salen tras 12 h sin respuesta, en la etapa en que estaba la conversación; respondidos, los que el lead contestó.</li>
+      <li><b>A confirmar:</b> «apertura en dolor» y bienvenidas no se cuentan solas: las sigue cargando el setter.</li>
+      <li><b>Ver la lista:</b> tocar «Inbox ›» abre un modal con las conversaciones que suma ese número (usuario, fase, hora y «Abrir chat»). La celda sigue siendo para editar el número.</li>
+      <li><b>Agendas:</b> como hoy, del sistema de agendas.</li>
+    </ul>
+  </div>
+</div>
+
+<style>
+.velo{position:fixed;inset:0;background:rgba(15,19,32,.45);display:none;place-items:center;padding:16px;z-index:50}
+.velo.si{display:grid}
+.modal{width:min(620px,100%);max-height:80vh;display:grid;grid-template-rows:auto auto minmax(0,1fr) auto;background:var(--panel);border-radius:22px;border:1px solid var(--border);box-shadow:0 30px 80px rgba(0,0,0,.3);overflow:hidden}
+.m-cab{display:flex;align-items:flex-start;gap:10px;padding:18px 20px 6px}
+.m-cab h3{margin:0;font-size:17px;font-weight:900}
+.m-cab .x{margin-left:auto;border:0;background:var(--item);border-radius:10px;width:30px;height:30px;cursor:pointer;color:var(--text);font-size:15px}
+.m-regla{padding:0 20px 12px;color:var(--muted);font-size:12px;border-bottom:1px solid var(--border)}
+.m-lista{overflow:auto;padding:6px 10px}
+.m-fila{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;gap:10px;align-items:center;padding:9px 10px;border-radius:12px}
+.m-fila:hover{background:var(--item)}
+.m-fila b{font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.m-fila .h{color:var(--muted40);font-size:11px;font-variant-numeric:tabular-nums}
+.fase{padding:2px 8px;border-radius:999px;font-size:11px;font-weight:800;background:color-mix(in srgb,#7D63E6 14%,transparent);color:#7D63E6}
+.fase.nl{background:color-mix(in srgb,var(--muted40) 20%,transparent);color:var(--muted)}
+.abrir{font-size:11px;font-weight:800;color:var(--brand);text-decoration:none;white-space:nowrap}
+.m-pie{display:flex;align-items:center;gap:8px;padding:12px 20px;border-top:1px solid var(--border);color:var(--muted);font-size:12px}
+.m-pie .btn{margin-left:auto}
+</style>
+<div class="velo" id="velo" role="dialog" aria-modal="true" aria-labelledby="m-t">
+  <div class="modal">
+    <div class="m-cab"><div><span class="k" id="m-k">Anuncios · Entrantes</span><h3 id="m-t">32 nuevos mensajes</h3></div><button class="x" id="cerrar" aria-label="Cerrar">✕</button></div>
+    <div class="m-regla" id="m-r">Su primer mensaje llegó el mié 18 nov y te las asignaron a vos.</div>
+    <div class="m-lista" id="m-l"></div>
+    <div class="m-pie"><span>Si una no corresponde, corregí el número en el paso.</span><button class="btn pri">Ver todas en Conversaciones →</button></div>
+  </div>
+</div>
+<script>
+const gente=['vanessa.jaramillo.733','irisdcbarria','yurimunozgomez','camifigueroam','andresportugal','luzmarina.r','dra.pauli.m','juanse.medic','marianela_ok','fer.residente','sofi.estudia','nico.mir2027','caro.rotante','dani.salud','vale.clinica','tomi.pediatria'];
+const fases=[['2 Conexión',''],['1 Apertura',''],['3 Dolor',''],['No lead','nl'],['6 Propuesta',''],['2 Conexión','']];
+const reglas={
+ 'Nuevos mensajes':'Su primer mensaje llegó el mié 18 nov y te las asignaron a vos.',
+ 'Entrantes cualificados':'De las nuevas, las que contestaron algo (al bot o a vos), sin las in-abribles. Incluye los no leads.',
+ 'No leads':'Contestaron y las marcaste «No lead», o el bot dijo que no califican.',
+ 'In-abribles':'Las que pasaste a «In-abrible» desde la tarjeta del lead.',
+ 'En entrantes':'El equipo les escribió por primera vez este día.',
+ 'Respondieron':'De esas aperturas, las que el lead contestó después.',
+ 'Embudo':'Llegaron este día por primera vez a esa etapa.',
+ 'Follow-ups':'Mensajes del equipo tras 12 h sin respuesta, en la etapa en que estaba la conversación.',
+ 'Respondidos':'De esos follow-ups, los que el lead contestó.'};
+const velo=document.getElementById('velo');
+document.querySelectorAll('[data-stat]').forEach(b=>b.addEventListener('click',()=>{
+  const campo=b.closest('.campo,.fila');
+  const rot=campo.querySelector('.k').childNodes[0].textContent.trim();
+  const n=+((campo.querySelector('.celda .n')||{}).textContent||0);
+  const canal=campo.closest('.col')?.querySelector('.chip')?.textContent||'Anuncios';
+  document.getElementById('m-k').textContent=canal+' · '+(campo.closest('section').getAttribute('aria-label'));
+  document.getElementById('m-t').textContent=n+' · '+rot.toLowerCase();
+  document.getElementById('m-r').textContent=reglas[rot]||'';
+  const l=document.getElementById('m-l');
+  l.innerHTML=n?Array.from({length:n},(_,i)=>{const f=fases[i%fases.length];const h=String(9+(i%10)).padStart(2,'0')+':'+String((i*7)%60).padStart(2,'0');
+    return `<div class="m-fila"><b>@${gente[i%gente.length]}${i>=gente.length?i:''}</b><span class="fase ${f[1]}">${f[0]}</span><span class="h">${h}</span><a class="abrir" href="#">Abrir chat ›</a></div>`}).join('')
+    :'<p style="padding:20px;color:var(--muted)">Ninguna conversación suma este número.</p>';
+  velo.classList.add('si');
+}));
+const cerrar=()=>velo.classList.remove('si');
+document.getElementById('cerrar').onclick=cerrar;
+velo.addEventListener('click',e=>{if(e.target===velo)cerrar()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')cerrar()});
+</script>
+</body>
+</html>

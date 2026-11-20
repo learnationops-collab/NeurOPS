@@ -14,7 +14,7 @@ cada uno. Todo en lote para la lista (una consulta por dato, no por conversació
 from datetime import timedelta
 
 from app import db
-from app.automatizaciones import bandeja
+from app.automatizaciones import bandeja, fases
 from app.automatizaciones.modelos import AutEjecucion, IgMensaje
 from app.models import Appointment, Client
 from app.models.inbox_work import InboxRead, Task
@@ -159,6 +159,7 @@ def de_contactos(contactos, ejecuciones, ahora, usuario_id, primeros):
             'sin_leer': sin_leer.get(c.id, 0),
             'tarea': tareas.get(c.id),
         }
+        salida[c.id]['fase'] = fases.efectiva(c, salida[c.id])
     return salida
 
 

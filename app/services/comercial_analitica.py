@@ -12,6 +12,7 @@ from datetime import date, timedelta
 
 from app.models import User
 from app.services.closer_dashboard_service import CloserDashboardService
+from app.services.closer_agendas_service import ARCHIVADA_SIN_REPORTE
 from app.services.cierres_reales import cierres_reales
 from app.services.closer_service import matriz_de_cierres
 from app.services.comercial_service import (
@@ -19,6 +20,7 @@ from app.services.comercial_service import (
     chip, pct,
 )
 from app.services import comercial_llamadas, descalificados_service, setter_analitica
+from app.services.area_venta import cobros_de_closing, de_closing
 from app.services.commission_service import CLOSER_RATE, cash_neto
 from app.services.procedencia_ingresos_service import agendas_para_atribuir, procedencia_de_ventas
 from app.services.senas_conversion import claves_de_fila, conversion_de, pagos_posteriores
@@ -352,10 +354,13 @@ def _adquisicion(start, end, bloque, filtrado=False):
 
 
 def _cierres_por_canal(agendas):
-    """`{canal: {asistieron, presentaciones, ventas, senas}}` de las agendas, 'directa' y 'triage'."""
-    salida = {c: {'asistieron': 0, 'presentaciones': 0, 'ventas': 0, 'senas': 0} for c in ('directa', 'triage')}
+    """`{canal: {agendas, asistieron, presentaciones, ventas, senas}}` de las agendas, 'directa' y 'triage'.
+    `agendas` (20/11/2026, ADR-W186): todas las del canal, para el close rate por agenda."""
+    salida = {c: {'agendas': 0, 'asistieron': 0, 'presentaciones': 0, 'ventas': 0, 'senas': 0} for c in ('directa', 'triage')}
     for f in agendas:
         c = salida.get(f.get('canal'))
+        if c is not None:
+            c['agendas'] += 1
         if c is None or not f['asistio']:
             continue
         c['asistieron'] += 1
@@ -363,6 +368,21 @@ def _cierres_por_canal(agendas):
         c['ventas'] += 1 if f['post_call']['key'] == 'venta' else 0
         c['senas'] += 1 if f['post_call']['key'] == 'sena' else 0
     return salida
+
+
+def sin_resultado(agendas):
+    """Las agendas que ya pasaron y no tienen resultado (sin reporte o archivadas sin reporte), por closer: no
+    cuentan como tomadas ni como presentadas, así que mientras falten el close rate es más bajo de lo real
+    (ADR-W186). `filtros`: los estados con los que Revisar las lista."""
+    por_closer = {}
+    for f in agendas:
+        clave = f['post_call']['key']
+        if (clave == 'pendiente' and f['ya_paso']) or clave == 'archivada_sin_reporte':
+            nombre = f.get('closer') or 'Sin closer'
+            por_closer[nombre] = por_closer.get(nombre, 0) + 1
+    return {'n': sum(por_closer.values()),
+            'por_closer': [{'nombre': k, 'n': v} for k, v in sorted(por_closer.items(), key=lambda x: -x[1])],
+            'filtros': [SIN_REPORTE['label'], ARCHIVADA_SIN_REPORTE]}
 
 
 def bloque_closers(start, end, closer_id=None, closer_nombre=None, con_reales=True, segmento=None,
@@ -377,7 +397,8 @@ def bloque_closers(start, end, closer_id=None, closer_nombre=None, con_reales=Tr
     esos leads (`segmentos_comercial`). Lo que no es de un lead (las deudas por cobrar, las fuentes) no se filtra."""
     # Las agendas, con los mismos filtros que las listas de sus cifras (`comercial_llamadas`, ADR-W144).
     agendas = comercial_llamadas.filas_de_closing(start, end, closer_id, segmento, paises, sin_excluidos, con_reales)
-    ventas = ComercialService.ventas(start, end, closer_nombre=closer_nombre)
+    # Sin el low ticket ni lo que cargó el triage (ADR-W188): eso es del tablero de Triage.
+    ventas = de_closing(ComercialService.ventas(start, end, closer_nombre=closer_nombre))
     if sin_excluidos:
         ventas = [f for f in ventas if ComercialService.comparable(f['closer'])]
     if segmento:
@@ -465,6 +486,7 @@ def bloque_closers(start, end, closer_id=None, closer_nombre=None, con_reales=Tr
         # Las mismas cuentas partidas en agendas directas y desde triage (09/11/2026): el panel Cierre
         # muestra el close rate de cada canal con la misma regla que el total.
         'cierres_canal': _cierres_por_canal(agendas),
+        'sin_resultado': sin_resultado(agendas),
         # El close rate real, por cobro (ver `cierres_reales`): lo que ve el tile de arriba. El de
         # por llamada (`close_rate`) queda en la matriz de abajo.
         'close_rate_real': reales['pct'] if reales else None,
@@ -662,7 +684,7 @@ def variabilidad(rol, start, end, miembro_id=None, prev_start=None, prev_end=Non
 def _filas_closers(start, end, closer_id, closer_nombre):
     """(agendas, ventas) del período: las filas de las que salen todas las series del closer."""
     return (_sin_triage(ComercialService.agendas(start, end, closer_id=closer_id), closer_id),
-            ComercialService.ventas(start, end, closer_nombre=closer_nombre))
+            de_closing(ComercialService.ventas(start, end, closer_nombre=closer_nombre)))
 
 
 def _series_closers(dias, start, end, closer_id, closer_nombre):
@@ -767,7 +789,7 @@ def ingresos_por_fuente(start, end, closer_nombre=None, agendas=None):
     La atribución se calcula sobre las ventas de TODO el período aunque se mire a un closer (ver
     `procedencia_de_ventas`): así un cobro cae en el mismo balde en «Mis datos» y en el equipo."""
     del_periodo, propias = ComercialService.ventas_de(start, end, closer_nombre)
-    return procedencia_de_ventas(propias, contexto=del_periodo, base='neto', agendas=agendas)
+    return procedencia_de_ventas(cobros_de_closing(propias), contexto=del_periodo, base='neto', agendas=agendas)
 
 
 def fuentes_de(start, end, prev_start=None, prev_end=None, closer_nombre=None):

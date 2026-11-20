@@ -1,26 +1,26 @@
-// La vista Embudo: una columna por sub-etapa (Con el bot · En conversación · Link enviado · Agendó), con
-// la etapa a la que pertenece arriba. Arrastrar una tarjeta a otra columna la mueve; tocarla abre el chat.
+// La vista Embudo por etapa del setting (ADR-W184): una columna por fase, de 1 Apertura a 8 Confirmación, y las
+// salidas (No lead, In-abrible). Arriba de cada una, su etapa (Automática, Manual, Agendamiento) con su color.
+// Arrastrar una tarjeta a otra columna la mueve de fase; tocarla abre el chat.
 import { useState } from 'react';
 import { Avatar, toast } from '../../../components/standard';
 import { inboxApi } from '../api';
-import { ETAPAS, quien } from './colas';
+import { quien } from './colas';
 import { Califica, Vence, hora } from './Fila';
+import { FASES, TRAMOS, colorDe, corto, faseDe } from './fasesSetting';
 import { Puntos } from './Progreso';
-
-const TRAMO = { auto: 'Automática', manual: 'Manual', agenda: 'Agendamiento' };
 
 export default function Embudo({ lista, ahora, onAbrir, onMovida }) {
     const [arrastra, setArrastra] = useState(null);
     const [sobre, setSobre] = useState(null);
 
-    const soltar = async (etapa) => {
+    const soltar = async (fase) => {
         const c = lista.find((x) => x.id === arrastra);
         setArrastra(null);
         setSobre(null);
-        if (!c || c.etapa === etapa) return;
+        if (!c || c.fase === fase) return;
         try {
-            await inboxApi.moverEtapa(c.id, etapa);
-            toast(`${quien(c)} → ${ETAPAS.find((e) => e.value === etapa).label}`);
+            await inboxApi.moverFase(c.id, fase);
+            toast(`${quien(c)} → ${faseDe(fase).label}`);
             onMovida();
         } catch (e) {
             toast(e.response?.data?.message || 'No se pudo mover', 'error');
@@ -28,15 +28,15 @@ export default function Embudo({ lista, ahora, onAbrir, onMovida }) {
     };
 
     return (
-        <div className="cv-embudo">
-            {ETAPAS.map((e) => {
-                const cs = lista.filter((c) => c.etapa === e.value);
+        <div className="cv-embudo cv-embudo--fases">
+            {FASES.map((f) => {
+                const cs = lista.filter((c) => c.fase === f.id);
                 return (
-                    <section key={e.value} className={`cv-col${sobre === e.value ? ' cv-col--sobre' : ''}`} style={{ '--c': e.color }}
-                        onDragOver={(ev) => { ev.preventDefault(); setSobre(e.value); }} onDragLeave={() => setSobre(null)} onDrop={() => soltar(e.value)}>
+                    <section key={f.id} className={`cv-col${sobre === f.id ? ' cv-col--sobre' : ''}`} style={{ '--c': colorDe(f) }}
+                        onDragOver={(ev) => { ev.preventDefault(); setSobre(f.id); }} onDragLeave={() => setSobre(null)} onDrop={() => soltar(f.id)}>
                         <header className="cv-col-cab">
-                            <span className="t-rotulo">{TRAMO[e.tramo]}</span>
-                            <b>{e.label}</b>
+                            <span className="t-rotulo">{TRAMOS[f.tramo].nombre}</span>
+                            <b>{f.n} · {corto(f)}</b>
                             <span className="t-cap mut">{cs.length === 1 ? '1 lead' : `${cs.length} leads`}</span>
                         </header>
                         <ul>

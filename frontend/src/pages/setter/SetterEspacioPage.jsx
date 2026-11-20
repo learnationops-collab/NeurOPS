@@ -1,8 +1,8 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { Suspense, lazy, useCallback, useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { BarChart3, CalendarClock, CalendarDays, CheckCircle2, ClipboardList, Ghost, Link2, Share2 } from 'lucide-react';
+import { BarChart3, CalendarClock, CalendarDays, CheckCircle2, ClipboardList, Ghost, Link2, MessagesSquare, Share2 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePlaybook } from '../../contexts/PlaybookContext';
@@ -24,6 +24,9 @@ import { marcaDelDock } from './agendas/meses';
 import ReporteDiario from './reporte/ReporteDiario';
 import Historial from './reporte/Historial';
 import CompartidosConmigo from '../../components/compartidos/CompartidosConmigo';
+
+// La bandeja del Inbox como sección (1435, ADR-W184): se carga recién al abrirla, con sus estilos.
+const InboxEmbebido = lazy(() => import('../inbox/InboxEmbebido'));
 
 /**
  * El espacio del setter: todo su trabajo y sus datos en una sola pantalla, con un solo dock.
@@ -69,6 +72,8 @@ import CompartidosConmigo from '../../components/compartidos/CompartidosConmigo'
 const SECCIONES = [
     // La primera es el aterrizaje del rol y adonde cae una sección que no existe.
     { id: 'agendas', label: 'Mis agendas', Icono: CalendarDays, sub: 'Cada agenda, con su anuncio.' },
+    // Las conversaciones de Instagram, sin salir a /inbox (Social Selling, 17/11/2026: un solo lugar de trabajo).
+    { id: 'conversaciones', label: 'Conversaciones', Icono: MessagesSquare, sub: 'Los que te escribieron, por espera.' },
     { id: 'reporte', label: 'Reporte', Icono: ClipboardList, sub: 'Así cerraste el día.',
         tabs: [{ key: 'hoy', label: 'Reporte' }, { key: 'historial', label: 'Historial' }] },
     // El Analizar del dashboard comercial, el mismo tablero de setters que ve la dirección, con sus
@@ -298,6 +303,9 @@ const SetterEspacioPage = () => {
                         propia). Un número del sistema lleva a Revisar, a la pestaña de su tabla y con
                         el filtro de ese número, partiendo de la URL que el dashboard acaba de escribir. */}
                     {seccion === 'compartidos' && <CompartidosConmigo />}
+                    {seccion === 'conversaciones' && (
+                        <Suspense fallback={<p className="sub">Cargando la bandeja…</p>}><InboxEmbebido /></Suspense>
+                    )}
                     {seccion === 'datos' && (
                         <DashboardComercial embebido seccionFija="analizar"
                             onIrASeccion={(_seccion, urlDelFiltro) => irA('revisar',

@@ -11,9 +11,6 @@ from app.agendas_v2.nucleo.normalizar import franjas, normal_horario
 from app.agendas_v2.nucleo.tiempo import clave_dia, zoned_to_utc
 
 MAX_DIAS = 120
-# Las sesiones se encadenan una tras otra (sesión + margen). Si un inicio no está libre, se busca el
-# siguiente de a estos minutos: después de algo ocupado, la cadena sigue en el primer inicio libre.
-PASO_BUSQUEDA = 5
 
 AG_DEF = {
     'reservas': {'modo': 'dias', 'n': 30, 'tipo': 'corridos', 'desde': '', 'hasta': ''},
@@ -74,10 +71,11 @@ def dias_del_horizonte(o, tz, ahora):
 
 
 def inicios_en_dias(p, dur, dias, margen=0, minimo=-math.inf, ocupado=None):
-    """Inicios (ms UTC, ordenados) de la persona `p` en esos días, encadenados para que le entren la
-    mayor cantidad de sesiones: cada una empieza donde termina el margen de la anterior, y si un inicio
-    no está libre se busca el siguiente de a PASO_BUSQUEDA minutos. La sesión tiene que entrar en su
-    horario; el margen no (el del final del día puede pasarse), pero sí tiene que estar libre.
+    """Inicios (ms UTC, ordenados) de la persona `p` en esos días: franjas fijas (ADR-W182) que salen
+    del comienzo de su horario de a sesión + margen, para que le entren la mayor cantidad de sesiones.
+    Si una está ocupada se saltea: la grilla no se corre (antes se buscaba el siguiente inicio de a 5
+    minutos y quedaban horarios desalineados). La sesión tiene que entrar en su horario; el margen no
+    (el del final del día puede pasarse), pero sí tiene que estar libre.
     `ocupado(persona_id, inicio, dur)` dice si ya tiene algo en ese rato (reservas, Google Calendar)."""
     ocupado = ocupado or (lambda pid, t, dur: False)
     tz = p.get('tz') or TZ_DEF
@@ -89,9 +87,7 @@ def inicios_en_dias(p, dur, dias, margen=0, minimo=-math.inf, ocupado=None):
                 t = zoned_to_utc(dia['y'], dia['m'], dia['d'], m // 60, m % 60, tz)
                 if t >= minimo and not ocupado(p.get('id'), t, dur + margen):
                     out.append(t)
-                    m += dur + margen
-                else:
-                    m += PASO_BUSQUEDA
+                m += dur + margen
     return sorted(out)
 
 

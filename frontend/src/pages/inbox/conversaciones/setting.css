@@ -1,0 +1,131 @@
+/* Lo del setting en el Inbox (ADR-W184): la barra de arriba de la lista, el filtro en dos columnas, ordenar,
+   etiquetar varias, la tarjeta del lead con su etapa, el guión, las notas resaltadas y la línea de arriba del chat. */
+
+/* Dentro del espacio del setter: sin el fondo propio de Thalamus y con la altura que deja su encabezado y su dock */
+.thalamus.inbox.inbox-embebido{--inbox-alto:calc(100dvh - 250px);background:none}
+.thalamus.inbox.inbox-embebido .ui-header{margin-bottom:var(--s2)}
+
+/* La lista no recorta lo que sale de sus bordes (filtro, ordenar): solo scrollea la lista de chats */
+.thalamus.inbox .cv-lista{overflow:visible;position:relative;z-index:5}
+.thalamus.inbox .cv-lista ul{flex:1;min-height:0}
+.thalamus.inbox .cv-lista-buscar{display:grid;gap:6px;padding:2px 2px 8px}
+.thalamus.inbox .cv-lista-filtros{display:flex;gap:6px;align-items:center}
+.thalamus.inbox .cv-asignado-sel.ui-select{flex:1;min-width:0}
+.thalamus.inbox .cv-lista-buscar .cv-macro-pop{left:0;right:auto;width:min(640px,calc(100vw - 32px));z-index:40}
+.thalamus.inbox .cv-chips-guardados{display:flex;gap:5px;overflow-x:auto;padding:0 4px 8px;scrollbar-width:none}
+.thalamus.inbox .cv-chips-guardados .ui-chip.ui-chip{height:24px;font-size:11px;cursor:pointer;flex:none}
+.thalamus.inbox .cv-chip-x{display:inline-grid;place-items:center;margin-left:2px;opacity:.6}
+.thalamus.inbox .cv-chip-x:hover{opacity:1}
+
+/* Filtro: dos columnas; las fases en grilla de dos; las etiquetas en un subdesplegable */
+.thalamus.inbox .cv-macro-pop{grid-template-columns:190px minmax(0,1fr)}
+.thalamus.inbox .cv-macro-fases{display:grid;grid-template-columns:1fr 1fr;gap:2px 8px}
+.thalamus.inbox .cv-macro-fase{display:flex;align-items:center;gap:7px;padding:3px 6px;border-radius:9px;font-size:12px;cursor:pointer}
+.thalamus.inbox .cv-macro-fase:hover{background:var(--bg-item)}
+.thalamus.inbox .cv-macro-fase--on{background:color-mix(in srgb,var(--c) 14%,transparent)}
+.thalamus.inbox .cv-macro-fase-n{width:16px;height:16px;border-radius:50%;display:grid;place-items:center;font-size:9px;font-weight:800;border:2px solid var(--c);color:var(--c);flex:none}
+.thalamus.inbox .cv-macro-fase-t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.thalamus.inbox .cv-macro-sub{position:relative}
+.thalamus.inbox .cv-macro-sub-btn{display:flex;align-items:center;gap:6px;width:100%;height:34px;padding:0 10px;border-radius:12px;
+  background:var(--bg-input);border:1px solid var(--border-main);text-align:left;cursor:pointer}
+.thalamus.inbox .cv-macro-sub-btn > span:first-child{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.thalamus.inbox .cv-macro-sub-pop{position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:5;display:grid;gap:6px;max-height:260px;overflow:auto;
+  padding:8px;border-radius:14px;background:var(--bg-flotante);border:1px solid var(--border-main);box-shadow:var(--shadow-main)}
+.thalamus.inbox .cv-macro-sub-grupo{display:grid;gap:2px}
+.thalamus.inbox .cv-macro-pie{flex-wrap:wrap}
+.thalamus.inbox .cv-macro-guardar{display:flex;gap:6px;margin-left:auto}
+.thalamus.inbox .cv-macro-guardar .ui-entry{width:240px}
+
+/* Ordenar */
+.thalamus.inbox .cv-orden-pop{position:absolute;top:calc(100% + 8px);left:0;z-index:40;width:280px;display:grid;gap:2px;padding:8px;border-radius:16px;
+  background:var(--bg-flotante);border:1px solid var(--border-main);box-shadow:var(--shadow-main)}
+.thalamus.inbox .cv-orden-op{display:flex;align-items:center;gap:8px;width:100%;padding:6px 8px;border:0;border-radius:10px;background:none;text-align:left;cursor:pointer}
+.thalamus.inbox .cv-orden-op:hover,.thalamus.inbox .cv-orden-op[aria-checked="true"]{background:var(--bg-item)}
+.thalamus.inbox .cv-orden-op > span:first-child{flex:1}
+
+/* Etiquetar varias */
+.thalamus.inbox .cv-item-check{width:18px;height:18px;margin-top:8px;border-radius:6px;border:1.5px solid var(--border-main);display:grid;place-items:center;flex:none}
+.thalamus.inbox .cv-item--marcada{background:color-mix(in srgb,var(--brand-secondary) 10%,transparent);border-color:color-mix(in srgb,var(--brand-secondary) 35%,transparent)}
+.thalamus.inbox .cv-item--marcada .cv-item-check{background:var(--brand-secondary);border-color:var(--brand-secondary);color:var(--on-brand)}
+.thalamus.inbox .cv-masiva{display:flex;align-items:center;gap:8px;margin-top:6px;padding:8px;border-radius:14px;background:var(--bg-flotante);border:1px solid var(--border-main)}
+.thalamus.inbox .cv-masiva b{flex:1;font-size:12px}
+.thalamus.inbox .cv-masivo{width:min(460px,100%);display:grid;gap:var(--s3)}
+.thalamus.inbox .cv-masivo-cuerpo{display:grid;gap:var(--s3);max-height:55vh;overflow:auto}
+.thalamus.inbox .cv-masivo-op{display:flex;align-items:center;gap:8px;width:100%;padding:6px 8px;border-radius:10px;border:1px solid transparent;background:var(--bg-item);cursor:pointer;text-align:left}
+.thalamus.inbox .cv-masivo-op--on{border-color:var(--brand-secondary);background:color-mix(in srgb,var(--brand-secondary) 10%,transparent)}
+
+/* Embudo por fase: más columnas, más angostas */
+.thalamus.inbox .cv-embudo--fases{grid-auto-columns:220px}
+
+/* Línea de arriba del chat */
+.thalamus.inbox .cv-chat-linea-sup{display:flex;align-items:center;gap:8px;padding-bottom:var(--s2);border-bottom:1px solid var(--border-subtle);min-width:0}
+.thalamus.inbox .cv-chat-tiempos{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+
+/* Tarjeta del lead */
+.thalamus.inbox .cv-tarjeta{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;padding:var(--s3);min-width:0}
+.thalamus.inbox .cv-tarjeta-quien{display:flex;align-items:center;gap:10px}
+.thalamus.inbox .cv-tarjeta-nombre{flex:1;min-width:0;display:grid;gap:3px}
+.thalamus.inbox .cv-tarjeta-fila{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.thalamus.inbox .cv-tarjeta-fila > .cv-tarjeta-pop-caja{min-width:0}
+.thalamus.inbox .cv-tarjeta-fila > .cv-tarjeta-pop-caja:last-child .ui-chip{max-width:100%}
+.thalamus.inbox .cv-elipsis{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.thalamus.inbox .cv-tarjeta-pop-caja{position:relative}
+.thalamus.inbox .cv-tarjeta-delegar{border:0;background:none;padding:2px 6px;border-radius:8px;cursor:pointer}
+.thalamus.inbox .cv-tarjeta-delegar:hover,.thalamus.inbox .cv-tarjeta-delegar[aria-expanded="true"]{background:var(--bg-item)}
+.thalamus.inbox .cv-tarjeta-pop{position:absolute;top:calc(100% + 6px);left:0;z-index:40;min-width:210px;display:grid;gap:2px;padding:6px;border-radius:14px;
+  background:var(--bg-flotante);border:1px solid var(--border-main);box-shadow:var(--shadow-main)}
+.thalamus.inbox .cv-tarjeta-pop--der{left:auto;right:0}
+.thalamus.inbox .cv-tarjeta-pop .t-rotulo{padding:4px 6px}
+.thalamus.inbox .cv-tarjeta-op{display:flex;align-items:center;gap:8px;width:100%;padding:6px 8px;border:0;border-radius:9px;background:none;cursor:pointer;text-align:left;font-size:12.5px}
+.thalamus.inbox .cv-tarjeta-op:hover,.thalamus.inbox .cv-tarjeta-op[aria-checked="true"]{background:var(--bg-item)}
+.thalamus.inbox .cv-tarjeta-op svg:last-child{margin-left:auto}
+.thalamus.inbox .cv-etapa-btn{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border-radius:14px;cursor:pointer;text-align:left;
+  background:var(--bg-item);border:1px solid color-mix(in srgb,var(--c) 40%,transparent)}
+.thalamus.inbox .cv-etapa-btn:hover,.thalamus.inbox .cv-etapa-btn[aria-expanded="true"]{border-color:var(--c)}
+.thalamus.inbox .cv-etapa-n{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:800;flex:none;
+  background:color-mix(in srgb,var(--c) 18%,transparent);color:var(--c);border:2px solid var(--c)}
+.thalamus.inbox .cv-etapa-t{flex:1;min-width:0;display:grid}
+.thalamus.inbox .cv-etapa-t small{font-size:11px;color:var(--text-muted)}
+.thalamus.inbox .cv-etapa-pop{right:0;max-height:380px;overflow:auto}
+.thalamus.inbox .cv-etapa-grupo{display:grid;gap:1px}
+.thalamus.inbox .cv-etapa-grupo + .cv-etapa-grupo{border-top:1px solid var(--border-subtle);padding-top:4px;margin-top:2px}
+.thalamus.inbox .cv-etapa-op{display:flex;align-items:center;gap:8px;width:100%;padding:5px 8px;border:0;border-radius:9px;background:none;cursor:pointer;text-align:left;font-size:12.5px;color:var(--text-muted)}
+.thalamus.inbox .cv-etapa-op:hover{background:var(--bg-item)}
+.thalamus.inbox .cv-etapa-op .cv-etapa-n{width:18px;height:18px;font-size:9px;background:none}
+.thalamus.inbox .cv-etapa-op--hecha .cv-etapa-n{background:var(--success);border-color:var(--success);color:var(--on-brand)}
+.thalamus.inbox .cv-etapa-op--actual{color:var(--text-main);font-weight:700;background:color-mix(in srgb,var(--c) 14%,transparent)}
+.thalamus.inbox .cv-etapa-op .t-cap{margin-left:auto}
+.thalamus.inbox .cv-adelantar.ui-btn{width:100%;justify-content:center}
+.thalamus.inbox .cv-tarjeta-bot{display:flex;align-items:center;gap:4px;border:0;background:none;padding:0;cursor:pointer}
+
+/* Guión arriba de la caja */
+.thalamus.inbox .cv-guion{display:grid;gap:6px;padding:8px;border-radius:12px;border:1px solid color-mix(in srgb,#7D63E6 35%,transparent);background:color-mix(in srgb,#7D63E6 7%,transparent)}
+.thalamus.inbox .cv-guion-cab{display:flex;align-items:center;gap:6px;font-size:12px}
+.thalamus.inbox .cv-guion-cab b{flex:1;color:#7D63E6}
+.thalamus.inbox .cv-guion-ojo{display:flex;align-items:flex-start;gap:5px;margin:0;font-size:11.5px;color:var(--warning)}
+.thalamus.inbox .cv-guion-ops{display:flex;flex-wrap:wrap;gap:6px}
+.thalamus.inbox .cv-guion-op{flex:1 1 220px;max-width:340px;display:grid;gap:2px;text-align:left;padding:6px 9px;border-radius:10px;border:1px solid var(--border-main);background:var(--bg-item);cursor:pointer;font-size:12px}
+.thalamus.inbox .cv-guion-op:hover{border-color:#7D63E6}
+.thalamus.inbox .cv-guion-op b{font-size:10.5px;color:#7D63E6}
+.thalamus.inbox .cv-guion-op span{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+
+/* Anotar resaltando */
+.thalamus.inbox .cv-burbuja--entrante p{user-select:text}
+.thalamus.inbox .cv-globo{position:fixed;z-index:80;width:320px;display:grid;gap:8px;padding:10px;border-radius:16px;
+  background:var(--bg-flotante);border:1px solid var(--border-main);box-shadow:var(--shadow-main)}
+.thalamus.inbox .cv-globo blockquote{margin:0;padding:4px 8px;border-left:3px solid var(--warning);font-size:12px;color:var(--text-muted)}
+
+/* Ficha: plegables y notas para la venta */
+.thalamus.inbox .cv-plegable{display:flex;align-items:center;gap:6px;width:100%;border:0;background:none;padding:0;cursor:pointer;text-align:left}
+.thalamus.inbox .cv-plegable:disabled{cursor:default}
+.thalamus.inbox .cv-nota-venta-ult{margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.thalamus.inbox .cv-notas-venta{width:min(520px,100%);display:grid;gap:var(--s3)}
+.thalamus.inbox .cv-notas-venta-lista{list-style:none;margin:0;padding:0;display:grid;gap:8px;max-height:60vh;overflow:auto}
+.thalamus.inbox .cv-nota-venta{display:grid;gap:4px;justify-items:start;padding:8px 10px;border-radius:12px;background:var(--bg-item);border-left:3px solid var(--warning);font-size:12.5px}
+.thalamus.inbox .cv-nota-venta q{color:var(--text-muted);font-style:italic}
+
+@media (max-width:620px){
+  .thalamus.inbox .cv-macro-fases{grid-template-columns:1fr}
+  .thalamus.inbox .cv-macro-guardar{width:100%}
+  .thalamus.inbox .cv-macro-guardar .ui-entry{flex:1;width:auto}
+}

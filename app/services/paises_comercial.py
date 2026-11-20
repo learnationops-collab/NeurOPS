@@ -31,8 +31,9 @@ def panel(rol, start, end, miembro_id=None, segmento=None):
         cobros = []
     else:
         agendas = ComercialService.agendas(start, end, closer_id=miembro_id if rol == ROL_CLOSERS else None)
-        cobros = ComercialService.ventas(start, end, closer_nombre=ComercialService.nombre_de(miembro_id)
-                                         if rol == ROL_CLOSERS and miembro_id else None)
+        from app.services.area_venta import de_closing
+        cobros = de_closing(ComercialService.ventas(start, end, closer_nombre=ComercialService.nombre_de(miembro_id)
+                                                    if rol == ROL_CLOSERS and miembro_id else None))
     if segmento:
         agendas, cobros = segmentos_comercial.filtrar(agendas, segmento), segmentos_comercial.filtrar(cobros, segmento)
     lectura.con_pais(agendas)

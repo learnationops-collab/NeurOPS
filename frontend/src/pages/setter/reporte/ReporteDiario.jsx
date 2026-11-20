@@ -7,11 +7,13 @@ import Tip from '../../comercial/components/Tip';
 import Calendario from './Calendario';
 import Celda from './Celda';
 import Flujo from './Flujo';
+import ListaInbox from './ListaInbox';
+import Marca, { REGLAS } from './MarcaInbox';
 import Resumen from './Resumen';
 import { ChipAviso, ChipCanal, ChipRespuesta, Numero, useAngosto } from './Piezas';
 import { reanimar, reducido } from './movimiento';
 import {
-    AMBOS, BIENVENIDAS, CANALES, ETAPAS, FOLLOWUPS, PASOS, aPayload, aplicarPrecarga, calcular, conRuta,
+    AMBOS, BIENVENIDAS, CANALES, ETAPAS, FOLLOWUPS, PASOS, aPayload, aplicarInbox, aplicarPrecarga, calcular, conRuta,
     desdeLectura, estadoDelPaso, fmtInt, fusionar, hoyIso, leerRuta, primerError, proporcion, textoFecha,
     topeDeArrastre, vacio,
 } from './modelo';
@@ -33,7 +35,9 @@ import './reporteDiario.css';
  *   1. el borrador de ESTE navegador para ese setter y ese día (lo que escribió y no envió);
  *   2. si no hay borrador, lo que ya envió (el backend lo devuelve con `leer()`);
  *   3. si no envió nada, la precarga del sistema (`/prefill`), que nunca pisa lo que el setter
- *      tocó a mano.
+ *      tocó a mano. Desde el 20/11/2026 trae lo que contó el Inbox (ADR-W185): cada número que
+ *      viene de ahí lleva la marca «Inbox ›», que abre la lista de conversaciones que suma; si el
+ *      setter lo cambia, queda «Corregido». Lo que no tiene definición acordada, «A confirmar».
  * El borrador es solo una comodidad: localStorage puede no estar (ventana privada, sitio sin
  * datos) y entonces el formulario anda igual, sin recordar.
  */
@@ -72,6 +76,7 @@ const Campo = ({ ruta, rotulo, canal, aria, ancho, punto, ctx }) => (
         <span className="rd-k">
             {punto && <i className="rd-punto" style={{ '--c': canal.c }} aria-hidden="true" />}
             {rotulo}
+            <Marca rutas={[ruta]} titulo={aria} ctx={ctx} />
         </span>
         <Celda ruta={ruta} valor={leerRuta(ctx.estado, ruta)} color={canal.c} aria={aria}
             proporcion={proporcion(ctx.estado, ruta)} tope={topeDeArrastre(ctx.estado, ruta)}
@@ -237,6 +242,7 @@ const TablaFollowups = ({ ctx }) => (
         {FILAS_FU.map((f, i) => (
             <span key={`fila-${f.sec}`} className="rd-k rd-fu-c rd-fu-fila" style={{ '--dc': 1, '--dr': i + 2, '--mc': i + 2, '--mr': 1 }}>
                 {f.n}<Tip titulo={f.n} texto={f.tip} />
+                <Marca rutas={FOLLOWUPS.map(([k]) => `${f.sec}.${k}`)} titulo={`Follow-ups · ${f.n.toLowerCase()}`} ctx={ctx} />
             </span>
         ))}
         {FILAS_FU.flatMap((f, i) => FOLLOWUPS.map(([k, n], e) => {
@@ -365,6 +371,9 @@ const ReporteDiario = ({ setterId, onEnviado }) => {
     const [listo, setListo] = useState(null);
     const [enviando, setEnviando] = useState(false);
     const [enviados, setEnviados] = useState(() => new Set());
+    // Lo que contó el Inbox: {autos: {ruta: valor}, detalle: {ruta: [conversaciones]}}; y la lista abierta.
+    const [inbox, setInbox] = useState({ autos: {}, detalle: {} });
+    const [lista, setLista] = useState(null);
     const tocados = useRef(new Set());
     const sucio = useRef(false);
     const panelRef = useRef(null);
@@ -389,6 +398,7 @@ const ReporteDiario = ({ setterId, onEnviado }) => {
         setYaEnviado(false);
         setDelV1(false);
         setListo(null);
+        setInbox({ autos: {}, detalle: {} });
         setPaso(0);
         setCargando(true);
 
@@ -411,7 +421,9 @@ const ReporteDiario = ({ setterId, onEnviado }) => {
                 }
                 const pre = await api.get('/public/setter-report/prefill', { params: { setter_id: setterId, date: fecha } });
                 if (!vivo) return;
-                setEstado(previo => aplicarPrecarga(previo, pre.data, tocados.current));
+                const delInbox = pre.data?.inbox;
+                setEstado(previo => aplicarInbox(aplicarPrecarga(previo, pre.data, tocados.current), delInbox, tocados.current).estado);
+                setInbox({ autos: aplicarInbox(vacio(), delInbox, new Set()).autos, detalle: delInbox?.detalle || {} });
             } catch {
                 // Sin el reporte guardado o sin la precarga, el formulario sigue: se carga a mano.
             } finally {
@@ -516,7 +528,13 @@ const ReporteDiario = ({ setterId, onEnviado }) => {
     const pasoK = PASOS[paso].k;
     const Panel = PANELES[pasoK];
     // El orden de las celdas del paso: escalona su entrada (cada una 35 ms después de la anterior).
-    const ctx = { estado, ...calc, cambiar, alEnter, orden: ORDEN[pasoK] || [] };
+    const verLista = (rutas, titulo) => setLista({
+        titulo: `${rutas.reduce((a, r) => a + (inbox.autos[r] || 0), 0)} · ${titulo}`,
+        regla: (([sec, campo]) => REGLAS[sec] || REGLAS[campo])(rutas[0].split('.')),
+        lista: rutas.flatMap(r => inbox.detalle[r] || []),
+    });
+    const ctx = { estado, ...calc, cambiar, alEnter, orden: ORDEN[pasoK] || [], inbox, verLista };
+    const hayInbox = Object.keys(inbox.autos).length > 0;
     const avisosDelPaso = calc.avisos.filter(a => a.paso === pasoK);
 
     return (
@@ -582,6 +600,12 @@ const ReporteDiario = ({ setterId, onEnviado }) => {
                 ) : (
                     <div className="rd-flujo">
                         <h2 className="rd-sr">{PASOS[paso].n}</h2>
+                        {hayInbox && Panel && pasoK !== 'reflexion' && (
+                            <p className="rd-inbox-aviso">
+                                <b>Lo contó el Inbox.</b> Revisá cada número: si algo no cuadra, cambialo y queda como corregido.
+                                Tocá <span className="rd-marca">Inbox ›</span> para ver qué conversaciones suma.
+                            </p>
+                        )}
                         <div className="rd-paneles" ref={panelRef}>
                             <div className="rd-panel" key={pasoK}>
                                 {Panel ? <Panel ctx={ctx} /> : <Resumen estado={estado} conAvisos />}
@@ -611,6 +635,7 @@ const ReporteDiario = ({ setterId, onEnviado }) => {
                     </div>
                 )}
             </div>
+            {lista && <ListaInbox {...lista} onCerrar={() => setLista(null)} />}
         </div>
     );
 };

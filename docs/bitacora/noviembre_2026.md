@@ -739,3 +739,29 @@
 ### 19/11/2026 · Workshop: el nombre del taller es su fecha
 - El nombre de cada taller sale de su fecha y se actualiza solo al moverlo de día; el formulario ya no tiene el campo «Nombre del workshop». Se corrigieron los nombres que habían quedado atrás (p. ej. «19 de noviembre» con fecha 21/11).
 - Los talleres del 21/11 y del 28/11 tienen un grupo de WhatsApp por anuncio (G1–G8 Gral, U1–U6 US y TC1), por ahora con el grupo actual del taller.
+
+### 20/11/2026 · Agendas: franjas fijas, Momentum de 30 y perfil de Mario
+- Los horarios que ve el lead son franjas fijas de a sesión + margen desde el comienzo del horario del closer: si una está ocupada se saltea y no se corre la cadena, así no aparecen inicios desalineados como 14:15 (ADR-W182, Leadership 1432).
+- La Momentum Session de Jean Carlo pasa de 45 a 30 minutos (dato del evento, Leadership 1433).
+- Academia: la cuenta de Mario con el correo de Learnation se llamaba «Mario Testea» (así salía en el chat y en Leadership); ahora es «Mario Bühler», con su foto (Leadership 1444).
+- El día que un closer ya tiene una Momentum, a la siguiente solo se le ofrece el horario pegado (cuando termina la anterior con su margen), para que no le corten las sesiones de closing (ADR-W183).
+- Academia: canal Sesiones en el chat del equipo, con la nota del reporte de cada sesión, en reemplazo de Discord (Academia ADR-236, Leadership 1389).
+- Inbox › Conversaciones: el buscador pasa de la derecha de la cabecera a arriba de la lista de chats, donde lo ve el setter; en la vista Embudo sigue en la cabecera (Leadership 1434).
+
+### 20/11/2026 · Inbox en el espacio del setter, con las fases del setting
+- Conversaciones es una sección del dock del setter: trabaja el Inbox sin salir a otro portal (Leadership 1435).
+- Las conversaciones tienen fase del setting (Apertura, Conexión, Dolor, Consecuencia, Compromiso, Propuesta, Link, Confirmación, No lead, In-abrible): se cambia desde la tarjeta del lead o con «Adelantar», y al pasar a una fase con varios mensajes se elige cuál pegar en la caja. El Embudo va por fase (ADR-W184).
+- Arriba de la lista: buscador, asignación, filtro en dos columnas (con fase y etiquetas), Ordenar (espera, cierre de la ventana, etapa…), filtros guardados como chips y «Elegir» para etiquetar varias de una vez (Leadership 1434 y 1426).
+- La tarjeta del lead junta lo que iba en la cabecera del chat (delegar, canal, etiquetas, etapa); arriba del chat queda cuánto espera y cuánto falta para que se cierre la ventana de Instagram.
+- Seleccionar parte de un mensaje del lead lo anota para la venta: aparece en la ficha del lead › Comunicación.
+
+- La tarjeta del lead ya no desborda la columna derecha: el canal con campaña larga se corta con «…».
+- Reporte del setter precargado con lo que contó el Inbox (ADR-W185): nuevos mensajes, cualificados, no leads e in-abribles por canal; embudo y follow-ups cuando el setter usa las fases. Cada número lleva «Inbox ›» con la lista de conversaciones en un modal, y «Corregido» si el setter lo cambia. Aperturas y bienvenidas siguen a mano, «A confirmar».
+- Panel Cierre del dashboard comercial (ADR-W186): aviso de agendas sin resultado por closer (abre Revisar), el camino agendas → se presentaron → presentación → compraron, y el close rate por agenda como tercer anillo y en directas contra triage. No se sacó nada de lo que ya mostraba.
+- Dashboard comercial (ADR-W187): Segmentos suma el corte «Respuesta» (cuánto compra cada opción del formulario de agenda y si los puntos del segmento coinciden), y Analizar suma el panel «Por qué compran y por qué no» (decide × invierte y las objeciones de las llamadas que no cerraron, agrupadas).
+
+### 20/11/2026 · El low ticket sale del Closing y cuenta como cierre en el Triage
+- Closing (dirección comercial): el low ticket (programa LT) y lo que carga alguien con rol triage ya no cuentan en ventas, cash, close rate, ticket, CAC, fuentes, reporte diario, simulador ni proyección. Pedido del director comercial: la venta de $100 de Dari (Celia Salgado, 18/11) subía el close rate del equipo a 20 % contra 11,1 % de Jean Carlo y bajaba el ticket a $230; ahora el equipo da 11,1 % y $360 (ADR-W188, Leadership 1448).
+- Revisar › Ventas suma la faceta «Área» (Closing / Triage); los números del Closing abren la lista con «Área: Closing».
+- Las Comparativas de closers ya no muestran a las personas de triage (revierte ADR-W062).
+- Triage: el cierre del low ticket es por cobro, con la llamada anterior en la base, como el close rate real del Closing (25 % la semana del 16/11). La tarjeta y el panel muestran lo cobrado y abren sus ventas (ADR-W189).
