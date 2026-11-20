@@ -728,3 +728,7 @@
 
 ### 19/11/2026 · Pedido a los devs
 - Herramienta nueva «Pedido a los devs» (Herramientas › Crear, fijable en el dock): un cambio, un error o una duda de la plataforma va directo al Inbox de Leadership del dev. Fijada en el dock de Jean Carlo (ADR-W181, Leadership 1430).
+
+### 19/11/2026 · Workshop: el nombre del taller es su fecha
+- El nombre de cada taller sale de su fecha y se actualiza solo al moverlo de día; el formulario ya no tiene el campo «Nombre del workshop». Se corrigieron los nombres que habían quedado atrás (p. ej. «19 de noviembre» con fecha 21/11).
+- Los talleres del 21/11 y del 28/11 tienen un grupo de WhatsApp por anuncio (G1–G8 Gral, U1–U6 US y TC1), por ahora con el grupo actual del taller.
