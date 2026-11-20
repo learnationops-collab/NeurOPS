@@ -84,7 +84,7 @@ function Canal({ contacto, canal, campana, onCambio }) {
         <div className="cv-tarjeta-pop-caja" ref={d.caja}>
             <Chip as="button" type="button" subtle color="var(--info)" aria-expanded={d.abierto} data-tip="Canal|Lo usa el reporte del día"
                 onClick={() => d.setAbierto((a) => !a)}>
-                {rotulo}{campana ? ` · ${campana}` : ''}<ChevronDown size={11} aria-hidden="true" />
+                <span className="cv-elipsis">{rotulo}{campana ? ` · ${campana}` : ''}</span><ChevronDown size={11} aria-hidden="true" />
             </Chip>
             {d.abierto && (
                 <div className="cv-tarjeta-pop cv-tarjeta-pop--der" ref={pop} role="menu" aria-label="Canal">
