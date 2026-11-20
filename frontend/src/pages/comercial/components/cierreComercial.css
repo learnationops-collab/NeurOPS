@@ -77,8 +77,10 @@
 .dc-shell .cc-canal-riel i { width: var(--w); border-radius: 999px; animation: ccRiel .9s .3s both cubic-bezier(.2, .8, .2, 1); }
 .dc-shell .cc-canal-v { background: var(--c); }
 .dc-shell .cc-canal-s { background: color-mix(in srgb, var(--c) 40%, transparent); }
-.dc-shell .cc-celda { display: grid; justify-items: end; gap: 3px; }
-.dc-shell .cc-celda-antes { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; color: var(--text-muted); white-space: nowrap; }
+.dc-shell .cc-celda { display: grid; justify-items: end; gap: 3px; min-width: 0; }
+/* «antes + cambio» no entra en una celda de 70px: el cambio baja debajo en vez de pisar la celda de al lado (20/11/2026). */
+.dc-shell .cc-celda-antes { display: inline-flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 2px 4px;
+    font-size: 11px; font-weight: 700; color: var(--text-muted); white-space: nowrap; max-width: 100%; }
 .dc-shell .cc-celda-antes .vsp-d { padding: 0 5px; font-size: 10px; }
 .dc-shell .cc-canal-pct { font-size: 16px; font-weight: 800; text-align: right; }
 .dc-shell .cc-canal-v2 { font-size: 14px; font-weight: 700; text-align: right; color: color-mix(in srgb, var(--text-on-surface) 65%, transparent); }
@@ -165,6 +167,17 @@
 .dc-shell .cc-paso-pct b { font-size: 13px; font-weight: 900; }
 .dc-shell .cc-paso-pct small { font-size: 11px; color: var(--text-muted); }
 .dc-shell .cc-lecturas--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+/* Con tres anillos cada columna mide ~130px y la fila «Ventas · ahora · antes · cambio» pide ~260: el cambio se metía
+   en la columna de al lado (20/11/2026). En una columna angosta el cambio baja debajo de «Antes». */
+.dc-shell .cc-lectura { container-type: inline-size; }
+@container (max-width: 250px) {
+    .dc-shell .cc-tasa { grid-template-columns: minmax(0, 1fr) auto auto; column-gap: 8px; row-gap: 2px; }
+    .dc-shell .cc-tasa-rot { gap: 5px; font-size: 11px; }
+    .dc-shell .cc-tasa-n { font-size: 14px; }
+    .dc-shell .cc-tasa > span[role="cell"]:last-child { grid-column: 2 / -1; justify-self: end; padding-left: 0; }
+    .dc-shell .cc-tasa--cab > span:last-child { display: none; }
+    .dc-shell .cc-tasa--cab small:last-of-type { text-align: right; padding-left: 0; }
+}
 @media (max-width: 720px) {
     .dc-shell .cc-camino { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .dc-shell .cc-paso:nth-child(3) { border-left: 0; }

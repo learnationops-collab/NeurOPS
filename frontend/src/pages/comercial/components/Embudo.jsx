@@ -123,7 +123,7 @@ const Embudo = ({ pasos, sinCuello = false, sinFinal = false, canales = null, ch
                 return (
                     <div key={p.paso}>
                         <div className="dc-funnel-row">
-                            <span style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                            <span className="dc-funnel-cab" style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
                                 {p.ir ? (
                                     <button type="button" className="dc-funnel-label" style={{
                                         background: 'none', border: 0, padding: 0, cursor: 'pointer',

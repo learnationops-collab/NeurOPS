@@ -85,6 +85,10 @@
     letter-spacing: .16em;
 }
 
+/* El rótulo de cada paso baja a dos líneas cuando no entra (20/11/2026): «Agendas 50 · 8 descartadas · i» medía más
+   que la columna y la pastilla quedaba debajo de la barra. */
+.dc-shell .dc-funnel--barras .dc-funnel-cab { flex-wrap: wrap; row-gap: 3px; }
+
 .dc-shell .dc-funnel--barras .dc-funnel-bar {
     height: 40px;
     border-radius: 12px;
