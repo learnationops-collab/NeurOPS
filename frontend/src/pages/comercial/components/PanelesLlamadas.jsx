@@ -83,8 +83,8 @@ export const PanelCierre = ({ bloque, previo, vsLabel, irA, cargarNoCerradas, on
         <Panel id="p-cierre" cab={
             <PanelCab titulo="Cierre"
                 ayuda={'El close rate cuenta solo pagos completos y split pay, una venta por lead. El '
-                    + 'anillo azul son las ventas y el rosa las señas, sobre las llamadas con show up y '
-                    + 'sobre las presentaciones. Abajo, el mismo close rate de las agendas directas y de '
+                    + 'anillo azul son las ventas y el rosa las señas, sobre las agendas, sobre las llamadas con show up y '
+                    + 'sobre las presentaciones. Arriba, el camino de la agenda a la venta. Abajo, el mismo close rate de las agendas directas y de '
                     + 'las que vienen del triage. Debajo de cada cifra, la del período comparado y cuánto cambió.'}>
                 {previo && <span className="cc-vs-cab"><small>vs</small>{vsLabel || 'Período comparado'}</span>}
             </PanelCab>
@@ -94,6 +94,7 @@ export const PanelCierre = ({ bloque, previo, vsLabel, irA, cargarNoCerradas, on
                 : (
                     <CierreComercial cierres={c} previo={previo?.cierres} previoCanal={previo?.cierres_canal} vsLabel={vsLabel}
                         porCanal={bloque.cierres_canal} irA={irA} destinos={DESTINOS_CIERRES}
+                        agendas={bloque.agendas ?? null} previoAgendas={previo?.agendas ?? null} sinResultado={bloque.sin_resultado}
                         onVerNoCerradas={cargarNoCerradas ? () => setVerNoCerradas(true) : undefined}>
                         <CierrePorLlamada porLlamada={bloque.cierres_llamada} previo={previo?.cierres_llamada}
                             vsLabel={vsLabel} onVer={registros.abrir} />

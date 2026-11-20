@@ -750,3 +750,4 @@
 
 - La tarjeta del lead ya no desborda la columna derecha: el canal con campaña larga se corta con «…».
 - Reporte del setter precargado con lo que contó el Inbox (ADR-W185): nuevos mensajes, cualificados, no leads e in-abribles por canal; embudo y follow-ups cuando el setter usa las fases. Cada número lleva «Inbox ›» con la lista de conversaciones en un modal, y «Corregido» si el setter lo cambia. Aperturas y bienvenidas siguen a mano, «A confirmar».
+- Panel Cierre del dashboard comercial (ADR-W186): aviso de agendas sin resultado por closer (abre Revisar), el camino agendas → se presentaron → presentación → compraron, y el close rate por agenda como tercer anillo y en directas contra triage. No se sacó nada de lo que ya mostraba.

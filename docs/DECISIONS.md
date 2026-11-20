@@ -1683,3 +1683,15 @@
   5. «Abrir chat» abre Conversaciones en esa conversación (`?step=conversaciones&c=<id>`).
 - **Qué se pierde:** el setter ya no arranca en cero en entrantes (vuelve el número del sistema, ahora del Inbox propio). La fase de la lista es la marcada: sin marcar, sale vacía. Los mensajes del equipo no traen autor, así que cuenta todo lo que pasa en sus conversaciones, lo mande quien lo mande.
 - **Consecuencias:** sin migración. `GET /public/setter-report/prefill` suma `inbox` (None si el usuario no es setter o si la cuenta falla, y el formulario sigue como antes).
+
+## ADR-W186: el panel Cierre muestra el camino de la agenda a la venta y avisa los reportes faltantes
+
+- **Fecha:** 2026-11-20 · **Subsistema:** dashboard comercial › Analizar › panel Cierre (`CierreComercial.jsx`, `PanelesLlamadas.jsx`, `comercial_analitica.bloque_closers`). Vista de la dirección comercial; los closers ven el mismo panel con sus números. Mockup aprobado en `docs/mockups/cierre-por-corte/`.
+- **Contexto:** Mario (loom del 19/11) pidió el porcentaje de cierre por agenda, por llamada tomada y por presentación, por venta directa y por tipo de lead, y que los reportes de los closers estén completos («si no, no tenemos información»). El panel ya tenía por llamada y por presentación, directas contra triage y el filtro de segmento. Santi pidió que nadie pierda información: se actualiza el panel que ya existía, no se reemplaza ninguna vista.
+- **Decisión:**
+  1. **Aviso de agendas sin resultado** arriba del panel (sin reporte cuya hora ya pasó, o archivadas sin reporte), con cuántas tiene cada closer y un link a Revisar filtrado por esos estados. No cuentan como tomadas ni como presentadas, así que mientras falten el close rate es más bajo de lo real. Sin ninguna, no aparece.
+  2. **El camino de la agenda a la venta** alrededor de la barra «Presentación»: agendas → se presentaron (show up sobre agendas) → presentación (igual que antes: cuenta y período comparado) → compraron (ventas sobre presentaciones). Muestra dónde se pierde la venta.
+  3. **Close rate por agenda** como tercer anillo, primero (el orden de Mario: agenda, llamada, presentación), y como columna en directas contra triage. `cierres_canal` suma `agendas` por canal.
+  4. Segmento A–D sigue por la barra de segmento, que filtra el panel entero; por closer, en Comparativas.
+- **Qué se pierde:** nada de lo que se mostraba. El panel queda un poco más alto (el camino ocupa una fila más que la barra).
+- **Consecuencias:** `bloque_closers` devuelve `sin_resultado` ({n, por_closer, filtros}) y `cierres_canal[*].agendas`. Sin migración.

@@ -64,7 +64,7 @@
 
 /* Por canal */
 .dc-shell .cc-canales { display: grid; gap: 8px; padding-top: 12px; border-top: 1px solid var(--border-subtle); }
-.dc-shell .cc-canal { display: grid; grid-template-columns: 112px minmax(40px, 1fr) repeat(3, 84px); gap: 10px; align-items: center; }
+.dc-shell .cc-canal { display: grid; grid-template-columns: 104px minmax(30px, 1fr) repeat(4, 70px); gap: 8px; align-items: center; }
 .dc-shell .cc-canal--cab { margin-bottom: -2px; }
 .dc-shell .cc-canal--cab small {
     font-size: 9px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; white-space: nowrap;
@@ -116,7 +116,7 @@
 @media (max-width: 560px) {
     .dc-shell .cc-n { font-size: 26px; }
     .dc-shell .cc-pct { font-size: 24px; }
-    .dc-shell .cc-canal { grid-template-columns: 80px repeat(3, minmax(0, 1fr)); gap: 6px; }
+    .dc-shell .cc-canal { grid-template-columns: 72px repeat(4, minmax(0, 1fr)); gap: 6px; }
     .dc-shell .cc-canal-riel, .dc-shell .cc-canal--cab > span:nth-child(2) { display: none; }
     .dc-shell .cc-conteos { gap: 6px; }
     .dc-shell .cc-conteo { padding: 12px 10px 10px; }
@@ -142,4 +142,31 @@
 @media (max-width: 560px) {
     .dc-shell .cc-pres { grid-template-columns: auto minmax(40px, 1fr) auto auto; }
     .dc-shell .cc-pres-vs { grid-column: 1 / -1; }
+}
+
+/* ADR-W186: aviso de agendas sin resultado, el camino de la agenda a la venta y el tercer anillo */
+.dc-shell .cc-aviso { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; font-size: 12.5px;
+    color: var(--warning); background: color-mix(in srgb, var(--warning) 9%, transparent);
+    border: 1px solid color-mix(in srgb, var(--warning) 32%, transparent); }
+.dc-shell .cc-aviso b { color: var(--text-on-surface); }
+.dc-shell .cc-aviso svg { flex: none; }
+.dc-shell .cc-aviso-ver { margin-left: auto; display: inline-flex; align-items: center; gap: 2px; border: 0; background: none;
+    font: inherit; font-size: 12px; font-weight: 800; color: var(--info); cursor: pointer; white-space: nowrap; }
+.dc-shell .cc-camino { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--border-subtle);
+    border-radius: 16px; overflow: hidden; }
+.dc-shell .cc-paso { display: grid; align-content: start; gap: 5px; padding: 10px 12px; min-width: 0;
+    background: color-mix(in srgb, var(--text-on-surface) 3%, transparent); }
+.dc-shell .cc-paso + .cc-paso { border-left: 1px solid var(--border-subtle); }
+.dc-shell .cc-camino > .cc-paso:only-child { border-left: 0; }
+.dc-shell .cc-paso-rot { font-size: 9px; font-weight: 900; letter-spacing: .14em; text-transform: uppercase; color: var(--text-muted); }
+.dc-shell .cc-paso-n { font-size: 22px; line-height: 1; font-weight: 900; }
+.dc-shell .cc-paso--venta .cc-paso-n { color: var(--cc-v); }
+.dc-shell .cc-paso-pct { display: flex; align-items: baseline; gap: 6px; }
+.dc-shell .cc-paso-pct b { font-size: 13px; font-weight: 900; }
+.dc-shell .cc-paso-pct small { font-size: 11px; color: var(--text-muted); }
+.dc-shell .cc-lecturas--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 720px) {
+    .dc-shell .cc-camino { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .dc-shell .cc-paso:nth-child(3) { border-left: 0; }
+    .dc-shell .cc-lecturas--3 { grid-template-columns: 1fr; }
 }

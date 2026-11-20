@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronRight } from 'lucide-react';
+import { AlertTriangle, ChevronRight } from 'lucide-react';
 import MetricaClicable, { abrir } from '../../../components/dashboard/MetricaClicable';
 import { Pct } from '../../../components/dashboard/piezasCierres';
 import { Tip } from './Shared';
@@ -14,6 +14,11 @@ import './cierreComercial.css';
  * período se nombra una vez, en la cabecera del panel.
  *
  * Lee `bloque.cierres` (`matriz_de_cierres`) y `bloque.cierres_canal`, y lo mismo del bloque comparado.
+ *
+ * 20/11/2026 (ADR-W186, pedido de Mario para la dirección comercial), sin sacar nada de lo que ya mostraba:
+ * un aviso con las agendas sin resultado (no cuentan como tomadas, así que bajan las tasas), el camino entero
+ * alrededor de la barra de presentación (agendas → se presentaron → presentación → compraron), el close rate
+ * por agenda como tercer anillo y como columna en el corte por canal.
  */
 const tasa = (num, den) => (den ? Math.round((num / den) * 1000) / 10 : null);
 const pctTexto = (x) => (x == null ? '—' : `${x}%`);
@@ -110,21 +115,53 @@ const Conteo = ({ n, previo, rotulo, tono, onClick, titulo, mejorBaja, vs }) => 
     ) : <div className="cc-conteo" title={titulo}>{cuerpo}</div>;
 };
 
-/** Tasa de presentación: a cuántas llamadas con show up se les presentó la oferta (lo que responde el closer en
- * el reporte: «¿presentaste la oferta?»). Una barra con la cuenta y la de antes. */
-const Presentacion = ({ celda, previo, vs }) => {
-    if (!celda) return null;
-    return (
-        <div className="cc-pres" title={`Presentaron la oferta en ${celda.num} de ${celda.den} llamadas con show up`}>
-            <span className="cc-pres-rot">Presentación</span>
-            <span className="cc-pres-riel" aria-hidden="true"><i style={{ '--w': `${celda.pct || 0}%` }} /></span>
-            <b className="cc-pres-n num">{pctTexto(celda.pct)}</b>
-            <small className="cc-pres-frac num">{celda.num}/{celda.den}</small>
-            <VsPrevio actual={celda.pct} previo={previo?.pct} texto={pctTexto(previo?.pct)} vs={vs}
-                detalle={previo ? `${previo.num}/${previo.den}` : null} className="cc-pres-vs" />
-        </div>
-    );
-};
+/** Un paso del camino: la tasa sobre el paso anterior, su cuenta y la de antes. */
+const PasoCamino = ({ rotulo, n, celda, previo, vs, titulo, clase = '' }) => (
+    <div className={`cc-paso ${clase}`} title={titulo}>
+        <small className="cc-paso-rot">{rotulo}</small>
+        <b className="cc-paso-n num">{n}</b>
+        {celda && (
+            <>
+                <span className="cc-pres-riel" aria-hidden="true"><i style={{ '--w': `${celda.pct || 0}%` }} /></span>
+                <span className="cc-paso-pct"><b className="num">{pctTexto(celda.pct)}</b><small className="num">{celda.num}/{celda.den}</small></span>
+                <VsPrevio actual={celda.pct} previo={previo?.pct} texto={pctTexto(previo?.pct)} vs={vs}
+                    detalle={previo ? `${previo.num}/${previo.den}` : null} className="cc-pres-vs" />
+            </>
+        )}
+    </div>
+);
+
+const celdaDe = (num, den) => (den ? { num, den, pct: tasa(num, den) } : null);
+
+/** El camino de la agenda a la venta, alrededor de la tasa de presentación (lo que responde el closer en el
+ * reporte: «¿presentaste la oferta?»), que conserva su cuenta y la de antes. Muestra dónde se pierde la venta:
+ * en que no se presentan, en que no se presenta la oferta o en el cierre. */
+const Camino = ({ agendas, c, previoAgendas, p, vs }) => (
+    <div className="cc-camino" role="group" aria-label="De la agenda a la venta">
+        <PasoCamino rotulo="Agendas" n={agendas} vs={vs} titulo="Agendas del período"
+            previo={null} celda={null} />
+        <PasoCamino rotulo="Se presentaron" n={c.asistieron} vs={vs} titulo="Llamadas con show up, sobre las agendas"
+            celda={celdaDe(c.asistieron, agendas)} previo={p ? celdaDe(p.asistieron, previoAgendas) : null} />
+        <PasoCamino rotulo="Presentación" n={c.presentaciones} vs={vs}
+            titulo={c.presentacion ? `Presentaron la oferta en ${c.presentacion.num} de ${c.presentacion.den} llamadas con show up` : ''}
+            celda={c.presentacion} previo={p?.presentacion} />
+        <PasoCamino rotulo="Compraron" n={c.ventas} vs={vs} clase="cc-paso--venta" titulo="Ventas sobre las presentaciones"
+            celda={celdaDe(c.ventas, c.presentaciones)} previo={p ? celdaDe(p.ventas, p.presentaciones) : null} />
+    </div>
+);
+
+/** Las agendas que ya pasaron sin resultado: mientras falten, las tasas son más bajas de lo real. */
+const AvisoSinResultado = ({ datos, onVer }) => (datos?.n ? (
+    <div className="cc-aviso" role="status">
+        <AlertTriangle size={15} aria-hidden="true" />
+        <span>
+            <b>{datos.n === 1 ? '1 agenda todavía sin resultado' : `${datos.n} agendas todavía sin resultado`}</b>
+            {' '}({datos.por_closer.map(x => `${x.nombre} ${x.n}`).join(', ')}): no cuentan como tomadas y las tasas
+            pueden estar más bajas de lo real.
+        </span>
+        {onVer && <button type="button" className="cc-aviso-ver" onClick={onVer}>Ver en Revisar <ChevronRight size={13} aria-hidden="true" /></button>}
+    </div>
+) : null);
 
 /** Una celda de la tabla por canal: la tasa y, debajo, la de antes con su cambio. */
 const CeldaCanal = ({ ahora, antes, clase, titulo }) => (
@@ -139,9 +176,14 @@ const CeldaCanal = ({ ahora, antes, clase, titulo }) => (
 /** Close rate por canal: barra de ventas + señas sobre las que asistieron de ese canal. */
 const FilaCanal = ({ canal, d, p }) => {
     const ancho = (x) => `${d.asistieron ? (x / d.asistieron) * 100 : 0}%`;
-    const de = (x, k) => (x ? (k === 'pres' ? tasa(x.ventas, x.presentaciones)
-        : tasa(x.ventas + (k === 'con' ? x.senas : 0), x.asistieron)) : undefined);
+    const de = (x, k) => {
+        if (!x) return undefined;
+        if (k === 'pres') return tasa(x.ventas, x.presentaciones);
+        if (k === 'agenda') return x.agendas == null ? undefined : tasa(x.ventas, x.agendas);
+        return tasa(x.ventas + (k === 'con' ? x.senas : 0), x.asistieron);
+    };
     const celdas = [
+        { k: 'agenda', clase: 'cc-canal-v2', t: 'Close rate por agenda' },
         { k: 'solo', clase: 'cc-canal-pct', t: 'Close rate por llamada' },
         { k: 'pres', clase: 'cc-canal-v2', t: 'Close rate por presentación' },
         { k: 'con', clase: 'cc-canal-v2 cc-canal-con', t: 'Ventas + señas, por llamada' },
@@ -150,7 +192,8 @@ const FilaCanal = ({ canal, d, p }) => {
         <div className="cc-canal" role="row" style={{ '--c': canal.color }}>
             <span className="cc-canal-nombre" role="rowheader"
                 title={`${canal.nombre}: ${d.ventas} ventas y ${d.senas} señas de ${d.asistieron} llamadas con show up`
-                    + ` (${d.presentaciones} presentaciones)`}>
+                    + ` (${d.presentaciones} presentaciones, ${d.agendas ?? '—'} agendas)`
+                    + (d.asistieron < 10 ? '. Con menos de 10 llamadas, una venta mueve mucho el porcentaje.' : '')}>
                 <i className="cc-punto" style={{ background: canal.color }} />{canal.nombre}
             </span>
             <span className="cc-canal-riel" aria-hidden="true">
@@ -165,12 +208,17 @@ const FilaCanal = ({ canal, d, p }) => {
     );
 };
 
-const CierreComercial = ({ cierres, previo, previoCanal, vsLabel, porCanal, destinos, irA, onVerNoCerradas, children = null }) => {
+const CierreComercial = ({ cierres, previo, previoCanal, vsLabel, porCanal, destinos, irA, onVerNoCerradas,
+    agendas = null, previoAgendas = null, sinResultado = null, children = null }) => {
     const c = cierres;
     const p = previo;
     const abrirLista = (d) => abrir(irA, d);
+    const verSinResultado = sinResultado?.n && irA
+        ? abrirLista({ tabla: 'agendas', filtro: { estado: sinResultado.filtros }, de: 'Sin resultado' }) : null;
+    const conAgenda = agendas != null;
     return (
         <div className="cc">
+            <AvisoSinResultado datos={sinResultado} onVer={verSinResultado} />
             <div className="cc-conteos">
                 <Conteo n={c.ventas} previo={p?.ventas} rotulo="ventas" tono="ventas" vs={vsLabel}
                     titulo={`${c.ventas_completo} pago completo + ${c.ventas_split} split pay`}
@@ -181,8 +229,17 @@ const CierreComercial = ({ cierres, previo, previoCanal, vsLabel, porCanal, dest
                     vs={vsLabel} titulo="Asistieron y no compraron ni dejaron seña"
                     onClick={c.no_cerradas?.num ? (onVerNoCerradas || abrirLista(destinos.no_cerradas)) : undefined} />
             </div>
-            <Presentacion celda={c.presentacion} previo={p?.presentacion} vs={vsLabel} />
-            <div className="cc-lecturas">
+            {conAgenda
+                ? <Camino agendas={agendas} c={c} previoAgendas={previoAgendas} p={p} vs={vsLabel} />
+                : <PasoCamino rotulo="Presentación" n={c.presentaciones} celda={c.presentacion} previo={p?.presentacion} vs={vsLabel} />}
+            <div className={`cc-lecturas${conAgenda ? ' cc-lecturas--3' : ''}`}>
+                {conAgenda && (
+                    <Lectura titulo="Por agenda" unidad="agendas" irA={irA} vs={vsLabel}
+                        ayuda="Sobre todas las agendas del período, también las de quienes no se presentaron."
+                        ventas={c.ventas} senas={c.senas} den={agendas}
+                        destino={destinos.sin_senas.por_llamada}
+                        previo={p && previoAgendas != null ? { ventas: p.ventas, senas: p.senas, den: previoAgendas } : null} />
+                )}
                 <Lectura titulo="Por llamada" unidad="llamadas con show up" irA={irA} vs={vsLabel}
                     ayuda="Sobre todas las llamadas a las que el lead se presentó."
                     ventas={c.ventas} senas={c.senas} den={c.asistieron}
@@ -198,6 +255,7 @@ const CierreComercial = ({ cierres, previo, previoCanal, vsLabel, porCanal, dest
                 <div className="cc-canales" role="table" aria-label="Close rate por canal">
                     <div className="cc-canal cc-canal--cab" role="row">
                         <span role="columnheader" /><span role="columnheader" />
+                        <small role="columnheader">Agenda</small>
                         <small role="columnheader">Llamada</small>
                         <small role="columnheader">Present.</small>
                         <small role="columnheader" className="cc-canal-con">+ Señas</small>
