@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { getTabla } from '../../comercialApi';
 import { TABLAS } from '../tablasDef';
-import { aplicarFiltros, hayCondiciones } from '../filtroFacetas';
+import { aplicarFiltros, hayCondiciones, modoCumple } from '../filtroFacetas';
 
 /** La tabla Agendas de Revisar: sus facetas son las del Filtro completo de Analizar (ADR-W190). */
 export const DEF_AGENDAS = TABLAS.agendas;
@@ -39,7 +39,7 @@ const useFiltroAnalizar = ({ activo, filtros, filtro, conPersona }) => {
 
     const vigentes = datos?.clave === clave ? datos : null;
     const facetas = useMemo(() => filtro?.facetas || {}, [filtro?.facetas]);
-    const modo = filtro?.modo || 'todas';
+    const modo = modoCumple(filtro?.modo);
 
     const filas = useMemo(() => {
         const todas = vigentes?.filas || [];

@@ -13,8 +13,11 @@ import { useEnPantalla } from '../../../components/ui/useEnPantalla';
  * Lo usa también el calendario de Thalamus (Available). Sus botones llevan `data-nav`: solo cambian lo que
  * se ve, así que el modo solo lectura de Thalamus (ui/soloLectura.js) no los bloquea.
  */
+// Los modos de siempre: cumplir todas las facetas elegidas o alguna. Revisar y Analizar usan `MODOS_CUMPLE`.
+const MODOS_TODAS = { rotulo: 'Cumple', opciones: [['todas', 'Todas'], ['alguna', 'Alguna']] };
+
 const PanelConfigurar = ({ def, filas, facetas, setFacetas, modo, setModo, tabla, basis, setBasis,
-    onLimpiar, onCerrar }) => {
+    onLimpiar, onCerrar, modos = MODOS_TODAS }) => {
     const enPantalla = useEnPantalla();
     const opcionesDe = (faceta) => {
         // Las opciones se cuentan sobre TODAS las filas del período, no sobre lo ya filtrado: si
@@ -75,9 +78,9 @@ const PanelConfigurar = ({ def, filas, facetas, setFacetas, modo, setModo, tabla
                         </div>
                     </>
                 )}
-                <span className="t-rotulo">Cumple</span>
+                <span className="t-rotulo">{modos.rotulo}</span>
                 <div className="seg">
-                    {[['todas', 'Todas'], ['alguna', 'Alguna']].map(([k, label]) => (
+                    {modos.opciones.map(([k, label]) => (
                         <button key={k} type="button" data-nav="" aria-pressed={modo === k}
                             onClick={() => setModo(k)}>
                             {label}

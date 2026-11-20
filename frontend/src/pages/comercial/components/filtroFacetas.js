@@ -6,6 +6,18 @@
 const texto = (fila) => [fila.cliente, fila.ig, fila.email, fila.telefono, fila.closer, fila.setter,
     fila.fuente, fila.programa].filter(Boolean).join(' ').toLowerCase();
 
+/**
+ * Revisar y Analizar (20/11/2026, pedido de Kerwin): «Cumple» deja las filas que cumplen todas las condiciones y
+ * «No cumple» las demás, así las dos listas suman el total. Reemplaza a Todas / Alguna en esas dos pantallas.
+ */
+export const MODOS_CUMPLE = { rotulo: 'Mostrar', opciones: [['todas', 'Cumple'], ['no_cumple', 'No cumple']] };
+
+/** El modo guardado, llevado a uno de `MODOS_CUMPLE` (un «alguna» de antes vuelve a «Cumple»). */
+export const modoCumple = (modo) => (modo === 'no_cumple' ? 'no_cumple' : 'todas');
+
+/** La etiqueta de la fila de condiciones. */
+export const rotuloModo = (modo) => (modo === 'no_cumple' ? 'No cumple:' : 'Cumple:');
+
 /** Si alguna faceta de la tabla tiene al menos un valor puesto. */
 export const hayCondiciones = (def, facetas) => def.facetas.some(fa => (facetas[fa.key] || []).length > 0);
 
@@ -27,7 +39,8 @@ export const aplicarFiltros = (filas, def, query, facetas, modo) => {
         const activas = def.facetas.filter(fa => (facetas[fa.key] || []).length > 0);
         if (activas.length === 0) return true;
         const cumple = activas.map(fa => facetas[fa.key].includes(fa.de(f)));
-        return modo === 'alguna' ? cumple.some(Boolean) : cumple.every(Boolean);
+        if (modo === 'alguna') return cumple.some(Boolean);
+        return modo === 'no_cumple' ? !cumple.every(Boolean) : cumple.every(Boolean);
     });
 };
 
