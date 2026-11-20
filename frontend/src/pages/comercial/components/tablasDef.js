@@ -290,7 +290,11 @@ const COL_VER = { key: 'ver', header: '', width: '0.4fr', min: 32 };
 // el comentario que hay arriba de cada `ayuda`, donde le sirve a quien toque este archivo.
 /** El segmento A/B/C/D del lead (lo pone el backend en cada fila: `segmentos_comercial.con_segmento`). */
 export const segmentoDe = (fila) => (fila.segmento === 'sin' ? 'Sin segmento' : fila.segmento || null);
-const FACETA_SEGMENTO = { key: 'segmento', label: 'Segmento', de: segmentoDe, ayuda: () => 'A, B, C o D según el formulario; «Sin segmento» son las agendas de antes del triage.' };
+// El país del lead (04/11/2026, `paises_lectura`): en el Filtro completo desde el 20/11/2026 (ADR-W190).
+const FACETA_PAIS = { key: 'pais', label: 'País', de: (f) => f.pais_nombre || null };
+/** En qué contacto de la cadencia va el seguimiento pendiente de una agenda, o null si no tiene. */
+export const contactoDe = (f) => (f.en_seguimiento ? `Contacto ${Math.min(f.seguimiento_intento || 1, 4)}` : null);
+const FACETA_SEGMENTO ={ key: 'segmento', label: 'Segmento', de: segmentoDe, ayuda: () => 'A, B, C o D según el formulario; «Sin segmento» son las agendas de antes del triage.' };
 
 export const TABLAS = {
     agendas: {
@@ -323,6 +327,7 @@ export const TABLAS = {
             { key: 'closing', label: 'Resultado en closing', de: closingDe,
                 ayuda: () => 'De una llamada de triage: no pasó a closing, o el resultado de la llamada con el closer.' },
             FACETA_SEGMENTO,
+            FACETA_PAIS,
             { key: 'confirmada', label: 'Confirmada', de: fueConfirmada },
             { key: 'asistio', label: 'Asistió', de: asistio },
             { key: 'presento', label: 'Presentó', de: presento },
@@ -330,6 +335,8 @@ export const TABLAS = {
             // llevar («Cerró: No»). Los estados de una llamada abierta ya se filtran por post call.
             { key: 'cerro', label: 'Cerró', de: cerro, oculta: true },
             { key: 'dia', label: 'Día de la reunión', de: (f) => diaDe(f.fecha), oculta: true },
+            // Oculta: a dónde lleva cada fila de «Seguimientos en curso» de Analizar (ADR-W190).
+            { key: 'seguimiento', label: 'Seguimiento', de: contactoDe, oculta: true },
         ],
         chips: [
             // "Vigentes" y no "Todas": el listado por defecto deja afuera a las descartadas.

@@ -31,8 +31,11 @@ export const getPaises = (filtros, config = {}) =>
 
 export const getContexto = () => api.get('/comercial/contexto').then(r => r.data);
 
-export const getResumen = (filtros) =>
-    api.get('/comercial/resumen', { params: filtrosQuery(filtros) }).then(r => r.data);
+/** `ids` (ADR-W190): `{agendas, agendas_previo}` que dejó pasar el Filtro completo; van por POST porque un
+ *  período largo no entra en la URL. Sin `ids`, el resumen de siempre. */
+export const getResumen = (filtros, ids = null) => (ids
+    ? api.post('/comercial/resumen', ids, { params: filtrosQuery(filtros) })
+    : api.get('/comercial/resumen', { params: filtrosQuery(filtros) })).then(r => r.data);
 
 export const getComparativas = (filtros) =>
     api.get('/comercial/comparativas', { params: filtrosQuery(filtros) }).then(r => r.data);
@@ -58,9 +61,10 @@ export const getSimuladorTendencia = () =>
  * Ventas, el backend suma las no completadas, el estado y la agenda de cada venta. Solo le hace caso
  * a admin y operador (`ROLES_QUE_OPERAN`); a cualquier otro rol le devuelve lo de siempre.
  */
-export const getTabla = (filtros, tabla, basis, { operar = false } = {}) =>
+export const getTabla = (filtros, tabla, basis, { operar = false, previo = false } = {}) =>
     api.get('/comercial/tabla', {
-        params: { ...filtrosQuery(filtros), tabla, basis, ...(operar ? { operar: 1 } : {}) },
+        // `previo` (Agendas, ADR-W190): suma `filas_previo`, las del período comparado, para el Filtro de Analizar.
+        params: { ...filtrosQuery(filtros), tabla, basis, ...(operar ? { operar: 1 } : {}), ...(previo ? { previo: 1 } : {}) },
     }).then(r => r.data);
 
 /** «No cerradas» del panel Cierre: las agendas con show up sin venta ni seña, cada una con su
