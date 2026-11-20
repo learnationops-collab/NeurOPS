@@ -10,8 +10,11 @@ from app.services.comercial_service import ROL_CLOSERS, ComercialService
 
 def _real_de(start, end, closer_id=None, closer_nombre=None):
     """El % del cierre real de una persona (o del equipo si no se pasa ninguna) en un período."""
-    agendas = ComercialService.agendas(start, end, closer_id=closer_id)
-    ventas = ComercialService.ventas(start, end, closer_nombre=closer_nombre)
+    from app.services.area_venta import de_closing
+    from app.services.comercial_analitica import _sin_triage
+    # Como `bloque_closers`: sin las llamadas ni las ventas del triage (ADR-W188).
+    agendas = _sin_triage(ComercialService.agendas(start, end, closer_id=closer_id), closer_id)
+    ventas = de_closing(ComercialService.ventas(start, end, closer_nombre=closer_nombre))
     asistieron = ComercialService.totales_agendas(agendas)['asistieron']
     reales = cierres_reales(start, end, ventas, asistieron, closer_nombre=closer_nombre)
     return reales['pct'], reales['cierres'], reales['base']

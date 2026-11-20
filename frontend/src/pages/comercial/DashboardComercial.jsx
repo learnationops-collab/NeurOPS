@@ -22,7 +22,7 @@ import Variabilidad from './components/Variabilidad';
 import ProgramasSegmentos from '../programas/ProgramasSegmentos';
 import Simulador from './components/simulador/Simulador';
 import Revisar, { TABLAS_POR_ROL, duplicadasDe } from './components/Revisar';
-import { puedeExportarRevisar } from './components/tablasDef';
+import { AREA_CLOSING, puedeExportarRevisar } from './components/tablasDef';
 import { operacionDe } from './components/operar/operacion';
 import LeadModal from './components/LeadModal';
 import FichaLeadModal from '../../components/ficha/FichaLeadModal';
@@ -492,6 +492,8 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     const irA = useCallback((cual, filtro) => {
         const limpio = Object.fromEntries(
             Object.entries(filtro || {}).filter(([, v]) => v !== null && v !== undefined));
+        // Las cifras de Closing no cuentan el low ticket ni lo del triage (ADR-W188): su lista tampoco.
+        if (cual === 'ventas' && rol === 'closers' && !('area' in limpio)) limpio.area = AREA_CLOSING;
         olvidarBasis(cual);
         const siguiente = set({
             ...(embebido ? {} : { s: 'revisar' }),
@@ -505,7 +507,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
         // clic: `setSearchParams` arma la suya desde la URL del render, que todavía no tiene
         // `t`/`f`/`ft`, y pisaba el filtro — la lista abría sin ninguna condición.
         if (embebido) onIrASeccion?.('revisar', siguiente);
-    }, [set, embebido, onIrASeccion, proximoToken, olvidarBasis]);
+    }, [set, embebido, onIrASeccion, proximoToken, olvidarBasis, rol]);
 
     /**
      * El drill-down solo existe si hay una lista a la que llegar. Embebido, esa lista es del host:

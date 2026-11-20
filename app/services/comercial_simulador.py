@@ -96,8 +96,10 @@ def base(hoy=None):
     inicio = hoy - timedelta(days=DIAS_ATRAS)
     primero = hoy.replace(day=1)
 
-    agendas = ComercialService.agendas(inicio, ayer)
-    ventas = ComercialService.ventas(inicio, ayer)
+    from app.services.comercial_analitica import _sin_triage
+    agendas = _sin_triage(ComercialService.agendas(inicio, ayer))
+    from app.services.area_venta import de_closing
+    ventas = de_closing(ComercialService.ventas(inicio, ayer))
     generadas = ComercialService.generadas(inicio, ayer)
     pares = setter_analitica.pares_de(inicio, ayer)
     tablero = anuncios_service.tablero(inicio, ayer)

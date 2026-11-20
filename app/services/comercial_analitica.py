@@ -20,6 +20,7 @@ from app.services.comercial_service import (
     chip, pct,
 )
 from app.services import comercial_llamadas, descalificados_service, setter_analitica
+from app.services.area_venta import cobros_de_closing, de_closing
 from app.services.commission_service import CLOSER_RATE, cash_neto
 from app.services.procedencia_ingresos_service import agendas_para_atribuir, procedencia_de_ventas
 from app.services.senas_conversion import claves_de_fila, conversion_de, pagos_posteriores
@@ -396,7 +397,8 @@ def bloque_closers(start, end, closer_id=None, closer_nombre=None, con_reales=Tr
     esos leads (`segmentos_comercial`). Lo que no es de un lead (las deudas por cobrar, las fuentes) no se filtra."""
     # Las agendas, con los mismos filtros que las listas de sus cifras (`comercial_llamadas`, ADR-W144).
     agendas = comercial_llamadas.filas_de_closing(start, end, closer_id, segmento, paises, sin_excluidos, con_reales)
-    ventas = ComercialService.ventas(start, end, closer_nombre=closer_nombre)
+    # Sin el low ticket ni lo que cargó el triage (ADR-W188): eso es del tablero de Triage.
+    ventas = de_closing(ComercialService.ventas(start, end, closer_nombre=closer_nombre))
     if sin_excluidos:
         ventas = [f for f in ventas if ComercialService.comparable(f['closer'])]
     if segmento:
@@ -682,7 +684,7 @@ def variabilidad(rol, start, end, miembro_id=None, prev_start=None, prev_end=Non
 def _filas_closers(start, end, closer_id, closer_nombre):
     """(agendas, ventas) del período: las filas de las que salen todas las series del closer."""
     return (_sin_triage(ComercialService.agendas(start, end, closer_id=closer_id), closer_id),
-            ComercialService.ventas(start, end, closer_nombre=closer_nombre))
+            de_closing(ComercialService.ventas(start, end, closer_nombre=closer_nombre)))
 
 
 def _series_closers(dias, start, end, closer_id, closer_nombre):
@@ -787,7 +789,7 @@ def ingresos_por_fuente(start, end, closer_nombre=None, agendas=None):
     La atribución se calcula sobre las ventas de TODO el período aunque se mire a un closer (ver
     `procedencia_de_ventas`): así un cobro cae en el mismo balde en «Mis datos» y en el equipo."""
     del_periodo, propias = ComercialService.ventas_de(start, end, closer_nombre)
-    return procedencia_de_ventas(propias, contexto=del_periodo, base='neto', agendas=agendas)
+    return procedencia_de_ventas(cobros_de_closing(propias), contexto=del_periodo, base='neto', agendas=agendas)
 
 
 def fuentes_de(start, end, prev_start=None, prev_end=None, closer_nombre=None):

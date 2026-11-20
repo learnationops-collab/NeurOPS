@@ -27,6 +27,7 @@ from datetime import date, timedelta
 import numpy as np
 
 from app.services import anuncios_service
+from app.services.area_venta import de_closing
 from app.services.comercial_service import ComercialService
 from app.services.comercial_simulador import _dia
 
@@ -50,7 +51,8 @@ _cache = {}
 
 
 def _series(desde, hasta):
-    """{cifra: np.array diaria} de `desde` a `hasta`, ambos incluidos."""
+    """{cifra: np.array diaria} de `desde` a `hasta`, ambos incluidos. Sin el triage (ADR-W188)."""
+    from app.services.comercial_analitica import _sin_triage
     n = (hasta - desde).days + 1
     iso = [(desde + timedelta(i)).isoformat() for i in range(n)]
     pos = {f: i for i, f in enumerate(iso)}
@@ -64,13 +66,13 @@ def _series(desde, hasta):
                 grupos.setdefault(d, []).append(f)
         return grupos
 
-    for d, fs in por_dia(ComercialService.agendas(desde, hasta), 'fecha').items():
+    for d, fs in por_dia(_sin_triage(ComercialService.agendas(desde, hasta)), 'fecha').items():
         t = ComercialService.totales_agendas(fs)
         s['asistieron'][pos[d]] = t['asistieron']
         s['ventas'][pos[d]] = t['ventas']
     for d, fs in por_dia(ComercialService.generadas(desde, hasta), 'creada').items():
         s['generadas'][pos[d]] = len(fs)
-    for d, fs in por_dia(ComercialService.ventas(desde, hasta), 'fecha').items():
+    for d, fs in por_dia(de_closing(ComercialService.ventas(desde, hasta)), 'fecha').items():
         s['cash_nuevas'][pos[d]] = sum(f['monto'] for f in fs if f['es_venta'])
     for fila in anuncios_service.tablero(desde, hasta)['filas']:
         for f, v in fila['dias'].items():
