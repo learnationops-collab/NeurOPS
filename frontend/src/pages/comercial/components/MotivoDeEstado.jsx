@@ -16,6 +16,8 @@ import { fmt } from './Shared';
 const PIDEN_MOTIVO = { pre_call: ['cancelo'], post_call: ['no_show', 'reagendo', 'cancelo'] };
 
 export const SIN_MOTIVO = 'Sin motivo registrado: se marcó antes de que fuera obligatorio.';
+// La canceló el closer en su Google Calendar y todavía no dijo por qué (ADR-W191): se le pide en su mazo.
+export const FALTA_GOOGLE = 'Falta el motivo · canceló en Google';
 
 /** «30/10 12:40», en el reloj de quien mira. */
 const cuando = (iso) => (iso ? `${fmt.fechaLocal(iso)} ${fmt.horaLocal(iso)}` : null);
@@ -32,7 +34,7 @@ export const llevaMotivo = (fila, grupo) => !!fila.motivo
 
 /** El chip del estado con el motivo en un globito al pasar el mouse. `chip`: el nodo ya dibujado. */
 export const ConMotivo = ({ fila, grupo, chip }) => (
-    <Tip ancla={chip} titulo={fila[grupo].label} texto={fila.motivo.texto || SIN_MOTIVO}
+    <Tip ancla={chip} titulo={fila[grupo].label} texto={fila.motivo.falta ? FALTA_GOOGLE : (fila.motivo.texto || SIN_MOTIVO)}
         pie={pieDe(fila.motivo)} />
 );
 
@@ -40,6 +42,15 @@ export const ConMotivo = ({ fila, grupo, chip }) => (
 export const CeldaMotivo = ({ fila }) => {
     const m = fila.motivo;
     if (!m) return <span className="celda mut40">—</span>;
+    if (m.falta) {
+        return (
+            <span className="celda" style={{ color: 'var(--warning)' }}
+                title={`${m.texto}
+El closer la canceló en su Google Calendar; se le pidió el motivo en su mazo.`}>
+                {FALTA_GOOGLE}
+            </span>
+        );
+    }
     if (!m.texto) return <span className="celda mut40" title={SIN_MOTIVO}>Sin motivo</span>;
     return (
         <span className="celda" title={`${m.texto}${pieDe(m) ? `\n${pieDe(m)}` : ''}`}>

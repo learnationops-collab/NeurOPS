@@ -39,6 +39,7 @@ import ProcrastinarModal from './components/ProcrastinarModal';
 import ResumenDelDia from './components/ResumenDelDia';
 import YaTieneAgenda from './components/YaTieneAgenda';
 import EliminarLead from './components/EliminarLead';
+import CanceladasGoogle from './components/CanceladasGoogle';
 import { localInputsToUtcIso, parseUtcIso, splitLocalDateTime, localToday, localDateFromNow, formatCountdown, formatAgendaDateTime, viewerTimezoneLabel } from '../../utils/datetime';
 import AgendaCountdown from '../../components/shared/AgendaCountdown';
 import FichaLeadModal from '../../components/ficha/FichaLeadModal';
@@ -2235,6 +2236,8 @@ const CloserWorkflowPage = () => {
 
                 {activeView === 'inbox' ? (
                 <div className="space-y-6">
+                {/* Las que canceló en su Google Calendar sin decir por qué (ADR-W191): solo si hay alguna. */}
+                <CanceladasGoogle onCambio={() => fetchAgendas({ refreshSeguimientos: false })} />
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                 
                 {/* Columna Única de Ancho Completo v7 */}

@@ -13,7 +13,8 @@ export const motivoDe = (f) => {
             extra: f.motivo_no_cierre.oferta_presentada ? 'con oferta' : 'sin oferta' };
     }
     const texto = f.motivo?.texto;
-    if (!texto) return null;
+    // La nota automática de una cancelación en Google no es un motivo (ADR-W191).
+    if (!texto || f.motivo.falta) return null;
     const tipo = clave === 'no_show' ? 'No show' : clave === 'reagendo' ? 'Reprogramó' : 'Canceló';
     return { tipo, texto, extra: f.motivo.auto ? 'nota automática' : null };
 };

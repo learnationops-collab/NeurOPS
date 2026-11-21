@@ -2836,3 +2836,6 @@ def get_leads_audit():
     leads.sort(key=lambda r: r['full_name'])
     return jsonify({"month": f"{year}-{mon:02d}", "leads": leads}), 200
 
+
+# Rutas que viven en su propio archivo y se cuelgan de este blueprint (ADR-W191).
+from app.api import closer_canceladas  # noqa: E402,F401

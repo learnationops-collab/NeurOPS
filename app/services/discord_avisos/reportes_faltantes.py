@@ -65,6 +65,11 @@ def pendientes():
                 debe.append(f"falta el reporte de ayer ({_plural(de_ayer, 'llamada', 'llamadas')})")
             if sin_resultado:
                 debe.append(_plural(sin_resultado, 'llamada sin resultado', 'llamadas sin resultado'))
+            # Las que canceló en su Google Calendar sin decir por qué (ADR-W191).
+            from app.services.cancelaciones_google import pendientes as sin_motivo
+            canceladas = len(sin_motivo(u.id))
+            if canceladas:
+                debe.append(_plural(canceladas, 'cancelada en Google sin motivo', 'canceladas en Google sin motivo'))
         elif rol == 'setter' and _de_setter(u):
             debe.append('falta el reporte de setter de ayer')
         if debe:
