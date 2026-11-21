@@ -778,3 +778,7 @@
 - Con Closers: próximo a revisar (mejor score sin votos), % de preselección y reserva, y tabla con conocimiento, cierre, inglés, video y llamada, WhatsApp y score. Pestañas «Por revisar» e «Incompletas». La búsqueda de la cabecera busca closers.
 - Ficha del closer con el diseño de la de Asistente: Cualitativo, Experiencia, Motivación y Archivos, desglose del score por criterio de Clarity (`GET /api/job-applications/<id>` suma `criterios`) y Preseleccionar / Reserva / Descartar como votos, más «Pasar a prueba» con la preselección.
 - Dock: la gema de Talent y el avatar ya no se apilan en la isla derecha (la envoltura del avatar va en fila en todas las pantallas) y la gema mide lo que la llave.
+### 21/11/2026 · Búsqueda nueva de closers: Antiguos y Hiring · Closers
+- Las postulaciones de Closer se archivan (`job_applications.archivada_at`, migración `f7b9d1e3a5c7`): salen del Inbox, las pestañas, Analizados, Revisores y Estadísticas, pero quedan en la base con sus votos (ADR-W193). Se archivan las 682 de septiembre a noviembre para arrancar la búsqueda nueva con el Inbox en cero.
+- «Antiguos»: botón discreto al lado de las pestañas del Inbox de Closers con las postulaciones archivadas y el estado que tenían. Se abren con la misma ficha y, una vez abierto, la búsqueda también las encuentra.
+- Rol nuevo «Hiring · Closers» (`hiring_closers`), como rol adicional: Talent solo con Inbox (fijo en Closers) y la sección Closers. Puede votar, pero no ve Asistentes, Forms, Stats ni los ajustes de Talent. Para Marlon.
