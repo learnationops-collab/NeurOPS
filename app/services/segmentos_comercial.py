@@ -51,6 +51,11 @@ def _filas_del_rol(rol, start, end, miembro_id, paises=None):
     return paises_lectura.filtrar(filas, paises) if paises else filas
 
 
+def _solo_ids(filas, ids):
+    """Las filas de las agendas que dejó pasar el Filtro completo de Analizar (ADR-W190); sin `ids`, todas."""
+    return filas if ids is None else [f for f in filas if f['id'] in ids]
+
+
 def _sin_reporte(f):
     return f['post_call']['key'] == 'pendiente' and f['ya_paso']
 
@@ -104,14 +109,14 @@ def _separar(filas, clave_de):
     return sep
 
 
-def panel(rol, start, end, miembro_id=None, elegidos=None, corte='closer', previo=None, paises=None):
+def panel(rol, start, end, miembro_id=None, elegidos=None, corte='closer', previo=None, paises=None, ids=None, ids_previo=None):
     """{rol, corte, segmentos, cuentas, grupos: [{key, label, filas: [una por segmento], total}], comparacion}. Con `elegidos`,
     solo esos segmentos y el total de ellos. `previo`: (desde, hasta) del período contra el que se compara; cada fila y
     total trae `previo` y `delta`."""
     corte = corte if corte in CORTES else 'closer'
     clave_de = _clave_de(corte)
-    filas = con_segmento(_filas_del_rol(rol, start, end, miembro_id, paises))
-    filas_p = con_segmento(_filas_del_rol(rol, *previo, miembro_id, paises)) if previo else []
+    filas = _solo_ids(con_segmento(_filas_del_rol(rol, start, end, miembro_id, paises)), ids)
+    filas_p = _solo_ids(con_segmento(_filas_del_rol(rol, *previo, miembro_id, paises)), ids_previo) if previo else []
     sep = _separar(filas, clave_de)
     sep_p = _separar(filas_p, clave_de) if previo else {}
     grupos = [_grupo(corte, k, sep.get(k, []), elegidos) for k in cortes.claves(sep, sep_p)]
@@ -146,14 +151,14 @@ _CONDICION = {
 }
 
 
-def registros(rol, start, end, miembro_id, metrica, segmento, corte='ninguno', grupo=None, paises=None):
+def registros(rol, start, end, miembro_id, metrica, segmento, corte='ninguno', grupo=None, paises=None, ids=None):
     """La lista de una cifra del panel: las filas del segmento `segmento` (varios por coma; vacío = todos) y del `grupo` del
     `corte` (None = todos) que suman `metrica`. Su cantidad es la cifra."""
     if metrica not in METRICAS:
         raise ValueError('Esa cifra todavía no tiene lista.')
     elegidos = lectura.parsear(segmento)
     clave_de = _clave_de(corte if corte in _VALIDOS else 'ninguno')
-    filas = [f for f in filtrar(_filas_del_rol(rol, start, end, miembro_id, paises), elegidos)
+    filas = [f for f in filtrar(_solo_ids(_filas_del_rol(rol, start, end, miembro_id, paises), ids), elegidos)
              if _CONDICION[metrica](f) and (grupo is None or clave_de(f) == grupo)]
     salida = [{
         'id': str(f['id']), 'persona': f['cliente'], 'segmento': lectura.ETIQUETAS[f['segmento']], 'cita': f['fecha'] or '',

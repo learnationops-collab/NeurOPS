@@ -10,7 +10,7 @@ import time
 
 from flask import jsonify, request
 
-from app.api.comercial import _alcance, _rangos, _solo_direccion, bp
+from app.api.comercial import _alcance, _ids_del_filtro, _rangos, _solo_direccion, bp
 from app.services import comercial_no_cerradas, objeciones_categorias, segmentos_respuestas
 from app.services.comercial_service import ROL_CLOSERS
 
@@ -39,13 +39,17 @@ def segmentos_respuestas_personas():
     return jsonify({'personas': segmentos_respuestas.personas_de(q, op)}), 200
 
 
-@bp.route('/por-que-compran', methods=['GET'])
+@bp.route('/por-que-compran', methods=['GET', 'POST'])
 def por_que_compran():
     rol, miembro_id, _ = _alcance()
     if rol != ROL_CLOSERS:
         return jsonify({'error': 'Este panel es del tablero de closers.'}), 400
     start, end, _p, _q = _rangos()
     filas = comercial_no_cerradas.no_cerradas(start, end, miembro_id)
+    # El Filtro completo de Analizar (ADR-W190): solo las objeciones de las agendas que dejó pasar.
+    ids, _previo = _ids_del_filtro()
+    if ids is not None:
+        filas = [f for f in filas if f['id'] in ids]
     r = _resumen()
     return jsonify({'objeciones': objeciones_categorias.agrupar(filas), 'cruce': r['cruce'],
                     'promedio': r['pct'], 'desde': r['desde']}), 200

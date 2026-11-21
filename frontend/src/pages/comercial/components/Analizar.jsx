@@ -261,12 +261,14 @@ const FilaFuente = ({ p, total, i, abierta, alternar, irA }) => {
     );
 };
 
-const PanelFuentes = ({ fuentes, irA }) => {
+const PanelFuentes = ({ fuentes, irA, filtrado = false }) => {
     const [vista, setVista] = useState('tabla');
     // Una abierta por vez: con dos, la tarjeta vuelve a crecer lo que se ahorró al plegarlas.
     const [abierta, setAbierta] = useState(null);
     const { total, cantidad, procedencias } = fuentes;
-    const filas = procedencias.filter(p => p.key !== 'sin_procedencia' || p.cantidad > 0 || p.monto !== 0);
+    // Con el Filtro completo puesto, solo las fuentes que tienen cobros de esos leads (20/11/2026).
+    const filas = procedencias.filter(p => (filtrado ? p.cantidad > 0 || p.monto !== 0
+        : p.key !== 'sin_procedencia' || p.cantidad > 0 || p.monto !== 0));
     return (
         <Panel id="p-fuentes" cab={
             <PanelCab titulo="Ingresos por fuente"
@@ -566,7 +568,8 @@ const pasosDe = (funnel, vocabulario, irA) => funnel.map(p => {
     };
 });
 
-const DashboardClosers = ({ bloque, previo, deltas, porCobrar, adquisicion, vsLabel, fuentes, irA, cargarNoCerradas, onAbrirFila, filtros }) => (
+const DashboardClosers = ({ bloque, previo, deltas, porCobrar, adquisicion, vsLabel, fuentes, irA, cargarNoCerradas, onAbrirFila, filtros,
+    filtrado }) => (
     <>
         <div className="grid grid--4">
             <Tile label="Show up" valor={fmt.pct(bloque.show_up)} color={v('success')}
@@ -641,7 +644,7 @@ const DashboardClosers = ({ bloque, previo, deltas, porCobrar, adquisicion, vsLa
         {fuentes ? (
             <div className="grid-2">
                 <PanelPagos bloque={bloque} irA={irA} />
-                <PanelFuentes fuentes={fuentes} irA={irA} />
+                <PanelFuentes fuentes={fuentes} irA={irA} filtrado={filtrado} />
             </div>
         ) : <PanelPagos bloque={bloque} irA={irA} />}
 
@@ -661,6 +664,7 @@ const DashboardClosers = ({ bloque, previo, deltas, porCobrar, adquisicion, vsLa
  * URL como el resto de los filtros (ver `DashboardComercial`). El de closers no la usa.
  */
 const Analizar = ({ datos, rol, irA, cargarNoCerradas = null, onAbrirFila = null, canal = null, onCanal = null, vsLabel = null,
+    filtrado = false,
     fallo = false, onReintentar = null, filtros = null }) => {
     // El resumen que hay en mano puede ser todavía el del rol anterior: el `rol` de arriba cambia
     // en el momento y el fetch llega después. Dibujar el dashboard de closers con un payload de
@@ -682,7 +686,7 @@ const Analizar = ({ datos, rol, irA, cargarNoCerradas = null, onAbrirFila = null
     return rol === 'setters'
         ? <DashboardSetters bloque={actual} deltas={deltas} deltasCanales={datos.deltas_canales}
             comision={datos.comision} canal={canal} onCanal={onCanal} irA={irA} />
-        : <DashboardClosers bloque={actual} previo={datos.previo} deltas={deltas} porCobrar={datos.por_cobrar}
+        : <DashboardClosers bloque={actual} previo={datos.previo} deltas={deltas} porCobrar={datos.por_cobrar} filtrado={filtrado}
             adquisicion={datos.adquisicion} vsLabel={vsLabel}
             fuentes={datos.fuentes} irA={irA} cargarNoCerradas={cargarNoCerradas}
             onAbrirFila={onAbrirFila} filtros={filtros} />;

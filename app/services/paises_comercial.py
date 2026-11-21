@@ -22,7 +22,7 @@ def _cuenta(agendas, cobros):
     }
 
 
-def panel(rol, start, end, miembro_id=None, segmento=None):
+def panel(rol, start, end, miembro_id=None, segmento=None, ids=None, leads=None):
     """{rol, paises: [{pais, label, agendas, realizadas, asistieron, show_up, ventas, cierre, cash}], total}.
     Solo los países con movimiento, de más a menos agendas; «Sin país» siempre al final. `cash` es de
     los cobros del closer (el setter no tiene cash propio en esta tabla: queda en 0)."""
@@ -36,6 +36,11 @@ def panel(rol, start, end, miembro_id=None, segmento=None):
                                                     if rol == ROL_CLOSERS and miembro_id else None))
     if segmento:
         agendas, cobros = segmentos_comercial.filtrar(agendas, segmento), segmentos_comercial.filtrar(cobros, segmento)
+    if ids is not None:
+        # El Filtro completo de Analizar (ADR-W190): sus agendas y los cobros de sus leads, como el resumen.
+        from app.services.comercial_analitica import de_los_leads
+        agendas = [f for f in agendas if f['id'] in ids]
+        cobros = de_los_leads(cobros, leads) if leads else []
     lectura.con_pais(agendas)
     lectura.con_pais(cobros)
     claves = {f['pais'] for f in agendas} | {f['pais'] for f in cobros}

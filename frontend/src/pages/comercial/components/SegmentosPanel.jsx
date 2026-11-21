@@ -78,7 +78,7 @@ const Cambio = ({ actual, previo }) => {
     );
 };
 
-const General = ({ grupo, campo, onVer, montado, hayPrevio }) => {
+const General = ({ grupo, campo, onVer, montado, hayPrevio, filtrado }) => {
     const partes = reparto(grupo, campo.key);
     const antes = hayPrevio ? repartoPrevio(grupo, campo.key) : null;
     return (
@@ -94,6 +94,8 @@ const General = ({ grupo, campo, onVer, montado, hayPrevio }) => {
             {antes && <Barra partes={antes} alto="sm" montado={montado} nombre="período comparado" />}
             <div className="sgp-segs">
                 {partes.map((p, i) => {
+                    // Con el Filtro completo puesto solo quedan los segmentos que tienen algo (20/11/2026).
+                    if (filtrado && !p.n) return null;
                     const pp = antes ? Math.round(p.pct - antes[i].pct) : null;
                     return (
                         <button key={p.segmento} type="button" className="sgp-seg" disabled={!p.n}
@@ -138,7 +140,7 @@ const FilaGrupo = ({ grupo, campo, onVer, montado, hayPrevio, i }) => {
     );
 };
 
-const SegmentosPanel = ({ filtros, rol, elegidos, onElegir, version = 0 }) => {
+const SegmentosPanel = ({ filtros, rol, elegidos, onElegir, version = 0, filtrado = false }) => {
     const [guardado, poner] = useEstadoGuardado('cm_segmentos_vista_v2', INICIAL, { normalizar });
     const { corte, campo: campoKey } = guardado;
     const montado = useMontado();
@@ -169,7 +171,9 @@ const SegmentosPanel = ({ filtros, rol, elegidos, onElegir, version = 0 }) => {
 
     if (falla && !datos) return null;
     const hayPrevio = Boolean(datos?.comparacion);
-    const grupos = (datos?.grupos || []).filter(g => (g.total[campo.key] || 0) > 0 || (g.total.previo?.[campo.key] || 0) > 0);
+    // Sin filtro, también los que solo tienen datos en el período comparado; con el Filtro completo, solo los de este.
+    const grupos = (datos?.grupos || []).filter(g => (g.total[campo.key] || 0) > 0
+        || (!filtrado && (g.total.previo?.[campo.key] || 0) > 0));
     const cortes = [...(datos?.cortes || []).filter(c => CORTES.includes(c.key)), RESPUESTA];
 
     return (
@@ -188,7 +192,7 @@ const SegmentosPanel = ({ filtros, rol, elegidos, onElegir, version = 0 }) => {
             )}
             {datos && porRespuesta ? <CorteRespuesta version={version} /> : !datos ? <Vacio texto="Cargando los segmentos…" /> : (
                 <>
-                    {datos.general && <General grupo={datos.general} campo={campo} onVer={abrir} montado={montado} hayPrevio={hayPrevio} />}
+                    {datos.general && <General grupo={datos.general} campo={campo} onVer={abrir} montado={montado} hayPrevio={hayPrevio} filtrado={filtrado} />}
                     {hayPrevio && (
                         <p className="sgp-leyenda">
                             <span className="sgp-ley-actual" /> este período

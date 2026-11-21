@@ -25,9 +25,17 @@ export const filtrosQuery = ({ period, compare, miembroId, rol, desde, hasta, vs
     return params;
 };
 
+/**
+ * GET con los filtros del header o, con el Filtro completo de Analizar puesto (`filtros.ids`, ADR-W190), POST con
+ * las agendas que dejó pasar: los paneles y sus listas cuentan solo esas.
+ */
+const pedirFiltrado = (url, filtros, params, config = {}) => (filtros?.ids
+    ? api.post(url, filtros.ids, { params, ...config })
+    : api.get(url, { params, ...config })).then(r => r.data);
+
 /** Agendas, show up, ventas y cash del período por país del lead. Siempre todos los países: el filtro `pais` no se manda. */
 export const getPaises = (filtros, config = {}) =>
-    api.get('/comercial/paises', { params: filtrosQuery({ ...filtros, pais: null }), ...config }).then(r => r.data);
+    pedirFiltrado('/comercial/paises', filtros, filtrosQuery({ ...filtros, pais: null }), config);
 
 export const getContexto = () => api.get('/comercial/contexto').then(r => r.data);
 
@@ -70,7 +78,7 @@ export const getTabla = (filtros, tabla, basis, { operar = false, previo = false
 /** «No cerradas» del panel Cierre: las agendas con show up sin venta ni seña, cada una con su
  *  objeción. Mismo período y alcance que el resumen; se pide recién al abrir su modal. */
 export const getNoCerradas = (filtros) =>
-    api.get('/comercial/cierres/no-cerradas', { params: filtrosQuery(filtros) }).then(r => r.data);
+    pedirFiltrado('/comercial/cierres/no-cerradas', filtros, filtrosQuery(filtros));
 
 /** Corrige el pre call o el post call de una agenda. Devuelve el valor anterior, por si hay que
  *  deshacerlo desde la interfaz. «Reagendado», «No Show» y «Cancelado» llevan su `motivo` (ADR-W066). */
@@ -117,24 +125,21 @@ export const getRespuestasPersonas = (q, op, config = {}) =>
 
 /** Analizar › Por qué compran y por qué no (ADR-W187): el cruce decide × invierte y las objeciones del período. */
 export const getPorQueCompran = (filtros, config = {}) =>
-    api.get('/comercial/por-que-compran', { params: filtrosQuery(filtros), ...config }).then(r => r.data);
+    pedirFiltrado('/comercial/por-que-compran', filtros, filtrosQuery(filtros), config);
 
 export const getSegmentos = (filtros, config = {}, corte = 'closer') =>
-    api.get('/comercial/segmentos', { params: { ...filtrosQuery(filtros), corte }, ...config }).then(r => r.data);
+    pedirFiltrado('/comercial/segmentos', filtros, { ...filtrosQuery(filtros), corte }, config);
 
 /** La lista detrás de una cifra de `getSegmentos`: `metrica` agendas · realizadas · asistieron · ventas · sin_reporte.
  *  `extra`: { corte, grupo } (la celda de un grupo) y `previo` (la del período comparado). */
 export const getSegmentosRegistros = (filtros, metrica, segmento, config = {}, { corte, grupo, previo } = {}) =>
-    api.get('/comercial/segmentos/registros', {
-        params: { ...filtrosQuery({ ...filtros, segmento: null }), metrica, segmento, ...(corte ? { corte } : {}),
-            ...(grupo !== undefined && grupo !== null ? { grupo } : {}), ...(previo ? { previo: 1 } : {}) },
-        ...config,
-    }).then(r => r.data);
+    pedirFiltrado('/comercial/segmentos/registros', filtros, {
+        ...filtrosQuery({ ...filtros, segmento: null }), metrica, segmento, ...(corte ? { corte } : {}),
+        ...(grupo !== undefined && grupo !== null ? { grupo } : {}), ...(previo ? { previo: 1 } : {}),
+    }, config);
 
 /** La lista detrás de una cifra de «Destino de las agendas» o de «Por llamada» (ADR-W144): `que` es un grupo del panel,
  *  un estado o una marca (agendas · base · asistieron · ventas); `llamada`, primera · segunda · momentum (sin ella, todas). */
 export const getLlamadasRegistros = (filtros, que, llamada = null, config = {}, { previo } = {}) =>
-    api.get('/comercial/llamadas/registros', {
-        params: { ...filtrosQuery(filtros), que, ...(llamada ? { llamada } : {}), ...(previo ? { previo: 1 } : {}) },
-        ...config,
-    }).then(r => r.data);
+    pedirFiltrado('/comercial/llamadas/registros', filtros,
+        { ...filtrosQuery(filtros), que, ...(llamada ? { llamada } : {}), ...(previo ? { previo: 1 } : {}) }, config);
