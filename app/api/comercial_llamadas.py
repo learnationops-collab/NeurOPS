@@ -1,12 +1,12 @@
 """La lista detrás de cada cifra de «Destino de las agendas» y de «Por llamada» (Analizar › Closers, ADR-W144)."""
 from flask import jsonify, request
 
-from app.api.comercial import _alcance, _rangos, bp
+from app.api.comercial import _alcance, _ids_del_filtro, _rangos, bp
 from app.services import comercial_llamadas, paises_lectura, segmentos_lectura
 from app.services.comercial_service import ROL_CLOSERS
 
 
-@bp.route('/llamadas/registros', methods=['GET'])
+@bp.route('/llamadas/registros', methods=['GET', 'POST'])
 def llamadas_registros():
     """`?que=` una marca (agendas · base · asistieron · ventas), un grupo del panel (show_up · no_show · canceladas ·
     reprogramadas · sin_reporte · por_ocurrir · descalificadas · descartadas) o un estado; `&llamada=` primera ·
@@ -15,14 +15,19 @@ def llamadas_registros():
     if rol != ROL_CLOSERS:
         return jsonify({'error': 'Esta lista es del tablero de closers.'}), 400
     start, end, prev_start, prev_end = _rangos()
+    ids, ids_previo = _ids_del_filtro()
     if request.args.get('previo') in ('1', 'true'):
         if not prev_start:
             return jsonify({'error': 'No hay un período de comparación elegido.'}), 400
         start, end = prev_start, prev_end
+        ids = ids_previo
     try:
         filas = comercial_llamadas.filas_de_closing(
             start, end, miembro_id, segmentos_lectura.parsear(request.args.get('segmento')),
             paises_lectura.parsear(request.args.get('pais')))
+        if ids is not None:
+            # El Filtro completo de Analizar (ADR-W190): la lista cuenta lo mismo que la cifra filtrada.
+            filas = [f for f in filas if f['id'] in ids]
         datos = comercial_llamadas.registros(filas, request.args.get('que', ''), request.args.get('llamada'))
     except ValueError as error:
         return jsonify({'error': str(error)}), 400

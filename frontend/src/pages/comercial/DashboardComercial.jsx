@@ -418,6 +418,10 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
     });
     const filtrosResumen = compartir ? filtrosSinAmplias : filtros;
     const idsResumen = compartir ? filtroAnalizar.ids : null;
+    // Lo que reciben los paneles de Analizar (Segmentos, Por país, Por qué compran y las listas de cada cifra): con el
+    // Filtro completo puesto llevan sus ids y cuentan solo esas agendas (ADR-W190).
+    const filtrosPaneles = useMemo(() => (idsResumen ? { ...filtrosResumen, ids: idsResumen } : filtros),
+        [idsResumen, filtrosResumen, filtros]);
     // Con condiciones, el resumen espera a tener los ids: si no, se vería un instante el tablero sin filtrar.
     const esperaIds = compartir && filtroAnalizar.conCondiciones && !idsResumen;
 
@@ -519,7 +523,7 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
 
     // La lista de «No cerradas» del panel Cierre, del mismo período y alcance que el resumen. Se pide
     // al abrir su modal, no con el resumen (ver `GET /comercial/cierres/no-cerradas`).
-    const cargarNoCerradas = useCallback(() => getNoCerradas(filtros), [filtros]);
+    const cargarNoCerradas = useCallback(() => getNoCerradas(filtrosPaneles), [filtrosPaneles]);
     useEffect(() => { if (seccion === 'revisar') traerTabla(false); }, [seccion, traerTabla]);
 
     /**
@@ -907,16 +911,17 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                     {!esperaFechas && !vistaTriage && seccion === 'analizar' && tab === 'dashboard' && (
                         <Analizar datos={esperaIds ? null : resumen} rol={rol} irA={irADetalle}
                             fallo={fallas.resumen} onReintentar={cargarAnalizar}
-                            cargarNoCerradas={cargarNoCerradas} onAbrirFila={abrirFila} filtros={filtros}
+                            cargarNoCerradas={cargarNoCerradas} onAbrirFila={abrirFila} filtros={filtrosPaneles}
+                            filtrado={!!idsResumen}
                             canal={canal} onCanal={(c) => set({ canal: c })}
                             vsLabel={rangoVs ? textoRango(rangoVs) : contexto?.comparaciones?.find(c => c.key === compare)?.label} />
                     )}
                     {!esperaFechas && !vistaTriage && seccion === 'analizar' && tab === 'dashboard' && ['closers', 'setters'].includes(rol) && (
-                        <SegmentosPanel filtros={filtros} rol={rol} elegidos={compartir ? segCompartido : elegidosSeg}
+                        <SegmentosPanel filtros={filtrosPaneles} filtrado={!!idsResumen} rol={rol} elegidos={compartir ? segCompartido : elegidosSeg}
                             onElegir={elegirSeg} />
                     )}
                     {!esperaFechas && !vistaTriage && seccion === 'analizar' && tab === 'dashboard' && ['closers', 'setters'].includes(rol) && (
-                        <PanelPaises filtros={filtros} rol={rol} elegidos={compartir ? paisCompartido : elegidosPais}
+                        <PanelPaises filtros={filtrosPaneles} rol={rol} elegidos={compartir ? paisCompartido : elegidosPais}
                             onElegir={elegirPais} />
                     )}
                     {!esperaFechas && !vistaTriage && seccion === 'analizar' && tab === 'comparativas' && contexto.puede_comparar && (

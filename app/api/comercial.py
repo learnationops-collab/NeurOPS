@@ -140,6 +140,15 @@ def contexto():
     }), 200
 
 
+def _ids_del_filtro():
+    """(ids, ids_previo) del Filtro completo de Analizar si el pedido vino por POST con ellos; si no, (None, None)."""
+    if request.method != 'POST':
+        return None, None
+    cuerpo = request.get_json(silent=True) or {}
+    ids, previo = _ids(cuerpo.get('agendas')), _ids(cuerpo.get('agendas_previo'))
+    return (set(ids) if ids is not None else None), (set(previo) if previo is not None else None)
+
+
 def _ids(valor):
     """Una lista de ids de agenda del cuerpo, o None si no vino (sin Filtro completo)."""
     if not isinstance(valor, list):
@@ -162,17 +171,20 @@ def resumen():
     return jsonify({**datos, 'dates': _fechas(start, end, prev_start, prev_end)}), 200
 
 
-@bp.route('/paises', methods=['GET'])
+@bp.route('/paises', methods=['GET', 'POST'])
 def paises():
     """Analizar › Por país: las agendas, el show up, las ventas y el cash del período por el país del lead
     (`paises_comercial`). Mismo alcance que el resumen (`alcance_de`); `?segmento=A,B` lo acota a esos segmentos."""
     rol, miembro_id, _ = _alcance()
     start, end, _prev_start, _prev_end = _rangos()
-    datos = paises_comercial.panel(rol, start, end, miembro_id, segmentos_lectura.parsear(request.args.get('segmento')))
+    ids, ids_previo = _ids_del_filtro()
+    leads = analitica._leads_por_ids(ids | (ids_previo or set())) if ids is not None else None
+    datos = paises_comercial.panel(rol, start, end, miembro_id, segmentos_lectura.parsear(request.args.get('segmento')),
+                                   ids=ids, leads=leads)
     return jsonify({**datos, 'dates': _fechas(start, end, None, None)}), 200
 
 
-@bp.route('/segmentos', methods=['GET'])
+@bp.route('/segmentos', methods=['GET', 'POST'])
 def segmentos():
     """Analizar › Segmentos: las agendas del período por segmento A/B/C/D (+ «sin segmento»). El closer ve show up
     y cierre; el setter, las agendas que generó. Mismo alcance que el resumen (`alcance_de`); `?segmento=A,B`
@@ -181,27 +193,30 @@ def segmentos():
     start, end, prev_start, prev_end = _rangos()
     # `corte` (closer|setter|fuente|origen) parte cada segmento por eso; el VS del header (`compare`) trae el período comparado.
     previo = (prev_start, prev_end) if prev_start else None
+    ids, ids_previo = _ids_del_filtro()
     datos = segmentos_comercial.panel(rol, start, end, miembro_id, segmentos_lectura.parsear(request.args.get('segmento')),
                                       request.args.get('corte', 'ninguno'), previo,
-                                      paises_lectura.parsear(request.args.get('pais')))
+                                      paises_lectura.parsear(request.args.get('pais')), ids=ids, ids_previo=ids_previo)
     return jsonify({**datos, 'dates': _fechas(start, end, prev_start, prev_end)}), 200
 
 
-@bp.route('/segmentos/registros', methods=['GET'])
+@bp.route('/segmentos/registros', methods=['GET', 'POST'])
 def segmentos_registros():
     """La lista de una cifra de `/segmentos`: `?metrica=agendas|realizadas|asistieron|ventas|sin_reporte&segmento=A`, del
     grupo `grupo` del `corte`; con `previo=1`, la del período comparado."""
     rol, miembro_id, _ = _alcance()
     start, end, prev_start, prev_end = _rangos()
+    ids, ids_previo = _ids_del_filtro()
     if request.args.get('previo') in ('1', 'true'):
         if not prev_start:
             return jsonify({'error': 'No hay un período de comparación elegido.'}), 400
         start, end = prev_start, prev_end
+        ids = ids_previo
     try:
         datos = segmentos_comercial.registros(rol, start, end, miembro_id, request.args.get('metrica', ''),
                                               request.args.get('segmento', ''), request.args.get('corte', 'ninguno'),
                                               request.args.get('grupo') if 'grupo' in request.args else None,
-                                              paises_lectura.parsear(request.args.get('pais')))
+                                              paises_lectura.parsear(request.args.get('pais')), ids=ids)
     except ValueError as error:
         return jsonify({'error': str(error)}), 400
     return jsonify(datos), 200
@@ -250,7 +265,7 @@ def variabilidad():
     return jsonify({**datos, 'dates': _fechas(start, end, prev_start, prev_end)}), 200
 
 
-@bp.route('/cierres/no-cerradas', methods=['GET'])
+@bp.route('/cierres/no-cerradas', methods=['GET', 'POST'])
 def cierres_no_cerradas():
     """Analizar › Cierre › «No cerradas»: las llamadas con show up del período que no terminaron ni
     en venta ni en seña, cada una con su objeción registrada (pedido del usuario, 09/10/2026).
@@ -267,6 +282,9 @@ def cierres_no_cerradas():
     start, end, _prev_start, _prev_end = _rangos()
     filas = comercial_no_cerradas.no_cerradas(
         start, end, closer_id=miembro_id if rol == ROL_CLOSERS else None)
+    ids, _previo = _ids_del_filtro()
+    if ids is not None:
+        filas = [f for f in filas if f['id'] in ids]
     return jsonify({'filas': filas, 'total': len(filas),
                     'dates': _fechas(start, end, None, None)}), 200
 
