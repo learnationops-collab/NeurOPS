@@ -93,7 +93,7 @@ const Foco = ({ p, pesos, onAbrir, onPesos }) => {
 // Un porcentaje sobre las postulaciones con decisión, con su anillo.
 const pctTxt = (n) => n.toLocaleString('es', { maximumFractionDigits: 1 });
 
-const Tasa = ({ l, n, total, color, onClick }) => {
+export const Tasa = ({ l, n, total, color, onClick }) => {
     const pct = total ? (n / total) * 100 : 0;
     return (
         <button type="button" className="tl-tasa" style={{ '--c': color }} onClick={onClick} title={`${n} de ${total} con decisión`}>

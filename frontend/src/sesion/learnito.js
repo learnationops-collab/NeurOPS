@@ -4,7 +4,7 @@
 // LearnitoContext.jsx registra acá cómo abrirlo, igual que el Portal (portalBus.js).
 
 export const ROLES_LEARNITO = ['admin', 'operator', 'director_comercial', 'director_marketing', 'closer', 'setter',
-    'triage', 'hiring'];
+    'triage', 'hiring', 'hiring_closers'];
 
 export const puedeUsarLearnito = (user) => ROLES_LEARNITO.includes(user?.role);
 

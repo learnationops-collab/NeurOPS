@@ -4,9 +4,13 @@ usuario logueado (`current_user.id`), sin switch de demo.
 
 Desde el 10/10/2026 el panel vive dentro de Learnation Talent (se retiró la
 vista «Administración»), así que lo abren los mismos que Talent: `admin` y el
-rol acotado `hiring` (`hiring_required` en app/decorators.py, igual que
-app/api/assistant_applications.py). Cuenta el rol ACTIVO de la sesión: quien
-tiene `hiring` como rol adicional entra cuando trabaja con ese rol."""
+rol acotado `hiring` y, desde el 21/11/2026, `hiring_closers`, que ve solo esta
+búsqueda (`hiring_closers_required` en app/decorators.py; ADR-W193). Cuenta el
+rol ACTIVO de la sesión: quien tiene uno de esos roles como adicional entra
+cuando trabaja con ese rol.
+
+Las postulaciones archivadas (`archivada_at`) no entran en ninguna lista ni
+cuenta; se ven solo con `filtro=archivadas` (la pestaña «Antiguos»)."""
 import logging
 from collections import Counter
 from datetime import datetime, timedelta
@@ -15,10 +19,10 @@ from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 
 from app import db
-from app.decorators import ROLE_ADMIN, hiring_required
+from app.decorators import ROLE_ADMIN, hiring_closers_required
 from app.models import JobApplication, JobApplicationVote, ClarityWeight, User
 from app.models.job_application import CLARITY_CRITERIA, VOTE_VALUES, RESOLUCION_VALUES
-from app.models.user import ROLE_HIRING
+from app.models.user import ROLE_HIRING, ROLE_HIRING_CLOSERS
 from app.services import clarity
 
 bp = Blueprint('job_applications', __name__)
@@ -30,7 +34,7 @@ FILTROS_VALIDOS = ('mis_pendientes', 'todas', 'preseleccionadas', 'en_reserva', 
 
 # Quiénes revisan: los mismos roles que abren el panel (ver `hiring_required`). Antes del
 # 10/10/2026 eran solo los `admin`.
-ROLES_REVISORES = (ROLE_ADMIN, ROLE_HIRING)
+ROLES_REVISORES = (ROLE_ADMIN, ROLE_HIRING, ROLE_HIRING_CLOSERS)
 
 
 def _weights_map():
@@ -63,13 +67,24 @@ def _aplica_filtro(app_row, filtro):
 
 @bp.route('/job-applications', methods=['GET'])
 @login_required
-@hiring_required
+@hiring_closers_required
 def listar_job_applications():
     filtro = request.args.get('filtro', 'mis_pendientes')
     weights = _weights_map()
 
-    todas = JobApplication.query.filter_by(completo=True).order_by(JobApplication.created_at.desc()).all()
-    incompletas = JobApplication.query.filter_by(completo=False).order_by(JobApplication.updated_at.desc()).all()
+    if filtro == 'archivadas':
+        # «Antiguos»: las de búsquedas anteriores, completas o no, las más nuevas primero. Solo las
+        # completas llevan score (una a medias no se puntúa).
+        archivadas = (JobApplication.query.filter(JobApplication.archivada_at.isnot(None))
+                      .order_by(JobApplication.created_at.desc()).all())
+        return jsonify({
+            "postulaciones": [a.to_dict(weights=weights if a.completo else None, include_respuestas=False)
+                              for a in archivadas],
+            "total": len(archivadas),
+        }), 200
+
+    todas = JobApplication.activas().filter_by(completo=True).order_by(JobApplication.created_at.desc()).all()
+    incompletas = JobApplication.activas().filter_by(completo=False).order_by(JobApplication.updated_at.desc()).all()
 
     if filtro == 'incompletas':
         filtradas = incompletas
@@ -82,6 +97,7 @@ def listar_job_applications():
     conteos = {f: len([a for a in todas if _aplica_filtro(a, f)]) for f in FILTROS_VALIDOS}
     conteos['con_material'] = sum(1 for a in todas if a.video and a.llamada)
     conteos['incompletas'] = len(incompletas)
+    conteos['archivadas'] = JobApplication.query.filter(JobApplication.archivada_at.isnot(None)).count()
 
     return jsonify({
         "postulaciones": [a.to_dict(weights=peso_para_score, include_respuestas=False) for a in filtradas],
@@ -92,18 +108,24 @@ def listar_job_applications():
 
 @bp.route('/job-applications/<int:app_id>', methods=['GET'])
 @login_required
-@hiring_required
+@hiring_closers_required
 def ver_job_application(app_id):
     app_row = JobApplication.query.get_or_404(app_id)
     weights = _weights_map()
     data = app_row.to_dict(weights=weights, include_respuestas=True)
     data["votos_detalle"] = [v.to_dict() for v in app_row.votes]
+    # Valor 0-1 y peso de cada criterio de Clarity: la ficha de Talent dibuja el desglose del score.
+    valores = clarity.compute_criteria_values(app_row)
+    data["criterios"] = [
+        {"criterion": c["criterion"], "valor": valores.get(c["criterion"], 0.0), "peso": weights.get(c["criterion"], 0)}
+        for c in CLARITY_CRITERIA
+    ]
     return jsonify(data), 200
 
 
 @bp.route('/job-applications/<int:app_id>/vote', methods=['POST'])
 @login_required
-@hiring_required
+@hiring_closers_required
 def votar_job_application(app_id):
     data = request.get_json(silent=True) or {}
     valor = data.get('valor')
@@ -144,7 +166,7 @@ def votar_job_application(app_id):
 
 @bp.route('/job-applications/<int:app_id>/resolver', methods=['POST'])
 @login_required
-@hiring_required
+@hiring_closers_required
 def resolver_job_application(app_id):
     """Decisión manual de un revisor que pisa el veredicto calculado por votos:
     'preseleccionada' para destrabar un 'decidir' sin esperar a que algún
@@ -178,7 +200,7 @@ def resolver_job_application(app_id):
 
 @bp.route('/job-applications/clarity-weights', methods=['GET'])
 @login_required
-@hiring_required
+@hiring_closers_required
 def ver_clarity_weights():
     filas = ClarityWeight.query.order_by(ClarityWeight.id).all()
     if not filas:
@@ -191,7 +213,7 @@ def ver_clarity_weights():
 
 @bp.route('/job-applications/clarity-weights', methods=['PUT'])
 @login_required
-@hiring_required
+@hiring_closers_required
 def guardar_clarity_weights():
     data = request.get_json(silent=True) or {}
     pesos = data.get('weights') or {}
@@ -218,7 +240,7 @@ def guardar_clarity_weights():
 
 @bp.route('/job-applications/stats', methods=['GET'])
 @login_required
-@hiring_required
+@hiring_closers_required
 def stats_job_applications():
     SEGMENTOS_VALIDOS = ('todos', 'preseleccionados', 'en_reserva', 'testeo', 'descartados', 'bajas', 'incompletos')
     segmento = request.args.get('segmento', 'todos')
@@ -226,7 +248,7 @@ def stats_job_applications():
         segmento = 'todos'
 
     weights = _weights_map()
-    todas_las_filas = JobApplication.query.all()
+    todas_las_filas = JobApplication.activas().all()
     completas = [a for a in todas_las_filas if a.completo]
     # Cada segmento recorta el pool al mismo veredicto que se usa en la pestaña
     # de Postulaciones, para ver cómo viene ESE grupo puntualmente (score,
@@ -324,14 +346,14 @@ def stats_job_applications():
 
 @bp.route('/job-applications/revisores', methods=['GET'])
 @login_required
-@hiring_required
+@hiring_closers_required
 def revisores_job_applications():
     """Estado de la revisión por revisor: a cuántos les falta calificar a cada
     revisor, dónde votaron distinto (necesita decidir) y qué le falta ver al
     usuario actual. 'Revisor' es quien puede votar, no una lista fija: tiene
     alguno de `ROLES_REVISORES`, el mismo criterio que `hiring_required`."""
     weights = _weights_map()
-    completas = JobApplication.query.filter_by(completo=True).all()
+    completas = JobApplication.activas().filter_by(completo=True).all()
     total = len(completas)
 
     # `User.role.in_(...)` (ver `_RolComparator` en app/models/user.py) encuentra a quien TENGA el

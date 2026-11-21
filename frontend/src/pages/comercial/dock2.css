@@ -124,7 +124,8 @@
 html.dock-lateral #root{padding-left:100px;transition:padding-left .25s ease}
 html.dock-lateral.dock-lateral--abierta #root{padding-left:280px}
 /* Dock: la tarjeta de usuario al pasar el mouse por el avatar (TarjetaSesion.jsx), arriba a la derecha. */
-.dc-shell .dock-av-hover{position:relative;display:grid}
+/* En fila: hay pantallas que pasan más de una cosa junto al avatar (Talent, su gema); en grilla se apilaban. */
+.dc-shell .dock-av-hover{position:relative;display:flex;align-items:center;gap:var(--s1)}
 .dc-shell .dock-tarjeta-flot{position:absolute;right:-8px;bottom:calc(100% + 16px);z-index:2;width:264px;padding:10px;
   background:var(--bg-flotante,var(--bg-surface));border:1px solid var(--border-main);box-shadow:var(--shadow-main);
   opacity:0;visibility:hidden;transform:translateY(6px);transition:opacity .15s ease .25s,transform .15s ease .25s,visibility 0s linear .4s}

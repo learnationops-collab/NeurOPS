@@ -10,6 +10,7 @@ export const ROLE_OPTIONS = [
     { value: 'director_comercial', label: 'Dir. Comercial' },
     { value: 'director_marketing', label: 'Dir. Marketing' },
     { value: 'hiring', label: 'Hiring' },
+    { value: 'hiring_closers', label: 'Hiring · Closers' },
 ];
 
 export const QUESTION_TYPE_OPTIONS = [

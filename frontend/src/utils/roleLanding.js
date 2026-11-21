@@ -21,6 +21,8 @@ export const ROLE_LANDING_PATHS = {
     director_comercial: '/admin/comercial',
     director_marketing: '/admin/workshops',
     hiring: '/admin/hiring',
+    // Talent solo con la búsqueda de Closer (ADR-W193).
+    hiring_closers: '/admin/hiring',
 };
 
 // Rol desconocido -> /login: el fallback `*` del router ya manda ahí, así que es

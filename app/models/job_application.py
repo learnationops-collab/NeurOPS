@@ -87,6 +87,13 @@ class JobApplication(db.Model):
     resuelto_por_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     resuelto_at = db.Column(db.DateTime, nullable=True)
 
+    # Archivada: sale del Inbox, de las pestañas, de las estadísticas y de los
+    # revisores, pero la fila (y sus votos) queda en la base. Se archiva por
+    # tanda cuando arranca una búsqueda nueva (ADR-W193). Al archivar también
+    # se vacía `dedupe_key`, así quien vuelva a postular crea una fila nueva en
+    # vez de reabrir la vieja. None mientras está activa.
+    archivada_at = db.Column(db.DateTime, nullable=True, index=True)
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -96,6 +103,11 @@ class JobApplication(db.Model):
         def vacio(v):
             return v is None or v == '' or v == []
         return sum(1 for campo in CAMPOS_FORMULARIO if not vacio(getattr(self, campo)))
+
+    @classmethod
+    def activas(cls):
+        """Las postulaciones que todavía no se archivaron: las únicas que ve el panel."""
+        return cls.query.filter(cls.archivada_at.is_(None))
 
     def veredicto(self):
         # Una resolución manual pisa el cálculo por votos: así un admin puede

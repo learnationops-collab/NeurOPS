@@ -13,6 +13,10 @@ export const VEREDICTO = {
     baja: { label: 'Baja', fg: '#E85C4A', bg: '#1B0F1D', bd: '#4C2227' },
     incompleta: { label: 'Incompleta', fg: '#E85C4A', bg: '#1B0F1D', bd: '#4C2227' },
     sin_analizar: { label: 'Sin analizar', fg: '#4E8BD8', bg: '#0A152C', bd: '#1A3155' },
+    // Los de Closer (votos de los revisores, ver JobApplication.veredicto).
+    sin_calificar: { label: 'Sin calificar', fg: '#4E8BD8', bg: '#0A152C', bd: '#1A3155' },
+    preseleccionada: { label: 'Preselección', fg: '#2FBF8F', bg: '#071A24', bd: '#10413D' },
+    decidir: { label: 'A decidir', fg: '#D9A441', bg: '#1A171C', bd: '#473924' },
 };
 
 /** Medidor de 4 puntitos: el nivel de una respuesta de un vistazo. `redondos`
