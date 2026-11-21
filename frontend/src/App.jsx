@@ -336,7 +336,7 @@ function App() {
                 // Learnation Talent: sub-app con header y dock propios, sin MainLayout.
                 // Es la única pantalla del rol `hiring` (Asistente y, desde el 10/10/2026,
                 // la sección Closers, que eran las Postulaciones del admin).
-                <ProtectedRoute roles={['admin', 'hiring']}>
+                <ProtectedRoute roles={['admin', 'hiring', 'hiring_closers']}>
                   <HiringDashboardPage />
                 </ProtectedRoute>
               }

@@ -17,7 +17,7 @@ import ElegirRolAlSimular, { hayQueElegir } from '../../components/shared/Elegir
 import { rotuloDeRol } from '../../utils/cuentasVinculadas';
 import { simularA, simularEnPestanaNueva } from '../../utils/impersonation';
 
-const ORDEN = ['closer', 'setter', 'triage', 'operator', 'hiring', 'director_comercial', 'director_marketing', 'admin'];
+const ORDEN = ['closer', 'setter', 'triage', 'operator', 'hiring', 'hiring_closers', 'director_comercial', 'director_marketing', 'admin'];
 const sinTildes = (t) => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 const mensaje = (e) => e?.response?.data?.message || e?.message || 'No se pudo iniciar la simulación';
 

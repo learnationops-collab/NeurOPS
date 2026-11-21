@@ -33,6 +33,9 @@ export const guardarPuesto = (puesto) => {
 export function useClosers() {
     const [filas, setFilas] = useState([]);
     const [incompletas, setIncompletas] = useState([]);
+    // «Antiguos» (ADR-W193): las archivadas se piden recién cuando se abren; la cuenta viene con el resto.
+    const [archivadas, setArchivadas] = useState(null);
+    const [cuentaArchivadas, setCuentaArchivadas] = useState(0);
     const [cargando, setCargando] = useState(true);
     const [error, setError] = useState('');
 
@@ -45,6 +48,7 @@ export function useClosers() {
             ]);
             setFilas(completas.data.postulaciones || []);
             setIncompletas(aMedias.data.postulaciones || []);
+            setCuentaArchivadas(completas.data.conteos?.archivadas || 0);
             setError('');
         } catch (err) {
             console.error('Error al cargar postulaciones de Closer:', err);
@@ -56,8 +60,21 @@ export function useClosers() {
 
     useEffect(() => { cargar(); }, [cargar]);
 
+    const cargarArchivadas = useCallback(async () => {
+        try {
+            const res = await api.get('/job-applications?filtro=archivadas');
+            setArchivadas(res.data.postulaciones || []);
+        } catch (err) {
+            console.error('Error al cargar las postulaciones de Closer archivadas:', err);
+            setArchivadas([]);
+            setError('No se pudieron cargar las postulaciones anteriores.');
+        }
+    }, []);
+
     const porRevisar = useMemo(() => filas.filter((p) => p.veredicto === 'sin_calificar'), [filas]);
-    return { filas, incompletas, porRevisar, cargando, error, cargar };
+    return {
+        filas, incompletas, porRevisar, archivadas, cuentaArchivadas, cargando, error, cargar, cargarArchivadas,
+    };
 }
 
 const plano = (t) => String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');

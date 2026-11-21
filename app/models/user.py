@@ -23,12 +23,17 @@ ROLE_DIRECTOR_MARKETING = 'director_marketing'
 # `admin_required` (finanzas, equipo, base de datos) — ver `hiring_required`
 # en app/decorators.py.
 ROLE_HIRING = 'hiring'
+# Talent solo con la búsqueda de Closer (ADR-W193): el Inbox de Closers y la sección Closers, sin
+# Asistentes, Forms ni los ajustes de Talent. Se le suma como rol adicional a quien revisa closers
+# sin tener que ver a las candidatas a Asistente (Marlon, dirección comercial).
+ROLE_HIRING_CLOSERS = 'hiring_closers'
 # Equipo de fulfillment de la Academia: la Academia crea estas cuentas por API para usar Thalamus como
 # servicio de agenda (app/api/external/agenda.py). No tienen pantallas en NeurOPS: lo configuran todo
 # desde la Academia.
 ROLE_FULFILLMENT = 'fulfillment'
-# Closer de ventas para la Academia (User.es_closer_de_ventas): closer y, como mucho, director comercial.
-ROLES_CLOSER_DE_VENTAS = {ROLE_CLOSER, ROLE_DIRECTOR_COMERCIAL}
+# Closer de ventas para la Academia (User.es_closer_de_ventas): closer y, como mucho, director comercial
+# (y revisar postulaciones de closer, que no lo saca de la venta).
+ROLES_CLOSER_DE_VENTAS = {ROLE_CLOSER, ROLE_DIRECTOR_COMERCIAL, ROLE_HIRING_CLOSERS}
 
 # Los personajes que se pueden elegir de avatar (page-mascot; las hojas y la misma lista están en
 # frontend/src/components/mascota/: hojas/ y mascotas.js).

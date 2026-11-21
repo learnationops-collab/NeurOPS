@@ -18,6 +18,7 @@ from app.models.user import (
     ROLE_DIRECTOR_COMERCIAL,
     ROLE_DIRECTOR_MARKETING,
     ROLE_HIRING,
+    ROLE_HIRING_CLOSERS,
     ROLE_OPERATOR,
     ROLE_SETTER,
     ROLE_TRIAGE,
@@ -72,11 +73,16 @@ workshop_required = _requiere_roles(
 # `admin_required` — finanzas, equipo, base de datos — que no se le pidio).
 hiring_required = _requiere_roles((ROLE_ADMIN, ROLE_HIRING), "Hiring access required")
 
+# La búsqueda de Closer de ventas (`/api/job-applications`): además de los de `hiring_required`, el rol
+# acotado `hiring_closers`, que revisa closers sin ver a las candidatas a Asistente (ADR-W193).
+hiring_closers_required = _requiere_roles(
+    (ROLE_ADMIN, ROLE_HIRING, ROLE_HIRING_CLOSERS), "Hiring access required")
+
 # Learnito (`/copiloto` y `/api/copiloto`): todo el equipo de Work (24/10/2026). Fulfillment no: sus cuentas son de
 # la Academia y no tienen pantallas acá. Lo que ve cada uno lo decide el motor (app/services/tablas/alcance.py).
 copiloto_required = _requiere_roles(
     (ROLE_ADMIN, ROLE_OPERATOR, ROLE_DIRECTOR_COMERCIAL, ROLE_DIRECTOR_MARKETING, ROLE_CLOSER, ROLE_SETTER,
-     ROLE_TRIAGE, ROLE_HIRING), "Copiloto access required")
+     ROLE_TRIAGE, ROLE_HIRING, ROLE_HIRING_CLOSERS), "Copiloto access required")
 
 # Motor de tablas (`/api/tablas`): la direccion. El closer entra cuando el motor filtre su cartera.
 tablas_required = _requiere_roles(

@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
     Inbox, CheckCircle2, Trophy, BarChart3, FileText, Briefcase, Search, X, Filter, ArrowLeft, AlertTriangle,
-    SlidersHorizontal,
+    SlidersHorizontal, Archive,
 } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
 import api from '../../../services/api';
@@ -59,8 +59,14 @@ const SECCIONES = [
 
 const ES_TABLA = new Set(['pend', 'anal', 'fin']);
 
+// El rol `hiring_closers` (ADR-W193) ve Talent solo con la búsqueda de Closer: el Inbox (fijo en
+// Closers) y la sección Closers. Nada de Asistentes: ni sus secciones, ni sus pedidos, ni los ajustes.
+const SECCIONES_SOLO_CLOSERS = new Set(['pend', 'closers']);
+
 // `?s=closers` (el redirect de /admin/postulaciones) elige la sección con la que se entra.
-const seccionDeEntrada = (s) => (SECCIONES.some((x) => x.id === s) ? s : 'pend');
+const seccionDeEntrada = (s, soloClosers) => (
+    SECCIONES.some((x) => x.id === s && (!soloClosers || SECCIONES_SOLO_CLOSERS.has(x.id))) ? s : 'pend'
+);
 
 const Pestanas = ({ lista, actual, onElegir, cuentaDe }) => (
     <div className="tabs" role="group">
@@ -78,8 +84,9 @@ const HiringDashboardPage = () => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
     const [params, setParams] = useSearchParams();
+    const soloClosers = user?.role === 'hiring_closers';
 
-    const [seccion, setSeccion] = useState(() => seccionDeEntrada(params.get('s')));
+    const [seccion, setSeccion] = useState(() => seccionDeEntrada(params.get('s'), soloClosers));
     const [pestanas, setPestanas] = useState({ pend: 'online', anal: 'seleccionada', fin: 'testeo', closers: 'pendientes', pendCloser: 'revisar' });
     const [statsTab, setStatsTab] = useState('panorama');
     const [statsSeg, setStatsSeg] = useState('gen');
@@ -97,7 +104,8 @@ const HiringDashboardPage = () => {
     const [abierta, setAbierta] = useState(null);
     const [entradas, setEntradas] = useState(0);
     // Qué búsqueda mira el Inbox: Asistentes o Closers (ADR-W192). Se recuerda por navegador.
-    const [puesto, setPuesto] = useState(leerPuesto);
+    const [puestoElegido, setPuesto] = useState(leerPuesto);
+    const puesto = soloClosers ? 'closer' : puestoElegido;
     const closers = useClosers();
     const buscador = useRef(null);
     const botonVista = useRef(null);
@@ -136,10 +144,12 @@ const HiringDashboardPage = () => {
     }, []);
 
     useEffect(() => {
+        // Sin acceso a Asistentes no se piden: el servidor las negaría (403).
+        if (soloClosers) { setCargando(false); return; }
         cargar();
         cargarPesos();
         api.get('/hiring/config').then((res) => setBusquedaCfg(res.data)).catch(() => setBusquedaCfg(null));
-    }, [cargar, cargarPesos]);
+    }, [cargar, cargarPesos, soloClosers]);
 
     // La `s` solo dice dónde se entra: ya leída, se saca de la URL (con `replace`, sin sumar un paso
     // al historial). La sección no vive en la URL, y si quedaba, recargar después de pasar a Inbox
@@ -180,7 +190,7 @@ const HiringDashboardPage = () => {
     // ajustes de la herramienta (Clarity y búsqueda), que también abre el orbe del dock.
     const gruposDeSesion = armarMenuSesion({
         user, navigate, logout,
-        acciones: [{ id: 'talent', label: 'Ajustes de Talent', Icono: SlidersHorizontal, onClick: () => setConfig('clarity') }],
+        acciones: soloClosers ? [] : [{ id: 'talent', label: 'Ajustes de Talent', Icono: SlidersHorizontal, onClick: () => setConfig('clarity') }],
         configuracion: { onClick: () => abrirConfiguracion() },
         // El admin aterriza en Operaciones desde que se retiró su panel (/admin/ventas, 10/10/2026).
         ir: user?.role === 'admin' ? [{ id: 'operaciones', label: 'Volver a Operaciones', Icono: ArrowLeft, onClick: () => navigate('/ops/dashboard') }] : [],
@@ -265,9 +275,21 @@ const HiringDashboardPage = () => {
     let controles = null;
     if (modoCloser) {
         const cuentaCloser = { revisar: closers.porRevisar.length, incompletas: closers.incompletas.length };
+        const enAntiguos = pestanas.pendCloser === 'antiguos';
         controles = qCloser ? null : (
-            <Pestanas lista={PESTANAS_INBOX_CLOSER} actual={pestanas.pendCloser} cuentaDe={(id) => cuentaCloser[id]}
-                onElegir={(id) => setPestanas((prev) => ({ ...prev, pendCloser: id }))} />
+            <>
+                <Pestanas lista={PESTANAS_INBOX_CLOSER} actual={pestanas.pendCloser} cuentaDe={(id) => cuentaCloser[id]}
+                    onElegir={(id) => setPestanas((prev) => ({ ...prev, pendCloser: id }))} />
+                {/* Las postulaciones de búsquedas anteriores (archivadas, ADR-W193): un acceso discreto,
+                    no una pestaña más, para que el Inbox muestre solo a los que postulan ahora. */}
+                {closers.cuentaArchivadas > 0 && (
+                    <button type="button" className="tl-antiguos" aria-pressed={enAntiguos}
+                        title="Postulaciones de búsquedas anteriores"
+                        onClick={() => setPestanas((prev) => ({ ...prev, pendCloser: enAntiguos ? 'revisar' : 'antiguos' }))}>
+                        <Archive size={14} />Antiguos<span className="cuenta">{closers.cuentaArchivadas}</span>
+                    </button>
+                )}
+            </>
         );
     } else if (!enBusqueda && ES_TABLA.has(seccion)) {
         // Híbridos casi nunca tiene a nadie: la pestaña aparece solo si hay alguna (o si es la abierta).
@@ -299,7 +321,9 @@ const HiringDashboardPage = () => {
         anal: c.anal ? [{ tipo: 'cuenta', texto: String(c.anal), titulo: `${c.anal} analizadas` }] : [],
         fin: c.fin ? [{ tipo: 'cuenta', texto: String(c.fin), titulo: `${c.fin} finalistas` }] : [],
     };
-    const secciones = SECCIONES.map((s) => ({ ...s, marcas: marcas[s.id] || [] }));
+    const secciones = SECCIONES
+        .filter((s) => !soloClosers || SECCIONES_SOLO_CLOSERS.has(s.id))
+        .map((s) => ({ ...s, marcas: marcas[s.id] || [] }));
 
     const vacio = (() => {
         if (cargando) return <p className="t-cap mut40">Cargando postulaciones…</p>;
@@ -359,7 +383,7 @@ const HiringDashboardPage = () => {
                             <IsotipoTalent />
                             <div className="tl-tit">
                                 <h1 className="t-h1">{titulo}</h1>
-                                {seccion === 'pend' && !enBusqueda && (
+                                {seccion === 'pend' && !enBusqueda && !soloClosers && (
                                     <MenuPuesto valor={puesto} cuentas={{ asistente: c.pend, closer: closers.porRevisar.length }}
                                         onCambiar={(v) => { setPuesto(v); guardarPuesto(v); setQuery(''); }} />
                                 )}
@@ -484,19 +508,23 @@ const HiringDashboardPage = () => {
                     ariaLabel="Secciones de Learnation Talent"
                     despues={(
                         <>
-                            <button
-                                type="button"
-                                className="tl-orb"
-                                aria-label="Configuración de Learnation Talent"
-                                aria-expanded={Boolean(config)}
-                                title="Configuración: Clarity y búsqueda"
-                                onClick={() => setConfig((v) => (v ? null : 'clarity'))}
-                            >
-                                <IsotipoTalent tam={50} id="tlGDock" className="" etiqueta="" />
-                            </button>
+                            {soloClosers ? (
+                                <span className="tl-orb" aria-hidden="true"><IsotipoTalent tam={50} id="tlGDock" className="" etiqueta="" /></span>
+                            ) : (
+                                <button
+                                    type="button"
+                                    className="tl-orb"
+                                    aria-label="Configuración de Learnation Talent"
+                                    aria-expanded={Boolean(config)}
+                                    title="Configuración: Clarity y búsqueda"
+                                    onClick={() => setConfig((v) => (v ? null : 'clarity'))}
+                                >
+                                    <IsotipoTalent tam={50} id="tlGDock" className="" etiqueta="" />
+                                </button>
+                            )}
                             <MenuSesion
                                 nombre={user?.name || user?.username || ''}
-                                rol={rotuloDeSesion(user, 'Hiring')}
+                                rol={rotuloDeSesion(user, soloClosers ? 'Hiring · Closers' : 'Hiring')}
                                 grupos={gruposDeSesion}
                             />
                         </>
@@ -523,7 +551,7 @@ const HiringDashboardPage = () => {
                 />
             )}
 
-            {config && (
+            {config && !soloClosers && (
                 <ConfigTalent
                     tab={config}
                     onTab={setConfig}

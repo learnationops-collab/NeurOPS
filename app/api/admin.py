@@ -308,7 +308,7 @@ def get_setter_performance():
     
     return jsonify(data), 200
 
-ROLES_DE_EQUIPO = ('admin', 'operator', 'director_comercial', 'director_marketing', 'closer', 'setter', 'triage', 'hiring')
+ROLES_DE_EQUIPO = ('admin', 'operator', 'director_comercial', 'director_marketing', 'closer', 'setter', 'triage', 'hiring', 'hiring_closers')
 
 
 def _roles_pedidos(data, actual=None):

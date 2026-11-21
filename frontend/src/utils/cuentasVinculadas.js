@@ -16,6 +16,7 @@ const ROTULO_DE_ROL = {
     director_comercial: 'Dirección comercial',
     director_marketing: 'Dirección de marketing',
     hiring: 'Hiring',
+    hiring_closers: 'Hiring · Closers',
 };
 
 export const rotuloDeRol = (rol) => ROTULO_DE_ROL[rol] || rol;
@@ -23,7 +24,7 @@ export const rotuloDeRol = (rol) => ROTULO_DE_ROL[rol] || rol;
 // El ícono de cada rol en las pantallas donde se elige uno (el Portal y la simulación).
 export const ICONO_DE_ROL = {
     admin: Settings2, director_comercial: BarChart3, director_marketing: Megaphone, closer: PhoneCall,
-    setter: MessageCircle, operator: Briefcase, triage: Filter, hiring: UserPlus,
+    setter: MessageCircle, operator: Briefcase, triage: Filter, hiring: UserPlus, hiring_closers: UserPlus,
 };
 
 /**

@@ -18,7 +18,9 @@ import logoWhatsapp from '../../assets/apps/whatsapp.png';
 // (el de mejor score entre los que nadie calificó) y qué parte de lo decidido se preselecciona o
 // queda en reserva; abajo, la tabla. «Por revisar» son las completas sin ningún voto;
 // «Incompletas», las que cortaron el formulario a la mitad. Lo ya calificado sigue en la sección
-// Closers del dock (Analizados, Revisores, Estadísticas, Clarity).
+// Closers del dock (Analizados, Revisores, Estadísticas, Clarity). «Antiguos» (ADR-W193, se abre desde
+// un botón discreto de la cabecera) son las postulaciones de búsquedas anteriores, ya archivadas: no
+// cuentan en nada, se pueden abrir y se las encuentra también con la búsqueda una vez abiertas.
 
 const HUMO_MARCA = ['var(--info)', 'var(--brand-primary)', 'var(--brand-secondary)', 'var(--focus-blue)'];
 
@@ -177,17 +179,25 @@ const Fila = ({ p, conEstado, incompleta, onAbrir }) => {
 };
 
 const InboxCloser = ({ closers, pestana, q }) => {
-    const { filas, incompletas, porRevisar, cargando, error, cargar } = closers;
+    const {
+        filas, incompletas, porRevisar, archivadas, cargando, error, cargar, cargarArchivadas,
+    } = closers;
     const [abierta, setAbierta] = useState(null);
     const [listaFicha, setListaFicha] = useState([]);
     const tabla = useRef(null);
     const enBusqueda = q.length > 0;
     const incompleta = !enBusqueda && pestana === 'incompletas';
+    const antiguos = !enBusqueda && pestana === 'antiguos';
+
+    useEffect(() => {
+        if (pestana === 'antiguos' && archivadas === null) cargarArchivadas();
+    }, [pestana, archivadas, cargarArchivadas]);
 
     const lista = useMemo(() => {
-        if (enBusqueda) return [...filas, ...incompletas].filter((p) => coincideCloser(p, q));
+        if (enBusqueda) return [...filas, ...incompletas, ...(archivadas || [])].filter((p) => coincideCloser(p, q));
+        if (antiguos) return archivadas || [];
         return incompleta ? incompletas : porRevisar;
-    }, [enBusqueda, q, filas, incompletas, porRevisar, incompleta]);
+    }, [enBusqueda, q, filas, incompletas, porRevisar, incompleta, antiguos, archivadas]);
     const ids = useMemo(() => lista.map((p) => p.id), [lista]);
 
     // Al cambiar de pestaña las barritas vuelven a crecer.
@@ -197,12 +207,13 @@ const InboxCloser = ({ closers, pestana, q }) => {
         t.classList.add('entra');
         const id = setTimeout(() => t.classList.remove('entra'), 1100);
         return () => clearTimeout(id);
-    }, [pestana, enBusqueda]);
+    }, [pestana, enBusqueda, archivadas]);
 
     const abrir = (id) => { setListaFicha(ids.includes(id) ? ids : [id]); setAbierta(id); };
 
     let vacio = null;
-    if (cargando) vacio = <p className="t-cap mut40">Cargando postulaciones…</p>;
+    if (cargando || (antiguos && archivadas === null)) vacio = <p className="t-cap mut40">Cargando postulaciones…</p>;
+    else if (antiguos) vacio = <p className="t-h3">No hay postulaciones de búsquedas anteriores</p>;
     else if (enBusqueda) {
         vacio = (
             <>
@@ -226,7 +237,7 @@ const InboxCloser = ({ closers, pestana, q }) => {
     return (
         <>
             {error && <div className="tl-aviso-error"><AlertTriangle size={16} />{error}</div>}
-            {!enBusqueda && !incompleta && !cargando && (
+            {!enBusqueda && !incompleta && !antiguos && !cargando && (
                 <div className="tl-resumen">
                     <Foco p={porRevisar[0] || null} onAbrir={abrir} />
                     <Avance filas={filas} />
@@ -240,11 +251,11 @@ const InboxCloser = ({ closers, pestana, q }) => {
                         <span />
                     </div>
                     {lista.length === 0 && <div className="tl-vacio">{vacio}</div>}
-                    {lista.map((p) => <Fila key={p.id} p={p} conEstado={enBusqueda} incompleta={incompleta || !p.completo} onAbrir={abrir} />)}
+                    {lista.map((p) => <Fila key={p.id} p={p} conEstado={enBusqueda || antiguos} incompleta={incompleta || !p.completo} onAbrir={abrir} />)}
                     <div className="tl-tpie">
                         Mostrando <b>{lista.length}</b>
                         <span className="sep" />
-                        {incompleta ? 'Las más recientes primero' : 'Mejor score primero'}
+                        {antiguos ? 'Búsquedas anteriores · las más recientes primero' : incompleta ? 'Las más recientes primero' : 'Mejor score primero'}
                     </div>
                 </div>
             </div>
