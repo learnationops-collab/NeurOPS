@@ -905,9 +905,6 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                             datos={!esperaIds && resumen?.rol === rol ? resumen : null} irA={irADetalle} alcance={alcance}
                             vsLabel={rangoVs ? textoRango(rangoVs) : contexto?.comparaciones?.find(c => c.key === compare)?.label} />
                     )}
-                    {!esperaFechas && compartir && seccion === 'analizar' && tab === 'dashboard' && filtroAnalizar.listo && (
-                        <SeguimientosMotivos filtradas={filtroAnalizar.filtradas} irA={irADetalle} />
-                    )}
                     {!esperaFechas && !vistaTriage && seccion === 'analizar' && tab === 'dashboard' && (
                         <Analizar datos={esperaIds ? null : resumen} rol={rol} irA={irADetalle}
                             fallo={fallas.resumen} onReintentar={cargarAnalizar}
@@ -923,6 +920,10 @@ const DashboardComercial = ({ embebido = false, seccionFija = null, onIrASeccion
                     {!esperaFechas && !vistaTriage && seccion === 'analizar' && tab === 'dashboard' && ['closers', 'setters'].includes(rol) && (
                         <PanelPaises filtros={filtrosPaneles} rol={rol} elegidos={compartir ? paisCompartido : elegidosPais}
                             onElegir={elegirPais} />
+                    )}
+                    {/* Seguimientos y motivos van al final: son de consulta, no lo primero que se mira (Kerwin, 20/11/2026). */}
+                    {!esperaFechas && compartir && seccion === 'analizar' && tab === 'dashboard' && filtroAnalizar.listo && (
+                        <SeguimientosMotivos filtradas={filtroAnalizar.filtradas} irA={irADetalle} />
                     )}
                     {!esperaFechas && !vistaTriage && seccion === 'analizar' && tab === 'comparativas' && contexto.puede_comparar && (
                         // Un closer ve a sus compañeros pero no puede abrir sus listas (el backend
