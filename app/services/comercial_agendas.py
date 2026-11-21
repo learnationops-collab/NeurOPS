@@ -34,9 +34,13 @@ def _con_motivo(filas):
         if clave:
             pedidas.append((f['id'], clave, f['person_uuid']))
     motivos = motivos_agenda.de_agendas(pedidas)
+    from app.services.cancelaciones_google import es_automatica
     for f in filas:
         if f['id'] in motivos:
             f['motivo'] = motivos[f['id']]
+            # Cancelada en el Google Calendar del closer: la nota automática no es un motivo (ADR-W191).
+            if es_automatica(f['motivo'].get('texto')):
+                f['motivo'] = {**f['motivo'], 'falta': True}
 
 
 def _con_motivo_no_cierre(filas):

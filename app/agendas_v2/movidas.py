@@ -30,10 +30,13 @@ def _cancelar(appt, estado):
 
     appt.google_event_id = None
     como = 'canceló' if estado == 'cancelado' else 'borró'
+    from app.services import cancelaciones_google
     CloserService.process_agenda(appt.closer_id, appt.id, {
         'status': 'Cancelado', 'role': 'closer',
-        'note': f'el closer {como} el evento en su Google Calendar (lo detectó Work)',
+        'note': f'el closer {como} el evento {cancelaciones_google.SUFIJO}',
     }, is_admin=True)
+    # La nota no dice por qué: se le pide al closer por Discord y queda pendiente en su mazo (ADR-W191).
+    cancelaciones_google.avisar(appt)
 
 
 def sincronizar_movidas(ahora=None):
