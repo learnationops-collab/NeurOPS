@@ -1503,7 +1503,12 @@ def get_closer_deck():
 
     if current_user.role != 'admin':
         # Cada cuenta confirma solo sus agendas: el triage ya no confirma las A y B de closing (27/10/2026).
-        query = query.filter_by(closer_id=current_user.id)
+        # Darian confirma además las de todos los closers que faltan confirmar (ADR-W194).
+        if step == 'confirmations':
+            from app.services.confirma_por_todos import acotar
+            query = acotar(query, current_user)
+        else:
+            query = query.filter_by(closer_id=current_user.id)
 
     appointments = query.order_by(Appointment.start_time.asc()).all()
     if step == 'confirmations':
@@ -1636,7 +1641,9 @@ def get_closer_deck_counts():
     )
     
     if current_user.role != 'admin':
-        query_confirmations = query_confirmations.filter_by(closer_id=current_user.id)
+        # Las mismas que su tablero de Confirmaciones: Darian cuenta también las de los closers (ADR-W194).
+        from app.services.confirma_por_todos import acotar
+        query_confirmations = acotar(query_confirmations, current_user)
         query_calls = query_calls.filter_by(closer_id=current_user.id)
 
     # "Confirmadas" dentro del propio pool de confirmaciones: una cita puede tener

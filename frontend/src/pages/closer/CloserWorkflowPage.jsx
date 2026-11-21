@@ -1451,7 +1451,7 @@ const CloserWorkflowPage = () => {
         const etiquetas = [
             a.desplazada && { texto: 'Reagendar: horario tomado', tono: 'var(--cl-warning)', title: 'Un lead A/B o una Momentum tomó este horario. La agenda sigue en pie: acordá otro con el lead.' },
             isPendingReferral && { texto: 'Contactar y acordar fecha', tono: 'var(--cl-lila)' },
-            // El triage confirma los A y B de los closers (plan_segmentos_triage.md §8.5).
+            // Darian confirma las agendas de todos los closers (ADR-W194): la tarjeta dice de quién es.
             esTriage && a.closer_id && a.closer_id !== user?.id
                 && { texto: `${a.segmento || ''} de ${a.closer_name}`.trim(), tono: 'var(--cl-info)', title: 'Confirmala antes de su llamada con el closer' },
             // El segmento y sus puntos (la del triage ya lo dice en «A de <closer>»).
