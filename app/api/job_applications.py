@@ -98,6 +98,12 @@ def ver_job_application(app_id):
     weights = _weights_map()
     data = app_row.to_dict(weights=weights, include_respuestas=True)
     data["votos_detalle"] = [v.to_dict() for v in app_row.votes]
+    # Valor 0-1 y peso de cada criterio de Clarity: la ficha de Talent dibuja el desglose del score.
+    valores = clarity.compute_criteria_values(app_row)
+    data["criterios"] = [
+        {"criterion": c["criterion"], "valor": valores.get(c["criterion"], 0.0), "peso": weights.get(c["criterion"], 0)}
+        for c in CLARITY_CRITERIA
+    ]
     return jsonify(data), 200
 
 

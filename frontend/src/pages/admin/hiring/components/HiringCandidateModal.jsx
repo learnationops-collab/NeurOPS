@@ -79,9 +79,9 @@ export const dimensionesPanel = (ancho, alto) => {
 
 // Si igual no entra (formulario largo, pantalla baja), la ficha se achica en
 // bloque hasta que entre sin scroll; por debajo de este mínimo, vuelve el scroll.
-const AJUSTE_MIN = 0.7;
+export const AJUSTE_MIN = 0.7;
 
-const useDimensionesPanel = () => {
+export const useDimensionesPanel = () => {
     // En pantallas bajas pero anchas va a pantalla completa, también con medidas
     // en px para poder achicarla en bloque. En el teléfono, null: ahí se scrollea.
     const leer = () => {
@@ -131,7 +131,7 @@ export const Completitud = ({ valor }) => {
 };
 
 // Una cápsula de contacto de la cabecera: el dato y el botón de copiarlo.
-const Capsula = ({ valor, etiqueta, icono, copiado, onCopiar, children }) => (
+export const Capsula = ({ valor, etiqueta, icono, copiado, onCopiar, children }) => (
     <div className="tl-fi-capsula">
         {icono}
         <span title={valor}>{children || valor}</span>

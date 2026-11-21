@@ -21,6 +21,9 @@ import HiringForms from './components/forms/HiringForms';
 import PanelesConservados from '../../../components/ui/PanelesConservados';
 import { IsotipoTalent } from './components/Piezas';
 import AlDia from './components/AlDia';
+import InboxCloser, { PESTANAS_INBOX_CLOSER } from './components/closers/InboxCloser';
+import MenuPuesto from './components/closers/MenuPuesto';
+import { guardarPuesto, leerPuesto, useClosers } from './lib/closers';
 import PostulacionesCloser, { PESTANAS_CLOSER } from '../postulaciones/PostulacionesCloser';
 import {
     PESTANAS, agrupar, colsVisibles, coincide, cuentas as contar, enPestana, filtrosActivos, guardarVista, leerVista,
@@ -77,7 +80,7 @@ const HiringDashboardPage = () => {
     const [params, setParams] = useSearchParams();
 
     const [seccion, setSeccion] = useState(() => seccionDeEntrada(params.get('s')));
-    const [pestanas, setPestanas] = useState({ pend: 'online', anal: 'seleccionada', fin: 'testeo', closers: 'pendientes' });
+    const [pestanas, setPestanas] = useState({ pend: 'online', anal: 'seleccionada', fin: 'testeo', closers: 'pendientes', pendCloser: 'revisar' });
     const [statsTab, setStatsTab] = useState('panorama');
     const [statsSeg, setStatsSeg] = useState('gen');
     const [query, setQuery] = useState('');
@@ -93,6 +96,9 @@ const HiringDashboardPage = () => {
     const [busquedaCfg, setBusquedaCfg] = useState(null);
     const [abierta, setAbierta] = useState(null);
     const [entradas, setEntradas] = useState(0);
+    // Qué búsqueda mira el Inbox: Asistentes o Closers (ADR-W192). Se recuerda por navegador.
+    const [puesto, setPuesto] = useState(leerPuesto);
+    const closers = useClosers();
     const buscador = useRef(null);
     const botonVista = useRef(null);
 
@@ -188,9 +194,11 @@ const HiringDashboardPage = () => {
     const hospeda = seccion === 'closers';
     const visitoClosers = useRef(false);
     if (hospeda) visitoClosers.current = true;
-    const q = hospeda ? '' : query.trim();
+    const modoCloser = puesto === 'closer' && seccion === 'pend';
+    const q = hospeda || modoCloser ? '' : query.trim();
+    const qCloser = modoCloser ? query.trim() : '';
     const enBusqueda = q.length > 0;
-    const esTabla = enBusqueda || ES_TABLA.has(seccion);
+    const esTabla = !modoCloser && (enBusqueda || ES_TABLA.has(seccion));
     const c = useMemo(() => contar(todas), [todas]);
     const pestana = pestanas[seccion];
 
@@ -255,7 +263,13 @@ const HiringDashboardPage = () => {
 
     // --- Cabecera: las pestañas de cada sección y el botón Vista ---
     let controles = null;
-    if (!enBusqueda && ES_TABLA.has(seccion)) {
+    if (modoCloser) {
+        const cuentaCloser = { revisar: closers.porRevisar.length, incompletas: closers.incompletas.length };
+        controles = qCloser ? null : (
+            <Pestanas lista={PESTANAS_INBOX_CLOSER} actual={pestanas.pendCloser} cuentaDe={(id) => cuentaCloser[id]}
+                onElegir={(id) => setPestanas((prev) => ({ ...prev, pendCloser: id }))} />
+        );
+    } else if (!enBusqueda && ES_TABLA.has(seccion)) {
         // Híbridos casi nunca tiene a nadie: la pestaña aparece solo si hay alguna (o si es la abierta).
         const lista = PESTANAS[seccion].filter((t) => t.id !== 'hibrido' || c.hibrido > 0 || pestana === 'hibrido');
         controles = <Pestanas lista={lista} actual={pestana} onElegir={(id) => setPestanas((prev) => ({ ...prev, [seccion]: id }))} cuentaDe={(id) => c[id === 'incompletas' ? 'incompletas' : id]} />;
@@ -278,7 +292,10 @@ const HiringDashboardPage = () => {
     const nf = filtrosActivos(cfg);
 
     const marcas = {
-        pend: c.pend ? [{ tipo: 'cuenta', texto: String(c.pend), titulo: `${c.pend} sin analizar` }] : [],
+        pend: (() => {
+            const n = puesto === 'closer' ? closers.porRevisar.length : c.pend;
+            return n ? [{ tipo: 'cuenta', texto: String(n), titulo: `${n} sin ${puesto === 'closer' ? 'calificar' : 'analizar'}` }] : [];
+        })(),
         anal: c.anal ? [{ tipo: 'cuenta', texto: String(c.anal), titulo: `${c.anal} analizadas` }] : [],
         fin: c.fin ? [{ tipo: 'cuenta', texto: String(c.fin), titulo: `${c.fin} finalistas` }] : [],
     };
@@ -342,6 +359,10 @@ const HiringDashboardPage = () => {
                             <IsotipoTalent />
                             <div className="tl-tit">
                                 <h1 className="t-h1">{titulo}</h1>
+                                {seccion === 'pend' && !enBusqueda && (
+                                    <MenuPuesto valor={puesto} cuentas={{ asistente: c.pend, closer: closers.porRevisar.length }}
+                                        onCambiar={(v) => { setPuesto(v); guardarPuesto(v); setQuery(''); }} />
+                                )}
                                 {!enBusqueda && seccion === 'forms' && formActivoNombre && (
                                     <p className="tl-sub">Búsqueda: <b>{formActivoNombre}</b></p>
                                 )}
@@ -359,7 +380,7 @@ const HiringDashboardPage = () => {
                                         autoComplete="off"
                                         value={query}
                                         onChange={(e) => setQuery(e.target.value)}
-                                        placeholder="Buscar candidata, país o provincia"
+                                        placeholder={modoCloser ? 'Buscar closer, país o correo' : 'Buscar candidata, país o provincia'}
                                         aria-label="Buscar postulante"
                                     />
                                     {enBusqueda ? (
@@ -391,11 +412,13 @@ const HiringDashboardPage = () => {
                     </header>
 
                     {!hospeda && (
-                        <main className="tl-vista" key={`${seccion}|${enBusqueda ? 'q' : ''}|${seccion === 'stats' ? statsTab : ''}`}>
+                        <main className="tl-vista" key={`${seccion}|${modoCloser ? 'closer' : ''}|${enBusqueda ? 'q' : ''}|${seccion === 'stats' ? statsTab : ''}`}>
                             {errorCarga && <div className="tl-aviso-error"><AlertTriangle size={16} />{errorCarga}</div>}
                             {errorBorrado && <div className="tl-aviso-error"><AlertTriangle size={16} />{errorBorrado}</div>}
 
-                            {!enBusqueda && seccion === 'pend' && !cargando && (
+                            {modoCloser && <InboxCloser closers={closers} pestana={pestanas.pendCloser} q={qCloser} />}
+
+                            {!modoCloser && !enBusqueda && seccion === 'pend' && !cargando && (
                                 <ResumenInbox
                                     proxima={proxima}
                                     cuentas={c}

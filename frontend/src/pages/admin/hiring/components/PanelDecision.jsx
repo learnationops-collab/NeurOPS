@@ -60,6 +60,7 @@ const PanelDecision = ({ d, botones, titulos, onDecidir, nota }) => {
         d.edad && ['Edad', `${d.edad} años`],
         d.modalidad && ['Modalidad', MODALIDAD[d.modalidad]?.label],
         typeof d.completitud === 'number' && d.completitud < 100 && ['Formulario', `${d.completitud} %`],
+        ...(d.perfil_extra || []),
     ].filter(Boolean);
 
     return (
