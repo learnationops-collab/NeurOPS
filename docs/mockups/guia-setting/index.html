@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Inbox · Guía del setting (mockup)</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="guia.css">
+</head>
+<body data-theme="light">
+<header class="tope">
+  <span class="logo"></span><h1>Guía</h1>
+  <span class="chip" style="--c:var(--ok)" id="ver">Publicada el 20/11 por Mario</span>
+  <button class="btn ghost">Historial</button>
+  <div class="der">
+    <span class="k">Mockup · ver como</span>
+    <div class="seg" id="rol"><button class="act" data-rol="setter">Setter</button><button data-rol="dc">Dirección comercial</button></div>
+    <div class="seg" id="tema"><button class="act" data-t="light">Claro</button><button data-t="dark">Oscuro</button></div>
+  </div>
+</header>
+<div class="app">
+  <nav class="dock">
+    <a href="#">Flujos</a>
+    <a href="#" class="act">Guía</a>
+    <a href="#">Conversaciones</a>
+  </nav>
+  <main class="vista">
+    <div class="aviso" style="--c:var(--warn)" id="pendientes" hidden>
+      <div><b id="pend-t"></b><br><small>En el chat sigue lo publicado hasta que publiques.</small></div>
+      <div class="der"><button class="btn" id="descartar">Descartar</button><button class="btn pri" id="publicar">Publicar</button></div>
+    </div>
+    <div class="cuerpo">
+      <aside class="panel etapas" id="lista"></aside>
+      <section class="panel editor">
+        <div class="ayuda">Cada paso puede tener <b>opción A y opción B</b>: el setter elige cuál mandar y acá ves cuál responde más.
+          Una línea en blanco separa los mensajes. <b>{nombre}</b> y <b>{link de agenda}</b> se completan solos; lo que va entre <b>[corchetes]</b> lo escribe el setter.</div>
+        <div id="editor" style="display:grid;gap:14px"></div>
+      </section>
+      <aside class="panel lado" id="previa"></aside>
+    </div>
+
+    <div class="panel notas">
+      <h2>Notas del mockup</h2>
+      <ul>
+        <li>Sección nueva del Inbox, «Guía», entre Flujos y Conversaciones. Reemplaza al documento de setting: la primera versión carga el documento completo.</li>
+        <li>Cada etapa es una lista de pasos, y cada paso tiene una o dos opciones (A y B). Los mensajes por respuesta de No lead son opciones con el nombre de la respuesta en vez de una letra.</li>
+        <li>«Cuándo se usa»: Siempre, Solo si… (con la condición escrita, por ejemplo «ENARM, el próximo año»), Opcional o No se usa. Lo que no se usa queda guardado pero no sale en el «/».</li>
+        <li>Los setters cambian textos, opciones y pasos y publican directo. Agregar, renombrar o mover etapas y cambiar «Quién es lead» lo aprueba la dirección comercial.</li>
+        <li>Para saber qué opción responde más, el chat tiene que guardar qué paso y qué opción se mandó. Hoy no lo guarda. Las cifras del mockup son de ejemplo.</li>
+      </ul>
+    </div>
+  </main>
+</div>
+
+<div class="velo" id="velo">
+  <div class="modal">
+    <h3>Proponer un cambio</h3>
+    <div style="color:var(--muted)">Lo aprueba la dirección comercial. Mientras tanto sigue lo de ahora.</div>
+    <textarea rows="3" placeholder="Qué querés cambiar y por qué"></textarea>
+    <div class="pie"><button class="btn" id="cerrar">Cancelar</button><button class="btn pri" id="mandar">Mandar</button></div>
+  </div>
+</div>
+<script src="datos.js"></script>
+<script src="guia.js"></script>
+</body>
+</html>

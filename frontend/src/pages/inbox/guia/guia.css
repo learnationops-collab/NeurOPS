@@ -1,0 +1,84 @@
+/* La Guía del setting (ADR-W197): lista de etapas, editor de pasos con opciones A/B y la vista previa del «/». */
+.thalamus.inbox .gu{display:grid;gap:var(--s3)}
+.thalamus.inbox .gu-barra{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap}
+.thalamus.inbox .gu-pend{margin-left:auto;display:flex;align-items:center;gap:var(--s2);padding:6px 6px 6px 14px;border-radius:999px;
+  background:var(--warning-surface);border:1px solid var(--warning-border);font-size:12px}
+.thalamus.inbox .gu-ayuda{margin:0;font-size:12px;color:var(--text-muted);background:var(--bg-item);border-radius:12px;padding:8px 12px}
+.thalamus.inbox .gu-ayuda b{color:var(--text-on-surface)}
+.thalamus.inbox .gu-cuerpo{display:grid;grid-template-columns:220px minmax(0,1fr) 300px;gap:var(--s3);align-items:start}
+.thalamus.inbox .gu-esqueleto{min-height:420px}
+
+/* Lista de etapas */
+.thalamus.inbox .gu-lista{display:grid;gap:var(--s3);position:sticky;top:var(--s3)}
+.thalamus.inbox .gu-grupo{display:grid;gap:2px}
+.thalamus.inbox .gu-grupo .t-rotulo{padding:0 8px 2px}
+.thalamus.inbox .gu-et{display:grid;grid-template-columns:22px minmax(0,1fr);gap:8px;align-items:center;padding:6px 8px;border-radius:10px;
+  border:0;background:transparent;color:var(--text-on-surface);text-align:left;font-size:13px;font-weight:600;cursor:pointer}
+.thalamus.inbox .gu-et:hover{background:var(--bg-item)}
+.thalamus.inbox .gu-et--on{background:color-mix(in srgb,var(--c) 13%,transparent)}
+.thalamus.inbox .gu-et-n{width:22px;height:22px;border-radius:7px;display:grid;place-items:center;font-size:11px;font-weight:800;
+  background:color-mix(in srgb,var(--c) 16%,transparent);color:var(--c)}
+.thalamus.inbox .gu-sucio{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--warning);margin-left:6px;vertical-align:middle}
+
+/* Editor */
+.thalamus.inbox .gu-editor{display:grid;gap:var(--s3)}
+.thalamus.inbox .gu-ecab{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap}
+.thalamus.inbox .gu-ecab h2{margin:0;font-size:18px}
+.thalamus.inbox .gu-der{margin-left:auto}
+.thalamus.inbox .gu-bot{margin:0;font-size:12px;color:var(--text-muted);border:1px dashed var(--border-main);border-radius:12px;padding:8px 12px}
+.thalamus.inbox .gu-nota{font-size:12px}
+.thalamus.inbox .gu-paso{display:grid;gap:var(--s2);padding:12px 14px;border-radius:16px;border:1px solid var(--border-subtle);background:var(--bg-element)}
+.thalamus.inbox .gu-paso--apagado{opacity:.55}
+.thalamus.inbox .gu-paso--editado{border-color:var(--warning-border)}
+.thalamus.inbox .gu-paso-cab{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap}
+.thalamus.inbox .gu-num{font-weight:800;color:var(--text-muted-40);width:16px}
+.thalamus.inbox .gu-tit{flex:1;min-width:140px;font-weight:700}
+.thalamus.inbox .gu-atajo{width:130px;color:var(--brand-secondary);font-weight:700}
+.thalamus.inbox .gu-cuando{flex:1;min-width:200px}
+.thalamus.inbox .gu-ops{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:var(--s2)}
+.thalamus.inbox .gu-op{display:grid;gap:6px;align-content:start}
+.thalamus.inbox .gu-op-cab{display:flex;align-items:center;gap:8px;min-height:24px}
+.thalamus.inbox .gu-op-si{max-width:180px}
+.thalamus.inbox .gu-op textarea{min-height:96px}
+.thalamus.inbox .gu-mejor{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--success)}
+.thalamus.inbox .gu-audio{margin:0;font-size:12px;padding:6px 10px;border-radius:10px;background:var(--brand-secondary-surface)}
+.thalamus.inbox .gu-nueva{border:1px dashed var(--border-main);border-radius:12px;min-height:96px;background:transparent;color:var(--text-muted);
+  font-weight:700;cursor:pointer}
+.thalamus.inbox .gu-nueva:hover{color:var(--brand-secondary);border-color:var(--brand-secondary)}
+.thalamus.inbox .gu-paso-pie{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap}
+.thalamus.inbox .gu-pie-der{margin-left:auto;display:flex;gap:2px}
+.thalamus.inbox .gu-agregar{justify-self:start}
+.thalamus.inbox .gu-campo{display:grid;gap:6px}
+.thalamus.inbox .gu-campo h3{margin:0;font-size:13px}
+.thalamus.inbox .gu-item{display:flex;gap:var(--s2);align-items:center}
+.thalamus.inbox .gu-item > :first-child{flex:1}
+
+/* Vista previa */
+.thalamus.inbox .gu-previa{display:grid;gap:var(--s2);position:sticky;top:var(--s3)}
+.thalamus.inbox .gu-menu{border:1px solid var(--border-subtle);border-radius:14px;overflow:hidden}
+.thalamus.inbox .gu-menu-fila{display:flex;align-items:center;gap:8px;padding:7px 10px;font-size:12px;border-top:1px solid var(--border-subtle)}
+.thalamus.inbox .gu-menu-fila:first-child{border-top:0}
+.thalamus.inbox .gu-menu-fila code{color:var(--brand-secondary);font-weight:800;font-family:inherit;width:90px;flex:none;overflow:hidden;text-overflow:ellipsis}
+.thalamus.inbox .gu-menu-fila span:not(.gu-ab){flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+.thalamus.inbox .gu-ab{display:inline-flex;gap:3px}
+.thalamus.inbox .gu-ab button{border:1px solid var(--border-main);background:var(--bg-element);color:var(--text-muted);border-radius:6px;padding:1px 7px;
+  font-size:11px;font-weight:800;cursor:pointer}
+.thalamus.inbox .gu-ab .gu-ab--on{background:var(--brand-secondary);border-color:var(--brand-secondary);color:var(--on-brand)}
+.thalamus.inbox .gu-burbujas{display:grid;gap:6px;padding:10px;border-radius:14px;background:var(--bg-item)}
+.thalamus.inbox .gu-burbuja{max-width:92%;justify-self:end;padding:7px 11px;border-radius:14px 14px 4px 14px;background:var(--brand-secondary);
+  color:var(--on-brand);font-size:12px;white-space:pre-wrap}
+.thalamus.inbox .gu-var{background:rgba(255,255,255,.22);border-radius:4px;padding:0 3px;font-weight:700}
+.thalamus.inbox .gu-hueco{background:#FFE08A;color:#4A3500;border-radius:4px;padding:0 3px;font-weight:700}
+
+/* Modales */
+.gu-modal{width:min(520px,94vw)}
+.gu-modal--ancho{width:min(680px,94vw)}
+.gu-modal-cuerpo{display:grid;gap:12px;padding:12px 20px 20px;max-height:70vh;overflow:auto}
+.gu-modal-pie{display:flex;justify-content:flex-end;gap:8px}
+.gu-version{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12.5px;padding:8px 0;border-bottom:1px solid var(--border-subtle)}
+.gu-prop{display:grid;gap:6px;padding:10px 12px;border-radius:12px;border:1px solid var(--border-subtle)}
+.gu-prop p{margin:0}
+.gu-prop-cab{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+
+@media (max-width:1180px){.thalamus.inbox .gu-cuerpo{grid-template-columns:200px minmax(0,1fr)}.thalamus.inbox .gu-previa{grid-column:1/-1;position:static}}
+@media (max-width:760px){.thalamus.inbox .gu-cuerpo{grid-template-columns:1fr}.thalamus.inbox .gu-lista{position:static}}

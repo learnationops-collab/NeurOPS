@@ -156,6 +156,8 @@ class IgMensaje(db.Model):
     # Quién del equipo lo mandó desde el Inbox (origen OTRO). Los ecos de Kommo o ManyChat no lo traen.
     autor_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
     autor = db.relationship('User', foreign_keys=[autor_id])
+    # El paso de la Guía del setting que se mandó (`etapa:paso:opción`, ADR-W197): de acá sale qué opción responde más.
+    guia = db.Column(db.String(120), nullable=True, index=True)
 
 
 class AutCampana(db.Model):
@@ -283,3 +285,40 @@ class AutSeguimiento(db.Model):
     resuelto_en = db.Column(db.DateTime, nullable=True)
 
     autor = db.relationship('User', foreign_keys=[autor_id])
+
+
+class GuiaVersion(db.Model):
+    """Cada publicación de la Guía del setting (ADR-W197): la vigente es la última. Sin ninguna, rige
+    `guia_inicial.INICIAL`. `contenido` tiene la forma que valida `guia.py`."""
+    __tablename__ = 'guia_setting_versiones'
+
+    id = db.Column(db.Integer, primary_key=True)
+    contenido = db.Column(db.JSON, nullable=False)
+    autor_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    nota = db.Column(db.String(300), nullable=True)
+    creada_en = db.Column(db.DateTime, nullable=False, default=ahora)
+
+    autor = db.relationship('User', foreign_keys=[autor_id])
+
+
+class GuiaPropuesta(db.Model):
+    """Un cambio a la Guía que el setter no puede hacer solo (etapas, quién es lead): lo escribe y lo
+    responde la dirección comercial."""
+    __tablename__ = 'guia_setting_propuestas'
+
+    PENDIENTE = 'pendiente'
+    APROBADA = 'aprobada'
+    RECHAZADA = 'rechazada'
+
+    id = db.Column(db.Integer, primary_key=True)
+    etapa = db.Column(db.String(20), nullable=True)
+    texto = db.Column(db.Text, nullable=False)
+    estado = db.Column(db.String(12), nullable=False, default=PENDIENTE, index=True)
+    autor_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    revisor_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    respuesta = db.Column(db.Text, nullable=True)
+    creada_en = db.Column(db.DateTime, nullable=False, default=ahora)
+    revisada_en = db.Column(db.DateTime, nullable=True)
+
+    autor = db.relationship('User', foreign_keys=[autor_id])
+    revisor = db.relationship('User', foreign_keys=[revisor_id])

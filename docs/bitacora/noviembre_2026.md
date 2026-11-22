@@ -790,3 +790,9 @@
 
 ### 22/11/2026 · Reuniones sin agenda en Operaciones
 - Sección nueva «Reuniones» en el espacio del operador: las notas de Meet que no cuelgan de ninguna agenda, en Grupales, Con alumnos y Otras, con búsqueda, filtro por serie y el detalle al costado (resumen, nota completa, Doc, grabación, ficha). Desde el detalle se cambia la categoría de la nota o de toda su serie (ADR-W196, Leadership 1190).
+
+### 22/11/2026 · Guía del setting en el Inbox
+- Sección nueva «Guía» en el Inbox y en el espacio del setter: las etapas del setting y lo que se manda en cada una, editable por el equipo y publicada por versiones. Arranca con el documento de setting completo (ADR-W197, Leadership 1436).
+- Cada paso tiene opción A y B (o una por respuesta del lead), «Cuándo se usa» (Siempre, Solo si…, Opcional, No se usa), nota y si al mandarlo pasa a la etapa siguiente. Debajo de cada opción, qué porcentaje respondió en 14 días.
+- El chat toma la Guía: el guion al pasar de etapa y el «/» (los pasos de la etapa del lead, o de todas escribiendo el atajo). Completa nombre y link de agenda, no deja mandar con [corchetes] sin completar y separa en varios mensajes con una línea en blanco.
+- «Quién es lead» y las etapas se proponen y los responde la dirección comercial; el historial deja volver a una versión anterior.

@@ -12,6 +12,7 @@ import Etiquetas from './Etiquetas';
 import { Califica } from './Fila';
 import { FASES, TRAMOS, colorDe, faseDe, ordenDe, siguiente } from './fasesSetting';
 import useEquipo from './useEquipo';
+import { pasosDe, useGuia, visibles } from '../guia/useGuia';
 
 const CANALES = [['anuncios', 'Anuncios'], ['inbound', 'Inbound'], ['bienvenida', 'Bienvenida']];
 
@@ -106,6 +107,8 @@ function Etapa({ fase, onMover }) {
     const f = faseDe(fase);
     const sig = siguiente(fase);
     const grupo = (tramo) => FASES.filter((x) => x.tramo === tramo);
+    const guia = useGuia();
+    const cuantos = (id) => visibles(pasosDe(guia, id)).length;
     return (
         <>
             <div className="cv-tarjeta-pop-caja" ref={d.caja}>
@@ -127,7 +130,7 @@ function Etapa({ fase, onMover }) {
                                             style={{ '--c': colorDe(x) }} onClick={() => { d.setAbierto(false); onMover(x.id); }}>
                                             <span className="cv-etapa-n">{hecha ? <Check size={10} strokeWidth={3} /> : x.n}</span>
                                             <span>{x.label}</span>
-                                            {x.guion.length > 1 && <span className="t-cap mut40">{x.guion.length} mensajes</span>}
+                                            {cuantos(x.id) > 1 && <span className="t-cap mut40">{cuantos(x.id)} pasos</span>}
                                         </button>
                                     );
                                 })}
