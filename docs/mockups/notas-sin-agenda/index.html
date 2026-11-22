@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="es" data-tema="learnation" data-tema-modo="oscuro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reuniones sin agenda · mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<!-- Las hojas reales de Work: el mockup se ve con los mismos temas y componentes estándar (ui-*). -->
+<link rel="stylesheet" href="../../../frontend/src/temas/temas.css">
+<link rel="stylesheet" href="../../../frontend/src/temas/temas-unicos.css">
+<link rel="stylesheet" href="../../../frontend/src/components/standard/standard.css">
+<style>
+/* Solo lo de esta pantalla (irá a pages/operations/reuniones/reuniones.css). Mismo armado que Conflictos
+   (pages/conflictos/conflictos.css): lista en un Panel y, al elegir una fila, el detalle pegado al costado. */
+body{margin:0;min-height:100vh;background:var(--ln-page-bg);background-color:var(--ln-page-base);color:var(--ln-text-out);
+  font-family:'Montserrat','Helvetica Neue',Arial,sans-serif;font-size:14px}
+.mk-tema{position:fixed;right:16px;bottom:16px;z-index:5}
+
+.re-pagina{display:flex;flex-direction:column;gap:16px;padding:16px;max-width:1400px;margin:0 auto}
+.re-filtros{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.re-filtros .ui-entry{flex:1 1 260px;max-width:380px}
+.re-aclara{margin:0;color:var(--ln-text-muted);font-size:13px}
+
+.re-cuerpo{display:grid;gap:16px;grid-template-columns:minmax(0,1.25fr) minmax(340px,1fr);align-items:start}
+@media (max-width:1000px){.re-cuerpo{grid-template-columns:1fr}}
+
+.re-lista{padding:0;overflow:hidden}
+.re-fila{display:grid;grid-template-columns:92px 1fr 170px 90px;gap:12px;align-items:center;width:100%;padding:12px 16px;
+  text-align:left;background:none;border:0;border-bottom:1px solid var(--ln-border-subtle);color:inherit;font:inherit;cursor:pointer}
+.re-fila:hover{background:var(--ln-inset-bg)}
+.re-fila.is-activo{background:var(--ln-inset-bg);box-shadow:inset 3px 0 0 var(--ln-brand-2)}
+.re-fila--cabeza{cursor:default;font-size:12px;color:var(--ln-text-muted);text-transform:uppercase;letter-spacing:.04em}
+.re-fila--cabeza:hover{background:none}
+.re-fila__dia{font-variant-numeric:tabular-nums;color:var(--ln-text-muted);font-size:13px}
+.re-fila__dia b{color:var(--ln-text-in);font-weight:700}
+.re-fila__titulo{font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.re-fila__serie{color:var(--ln-text-muted);font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.re-fila__extra{display:flex;gap:8px;justify-content:flex-end;color:var(--ln-text-faint);font-size:12px;align-items:center}
+.re-fila__extra svg{width:14px;height:14px}
+.re-mas{display:flex;justify-content:center;padding:12px}
+@media (max-width:760px){.re-fila{grid-template-columns:1fr auto}.re-fila--cabeza{display:none}.re-fila__serie{grid-column:1/-1}}
+
+.re-lado{position:sticky;top:16px;max-height:calc(100vh - 32px);overflow:auto}
+.re-detalle{display:flex;flex-direction:column;gap:12px}
+.re-detalle__cabeza{display:flex;flex-direction:column;align-items:flex-start;gap:6px}
+.re-detalle__cabeza h2{margin:0;font-size:20px}
+.re-detalle__meta{margin:0;color:var(--ln-text-muted)}
+.re-links{display:flex;flex-wrap:wrap;gap:8px}
+.re-sub{margin:0 0 8px;font-size:14px}
+.re-resumen{margin:0;white-space:pre-line;line-height:1.55}
+.re-cat{display:flex;flex-direction:column;gap:10px;align-items:flex-start}
+.re-cat__fila{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.re-cat p{margin:0;color:var(--ln-text-muted);font-size:13px}
+.re-mas-datos summary{cursor:pointer;color:var(--ln-text-muted)}
+.re-mas-datos ul{margin:8px 0 0;padding-left:1.2em;display:grid;gap:4px;color:var(--ln-text-muted)}
+.re-md{display:grid;gap:8px;padding-top:8px}
+.re-md h4{margin:8px 0 0}
+.re-md ul{margin:0;padding-left:1.2em;display:grid;gap:4px}
+</style>
+</head>
+<body>
+<button class="ui-btn ui-btn--secondary ui-btn--sm mk-tema" type="button"
+  onclick="const h=document.documentElement;h.dataset.temaModo=h.dataset.temaModo==='oscuro'?'claro':'oscuro'">Claro / oscuro</button>
+
+<div class="re-pagina">
+  <!-- PageHeader con Segmented: como Conflictos. -->
+  <header class="ui-header">
+    <div class="ui-header__id">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m16 13 5.2 3.1a.5.5 0 0 0 .8-.4V8.3a.5.5 0 0 0-.8-.4L16 11"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg>
+      <h1 class="ui-header__title">Reuniones</h1>
+    </div>
+    <div class="ui-header__actions">
+      <div class="ui-seg" role="group" aria-label="Qué reuniones" id="pestanas">
+        <button type="button" class="ui-seg__item" aria-pressed="true" data-g="grupales">Grupales <span class="ui-seg__count">1.289</span></button>
+        <button type="button" class="ui-seg__item" aria-pressed="false" data-g="alumnos">Con alumnos <span class="ui-seg__count">273</span></button>
+        <button type="button" class="ui-seg__item" aria-pressed="false" data-g="otras">Otras <span class="ui-seg__count">1.460</span></button>
+      </div>
+    </div>
+  </header>
+
+  <!-- InputGroup + Select estándar. -->
+  <div class="re-filtros">
+    <label class="ui-entry">
+      <span class="ui-entry__prefix"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span>
+      <input placeholder="Buscar en el título o por un invitado" aria-label="Buscar">
+    </label>
+    <button type="button" class="ui-select ui-select--sm" aria-label="Serie">
+      <span class="ui-select__value" id="serie">Todas las series</span>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+    </button>
+  </div>
+  <p class="re-aclara" id="aclara">Reuniones del equipo que no cuelgan de ninguna agenda de venta.</p>
+
+  <div class="re-cuerpo">
+    <section class="ui-panel re-lista">
+      <div class="re-fila re-fila--cabeza" aria-hidden="true"><span>Cuándo</span><span>Reunión</span><span>Serie</span><span></span></div>
+      <div id="filas"></div>
+      <div class="re-mas"><button type="button" class="ui-btn ui-btn--secondary ui-btn--sm">Ver 50 más</button></div>
+    </section>
+
+    <aside class="re-lado" aria-label="Detalle de la reunión">
+      <div class="re-detalle" id="detalle"></div>
+    </aside>
+  </div>
+</div>
+
+<script>
+// Datos de muestra con las series reales de producción (22/11/2026).
+const ICO_VIDEO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m16 13 5.2 3.1a.5.5 0 0 0 .8-.4V8.3a.5.5 0 0 0-.8-.4L16 11"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg>';
+const ICO_GENTE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>';
+const CAT = { team: ['Reunión del equipo', 'var(--ln-brand-2, #5B7CFF)'], student: ['Sesión con estudiante', '#10B981'],
+  interview: ['Entrevista', '#F59E0B'], other: ['Otra', 'var(--ln-text-muted)'], sales: ['Venta', 'var(--ln-brand, #FF3FA4)'] };
+const NOTAS = {
+  grupales: [
+    { dia: '20 nov', hora: '10:00', t: 'Educational Team', s: 'Educational Team', inv: 9, rec: true, cat: 'team' },
+    { dia: '19 nov', hora: '15:30', t: 'Developers Team', s: 'Developers Team', inv: 4, rec: true, cat: 'team' },
+    { dia: '19 nov', hora: '09:00', t: 'Closers', s: 'Closers', inv: 7, rec: true, cat: 'team' },
+    { dia: '18 nov', hora: '18:00', t: 'Learning Clinic', s: 'Learning Clinic', inv: 23, rec: false, cat: 'team' },
+    { dia: '18 nov', hora: '11:00', t: 'Operaciones', s: 'Operaciones', inv: 3, rec: true, cat: 'team' },
+    { dia: '17 nov', hora: '10:00', t: 'Trainning Session', s: 'Trainning Session', inv: 6, rec: true, cat: 'team' },
+    { dia: '14 nov', hora: '—', t: 'Reunión de Santiago Coro', s: '', inv: 0, rec: false, cat: 'team', sinFecha: true },
+  ],
+  alumnos: [
+    { dia: '06 nov', hora: '19:02', t: 'Scale Session: Miguel Munguia', s: 'Scale Session', inv: 1, rec: true, cat: 'student' },
+    { dia: '06 nov', hora: '17:00', t: 'Exam Session', s: 'Exam Session', inv: 1, rec: true, cat: 'student' },
+    { dia: '05 nov', hora: '20:00', t: 'Consultoría Individual', s: 'Consultoría Individual', inv: 1, rec: true, cat: 'student' },
+    { dia: '05 nov', hora: '16:30', t: 'Sesión de reactivación', s: 'Sesión de reactivación', inv: 1, rec: false, cat: 'student' },
+    { dia: '04 nov', hora: '18:00', t: 'NS Session', s: 'NS Session', inv: 2, rec: true, cat: 'student' },
+  ],
+  otras: [
+    { dia: '21 nov', hora: '12:00', t: 'Puntaje', s: 'Puntaje', inv: 2, rec: true, cat: 'other' },
+    { dia: '20 nov', hora: '16:00', t: 'Nadia & Andy', s: 'Nadia & Andy', inv: 1, rec: true, cat: 'other' },
+    { dia: '19 nov', hora: '11:30', t: 'Marketing Hiring', s: 'Marketing Hiring', inv: 3, rec: false, cat: 'interview' },
+    { dia: '18 nov', hora: '15:00', t: 'A player', s: 'A player', inv: 1, rec: true, cat: 'other' },
+    { dia: '17 nov', hora: '10:30', t: '[Plan] Ferddy Aliaga y Mario Bühler', s: '[Plan] Ferddy Aliaga y Mario Bühler', inv: 1, rec: true, cat: 'sales' },
+  ],
+};
+const ACLARA = {
+  grupales: 'Reuniones del equipo que no cuelgan de ninguna agenda de venta.',
+  alumnos: 'Sesiones con alumnos (Scale, Exam, Consultoría…) que no cuelgan de ninguna agenda.',
+  otras: 'Lo demás sin agenda: 1:1, entrevistas y lo que Work no supo clasificar. Si alguna es grupal o con un alumno, cambiale la categoría y pasa a su pestaña.',
+};
+let grupo = 'grupales', elegida = 0;
+
+const chip = (cat) => `<span class="ui-chip ui-chip--subtle" style="--c:${CAT[cat][1]}">${CAT[cat][0]}</span>`;
+function filas() {
+  document.getElementById('filas').innerHTML = NOTAS[grupo].map((n, i) => `
+    <button type="button" class="re-fila${i === elegida ? ' is-activo' : ''}" aria-pressed="${i === elegida}" data-i="${i}">
+      <span class="re-fila__dia"><b>${n.dia}</b> ${n.hora}</span>
+      <span class="re-fila__titulo">${n.t}${grupo === 'otras' ? ' ' + chip(n.cat) : ''}</span>
+      <span class="re-fila__serie">${n.s || 'Sin serie'}</span>
+      <span class="re-fila__extra">${n.inv ? ICO_GENTE + n.inv : ''} ${n.rec ? ICO_VIDEO : ''}</span>
+    </button>`).join('');
+  document.querySelectorAll('.re-fila[data-i]').forEach(b => b.onclick = () => { elegida = +b.dataset.i; filas(); detalle(); });
+}
+function detalle() {
+  const n = NOTAS[grupo][elegida];
+  const opciones = Object.keys(CAT).map(k => k === n.cat ? CAT[k][0] : null).find(Boolean);
+  document.getElementById('detalle').innerHTML = `
+    <header class="re-detalle__cabeza">
+      ${chip(n.cat)}
+      <h2>${n.t}</h2>
+      <p class="re-detalle__meta">${n.sinFecha ? 'Fecha del Doc: ' : ''}${n.dia} · ${n.hora} · ${n.inv ? n.inv + ' invitados' : 'sin invitados de afuera'} · Drive de santiago@thelearnation.com</p>
+      <div class="re-links">
+        <button type="button" class="ui-btn ui-btn--secondary ui-btn--sm">↗ Abrir notas</button>
+        ${n.rec ? '<button type="button" class="ui-btn ui-btn--secondary ui-btn--sm">▶ Grabación</button>' : ''}
+        ${grupo === 'alumnos' ? '<button type="button" class="ui-btn ui-btn--secondary ui-btn--sm">Ver ficha</button>' : ''}
+      </div>
+    </header>
+
+    <section class="ui-panel ui-panel--sm">
+      <h3 class="re-sub">Resumen</h3>
+      <p class="re-resumen">Planificación del contenido de diciembre y revisión de la clínica de aprendizaje.
+
+Contenido del mes
+Se definieron los cuatro temas de las clases en vivo y quién arma cada una.
+
+Learning Clinic
+Bajó la asistencia de la última semana; se prueba moverla a las 18:00.</p>
+      <details class="re-mas-datos" style="margin-top:12px">
+        <summary>Nota completa</summary>
+        <div class="re-md"><h4>Próximos pasos</h4><ul><li>Kerwin: armar la clase del 3 de diciembre.</li><li>Ana: mover la Learning Clinic a las 18:00.</li></ul><h4>Detalles</h4><p>(el Doc entero, como en la pestaña Reuniones de la ficha)</p></div>
+      </details>
+      ${n.inv ? `<details class="re-mas-datos" style="margin-top:8px"><summary>Invitados (${n.inv})</summary><ul><li>ana@thelearnation.com</li><li>kerwin@thelearnation.com</li><li>…</li></ul></details>` : ''}
+    </section>
+
+    <section class="ui-panel ui-panel--sm re-cat">
+      <h3 class="re-sub">Categoría</h3>
+      <div class="re-cat__fila">
+        <button type="button" class="ui-select ui-select--sm" aria-label="Categoría de esta reunión" style="min-width:220px">
+          <span class="ui-select__value">${opciones}</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        ${n.s ? `<label class="re-cat__fila" style="gap:8px"><span class="ui-switch ui-switch--static" aria-checked="false"></span> Todas las de «${n.s}»</label>` : ''}
+      </div>
+      <p>${n.s ? 'Con «Todas» vale para la serie entera y para las que vengan (lo mismo que Integraciones › Categorías).' : 'Esta nota no tiene serie: el cambio vale solo para ella.'}</p>
+      <button type="button" class="ui-btn ui-btn--primary ui-btn--sm" disabled>Guardar</button>
+    </section>`;
+}
+document.querySelectorAll('#pestanas .ui-seg__item').forEach(b => b.onclick = () => {
+  grupo = b.dataset.g; elegida = 0;
+  document.querySelectorAll('#pestanas .ui-seg__item').forEach(x => x.setAttribute('aria-pressed', x === b));
+  document.getElementById('aclara').textContent = ACLARA[grupo];
+  filas(); detalle();
+});
+filas(); detalle();
+</script>
+</body>
+</html>

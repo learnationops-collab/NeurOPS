@@ -787,3 +787,6 @@
 ### 22/11/2026 · Aviso de alumno nuevo para fulfillment
 - El aviso de #onboardings ya no muestra la plata (sigue en #wins). Lleva programa, fecha de ingreso, etapa, examen, lo que quiere resolver (del formulario de la agenda), dolores, notas del closer y del setter, y el teléfono grande en la tarjeta (ADR-W195, Leadership 1439).
 - Academia: guion en vivo de la Onboarding Session con la demostración de Mario y sus correcciones del 17/11 (Academia ADR-243, Leadership 1440).
+
+### 22/11/2026 · Reuniones sin agenda en Operaciones
+- Sección nueva «Reuniones» en el espacio del operador: las notas de Meet que no cuelgan de ninguna agenda, en Grupales, Con alumnos y Otras, con búsqueda, filtro por serie y el detalle al costado (resumen, nota completa, Doc, grabación, ficha). Desde el detalle se cambia la categoría de la nota o de toda su serie (ADR-W196, Leadership 1190).
