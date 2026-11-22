@@ -3,6 +3,7 @@
   · envio.py: a dónde y cómo (webhook o bot, por canal), con la imagen o el embed de texto.
   · tarjeta.py: el aviso genérico (texto con nombre y número para buscar; el resto en la imagen).
   · venta.py: cada venta o cobro registrado (reemplaza al aviso que armaba n8n).
+  · onboarding.py: el alumno nuevo en #onboardings, con lo educativo y sin la plata (ADR-W195).
   · resultado.py: el resultado de cada llamada reportada.
   · externo.py: los que pide la Academia por la API (Onboarding, reactivación, tours, upsell).
 
