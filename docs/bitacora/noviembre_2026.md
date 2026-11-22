@@ -783,3 +783,7 @@
 - «Antiguos»: botón discreto al lado de las pestañas del Inbox de Closers con las postulaciones archivadas y el estado que tenían. Se abren con la misma ficha y, una vez abierto, la búsqueda también las encuentra.
 - Rol nuevo «Hiring · Closers» (`hiring_closers`), como rol adicional: Talent solo con Inbox (fijo en Closers) y la sección Closers. Puede votar, pero no ve Asistentes, Forms, Stats ni los ajustes de Talent. Para Marlon.
 - Confirmaciones: Darian ve en su tablero las agendas sin confirmar de todos los closers y de todos los segmentos («A de Jean Carlo»); al confirmar una de otro closer sale de su tablero y sigue en el del closer, que puede confirmar como respaldo (ADR-W194, Leadership «Darian confirma todas las llamadas…»).
+
+### 22/11/2026 · Aviso de alumno nuevo para fulfillment
+- El aviso de #onboardings ya no muestra la plata (sigue en #wins). Lleva programa, fecha de ingreso, etapa, examen, lo que quiere resolver (del formulario de la agenda), dolores, notas del closer y del setter, y el teléfono grande en la tarjeta (ADR-W195, Leadership 1439).
+- Academia: guion en vivo de la Onboarding Session con la demostración de Mario y sus correcciones del 17/11 (Academia ADR-243, Leadership 1440).
