@@ -796,3 +796,6 @@
 - Cada paso tiene opción A y B (o una por respuesta del lead), «Cuándo se usa» (Siempre, Solo si…, Opcional, No se usa), nota y si al mandarlo pasa a la etapa siguiente. Debajo de cada opción, qué porcentaje respondió en 14 días.
 - El chat toma la Guía: el guion al pasar de etapa y el «/» (los pasos de la etapa del lead, o de todas escribiendo el atajo). Completa nombre y link de agenda, no deja mandar con [corchetes] sin completar y separa en varios mensajes con una línea en blanco.
 - «Quién es lead» y las etapas se proponen y los responde la dirección comercial; el historial deja volver a una versión anterior.
+
+### 23/11/2026 · Segmento C con Mario y Marlon
+- El mínimo diario de una estrategia admite varios closers, cada uno con su tope de agendas por día. En Team › Estrategias se suman y se quitan como etiquetas. Segmento C: Marlon y Mario, hasta 5 por día cada uno, además de Dari (ADR-W198, Leadership 1469).

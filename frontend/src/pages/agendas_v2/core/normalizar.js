@@ -202,11 +202,13 @@ export function normalGrupo(id, d) {
     };
 }
 
-// Mínimo diario: {p: personaId, n: agendas por día}. Sin closer o con 0, no hay mínimo ({}).
+// Mínimo diario: {ps: [personaId], n: agendas por día de cada uno}. El viejo {p, n} se lee como ps = [p].
+// Sin closers o con 0, no hay mínimo ({}).
 export function normalMinimo(v) {
     v = v && typeof v === 'object' ? v : {};
-    const p = String(v.p || ''), n = entero(v.n, 0, 50, 0);
-    return p && n ? { p, n } : {};
+    const ps = [...new Set((Array.isArray(v.ps) ? v.ps : [v.p]).filter(Boolean).map(String))].slice(0, 30);
+    const n = entero(v.n, 0, 50, 0);
+    return ps.length && n ? { ps, n } : {};
 }
 
 // Distribuida: el porcentaje de cada closer {personaId: 0..100}. Sin dato, todos parejo.

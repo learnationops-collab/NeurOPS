@@ -95,21 +95,31 @@ def _por_estrategia(estrategia, miembros, slots_de, ahora, carga_de, g=None):
 
 
 def con_minimo(d, g, x, slots_base, en_dia, con_base):
-    """Mínimo diario (Santi, 14/11/2026): `g.minimo` = {p, n}. Los días en que ese closer tiene menos de n
-    agendas, sus horarios se suman a los de la estrategia (a igual hora, gana él) y se agendan con el evento
-    que abrió el lead (`base`), no con la sesión de la regla."""
+    """Mínimo diario (Santi, 14/11/2026): `g.minimo` = {ps, n}. Los días en que uno de esos closers tiene menos
+    de n agendas, sus horarios se suman a los de la estrategia (a igual hora, gana él; entre dos del mínimo, el
+    primero de la lista) y se agendan con el evento que abrió el lead (`base`), no con la sesión de la regla.
+    Varios closers desde el 21/11/2026 (Mario y Marlon, ADR-W198)."""
     m = g.get('minimo') or {}
-    p, n = buscar(d, 'personas', m.get('p')), m.get('n') or 0
-    if not p or n <= 0 or not es_closer(d, p) or horas_semana(p) <= 0:
-        return x
-    tz = p.get('tz') or TZ_DEF
-    suyos = [t for t in slots_base(p) if en_dia(p['id'], t, tz) < n]
-    if not suyos:
+    n = m.get('n') or 0
+    if n <= 0:
         return x
     mapa = {s['t']: s for s in x['slots']}
-    for t in suyos:
-        mapa[t] = {'t': t, 'p': p['id'], **({'base': True} if con_base else {})}
-    regla = (x['regla'] + ' + ' if x['regla'] else '') + p['nombre'] + ' hasta ' + str(n) + ' por día'
+    tomados, nombres = set(), []
+    for pid in m.get('ps') or []:
+        p = buscar(d, 'personas', pid)
+        if not p or not es_closer(d, p) or horas_semana(p) <= 0:
+            continue
+        tz = p.get('tz') or TZ_DEF
+        suyos = [t for t in slots_base(p) if t not in tomados and en_dia(p['id'], t, tz) < n]
+        if not suyos:
+            continue
+        nombres.append(p['nombre'])
+        for t in suyos:
+            mapa[t] = {'t': t, 'p': p['id'], **({'base': True} if con_base else {})}
+            tomados.add(t)
+    if not nombres:
+        return x
+    regla = (x['regla'] + ' + ' if x['regla'] else '') + ' y '.join(nombres) + ' hasta ' + str(n) + ' por día'
     return {'slots': [mapa[t] for t in sorted(mapa)], 'regla': regla}
 
 

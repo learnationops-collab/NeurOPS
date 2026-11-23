@@ -1793,3 +1793,11 @@
   5. Para saber qué opción responde más, el primer mensaje lleva `ig_mensajes.guia` (`etapa:paso:opción`). Respondió si el lead escribió antes del próximo mensaje de la Guía en esa conversación. Cada opción muestra el % de los últimos 14 días y la que más responde se marca.
 - **Qué se pierde:** el guion deja de estar en el código: un cambio en la Guía llega a todos al publicar, sin revisión previa (queda en el historial). Las etapas no se crean ni se renombran desde la pantalla: es una propuesta y después código. Lo que se mandaba antes de hoy no tiene marca, así que las cifras arrancan en cero.
 - **Consecuencias:** migración `a8c2e4f6b1d3` (`ig_mensajes.guia`, `guia_setting_versiones`, `guia_setting_propuestas`; idempotente). Endpoints `GET/PUT /api/inbox/guia`, `/guia/historial`, `/guia/versiones/<id>/restaurar`, `/guia/propuestas` (GET, POST, PUT). `POST /conversaciones/<id>/escribir` acepta `guia`. `fasesSetting.js` queda solo con las fases.
+
+## ADR-W198: el mínimo diario de una estrategia admite varios closers
+
+- **Fecha:** 2026-11-23 · **Subsistema:** Agendas 2.0, asignación (`app/agendas_v2/nucleo/asignacion.py` `con_minimo` y su espejo `frontend/src/pages/agendas_v2/core/asignacion.js`; `normalizar` en los dos; pantalla Team › Estrategias, `secciones/team/Grupos.jsx`).
+- **Contexto:** con la salida de Jean Carlo (21/11), Mario pidió que los leads C también los tomen él y Marlon, con el tope que tenía Jean (5 agendas por día). El mínimo diario (14/11) admitía un solo closer, así que los C quedaron solo con Dari.
+- **Decisión:** `minimo` pasa de `{p, n}` a `{ps: [persona], n}`: cada closer de la lista suma sus horarios los días en que tiene menos de n agendas. A igual hora gana el closer del mínimo sobre la estrategia, y entre dos del mínimo el primero de la lista. El `{p, n}` viejo se lee como `ps = [p]`. En Estrategias, los closers del mínimo son etiquetas con su botón para quitar y un selector «Sumar otro».
+- **Qué se pierde:** nada; con un solo closer funciona igual que antes.
+- **Consecuencias:** sin migración (los grupos se renormalizan al leerlos). Segmento C queda con Marlon y Mario, 5 por día cada uno.

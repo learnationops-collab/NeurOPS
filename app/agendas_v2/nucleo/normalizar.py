@@ -363,10 +363,13 @@ def normal_grupo(id, d):
 
 
 def _minimo(v):
-    """Mínimo diario: {p: persona_id, n: agendas por día}. Sin closer o con 0, no hay mínimo ({})."""
+    """Mínimo diario: {ps: [persona_id], n: agendas por día de cada uno}. El viejo {p, n} (un closer) se
+    lee como ps = [p]. Sin closers o con 0, no hay mínimo ({})."""
     v = obj(v)
-    p, n = js_str(v.get('p') or ''), entero(v.get('n'), 0, 50, 0)
-    return {'p': p, 'n': n} if p and n else {}
+    ps = v.get('ps') if isinstance(v.get('ps'), list) else [v.get('p')]
+    ps = list(dict.fromkeys(js_str(x) for x in ps if x))[:30]
+    n = entero(v.get('n'), 0, 50, 0)
+    return {'ps': ps, 'n': n} if ps and n else {}
 
 
 def _pesos(v):
