@@ -1801,3 +1801,11 @@
 - **Decisión:** `minimo` pasa de `{p, n}` a `{ps: [persona], n}`: cada closer de la lista suma sus horarios los días en que tiene menos de n agendas. A igual hora gana el closer del mínimo sobre la estrategia, y entre dos del mínimo el primero de la lista. El `{p, n}` viejo se lee como `ps = [p]`. En Estrategias, los closers del mínimo son etiquetas con su botón para quitar y un selector «Sumar otro».
 - **Qué se pierde:** nada; con un solo closer funciona igual que antes.
 - **Consecuencias:** sin migración (los grupos se renormalizan al leerlos). Segmento C queda con Marlon y Mario, 5 por día cada uno.
+
+## ADR-W199: el lead que ya agendó puede avisar que ningún horario le sirve
+
+- **Fecha:** 2026-11-23 · **Subsistema:** Agendas 2.0, página pública (`app/agendas_v2/sin_horario.py`, `POST /api/agendas-v2/publico/reservas/sin-horario`; `frontend/src/pages/agendas_v2/reserva/NingunHorario.jsx` en `PasoListo`) y tarjeta del closer y del triage (`CloserWorkflowPage.jsx`).
+- **Contexto:** Marlon (19/11, Leadership 1465) pidió que el lead pueda decir «ningún horario me sirve». La asistencia de los A y B cayó al 41 % (Sales Team 21/11). Si el lead no agenda porque ningún horario le sirve, la llamada se pierde. Si agenda uno que no le sirve, lo más probable es que no se presente.
+- **Decisión:** la opción aparece solo después de agendar, en la confirmación. El lead escribe qué días y horarios le quedan bien. La agenda no se cancela: se marca en `agenda_payload.sin_horario = {texto, en}` y la tarjeta del deck (closer y triage) lleva la etiqueta «Reagendar: ningún horario le sirve», con lo que escribió el lead. La página conoce la agenda por un token firmado (un mes) que devuelve `POST /reservas`; con el id solo no se puede escribir.
+- **Qué se pierde:** nada. Quien no agenda sigue sin dejar rastro de por qué.
+- **Consecuencias:** sin migración (`agenda_payload` ya es JSON). No avisa por Discord ni por WhatsApp: se ve al abrir el deck.

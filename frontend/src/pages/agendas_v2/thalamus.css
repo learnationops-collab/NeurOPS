@@ -1851,3 +1851,15 @@
 .thalamus .cu-dock{display:grid;gap:var(--s4)}
 .thalamus .cu-dock-fila{display:flex;align-items:center;gap:var(--s3);flex-wrap:wrap}
 .thalamus .cu-dock-fila > b{min-width:120px}
+
+/* «Ningún horario me sirve» en la confirmación (ADR-W199) */
+.thalamus .rv-sinh-abrir{margin-top:18px;background:none;border:0;padding:0;font-size:15px;cursor:pointer}
+.thalamus .rv-sinh{margin-top:18px;width:min(100%,640px);display:grid;gap:10px;padding:18px 20px;border-radius:18px;background:var(--rv-campo);border:1px solid var(--rv-campo-borde)}
+.thalamus .rv-sinh-lbl{font-weight:700;color:var(--rv-fg)}
+.thalamus .rv-sinh-txt{width:100%;resize:vertical;padding:12px 14px;border-radius:12px;border:1px solid var(--rv-campo-borde);background:rgba(255,255,255,.04);color:var(--rv-fg);font-size:15px}
+.thalamus .rv-sinh-txt::placeholder{color:var(--rv-tenue)}
+.thalamus .rv-sinh-ayuda{margin:0;font-size:13px;color:var(--rv-mut)}
+.thalamus .rv-sinh-error{margin:0;font-size:13px;color:var(--brand-danger,#f87171)}
+.thalamus .rv-sinh-acc{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.thalamus .rv-sinh-acc .rv-link{background:none;border:0;padding:0;cursor:pointer}
+.thalamus .rv-sinh--ok{margin-top:18px;display:flex;align-items:flex-start;gap:8px;color:var(--rv-fg);font-size:15px}

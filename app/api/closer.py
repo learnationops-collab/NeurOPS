@@ -3,6 +3,7 @@ import json
 import pytz
 from flask_login import login_required, current_user
 from app.api.errores import error_interno
+from app.agendas_v2 import sin_horario
 from app.services.closer_service import CloserService
 from app.models import DailyReportQuestion, CloserDailyStats, DailyReportAnswer, db, Appointment, WeeklyAvailability, Event, Client, SurveyAnswer, SurveyQuestion, FeatureToggle
 from app.decorators import role_required
@@ -1533,6 +1534,8 @@ def get_closer_deck():
         formatted["segmento_puntos"] = a.segmento_puntos
         # Un lead A/B o una Momentum tomó su horario (desplazar.py): sigue en pie, hay que reagendarla.
         formatted["desplazada"] = bool(a.desplazada_por_id)
+        # El lead avisó al agendar que ningún horario le sirve (ADR-W199): sigue en pie, hay que reagendarla.
+        formatted["sin_horario"] = sin_horario.de(a)
         formatted["viene_de_triage"] = bool(a.agenda_triage_id)
         formatted_appointments.append(formatted)
         

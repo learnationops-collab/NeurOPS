@@ -389,7 +389,9 @@ export default function PantallaLead({ fuente, proveedor, modo = 'prueba', prevM
                 const durReal = rr.duracion || rr.duracion_min || null;
                 // El correo al que Google mandó la invitación al evento (vacío si no hubo evento o correo).
                 const invitacion = (r && r.reserva && r.reserva.invitacion) || '';
-                setS(q => conFoco({ ...q, listo: true, slot, asigFinal: asig, consultor, durReal, invitacion }, 'entra'));
+                // Con este token avisa después si ningún horario le sirve (ADR-W199).
+                const token = rr.token || '';
+                setS(q => conFoco({ ...q, listo: true, slot, asigFinal: asig, consultor, durReal, invitacion, token }, 'entra'));
             }, (e) => {
                 if (!vivoRef.current) return;
                 if (e && e.code === 'ya_tiene' && e.agenda) {
@@ -461,7 +463,8 @@ export default function PantallaLead({ fuente, proveedor, modo = 'prueba', prevM
     } else if (s.listo) {
         clave = 'listo';
         paso = <PasoListo ids={ids} nombre={nombre} slot={s.slot} s={s} dur={s.durReal || ctx.dur} redir={ctx.redir} preguntas={preguntas} prueba={prueba} respuestas={respuestas} acc={acc}
-            consultor={s.consultor} invitacion={s.invitacion} tapados={s.guardados ? s.tapados : null} />;
+            consultor={s.consultor} invitacion={s.invitacion} tapados={s.guardados ? s.tapados : null}
+            sinHorario={s.token && typeof proveedor.sinHorario === 'function' ? (texto) => proveedor.sinHorario(s.token, texto) : null} />;
     } else if (s.reco) {
         clave = 'reco';
         paso = <PasoConocido ids={ids} reco={s.reco} tz={s.tz} acc={acc} />;

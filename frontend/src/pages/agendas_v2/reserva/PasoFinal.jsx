@@ -9,6 +9,7 @@ import { textoRespuesta } from '../core/reserva';
 import { dtf, fechaTs, gmtTxt, horaTxt } from '../core/tiempo';
 import { fmt, mayus } from '../core/util';
 import { Avatar, Bandera, Icono } from '../ui/base';
+import NingunHorario from './NingunHorario';
 
 export function Respuestas({ preguntas, resp, pais, nombre, asig, slot, d }) {
     const filas = preguntas.map(q => {
@@ -64,7 +65,7 @@ export function DatosLead({ preguntas, s, tapados }) {
  * consultor: {nombre, color} (en la prueba, la persona del horario elegido).
  */
 // invitacion: el correo al que salió la invitación de Google Calendar; el lead la tiene que aceptar para verla en su calendario.
-export function PasoListo({ ids, nombre, slot, s, dur, redir, preguntas, prueba, respuestas, acc, consultor, invitacion, tapados }) {
+export function PasoListo({ ids, nombre, slot, s, dur, redir, preguntas, prueba, respuestas, acc, consultor, invitacion, tapados, sinHorario }) {
     const [listo, setListo] = useState(false);
     const z = zonaInfo(s.tz), t = slot.t;
     if (listo) {
@@ -78,6 +79,7 @@ export function PasoListo({ ids, nombre, slot, s, dur, redir, preguntas, prueba,
                         ? <>Te llevamos al siguiente paso. Si no se abrió, <a className="rv-link" href={redir} target="_blank" rel="noopener noreferrer">abrilo acá</a>.</>
                         : 'Tu consultor te escribe por WhatsApp. Ya podés cerrar esta página.'}
                 </p>
+                {!redir && <NingunHorario enviar={sinHorario} />}
                 {respuestas}
                 {prueba && <Acciones acc={acc} />}
             </div>
@@ -117,6 +119,7 @@ export function PasoListo({ ids, nombre, slot, s, dur, redir, preguntas, prueba,
                     ? <a className="rv-seguir" href={redir} target="_blank" rel="noopener noreferrer" onClick={() => setListo(true)}>Confirmar<Icono n="check" s={18} /></a>
                     : <button type="button" className="rv-seguir" onClick={confirmar}>Confirmar<Icono n="check" s={18} /></button>}
             </div>
+            <NingunHorario enviar={sinHorario} />
             {respuestas}
             {prueba && <Acciones acc={acc} />}
         </div>

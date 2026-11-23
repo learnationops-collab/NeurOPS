@@ -799,3 +799,6 @@
 
 ### 23/11/2026 · Segmento C con Mario y Marlon
 - El mínimo diario de una estrategia admite varios closers, cada uno con su tope de agendas por día. En Team › Estrategias se suman y se quitan como etiquetas. Segmento C: Marlon y Mario, hasta 5 por día cada uno, además de Dari (ADR-W198, Leadership 1469).
+
+### 23/11/2026 · «Ningún horario me sirve»
+- Después de agendar, el lead puede tocar «Ningún horario me sirve» y escribir qué días y horarios le quedan bien. La agenda sigue en pie y la tarjeta del closer y del triage dice «Reagendar: ningún horario le sirve», con lo que escribió (ADR-W199, Leadership 1465, pedido de Marlon).
