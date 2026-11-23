@@ -805,3 +805,6 @@
 
 ### 23/11/2026 · El triage confirma todas las agendas de los closers
 - Quien tiene el rol triage ve en Confirmaciones todas las agendas de los closers, también las ya confirmadas (quedan en la columna «Confirmado»). Antes era solo Dari por nombre y las confirmadas salían de su tablero. Hoy la única cuenta triage activa es Dari González (ADR-W200).
+
+### 23/11/2026 · Confirmar con vistas: tablero, lista y semana
+- Confirmar (triage y closers) tiene vistas guardadas como pestañas, en la misma fila que el título, con Filtro, Ordenar, Agrupar y Propiedades, como en Notion. De fábrica son tres: Por etapa (el tablero de siempre, se entra ahí), Por hora (lista agrupada por urgencia) y Semana (calendario). Cada uno elige qué propiedades y respuestas del formulario ver; se guardan en su cuenta (ADR-W201).
