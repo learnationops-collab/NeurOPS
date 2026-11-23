@@ -11,11 +11,13 @@ Work detecta el evento cancelado o borrado (`agendas_v2/movidas.py`) y cancela l
 - `avisar`: el mensaje de Discord al closer en el momento en que Work la detecta.
 
 Una agenda que se reasignó después de cancelarse (el closer canceló su evento y le pasó el lead a otro) no se pide:
-la siguió otra persona.
+la siguió otra persona. Tampoco si el lead tiene otra agenda más adelante sin cancelar (ADR-W202).
 """
 import logging
 import os
 from datetime import datetime
+
+from sqlalchemy import or_
 
 from app import db
 from app.models import Appointment, LeadEventLog
@@ -51,9 +53,20 @@ def _ultima_nota_de_motivo(appt_id):
             .order_by(LeadEventLog.created_at.desc(), LeadEventLog.id.desc()).all())
 
 
+def _siguio_en_otra(appt):
+    """¿El lead tiene otra agenda más adelante que no está cancelada? Entonces se lo siguió: no hay qué explicar.
+    Pasa con las filas duplicadas por una movida (Gerardo Morales, 05/11/2026): la que quedó se reportó y la otra
+    se canceló sola al desaparecer su evento."""
+    return db.session.query(Appointment.id).filter(
+        Appointment.client_id == appt.client_id, Appointment.id != appt.id,
+        Appointment.start_time > appt.start_time,
+        or_(Appointment.closer_result.is_(None), Appointment.closer_result != 'Cancelado'),
+    ).first() is not None
+
+
 def _espera_motivo(appt, notas):
-    """¿Sigue cancelada con la nota automática como último motivo, sin reasignarse después?"""
-    if appt.closer_result != 'Cancelado':
+    """¿Sigue cancelada con la nota automática como último motivo, sin reasignarse ni seguir en otra agenda?"""
+    if appt.closer_result != 'Cancelado' or (appt.start_time and _siguio_en_otra(appt)):
         return None
     automatica = None
     for n in notas:  # de la más nueva a la más vieja
