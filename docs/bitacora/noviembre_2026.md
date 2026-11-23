@@ -802,3 +802,6 @@
 
 ### 23/11/2026 · «Ningún horario me sirve»
 - Después de agendar, el lead puede tocar «Ningún horario me sirve» y escribir qué días y horarios le quedan bien. La agenda sigue en pie y la tarjeta del closer y del triage dice «Reagendar: ningún horario le sirve», con lo que escribió (ADR-W199, Leadership 1465, pedido de Marlon).
+
+### 23/11/2026 · El triage confirma todas las agendas de los closers
+- Quien tiene el rol triage ve en Confirmaciones todas las agendas de los closers, también las ya confirmadas (quedan en la columna «Confirmado»). Antes era solo Dari por nombre y las confirmadas salían de su tablero. Hoy la única cuenta triage activa es Dari González (ADR-W200).

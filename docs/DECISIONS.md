@@ -1809,3 +1809,11 @@
 - **Decisión:** la opción aparece solo después de agendar, en la confirmación. El lead escribe qué días y horarios le quedan bien. La agenda no se cancela: se marca en `agenda_payload.sin_horario = {texto, en}` y la tarjeta del deck (closer y triage) lleva la etiqueta «Reagendar: ningún horario le sirve», con lo que escribió el lead. La página conoce la agenda por un token firmado (un mes) que devuelve `POST /reservas`; con el id solo no se puede escribir.
 - **Qué se pierde:** nada. Quien no agenda sigue sin dejar rastro de por qué.
 - **Consecuencias:** sin migración (`agenda_payload` ya es JSON). No avisa por Discord ni por WhatsApp: se ve al abrir el deck.
+
+## ADR-W200: el triage confirma todas las agendas de los closers
+
+- **Fecha:** 2026-11-23 · **Subsistema:** mazo, pestaña Confirmaciones (`/api/closer/deck`, `/deck/counts`, `app/services/confirma_por_todos.py`). Extiende ADR-W194.
+- **Contexto:** desde ADR-W194 solo Darian (persona fija por nombre) veía en Confirmaciones las agendas de los closers, y solo las que faltaban confirmar: al confirmar una salía de su tablero. Revisando el 23/11, Santi no veía en el tablero de Dari las de Marlon que ella ya había confirmado. Se decide que la confirmación de las llamadas de closing es tarea del rol triage, completa.
+- **Decisión:** toda cuenta con el rol triage ve en Confirmaciones todas las agendas con closer, confirmadas o no, de cualquier segmento y de cualquier closer (incluidas las de otras personas de triage). Las de otros closers llevan «A de <closer>»; las confirmadas quedan en la columna «Confirmado». El contador de la pestaña cuenta lo mismo. Se quita la lista fija de nombres.
+- **Qué se pierde:** no se puede dar el rol triage sin que esa persona vea todas las agendas de closing. El tablero de triage es más largo. Varias personas pueden confirmar la misma agenda a la vez; gana la última.
+- **Consecuencias:** sin migración ni cambio de permisos (`confirmar` ya incluía a triage). Para sumar o sacar a alguien de las confirmaciones se cambia su rol en Equipo. Hoy la única cuenta triage activa es Dari González.

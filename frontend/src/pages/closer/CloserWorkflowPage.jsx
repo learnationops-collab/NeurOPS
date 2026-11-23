@@ -1453,7 +1453,7 @@ const CloserWorkflowPage = () => {
             // ADR-W199: al agendar, el lead avisó que ningún horario le sirve.
             a.sin_horario && { texto: 'Reagendar: ningún horario le sirve', tono: 'var(--cl-warning)', title: 'El lead escribió: «' + a.sin_horario.texto + '». La agenda sigue en pie: acordá otro horario.' },
             isPendingReferral && { texto: 'Contactar y acordar fecha', tono: 'var(--cl-lila)' },
-            // Darian confirma las agendas de todos los closers (ADR-W194): la tarjeta dice de quién es.
+            // El triage confirma las agendas de todos los closers (ADR-W200): la tarjeta dice de quién es.
             esTriage && a.closer_id && a.closer_id !== user?.id
                 && { texto: `${a.segmento || ''} de ${a.closer_name}`.trim(), tono: 'var(--cl-info)', title: 'Confirmala antes de su llamada con el closer' },
             // El segmento y sus puntos (la del triage ya lo dice en «A de <closer>»).
