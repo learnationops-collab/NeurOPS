@@ -136,6 +136,10 @@ def create_app(config_class=Config):
     from app.api.chat import bp as chat_api_bp
     app.register_blueprint(chat_api_bp, url_prefix='/api/chat')
 
+    # Reporte único del día (closer, setter, triage): sesión y CSRF como el resto (ADR-W203).
+    from app.reporte_dia.api import bp as reporte_dia_api_bp
+    app.register_blueprint(reporte_dia_api_bp, url_prefix='/api/reporte')
+
     # Motor genérico de tablas (ver app/services/tablas/ y docs/plan_tablas_motor_generico.md).
     from app.api.tablas import bp as tablas_api_bp
     app.register_blueprint(tablas_api_bp, url_prefix='/api/tablas')

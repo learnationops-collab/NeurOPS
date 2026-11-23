@@ -51,12 +51,11 @@ const useDockNavigation = () => {
                 // La venta se declara en la ficha: el mazo abre con el buscador listo para
                 // elegir al cliente (antes era una página aparte, /closer/sales/new).
                 { id: 'step-2', icon: DollarSign, label: '2. Declarar Venta', path: '/closer/deck?venta=1' },
-                { id: 'step-3', icon: ClipboardList, label: '3. Reporte Diario', path: '/closer/report' },
                 // "Mis datos" es el dashboard comercial acotado a este closer: los mismos
                 // paneles que ve la direccion, con sus agendas y sus ventas (ver
                 // pages/comercial/DashboardComercial.jsx). El dashboard viejo
                 // (/closer/dashboard) sigue existiendo por URL.
-                { id: 'step-4', icon: BarChart3, label: '4. Mis Datos', path: '/closer/mis-datos' },
+                { id: 'step-4', icon: BarChart3, label: '3. Mis Datos', path: '/closer/mis-datos' },
                 { id: 'unattributed', icon: Link2Off, label: 'Sin Anuncio', path: '/unattributed-leads' }
             ];
         } else if (isSetter) {
@@ -74,8 +73,7 @@ const useDockNavigation = () => {
                 { id: 'deck', icon: Layers, label: 'Mis llamadas', path: '/triage/deck' },
                 { id: 'confirmaciones', icon: CalendarCheck, label: 'Confirmaciones', path: '/triage/confirmaciones' },
                 { id: 'agendas', icon: CalendarDays, label: 'Registro de Agendas', path: '/triage/agendas' },
-                { id: 'formularios', icon: ClipboardCheck, label: 'Formularios', path: '/triage/formularios' },
-                { id: 'report', icon: ClipboardList, label: 'Reporte Diario', path: '/triage/report' }
+                { id: 'formularios', icon: ClipboardCheck, label: 'Formularios', path: '/triage/formularios' }
             ];
         } else if (user?.role === 'operator' || user?.role === 'admin') {
             // Agendas y Ventas pasaron del panel de admin al de operaciones (20/ago/2026):
