@@ -808,3 +808,7 @@
 
 ### 23/11/2026 · Confirmar con vistas: tablero, lista y semana
 - Confirmar (triage y closers) tiene vistas guardadas como pestañas, en la misma fila que el título, con Filtro, Ordenar, Agrupar y Propiedades, como en Notion. De fábrica son tres: Por etapa (el tablero de siempre, se entra ahí), Por hora (lista agrupada por urgencia) y Semana (calendario). Cada uno elige qué propiedades y respuestas del formulario ver; se guardan en su cuenta (ADR-W201).
+
+### 23/11/2026 · Darian sin Momentum y sin canceladas fantasma
+- En Confirmaciones, el triage ya no ve las Momentum de otros closers: las confirma el closer con su alumno (ADR-W202, pedido de Darian).
+- «Canceladas en tu Google Calendar» ya no pide motivo si el lead tiene otra agenda más adelante sin cancelar. Le pasaba a Darian con Gerardo Morales: la movida del 05/11 había dejado dos filas, reportó una y la otra se canceló sola (ADR-W202).
