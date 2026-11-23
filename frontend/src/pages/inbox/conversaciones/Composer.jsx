@@ -15,7 +15,8 @@ import MenuRayo, { NuevaRapida } from './MenuRayo';
 import ModalFlujo from './ModalFlujo';
 import { ListaSeguimientos, ProgramarSeguimiento } from './Seguimientos';
 import useEquipo from './useEquipo';
-import { completar, faseDe } from './fasesSetting';
+import { faseDe } from './fasesSetting';
+import { LETRAS, completarGuia, faltaCompletar, notaDe, partes, pasosDe, siguienteId, useGuia, useLinkAgenda, visibles } from '../guia/useGuia';
 import { ventanaDe } from './ventana';
 
 const MODOS = [
@@ -62,9 +63,15 @@ function FormTarea({ contacto, yo, onHecho }) {
 // El lead de la conversación de Learnito abierta desde el Inbox: preguntar por otro arranca una nueva.
 const conversacionDeLearnito = { contacto: null };
 
-// Los mensajes de la etapa a la que se pasó: tocar uno lo pega en la caja (no sale solo).
+// Los pasos de la etapa a la que se pasó, de la Guía (ADR-W197): tocar una opción la pega en la caja (no sale sola).
 function Guion({ fase, contacto, onElegir }) {
     const f = faseDe(fase);
+    const guia = useGuia();
+    const link = useLinkAgenda();
+    const nota = notaDe(guia, fase);
+    const noleads = fase === 'nolead' ? guia?.contenido?.quien?.noleads || [] : [];
+    const elegir = (p, j) => onElegir({ texto: completarGuia(p.op[j].x, contacto, link), clave: `${fase}:${p.id}:${j}`,
+        pasaA: p.avanza ? siguienteId(fase) : null });
     return (
         <div className="cv-guion">
             <div className="cv-guion-cab">
@@ -72,13 +79,15 @@ function Guion({ fase, contacto, onElegir }) {
                 <b>Pasaste a {f.n} · {f.label}: elegí qué mandar</b>
                 <IconButton size="xs" label="Cerrar el guión" icon={<X size={12} />} onClick={() => onElegir(null)} />
             </div>
-            {(f.ojo || []).map((o) => <p key={o} className="cv-guion-ojo"><AlertTriangle size={12} aria-hidden="true" />{o}</p>)}
+            {nota && <p className="cv-guion-ojo"><AlertTriangle size={12} aria-hidden="true" />{nota}</p>}
+            {noleads.length > 0 && <p className="cv-guion-ojo"><AlertTriangle size={12} aria-hidden="true" />No es lead: {noleads.join(', ')}.</p>}
             <div className="cv-guion-ops">
-                {f.guion.map((g) => (
-                    <button key={g.v} type="button" className="cv-guion-op" onClick={() => onElegir(completar(g.t, contacto))}>
-                        <b>{g.v}</b><span>{g.t}</span>
+                {visibles(pasosDe(guia, fase)).flatMap((p) => p.op.map((o, j) => (
+                    <button key={`${p.id}:${j}`} type="button" className="cv-guion-op" onClick={() => elegir(p, j)}>
+                        <b>{p.t}{p.op.length > 1 || p.porRespuesta ? ` · ${p.porRespuesta ? o.si : LETRAS[j]}` : ''}{p.uso === 'solo si' && p.cuando ? ` · solo si ${p.cuando}` : p.uso === 'opcional' ? ' · opcional' : ''}</b>
+                        <span>{o.x}</span>
                     </button>
-                ))}
+                )))}
             </div>
         </div>
     );
@@ -87,7 +96,7 @@ function Guion({ fase, contacto, onElegir }) {
 const programados = (items) => (items || []).filter((s) => s.estado === 'programado' || s.estado === 'error');
 const cuando = (iso) => new Date(iso).toLocaleString('es-AR', { weekday: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
-export default function Composer({ contacto, ejecucion, seguimientos, yo, onCambio, onEnviar, onLearnito, pegar, selector, onSelector }) {
+export default function Composer({ contacto, fase, ejecucion, seguimientos, yo, onCambio, onEnviar, onLearnito, pegar, selector, onSelector }) {
     const [modo, setModo] = useState('chat');
     const [texto, setTexto] = useState(() => borradorDe(contacto.id));
     const [rayo, setRayo] = useState(false);
@@ -99,8 +108,15 @@ export default function Composer({ contacto, ejecucion, seguimientos, yo, onCamb
     const learnito = useLearnito();
     const [pausar, setPausar] = useState(true);
     const [verSeguimientos, setVerSeguimientos] = useState(false);
-    // Lo que se eligió del guión entra en la caja (reemplaza lo escrito): se revisa y se manda.
-    useEffect(() => { if (pegar?.texto) { setModo('chat'); setTexto(pegar.texto); } }, [pegar]);
+    // Lo que se eligió de la Guía entra en la caja (reemplaza lo escrito): se revisa y se manda. `deGuia` recuerda
+    // qué paso y opción era (para medir cuál responde más) y si al mandarlo el lead pasa de etapa.
+    const [deGuia, setDeGuia] = useState(null);
+    const elegirDeGuia = (e) => { setModo('chat'); setTexto(e.texto); setDeGuia(e.clave ? e : null); };
+    const [pegado, setPegado] = useState(null);
+    if (pegar !== pegado) {
+        setPegado(pegar);
+        if (pegar?.texto) elegirDeGuia(pegar);
+    }
     const pendientes = programados(seguimientos);
     const caja = useRef(null);
     const barra = texto.startsWith('/');
@@ -137,7 +153,28 @@ export default function Composer({ contacto, ejecucion, seguimientos, yo, onCamb
             setTexto('');
             guardarBorrador(contacto.id, '');
         }
-        onEnviar({ ...cuerpo, pausar }, rotulo || cuerpo.texto);
+        return onEnviar({ ...cuerpo, pausar }, rotulo || cuerpo.texto);
+    };
+    // Lo pegado de la Guía: sin [corchetes] sin completar, una línea en blanco separa los mensajes, el primero lleva
+    // la marca de la opción y, si el paso «pasa a la siguiente», el lead cambia de etapa al salir.
+    const enviarTexto = async () => {
+        if (!deGuia) { enviar({ texto }); return; }
+        if (faltaCompletar(texto)) { toast('Completá lo que está entre [corchetes] antes de mandar', 'error'); return; }
+        const elegido = deGuia;
+        const lista = partes(texto);
+        setDeGuia(null);
+        for (let i = 0; i < lista.length; i += 1) {
+            const ok = await enviar(i === 0 ? { texto: lista[i], guia: elegido.clave } : { texto: lista[i] });
+            if (!ok) return;
+        }
+        if (elegido.pasaA) {
+            try {
+                await inboxApi.moverFase(contacto.id, elegido.pasaA);
+                onCambio();
+            } catch (e) {
+                toast(e.response?.data?.message || 'No se pudo pasar de etapa', 'error');
+            }
+        }
     };
     const enviarAudio = (a) => enviar({ audio_id: a.id }, `🎤 ${a.nombre}`);
     const puedeEnviar = ventana.estado !== 'cerrada';
@@ -165,7 +202,7 @@ export default function Composer({ contacto, ejecucion, seguimientos, yo, onCamb
         e.preventDefault();
         if (!texto.trim() || barra) return;
         if (modo === 'nota') guardarNota();
-        else if (puedeEnviar) enviar({ texto });
+        else if (puedeEnviar) enviarTexto();
     };
 
     return (
@@ -173,7 +210,8 @@ export default function Composer({ contacto, ejecucion, seguimientos, yo, onCamb
             {verSeguimientos && <ListaSeguimientos items={seguimientos} onCambio={onCambio} />}
             {selector && modo === 'chat' && <Guion fase={selector} contacto={contacto} onElegir={onSelector} />}
             {menu && (
-                <MenuRayo contacto={contacto} filtro={barra ? texto.slice(1) : ''} onTexto={insertar}
+                <MenuRayo contacto={contacto} fase={fase} filtro={barra ? texto.slice(1) : ''} onTexto={insertar}
+                    onGuia={(e) => { setRayo(false); elegirDeGuia(e); }}
                     onPaso={(id) => { setRayo(false); setTexto(''); setPaso(id); }} onNueva={() => { setRayo(false); setNueva(true); }}
                     onAudio={puedeEnviar ? audioDelMenu : null} />
             )}
@@ -206,12 +244,12 @@ export default function Composer({ contacto, ejecucion, seguimientos, yo, onCamb
                                 disabled={ventana.estado === 'cerrada'} onClick={() => setProgramar(true)} />
                         </>
                     )}
-                    <TextArea value={texto} onChange={(e) => setTexto(e.target.value)} aria-label={modo === 'nota' ? 'Nota interna' : 'Mensaje'}
+                    <TextArea value={texto} onChange={(e) => { setTexto(e.target.value); if (!e.target.value) setDeGuia(null); }} aria-label={modo === 'nota' ? 'Nota interna' : 'Mensaje'}
                         onKeyDown={alTeclear}
                         placeholder={modo === 'nota' ? 'Nota para el equipo: el lead no la ve · Enter guarda' : 'Escribile al lead · Enter envía, Shift+Enter salta de línea · / respuestas rápidas'} />
                     {modo === 'nota'
                         ? <Button variant="primary" disabled={!texto.trim()} onClick={guardarNota}>Guardar</Button>
-                        : <Button variant="primary" icon={<Send />} disabled={!texto.trim() || !puedeEnviar} data-tip="Enviar|Enter" onClick={() => enviar({ texto })}>Enviar</Button>}
+                        : <Button variant="primary" icon={<Send />} disabled={!texto.trim() || !puedeEnviar} data-tip="Enviar|Enter" onClick={enviarTexto}>Enviar</Button>}
                 </div>
             )}
             {modo === 'chat' && ventana.aviso && <p className="t-cap mut40 cv-bloqueado">{ventana.aviso}</p>}

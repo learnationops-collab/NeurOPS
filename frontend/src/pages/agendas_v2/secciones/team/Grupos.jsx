@@ -12,7 +12,7 @@ import { useOrdenable } from '../../ui/useOrdenable';
 import { avisoPrioridad, textoEstrategia } from './cobertura';
 import { CampoNombre, Compo, Nivel, colorNivel } from './comun';
 import ElegirCloser, { useUsuariosReales } from './ElegirCloser';
-import { Card, EmptyState, Grid, IconButton, Input, Segmented, Select, Stepper } from '../../../../components/standard';
+import { Card, Chip, EmptyState, Grid, IconButton, Input, Segmented, Select, Stepper } from '../../../../components/standard';
 
 const SUGERIDAS = ['Ultra cualificado', 'Medio cualificado', 'General'];
 
@@ -85,28 +85,39 @@ function Miembro({ p, j, g, numerar, ordenable, pct }) {
     );
 }
 
-// Mínimo diario: los días en que ese closer tiene menos de n agendas, también recibe los leads de esta
-// estrategia, con el evento que abrió el lead.
+// Mínimo diario: los días en que uno de esos closers tiene menos de n agendas, también recibe los leads de
+// esta estrategia, con el evento que abrió el lead. Varios closers desde el 23/11 (ADR-W198).
 function MinimoDiario({ g }) {
     const { d } = useDatos();
     const { lectura } = usePermisos();
-    const m = g.minimo || {};
-    const ops = closers(d).filter(p => !esTriage(d, p)).map(p => ({ value: p.id, label: p.nombre }));
+    const m = g.minimo || {}, ps = m.ps || [];
+    const elegidos = ps.map(id => d.personas.find(p => p.id === id)).filter(Boolean);
+    const ops = closers(d).filter(p => !esTriage(d, p) && !ps.includes(p.id)).map(p => ({ value: p.id, label: p.nombre }));
     const guardar = (cambio) => {
-        const v = { p: m.p || '', n: m.n || 5, ...cambio };
-        almacen.editar('grupos', g.id, { minimo: v.p ? v : {} }, true);
+        const v = { ps, n: m.n || 5, ...cambio };
+        almacen.editar('grupos', g.id, { minimo: v.ps.length ? v : {} }, true);
     };
-    if (lectura && !m.p) return null;
+    if (lectura && !ps.length) return null;
     return (
         <div className="pr-regla" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <span>Mínimo diario:</span>
-            <Select size="sm" label={'Closer del mínimo diario de ' + g.nombre} value={m.p || ''} disabled={lectura}
-                options={[{ value: '', label: 'Ninguno' }, ...ops]} onChange={v => guardar({ p: v })} />
-            {m.p && (
+            {elegidos.map(p => (
+                <span key={p.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                    <Chip subtle>{p.nombre}</Chip>
+                    {!lectura && <IconButton size="sm" label={'Quitar a ' + p.nombre + ' del mínimo diario'} icon={<Icono n="x" s={12} />}
+                        onClick={() => guardar({ ps: ps.filter(x => x !== p.id) })} />}
+                </span>
+            ))}
+            {!lectura && ops.length > 0 && (
+                <Select size="sm" label={'Sumar closer al mínimo diario de ' + g.nombre} value=""
+                    options={[{ value: '', label: elegidos.length ? 'Sumar otro' : 'Ninguno' }, ...ops]}
+                    onChange={v => v && guardar({ ps: ps.concat([v]) })} />
+            )}
+            {elegidos.length > 0 && (
                 <>
                     <Stepper value={m.n || 5} min={1} max={50} disabled={lectura} label={'Agendas por día de ' + g.nombre}
                         onChange={n => guardar({ n })} />
-                    <span>agendas por día</span>
+                    <span>{elegidos.length > 1 ? 'agendas por día cada uno' : 'agendas por día'}</span>
                 </>
             )}
         </div>

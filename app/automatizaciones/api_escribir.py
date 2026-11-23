@@ -8,7 +8,7 @@ from flask_login import current_user
 from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 
 from app import db
-from app.automatizaciones import acciones, escribir, servicio
+from app.automatizaciones import acciones, escribir, guia, servicio
 from app.automatizaciones.api import bp
 from app.automatizaciones.modelos import IgContacto
 from app.models.inbox_work import AudioClip
@@ -33,7 +33,8 @@ def url_publica_de(audio_id):
 
 @bp.route('/conversaciones/<int:contacto_id>/escribir', methods=['POST'])
 def escribir_al_lead(contacto_id):
-    """`texto` o `audio_id`. Devuelve el mensaje como lo muestra el chat."""
+    """`texto` o `audio_id`; `guia`, el paso de la Guía que se mandó (`fase:paso:opción`). Devuelve el mensaje
+    como lo muestra el chat."""
     datos = request.get_json(silent=True) or {}
     audio = None
     if datos.get('audio_id'):
@@ -50,7 +51,8 @@ def escribir_al_lead(contacto_id):
             mensaje = escribir.enviar(motor, contacto, current_user.id, texto=datos.get('texto'),
                                       url_audio=url_publica_de(audio.id) if audio else None,
                                       nombre_audio=audio.name if audio else None,
-                                      pausar=datos.get('pausar', True) is not False)
+                                      pausar=datos.get('pausar', True) is not False,
+                                      guia=guia.clave_valida(datos.get('guia')))
             hasta = contacto.bot_pausado_hasta
             respuesta = {'id': mensaje.id, 'texto': mensaje.texto, 'en': mensaje.enviado_en.isoformat() + 'Z',
                          'bot_pausado_hasta': hasta.isoformat() + 'Z' if hasta else None}

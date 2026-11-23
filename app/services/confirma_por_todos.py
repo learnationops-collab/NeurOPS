@@ -1,37 +1,29 @@
-"""Darian confirma las agendas de todos los closers (reunión del 20/11/2026, ADR-W194).
+"""El triage confirma todas las agendas de los closers (ADR-W194, extendido a todo el rol en ADR-W200).
 
-En Confirmaciones del mazo, cada cuenta ve solo sus agendas (`closer_id`). Darian, además, ve las de todos los
-closers que todavía no están confirmadas, de cualquier segmento: al confirmar una de otro closer sale de su tablero
-y sigue en el del closer, que la ve pasar de columna y puede confirmarla él como respaldo. Las de otras personas de
-triage no entran: son sus sesiones diagnósticas.
+En Confirmaciones del mazo, cada cuenta ve solo sus agendas (`closer_id`). Quien tiene el rol triage ve todas las
+agendas con closer, confirmadas o no: las confirmadas quedan en su columna «Confirmado», así ve todo lo del día. El
+closer las sigue viendo en su tablero y puede confirmarlas él como respaldo.
 
-Es una persona fija por pedido de Kerwin (sin opción en Equipo): para cambiarla, cambiar `NOMBRES`.
+Las Momentum de otros closers no entran (ADR-W202): son sesiones del closer con su alumno, las confirma él. Se
+reconocen por el origen: 'Momentum' (Academia y manual) y 'momentum-sessions' (el link de Agendas 2.0).
 """
-from sqlalchemy import and_, func, or_
+from sqlalchemy import func, or_
 
 from app.models import Appointment
-from app.services.setter_assignment_service import normalizar_nombre
-
-# El nombre de usuario, normalizado (sin tildes ni mayúsculas).
-NOMBRES = {'dari gonzalez'}
 
 
 def confirma_por_todos(usuario):
-    return bool(usuario and normalizar_nombre(getattr(usuario, 'username', '') or '') in NOMBRES)
+    return bool(usuario and usuario.tiene_rol('triage'))
 
 
-def _ids_de_triage():
-    from app.models import User
-    return [u.id for u in User.query.all() if u.tiene_rol('triage')]
+def _no_es_momentum():
+    return or_(Appointment.origin.is_(None), ~func.lower(Appointment.origin).like('%momentum%'))
 
 
 def acotar(query, usuario):
-    """El filtro de Confirmaciones de `usuario`: sus agendas y, si confirma por todos, las de los closers sin
-    confirmar. Recibe la consulta ya filtrada por fecha y estado."""
+    """El filtro de Confirmaciones de `usuario`: sus agendas o, si es triage, todas las que tienen closer menos las
+    Momentum de otros. Recibe la consulta ya filtrada por fecha y estado."""
     if not confirma_por_todos(usuario):
         return query.filter(Appointment.closer_id == usuario.id)
-    sin_confirmar = or_(Appointment.result.is_(None), func.lower(func.trim(Appointment.result)) != 'confirmado')
-    triage = [i for i in _ids_de_triage() if i != usuario.id]
-    de_otros = and_(Appointment.closer_id.isnot(None), Appointment.closer_id != usuario.id, sin_confirmar,
-                    *([Appointment.closer_id.notin_(triage)] if triage else []))
-    return query.filter(or_(Appointment.closer_id == usuario.id, de_otros))
+    return query.filter(Appointment.closer_id.isnot(None),
+                        or_(Appointment.closer_id == usuario.id, _no_es_momentum()))

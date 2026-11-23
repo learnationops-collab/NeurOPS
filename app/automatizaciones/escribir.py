@@ -58,9 +58,9 @@ def _mandar(motor, contacto, cuerpo, etiqueta):
         transporte.liberar_control(contacto.igsid)
 
 
-def enviar(motor, contacto, autor_id, texto=None, url_audio=None, nombre_audio=None, pausar=True):
+def enviar(motor, contacto, autor_id, texto=None, url_audio=None, nombre_audio=None, pausar=True, guia=None):
     """Manda el mensaje del equipo y lo deja en la conversación. Devuelve el `IgMensaje`. `pausar=False`
-    deja al bot seguir (la casilla del chat)."""
+    deja al bot seguir (la casilla del chat). `guia`: el paso de la Guía que se mandó (ADR-W197)."""
     estado = ventana(contacto, motor.ahora)
     if estado == 'cerrada':
         raise AccionInvalida('Pasaron más de 7 días desde el último mensaje del lead: Instagram no deja escribirle '
@@ -74,7 +74,8 @@ def enviar(motor, contacto, autor_id, texto=None, url_audio=None, nombre_audio=N
         raise AccionInvalida(f'Instagram no lo aceptó: {error}')
     texto_visible = cuerpo.get('text') or f'🎤 {nombre_audio or "Audio"}'
     mensaje = IgMensaje(contacto_id=contacto.id, mid=mid, direccion=IgMensaje.SALIENTE, origen=IgMensaje.OTRO,
-                        texto=texto_visible, contenido=cuerpo, enviado_en=motor.ahora, autor_id=autor_id)
+                        texto=texto_visible, contenido=cuerpo, enviado_en=motor.ahora, autor_id=autor_id,
+                        guia=guia)
     db.session.add(mensaje)
     db.session.flush()
     return mensaje

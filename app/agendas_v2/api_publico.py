@@ -9,7 +9,7 @@ Contrato: docs/agendas_v2_api.md.
 
 from flask import Blueprint, Response, jsonify, request
 
-from app.agendas_v2 import servicio, videos
+from app.agendas_v2 import servicio, sin_horario, videos
 from app.services import limite_intentos
 
 bp = Blueprint('agendas_v2_publico', __name__)
@@ -18,7 +18,8 @@ NO_DISPONIBLE = ({'code': 'no_disponible', 'message': 'Este link no está dispon
 
 # Limite por IP, en la base (compartido entre los workers; ver app/services/limite_intentos.py). Cuenta
 # cada pedido, antes de cualquier otra escritura. (pedidos, segundos)
-LIMITES = {'horarios': (30, 60), 'reservas': (10, 60), 'conocido': (10, 60), 'avance': (60, 60), 'gracias': (30, 60)}
+LIMITES = {'horarios': (30, 60), 'reservas': (10, 60), 'conocido': (10, 60), 'avance': (60, 60), 'gracias': (30, 60),
+           'sin_horario': (10, 60)}
 
 
 def _excede(tipo):
@@ -127,8 +128,21 @@ def reservar():
 
     return jsonify(
         {'reserva': {'id': r['id'], 'inicio': _iso(r['inicio']), 'fin': _iso(r['fin']), 'duracion': r['duracion'],
-                     'consultor': r.get('consultor'), 'invitacion': r.get('invitacion')}}
+                     'consultor': r.get('consultor'), 'invitacion': r.get('invitacion'),
+                     'token': sin_horario.token_de(r['id'])}}
     ), 201
+
+
+@bp.route('/reservas/sin-horario', methods=['POST'])
+def ningun_horario():
+    """El lead ya agendó y avisa que ningún horario le sirve: la agenda sigue y el triage la reagenda."""
+    if _excede('sin_horario'):
+        return _demasiados()
+    cuerpo = _cuerpo()
+    error = sin_horario.guardar(cuerpo.get('token'), cuerpo.get('texto'))
+    if error:
+        return jsonify({'code': error}), 400
+    return '', 204
 
 @bp.route('/gracias/<gracias_id>', methods=['GET'])
 def gracias(gracias_id):

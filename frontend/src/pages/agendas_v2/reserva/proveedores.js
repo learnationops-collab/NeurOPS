@@ -195,5 +195,11 @@ export function proveedorApi() {
                 return data;
             } catch (e) { throw errorPublico(e); }
         },
+
+        // Ya agendó y avisa que ningún horario le sirve (ADR-W199): token = el que devolvió reservar.
+        async sinHorario(token, texto) {
+            try { await api.post('/agendas-v2/publico/reservas/sin-horario', { token, texto }, OPC); }
+            catch (e) { throw errorPublico(e); }
+        },
     };
 }

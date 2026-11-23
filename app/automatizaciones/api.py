@@ -27,7 +27,7 @@ ROLES_DE_LECTURA = (ROLE_SETTER,)
 # lo que trabaja sobre la conversación (`api_trabajo.py`), la biblioteca del equipo (`api_biblioteca.py`)
 # escribirle al lead (`api_escribir.py`), programar seguimientos (`api_seguimientos.py`), armar la
 # pregunta a Learnito (`api_learnito.py`, un GET) y proponer cambios
-# de estructura (`api_propuestas.py`).
+# de estructura (`api_propuestas.py`), y publicar la Guía o proponerle cambios (`api_guia.py`).
 ACCIONES_DEL_SETTER = {'inbox.mover_en_flujo', 'inbox.bot_de_conversacion', 'inbox.crear_grupo_etiquetas',
                        'inbox.escribir_al_lead', 'inbox.proponer_cambios',
                        'inbox.programar_seguimiento', 'inbox.cancelar_seguimiento',
@@ -35,7 +35,8 @@ ACCIONES_DEL_SETTER = {'inbox.mover_en_flujo', 'inbox.bot_de_conversacion', 'inb
                        'inbox.marcar_leido', 'inbox.asignar_conversacion', 'inbox.mover_etapa', 'inbox.corregir_variable',
                        'inbox.crear_nota', 'inbox.crear_tarea', 'inbox.cambiar_tarea',
                        'inbox.crear_rapida', 'inbox.borrar_rapida', 'inbox.subir_audio', 'inbox.borrar_audio',
-                       'inbox.mover_fase', 'inbox.marcar_canal', 'inbox.anotar_cita', 'inbox.etiquetar_varias'}
+                       'inbox.mover_fase', 'inbox.marcar_canal', 'inbox.anotar_cita', 'inbox.etiquetar_varias',
+                       'inbox.publicar_guia', 'inbox.proponer_guia'}
 MAX_BYTES_GRAFO = 300_000
 MAX_NODOS = 300
 MENSAJES_POR_CONVERSACION = 300

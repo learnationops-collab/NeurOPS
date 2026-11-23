@@ -790,3 +790,32 @@
 - «Antiguos»: botón discreto al lado de las pestañas del Inbox de Closers con las postulaciones archivadas y el estado que tenían. Se abren con la misma ficha y, una vez abierto, la búsqueda también las encuentra.
 - Rol nuevo «Hiring · Closers» (`hiring_closers`), como rol adicional: Talent solo con Inbox (fijo en Closers) y la sección Closers. Puede votar, pero no ve Asistentes, Forms, Stats ni los ajustes de Talent. Para Marlon.
 - Confirmaciones: Darian ve en su tablero las agendas sin confirmar de todos los closers y de todos los segmentos («A de Jean Carlo»); al confirmar una de otro closer sale de su tablero y sigue en el del closer, que puede confirmar como respaldo (ADR-W194, Leadership «Darian confirma todas las llamadas…»).
+
+### 22/11/2026 · Aviso de alumno nuevo para fulfillment
+- El aviso de #onboardings ya no muestra la plata (sigue en #wins). Lleva programa, fecha de ingreso, etapa, examen, lo que quiere resolver (del formulario de la agenda), dolores, notas del closer y del setter, y el teléfono grande en la tarjeta (ADR-W195, Leadership 1439).
+- Academia: guion en vivo de la Onboarding Session con la demostración de Mario y sus correcciones del 17/11 (Academia ADR-243, Leadership 1440).
+
+### 22/11/2026 · Reuniones sin agenda en Operaciones
+- Sección nueva «Reuniones» en el espacio del operador: las notas de Meet que no cuelgan de ninguna agenda, en Grupales, Con alumnos y Otras, con búsqueda, filtro por serie y el detalle al costado (resumen, nota completa, Doc, grabación, ficha). Desde el detalle se cambia la categoría de la nota o de toda su serie (ADR-W196, Leadership 1190).
+
+### 22/11/2026 · Guía del setting en el Inbox
+- Sección nueva «Guía» en el Inbox y en el espacio del setter: las etapas del setting y lo que se manda en cada una, editable por el equipo y publicada por versiones. Arranca con el documento de setting completo (ADR-W197, Leadership 1436).
+- Cada paso tiene opción A y B (o una por respuesta del lead), «Cuándo se usa» (Siempre, Solo si…, Opcional, No se usa), nota y si al mandarlo pasa a la etapa siguiente. Debajo de cada opción, qué porcentaje respondió en 14 días.
+- El chat toma la Guía: el guion al pasar de etapa y el «/» (los pasos de la etapa del lead, o de todas escribiendo el atajo). Completa nombre y link de agenda, no deja mandar con [corchetes] sin completar y separa en varios mensajes con una línea en blanco.
+- «Quién es lead» y las etapas se proponen y los responde la dirección comercial; el historial deja volver a una versión anterior.
+
+### 23/11/2026 · Segmento C con Mario y Marlon
+- El mínimo diario de una estrategia admite varios closers, cada uno con su tope de agendas por día. En Team › Estrategias se suman y se quitan como etiquetas. Segmento C: Marlon y Mario, hasta 5 por día cada uno, además de Dari (ADR-W198, Leadership 1469).
+
+### 23/11/2026 · «Ningún horario me sirve»
+- Después de agendar, el lead puede tocar «Ningún horario me sirve» y escribir qué días y horarios le quedan bien. La agenda sigue en pie y la tarjeta del closer y del triage dice «Reagendar: ningún horario le sirve», con lo que escribió (ADR-W199, Leadership 1465, pedido de Marlon).
+
+### 23/11/2026 · El triage confirma todas las agendas de los closers
+- Quien tiene el rol triage ve en Confirmaciones todas las agendas de los closers, también las ya confirmadas (quedan en la columna «Confirmado»). Antes era solo Dari por nombre y las confirmadas salían de su tablero. Hoy la única cuenta triage activa es Dari González (ADR-W200).
+
+### 23/11/2026 · Confirmar con vistas: tablero, lista y semana
+- Confirmar (triage y closers) tiene vistas guardadas como pestañas, en la misma fila que el título, con Filtro, Ordenar, Agrupar y Propiedades, como en Notion. De fábrica son tres: Por etapa (el tablero de siempre, se entra ahí), Por hora (lista agrupada por urgencia) y Semana (calendario). Cada uno elige qué propiedades y respuestas del formulario ver; se guardan en su cuenta (ADR-W201).
+
+### 23/11/2026 · Darian sin Momentum y sin canceladas fantasma
+- En Confirmaciones, el triage ya no ve las Momentum de otros closers: las confirma el closer con su alumno (ADR-W202, pedido de Darian).
+- «Canceladas en tu Google Calendar» ya no pide motivo si el lead tiene otra agenda más adelante sin cancelar. Le pasaba a Darian con Gerardo Morales: la movida del 05/11 había dejado dos filas, reportó una y la otra se canceló sola (ADR-W202).

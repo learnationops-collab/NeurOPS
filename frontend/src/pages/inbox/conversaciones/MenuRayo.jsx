@@ -1,7 +1,8 @@
 // El menú del rayito (o «/» en la caja): las variables de la persona, los links de agenda del setter, las
 // respuestas rápidas del equipo (con sus variables ya completadas), los audios del equipo (tocar uno lo manda,
 // `onAudio`; sin él, con la ventana cerrada, no aparecen) y los pasos del flujo. Un paso lo manda el
-// bot y el flujo sigue desde ahí (abre «Continuar desde…» con ese paso elegido).
+// bot y el flujo sigue desde ahí (abre «Continuar desde…» con ese paso elegido). Arriba, los pasos de la Guía de la etapa
+// del lead (ADR-W197); escribiendo un atajo, los de todas las etapas (`onGuia` lo pega en la caja).
 import { useEffect, useState } from 'react';
 import { Bot, Link2, Mic, Plus, Trash2 } from 'lucide-react';
 import useEnPantalla from '../../../components/ui/useEnPantalla';
@@ -9,6 +10,8 @@ import { Button, Input, LinkButton, Modal, ModalHeader, TextArea, toast } from '
 import api from '../../../services/api';
 import { rotuloDeLink } from '../../setter/MisLinks';
 import { inboxApi } from '../api';
+import { LETRAS, completarGuia, siguienteId, useGuia, useLinkAgenda, visibles } from '../guia/useGuia';
+import { faseDe } from './fasesSetting';
 
 export const variablesDe = (contacto) => Object.entries(contacto.variables || {}).filter(([k]) => !k.startsWith('_'));
 export const completar = (texto, contacto) => texto.replace(/\{(\w+)\}/g, (m, k) => {
@@ -50,7 +53,9 @@ export function NuevaRapida({ onCreada, onCerrar }) {
     );
 }
 
-export default function MenuRayo({ contacto, filtro, onTexto, onPaso, onNueva, onAudio }) {
+export default function MenuRayo({ contacto, fase, filtro, onTexto, onGuia, onPaso, onNueva, onAudio }) {
+    const guia = useGuia();
+    const linkAgenda = useLinkAgenda();
     const pop = useEnPantalla();
     const [rapidas, setRapidas] = useState(null);
     const [pasos, setPasos] = useState(null);
@@ -73,6 +78,12 @@ export default function MenuRayo({ contacto, filtro, onTexto, onPaso, onNueva, o
     const okR = (rapidas || []).filter((r) => !f || r.atajo.includes(f) || r.titulo.toLowerCase().includes(f));
     const okA = onAudio ? audios.filter((a) => !f || 'audio'.includes(f) || a.nombre.toLowerCase().includes(f)) : [];
     const okP = (pasos?.pasos || []).filter((p) => !f || (p.nombre || '').toLowerCase().includes(f) || `paso ${p.numero}`.includes(f));
+    // Sin filtro, los pasos de su etapa; con filtro, los de cualquier etapa cuyo atajo o nombre coincida.
+    const okG = Object.entries(guia?.contenido?.etapas || {}).flatMap(([id, e]) => visibles(e.pasos || [])
+        .filter((p) => (f ? p.atajo.includes(f) || p.t.toLowerCase().includes(f) : id === fase))
+        .flatMap((p) => p.op.map((o, j) => ({ id, p, o, j }))));
+    const guiaElegida = ({ id, p, j }) => onGuia({ texto: completarGuia(p.op[j].x, contacto, linkAgenda), clave: `${id}:${p.id}:${j}`,
+        pasaA: p.avanza ? siguienteId(id) : null });
     const borrar = async (r) => {
         try {
             await inboxApi.borrarRapida(r.id);
@@ -84,6 +95,13 @@ export default function MenuRayo({ contacto, filtro, onTexto, onPaso, onNueva, o
 
     return (
         <div className="cv-rayo" ref={pop} role="menu">
+            {okG.length > 0 && <span className="t-rotulo">Guía · {f ? 'todas las etapas' : faseDe(fase).label}</span>}
+            {okG.map((g) => (
+                <button key={`${g.id}:${g.p.id}:${g.j}`} type="button" className="cv-rayo-op" onClick={() => guiaElegida(g)}>
+                    <b>/{g.p.atajo} · {g.p.t}{g.p.porRespuesta ? ` · ${g.o.si}` : g.p.op.length > 1 ? ` · ${LETRAS[g.j]}` : ''}{f && g.id !== fase ? ` (${faseDe(g.id).label})` : ''}</b>
+                    <span>{g.o.x}</span>
+                </button>
+            ))}
             {okV.length > 0 && <span className="t-rotulo">Variables</span>}
             {okV.map(([k, v]) => (
                 <button key={k} type="button" className="cv-rayo-op" onClick={() => onTexto(String(v))}><b>{`{${k}}`}</b><span>{String(v)}</span></button>

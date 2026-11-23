@@ -60,17 +60,24 @@ function porEstrategia(estrategia, miembros, slotsDe, { ahora, cargaDe }, g = nu
     return { slots, regla: estrategia === 'horario' ? 'Máxima disponibilidad: ' + nombres.join(' → ') : 'Distribuida entre ' + miembros.length };
 }
 
-// Mínimo diario (Santi, 14/11/2026): g.minimo = {p, n}. Los días en que ese closer tiene menos de n agendas, sus
-// horarios se suman a los de la estrategia (a igual hora, gana él) y se agendan con el evento que abrió el lead.
+// Mínimo diario (Santi, 14/11/2026): g.minimo = {ps, n}. Los días en que uno de esos closers tiene menos de n
+// agendas, sus horarios se suman a los de la estrategia (a igual hora, gana él; entre dos del mínimo, el primero
+// de la lista) y se agendan con el evento que abrió el lead. Espejo de con_minimo (ADR-W198).
 export function conMinimo(d, g, x, slotsBase, enDia, conBase) {
-    const m = g.minimo || {}, p = buscar(d, 'personas', m.p), n = m.n || 0;
-    if (!p || n <= 0 || !esCloser(d, p) || horasSemana(p) <= 0) return x;
-    const tz = p.tz || TZ_DEF;
-    const suyos = slotsBase(p).filter(t => enDia(p.id, t, tz) < n);
-    if (!suyos.length) return x;
-    const mapa = new Map(x.slots.map(s => [s.t, s]));
-    suyos.forEach(t => mapa.set(t, { t, p: p.id, ...(conBase ? { base: true } : {}) }));
-    const regla = (x.regla ? x.regla + ' + ' : '') + p.nombre + ' hasta ' + n + ' por día';
+    const m = g.minimo || {}, n = m.n || 0;
+    if (n <= 0) return x;
+    const mapa = new Map(x.slots.map(s => [s.t, s])), tomados = new Set(), nombres = [];
+    for (const pid of m.ps || []) {
+        const p = buscar(d, 'personas', pid);
+        if (!p || !esCloser(d, p) || horasSemana(p) <= 0) continue;
+        const tz = p.tz || TZ_DEF;
+        const suyos = slotsBase(p).filter(t => !tomados.has(t) && enDia(p.id, t, tz) < n);
+        if (!suyos.length) continue;
+        nombres.push(p.nombre);
+        suyos.forEach(t => { mapa.set(t, { t, p: p.id, ...(conBase ? { base: true } : {}) }); tomados.add(t); });
+    }
+    if (!nombres.length) return x;
+    const regla = (x.regla ? x.regla + ' + ' : '') + nombres.join(' y ') + ' hasta ' + n + ' por día';
     return { slots: [...mapa.keys()].sort((a, b) => a - b).map(t => mapa.get(t)), regla };
 }
 

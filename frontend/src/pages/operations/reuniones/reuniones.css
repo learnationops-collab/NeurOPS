@@ -1,0 +1,51 @@
+/* Operaciones › Reuniones: mismo armado que Conflictos (pages/conflictos/conflictos.css). Los ajustes sobre
+   componentes estándar pesan tres clases (.thalamus .re-… .ui-…), ver la skill ui-builder. */
+.re-pagina { display: flex; flex-direction: column; gap: 14px; }
+.re-filtros { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.thalamus .re-filtros .ui-entry { flex: 1 1 260px; max-width: 380px; }
+.re-aclara { margin: 0; color: var(--ln-text-muted); font-size: 13px; }
+
+.re-cuerpo { display: grid; gap: 16px; grid-template-columns: 1fr; align-items: start; }
+.re-cuerpo--con-detalle { grid-template-columns: minmax(0, 1.25fr) minmax(340px, 1fr); }
+@media (max-width: 1000px) { .re-cuerpo--con-detalle { grid-template-columns: 1fr; } }
+
+.thalamus .re-cuerpo .re-lista { padding: 0; overflow: hidden; }
+.thalamus .re-fila {
+    display: grid; grid-template-columns: 96px minmax(0, 1fr) 180px 80px; gap: 12px; align-items: center;
+    width: 100%; padding: 12px 16px; text-align: left; background: none; border: 0;
+    border-bottom: 1px solid var(--ln-border-subtle); color: inherit; font: inherit; cursor: pointer;
+}
+.thalamus .re-fila:hover { background: var(--ln-inset-bg); }
+.thalamus .re-fila.is-activo { background: var(--ln-inset-bg); box-shadow: inset 3px 0 0 var(--ln-brand-2); }
+.thalamus .re-fila--cabeza { cursor: default; font-size: 12px; color: var(--ln-text-muted); text-transform: uppercase; letter-spacing: .04em; }
+.thalamus .re-fila--cabeza:hover { background: none; }
+.re-fila__dia { font-variant-numeric: tabular-nums; color: var(--ln-text-muted); font-size: 13px; }
+.re-fila__dia b { color: var(--ln-text-in); font-weight: 700; }
+.re-fila__titulo { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.re-fila__serie { color: var(--ln-text-muted); font-size: 13px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.re-fila__extra { display: flex; gap: 8px; justify-content: flex-end; align-items: center; color: var(--ln-text-faint); font-size: 12px; }
+.re-fila__extra > span { display: inline-flex; align-items: center; gap: 3px; }
+.re-fila__extra svg { width: 14px; height: 14px; }
+.re-mas { display: flex; justify-content: center; padding: 12px; }
+@media (max-width: 760px) {
+    .thalamus .re-fila { grid-template-columns: 1fr auto; }
+    .thalamus .re-fila--cabeza { display: none; }
+    .re-fila__serie { grid-column: 1 / -1; }
+}
+
+.re-lado { position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow: auto; }
+.re-detalle { display: flex; flex-direction: column; gap: 12px; }
+.re-detalle__cabeza { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.re-detalle__cabeza h2 { margin: 0; font-size: 20px; }
+.re-detalle__meta { margin: 0; color: var(--ln-text-muted); }
+.re-links { display: flex; flex-wrap: wrap; gap: 8px; }
+.re-sub { margin: 0 0 8px; font-size: 14px; }
+.re-resumen { margin: 0; white-space: pre-line; line-height: 1.55; }
+.re-cat { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.re-cat__fila { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.re-cat p { margin: 0; color: var(--ln-text-muted); font-size: 13px; }
+.re-mas-datos { margin-top: 10px; }
+.re-mas-datos summary { cursor: pointer; color: var(--ln-text-muted); }
+.re-mas-datos ul { margin: 8px 0 0; padding-left: 1.2em; display: grid; gap: 4px; color: var(--ln-text-muted); }
+.re-mas-datos .fi-meet-md { display: grid; gap: 8px; padding-top: 8px; }
+.re-mas-datos .fi-meet-md ul { color: inherit; }

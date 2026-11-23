@@ -1,4 +1,4 @@
-"""El aviso de cada venta o cobro registrado (ADR-W121): a #wins siempre y a #onboardings si entra un alumno
+"""El aviso de cada venta o cobro registrado (ADR-W121): a #wins siempre y a #onboardings (su tarjeta, onboarding.py) si entra un alumno
 nuevo (pago completo, primer pago o seña).
 
 Reemplaza al flujo «New Sales» de n8n (sus avisos a Discord, el WhatsApp interno y la página de Notion). Sale de
@@ -14,6 +14,7 @@ import time
 from flask import current_app
 
 from app import db
+from app.services.discord_avisos import onboarding
 from app.services.discord_avisos.tarjeta import Aviso, avisar, corto
 
 ESPERA = 4  # segundos, para que la request termine de guardar el plan
@@ -117,8 +118,9 @@ def avisar_pago(pago_id, convirtio_sena=False):
                     time.sleep(ESPERA)
                 pago = db.session.get(FinancialSale, pago_id)
                 if pago:
-                    aviso = armar(pago, convirtio_sena)
                     for canal in canales(pago):
+                        # #onboardings lleva lo educativo, no la plata (onboarding.py, ADR-W195).
+                        aviso = onboarding.armar(pago) if canal == 'onboarding' else armar(pago, convirtio_sena)
                         avisar(canal, aviso, etiqueta='VENTA', en_hilo=False)
             except Exception as e:  # noqa: BLE001
                 app.logger.error(f'[VENTA] No se pudo avisar el pago #{pago_id} a Discord: {e}')

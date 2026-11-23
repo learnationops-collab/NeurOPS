@@ -2,7 +2,7 @@ import React, { Suspense, lazy, useCallback, useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { BarChart3, CalendarClock, CalendarDays, CheckCircle2, ClipboardList, Ghost, Link2, MessagesSquare, Share2 } from 'lucide-react';
+import { BarChart3, BookOpen, CalendarClock, CalendarDays, CheckCircle2, ClipboardList, Ghost, Link2, MessagesSquare, Share2 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePlaybook } from '../../contexts/PlaybookContext';
@@ -74,6 +74,8 @@ const SECCIONES = [
     { id: 'agendas', label: 'Mis agendas', Icono: CalendarDays, sub: 'Cada agenda, con su anuncio.' },
     // Las conversaciones de Instagram, sin salir a /inbox (Social Selling, 17/11/2026: un solo lugar de trabajo).
     { id: 'conversaciones', label: 'Conversaciones', Icono: MessagesSquare, sub: 'Los que te escribieron, por espera.' },
+    // Lo que se manda en cada etapa del setting, editable (ADR-W197).
+    { id: 'guia', label: 'Guía', Icono: BookOpen, sub: 'Lo que mandás en cada etapa.' },
     { id: 'reporte', label: 'Reporte', Icono: ClipboardList, sub: 'Así cerraste el día.',
         tabs: [{ key: 'hoy', label: 'Reporte' }, { key: 'historial', label: 'Historial' }] },
     // El Analizar del dashboard comercial, el mismo tablero de setters que ve la dirección, con sus
@@ -305,6 +307,9 @@ const SetterEspacioPage = () => {
                     {seccion === 'compartidos' && <CompartidosConmigo />}
                     {seccion === 'conversaciones' && (
                         <Suspense fallback={<p className="sub">Cargando la bandeja…</p>}><InboxEmbebido /></Suspense>
+                    )}
+                    {seccion === 'guia' && (
+                        <Suspense fallback={<p className="sub">Cargando la guía…</p>}><InboxEmbebido seccion="guia" /></Suspense>
                     )}
                     {seccion === 'datos' && (
                         <DashboardComercial embebido seccionFija="analizar"

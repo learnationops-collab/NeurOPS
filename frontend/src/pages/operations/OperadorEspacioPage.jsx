@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { ClipboardCheck, Database, Ghost, GraduationCap, LifeBuoy, Plug, Table2, Users } from 'lucide-react';
+import { ClipboardCheck, Database, Ghost, GraduationCap, LifeBuoy, Mic, Plug, Table2, Users } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePlaybook } from '../../contexts/PlaybookContext';
 import { revertImpersonation } from '../../utils/impersonation';
@@ -19,6 +19,7 @@ import PanelesConservados from '../../components/ui/PanelesConservados';
 import FormsManagementPage from '../shared/FormsManagementPage';
 import CourseEditorPage from './course-editor/CourseEditorPage';
 import PanelIntegraciones from './PanelIntegraciones';
+import PanelReuniones from './reuniones/PanelReuniones';
 
 /**
  * El espacio del operador: todo su trabajo en una sola pantalla, con un solo dock.
@@ -57,6 +58,8 @@ const SECCIONES = [
     { id: 'curso', label: 'Curso', Icono: GraduationCap },
     // Las cuentas externas de Work (las notas de Meet, 05/11/2026).
     { id: 'integraciones', label: 'Integraciones', Icono: Plug },
+    // Las notas de Meet sin agenda: reuniones grupales y sesiones con alumnos (ADR-W196).
+    { id: 'reuniones', label: 'Reuniones', Icono: Mic },
 ];
 
 /** Las secciones que se juntaron en Registros: un link viejo cae en su tabla. */
@@ -172,6 +175,7 @@ const OperadorEspacioPage = () => {
                         formularios: () => <div className="operador-oscuro"><FormsManagementPage /></div>,
                         curso: () => <CourseEditorPage />,
                         integraciones: () => <PanelIntegraciones />,
+                        reuniones: () => <PanelReuniones />,
                     }} />
                 {/* El mismo Revisar de la dirección, con su período y sus tablas; trae su propia isla `.dc-shell`. */}
                 {seccion === 'registros' && <DashboardComercial embebido seccionFija="revisar" />}

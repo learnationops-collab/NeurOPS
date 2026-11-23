@@ -1,6 +1,7 @@
 """Notas de Meet (app/services/notas_meet/): conectar Drives (varias cuentas), su estado y las categorías.
 
 - /api/notas-meet/*: Operaciones › Integraciones (admin u operador).
+- /api/notas-meet/sin-agenda y /notas/<id>: Operaciones › Reuniones, las notas que no cuelgan de una agenda.
 - /google/notas/conectar/<firma>: el link firmado que abre quien tiene la cuenta (sin sesión de Work).
 - Las notas de un lead se leen por la ficha (`GET /api/ficha/notas-meet`, app/api/ficha/lectura.py).
 """
@@ -11,9 +12,11 @@ import threading
 from flask import Blueprint, current_app, jsonify, redirect, request, session
 from flask_login import current_user
 
+from app import db
 from app.decorators import admin_required
+from app.models import MeetingNote
 from app.services.google_service import GoogleService
-from app.services.notas_meet import categorias, conexion, series, sincronizar
+from app.services.notas_meet import categorias, conexion, series, sin_agenda, sincronizar
 
 logger = logging.getLogger(__name__)
 
@@ -84,6 +87,52 @@ def elegir_serie():
     except ValueError as e:
         return jsonify({'error': str(e)}), 400
     return jsonify({'ok': True, 'cambiadas': cambiadas}), 200
+
+
+@bp.route('/api/notas-meet/sin-agenda', methods=['GET'])
+@admin_required
+def sin_agenda_listar():
+    """Operaciones › Reuniones: `grupo` (grupales|alumnos|otras), `q` (título o invitado), `serie`, `offset`.
+    Trae la cuenta de cada grupo y las series del grupo para el filtro."""
+    grupo = request.args.get('grupo', 'grupales')
+    try:
+        offset = max(int(request.args.get('offset', 0)), 0)
+        datos = sin_agenda.listar(grupo, q=request.args.get('q'), serie=request.args.get('serie'), offset=offset)
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    if not offset:
+        datos.update(cuentas=sin_agenda.cuentas(), series=sin_agenda.series_del_grupo(grupo),
+                     categorias=categorias.CATEGORIAS)
+    return jsonify(datos), 200
+
+
+@bp.route('/api/notas-meet/notas/<int:nota_id>', methods=['GET'])
+@admin_required
+def nota_detalle(nota_id):
+    nota = db.session.get(MeetingNote, nota_id)
+    if not nota:
+        return jsonify({'error': 'No existe esa nota.'}), 404
+    return jsonify(sin_agenda.detalle(nota)), 200
+
+
+@bp.route('/api/notas-meet/notas/<int:nota_id>', methods=['PUT'])
+@admin_required
+def nota_categoria(nota_id):
+    """`{categoria, serie}`: con `serie` true vale para toda su serie (y las que vengan); categoria null
+    vuelve a la automática."""
+    nota = db.session.get(MeetingNote, nota_id)
+    if not nota:
+        return jsonify({'error': 'No existe esa nota.'}), 404
+    d = request.get_json(silent=True) or {}
+    try:
+        if d.get('serie') and nota.series:
+            cambiadas = series.elegir(nota.series, d.get('categoria'))
+        else:
+            series.elegir_nota(nota, d.get('categoria'))
+            cambiadas = 1
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+    return jsonify({'ok': True, 'cambiadas': cambiadas, 'nota': sin_agenda.detalle(nota)}), 200
 
 
 @bp.route('/google/notas/conectar/<firma>', methods=['GET'])

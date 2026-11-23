@@ -49,6 +49,9 @@ import ClienteNuevoVenta from './components/ClienteNuevoVenta';
 import DiaDelReporte, { etiquetaDia } from './components/DiaDelReporte';
 import { agendaParaVender, ejecutarAccion, mensajeDeError } from '../../components/ficha/fichaApi';
 import { ayudaDeResultado } from '../../utils/estadosAgenda';
+import ConfirmarVistas from './confirmar/ConfirmarVistas';
+import { etapaDeConfirmacion } from './confirmar/etapas';
+import { esDeFormulario, respuestaDe } from './confirmar/propiedades';
 
 const ORDINALES = ['primer', 'segundo', 'tercer', 'cuarto', 'quinto', 'sexto', 'séptimo', 'octavo', 'noveno', 'décimo'];
 
@@ -81,14 +84,7 @@ const ETAPAS_DEL_TABLERO = [
 ];
 const ETAPA_DE_FASE = Object.fromEntries(ETAPAS_DEL_TABLERO.map(e => [e.fase, e.clave]));
 
-// En qué etapa está una cita, con la misma regla que la pestaña Confirmación de la ficha
-// (`ficha_lead_service._confirmacion`): Confirmado solo si `result` lo dice; si no, la etapa
-// guardada, donde vacía es Por contactar y cualquier otra (las viejas incluidas) es Contactado.
-const etapaDeConfirmacion = (a) => {
-    if ((a.result || '').trim().toLowerCase() === 'confirmado') return 'confirmado';
-    const etapa = a.confirmation_stage || 'por_contactar';
-    return etapa === 'por_contactar' ? 'por_contactar' : 'contactado';
-};
+// En qué etapa está una cita: `etapaDeConfirmacion` (confirmar/etapas.js), la regla de la ficha.
 
 // Qué llamada es cada cita (`tipo_llamada` del backend, `manual.tipo_de_llamada`): la franja de la
 // tarjeta lo dice y las métricas de Confirmar y Reportar lo separan (24/10/2026).
@@ -1329,8 +1325,10 @@ const CloserWorkflowPage = () => {
     // columnas, más la columna. Así entran de a una, de izquierda a derecha y de arriba abajo, con
     // el mismo escalón (`escalonDe`) que el esqueleto que ocupaba su lugar. Sólo mientras dura la
     // entrada del tablero (`tableroEntrando`): fuera de ella, la tarjeta que aparece entra ya.
-    const renderKanbanCard = (a, phase, orden = 0) => {
+    const renderKanbanCard = (a, phase, orden = 0, props = null) => {
         const isViewed = selectedLead?.id === a.id;
+        // Las propiedades que eligió en la vista (ADR-W201); sin vista, se ve todo.
+        const ver = (clave) => !props || props.has(clave);
 
         // Un referido manual se crea sin fecha real de cita (todavía no se acordó una) —
         // el backend le pone start_time=ahora solo para que entre al pipeline de confirmación
@@ -1400,19 +1398,22 @@ const CloserWorkflowPage = () => {
         const inversion = inversionTxt ? inversionCorta(inversionTxt) : null;
         const decision = decisionDe(a);
         const telefono = (a.phone || '').trim();
+        const tagDeCloser = ver('closer') && esTriage && a.closer_id && a.closer_id !== user?.id;
         const etiquetas = [
-            a.desplazada && { texto: 'Reagendar: horario tomado', tono: 'var(--cl-warning)', title: 'Un lead A/B o una Momentum tomó este horario. La agenda sigue en pie: acordá otro con el lead.' },
-            isPendingReferral && { texto: 'Contactar y acordar fecha', tono: 'var(--cl-lila)' },
-            // Darian confirma las agendas de todos los closers (ADR-W194): la tarjeta dice de quién es.
-            esTriage && a.closer_id && a.closer_id !== user?.id
-                && { texto: `${a.segmento || ''} de ${a.closer_name}`.trim(), tono: 'var(--cl-info)', title: 'Confirmala antes de su llamada con el closer' },
+            ver('avisos') && a.desplazada && { texto: 'Reagendar: horario tomado', tono: 'var(--cl-warning)', title: 'Un lead A/B o una Momentum tomó este horario. La agenda sigue en pie: acordá otro con el lead.' },
+            // ADR-W199: al agendar, el lead avisó que ningún horario le sirve.
+            ver('avisos') && a.sin_horario && { texto: 'Reagendar: ningún horario le sirve', tono: 'var(--cl-warning)', title: 'El lead escribió: «' + a.sin_horario.texto + '». La agenda sigue en pie: acordá otro horario.' },
+            ver('avisos') && isPendingReferral && { texto: 'Contactar y acordar fecha', tono: 'var(--cl-lila)' },
+            // El triage confirma las agendas de todos los closers (ADR-W200): la tarjeta dice de quién es.
+            tagDeCloser
+                && { texto: `${ver('segmento') ? a.segmento || '' : ''} de ${a.closer_name}`.trim(), tono: 'var(--cl-info)', title: 'Confirmala antes de su llamada con el closer' },
             // El segmento y sus puntos (la del triage ya lo dice en «A de <closer>»).
-            a.segmento && !(esTriage && a.closer_id && a.closer_id !== user?.id)
+            ver('segmento') && a.segmento && !tagDeCloser
                 && { texto: a.segmento_puntos != null ? `${a.segmento} · ${fmtPuntos(a.segmento_puntos)} pts` : a.segmento, tono: TONO_SEGMENTO[a.segmento] || 'var(--cl-info)', title: 'Segmento del lead según su formulario' },
-            a.examen && { texto: a.examen, tono: 'var(--cl-lila)' },
+            ver('examen') && a.examen && { texto: a.examen, tono: 'var(--cl-lila)' },
             (phase === 'call' || phase === 'call_done') && a.closer_result && a.closer_result !== 'Pendiente'
                 && { texto: a.closer_result, tono: 'var(--cl-magenta)', title: ayudaDeResultado(a.closer_result) },
-            reminderBadge && { texto: reminderBadge.label, tono: reminderBadge.tono },
+            ver('avisos') && reminderBadge && { texto: reminderBadge.label, tono: reminderBadge.tono },
         ].filter(Boolean);
 
         return (
@@ -1441,7 +1442,7 @@ const CloserWorkflowPage = () => {
                     </span>
                 )}
 
-                <div
+                {ver('hora') && <div
                     className="kc-banda"
                     title={isPendingReferral ? undefined : `${formatAgendaDateTime(a.start_time)} (${viewerTimezoneLabel()}, tu zona horaria)`}
                 >
@@ -1461,7 +1462,7 @@ const CloserWorkflowPage = () => {
                             {!pideAccion && countdown?.kind !== 'past' && <i />}
                         </span>
                     )}
-                </div>
+                </div>}
 
                 <div className="kc-cuerpo">
                 <div className="kc-top">
@@ -1473,7 +1474,7 @@ const CloserWorkflowPage = () => {
                         <span className="kc-nuevo">Nuevo</span>
                     )}
                 </b>
-                {telefono && (
+                {telefono && ver('telefono') && (
                     <div className="kc-tel">
                         <span className="kc-tel-n">{telefonoLegible(telefono)}</span>
                         <button type="button" className="kc-copiar" title="Copiar teléfono" aria-label="Copiar teléfono"
@@ -1497,14 +1498,14 @@ const CloserWorkflowPage = () => {
 
                 {/* Cada dato con su ícono, en una línea separada por filetes: inversión, decisión
                     y origen (un evento lleva calendario; una persona, su inicial). */}
-                <div className="kc-datos">
-                    {inversion && (
+                {(ver('inversion') || ver('decision') || ver('origen')) && <div className="kc-datos">
+                    {ver('inversion') && inversion && (
                         <span className={`kc-dato kc-plata${inversion.sin ? ' kc-plata--sin' : ''}`} title={`Inversión: ${inversionTxt}`}>
                             <span className="kc-dato-ic" aria-hidden="true">$</span>
                             <span className="kc-plata-n">{inversion.texto}</span>
                         </span>
                     )}
-                    {decision && (
+                    {ver('decision') && decision && (
                         <span className={`kc-dato kc-decide${decision.solo === false ? ' kc-decide--con' : decision.solo ? '' : ' kc-decide--otro'}`} title={`Decisión: ${decision.title}`}>
                             <svg className="kc-ic" viewBox="0 0 24 24" aria-hidden="true">
                                 {decision.solo === false
@@ -1514,13 +1515,13 @@ const CloserWorkflowPage = () => {
                             <span className="kc-dato-tx">{decision.texto}</span>
                         </span>
                     )}
-                    <span className="kc-dato kc-origen" title={`Origen: ${origen}`}>
+                    {ver('origen') && <span className="kc-dato kc-origen" title={`Origen: ${origen}`}>
                         {origenEsEvento
                             ? <svg className="kc-ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2.5" /><path d="M3.5 10h17M8 3v4M16 3v4" /></svg>
                             : <span className="kc-origen-ini" aria-hidden="true">{[...origen.replace(/^Referido de\s+/i, '')][0]?.toUpperCase()}</span>}
                         <span className="kc-dato-tx">{origen}</span>
-                    </span>
-                </div>
+                    </span>}
+                </div>}
 
                 {etiquetas.length > 0 && (
                     <div className="kc-etiquetas">
@@ -1530,11 +1531,17 @@ const CloserWorkflowPage = () => {
                     </div>
                 )}
                 
-                {a.setter_notes && (
+                {ver('notas_setter') && a.setter_notes && (
                     <div className="nt-v6 text-[10px] text-slate-350">
                         {a.setter_notes}
                     </div>
                 )}
+
+                {/* Las respuestas del formulario que eligió ver en la vista (ADR-W201). */}
+                {props && [...props].filter(esDeFormulario).map(k => {
+                    const r = respuestaDe(a, k);
+                    return r ? <div key={k} className="cv-kv"><small>{k.slice(2)}</small><span>{r}</span></div> : null;
+                })}
                 
                 {/* El botón no cambia la etapa por sí solo: abre el mismo modal de proceso de
                     confirmación que el resto de la tarjeta (según en qué etapa esté el lead),
@@ -2257,40 +2264,58 @@ const CloserWorkflowPage = () => {
                                 👏 No hay citas pendientes de confirmación.
                             </div>
                         ) : (
-                            <div className={`kb-v6 kb-etapas${arrastrando ? ' kb-arrastre' : ''}`}>
-                                {/* Una columna por etapa de la ficha. Cada una recibe tarjetas
-                                    arrastradas de las otras (ver `moverDeEtapa`). */}
-                                {ETAPAS_DEL_TABLERO.map(etapa => {
-                                    const leads = confirmationsPipeline[etapa.lista];
-                                    const recibe = arrastrando && arrastrando.desde !== etapa.clave;
+                            /* Las vistas de Confirmar (ADR-W201): la primera es este mismo tablero por
+                               etapa; lista y semana se suman al lado. El tablero sigue dibujándose acá. */
+                            <ConfirmarVistas
+                                agendas={filteredAgendas} user={user} esTriage={esTriage} ahora={nowTick}
+                                fechaBase={selectedDate} seleccionada={selectedLead?.id}
+                                onAbrir={handleSelectLead} onMover={moverDeEtapa}
+                                renderTablero={({ grupos, agrupacion, props }) => {
+                                    const porEtapa = agrupacion === 'etapa';
+                                    // Por etapa, las tres columnas de siempre (con arrastre); por closer, día o
+                                    // segmento, una columna por grupo y cada tarjeta con el tono de su etapa.
+                                    const columnas = porEtapa
+                                        ? ETAPAS_DEL_TABLERO.map(e => ({ ...e, items: grupos.find(g => g.clave === e.clave)?.items || [] }))
+                                        : grupos.map((g, i) => ({ clave: g.clave, titulo: g.titulo, clase: 'k2-v6 cv-col-neutra', columna: i, vacio: '', items: g.items }));
+                                    const faseDe = (a) => ETAPAS_DEL_TABLERO.find(e => e.clave === etapaDeConfirmacion(a))?.fase;
                                     return (
-                                        <div key={etapa.clave}
-                                            className={`kcol-v6 ${etapa.clase}${recibe ? ' kcol-recibe' : ''}${recibe && columnaDestino === etapa.clave ? ' kcol-encima' : ''}`}
-                                            onDragOver={recibe ? (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; if (columnaDestino !== etapa.clave) setColumnaDestino(etapa.clave); } : undefined}
-                                            onDragLeave={recibe ? (e) => { if (!e.currentTarget.contains(e.relatedTarget)) setColumnaDestino(null); } : undefined}
-                                            onDrop={recibe ? (e) => {
-                                                e.preventDefault();
-                                                const id = Number(e.dataTransfer.getData('text/plain')) || arrastrando.id;
-                                                setArrastrando(null);
-                                                setColumnaDestino(null);
-                                                moverDeEtapa(id, etapa.clave);
-                                            } : undefined}
-                                        >
-                                            <div className="kch-v6">
-                                                <span className="dt-v6"></span>
-                                                <b>{etapa.titulo}</b>
-                                                <span className="n-v6">{leads.length}</span>
-                                            </div>
-                                            <div className="kbody-v6">
-                                                {leads.length > 0
-                                                    ? leads.map((a, i) => renderKanbanCard(a, etapa.fase, i * ETAPAS_DEL_TABLERO.length + etapa.columna))
-                                                    : <div className={`kempty-v6${etapa.clave !== 'confirmado' ? ' done-v6' : ''}`}>{etapa.vacio}</div>}
-                                                {recibe && <div className="kdrop-v6" aria-hidden="true">Soltalo acá · pasa a {etapa.titulo}</div>}
-                                            </div>
+                                        <div className={`kb-v6${porEtapa ? ' kb-etapas' : ''}${arrastrando ? ' kb-arrastre' : ''}`}
+                                            style={porEtapa ? undefined : { gridTemplateColumns: `repeat(${Math.max(1, columnas.length)}, minmax(260px, 1fr))`, overflowX: 'auto' }}>
+                                            {/* Por etapa, cada columna recibe tarjetas arrastradas de las otras (ver `moverDeEtapa`). */}
+                                            {columnas.map(etapa => {
+                                                const leads = etapa.items;
+                                                const recibe = porEtapa && arrastrando && arrastrando.desde !== etapa.clave;
+                                                return (
+                                                    <div key={etapa.clave}
+                                                        className={`kcol-v6 ${etapa.clase}${recibe ? ' kcol-recibe' : ''}${recibe && columnaDestino === etapa.clave ? ' kcol-encima' : ''}`}
+                                                        onDragOver={recibe ? (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; if (columnaDestino !== etapa.clave) setColumnaDestino(etapa.clave); } : undefined}
+                                                        onDragLeave={recibe ? (e) => { if (!e.currentTarget.contains(e.relatedTarget)) setColumnaDestino(null); } : undefined}
+                                                        onDrop={recibe ? (e) => {
+                                                            e.preventDefault();
+                                                            const id = Number(e.dataTransfer.getData('text/plain')) || arrastrando.id;
+                                                            setArrastrando(null);
+                                                            setColumnaDestino(null);
+                                                            moverDeEtapa(id, etapa.clave);
+                                                        } : undefined}
+                                                    >
+                                                        <div className="kch-v6">
+                                                            <span className="dt-v6"></span>
+                                                            <b>{etapa.titulo}</b>
+                                                            <span className="n-v6">{leads.length}</span>
+                                                        </div>
+                                                        <div className="kbody-v6">
+                                                            {leads.length > 0
+                                                                ? leads.map((a, i) => renderKanbanCard(a, porEtapa ? etapa.fase : faseDe(a), i * columnas.length + etapa.columna, props))
+                                                                : <div className={`kempty-v6${etapa.clave !== 'confirmado' ? ' done-v6' : ''}`}>{etapa.vacio}</div>}
+                                                            {recibe && <div className="kdrop-v6" aria-hidden="true">Soltalo acá · pasa a {etapa.titulo}</div>}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     );
-                                })}
-                            </div>
+                                }}
+                            />
                         )
                     ) : activeStep === 'seguimientos' ? (
                         <div className="space-y-6">

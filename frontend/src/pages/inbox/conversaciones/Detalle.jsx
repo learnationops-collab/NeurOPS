@@ -18,7 +18,7 @@ import useEnvio from './useEnvio';
 import { ChipFase } from './Fila';
 import { Puntos } from './Progreso';
 import { REFRESCO, cierreMin, colorEspera, esperaMin, quien, textoEspera } from './colas';
-import { completar, faseDe } from './fasesSetting';
+import { completarGuia, pasosDe, siguienteId, useGuia, useLinkAgenda, visibles } from '../guia/useGuia';
 
 function Linea({ contacto, avance, mensajes }) {
     const ahora = new Date();
@@ -52,7 +52,7 @@ function Chat({ datos, yo, onCambio, pegar, selector, onSelector }) {
             <Feed mensajes={datos.mensajes} notas={datos.notas || []} tareas={datos.tareas || []}
                 pendientes={envio.pendientes} onReintentar={envio.reintentar} onDescartar={envio.descartar}
                 onSeleccion={() => setSeleccion(seleccionDelLead())} />
-            <Composer contacto={contacto} ejecucion={datos.ejecucion} seguimientos={datos.seguimientos} yo={yo} onCambio={onCambio}
+            <Composer contacto={contacto} fase={avance?.fase} ejecucion={datos.ejecucion} seguimientos={datos.seguimientos} yo={yo} onCambio={onCambio}
                 onEnviar={envio.enviar} onLearnito={abrirLearnito} pegar={pegar} selector={selector} onSelector={onSelector} />
             {seleccion && <GloboCita contactoId={contacto.id} seleccion={seleccion} onCerrar={cerrarSeleccion} onHecho={() => { setSeleccion(null); onCambio(); }} />}
         </Panel>
@@ -65,6 +65,8 @@ export default function Detalle({ id, yo, onLeido, onCambio }) {
     // Al pasar de etapa: la etapa cuyos mensajes se eligen (`selector`) y el texto que se pega en la caja (`pegar`).
     const [selector, setSelector] = useState(null);
     const [pegar, setPegar] = useState(null);
+    const guia = useGuia();
+    const link = useLinkAgenda();
     // Cada conversación monta un Detalle nuevo (key={id}): arranca con lo último que se vio de ese chat (recuerdo.js). Se vuelve a pedir cada
     // REFRESCO, y después de cada acción del setter, sin vaciar lo que se ve.
     const pedir = useCallback(() => inboxApi.conversacion(id)
@@ -93,9 +95,13 @@ export default function Detalle({ id, yo, onLeido, onCambio }) {
             toast(e.response?.data?.message || 'No se pudo mover de etapa', 'error');
             return;
         }
-        const f = faseDe(fase);
-        if (f.guion.length > 1) setSelector(fase);
-        else if (f.guion.length === 1) { setSelector(null); setPegar({ texto: completar(f.guion[0].t, datos?.contacto), n: Date.now() }); }
+        // La Guía (ADR-W197): con un solo mensaje se pega directo; con más, se elige.
+        const pasos = visibles(pasosDe(guia, fase));
+        if (pasos.length === 1 && pasos[0].op.length === 1) {
+            setSelector(null);
+            setPegar({ texto: completarGuia(pasos[0].op[0].x, datos?.contacto, link), clave: `${fase}:${pasos[0].id}:0`,
+                pasaA: pasos[0].avanza ? siguienteId(fase) : null, n: Date.now() });
+        } else setSelector(pasos.length ? fase : null);
     };
 
     if (error && !datos) return <Panel size="sm" className="cv-detalle"><EmptyState icon={<MessageSquare size={22} />}>{error}</EmptyState></Panel>;
@@ -104,7 +110,7 @@ export default function Detalle({ id, yo, onLeido, onCambio }) {
     return (
         <>
             <Chat datos={datos} yo={yo} onCambio={cambio} pegar={pegar} selector={selector}
-                onSelector={(texto) => { setSelector(null); if (texto) setPegar({ texto, n: Date.now() }); }} />
+                onSelector={(elegido) => { setSelector(null); if (elegido) setPegar({ ...elegido, n: Date.now() }); }} />
             <div className="cv-derecha">
                 <TarjetaLead datos={datos} fase={fase} canal={datos.canal} yo={yo} onCambio={cambio} onMover={mover} />
                 <FichaLead contacto={datos.contacto} tareas={datos.tareas || []} recorrido={datos.recorrido || []}
