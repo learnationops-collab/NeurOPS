@@ -818,3 +818,7 @@
 - Cada seguimiento sale a tantas horas del último mensaje del lead, si lo último es nuestro. Lo escribe el setter (le aparece «Toca seguimiento N» en la conversación) o lo manda el motor, con texto y botón con link, siempre antes de las 24 horas. Sirve para la invitación al workshop del proyecto #195 (Estrategia 23/11).
 - Los seguimientos arrancan apagados en cada embudo. Al prenderlos queda la fecha y desde ahí solo cuentan las conversaciones nuevas.
 - «Simular conversación» prueba el embudo entero con el borrador: escribir como el lead, contestar como setter, adelantar el reloj. No manda ni guarda nada (ADR-W204).
+
+### 24/11/2026 · Webhook de WhatsApp y arreglo del deploy de Embudos
+- El deploy de Embudos falló en producción: su migración repetía el ID `c4e6a8b0d2f4`, que ya usaba una de hiring, y Alembic quedó con dos heads. Pasa a `e8f0a2c4b6d1`. Producción siguió con el deploy anterior; no se aplicó nada a medias.
+- Nuevo `/api/webhooks/whatsapp` para la app propia «Learnation Contacts» (Neurocogniciones LLC), primer paso del broadcast de WhatsApp al inbox de setters (proyecto #192, Estrategia 23/11). Verifica la suscripción con `WA_WEBHOOK_VERIFY_TOKEN`, comprueba la firma con `WA_APP_SECRET` y guarda cada evento crudo en `whatsapp_webhook_eventos`; el procesamiento al inbox va aparte.

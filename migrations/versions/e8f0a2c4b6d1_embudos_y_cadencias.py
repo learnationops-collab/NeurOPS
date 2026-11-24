@@ -1,7 +1,7 @@
 """Embudos del Inbox y cadencias de seguimiento por fase (ADR-W204)
 
-Revision ID: c4e6a8b0d2f4
-Revises: b3d5f7a9c2e4
+Revision ID: e8f0a2c4b6d1
+Revises: d1a3c5e7f9b2
 Create Date: 2026-11-24
 
 Idempotente: lo que ya existe no se toca. Crea el embudo Conversión (el de siempre), con los seguimientos
@@ -10,8 +10,8 @@ automáticos apagados.
 import sqlalchemy as sa
 from alembic import op
 
-revision = 'c4e6a8b0d2f4'
-down_revision = 'b3d5f7a9c2e4'
+revision = 'e8f0a2c4b6d1'
+down_revision = 'd1a3c5e7f9b2'
 branch_labels = None
 depends_on = None
 
