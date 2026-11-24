@@ -62,9 +62,10 @@ def start_scheduler(app):
         from app.services.closer_followup_service import reminders_enabled
         con_avisos = reminders_enabled() and not _apagado('DISABLE_REMINDER_SCHEDULER')
         con_avance = bool(os.environ.get('ACADEMY_API_TOKEN')) and not _apagado('DISABLE_ACADEMY_PROGRESS_SYNC')
-        if not (con_avisos or con_avance):
-            logger.info("[ReminderScheduler] No se arranca: sin recordatorios ni Academia configurada.")
-            return
+        # Sin avisos ni Academia el resto de los jobs no arranca (como siempre); el cierre del día sí.
+        solo_cierre = not (con_avisos or con_avance)
+        if solo_cierre:
+            logger.info("[ReminderScheduler] Sin recordatorios ni Academia configurada: solo el cierre del día.")
 
     from apscheduler.schedulers.background import BackgroundScheduler
 
@@ -211,14 +212,34 @@ def start_scheduler(app):
             except Exception as e:
                 logger.error(f"[ReminderScheduler] Error avisando los reportes faltantes: {e}")
 
+    def _reporte_cierre():
+        # El reporte único cierra solo a las 10:00 locales del día siguiente (ADR-W203).
+        with app.app_context():
+            from app.reporte_dia.cierre import correr
+            try:
+                if not soy_lider(CLAVE_DEL_SCHEDULER):
+                    return
+                n = correr()
+                if n:
+                    logger.info(f"[ReminderScheduler] Días cerrados del reporte único: {n}")
+            except Exception as e:
+                logger.error(f"[ReminderScheduler] Error cerrando los días del reporte: {e}")
+
     from datetime import datetime, timedelta
+
+    _scheduler = BackgroundScheduler(daemon=True)
+    _scheduler.add_job(_reporte_cierre, 'interval', minutes=15,
+                       id='reporte_cierre', next_run_time=datetime.now() + timedelta(minutes=8))
+    if solo_cierre:
+        _scheduler.start()
+        logger.info("[ReminderScheduler] Scheduler arrancado solo con el cierre del día.")
+        return
 
     from app.agendas_v2.movidas import MINUTOS as MOVIDAS_MINUTOS
     from app.services.discord_avisos.reportes_faltantes import HORA_UTC as REPORTES_HORA_UTC
     from app.services.discord_avisos.llamadas_del_dia import HORA_UTC as LLAMADAS_HORA_UTC
     from app.services.origen_service import MINUTOS as ORIGENES_MINUTOS
     from app.services.notas_meet.sincronizar import MINUTOS as NOTAS_MEET_MINUTOS
-    _scheduler = BackgroundScheduler(daemon=True)
     _scheduler.add_job(_origenes, 'interval', minutes=ORIGENES_MINUTOS,
                        id='origenes', next_run_time=datetime.now() + timedelta(minutes=6))
     _scheduler.add_job(_movidas, 'interval', minutes=MOVIDAS_MINUTOS,

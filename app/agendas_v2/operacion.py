@@ -362,10 +362,11 @@ def _hora_del_closer(inicio_utc, local_lead, closer):
     return f' (lead) · {_hora(suya)}{dia} (tuya)'
 
 
-def aviso_whatsapp(appt):
+def aviso_whatsapp(appt, para=None):
     """Los 8 datos de la plantilla del aviso al closer (la misma del flujo de n8n): día y hora en la zona
     del lead, con su bandera, como los mandaba n8n. Si el closer está en otra zona, la hora suma la suya
-    («6:00 pm 🇲🇽 (lead) · 8:00 pm (tuya)»): con una sola hora parecía que la agenda estaba mal."""
+    («6:00 pm 🇲🇽 (lead) · 8:00 pm (tuya)»): con una sola hora parecía que la agenda estaba mal. `para`: quien
+    lo recibe, si no es el closer (la copia al triage); «(tuya)» va en su zona."""
     payload = appt.agenda_payload or {}
     lead = payload.get('lead') or {}
     closer = db.session.get(User, appt.closer_id)
@@ -380,7 +381,7 @@ def aviso_whatsapp(appt):
         'telefono': lead.get('telefono'),
         'instagram': ('@' + lead['instagram']) if lead.get('instagram') else None,
         'dia': f'{DIAS[local.weekday()]} {local.day}',
-        'hora': f'{_hora(local)} {BANDERAS.get(pais["c"], "🌍")}{_hora_del_closer(inicio, local, closer)}',
+        'hora': f'{_hora(local)} {BANDERAS.get(pais["c"], "🌍")}{_hora_del_closer(inicio, local, para or closer)}',
         'grupo': payload.get('prioridad_nombre'),
         'fuente': (setter.username if setter else payload.get('origen') or payload.get('funnel_slug')),
     }
@@ -395,8 +396,28 @@ def avisar_whatsapp(appt):
         current_app.logger.warning(f'[AGENDAS 2.0] El closer de la agenda #{appt.id} no tiene WhatsApp: no se le avisa.')
         return False
     try:
-        AvisoDeAgenda.enviar(closer.two_chat_number, **aviso_whatsapp(appt))
-        return True
+        datos = aviso_whatsapp(appt)
+        AvisoDeAgenda.enviar(closer.two_chat_number, **datos)
     except Exception as e:  # noqa: BLE001  (WhatsApp nunca puede frenar una agenda)
         current_app.logger.error(f'[AGENDAS 2.0] No se pudo avisar por WhatsApp la agenda #{appt.id}: {e}')
         return False
+    _copia_al_triage(appt)
+    return True
+
+
+def _copia_al_triage(appt):
+    """El triage confirma las agendas de los closers (ADR-W200): le llega el mismo WhatsApp, con el nombre del
+    closer y la hora «(tuya)» en su zona. No la suya (ya la recibió) ni las Momentum, que confirma el closer
+    (ADR-W202, ADR-W205)."""
+    from app.services.whatchimp_service import AvisoDeAgenda
+
+    if 'momentum' in (appt.origin or '').lower():
+        return
+    triage = [u for u in User.query.filter(User.is_active.is_(True), User.two_chat_number.isnot(None),
+                                           User.whatsapp_confirmado_en.isnot(None), User.id != appt.closer_id).all()
+              if u.tiene_rol('triage')]
+    for u in triage:
+        try:
+            AvisoDeAgenda.enviar(u.two_chat_number, **aviso_whatsapp(appt, para=u))
+        except Exception as e:  # noqa: BLE001
+            current_app.logger.error(f'[AGENDAS 2.0] No se pudo copiar al triage {u.username} la agenda #{appt.id}: {e}')

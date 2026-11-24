@@ -139,6 +139,10 @@ def create_app(config_class=Config):
     from app.api.chat import bp as chat_api_bp
     app.register_blueprint(chat_api_bp, url_prefix='/api/chat')
 
+    # Reporte único del día (closer, setter, triage): sesión y CSRF como el resto (ADR-W203).
+    from app.reporte_dia.api import bp as reporte_dia_api_bp
+    app.register_blueprint(reporte_dia_api_bp, url_prefix='/api/reporte')
+
     # Motor genérico de tablas (ver app/services/tablas/ y docs/plan_tablas_motor_generico.md).
     from app.api.tablas import bp as tablas_api_bp
     app.register_blueprint(tablas_api_bp, url_prefix='/api/tablas')
@@ -179,6 +183,12 @@ def create_app(config_class=Config):
     from app.api.instagram_webhook import bp as instagram_webhook_bp
     app.register_blueprint(instagram_webhook_bp, url_prefix='/api/webhooks/instagram')
     csrf.exempt(instagram_webhook_bp) # Exento: lo llama Meta, autenticado por la firma X-Hub-Signature-256
+
+    from app.api.whatsapp_webhook import bp as whatsapp_webhook_bp
+    app.register_blueprint(whatsapp_webhook_bp, url_prefix='/api/webhooks/whatsapp')
+    csrf.exempt(whatsapp_webhook_bp) # Exento: lo llama Meta, autenticado por la firma X-Hub-Signature-256
+    from app.whatsapp.api import bp as whatsapp_bp
+    app.register_blueprint(whatsapp_bp, url_prefix='/api/whatsapp')  # difusiones y plantillas (admin)
 
     from app.api.analytics import bp as analytics_bp
     app.register_blueprint(analytics_bp, url_prefix='/api/analytics')

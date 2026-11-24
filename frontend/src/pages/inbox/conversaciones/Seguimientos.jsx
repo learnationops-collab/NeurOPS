@@ -10,7 +10,7 @@ const CUANDO = [
     { value: '1', label: '1 h' }, { value: '3', label: '3 h' }, { value: '24', label: '24 h' },
     { value: '48', label: '2 días' }, { value: '72', label: '3 días' },
 ];
-const ESTADO = { enviado: 'Salió', cancelado: 'Cancelado', error: 'No salió' };
+const ESTADO = { enviado: 'Salió', cancelado: 'Cancelado', error: 'No salió', aviso: 'Toca' };
 const hora = (iso) => new Date(iso).toLocaleString('es-AR', { weekday: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
 export function ProgramarSeguimiento({ contacto, textoInicial, pausar, onCerrar, onHecho }) {
@@ -68,8 +68,9 @@ export function ListaSeguimientos({ items, onCambio }) {
             toast(e.response?.data?.message || 'No se pudo cancelar', 'error');
         }
     };
-    // Los programados y, de lo resuelto, solo lo que no salió (lo que salió ya se ve en el chat).
-    const visibles = items.filter((s) => s.estado === 'programado' || s.estado === 'error');
+    // Los programados, lo que no salió (lo que salió ya se ve en el chat) y el «toca seguimiento» vigente de la
+    // cadencia de la fase (ADR-W204). Lo viejo de la cadencia que no salió no se muestra: ya pasó.
+    const visibles = items.filter((s) => s.estado === 'programado' || (s.estado === 'error' && !s.cadencia) || s.vigente);
     if (!visibles.length) return null;
     return (
         <ul className="cv-seg-lista">
@@ -77,8 +78,12 @@ export function ListaSeguimientos({ items, onCambio }) {
                 <li key={s.id} className={`cv-seg cv-seg--${s.estado}`}>
                     <AlarmClock size={13} aria-hidden="true" />
                     <span>
-                        {s.estado === 'programado' ? <>Si no responde, <b>{hora(s.enviar_en)}</b>: </> : <><b>{ESTADO[s.estado]}</b> ({s.detalle}): </>}
-                        {s.audio ? `🎤 ${s.audio}` : `«${s.texto}»`}
+                        {s.vigente ? <><b>{s.texto}</b>{s.detalle ? `: ${s.detalle}` : ' (lo pide la cadencia de su fase)'}</> : (
+                            <>
+                                {s.estado === 'programado' ? <>Si no responde, <b>{hora(s.enviar_en)}</b>: </> : <><b>{ESTADO[s.estado]}</b> ({s.detalle}): </>}
+                                {s.audio ? `🎤 ${s.audio}` : `«${s.texto}»`}
+                            </>
+                        )}
                     </span>
                     {s.estado === 'programado' && <IconButton size="xs" label="Cancelar el seguimiento" icon={<X size={12} />} onClick={() => cancelar(s)} />}
                 </li>

@@ -1,19 +1,24 @@
 """La Guía del setting en /api/inbox/guia (ADR-W197), colgada del blueprint del Inbox.
 
 El setter lee, publica los pasos y propone lo demás (`ACCIONES_DEL_SETTER`). Admin, operador y dirección
-comercial además cambian «Quién es lead», vuelven a una versión anterior y responden las propuestas.
+comercial además cambian «Quién es lead» y los seguimientos automáticos, vuelven a una versión anterior y
+responden las propuestas. Hay una guía por embudo (ADR-W204): `?embudo=<slug>`; sin él, Conversión.
 """
-from flask import jsonify
+from flask import jsonify, request
 from flask_login import current_user
 
 from app import db
-from app.automatizaciones import fases, guia
+from app.automatizaciones import embudos, fases, guia
 from app.automatizaciones.api import ROLES_CON_ACCESO, _cuerpo, _iso, bp
-from app.automatizaciones.modelos import GuiaPropuesta, GuiaVersion, ahora
+from app.automatizaciones.modelos import AutEmbudo, GuiaPropuesta, GuiaVersion, ahora
 
 
 def _puede_aprobar():
     return current_user.role in ROLES_CON_ACCESO
+
+
+def _embudo():
+    return embudos.por_slug(request.args.get('embudo'))
 
 
 def _version(v):
@@ -30,22 +35,31 @@ def _propuesta(p):
 
 @bp.route('/guia', methods=['GET'])
 def ver_guia():
-    v, contenido = guia.vigente()
+    embudo = _embudo()
+    if embudo is None:
+        return jsonify({'message': 'Not found'}), 404
+    from app.automatizaciones import cadencias  # importa el motor (por `escribir`): solo cuando se usa
+    v, contenido = guia.vigente(embudo)
     pendientes = GuiaPropuesta.query.filter_by(estado=GuiaPropuesta.PENDIENTE).count()
+    nombres = {f['id']: f['nombre'] for f in embudos.fases_de(embudo)}
     return jsonify({'version': _version(v), 'contenido': contenido, 'uso': guia.uso(), 'dias_uso': guia.DIAS_USO,
                     'puede_aprobar': _puede_aprobar(), 'propuestas_pendientes': pendientes,
-                    'fases': [{'id': f, 'nombre': fases.NOMBRES[f]} for f in fases.TODAS]})
+                    'embudo': embudos.resumen(embudo), 'seguimientos_uso': cadencias.metricas(embudo),
+                    'fases': [{'id': f, 'nombre': nombres.get(f) or fases.NOMBRES.get(f, f)} for f in embudos.ids_de(embudo)]})
 
 
 @bp.route('/guia', methods=['PUT'])
 def publicar_guia():
     """`{contenido, base, nota}`: `base` es el id de la versión que se editó; si otro publicó antes, 409."""
     datos = _cuerpo()
-    actual, _ = guia.vigente()
+    embudo = _embudo()
+    if embudo is None:
+        return jsonify({'message': 'Not found'}), 404
+    actual, _ = guia.vigente(embudo)
     if (actual.id if actual else None) != datos.get('base'):
         return jsonify({'message': 'Alguien publicó la guía mientras la editabas: recargá para ver su versión'}), 409
     try:
-        v = guia.publicar(datos.get('contenido'), current_user.id, _puede_aprobar(), datos.get('nota'))
+        v = guia.publicar(datos.get('contenido'), current_user.id, _puede_aprobar(), datos.get('nota'), embudo)
     except guia.GuiaInvalida as e:
         return jsonify({'message': str(e)}), 400
     except PermissionError as e:
@@ -55,7 +69,9 @@ def publicar_guia():
 
 @bp.route('/guia/historial', methods=['GET'])
 def historial_guia():
-    vs = GuiaVersion.query.order_by(GuiaVersion.id.desc()).limit(50).all()
+    guardado = embudos.id_guardado(_embudo())
+    filtro = GuiaVersion.embudo_id.is_(None) if guardado is None else GuiaVersion.embudo_id == guardado
+    vs = GuiaVersion.query.filter(filtro).order_by(GuiaVersion.id.desc()).limit(50).all()
     return jsonify({'versiones': [_version(v) for v in vs]})
 
 
@@ -65,7 +81,12 @@ def restaurar_guia(vid):
     vieja = db.session.get(GuiaVersion, vid)
     if vieja is None:
         return jsonify({'message': 'Not found'}), 404
-    v = guia.publicar(vieja.contenido, current_user.id, True, f'Vuelta a la versión del {vieja.creada_en:%d/%m %H:%M}')
+    embudo = db.session.get(AutEmbudo, vieja.embudo_id) if vieja.embudo_id else None
+    try:
+        v = guia.publicar(vieja.contenido, current_user.id, True, f'Vuelta a la versión del {vieja.creada_en:%d/%m %H:%M}',
+                          embudo)
+    except guia.GuiaInvalida as e:
+        return jsonify({'message': str(e)}), 400
     return jsonify({'version': _version(v), 'contenido': v.contenido})
 
 
@@ -81,7 +102,7 @@ def proponer_guia():
     texto = str(datos.get('texto') or '').strip()
     if not texto:
         return jsonify({'message': 'Escribí qué querés cambiar y por qué'}), 400
-    etapa = datos.get('etapa') if datos.get('etapa') in fases.TODAS else None
+    etapa = str(datos.get('etapa') or '')[:20] or None
     p = GuiaPropuesta(texto=texto[:3000], etapa=etapa, autor_id=current_user.id)
     db.session.add(p)
     db.session.commit()

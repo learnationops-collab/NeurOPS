@@ -1,0 +1,143 @@
+"""Los eventos del webhook de WhatsApp, al Inbox y a las difusiones.
+
+  · Mensaje entrante: el contacto es un `IgContacto` con `igsid = 'wa:<número>'` (así lo ven la bandeja, la
+    conversación y el reparto igual que uno de Instagram). Abre la ventana de 24 h y queda como `IgMensaje`
+    del lead. Si respondió a una difusión, el destino pasa a «respondió» y el contacto se marca con
+    `variables.difusion` y `variables.origen = 'broadcast'` (para medir de dónde vienen los leads).
+  · Si el contacto no tiene setter, se le asigna al setter activo con menos WhatsApp nuevos en 24 h.
+  · Estado de un mensaje enviado (sent/delivered/read/failed): actualiza el destino de la difusión.
+"""
+import logging
+from datetime import datetime, timedelta
+
+from app import db
+from app.automatizaciones.modelos import IgContacto, IgMensaje
+from app.automatizaciones.reparto import setters_activos
+from app.models.whatsapp import WaDifusion, WaDifusionDestino, WhatsappWebhookEvento
+from app.whatsapp.cliente import PREFIJO
+
+logger = logging.getLogger(__name__)
+
+ESTADOS_META = {'sent': WaDifusionDestino.ENVIADO, 'delivered': WaDifusionDestino.ENTREGADO,
+                'read': WaDifusionDestino.LEIDO, 'failed': WaDifusionDestino.FALLO}
+SIN_TEXTO = {'image': '📷 Imagen', 'audio': '🎤 Audio', 'video': '🎬 Video', 'document': '📄 Documento',
+             'sticker': 'Sticker', 'location': '📍 Ubicación', 'contacts': '👤 Contacto'}
+
+
+def texto_de(mensaje):
+    tipo = mensaje.get('type')
+    if tipo == 'text':
+        return (mensaje.get('text') or {}).get('body') or ''
+    if tipo == 'button':
+        return (mensaje.get('button') or {}).get('text') or ''
+    if tipo == 'interactive':
+        interactivo = mensaje.get('interactive') or {}
+        respuesta = interactivo.get('button_reply') or interactivo.get('list_reply') or {}
+        return respuesta.get('title') or ''
+    if tipo == 'reaction':
+        return (mensaje.get('reaction') or {}).get('emoji') or ''
+    leyenda = (mensaje.get(tipo) or {}).get('caption') if isinstance(mensaje.get(tipo), dict) else None
+    base = SIN_TEXTO.get(tipo, f'[{tipo}]')
+    return f'{base}: {leyenda}' if leyenda else base
+
+
+def _setter_con_menos_carga(ahora):
+    candidatos = setters_activos()
+    if not candidatos:
+        return None
+    filas = (db.session.query(IgContacto.setter_id, db.func.count(IgContacto.id))
+             .filter(IgContacto.igsid.like(f'{PREFIJO}%'), IgContacto.asignado_en >= ahora - timedelta(hours=24),
+                     IgContacto.setter_id.in_([u.id for u in candidatos]))
+             .group_by(IgContacto.setter_id).all())
+    carga = dict(filas)
+    return min(candidatos, key=lambda u: (carga.get(u.id, 0), u.id))
+
+
+def _contacto(telefono, nombre, ahora):
+    contacto = IgContacto.query.filter_by(igsid=f'{PREFIJO}{telefono}').first()
+    if contacto is None:
+        contacto = IgContacto(igsid=f'{PREFIJO}{telefono}', nombre=nombre, username=f'+{telefono}',
+                              variables={'telefono': telefono, 'canal_mensajeria': 'whatsapp'}, creado_en=ahora)
+        db.session.add(contacto)
+        db.session.flush()
+    elif nombre and not contacto.nombre:
+        contacto.nombre = nombre
+    if contacto.setter_id is None:
+        setter = _setter_con_menos_carga(ahora)
+        if setter:
+            contacto.setter_id, contacto.asignado_en = setter.id, ahora
+    return contacto
+
+
+def _marcar_difusion(contacto, telefono, ahora):
+    destino = (WaDifusionDestino.query.filter(WaDifusionDestino.telefono == telefono,
+                                              WaDifusionDestino.enviado_en.isnot(None))
+               .order_by(WaDifusionDestino.enviado_en.desc()).first())
+    if destino is None:
+        return
+    if destino.estado != WaDifusionDestino.RESPONDIO:
+        destino.estado, destino.actualizado_en = WaDifusionDestino.RESPONDIO, ahora
+    destino.contacto_id = contacto.id
+    difusion = db.session.get(WaDifusion, destino.difusion_id)
+    variables = dict(contacto.variables or {})
+    if variables.get('difusion') != destino.difusion_id:
+        variables.update(difusion=destino.difusion_id, origen='broadcast',
+                         destino=difusion.destino if difusion else None)
+        contacto.variables = variables
+
+
+def _entrante(mensaje, nombres, ahora):
+    wamid = mensaje.get('id')
+    if wamid and IgMensaje.query.filter_by(mid=wamid).first():
+        return 'repetido'
+    telefono = mensaje.get('from')
+    contacto = _contacto(telefono, nombres.get(telefono), ahora)
+    momento = datetime.utcfromtimestamp(int(mensaje['timestamp'])) if mensaje.get('timestamp') else ahora
+    contacto.ultimo_entrante_en = max(contacto.ultimo_entrante_en or momento, momento)
+    db.session.add(IgMensaje(contacto_id=contacto.id, mid=wamid, direccion=IgMensaje.ENTRANTE,
+                             origen=IgMensaje.LEAD, texto=texto_de(mensaje), contenido={'whatsapp': mensaje},
+                             enviado_en=momento))
+    _marcar_difusion(contacto, telefono, ahora)
+    return 'mensaje'
+
+
+def _estado(estado, ahora):
+    destino = WaDifusionDestino.query.filter_by(wamid=estado.get('id')).first()
+    if destino is None:
+        return 'estado_ajeno'
+    nuevo = ESTADOS_META.get(estado.get('status'))
+    if nuevo and WaDifusionDestino.ORDEN[nuevo] > WaDifusionDestino.ORDEN[destino.estado]:
+        destino.estado, destino.actualizado_en = nuevo, ahora
+        if nuevo == WaDifusionDestino.FALLO:
+            error = (estado.get('errors') or [{}])[0]
+            destino.error = f"{error.get('code')}: {error.get('title') or error.get('message')}"[:300]
+    return f"estado_{estado.get('status')}"
+
+
+def procesar(evento, ahora=None):
+    """Pasa un `WhatsappWebhookEvento` y lo marca procesado. Un error queda en `resultado` (se puede reprocesar)."""
+    ahora = ahora or datetime.utcnow()
+    resultados = []
+    try:
+        for entry in evento.payload.get('entry') or []:
+            for cambio in entry.get('changes') or []:
+                valor = cambio.get('value') or {}
+                nombres = {c.get('wa_id'): (c.get('profile') or {}).get('name') for c in valor.get('contacts') or []}
+                resultados += [_entrante(m, nombres, ahora) for m in valor.get('messages') or []]
+                resultados += [_estado(s, ahora) for s in valor.get('statuses') or []]
+        evento.resultado = ','.join(dict.fromkeys(resultados))[:200] or 'sin_eventos'
+    except Exception as error:  # el evento queda guardado: se reprocesa después
+        db.session.rollback()
+        logger.exception('[WHATSAPP] Error procesando el evento %s', evento.id)
+        evento = db.session.get(WhatsappWebhookEvento, evento.id)
+        evento.resultado = f'error: {error}'[:200]
+    evento.procesado_en = ahora
+    db.session.commit()
+
+
+def procesar_pendientes(limite=200):
+    pendientes = (WhatsappWebhookEvento.query.filter(WhatsappWebhookEvento.procesado_en.is_(None))
+                  .order_by(WhatsappWebhookEvento.id).limit(limite).all())
+    for evento in pendientes:
+        procesar(evento)
+    return len(pendientes)

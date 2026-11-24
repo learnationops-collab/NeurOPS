@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="es" data-tema="learnation" data-tema-modo="claro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Seguimiento al workshop · mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../frontend/src/temas/temas.css">
+<link rel="stylesheet" href="../../../frontend/src/temas/temas-unicos.css">
+<link rel="stylesheet" href="../../../frontend/src/components/standard/standard.css">
+<style>
+:root{--acento:#ff3f9e;--ok:var(--ln-success,#3ecf8e);--warn:var(--ln-warning,#f5b84a);--mal:#f87171;--info:#5aa9ff;--lila:#b48cff;
+  --linea:var(--ln-border-subtle,rgba(0,0,0,.08));--suave:var(--ln-inset-bg,rgba(0,0,0,.04));--tarjeta:var(--ln-page-base,#fff)}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:var(--ln-page-bg);background-color:var(--ln-page-base);color:var(--ln-text-out);
+  font-family:'Montserrat','Helvetica Neue',Arial,sans-serif;font-size:13.5px}
+button,input,textarea{font-family:inherit}
+.page{max-width:1280px;margin:0 auto;padding:20px 16px 80px;display:grid;gap:16px}
+h1{margin:0;font-size:20px;font-weight:900;color:var(--ln-text-in)}
+.sub{margin:4px 0 0;color:var(--ln-text-muted);font-size:12.5px;line-height:1.5}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tabs button{all:unset;cursor:pointer;padding:8px 14px;border-radius:99px;font-weight:800;font-size:12.5px;background:var(--suave);color:var(--ln-text-in)}
+.tabs button.on{background:var(--acento);color:#fff}
+.vista{display:none}.vista.on{display:grid;gap:16px}
+.card{background:var(--tarjeta);border:1px solid var(--linea);border-radius:16px;padding:16px;display:grid;gap:12px;min-width:0}
+.card h3{margin:0;font-size:14px;font-weight:900;color:var(--ln-text-in)}
+.card small{color:var(--ln-text-muted);font-size:11.5px;line-height:1.45}
+.dos{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:16px}
+@media(max-width:900px){.dos{grid-template-columns:1fr}}
+
+/* Escenarios */
+.esc{display:grid;gap:6px}
+.esc button{all:unset;cursor:pointer;display:grid;gap:2px;padding:10px 12px;border-radius:12px;border:1px solid var(--linea)}
+.esc button b{font-size:12.5px;color:var(--ln-text-in)}
+.esc button span{font-size:11.5px;color:var(--ln-text-muted)}
+.esc button.on{border-color:var(--acento);box-shadow:inset 0 0 0 1px var(--acento)}
+
+/* Línea de tiempo de reglas */
+.reglas{display:grid;gap:6px}
+.regla{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border-radius:10px;background:var(--suave);font-size:12.5px}
+.regla i{flex:none;width:20px;height:20px;border-radius:99px;display:grid;place-items:center;font-style:normal;font-weight:900;font-size:11px;color:#fff}
+.regla.si i{background:var(--ok)}.regla.no i{background:var(--mal)}
+.regla div{display:grid;gap:2px}.regla span{color:var(--ln-text-muted);font-size:11.5px}
+.veredicto{padding:12px 14px;border-radius:12px;font-weight:800;font-size:13px}
+.veredicto.si{background:color-mix(in srgb,var(--ok) 16%,transparent);color:var(--ln-text-in)}
+.veredicto.no{background:color-mix(in srgb,var(--mal) 14%,transparent);color:var(--ln-text-in)}
+
+/* Chat */
+.chat{background:var(--suave);border-radius:14px;padding:14px;display:grid;gap:8px;align-content:start;min-height:420px}
+.chat .cab{display:flex;align-items:center;gap:10px;padding-bottom:8px;border-bottom:1px solid var(--linea)}
+.av{width:34px;height:34px;border-radius:99px;background:linear-gradient(135deg,var(--acento),var(--lila));color:#fff;display:grid;place-items:center;font-weight:900}
+.chat .cab b{color:var(--ln-text-in)}.chat .cab span{display:block;font-size:11px;color:var(--ln-text-muted)}
+.sep{justify-self:center;font-size:10.5px;font-weight:800;color:var(--ln-text-faint);text-transform:uppercase;letter-spacing:.06em;padding:4px 0}
+.msg{max-width:78%;padding:9px 12px;border-radius:14px;line-height:1.45;font-size:13px;position:relative}
+.msg .h{display:block;font-size:10px;margin-top:4px;opacity:.65}
+.in{justify-self:start;background:var(--tarjeta);color:var(--ln-text-in);border-bottom-left-radius:4px}
+.out{justify-self:end;background:#e9e3ff;color:#2a2440;border-bottom-right-radius:4px}
+.out.bot{background:#e4eefc}
+.out.auto{background:linear-gradient(135deg,#ffe3f1,#efe6ff);border:1.5px solid var(--acento);color:#2a2440}
+.tag{display:inline-block;font-size:9.5px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;padding:2px 6px;border-radius:6px;margin-bottom:4px}
+.tag.s{background:#cfc4ff;color:#3b2d80}.tag.b{background:#c7dbf7;color:#1f3d66}.tag.a{background:var(--acento);color:#fff}
+.btnig{display:block;margin-top:8px;text-align:center;padding:8px;border-radius:10px;background:#fff;color:#2a2440;font-weight:800;border:1px solid rgba(0,0,0,.1)}
+.ventana{justify-self:stretch;display:flex;align-items:center;gap:8px;font-size:11px;color:var(--ln-text-muted)}
+.ventana .barra{flex:1;height:6px;border-radius:99px;background:var(--linea);overflow:hidden}
+.ventana .barra i{display:block;height:100%;background:linear-gradient(90deg,var(--ok),var(--warn) 85%,var(--mal))}
+.nota{justify-self:center;font-size:11.5px;padding:6px 10px;border-radius:99px;background:color-mix(in srgb,var(--mal) 12%,transparent);color:var(--ln-text-in);font-weight:700}
+
+/* Configuración */
+.fila{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.sw{all:unset;cursor:pointer;width:42px;height:24px;border-radius:99px;background:var(--linea);position:relative;flex:none}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:99px;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.sw.on{background:var(--acento)}.sw.on::after{left:21px}
+label{display:grid;gap:6px;font-size:12px;font-weight:800;color:var(--ln-text-in)}
+textarea,input[type=text],input[type=number]{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--linea);background:var(--suave);color:var(--ln-text-in);font-size:13px;line-height:1.45}
+textarea{min-height:96px;resize:vertical}
+.tres{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+@media(max-width:700px){.tres{grid-template-columns:1fr}}
+.pill{font-size:10.5px;font-weight:800;padding:3px 8px;border-radius:99px;background:var(--suave);color:var(--ln-text-muted)}
+.pill.warn{background:color-mix(in srgb,var(--warn) 22%,transparent);color:var(--ln-text-in)}
+
+/* Medición */
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media(max-width:800px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{padding:14px;border-radius:14px;background:var(--suave);display:grid;gap:4px}
+.kpi b{font-size:24px;font-weight:900;color:var(--ln-text-in)}.kpi span{font-size:11.5px;color:var(--ln-text-muted)}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--ln-text-faint);padding:6px 8px;border-bottom:1px solid var(--linea)}
+td{padding:8px;border-bottom:1px solid var(--linea);color:var(--ln-text-in)}
+.ok{color:var(--ok);font-weight:800}.mu{color:var(--ln-text-muted)}
+.wrap{overflow-x:auto}
+
+/* Cadencias por etapa */
+.cad{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+@media(max-width:1000px){.cad{grid-template-columns:1fr}}
+.et h3 span{display:block;font-size:11px;font-weight:600;color:var(--ln-text-muted);margin-top:2px}
+.paso{border:1px solid var(--linea);border-radius:12px;padding:10px;display:grid;gap:8px;position:relative}
+.paso.auto{border-color:var(--acento);background:color-mix(in srgb,var(--acento) 6%,transparent)}
+.paso .top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.paso .n{width:22px;height:22px;border-radius:99px;background:var(--suave);display:grid;place-items:center;font-weight:900;font-size:11px;color:var(--ln-text-in)}
+.paso .h{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--ln-text-muted)}
+.paso .h input{width:52px;padding:4px 6px;font-size:12px}
+.quien{display:flex;border-radius:99px;background:var(--suave);padding:2px;margin-left:auto}
+.quien button{all:unset;cursor:pointer;padding:3px 9px;border-radius:99px;font-size:11px;font-weight:800;color:var(--ln-text-muted)}
+.quien button.on{background:var(--tarjeta);color:var(--ln-text-in);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.paso textarea{min-height:76px;font-size:12px}
+.paso .mini{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.paso .mini input{font-size:12px;padding:6px 8px}
+.paso .aviso{font-size:11px;color:var(--ln-text-muted)}
+.paso .err{font-size:11px;font-weight:700;color:var(--mal)}
+.linea24{display:flex;align-items:center;gap:8px;font-size:10.5px;font-weight:800;color:var(--mal);text-transform:uppercase;letter-spacing:.05em}
+.linea24::before,.linea24::after{content:"";flex:1;border-top:1.5px dashed var(--mal)}
+.mas{all:unset;cursor:pointer;text-align:center;padding:8px;border-radius:10px;border:1px dashed var(--linea);font-size:12px;font-weight:800;color:var(--ln-text-muted)}
+</style>
+</head>
+<body>
+<div class="page">
+  <div>
+    <h1>Seguimiento automático al workshop (Instagram)</h1>
+    <p class="sub">Mockup. Proyecto #195. El motor manda una invitación a la clase gratuita a los leads que dejaron de contestar, justo antes de que se cierre su ventana de 24 horas. Una sola vez por lead y por workshop.</p>
+  </div>
+  <div class="tabs">
+    <button class="on" data-v="sim">1. Cómo decide</button>
+    <button data-v="conf">2. Configuración (Inbox › Seguimientos)</button>
+    <button data-v="med">3. Medición</button>
+  </div>
+
+  <!-- 1. Simulación -->
+  <section class="vista on" id="sim">
+    <div class="dos">
+      <div class="card">
+        <h3>Elegí un caso</h3>
+        <div class="esc" id="esc"></div>
+        <h3 style="margin-top:6px">Reglas que revisa el motor (cada minuto)</h3>
+        <div class="reglas" id="reglas"></div>
+        <div class="veredicto" id="ver"></div>
+      </div>
+      <div class="card">
+        <h3>Conversación en el Inbox</h3>
+        <div class="chat" id="chat"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. Configuración: pestaña Seguimientos del Inbox -->
+  <section class="vista" id="conf">
+    <div class="card">
+      <div class="fila">
+        <div><h3>Inbox › Seguimientos</h3>
+          <small>Qué pasa cuando el lead deja de contestar, según su etapa. Aparte de los flujos: los flujos responden cuando el lead escribe; los seguimientos, cuando no escribe. Nunca a quien agendó o es No lead. Si el lead contesta, la cadencia se corta y vuelve a empezar la próxima vez que se quede callado.</small></div>
+        <button class="sw on" onclick="this.classList.toggle('on')"></button>
+      </div>
+      <div class="fila"><small><b>Mientras los setters sigan en Kommo</b> Work no ve la fase: «con bot» cae en Cualificación y «con setter» en Dolor. Los pasos de setter solo se cuentan; el aviso «toca seguimiento» empieza cuando trabajen desde el Inbox.</small><span class="pill warn">depende de #193</span></div>
+    </div>
+    <div class="cad" id="cad"></div>
+    <div class="card">
+      <h3>Variables de los mensajes automáticos</h3>
+      <div class="tres">
+        <label>{workshop_fecha}<input type="text" value="jueves 27/11, 20:00"></label>
+        <label>{workshop_link}<input type="text" value="https://learnation.../workshop?utm_source=instagram&amp;utm_medium=seguimiento&amp;utm_campaign=grupo-seguimientos-ig"></label>
+        <label>{nombre}<input type="text" value="nombre del lead en Instagram" disabled></label>
+      </div>
+      <div class="fila"><small>La UTM lleva al grupo de WhatsApp de seguimientos de Instagram. Hasta que Kerwin pase ese grupo, entra al grupo general.</small><span class="pill warn">falta grupo de Kerwin</span></div>
+    </div>
+  </section>
+
+  <!-- 3. Medición -->
+  <section class="vista" id="med">
+    <div class="kpis">
+      <div class="kpi"><span>Invitaciones enviadas (7 días)</span><b>312</b><span>≈ 45 por día</span></div>
+      <div class="kpi"><span>Respondieron después</span><b>41</b><span>13%</span></div>
+      <div class="kpi"><span>Tocaron «Sumarme»</span><b>58</b><span>19% · por la UTM</span></div>
+      <div class="kpi"><span>Entraron al grupo</span><b>27</b><span>9% · grupo seguimientos IG</span></div>
+    </div>
+    <div class="card">
+      <h3>Por tipo de mensaje</h3>
+      <div class="wrap"><table>
+        <tr><th>Mensaje</th><th>Enviadas</th><th>Respondieron</th><th>Sumarme</th><th>Al grupo</th></tr>
+        <tr><td>Todavía con el bot</td><td>201</td><td>22</td><td>31</td><td>13</td></tr>
+        <tr><td>Ya habló con un setter</td><td>111</td><td>19</td><td>27</td><td class="ok">14</td></tr>
+      </table></div>
+      <small>Números de ejemplo. En la conversación, la invitación queda marcada con la etiqueta «Workshop · auto» para que el setter vea qué le llegó al lead.</small>
+    </div>
+    <div class="card">
+      <h3>Próximas invitaciones</h3>
+      <div class="wrap"><table>
+        <tr><th>Lead</th><th>Mensaje</th><th>Sin respuesta</th><th>Ventana cierra</th><th>Sale</th></tr>
+        <tr><td>@dra.valen.md</td><td>Ya habló con un setter</td><td>2</td><td>hoy 21:40</td><td>18:40 – 20:40</td></tr>
+        <tr><td>@juanp_residente</td><td>Todavía con el bot</td><td>1</td><td>hoy 22:15</td><td>19:15 – 21:15</td></tr>
+        <tr><td>@cami.estudia</td><td>Todavía con el bot</td><td>3</td><td>mañana 08:05</td><td>05:05 – 07:05</td></tr>
+        <tr><td class="mu">@luisa.mir</td><td class="mu">Ya habló con un setter</td><td class="mu">1</td><td class="mu">hoy 23:00</td><td class="mu">no sale: falta 1 sin respuesta</td></tr>
+      </table></div>
+    </div>
+  </section>
+</div>
+
+<script>
+const ESC=[
+ {id:'bot',t:'Lead con el bot, 1 sin respuesta',d:'Nunca habló con un setter',
+  chat:[['sep','Ayer'],['in','Hola! info del programa','15:02'],['bot','¡Hola! Contame, ¿para qué examen te estás preparando?','15:02'],['in','MIR','15:10'],['bot','Genial. ¿Cuántas horas por día estudiás hoy?','15:10'],['sep','Hoy'],['ventana',88,'Ventana: quedan 2 h 50 min'],['auto','bot','13:05']],
+  reglas:[[1,'Automatización encendida'],[1,'No agendó y no es No lead'],[1,'Etapa: todavía con el bot','No hay mensajes de setter → mensaje de cualificación'],[1,'1 mensaje nuestro sin respuesta','Mínimo pedido: 1'],[1,'Faltan 2 h 50 min de ventana','Entre 3 y 1 h'],[1,'No recibió esta invitación para el workshop del 27/11']],si:'Sale ahora el mensaje «todavía con el bot».'},
+ {id:'set',t:'Lead con setter, 2 sin respuesta',d:'Habló de su dolor y no contestó más',
+  chat:[['sep','Ayer'],['in','Estudio 10 horas y me olvido todo 😩','12:20'],['set','Te entiendo, es lo más común. ¿Qué pasa cuando hacés simulacros?','12:31'],['in','Me va peor de lo que esperaba','12:40'],['set','¿Y qué te pasaría si este año no aprobás?','12:44'],['set','¿Seguís por ahí, Dra.?','19:58'],['sep','Hoy'],['ventana',92,'Ventana: quedan 1 h 55 min'],['auto','set','10:45']],
+  reglas:[[1,'Automatización encendida'],[1,'No agendó y no es No lead'],[1,'Etapa: ya habló con un setter','→ mensaje de dolor (cubre también oferta)'],[1,'2 rachas nuestras sin respuesta','Mínimo pedido: 2 (mensajes a menos de 30 min cuentan como uno)'],[1,'Faltan 1 h 55 min de ventana'],[1,'No recibió esta invitación']],si:'Sale ahora el mensaje «ya habló con un setter».'},
+ {id:'pocos',t:'Lead con setter, el setter salteó un paso',d:'Solo mandó 1 seguimiento de los 2',
+  chat:[['sep','Ayer'],['in','Cuánto sale el programa?','13:10'],['set','Antes de eso, contame un poco cómo venís con el estudio','13:22'],['sep','Hoy'],['ventana',88,'Ventana: quedan 2 h 50 min'],['auto','set','10:10']],
+  reglas:[[1,'Seguimientos encendidos'],[1,'No agendó y no es No lead'],[1,'Etapa: Dolor (con setter)'],[1,'Paso 3 (automático) a las 21 h sin respuesta','Lleva 21 h callado'],[0,'Paso 2 del setter no se mandó','No frena al automático: si esperara, se cerraría la ventana'],[1,'No recibió esta invitación']],si:'Sale igual. El paso del setter que faltó queda contado como salteado en la medición.'},
+ {id:'agendo',t:'Lead que ya agendó',d:'Tiene llamada el jueves',
+  chat:[['sep','Ayer'],['in','Dale, agendé para el jueves','16:00'],['set','¡Perfecto! Te espero 🙌','16:03'],['set','Te dejo este video antes de la llamada','16:05'],['sep','Hoy'],['ventana',90,'Ventana: quedan 2 h'],['nota','No sale: ya tiene agenda']],
+  reglas:[[1,'Automatización encendida'],[0,'Tiene agenda el jueves 27/11','Nunca se invita al workshop a quien ya agendó']],no:'No sale.'},
+ {id:'cerro',t:'Ventana cerrada',d:'El lead escribió hace más de 24 h',
+  chat:[['sep','Hace 2 días'],['in','Lo pienso y te aviso','11:00'],['set','Dale, cualquier cosa acá estoy','11:05'],['sep','Ayer'],['set','¿Pudiste pensarlo?','14:30'],['sep','Hoy'],['ventana',100,'Ventana cerrada'],['nota','No sale: Instagram no permite mensajes automáticos']],
+  reglas:[[1,'Automatización encendida'],[1,'No agendó'],[0,'Ventana de 24 h cerrada','Pasado ese plazo solo puede escribir una persona (HUMAN_AGENT). Un bot ahí arriesga la cuenta.']],no:'No sale. Por eso el motor apunta a las últimas horas de la ventana.'}
+];
+const TXT={bot:'Hola Juan! No estoy muy seguro de si tu perfil encaja con el programa, pero el jueves 27/11 voy a dar una clase gratuita sobre cómo pasar exámenes de residencia reteniendo más del 90% de lo que estudiás. Si te sirve, sumate 👇',
+ set:'Valentina, vi que estabas teniendo dificultades con tu preparación. El jueves 27/11 voy a dar una clase gratuita sobre cómo pasar exámenes de residencia reteniendo más del 90%. Creo que te puede servir mucho, sumate acá 👇'};
+const NOM={bot:['@juanp_residente','Juan Pérez · con el bot'],set:['@dra.valen.md','Valentina · setter Laura'],pocos:['@luisa.mir','Luisa · setter Laura'],agendo:['@nico.mir25','Nicolás · agendado'],cerro:['@andre.res','Andrea · setter Laura']};
+function pinta(id){
+  const e=ESC.find(x=>x.id===id);
+  document.querySelectorAll('#esc button').forEach(b=>b.classList.toggle('on',b.dataset.id===id));
+  document.getElementById('reglas').innerHTML=e.reglas.map(([ok,a,b])=>`<div class="regla ${ok?'si':'no'}"><i>${ok?'✓':'✕'}</i><div><b>${a}</b>${b?`<span>${b}</span>`:''}</div></div>`).join('');
+  const v=document.getElementById('ver');v.className='veredicto '+(e.si?'si':'no');v.textContent=e.si||e.no;
+  const [u,s]=NOM[id];
+  document.getElementById('chat').innerHTML=`<div class="cab"><div class="av">${u[1].toUpperCase()}</div><div><b>${u}</b><span>${s}</span></div></div>`+
+   e.chat.map(m=>{
+    const [k,a,b,c]=m;
+    if(k==='sep')return `<div class="sep">${a}</div>`;
+    if(k==='nota')return `<div class="nota">${a}</div>`;
+    if(k==='ventana')return `<div class="ventana"><span>${b}</span><div class="barra"><i style="width:${a}%"></i></div></div>`;
+    if(k==='in')return `<div class="msg in">${a}<span class="h">${b}</span></div>`;
+    if(k==='bot')return `<div class="msg out bot"><span class="tag b">Bot</span><br>${a}<span class="h">${b}</span></div>`;
+    if(k==='set')return `<div class="msg out"><span class="tag s">Setter</span><br>${a}<span class="h">${b}</span></div>`;
+    if(k==='auto')return `<div class="msg out auto"><span class="tag a">Workshop · auto</span><br>${TXT[a]}<span class="btnig">Sumarme</span><span class="h">${b} · enviado por el motor</span></div>`;
+   }).join('');
+}
+document.getElementById('esc').innerHTML=ESC.map(e=>`<button data-id="${e.id}"><b>${e.t}</b><span>${e.d}</span></button>`).join('');
+document.querySelectorAll('#esc button').forEach(b=>b.onclick=()=>pinta(b.dataset.id));
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.tabs button').forEach(x=>x.classList.toggle('on',x===b));
+  document.querySelectorAll('.vista').forEach(x=>x.classList.toggle('on',x.id===b.dataset.v));
+});
+pinta('bot');
+const CAD=[
+ {id:'cual',t:'Cualificación',d:'Apertura y Conexión · hoy: leads con el bot',pasos:[
+   {h:4,q:'setter'},
+   {h:20,q:'auto',x:'Hola {nombre}! No estoy muy seguro de si tu perfil encaja con el programa, pero el {workshop_fecha} voy a dar una clase gratuita sobre cómo pasar exámenes de residencia reteniendo más del 90% de lo que estudiás. Si te sirve, sumate 👇',b:'Sumarme'}]},
+ {id:'dolor',t:'Dolor',d:'Dolor, Consecuencia y Compromiso · hoy: leads con setter',pasos:[
+   {h:3,q:'setter'},{h:12,q:'setter'},
+   {h:21,q:'auto',x:'{nombre}, vi que estabas teniendo dificultades con tu preparación. El {workshop_fecha} voy a dar una clase gratuita sobre cómo pasar exámenes de residencia reteniendo más del 90%. Creo que te puede servir mucho, sumate acá 👇',b:'Sumarme'}]},
+ {id:'oferta',t:'Oferta',d:'Propuesta de agenda y Link',pasos:[
+   {h:3,q:'setter'},{h:12,q:'setter'},
+   {h:21,q:'auto',x:'{nombre}, vi que estabas teniendo dificultades con tu preparación. El {workshop_fecha} voy a dar una clase gratuita… sumate acá 👇',b:'Sumarme'},
+   {h:48,q:'setter'}]}
+];
+function pintaCad(){
+  document.getElementById('cad').innerHTML=CAD.map((e,ei)=>{
+    let cruzo=false;
+    const pasos=e.pasos.map((p,pi)=>{
+      let sep='';
+      if(!cruzo&&p.h>=24){cruzo=true;sep='<div class="linea24">se cierra la ventana de 24 h</div>';}
+      const auto=p.q==='auto';
+      const cuerpo=auto?`<textarea>${p.x}</textarea><div class="mini"><input value="${p.b}" title="Botón"><input value="{workshop_link}" title="Link del botón"></div>`
+        :`<div class="aviso">El setter ve «toca seguimiento ${pi+1}» en Conversaciones. Lo escribe él (puede usar un atajo de la Guía).</div>`;
+      const err=auto&&p.h>=24?'<div class="err">Un mensaje automático tiene que salir antes de las 24 h. Pasalo a setter o bajá las horas.</div>':'';
+      return sep+`<div class="paso ${auto?'auto':''}"><div class="top"><span class="n">${pi+1}</span>
+        <span class="h">a las <input type="number" value="${p.h}" onchange="CAD[${ei}].pasos[${pi}].h=+this.value;pintaCad()"> h sin respuesta</span>
+        <span class="quien"><button class="${auto?'':'on'}" onclick="CAD[${ei}].pasos[${pi}].q='setter';pintaCad()">Setter</button><button class="${auto?'on':''}" onclick="Object.assign(CAD[${ei}].pasos[${pi}],{q:'auto',x:CAD[${ei}].pasos[${pi}].x||'',b:'Sumarme'});pintaCad()">Automático</button></span></div>${cuerpo}${err}</div>`;
+    }).join('');
+    return `<div class="card et"><h3>${e.t}<span>${e.d}</span></h3>${pasos}<button class="mas" onclick="CAD[${ei}].pasos.push({h:24,q:'setter'});pintaCad()">+ Agregar paso</button></div>`;
+  }).join('');
+}
+pintaCad();
+
+</script>
+</body>
+</html>

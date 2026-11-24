@@ -21,8 +21,8 @@ import MisAgendas from './agendas/MisAgendas';
 import MisLinks, { copiar } from './MisLinks';
 import { abrirVentana } from '../../ventanas/ventanasStore';
 import { marcaDelDock } from './agendas/meses';
-import ReporteDiario from './reporte/ReporteDiario';
-import Historial from './reporte/Historial';
+import ReporteSeccion from '../reporte/ReporteSeccion';
+import useMarcaReporte from '../reporte/useMarcaReporte';
 import CompartidosConmigo from '../../components/compartidos/CompartidosConmigo';
 
 // La bandeja del Inbox como sección (1435, ADR-W184): se carga recién al abrirla, con sus estilos.
@@ -75,9 +75,9 @@ const SECCIONES = [
     // Las conversaciones de Instagram, sin salir a /inbox (Social Selling, 17/11/2026: un solo lugar de trabajo).
     { id: 'conversaciones', label: 'Conversaciones', Icono: MessagesSquare, sub: 'Los que te escribieron, por espera.' },
     // Lo que se manda en cada etapa del setting, editable (ADR-W197).
-    { id: 'guia', label: 'Guía', Icono: BookOpen, sub: 'Lo que mandás en cada etapa.' },
-    { id: 'reporte', label: 'Reporte', Icono: ClipboardList, sub: 'Así cerraste el día.',
-        tabs: [{ key: 'hoy', label: 'Reporte' }, { key: 'historial', label: 'Historial' }] },
+    { id: 'guia', label: 'Embudos', Icono: BookOpen, sub: 'Lo que se manda en cada fase y sus seguimientos.' },
+    // El reporte único (pages/reporte/): trae sus propias pestañas Hoy / Historial.
+    { id: 'reporte', label: 'Reporte', Icono: ClipboardList, sub: 'Así cerraste el día.' },
     // El Analizar del dashboard comercial, el mismo tablero de setters que ve la dirección, con sus
     // pestañas Dashboard · Comparativas · Variabilidad (las dibuja el dashboard, no el encabezado).
     { id: 'datos', label: 'Mis datos', Icono: BarChart3, sub: 'Así vienen tus números.' },
@@ -105,9 +105,6 @@ const tablaDePestana = (key) => REVISAR_DEL_SETTER.find(p => p.key === key)?.tab
  */
 const CLAVES_DEL_DRILL_DOWN = ['t', 'f', 'ft'];
 
-/** Fecha local de hoy (YYYY-MM-DD), la misma que el formulario del reporte pone por defecto. */
-const hoyLocal = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-
 const SetterEspacioPage = () => {
     const { user, logout } = useAuth();
     const { abrir: abrirConfiguracion } = useConfiguracion();
@@ -116,7 +113,8 @@ const SetterEspacioPage = () => {
     const navegar = useNavigate();
     const reducir = useReducedMotion();
     const [saliendo, setSaliendo] = useState(false);
-    const [reporteHoy, setReporteHoy] = useState(false);
+    // La marca de «Reporte» en el dock: ✓ con hoy completo, ámbar si hoy o ayer quedan incompletos.
+    const { marcas: marcasDelReporte, actualizar: actualizarMarcaDelReporte } = useMarcaReporte(!!user?.id);
     // El resumen de la bandeja de "Mis agendas": de ahí sale su marca en el dock (ver `marcaDelDock`:
     // cuenta las del mes que se trabaja, no las 149 de todos los meses). Lo informa la propia bandeja
     // (al cargar y después de cada asignación); si se entra por otra sección, se pide solo el resumen.
@@ -156,16 +154,6 @@ const SetterEspacioPage = () => {
 
     const elegirTab = useCallback((nuevaTab) => irA(seccion, nuevaTab), [irA, seccion]);
 
-    // ¿Ya mandó el reporte de hoy? Es lo que pone el "✓" en el dock, como el "Cerrar el día" del
-    // closer. Si la consulta falla no se marca nada: el dock sin ✓ es la respuesta prudente.
-    useEffect(() => {
-        if (!user?.id) return;
-        const hoy = hoyLocal();
-        api.get('/public/setter-reports', { params: { setter_id: user.id, start_date: hoy, end_date: hoy, per_page: 1 } })
-            .then(res => setReporteHoy((res.data?.total || 0) > 0))
-            .catch(() => { /* sin ✓, que es lo que hay que mostrar si no se sabe */ });
-    }, [user?.id]);
-
     // Atajo 'w' para Simular a alguien. Sin MainLayout esta pantalla no tiene el
     // HotkeysManager global (igual que el mazo del closer), y un operador que simula a un setter
     // lo necesita para cambiar de simulación.
@@ -200,7 +188,7 @@ const SetterEspacioPage = () => {
 
     const marcaDeAgendas = marcaDelDock(resumenAgendas);
     const secciones = SECCIONES.map((s) => {
-        if (s.id === 'reporte' && reporteHoy) return { ...s, marca: { texto: '✓', titulo: 'reporte de hoy enviado' } };
+        if (s.id === 'reporte' && marcasDelReporte.length) return { ...s, marcas: marcasDelReporte };
         if (s.id === 'agendas' && marcaDeAgendas) return { ...s, marca: marcaDeAgendas };
         return s;
     });
@@ -285,13 +273,12 @@ const SetterEspacioPage = () => {
                     {seccion === 'agendas' && (
                         <MisAgendas onResumen={alResumenDeAgendas} onVerDatos={() => irA('datos')} />
                     )}
-                    {/* El reporte del día por pasos y su Historial (10/10/2026). El setter es el de la
-                        sesión: simulando, el simulado. */}
-                    {seccion === 'reporte' && tab === 'hoy' && (
-                        <ReporteDiario setterId={user?.id}
-                            onEnviado={(fecha) => { if (fecha === hoyLocal()) setReporteHoy(true); }} />
+                    {/* El reporte único del día, con su Historial (docs/plan_reporte_unico.md). El setter es
+                        el de la sesión: simulando, el simulado. `?tab=historial` (/setter/statistics) abre el Historial. */}
+                    {seccion === 'reporte' && (
+                        <ReporteSeccion onDia={actualizarMarcaDelReporte}
+                            tabInicial={params.get('tab') === 'historial' ? 'hist' : 'hoy'} />
                     )}
-                    {seccion === 'reporte' && tab === 'historial' && <Historial setterId={user?.id} />}
                     {/* Revisar es el dashboard comercial, acotado a este setter por el backend
                         (`alcance_de`): la lista de Revisar, como "Mi cartera" en el mazo del closer.
                         Sin selector de persona: el contexto de un setter no lo ofrece. La tabla la

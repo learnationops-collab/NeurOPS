@@ -10,7 +10,7 @@ from flask_login import current_user, login_required
 
 from app import db
 from app.automatizaciones import bandeja, campanas, fases, metricas, progreso, servicio
-from app.automatizaciones.modelos import AutEjecucion, AutFlujo, IgContacto, IgMensaje
+from app.automatizaciones.modelos import AutEjecucion, AutEmbudo, AutFlujo, IgContacto, IgMensaje
 from app.automatizaciones.nucleo import grafo as g
 from app.models.instagram import InstagramWebhookEvento
 from app.models.tag import TARGET_IG_CONTACT
@@ -36,7 +36,7 @@ ACCIONES_DEL_SETTER = {'inbox.mover_en_flujo', 'inbox.bot_de_conversacion', 'inb
                        'inbox.crear_nota', 'inbox.crear_tarea', 'inbox.cambiar_tarea',
                        'inbox.crear_rapida', 'inbox.borrar_rapida', 'inbox.subir_audio', 'inbox.borrar_audio',
                        'inbox.mover_fase', 'inbox.marcar_canal', 'inbox.anotar_cita', 'inbox.etiquetar_varias',
-                       'inbox.publicar_guia', 'inbox.proponer_guia'}
+                       'inbox.publicar_guia', 'inbox.proponer_guia', 'inbox.simular_embudo'}
 MAX_BYTES_GRAFO = 300_000
 MAX_NODOS = 300
 MENSAJES_POR_CONVERSACION = 300
@@ -87,6 +87,9 @@ def _resumen_flujo(flujo, detalle=False):
         'publicada_en': _iso(publicada.publicada_en) if publicada else None,
         'cambios_sin_publicar': publicada is None or publicada.grafo != flujo.grafo,
         'palabras_clave': palabras,
+        # Dónde vive en Embudos (ADR-W204): sin embudo, Conversión; sin fase, la primera.
+        'embudo_id': flujo.embudo_id,
+        'fase': flujo.fase,
         'nodos': len((flujo.grafo or {}).get('nodos') or []),
         'ejecuciones_abiertas': AutEjecucion.query.join(AutEjecucion.version).filter(
             AutEjecucion.estado.in_(AutEjecucion.ABIERTOS), AutEjecucion.version.has(flujo_id=flujo.id)).count(),
@@ -98,6 +101,23 @@ def _resumen_flujo(flujo, detalle=False):
 def _flujo_completo(flujo):
     """Lo que abre el lienzo: el resumen, el borrador, sus errores y las métricas de cada paso."""
     return {**_resumen_flujo(flujo, detalle=True), 'grafo': flujo.grafo, 'errores': g.validar(flujo.grafo)}
+
+
+def _ubicar(flujo, datos):
+    """Aplica `embudo` (slug) y `fase` del cuerpo. Devuelve un mensaje de error o None."""
+    from app.automatizaciones import embudos
+    if 'embudo' in datos:
+        e = embudos.por_slug(datos.get('embudo'))
+        if e is None:
+            return 'Ese embudo no existe'
+        flujo.embudo_id = embudos.id_guardado(e)
+    if 'fase' in datos:
+        e = db.session.get(AutEmbudo, flujo.embudo_id) if flujo.embudo_id else None
+        fase = datos.get('fase') or None
+        if fase and fase not in embudos.ids_de(e):
+            return 'Esa fase no es del embudo'
+        flujo.fase = fase
+    return None
 
 
 def _error_de_grafo(grafo):
@@ -142,6 +162,9 @@ def crear_flujo():
     if error:
         return jsonify({'message': error}), 400
     flujo = AutFlujo(nombre=nombre, grafo=grafo)
+    problema = _ubicar(flujo, datos)
+    if problema:
+        return jsonify({'message': problema}), 400
     db.session.add(flujo)
     db.session.commit()
     return jsonify(_flujo_completo(flujo)), 201
@@ -172,6 +195,9 @@ def guardar_flujo(flujo_id):
         if problema:
             return jsonify({'message': problema}), 400
         flujo.grafo = datos['grafo']
+    problema = _ubicar(flujo, datos)
+    if problema:
+        return jsonify({'message': problema}), 400
     db.session.commit()
     return jsonify(_flujo_completo(flujo))
 
@@ -252,6 +278,7 @@ def listar_conversaciones():
     etiquetas = tags_service.de(TARGET_IG_CONTACT, ids)
     from app.automatizaciones import seguimientos  # importa el motor (por `escribir`): solo cuando se usa
     proximos = seguimientos.proximos(ids)
+    toca = seguimientos.avisos([c for c, _, _, _ in filas])
     avance = progreso.de_contactos([c for c, _, _, _ in filas], ejecuciones, ahora, current_user.id,
                                    {c.id: primero for c, _, _, primero in filas})
     salida = []
@@ -273,6 +300,7 @@ def listar_conversaciones():
             # Para la ventana de Instagram (24 h / 7 días) y el próximo seguimiento, a la vista en la fila.
             'ultimo_entrante_en': _iso(contacto.ultimo_entrante_en),
             'seguimiento': proximos.get(contacto.id),
+            'toca': toca.get(contacto.id),
             'bot_pausado': bool(contacto.bot_pausado_hasta and contacto.bot_pausado_hasta > ahora),
             'examen': variables.get('examen'),
             'califica': variables.get('_califica'),

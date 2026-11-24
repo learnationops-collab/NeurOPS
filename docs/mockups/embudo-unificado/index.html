@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="es" data-tema="learnation" data-tema-modo="claro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Embudo del setting · mockup</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../frontend/src/temas/temas.css">
+<link rel="stylesheet" href="../../../frontend/src/temas/temas-unicos.css">
+<link rel="stylesheet" href="../../../frontend/src/components/standard/standard.css">
+<style>
+:root{--acento:#ff3f9e;--ok:var(--ln-success,#3ecf8e);--warn:var(--ln-warning,#f5b84a);--mal:#f87171;--info:#5aa9ff;--lila:#7D63E6;
+  --linea:var(--ln-border-subtle,rgba(0,0,0,.08));--suave:var(--ln-inset-bg,rgba(0,0,0,.04));--tarjeta:var(--ln-page-base,#fff)}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:var(--ln-page-bg);background-color:var(--ln-page-base);color:var(--ln-text-out);
+  font-family:'Montserrat','Helvetica Neue',Arial,sans-serif;font-size:13.5px}
+button,input,textarea,select{font-family:inherit}
+.page{max-width:1440px;margin:0 auto;padding:18px 16px 110px;display:grid;gap:14px}
+.mut{color:var(--ln-text-muted)}.t-xs{font-size:11px}
+h1{margin:0;font-size:20px;font-weight:900;color:var(--ln-text-in)}
+h2{margin:0;font-size:16px;font-weight:900;color:var(--ln-text-in)}
+h3{margin:0;font-size:13.5px;font-weight:900;color:var(--ln-text-in)}
+.fila{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.der{margin-left:auto}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:99px;font-size:11px;font-weight:800;background:var(--suave);color:var(--ln-text-in);white-space:nowrap}
+.chip i{width:7px;height:7px;border-radius:99px;background:var(--c,currentColor)}
+.btn{all:unset;cursor:pointer;padding:7px 13px;border-radius:99px;font-size:12px;font-weight:800;background:var(--suave);color:var(--ln-text-in)}
+.btn.pri{background:var(--acento);color:#fff}.btn.sm{padding:4px 10px;font-size:11px}
+.card{background:var(--tarjeta);border:1px solid var(--linea);border-radius:16px;padding:14px;display:grid;gap:10px;min-width:0;align-content:start}
+
+/* Mapa del embudo */
+.mapa{display:grid;grid-template-columns:repeat(var(--cols,8),minmax(0,1fr));gap:6px}
+@media(max-width:1000px){.mapa{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.tramo{grid-column:span var(--n);font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--c);border-bottom:2px solid var(--c);padding-bottom:3px}
+.f{all:unset;cursor:pointer;display:grid;gap:3px;padding:9px 10px;border-radius:12px;border:1px solid var(--linea);background:var(--tarjeta);min-width:0}
+.f b{font-size:12px;color:var(--ln-text-in);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.f .n{font-size:20px;font-weight:900;color:var(--ln-text-in)}
+.f .m{font-size:10.5px;color:var(--ln-text-muted)}
+.f .ic{display:flex;gap:4px;margin-top:2px}
+.f .ic span{font-size:9.5px;font-weight:900;padding:1px 5px;border-radius:5px;background:var(--suave);color:var(--ln-text-muted)}
+.f .ic span.bot{background:#dbe8fb;color:#1f3d66}.f .ic span.auto{background:#ffe0ef;color:#9b1a5c}
+.f.on{border-color:var(--acento);box-shadow:inset 0 0 0 1px var(--acento)}
+
+/* Cuerpo */
+.cuerpo{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:14px;align-items:start}
+@media(max-width:1100px){.cuerpo{grid-template-columns:1fr}}
+.bloque{display:grid;gap:10px}
+.bloque>.cab{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.num{width:24px;height:24px;border-radius:8px;display:grid;place-items:center;font-weight:900;font-size:12px;color:#fff;background:var(--c)}
+.ayuda{font-size:12px;color:var(--ln-text-muted);line-height:1.5}
+
+/* Flujos (bot) */
+.flujos{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.flujo{border:1px solid var(--linea);border-radius:12px;padding:10px;display:grid;gap:6px}
+.flujo b{font-size:12.5px;color:var(--ln-text-in)}
+.barras{display:flex;gap:2px;align-items:flex-end;height:30px}
+.barras i{flex:1;border-radius:3px 3px 0 0;background:var(--ok)}
+.barras i.caida{background:var(--acento)}
+
+/* Pasos de la guía */
+.paso{border:1px solid var(--linea);border-radius:12px;padding:10px 12px;display:grid;gap:6px}
+.paso .top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.paso .top b{font-size:12.5px;color:var(--ln-text-in)}
+.atajo{font-family:ui-monospace,monospace;font-size:11px;padding:1px 6px;border-radius:6px;background:var(--suave);color:var(--ln-text-muted)}
+.op{display:grid;grid-template-columns:22px 1fr auto;gap:8px;align-items:start;font-size:12.5px;line-height:1.45;color:var(--ln-text-in)}
+.op .l{width:22px;height:22px;border-radius:7px;display:grid;place-items:center;font-weight:900;font-size:11px;background:var(--suave)}
+.op .r{font-size:11px;font-weight:800;color:var(--ok);white-space:nowrap}
+
+/* Seguimientos */
+.seg{border:1px solid var(--linea);border-radius:12px;padding:10px;display:grid;gap:8px}
+.seg.auto{border-color:var(--acento);background:color-mix(in srgb,var(--acento) 5%,transparent)}
+.seg .top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.seg .k{width:22px;height:22px;border-radius:99px;background:var(--suave);display:grid;place-items:center;font-weight:900;font-size:11px;color:var(--ln-text-in)}
+.seg .h{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--ln-text-muted)}
+.seg input[type=number]{width:52px;padding:4px 6px;border-radius:8px;border:1px solid var(--linea);background:var(--suave);color:var(--ln-text-in);font-size:12px}
+.quien{display:flex;border-radius:99px;background:var(--suave);padding:2px;margin-left:auto}
+.quien button{all:unset;cursor:pointer;padding:3px 9px;border-radius:99px;font-size:11px;font-weight:800;color:var(--ln-text-muted)}
+.quien button.on{background:var(--tarjeta);color:var(--ln-text-in);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.seg textarea{width:100%;min-height:70px;padding:8px 10px;border-radius:10px;border:1px solid var(--linea);background:var(--tarjeta);color:var(--ln-text-in);font-size:12px;line-height:1.45;resize:vertical}
+.seg .mini{display:grid;grid-template-columns:1fr 2fr;gap:6px}
+.seg .mini input{padding:6px 8px;border-radius:8px;border:1px solid var(--linea);background:var(--tarjeta);color:var(--ln-text-in);font-size:12px}
+.err{font-size:11px;font-weight:700;color:var(--mal)}
+.l24{display:flex;align-items:center;gap:8px;font-size:10px;font-weight:900;color:var(--mal);text-transform:uppercase;letter-spacing:.06em}
+.l24::before,.l24::after{content:"";flex:1;border-top:1.5px dashed var(--mal)}
+.mas{all:unset;cursor:pointer;text-align:center;padding:8px;border-radius:10px;border:1px dashed var(--linea);font-size:12px;font-weight:800;color:var(--ln-text-muted)}
+.copiar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:11.5px;color:var(--ln-text-muted)}
+
+/* Previa */
+.previa{position:sticky;top:14px}
+.chat{background:var(--suave);border-radius:14px;padding:12px;display:grid;gap:7px;align-content:start}
+.sep{justify-self:center;font-size:10px;font-weight:900;color:var(--ln-text-faint);text-transform:uppercase;letter-spacing:.06em;padding:3px 0}
+.msg{max-width:86%;padding:8px 11px;border-radius:13px;line-height:1.42;font-size:12.5px}
+.msg .h{display:block;font-size:9.5px;margin-top:3px;opacity:.6}
+.in{justify-self:start;background:var(--tarjeta);color:var(--ln-text-in)}
+.out{justify-self:end;background:#e9e3ff;color:#2a2440}.out.bot{background:#e4eefc}
+.out.auto{background:linear-gradient(135deg,#ffe3f1,#efe6ff);border:1.5px solid var(--acento);color:#2a2440}
+.tag{display:inline-block;font-size:9px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;padding:1px 5px;border-radius:5px;margin-bottom:3px}
+.tag.s{background:#cfc4ff;color:#3b2d80}.tag.b{background:#c7dbf7;color:#1f3d66}.tag.a{background:var(--acento);color:#fff}
+.btnig{display:block;margin-top:6px;text-align:center;padding:6px;border-radius:9px;background:#fff;font-weight:800;border:1px solid rgba(0,0,0,.1)}
+.silencio{justify-self:center;font-size:11px;font-weight:700;color:var(--ln-text-muted);padding:3px 10px;border-radius:99px;border:1px dashed var(--linea)}
+
+/* Dock simulado */
+.dock{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);display:flex;gap:4px;padding:6px;border-radius:18px;background:var(--ln-popover-bg,#fff);border:1px solid var(--linea);box-shadow:0 12px 30px rgba(0,0,0,.18);z-index:50}
+.dock span{padding:8px 14px;border-radius:12px;font-size:12px;font-weight:800;color:var(--ln-text-muted)}
+.dock span.on{background:var(--acento);color:#fff}
+.dock span s{opacity:.5}
+
+/* Notas */
+.notas ul{margin:0;padding-left:18px;display:grid;gap:6px;font-size:12.5px;line-height:1.5;color:var(--ln-text-in)}
+.antes{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+@media(max-width:800px){.antes{grid-template-columns:1fr 1fr}}
+.antes div{padding:10px;border-radius:12px;background:var(--suave);font-size:12px;line-height:1.45}
+.antes b{display:block;color:var(--ln-text-in);margin-bottom:2px}
+
+/* Embudos */
+.embs{display:flex;gap:4px;padding:4px;border-radius:99px;background:var(--suave);margin-left:12px}
+.embs button{all:unset;cursor:pointer;padding:6px 12px;border-radius:99px;font-size:12px;font-weight:800;color:var(--ln-text-muted);display:flex;gap:6px;align-items:center}
+.embs button.on{background:var(--tarjeta);color:var(--ln-text-in);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.embs button em{font-style:normal;font-size:10px;padding:1px 6px;border-radius:99px;background:var(--suave)}
+.f .sale{font-size:10px;font-weight:800;color:var(--acento)}
+/* Simulador */
+.velo{position:fixed;inset:0;background:rgba(10,10,30,.45);display:none;place-items:center;z-index:100;padding:16px}
+.velo.on{display:grid}
+.sim{width:min(1100px,100%);height:min(760px,calc(100vh - 32px));background:var(--tarjeta);border-radius:20px;display:grid;grid-template-columns:minmax(0,1fr) 340px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.35)}
+@media(max-width:860px){.sim{grid-template-columns:1fr;height:auto;max-height:calc(100vh - 32px);overflow:auto}}
+.sim .izq{display:grid;grid-template-rows:auto 1fr auto;min-height:0;border-right:1px solid var(--linea)}
+.sim .cab{padding:12px 14px;border-bottom:1px solid var(--linea);display:flex;align-items:center;gap:10px}
+.av{width:32px;height:32px;border-radius:99px;background:linear-gradient(135deg,var(--acento),#b48cff);color:#fff;display:grid;place-items:center;font-weight:900}
+.sim .hilo{padding:14px;overflow:auto;display:grid;gap:7px;align-content:start;background:var(--suave)}
+.sim .caja{padding:10px;border-top:1px solid var(--linea);display:grid;gap:8px}
+.sim .caja .fila input{flex:1;padding:9px 12px;border-radius:99px;border:1px solid var(--linea);background:var(--suave);color:var(--ln-text-in);font-size:13px}
+.botones{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.botones button{all:unset;cursor:pointer;padding:5px 10px;border-radius:9px;background:#fff;border:1px solid rgba(0,0,0,.12);font-size:12px;font-weight:700;color:#2a2440}
+.sim .lado{padding:14px;display:grid;gap:14px;align-content:start;overflow:auto}
+.estado{display:grid;gap:6px;padding:12px;border-radius:12px;background:var(--suave)}
+.estado .r{display:flex;justify-content:space-between;gap:8px;font-size:12px}
+.estado .r b{color:var(--ln-text-in)}
+.vbar{height:6px;border-radius:99px;background:var(--linea);overflow:hidden}.vbar i{display:block;height:100%;background:linear-gradient(90deg,var(--ok),var(--warn) 80%,var(--mal))}
+.reloj{display:flex;gap:6px;flex-wrap:wrap}
+.guiapasos{display:grid;gap:6px}
+.guiapasos button{all:unset;cursor:pointer;padding:8px 10px;border-radius:10px;border:1px solid var(--linea);font-size:12px;line-height:1.4;color:var(--ln-text-in)}
+.guiapasos button:hover{border-color:var(--lila)}
+.guiapasos button span{display:block;font-size:10.5px;font-weight:800;color:var(--lila)}
+.evento{justify-self:center;font-size:10.5px;font-weight:800;padding:3px 9px;border-radius:99px;background:color-mix(in srgb,var(--lila) 14%,transparent);color:var(--ln-text-in);text-align:center}
+.evento.t{background:color-mix(in srgb,var(--warn) 22%,transparent)}
+.evento.x{background:color-mix(in srgb,var(--mal) 14%,transparent)}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="fila">
+    <div>
+      <h1>Embudos</h1>
+      <div class="mut t-xs" style="margin-top:3px">Lo que se manda en cada fase y qué pasa si el lead no contesta. Reemplaza a <b>Flujos</b> y <b>Guía</b>.</div>
+    </div>
+    <div class="embs" id="embs"></div>
+    <span class="chip der" id="pub"></span>
+    <button class="btn">Historial</button>
+    <button class="btn">Quién es lead</button>
+    <button class="btn" onclick="abrirSim()">▶ Simular conversación</button>
+    <button class="btn pri">Publicar</button>
+  </div>
+
+  <div class="card">
+    <div class="mut t-xs" id="emb-desc"></div>
+    <div class="mapa" id="mapa"></div>
+  </div>
+
+  <div class="cuerpo">
+    <div class="card" id="editor" style="gap:18px"></div>
+    <div class="card previa">
+      <div class="fila"><h3>Cómo lo vive el lead</h3><span class="chip der t-xs" id="pv-chip"></span></div>
+      <div class="chat" id="chat"></div>
+    </div>
+  </div>
+
+  <div class="card notas">
+    <h3>Qué cambia respecto de hoy</h3>
+    <div class="antes">
+      <div><b>Flujos</b>Pasa a la fase Apertura (y No lead): son los mensajes del bot. Las tarjetas con su embudo y el lienzo siguen igual; se abren desde acá.</div>
+      <div><b>Guía</b>Sus pasos pasan a «Qué se manda» de cada fase. Mismos atajos, opciones A/B y «qué responde más». Se publica igual que hoy.</div>
+      <div><b>Seguimientos</b>Nuevo: «Si no contesta», por fase. Pasos de setter (aviso «toca seguimiento») o automáticos (los manda el motor, antes de las 24 h).</div>
+      <div><b>Campañas y Conversaciones</b>Quedan como están. Una campaña sigue llevando sus palabras clave a un flujo de Apertura.</div>
+    </div>
+    <ul>
+      <li>El dock del Inbox queda con tres secciones: <b>Embudos</b>, Campañas y Conversaciones. Cada campaña elige a qué embudo entra el lead; un embudo puede pasar al lead a otro (Lead magnet → Conversión).</li><li><b>Simular conversación</b> corre el borrador: escribís como el lead, contestás como setter con los pasos de la Guía y adelantás el reloj para ver salir los seguimientos.</li>
+      <li>Las fases siguen fijas (<code>fases.py</code>): agregarlas o moverlas se propone, como hoy.</li>
+      <li>El setter ve la sección en lectura (salvo los textos de la Guía, que hoy ya puede publicar). Los seguimientos automáticos los cambia la dirección comercial.</li>
+      <li>Mientras los setters sigan en Kommo, Work no ve la fase: «con bot» cuenta como Apertura y «con setter» como Dolor. Los números del mapa son de ejemplo.</li>
+    </ul>
+  </div>
+</div>
+
+<div class="velo" id="velo" onclick="if(event.target===this)cerrarSim()">
+  <div class="sim">
+    <div class="izq">
+      <div class="cab"><div class="av">V</div><div><b>@lead.de.prueba</b><div class="mut t-xs" id="sim-emb"></div></div><button class="btn sm der" onclick="reiniciar()">Reiniciar</button><button class="btn sm" onclick="cerrarSim()">Cerrar</button></div>
+      <div class="hilo" id="hilo"></div>
+      <div class="caja">
+        <div class="mut t-xs">Escribís como el lead. Nada sale a Instagram. Corre con el borrador: probás antes de publicar.</div>
+        <div class="fila"><input id="txt" placeholder="Escribí como el lead…" onkeydown="if(event.key==='Enter')lead(this.value)"><button class="btn pri" onclick="lead(document.getElementById('txt').value)">Enviar</button></div>
+      </div>
+    </div>
+    <div class="lado">
+      <div class="fila"><h3>Estado del lead</h3><span class="chip der t-xs">Borrador</span></div>
+      <div class="estado" id="estado"></div>
+      <div><h3 style="margin-bottom:6px">Adelantar el reloj</h3><div class="reloj"><button class="btn sm" onclick="pasar(1)">+1 h</button><button class="btn sm" onclick="pasar(4)">+4 h</button><button class="btn sm" onclick="pasar(12)">+12 h</button><button class="btn sm" onclick="pasar(24)">+24 h</button><button class="btn sm" onclick="pasar(0,true)">Hasta el próximo seguimiento</button></div></div>
+      <div><h3 style="margin-bottom:6px">Responder como setter</h3><div class="guiapasos" id="gp"></div></div>
+      <div><h3 style="margin-bottom:6px">Mover de fase</h3><div class="reloj" id="mover"></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="dock"><span class="on">Embudos</span><span>Campañas</span><span>Conversaciones</span><span><s>Flujos</s></span><span><s>Guía</s></span></div>
+
+<script>
+const TR={auto:['Automática','var(--info)'],manual:['Manual','var(--lila)'],agenda:['Agendamiento','var(--warn)']};
+const WS='El {workshop_fecha} voy a dar una clase gratuita sobre cómo pasar exámenes de residencia reteniendo más del 90% de lo que estudiás. Si te sirve, sumate 👇';
+let F=[
+ {id:'apertura',n:1,t:'auto',l:'Apertura',leads:84,resp:'62%',bot:true,
+  flujos:[{n:'Bienvenida anuncios MIR',e:'activo',ent:212,c:'58%',b:[100,82,70,61,58],caida:2},{n:'Palabra clave «CLASE»',e:'activo',ent:64,c:'71%',b:[100,90,77,71]},{n:'Inbound sin palabra',e:'pausado',ent:0,c:'–',b:[0,0,0]}],
+  pasos:[{t:'Saludo si el bot no salió',a:'aper-1',op:[['A','¡Hola {nombre}! Gracias por escribir. ¿Para qué examen te estás preparando?','41%']]}],
+  seg:[{h:4,q:'setter'},{h:20,q:'auto',x:'Hola {nombre}! No estoy muy seguro de si tu perfil encaja con el programa, pero… '+WS,b:'Sumarme'}]},
+ {id:'conexion',n:2,t:'manual',l:'Conexión',leads:61,resp:'48%',
+  pasos:[{t:'Situación actual',a:'con-1',op:[['A','Contame, {nombre}, ¿cuántas horas por día estás estudiando hoy?','52%'],['B','¿Cómo venís con la preparación? ¿Ya hiciste algún simulacro?','44%']]},{t:'Examen y fecha',a:'con-2',op:[['A','¿Para cuándo es tu examen?','61%']]}],
+  seg:[{h:4,q:'setter'},{h:20,q:'auto',x:'{nombre}, no estoy muy seguro de si tu perfil encaja, pero… '+WS,b:'Sumarme'}]},
+ {id:'dolor',n:3,t:'manual',l:'Dolor',leads:38,resp:'55%',
+  pasos:[{t:'Qué le cuesta',a:'dol-1',op:[['A','¿Qué es lo que más te cuesta hoy del estudio?','58%']]},{t:'Simulacros',a:'dol-2',op:[['A','¿Y cuando hacés simulacros, cómo te va?','49%']]}],
+  seg:[{h:3,q:'setter'},{h:12,q:'setter'},{h:21,q:'auto',x:'{nombre}, vi que estabas teniendo dificultades con tu preparación. '+WS,b:'Sumarme'}]},
+ {id:'consecuencia',n:4,t:'manual',l:'Consecuencia',leads:17,resp:'51%',
+  pasos:[{t:'Qué pasa si no aprueba',a:'cons-1',op:[['A','¿Y qué te pasaría si este año no aprobás?','51%']]}],
+  seg:[{h:3,q:'setter'},{h:12,q:'setter'},{h:21,q:'auto',x:'{nombre}, vi que estabas teniendo dificultades con tu preparación. '+WS,b:'Sumarme'}]},
+ {id:'compromiso',n:5,t:'manual',l:'Compromiso',leads:11,resp:'60%',
+  pasos:[{t:'Del 1 al 10',a:'comp-1',op:[['A','Del 1 al 10, ¿qué tan comprometido/a estás con aprobar este año?','60%']]}],
+  seg:[{h:3,q:'setter'},{h:12,q:'setter'},{h:21,q:'auto',x:'{nombre}, vi que estabas teniendo dificultades con tu preparación. '+WS,b:'Sumarme'}]},
+ {id:'propuesta',n:6,t:'manual',l:'Propuesta',leads:14,resp:'64%',
+  pasos:[{t:'Propuesta de llamada',a:'prop-1',op:[['A','Te propongo una llamada de 30 minutos con un especialista para armar tu plan. ¿Te sirve?','64%']]}],
+  seg:[{h:3,q:'setter'},{h:12,q:'setter'},{h:21,q:'auto',x:'{nombre}, por si no llegamos a hablar: '+WS,b:'Sumarme'},{h:48,q:'setter'}]},
+ {id:'link',n:7,t:'agenda',l:'Link',leads:9,resp:'70%',
+  pasos:[{t:'Link de agenda',a:'link-1',op:[['A','Acá podés elegir el horario que te quede mejor: {link de agenda}','70%']]}],
+  seg:[{h:2,q:'setter'},{h:10,q:'auto',x:'{nombre}, ¿pudiste ver los horarios? Te dejo el link de nuevo 👇',b:'Elegir horario'},{h:21,q:'auto',x:'{nombre}, por si no llegás a agendar: '+WS,b:'Sumarme'}]},
+ {id:'confirmacion',n:8,t:'agenda',l:'Confirmación',leads:22,resp:'–',
+  pasos:[{t:'Agradecer y preparar',a:'conf-1',op:[['A','¡Perfecto {nombre}! Te espero. Antes de la llamada mirá este video: {video}','–']]}],
+  seg:null}
+];
+const F2=[
+ {id:'entrega',n:1,t:'auto',l:'Entrega',leads:143,resp:'38%',bot:true,
+  flujos:[{n:'Palabra «GUIA» · guía de estudio MIR',e:'activo',ent:388,c:'81%',b:[100,90,81]}],
+  pasos:[{t:'Reenviar la guía',a:'lm-1',op:[['A','¡Acá la tenés de nuevo, {nombre}! 👉 {link_guia}','–']]}],
+  seg:[{h:6,q:'auto',x:'{nombre}, ¿pudiste descargar la guía? Si no te llegó, avisame y te la reenvío.',b:'Abrir la guía'}]},
+ {id:'consumo',n:2,t:'auto',l:'Consumo',leads:52,resp:'44%',bot:true,
+  flujos:[{n:'¿Qué te pareció la guía?',e:'activo',ent:140,c:'44%',b:[100,44]}],
+  pasos:[{t:'Qué le sirvió',a:'lm-2',op:[['A','¿Qué parte de la guía te sirvió más?','44%']]}],
+  seg:[{h:20,q:'auto',x:'{nombre}, '+WS,b:'Sumarme'}]},
+ {id:'puente',n:3,t:'manual',l:'Puente',leads:19,resp:'57%',sale:'Pasa a Conversión · Conexión',
+  pasos:[{t:'Invitar a conversar',a:'lm-3',op:[['A','Contame, ¿cómo venís con tu preparación? Así te digo qué más te puede servir.','57%']]}],
+  seg:[{h:4,q:'setter'},{h:21,q:'auto',x:'{nombre}, '+WS,b:'Sumarme'}]}
+];
+const EMB={conv:{n:'Conversión',d:'Anuncios e inbound hasta la llamada agendada. Entran las campañas «Bienvenida anuncios MIR» y «CLASE».',f:F,pub:'Publicado el 23/11 por Mario'},
+  lm:{n:'Lead magnet',d:'Guía de estudio MIR (palabra «GUIA»): entrega, consumo y puente. Cuando el lead contesta en Puente, pasa al embudo Conversión, en Conexión.',f:F2,pub:'Borrador sin publicar'}};
+let emb='conv';
+let sel='dolor';
+
+function mapa(){
+  const g=[];F.forEach(f=>{const u=g[g.length-1];if(u&&u[0]===f.t)u[1]++;else g.push([f.t,1]);});
+  document.getElementById('mapa').style.setProperty('--cols',F.length);
+  document.getElementById('mapa').innerHTML=g.map(([t,n])=>`<div class="tramo" style="--n:${n};--c:${TR[t][1]}">${TR[t][0]}</div>`).join('')+
+   F.map(f=>{
+    const autos=(f.seg||[]).filter(s=>s.q==='auto').length,sets=(f.seg||[]).filter(s=>s.q==='setter').length;
+    return `<button class="f ${f.id===sel?'on':''}" onclick="sel='${f.id}';todo()"><b>${f.n}. ${f.l}</b><span class="n">${f.leads}</span><span class="m">en la fase · ${f.resp} contesta</span>
+     <span class="ic">${f.bot?'<span class="bot">BOT</span>':''}<span>${f.pasos.length} pasos</span>${f.seg?`<span>${sets} seg.</span>`:''}${autos?`<span class="auto">${autos} auto</span>`:''}</span>${f.sale?`<span class="sale">→ ${f.sale}</span>`:''}</button>`;
+   }).join('');
+}
+
+function flujos(f){
+  if(!f.bot)return '';
+  return `<div class="bloque"><div class="cab"><span class="num" style="--c:var(--info)">A</span><h3>Lo manda el bot</h3><span class="ayuda">Los flujos que arrancan en esta fase. Abrir uno lleva al lienzo de siempre.</span><button class="btn sm der">+ Crear flujo</button></div>
+   <div class="flujos">${f.flujos.map(x=>{const m=Math.max(...x.b,1);return `<div class="flujo"><div class="fila"><b>${x.n}</b><span class="chip der t-xs"><i style="--c:${x.e==='activo'?'var(--ok)':'var(--ln-text-faint)'}"></i>${x.e}</span></div>
+     <div class="barras">${x.b.map((v,i)=>`<i class="${i===x.caida?'caida':''}" style="height:${Math.max(6,v/m*100)}%"></i>`).join('')}</div>
+     <div class="fila t-xs mut">${x.ent} entradas · ${x.c} completan<button class="btn sm der">Abrir lienzo</button></div></div>`;}).join('')}</div></div>`;
+}
+
+function pasos(f){
+  const letra=f.bot?'B':'A';
+  return `<div class="bloque"><div class="cab"><span class="num" style="--c:var(--lila)">${letra}</span><h3>${f.bot?'Si el bot no salió: lo manda el setter':'Lo manda el setter'}</h3><span class="ayuda">Los pasos de la Guía: salen en el «/» del chat con su atajo.</span><button class="btn sm der">+ Paso</button></div>
+   ${f.pasos.map(p=>`<div class="paso"><div class="top"><b>${p.t}</b><span class="atajo">/${p.a}</span><span class="mut t-xs der">contesta</span></div>
+     ${p.op.map(([l,x,r])=>`<div class="op"><span class="l">${l}</span><span>${x}</span><span class="r">${r}</span></div>`).join('')}</div>`).join('')}</div>`;
+}
+
+function seguimientos(f,fi){
+  const letra=f.bot?'C':'B';
+  if(!f.seg)return `<div class="bloque"><div class="cab"><span class="num" style="--c:var(--acento)">${letra}</span><h3>Si no contesta</h3></div><div class="ayuda">En Confirmación no hay seguimientos de Instagram: el lead ya agendó y lo siguen las confirmaciones de la llamada.</div></div>`;
+  let cruzo=false;
+  const items=f.seg.map((s,i)=>{
+    let sep='';if(!cruzo&&s.h>=24){cruzo=true;sep='<div class="l24">se cierra la ventana de 24 h · desde acá solo escribe una persona</div>';}
+    const auto=s.q==='auto';
+    const cuerpo=auto?`<textarea>${s.x}</textarea><div class="mini"><input value="${s.b}" title="Botón"><input value="{workshop_link}" title="Link del botón"></div>`
+      :`<div class="ayuda">El setter ve «toca seguimiento ${i+1}» en Conversaciones y lo escribe él.</div>`;
+    return sep+`<div class="seg ${auto?'auto':''}"><div class="top"><span class="k">${i+1}</span>
+      <span class="h">a las <input type="number" value="${s.h}" onchange="F[${fi}].seg[${i}].h=+this.value;todo()"> h sin respuesta</span>
+      <span class="quien"><button class="${auto?'':'on'}" onclick="F[${fi}].seg[${i}].q='setter';todo()">Setter</button><button class="${auto?'on':''}" onclick="Object.assign(F[${fi}].seg[${i}],{q:'auto',x:F[${fi}].seg[${i}].x||'',b:F[${fi}].seg[${i}].b||'Sumarme'});todo()">Automático</button></span></div>
+      ${cuerpo}${auto&&s.h>=24?'<div class="err">Un mensaje automático tiene que salir antes de las 24 h.</div>':''}</div>`;
+  }).join('');
+  return `<div class="bloque"><div class="cab"><span class="num" style="--c:var(--acento)">${letra}</span><h3>Si no contesta</h3><span class="ayuda">Se cuenta desde el último mensaje del lead. Si contesta, se corta.</span></div>
+   ${items}<button class="mas" onclick="F[${fi}].seg.push({h:24,q:'setter'});todo()">+ Agregar seguimiento</button>
+   <div class="copiar">Copiar esta cadencia a: ${F.filter(x=>x.seg&&x.id!==f.id).map(x=>`<button class="btn sm">${x.l}</button>`).join('')}</div></div>`;
+}
+
+function editor(){
+  const fi=F.findIndex(x=>x.id===sel),f=F[fi];
+  document.getElementById('editor').innerHTML=`<div class="fila"><span class="chip"><i style="--c:${TR[f.t][1]}"></i>${TR[f.t][0]}</span><h2>${f.n}. ${f.l}</h2>
+    <span class="der mut t-xs">${f.leads} leads en esta fase ahora</span><button class="btn sm">Proponer un cambio a la fase</button></div>`+flujos(f)+pasos(f)+seguimientos(f,fi);
+}
+
+function previa(){
+  const f=F.find(x=>x.id===sel);
+  const p=f.pasos[0].op[0][1].replace('{nombre}','Valentina').replace('{link de agenda}','learnation.../agenda');
+  let h=`<div class="sep">Lunes</div><div class="msg in">${f.id==='apertura'?'Hola! info':'Estudio 10 horas y me olvido todo 😩'}<span class="h">12:20</span></div>`;
+  h+=f.bot?`<div class="msg out bot"><span class="tag b">Bot</span><br>¡Hola Valentina! Contame, ¿para qué examen te estás preparando?<span class="h">12:20</span></div>`
+    :`<div class="msg out"><span class="tag s">Setter</span><br>${p}<span class="h">12:31</span></div>`;
+  h+=`<div class="silencio">el lead no contesta</div>`;
+  let ult=0,dia=false;
+  (f.seg||[]).forEach((s,i)=>{
+    if(s.h>=24&&!dia){dia=true;h+=`<div class="sep">Ventana cerrada</div>`;}
+    const hora=`+${s.h} h`;
+    h+=s.q==='auto'
+     ?`<div class="msg out auto"><span class="tag a">Seguimiento ${i+1} · auto</span><br>${s.x.replace('{nombre}','Valentina').replace('{workshop_fecha}','jueves 27/11')}<span class="btnig">${s.b}</span><span class="h">${hora}</span></div>`
+     :`<div class="msg out"><span class="tag s">Seguimiento ${i+1} · setter</span><br><i>lo escribe el setter</i><span class="h">${hora}</span></div>`;
+  });
+  if(!f.seg)h+=`<div class="silencio">sin seguimientos en esta fase</div>`;
+  document.getElementById('chat').innerHTML=h;
+  document.getElementById('pv-chip').textContent=f.l;
+}
+function embs(){
+  document.getElementById('embs').innerHTML=Object.entries(EMB).map(([k,e])=>`<button class="${k===emb?'on':''}" onclick="emb='${k}';F=EMB[emb].f;sel=F[0].id;todo()">${e.n}<em>${e.f.reduce((a,x)=>a+x.leads,0)}</em></button>`).join('')+'<button title="Nuevo embudo">+</button>';
+  document.getElementById('pub').textContent=EMB[emb].pub;
+  document.getElementById('emb-desc').textContent=EMB[emb].d;
+}
+function todo(){embs();mapa();editor();previa();}
+todo();
+// ── Simulador ──
+let S;
+const nom=x=>x.replace(/\{nombre\}/g,'Valen').replace('{workshop_fecha}','jueves 27/11').replace('{link de agenda}','learnation.../agenda').replace('{link_guia}','learnation.../guia').replace('{video}','learnation.../video');
+function reiniciar(){S={emb,fase:EMB[emb].f[0].id,t:0,ultLead:null,hechos:[],h:[],botDijo:false};pintaSim();}
+function abrirSim(){document.getElementById('velo').classList.add('on');reiniciar();}
+function cerrarSim(){document.getElementById('velo').classList.remove('on');}
+const fs=()=>EMB[S.emb].f, fa=()=>fs().find(x=>x.id===S.fase);
+const reloj=t=>{const d=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'][Math.floor((10+t)/24)%7];const h=(10+t)%24;return d+' '+String(Math.floor(h)).padStart(2,'0')+':00';};
+function lead(x){
+  if(!x||!x.trim())return;document.getElementById('txt').value='';
+  S.h.push(['in',x,reloj(S.t)]);S.ultLead=S.t;S.hechos=[];
+  const f=fa();
+  if(f.bot&&!S.botDijo){S.botDijo=true;
+    if(S.emb==='conv')S.h.push(['bot','¡Hola Valen! Gracias por escribir 🙌 Contame, ¿para qué examen te estás preparando?',reloj(S.t),['MIR','ENARM','Otro']]);
+    else S.h.push(['bot','¡Acá está tu guía de estudio, Valen! 👉 learnation.../guia',reloj(S.t),['Abrir la guía']]);
+  } else if(S.emb==='conv'&&S.fase==='apertura'){S.h.push(['bot','¡Genial! En un ratito te escribe alguien del equipo para ayudarte 💪',reloj(S.t)]);mover('conexion','el bot terminó: pasa al setter');}
+  else if(S.emb==='lm'&&S.fase==='entrega'){mover('consumo','abrió la guía');S.h.push(['bot','¿Qué te pareció la guía? ¿Qué parte te sirvió más?',reloj(S.t)]);}
+  else if(S.emb==='lm'&&S.fase==='consumo'){mover('puente','contestó: pasa a un setter');}
+  else if(S.emb==='lm'&&S.fase==='puente'){S.emb='conv';S.fase='conexion';S.h.push(['ev','Pasa al embudo Conversión · Conexión']);}
+  pintaSim();
+}
+function mover(id,por){S.fase=id;S.hechos=[];S.h.push(['ev',`Fase: ${fs().find(x=>x.id===id).l}${por?' · '+por:''}`]);}
+function setter(i){const p=fa().pasos[i];S.h.push(['set',nom(p.op[0][1]),reloj(S.t),'/'+p.a]);pintaSim();}
+function proximo(){
+  if(S.ultLead===null)return null;
+  const segs=fa().seg||[];
+  for(let i=0;i<segs.length;i++)if(!S.hechos.includes(i))return [i,segs[i],S.ultLead+segs[i].h];
+  return null;
+}
+function pasar(horas,alProximo){
+  const p=proximo();
+  const hasta=alProximo?(p?p[2]:S.t):S.t+horas;
+  let q;
+  while((q=proximo())&&q[2]<=hasta){
+    const [i,sg,cuando]=q;S.t=Math.max(S.t,cuando);S.hechos.push(i);
+    const abierta=cuando-S.ultLead<24;
+    if(sg.q==='auto'){
+      if(abierta)S.h.push(['auto',nom(sg.x),reloj(cuando),sg.b,i+1]);
+      else S.h.push(['ev',`Seguimiento ${i+1} no sale: ventana cerrada`,'x']);
+    } else S.h.push(['ev',`${reloj(cuando)} · Toca seguimiento ${i+1}: aviso al setter${abierta?'':' (ventana cerrada: solo puede escribir él)'}`,'t']);
+  }
+  S.t=Math.max(S.t,hasta);
+  pintaSim();
+}
+function pintaSim(){
+  const f=fa();
+  document.getElementById('sim-emb').textContent='Embudo '+EMB[S.emb].n+' · '+reloj(S.t);
+  document.getElementById('hilo').innerHTML=(S.h.length?'':'<div class="silencio">Escribí el primer mensaje del lead, por ejemplo «Hola, info»</div>')+S.h.map(m=>{
+    const [k,a,b,c,d]=m;
+    if(k==='ev')return `<div class="evento ${b||''}">${a}</div>`;
+    if(k==='in')return `<div class="msg in">${a}<span class="h">${b}</span></div>`;
+    if(k==='bot')return `<div class="msg out bot"><span class="tag b">Bot</span><br>${a}${c?`<div class="botones">${c.map(x=>`<button onclick="lead('${x}')">${x}</button>`).join('')}</div>`:''}<span class="h">${b}</span></div>`;
+    if(k==='set')return `<div class="msg out"><span class="tag s">Setter · ${c}</span><br>${a}<span class="h">${b}</span></div>`;
+    if(k==='auto')return `<div class="msg out auto"><span class="tag a">Seguimiento ${d} · auto</span><br>${a}<span class="btnig">${c}</span><span class="h">${b}</span></div>`;
+    return '';
+  }).join('');
+  const h=document.getElementById('hilo');h.scrollTop=h.scrollHeight;
+  const sin=S.ultLead===null?null:S.t-S.ultLead, quedan=sin===null?null:Math.max(0,24-sin), p=proximo();
+  document.getElementById('estado').innerHTML=`<div class="r"><span>Embudo · fase</span><b>${EMB[S.emb].n} · ${f.n}. ${f.l}</b></div>
+    <div class="r"><span>Sin contestar hace</span><b>${sin===null?'–':sin+' h'}</b></div>
+    <div class="r"><span>Ventana de 24 h</span><b>${quedan===null?'–':quedan?'quedan '+quedan+' h':'cerrada'}</b></div>
+    <div class="vbar"><i style="width:${quedan===null?0:(24-quedan)/24*100}%"></i></div>
+    <div class="r"><span>Próximo seguimiento</span><b>${p?`n.º ${p[0]+1} · ${p[1].q==='auto'?'auto':'setter'} · ${reloj(p[2])}`:'ninguno'}</b></div>`;
+  document.getElementById('gp').innerHTML=f.pasos.map((p,i)=>`<button onclick="setter(${i})"><span>/${p.a} · ${p.t}</span>${nom(p.op[0][1])}</button>`).join('');
+  document.getElementById('mover').innerHTML=fs().map(x=>`<button class="btn sm" style="${x.id===S.fase?'background:var(--acento);color:#fff':''}" onclick="mover('${x.id}','a mano');pintaSim()">${x.l}</button>`).join('');
+}
+</script>
+</body>
+</html>

@@ -26,8 +26,6 @@ import OperationsPage from './pages/admin/database/OperationsPage';
 import OpsRuta from './pages/operations/OpsRuta';
 import ConflictosPage from './pages/conflictos/ConflictosPage';
 import BookingPage from './pages/public/BookingPage';
-import PublicCloserReportPage from './pages/public/PublicCloserReportPage';
-import PublicTriageReportPage from './pages/public/PublicTriageReportPage';
 import FinancialAgendasPage from './pages/admin/reports/FinancialAgendasPage';
 import TriageWorkflowPage from './pages/triage/TriageWorkflowPage';
 import PixelTracker from './components/common/PixelTracker';
@@ -361,16 +359,8 @@ function App() {
             <Route path="/setter/report" element={<Navigate replace to="/setter/deck?step=reporte" />} />
             <Route path="/setter/statistics" element={<Navigate replace to="/setter/deck?step=reporte&tab=historial" />} />
             <Route path="/setter/agendas" element={<Navigate replace to="/setter/deck?step=agendas" />} />
-            <Route
-              path="/closer/report"
-              element={
-                <ProtectedRoute roles={['closer', 'admin']}>
-                  <MainLayout>
-                    <PublicCloserReportPage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
+            {/* El reporte del día es una sección del mazo (pages/reporte/, reporte único): la ruta vieja lleva ahí. */}
+            <Route path="/closer/report" element={<Navigate replace to="/closer/deck?view=report" />} />
             {/* /closer/stats (solo admin) dibujaba la misma pantalla que la pestaña Closers de
                 /admin/ventas: desde el 10/10/2026 lleva ahí. */}
             <Route path="/closer/stats" element={<Navigate to="/admin/ventas" replace />} />
@@ -445,16 +435,7 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/triage/report"
-              element={
-                <ProtectedRoute roles={['triage', 'admin']}>
-                  <MainLayout>
-                    <PublicTriageReportPage />
-                  </MainLayout>
-                </ProtectedRoute>
-              }
-            />
+            <Route path="/triage/report" element={<Navigate replace to="/triage/deck?view=report" />} />
 
             <Route
               path="/unattributed-leads"

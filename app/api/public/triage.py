@@ -36,76 +36,10 @@ def prefill_triage_report():
     except ValueError:
         return jsonify({"message": "Formato de fecha inválido"}), 400
 
-    from app.models import FinancialAgenda
-    from sqlalchemy import func
-
-    triage_name_clean = triage_name.strip().lower()
-
-    # Traer todas las agendas de este triador de forma insensible a mayúsculas
-    all_agendas = FinancialAgenda.query.filter(
-        func.lower(FinancialAgenda.encargado_triage) == triage_name_clean
-    ).all()
-
-    today_agendas_list = []
-    future_agendas_list = []
-
-    for a in all_agendas:
-        if not a.date:
-            continue
-        
-        # Extraer fechas puras
-        agenda_date = a.date.date() if isinstance(a.date, (datetime, date)) else a.date
-        created_date = a.created_at.date() if a.created_at else None
-
-        if agenda_date == target_date:
-            today_agendas_list.append(a)
-        elif created_date == target_date and agenda_date > target_date:
-            future_agendas_list.append(a)
-
-    # Helper robusto para clasificar e identificar estados por palabras clave insensibles a mayúsculas
-    def count_status(agendas, keywords):
-        count = 0
-        for a in agendas:
-            if not a.estado:
-                continue
-            est_clean = str(a.estado).strip().lower()
-            if any(kw in est_clean for kw in keywords):
-                count += 1
-        return count
-
-    # Palabras clave para los estados
-    kw_contacted = ['contac']
-    kw_confirmed = ['confirm']
-    kw_canceled = ['cancel']
-    kw_rescheduled = ['reagend', 'reprog']
-
-    # Métricas de hoy
-    today_agendas = len(today_agendas_list)
-    today_contacted = count_status(today_agendas_list, kw_contacted)
-    today_confirmed = count_status(today_agendas_list, kw_confirmed)
-    today_canceled = count_status(today_agendas_list, kw_canceled)
-    today_rescheduled = count_status(today_agendas_list, kw_rescheduled)
-
-    # Métricas futuras
-    future_agendas = len(future_agendas_list)
-    future_contacted = count_status(future_agendas_list, kw_contacted)
-    future_confirmed = count_status(future_agendas_list, kw_confirmed)
-    future_canceled = count_status(future_agendas_list, kw_canceled)
-    future_rescheduled = count_status(future_agendas_list, kw_rescheduled)
-
+    # El conteo vive en triage_reporte_service: el reporte único cuenta lo mismo.
+    from app.services.triage_reporte_service import contar
     return jsonify({
-        "today_agendas": today_agendas,
-        "today_contacted": today_contacted,
-        "today_confirmed": today_confirmed,
-        "today_canceled": today_canceled,
-        "today_rescheduled": today_rescheduled,
-        
-        "future_agendas": future_agendas,
-        "future_contacted": future_contacted,
-        "future_confirmed": future_confirmed,
-        "future_canceled": future_canceled,
-        "future_rescheduled": future_rescheduled,
-        
+        **contar(triage_name, target_date),
         "recoveries_contacted": 0,
         "recoveries_replied": 0,
         "recoveries_scheduled": 0

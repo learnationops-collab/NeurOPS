@@ -112,15 +112,35 @@ def tick(momento=None, transporte=None):
             resumen['procesados'] += procesar_pendientes(momento)['procesados']
     resumen['despertadas'] = despertar(momento, transporte)
     resumen['seguimientos'] = mandar_seguimientos(momento, transporte)
+    if transporte is None:
+        resumen['whatsapp'] = _whatsapp(momento)
     return resumen
 
 
+def _whatsapp(momento):
+    """Lo de WhatsApp en la misma vuelta: eventos que no se procesaron en el webhook y la tanda del broadcast."""
+    from app.whatsapp import difusion, entrantes
+    try:
+        return {'eventos': entrantes.procesar_pendientes(), 'difusion': difusion.enviar_tanda(momento)}
+    except Exception:  # WhatsApp no puede frenar el reloj de Instagram
+        db.session.rollback()
+        logger.exception('[MOTOR IG] Falló la vuelta de WhatsApp')
+        return None
+
+
 def mandar_seguimientos(momento=None, transporte=None):
-    """Los seguimientos condicionales que ya tocan (`seguimientos.py`)."""
+    """Los seguimientos condicionales que ya tocan (`seguimientos.py`) y las cadencias por fase (`cadencias.py`)."""
     if modo() == APAGADO and transporte is None:
         return 0
-    from app.automatizaciones import seguimientos  # usa `escribir`, que importa el motor: acá no es circular
-    return seguimientos.mandar_vencidos(_motor(transporte, momento or ahora()))
+    from app.automatizaciones import cadencias, seguimientos  # usan `escribir`, que importa el motor: acá no es circular
+    motor = _motor(transporte, momento or ahora())
+    enviados = seguimientos.mandar_vencidos(motor)
+    try:
+        enviados += cadencias.mandar(motor)
+    except Exception:  # una cadencia rota no puede frenar el resto del reloj
+        db.session.rollback()
+        logger.exception('[MOTOR IG] Falló la vuelta de las cadencias')
+    return enviados
 
 
 # --- El reloj del proceso ------------------------------------------------------------------------

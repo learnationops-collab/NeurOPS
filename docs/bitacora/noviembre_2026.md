@@ -819,3 +819,22 @@
 ### 23/11/2026 · Darian sin Momentum y sin canceladas fantasma
 - En Confirmaciones, el triage ya no ve las Momentum de otros closers: las confirma el closer con su alumno (ADR-W202, pedido de Darian).
 - «Canceladas en tu Google Calendar» ya no pide motivo si el lead tiene otra agenda más adelante sin cancelar. Le pasaba a Darian con Gerardo Morales: la movida del 05/11 había dejado dos filas, reportó una y la otra se canceló sola (ADR-W202).
+
+### 24/11/2026 · Embudos: flujos, Guía y seguimientos por fase en un solo lugar
+- En el Inbox, Flujos y Guía pasan a ser una sola sección, **Embudos** (también en el espacio del setter). Puede haber varios embudos: Conversión, el de siempre, y otros que se crean aparte, como uno de lead magnet, con sus fases y variables. Cada fase muestra lo que manda el bot (sus flujos), lo que manda el setter (la Guía) y «Si no contesta», la cadencia de seguimientos.
+- Cada seguimiento sale a tantas horas del último mensaje del lead, si lo último es nuestro. Lo escribe el setter (le aparece «Toca seguimiento N» en la conversación) o lo manda el motor, con texto y botón con link, siempre antes de las 24 horas. Sirve para la invitación al workshop del proyecto #195 (Estrategia 23/11).
+- Los seguimientos arrancan apagados en cada embudo. Al prenderlos queda la fecha y desde ahí solo cuentan las conversaciones nuevas.
+- «Simular conversación» prueba el embudo entero con el borrador: escribir como el lead, contestar como setter, adelantar el reloj. No manda ni guarda nada (ADR-W204).
+
+### 24/11/2026 · Webhook de WhatsApp y arreglo del deploy de Embudos
+- El deploy de Embudos falló en producción: su migración repetía el ID `c4e6a8b0d2f4`, que ya usaba una de hiring, y Alembic quedó con dos heads. Pasa a `e8f0a2c4b6d1`. Producción siguió con el deploy anterior; no se aplicó nada a medias.
+- Nuevo `/api/webhooks/whatsapp` para la app propia «Learnation Contacts» (Neurocogniciones LLC), primer paso del broadcast de WhatsApp al inbox de setters (proyecto #192, Estrategia 23/11). Verifica la suscripción con `WA_WEBHOOK_VERIFY_TOKEN`, comprueba la firma con `WA_APP_SECRET` y guarda cada evento crudo en `whatsapp_webhook_eventos`; el procesamiento al inbox va aparte.
+
+### 24/11/2026 · Broadcast de WhatsApp: backend
+- Difusiones de WhatsApp desde Work (proyecto #192): una plantilla aprobada sale a una lista de números de a poco, de 9 a 21 h de Argentina y con tope diario por difusión (arranca en 30; Mario: subir a 60 y 100 si no hay errores). A quien recibió otra difusión en los últimos 7 días no se le vuelve a mandar.
+- Sale por el +54 9 387 547-2662 («Neurocogniciones»), no por el +55, que también usa Whatchimp para los avisos de agenda: si el broadcast lo quema, los avisos siguen.
+- Las respuestas entran al Inbox de setters como conversaciones de WhatsApp (`wa:<número>`), asignadas al setter con menos WhatsApp nuevos en 24 h y marcadas con la difusión de origen. El setter contesta desde la misma caja, dentro de las 24 h.
+- API `/api/whatsapp` (admin): difusiones (crear con lista o CSV, sumar números, activar/pausar, tope) y plantillas (listar y crear).
+
+### 24/11/2026 · Darian recibe el WhatsApp de las agendas de los closers
+- El WhatsApp de agenda nueva que recibe cada closer le llega también al triage (Darian), con el nombre del closer y la hora en su zona. No le llegan las Momentum ni se le duplica el de sus propias agendas (ADR-W205).

@@ -8,6 +8,8 @@
   · IgMensaje: cada mensaje de la conversación, entrante o saliente, una sola vez por `mid`.
   · AutCampana: la campaña de marketing (funnel, pago u orgánica, vigencia) que manda sus palabras
     clave a un flujo. Ver `campanas.py`.
+  · AutEmbudo: un embudo del Inbox (Conversión, Lead magnet…): sus fases, sus variables y si corren sus
+    seguimientos automáticos. Ver `embudos.py`.
 """
 from datetime import datetime, timezone
 
@@ -34,6 +36,9 @@ class AutFlujo(db.Model):
         nullable=True)
     # Desde cuándo está activo: solo atrapa mensajes posteriores (la activación nunca es retroactiva).
     activo_desde = db.Column(db.DateTime, nullable=True)
+    # En qué embudo y fase vive (ADR-W204). Sin embudo: Conversión, Apertura. Al arrancar, deja al lead ahí.
+    embudo_id = db.Column(db.Integer, db.ForeignKey('aut_embudos.id', ondelete='SET NULL'), nullable=True, index=True)
+    fase = db.Column(db.String(20), nullable=True)
     creado_en = db.Column(db.DateTime, nullable=False, default=ahora)
     actualizado_en = db.Column(db.DateTime, nullable=False, default=ahora, onupdate=ahora)
 
@@ -75,6 +80,8 @@ class IgContacto(db.Model):
     # Fase del setting que marcó el equipo (`fases.py`); sin marcar, sale de lo que pasó. Y su canal para el reporte.
     fase = db.Column(db.String(20), nullable=True)
     canal = db.Column(db.String(20), nullable=True)
+    # En qué embudo está (ADR-W204). Sin embudo: Conversión, el de `fases.py`.
+    embudo_id = db.Column(db.Integer, db.ForeignKey('aut_embudos.id', ondelete='SET NULL'), nullable=True, index=True)
 
 
 class IgFase(db.Model):
@@ -268,6 +275,8 @@ class AutSeguimiento(db.Model):
     ENVIADO = 'enviado'
     CANCELADO = 'cancelado'
     ERROR = 'error'
+    # Un paso de setter de la cadencia de la fase: «toca seguimiento N» (ADR-W204).
+    AVISO = 'aviso'
 
     id = db.Column(db.Integer, primary_key=True)
     contacto_id = db.Column(db.Integer, db.ForeignKey('ig_contactos.id', ondelete='CASCADE'), nullable=False, index=True)
@@ -283,8 +292,37 @@ class AutSeguimiento(db.Model):
     detalle = db.Column(db.String(300), nullable=True)
     creado_en = db.Column(db.DateTime, nullable=False, default=ahora)
     resuelto_en = db.Column(db.DateTime, nullable=True)
+    # Los de la cadencia de una fase (`cadencias.py`): qué paso (`embudo:fase:paso`) y de qué silencio
+    # (el último mensaje del lead cuando tocó). Un paso sale una sola vez por silencio. Los del chat, sin esto.
+    cadencia = db.Column(db.String(120), nullable=True, index=True)
+    ciclo = db.Column(db.DateTime, nullable=True)
 
     autor = db.relationship('User', foreign_keys=[autor_id])
+
+    __table_args__ = (db.UniqueConstraint('contacto_id', 'cadencia', 'ciclo', name='uq_aut_seguimientos_cadencia'),)
+
+
+class AutEmbudo(db.Model):
+    """Un embudo del Inbox (ADR-W204). Conversión es el de siempre: sus fases son las de `fases.py` (`fases`
+    queda vacío) y alimenta el reporte del setter. Los demás traen sus fases: [{id, nombre, tramo}]."""
+    __tablename__ = 'aut_embudos'
+
+    CONVERSION = 'conversion'
+
+    id = db.Column(db.Integer, primary_key=True)
+    slug = db.Column(db.String(40), nullable=False, unique=True)
+    nombre = db.Column(db.String(80), nullable=False)
+    descripcion = db.Column(db.String(400), nullable=True)
+    fases = db.Column(db.JSON, nullable=True)
+    # Lo que completan los seguimientos automáticos: {workshop_fecha: 'jueves 27/11', workshop_link: …}.
+    variables = db.Column(db.JSON, nullable=True)
+    # Apagado, la cadencia no manda ni avisa nada (se arma y se prueba antes de prenderla).
+    seguimientos_activos = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
+    # Candado: desde cuándo están prendidos. Solo cuentan las conversaciones que empezaron después (un lead
+    # nuevo o uno que volvió a entrar por un flujo): las de antes nunca reciben la cadencia.
+    seguimientos_desde = db.Column(db.DateTime, nullable=True)
+    orden = db.Column(db.Integer, nullable=False, default=0, server_default='0')
+    creado_en = db.Column(db.DateTime, nullable=False, default=ahora)
 
 
 class GuiaVersion(db.Model):
@@ -293,6 +331,8 @@ class GuiaVersion(db.Model):
     __tablename__ = 'guia_setting_versiones'
 
     id = db.Column(db.Integer, primary_key=True)
+    # De qué embudo es (ADR-W204). Sin embudo: Conversión (todas las de antes).
+    embudo_id = db.Column(db.Integer, db.ForeignKey('aut_embudos.id', ondelete='CASCADE'), nullable=True, index=True)
     contenido = db.Column(db.JSON, nullable=False)
     autor_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
     nota = db.Column(db.String(300), nullable=True)

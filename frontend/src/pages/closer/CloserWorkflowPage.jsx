@@ -36,7 +36,6 @@ import ComisionMesCard from './components/ComisionMesCard';
 import TriageAbandonos from '../triage/components/TriageAbandonos';
 import CompartidosConmigo, { useCompartidos } from '../../components/compartidos/CompartidosConmigo';
 import ProcrastinarModal from './components/ProcrastinarModal';
-import ResumenDelDia from './components/ResumenDelDia';
 import YaTieneAgenda from './components/YaTieneAgenda';
 import EliminarLead from './components/EliminarLead';
 import CanceladasGoogle from './components/CanceladasGoogle';
@@ -46,7 +45,8 @@ import FichaLeadModal from '../../components/ficha/FichaLeadModal';
 import { telefonoLegible } from '../../components/ficha/FichaHeader';
 import { inversionCorta, decisionDe, TONO_SEGMENTO, fmtPuntos, inversionDe } from './datosDelLead';
 import ClienteNuevoVenta from './components/ClienteNuevoVenta';
-import DiaDelReporte, { etiquetaDia } from './components/DiaDelReporte';
+import ReporteSeccion from '../reporte/ReporteSeccion';
+import useMarcaReporte from '../reporte/useMarcaReporte';
 import { agendaParaVender, ejecutarAccion, mensajeDeError } from '../../components/ficha/fichaApi';
 import { ayudaDeResultado } from '../../utils/estadosAgenda';
 import ConfirmarVistas from './confirmar/ConfirmarVistas';
@@ -187,8 +187,9 @@ const CloserWorkflowPage = () => {
         return () => clearInterval(id);
     }, []);
 
-    // Vista activa v6: 'inbox' (bandeja) o 'report' (reporte del día).
-    const [activeView, setActiveView] = useState('inbox');
+    // Vista activa v6: 'inbox' (bandeja), 'report' (reporte del día) u otra sección del dock.
+    // `?view=report` abre directo el reporte (las rutas viejas /closer/report y /triage/report).
+    const [activeView, setActiveView] = useState(() => (searchParams.get('view') === 'report' ? 'report' : 'inbox'));
     // Cuántos leads compartidos son nuevos (el punto del dock); se vuelve a contar al cambiar de sección.
     const { lista: compartidos, cargar: contarCompartidos } = useCompartidos();
     useEffect(() => { contarCompartidos(); }, [activeView, contarCompartidos]);
@@ -220,155 +221,15 @@ const CloserWorkflowPage = () => {
             .then(res => setAuditEnabled(!!res.data?.enabled))
             .catch(() => setAuditEnabled(false));
     }, [esTriage]);
-    const [reportSent, setReportSent] = useState(false);
-    const [sendingReport, setSendingReport] = useState(false);
-    const [reportSentAt, setReportSentAt] = useState(null);
-    const [loadingReportStatus, setLoadingReportStatus] = useState(false);
-    // Estado de HOY específicamente (independiente del día que se esté viendo en el selector de
-    // arriba) — es lo que pone el "✓" de «Cerrar el día» en el dock, que siempre habla de hoy.
-    const [todayReportSent, setTodayReportSent] = useState(false);
-    // "Hoy" y "ayer" del closer según el backend (`today`/`yesterday` de GET /closer/deck/daily-report),
-    // no según el reloj del navegador: un admin simulando a un closer de otro país tiene otro "hoy"
-    // cerca de la medianoche. Mientras no llegan, se usa el del navegador.
-    const [diasReporte, setDiasReporte] = useState(null);
-    const hoyReporte = diasReporte?.hoy || localToday();
-    const ayerReporte = diasReporte?.ayer || localDateFromNow(-1);
-    // Día que se está reportando: hoy (por defecto) o ayer, nada más (ver DiaDelReporte y
-    // `_dia_reportable` en el backend) — para que el closer que se fue sin cerrar el día lo pueda
-    // mandar a la mañana siguiente. `null` = hoy: así el pedido va SIN fecha y el backend decide
-    // cuál es hoy, y una pestaña que queda abierta pasada la medianoche sigue en el día nuevo.
-    const [diaElegido, setDiaElegido] = useState(null);
-    const reportDate = diaElegido || hoyReporte;
-    const reportandoHoy = !diaElegido || diaElegido === hoyReporte;
-    const elegirDiaDelReporte = useCallback((fecha) => {
-        setDiaElegido(fecha === hoyReporte ? null : fecha);
-    }, [hoyReporte]);
-    // Si ayer quedó sin reportar (`yesterday` del mismo GET): aviso en «Cerrar el día» y punto en el dock.
-    const [estadoDeAyer, setEstadoDeAyer] = useState(null);
-    const leerDiasReporte = useCallback((d) => {
-        if (!d?.today || !d.yesterday) return;
-        setDiasReporte(prev => (prev?.hoy === d.today && prev?.ayer === d.yesterday.date
-            ? prev : { hoy: d.today, ayer: d.yesterday.date }));
-        setEstadoDeAyer(d.yesterday);
-    }, []);
-    // Un 400 del reporte trae el hoy/ayer del closer: si el día elegido quedó fuera de la ventana
-    // (pestaña abierta desde anteayer), se vuelve a hoy.
-    const resincronizarDia = useCallback((err) => {
-        const d = err?.response?.data;
-        if (err?.response?.status !== 400 || !d?.today) return false;
-        setDiasReporte({ hoy: d.today, ayer: d.yesterday });
-        setDiaElegido(null);
-        return true;
-    }, []);
-
-    // Estado del reporte v6
-    const [reflection, setReflection] = useState({ win: '', fix: '' });
-    // Único número del reporte que el sistema no puede calcular solo (no existe ninguna señal
-    // persistida de "slots disponibles configurados" ese día) — se pide a mano, todo lo demás
-    // sale de la Bandeja.
-    const [reportSlots, setReportSlots] = useState('');
+    // La marca de «Reporte» en el dock (ámbar si hoy o ayer quedan incompletos, ✓ con hoy completo):
+    // sale de GET /reporte/dia y la sección la actualiza en vivo (ver pages/reporte/).
+    const { marcas: marcasDelReporte, actualizar: actualizarMarcaDelReporte } = useMarcaReporte();
     // Resumen en vivo de lo que el closer tocó HOY (Conversando/Confirmados/Show ups/
-    // Reagendas/Seguimientos/Referidos) — reemplaza los inputs manuales de referidos: todo sale
-    // de CloserService.get_daily_activity_summary. Alimenta "Tu día" y el dock.
+    // Reagendas/Seguimientos/Referidos): todo sale de CloserService.get_daily_activity_summary.
+    // Alimenta "Tu día" y el dock.
     const [dailyActivity, setDailyActivity] = useState(null);
-    // Lo mismo, pero del día que se está cerrando en «Cerrar el día» (hoy o ayer). Va aparte para
-    // que elegir Ayer no le cambie los números a "Tu día", que siempre habla de hoy.
-    const [reportActivity, setReportActivity] = useState(null);
-    // Puntos de experiencia del día: se usa tanto en "Tu día" (arriba de todo) como en el
-    // Resumen del Reporte del día — una sola fórmula (`xpDelDia`) para que no se
-    // desincronicen. Pesos documentados en detalle donde se usa por primera vez, más abajo.
+    // Puntos de experiencia del día de "Tu día" (`xpDelDia`). Pesos documentados donde se usa.
     const dailyXp = useMemo(() => xpDelDia(dailyActivity), [dailyActivity]);
-    const reportXp = useMemo(() => xpDelDia(reportActivity), [reportActivity]);
-    const [reportStatusRefreshKey, setReportStatusRefreshKey] = useState(0);
-    // Trabajo atrasado de días ANTERIORES al que se está reportando (confirmaciones nunca
-    // gestionadas, llamadas confirmadas sin registrar su resultado, seguimientos vencidos sin
-    // marcar como hechos) — bloquea el envío del reporte hasta que se resuelva (ver
-    // CloserService.get_previous_days_pending).
-    const [pendingPreviousDays, setPendingPreviousDays] = useState(null);
-    // Últimos 7 días de cash cobrado (GET /closer/deck/daily-trend), para el mini gráfico de
-    // barras del hero de "Cerrar el día" — solo se pide al entrar a esa vista.
-    const [dailyTrend, setDailyTrend] = useState([]);
-    // Seguimientos "cerrada" (cobros) del día que se está reportando — para el 4° KPI
-    // ("Cobros resueltos") y el logro "Primer cobro". Mismo endpoint que ya usa SeguimientosPane.
-    const [seguimientosHoyGrouped, setSeguimientosHoyGrouped] = useState(null);
-    // Meta diaria de seguimientos (mismo dato que ya muestra la pestaña ③ Seguir) — para el
-    // logro "Meta de seguimientos".
-    const [seguimientosGoal, setSeguimientosGoal] = useState(null);
-    // Si ese atraso además TRABA el envío del reporte, o solo se avisa. Lo decide el toggle
-    // `bloqueo_reporte_backlog` desde Operaciones → Configuración, no el frontend.
-    const [backlogBlocksReport, setBacklogBlocksReport] = useState(false);
-    // Si "slots" no tiene valor guardado para el día elegido, se sugiere automáticamente el
-    // último valor que el closer haya reportado (para no reescribir la misma cifra todos los
-    // días) — sigue siendo editable, no es un valor fijo.
-    const [reportSlotsIsDefault, setReportSlotsIsDefault] = useState(false);
-    // Aviso en vivo si los slots escritos no llegan a las agendas del día: un cupo agendado
-    // sigue siendo un cupo, así que ese número es imposible (venía pasando en reportes reales).
-    const slotsPorDebajoDeAgendas = (
-        reportSlots.trim() !== '' &&
-        reportActivity?.agendas_del_dia !== undefined &&
-        Number(reportSlots) < reportActivity.agendas_del_dia
-    );
-
-    // Consultar si el día elegido ya tiene un reporte enviado (y precargar lo que ya se había
-    // escrito) cada vez que se entra a la pestaña de reporte, se cambia el día a reportar, o se
-    // pide un refresh manual (botón "Actualizar" del resumen, tras corregir algo en la bandeja).
-    useEffect(() => {
-        if (activeView !== 'report') return;
-        setLoadingReportStatus(true);
-        api.get('/closer/deck/daily-report', { params: diaElegido ? { date: diaElegido } : {} })
-            .then(res => {
-                const d = res.data || {};
-                setReportSent(!!d.sent);
-                setReportSentAt(d.sent_at || null);
-                setReflection({ win: d.reflection_victory || '', fix: d.reflection_opportunity || '' });
-                // Prioridad del default (pedido del usuario, 28/ago/2026): los slots del día NUNCA
-                // pueden ser menos que las agendas que realmente tiene ese día (`agendas_del_dia` —
-                // un cupo ocupado sigue siendo un cupo), así que ese es el default correcto, no un
-                // valor recordado de otro día distinto (`slots_last_value`, que puede no tener nada
-                // que ver con la cantidad de agendas de HOY). El closer sigue pudiendo editarlo hacia
-                // arriba si tuvo más cupos disponibles que los que ocupó.
-                if (d.slots !== null && d.slots !== undefined) {
-                    setReportSlots(String(d.slots));
-                    setReportSlotsIsDefault(false);
-                } else if (d.activity?.agendas_del_dia) {
-                    setReportSlots(String(d.activity.agendas_del_dia));
-                    setReportSlotsIsDefault(true);
-                } else if (d.slots_last_value !== null && d.slots_last_value !== undefined) {
-                    setReportSlots(String(d.slots_last_value));
-                    setReportSlotsIsDefault(true);
-                } else {
-                    setReportSlots('');
-                    setReportSlotsIsDefault(false);
-                }
-                setReportActivity(d.activity || null);
-                setPendingPreviousDays(d.pending_previous_days || null);
-                setBacklogBlocksReport(!!d.backlog_blocks_report);
-                leerDiasReporte(d);
-                if (d.date === d.today) {
-                    setTodayReportSent(!!d.sent);
-                    setDailyActivity(d.activity || null);
-                }
-            })
-            .catch(err => {
-                if (!resincronizarDia(err)) console.error('Error al consultar el estado del reporte:', err);
-            })
-            .finally(() => setLoadingReportStatus(false));
-    }, [activeView, diaElegido, reportStatusRefreshKey, leerDiasReporte, resincronizarDia]);
-
-    // Datos extra de "Cerrar el día" — gráfico de 7 días y cobros del día, calcados de la
-    // referencia visual. Solo se piden en esa vista, igual que el resto del estado del reporte.
-    useEffect(() => {
-        if (activeView !== 'report') return;
-        api.get('/closer/deck/daily-trend', { params: { date: reportDate } })
-            .then(res => setDailyTrend(res.data || []))
-            .catch(() => setDailyTrend([]));
-        api.get(`/closer/followups/today?selected_date=${reportDate}`)
-            .then(res => setSeguimientosHoyGrouped(res.data?.grouped || null))
-            .catch(() => setSeguimientosHoyGrouped(null));
-        api.get(`/closer/followups/goal?selected_date=${reportDate}`)
-            .then(res => setSeguimientosGoal(res.data || null))
-            .catch(() => setSeguimientosGoal(null));
-    }, [activeView, reportDate, reportStatusRefreshKey]);
 
     // Agendas y carga
     const [agendas, setAgendas] = useState([]);
@@ -385,17 +246,12 @@ const CloserWorkflowPage = () => {
     // hoy, no solo lo que trajo la pestaña activa) desde el arranque, y se vuelve a pedir cada
     // vez que `seguimientosRefreshKey` sube (esa señal ya se dispara después de cualquier acción
     // que modifica el mazo, así que "Tu día" queda al día sin agregar otro punto de recarga).
-    // Sin `date`: el backend contesta por el "hoy" del closer, y de paso dice si ayer quedó sin
-    // reportar (el punto de «Cerrar el día» en el dock tiene que verse sin entrar a esa pestaña).
+    // Sin `date`: el backend contesta por el "hoy" del closer.
     useEffect(() => {
         api.get('/closer/deck/daily-report')
-            .then(res => {
-                setTodayReportSent(!!res.data?.sent);
-                setDailyActivity(res.data?.activity || null);
-                leerDiasReporte(res.data);
-            })
+            .then(res => setDailyActivity(res.data?.activity || null))
             .catch(() => {});
-    }, [seguimientosRefreshKey, leerDiasReporte]);
+    }, [seguimientosRefreshKey]);
 
     const [unreadNoAgenda, setUnreadNoAgenda] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -1669,11 +1525,10 @@ const CloserWorkflowPage = () => {
             { id: 'cartera', label: 'Mi cartera', Icono: Briefcase },
         ] : []),
     ];
+    // El reporte del día (cierre único de closer y triage, pages/reporte/): se guarda solo y se cierra
+    // a las 10:00 del día siguiente.
+    seccionesDelDock.push({ id: 'report', label: 'Reporte', Icono: ClipboardList, marcas: marcasDelReporte });
     if (!esTriage) seccionesDelDock.push(
-        { id: 'report', label: 'Cerrar el día', Icono: ClipboardList, marcas: [
-            estadoDeAyer?.unreported && { tipo: 'aviso', texto: '', titulo: 'ayer quedó sin reportar' },
-            todayReportSent && { texto: '✓', titulo: 'reporte de hoy enviado' },
-        ].filter(Boolean) },
         { id: 'dashboard', label: 'Mis datos', Icono: BarChart3 },
         { id: 'cartera', label: 'Mi cartera', Icono: Briefcase },
         // Temporal: solo mientras Operaciones la tenga activada (GET /closer/leads-audit/status).
@@ -1720,71 +1575,6 @@ const CloserWorkflowPage = () => {
         paginaRef.current?.scrollTo({ top: 0 });
     };
 
-    // Resumen previo al envío (04/11/2026): qué se hizo y qué quedó sin resultado, con salto a la lista.
-    const [resumenAbierto, setResumenAbierto] = useState(false);
-    const [resumenDatos, setResumenDatos] = useState(null);
-    const [resumenCargando, setResumenCargando] = useState(false);
-    const abrirResumenDelDia = async () => {
-        if (backlogBlocksReport && pendingPreviousDays && pendingPreviousDays.total > 0) {
-            toast.error('Tenés tareas pendientes de días anteriores — resolvelas antes de enviar el reporte.');
-            return;
-        }
-        if (reportSlots.trim() === '') {
-            toast.error('Ingresá los slots disponibles del día — es el único dato que no se calcula solo.');
-            return;
-        }
-        setResumenAbierto(true);
-        setResumenCargando(true);
-        try {
-            const res = await api.get('/closer/deck/daily-report/summary', { params: diaElegido ? { date: diaElegido } : {} });
-            setResumenDatos(res.data);
-        } catch (err) {
-            resincronizarDia(err);
-            setResumenAbierto(false);
-            toast.error(err.response?.data?.error || 'No se pudo armar el resumen del día');
-        } finally {
-            setResumenCargando(false);
-        }
-    };
-    const enviarReporte = async () => {
-        setSendingReport(true);
-        try {
-            // Hoy va sin fecha (el backend sabe cuál es el hoy del closer).
-            const res = await api.post('/closer/deck/daily-report', {
-                date: diaElegido || undefined,
-                slots: parseInt(reportSlots) || 0,
-                reflections: { victory: reflection.win, opportunity: reflection.fix }
-            });
-            setReportSent(true);
-            setReportSentAt(new Date().toISOString());
-            setResumenAbierto(false);
-            const enviadoAyer = !!res.data?.late;
-            if (!enviadoAyer) setTodayReportSent(true);
-            // El de ayer ya está: se apagan el aviso y el punto del dock.
-            if (enviadoAyer) setEstadoDeAyer(prev => (prev ? { ...prev, sent: true, unreported: false } : prev));
-            toast.success(enviadoAyer
-                ? `Reporte de ayer (${etiquetaDia(res.data?.date || reportDate, { largo: true })}) enviado con éxito`
-                : 'Reporte del día enviado con éxito');
-        } catch (err) {
-            if (err.response?.status === 409 && err.response?.data?.pending_previous_days) {
-                setPendingPreviousDays(err.response.data.pending_previous_days);
-                setResumenAbierto(false);
-            }
-            // Fuera de la ventana hoy/ayer (pestaña abierta desde anteayer): se vuelve a hoy.
-            resincronizarDia(err);
-            toast.error(err.response?.data?.error || "Error al enviar el reporte del día");
-        } finally {
-            setSendingReport(false);
-        }
-    };
-    // «Corregir»: la lista de Mi cartera con las agendas del día que siguen en Pendiente.
-    const corregirDesdeResumen = () => {
-        setResumenAbierto(false);
-        setActiveView('cartera');
-        setSearchParams({ p: 'custom', d: reportDate, h: reportDate, t: 'agendas',
-            f: JSON.stringify({ post_call: 'Pendiente' }), ft: String(Date.now()) });
-        paginaRef.current?.scrollTo({ top: 0 });
-    };
 
     return (
         <div ref={paginaRef} className={`h-screen overflow-y-auto bg-v6 text-slate-100 flex flex-col custom-scrollbar${activeView === 'inbox' && (activeStep === 'confirmations' || activeStep === 'calls') ? ' clarity-v6' : ''}`}
@@ -2444,265 +2234,9 @@ const CloserWorkflowPage = () => {
                 </div>
                 </div>
                 ) : activeView === 'report' ? (
-                <div className="space-y-5 text-left">
-                    {/* Hero "CIERRE DEL DÍA" — calcado del artboard de la referencia visual: saludo +
-                        pills (movido/XP/racha) a la izquierda, gráfico de "últimos 7 días" a la
-                        derecha. Reemplaza el banner de estado + selector de fecha separados de
-                        antes: acá viven juntos, como en la referencia. */}
-                    {(() => {
-                        const isToday = reportandoHoy;
-                        const doneToday = reportActivity
-                            ? (reportActivity.confirmados_hoy || 0) + (reportActivity.show_ups || 0) + (reportActivity.seguimientos_hechos || 0)
-                            : 0;
-                        // `counts` es siempre "lo pendiente de HOY" — solo tiene sentido sumarlo al
-                        // total cuando se está reportando el día de hoy; para un día pasado ya cerrado
-                        // no hay "pendiente" que sumar, así que el total es lo hecho ese día.
-                        const pendingToday = isToday ? (Math.max(0, counts.confirmations - (counts.confirmations_done || 0)) + counts.calls + counts.seguimientos) : 0;
-                        const totalToday = doneToday + pendingToday;
-                        const firstName = user?.name?.split(' ')[0] || user?.username || 'Closer';
-                        const cashToday = reportActivity?.ventas_cash || 0;
-                        const maxTrend = Math.max(1, ...dailyTrend.map(d => d.cash), 1);
-                        const [, m, d] = reportDate.split('-');
-
-                        return (
-                            <div className="rpt-hero-v6">
-                                <div>
-                                    <div className="rpt-hero-lbl-v6">{isToday ? 'CIERRE DEL DÍA' : 'CIERRE DE AYER'} · {d}/{m}</div>
-                                    <h2>Buen avance, {firstName}</h2>
-                                    <p>{doneToday} de {totalToday} resueltos · ${Math.round(cashToday).toLocaleString()} movidos {isToday ? 'hoy' : 'ayer'}</p>
-                                    <div className="flex items-center gap-3 flex-wrap mt-4">
-                                        <span className="rpt-pill-v6" style={{ background: 'color-mix(in srgb, var(--ln-brand, #ff3fa4) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--ln-brand, #ff3fa4) 45%, transparent)' }}>
-                                            <span style={{ color: 'color-mix(in srgb, var(--ln-text-out, #ffffff) 60%, transparent)' }}>MOVISTE</span>
-                                            <span style={{ color: 'var(--v6-pink)', fontVariantNumeric: 'tabular-nums' }}>${Math.round(cashToday).toLocaleString()}</span>
-                                        </span>
-                                        <span className="rpt-pill-v6" style={{ background: 'color-mix(in srgb, var(--ln-brand-2-accent, #4e8bd8) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--ln-brand-2-accent, #4e8bd8) 45%, transparent)', color: 'var(--ln-brand-2-accent, #4E8BD8)' }}>
-                                            {reportXp} XP
-                                        </span>
-                                        <span className="rpt-pill-v6" style={{ background: 'color-mix(in srgb, var(--ln-warning, #d9a441) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--ln-warning, #d9a441) 45%, transparent)', color: 'var(--ln-warning, #D9A441)' }}>
-                                            RACHA {reportActivity?.streak_days ?? 0} DÍAS
-                                        </span>
-                                    </div>
-                                </div>
-                                <div>
-                                    <div style={{ fontSize: '10px', fontWeight: 900, letterSpacing: '.24em', color: 'var(--v6-tx3)', marginBottom: '14px' }}>ÚLTIMOS 7 DÍAS</div>
-                                    {dailyTrend.length > 0 ? (
-                                        <div className="rpt-trend-v6">
-                                            {dailyTrend.map(dtItem => (
-                                                <div key={dtItem.date} className="rpt-trend-col-v6">
-                                                    <div
-                                                        className="rpt-trend-bar-v6"
-                                                        style={{
-                                                            height: `${Math.max(4, (dtItem.cash / maxTrend) * 74)}px`,
-                                                            background: dtItem.is_target ? 'var(--v6-ok)' : 'color-mix(in srgb, var(--ln-brand-2-accent, #4e8bd8) 55%, transparent)'
-                                                        }}
-                                                        title={`$${Math.round(dtItem.cash).toLocaleString()}`}
-                                                    ></div>
-                                                    <span className="rpt-trend-lbl-v6">{dtItem.label}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ) : (
-                                        <p className="text-[11px]" style={{ color: 'var(--v6-tx3)' }}>Sin reportes previos todavía.</p>
-                                    )}
-                                </div>
-                            </div>
-                        );
-                    })()}
-
-                    {/* Hoy o ayer (pedido del usuario, 30/09/2026: «que me pueda permitir reportar
-                        el día de ayer»). El 29/ago se había sacado el selector de fecha libre; este
-                        solo tiene dos opciones y el backend rechaza cualquier otra. Si ayer quedó
-                        sin reportar, el aviso vive acá y lleva directo a Ayer. */}
-                    <DiaDelReporte
-                        hoy={hoyReporte}
-                        ayer={ayerReporte}
-                        valor={reportDate}
-                        onElegir={elegirDiaDelReporte}
-                        enviado={reportSent}
-                        enviadoEl={reportSentAt}
-                        ayerSinReportar={!!estadoDeAyer?.unreported}
-                        agendasDeAyer={estadoDeAyer?.agendas || 0}
-                        cargando={loadingReportStatus}
-                    />
-
-                    {/* 4 KPI del día — mismos 4 de la referencia visual (fracción hecho/total +
-                        barra), en vez de las 9 cajas sueltas de antes. "Total" = hecho + pendiente
-                        real de cada pestaña, no un número inventado. */}
-                    {(() => {
-                        const cobrosPendientes = seguimientosHoyGrouped?.cerrada?.length || 0;
-                        // Confirmaciones: `counts.confirmations` ya es el total del pool (incluye las
-                        // ya resueltas que siguen visibles, ver la cuenta del dock) — sumarle
-                        // `done` encima las contaba dos veces. Bug real confirmado en producción
-                        // (08/sep/2026, Nerina): con 1 sola agenda del día mostraba "2 de 3" acá
-                        // mientras la navegación, para el mismo pool, mostraba "1/1" correctamente.
-                        const confirmDoneKpi = reportActivity?.confirmados_hoy || 0;
-                        const confirmPendingKpi = Math.max(0, counts.confirmations - confirmDoneKpi);
-                        // `counts` es lo pendiente de HOY: cerrando ayer no se suma (mismo criterio
-                        // que el hero), cada KPI queda en lo que se hizo ese día.
-                        const pendiente = (n) => (reportandoHoy ? n : 0);
-                        const kpis = [
-                            { label: 'Confirmaciones', done: confirmDoneKpi, pending: pendiente(confirmPendingKpi), color: 'var(--ln-brand-2-accent, #4E8BD8)' },
-                            { label: 'Llamadas reportadas', done: reportActivity?.show_ups || 0, pending: pendiente(counts.calls), color: 'var(--ln-brand-2-accent, #4E8BD8)' },
-                            { label: 'Seguimientos hechos', done: reportActivity?.seguimientos_hechos || 0, pending: pendiente(counts.seguimientos), color: 'var(--ln-success, #2FBF8F)' },
-                            { label: 'Cobros resueltos', done: reportActivity?.ventas_count || 0, pending: cobrosPendientes, color: 'var(--ln-brand, #FF3FA4)' },
-                        ];
-                        return (
-                            <div className="rpt-kpis-v6">
-                                {kpis.map(k => {
-                                    const total = k.done + k.pending;
-                                    const pct = total ? Math.min(100, Math.round((k.done / total) * 100)) : 0;
-                                    return (
-                                        <div key={k.label} className="rpt-kpi-v6">
-                                            <div className="flex items-baseline gap-1.5">
-                                                <b style={{ color: k.color, fontSize: '30px' }}>{k.done}</b>
-                                                <span style={{ fontSize: '13px', color: 'var(--v6-tx3)', fontWeight: 900 }}>/{total}</span>
-                                            </div>
-                                            <div className="rpt-kpi-bar-v6"><i style={{ width: `${pct}%`, background: k.color }}></i></div>
-                                            <span>{k.label}</span>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        );
-                    })()}
-
-                    {/* LOGROS + REFLEXIÓN, lado a lado como en la referencia. Los 3 logros salen de
-                        datos ya reales en esta misma pantalla (nunca un número inventado): si
-                        hubo algún cobro hoy, si la bandeja quedó limpia, y la meta diaria de
-                        seguimientos (③ Seguir). */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="rpt-card-v6">
-                            <h3 className="rpt-title-v6" style={{ marginBottom: '4px' }}>LOGROS</h3>
-                            {(() => {
-                                const pendienteHoyTotal = Math.max(0, counts.confirmations - (counts.confirmations_done || 0)) + counts.calls + counts.seguimientos;
-                                const cobrosHechos = reportActivity?.ventas_count || 0;
-                                const segFaltan = seguimientosGoal?.faltan;
-                                const achievements = [
-                                    {
-                                        name: 'Primer cobro',
-                                        done: cobrosHechos > 0,
-                                        status: cobrosHechos > 0 ? '✓ logrado' : 'cobrá 1 venta'
-                                    },
-                                    // Lo pendiente que se conoce es el de hoy: de ayer no se sabe
-                                    // cómo quedó la bandeja a la noche, así que no se inventa.
-                                    {
-                                        name: 'Día limpio',
-                                        done: reportandoHoy && pendienteHoyTotal === 0,
-                                        status: !reportandoHoy ? '—' : pendienteHoyTotal === 0 ? '✓ logrado' : `faltan ${pendienteHoyTotal}`
-                                    },
-                                    {
-                                        name: 'Meta de seguimientos',
-                                        done: segFaltan === 0,
-                                        status: segFaltan === undefined || segFaltan === null ? '—' : segFaltan === 0 ? '✓ logrado' : `faltan ${segFaltan}`
-                                    },
-                                ];
-                                return achievements.map(a => (
-                                    <div key={a.name} className={`rpt-ach-v6 ${a.done ? 'done' : ''}`}>
-                                        <div className="rpt-ach-ic-v6">{a.done ? '✓' : '◆'}</div>
-                                        <div className="flex-1">
-                                            <div className="rpt-ach-name-v6">{a.name}</div>
-                                        </div>
-                                        <div className="rpt-ach-status-v6">{a.status}</div>
-                                    </div>
-                                ));
-                            })()}
-                        </div>
-
-                        <div className="rpt-card-v6 space-y-4">
-                            <div className="flex items-center gap-3">
-                                <h3 className="rpt-title-v6">REFLEXIÓN</h3>
-                                <div className="flex-1"></div>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-[10px] font-black uppercase tracking-wider" style={{ color: 'var(--v6-tx3)' }}>Slots</span>
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        value={reportSlots}
-                                        onChange={(e) => { setReportSlots(e.target.value); setReportSlotsIsDefault(false); }}
-                                        placeholder="0"
-                                        className="rpt-slots-input-v6"
-                                        style={slotsPorDebajoDeAgendas ? { borderColor: 'var(--v6-warn)' } : reportSlotsIsDefault ? { borderColor: 'color-mix(in srgb, var(--ln-brand-2, #8b5cf6) 60%, transparent)' } : undefined}
-                                    />
-                                </div>
-                            </div>
-                            {/* El mínimo posible siempre visible: la cantidad de agendas del día no
-                                puede quedar enterrada en un párrafo — es lo que pidió el usuario. Un
-                                cupo ocupado sigue siendo un cupo, así que los slots nunca pueden ser
-                                menos que esto. */}
-                            {reportActivity?.agendas_del_dia !== undefined && (
-                                <p className="text-[11px] font-bold" style={{ color: slotsPorDebajoDeAgendas ? 'var(--ln-warning-text, #F3D08A)' : 'var(--v6-tx3)' }}>
-                                    {slotsPorDebajoDeAgendas ? '⚠️ ' : ''}Mínimo {reportActivity.agendas_del_dia} — ese día tenés {reportActivity.agendas_del_dia} agenda(s) registradas, y un cupo ocupado sigue contando.
-                                </p>
-                            )}
-                            <div className="flex flex-col gap-2">
-                                <span className="text-[10px] font-black uppercase tracking-wider" style={{ color: 'var(--v6-ok)' }}>Victoria del día</span>
-                                <input
-                                    value={reflection.win}
-                                    onChange={(e) => setReflection(prev => ({ ...prev, win: e.target.value }))}
-                                    placeholder="Qué te salió bien y por qué…"
-                                    className="rpt-input-v6"
-                                />
-                            </div>
-                            <div className="flex flex-col gap-2">
-                                <span className="text-[10px] font-black uppercase tracking-wider" style={{ color: 'var(--v6-warn)' }}>Una cosa a mejorar</span>
-                                <input
-                                    value={reflection.fix}
-                                    onChange={(e) => setReflection(prev => ({ ...prev, fix: e.target.value }))}
-                                    placeholder="Una sola, concreta…"
-                                    className="rpt-input-v6"
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Aviso + enviar — reenviar el mismo día actualiza el reporte existente y lo
-                        reenvía a Discord, no lo duplica. */}
-                    <div className="rpt-card-v6 flex items-center gap-4 flex-wrap">
-                        <div className="flex items-center gap-2.5">
-                            <span className="w-2 h-2 rounded-full" style={{ background: 'var(--v6-warn)' }}></span>
-                            <span className="text-xs font-bold" style={{ color: 'var(--ln-warning-text, #F3D08A)' }}>
-                                {reportandoHoy
-                                    ? `${Math.max(0, counts.confirmations - (counts.confirmations_done || 0)) + counts.calls + counts.seguimientos} cosa(s) quedaron sin resolver`
-                                    : `Se guarda como el reporte del ${etiquetaDia(reportDate, { largo: true })}`}
-                            </span>
-                        </div>
-                        <div className="flex-1"></div>
-                        <button
-                            disabled={sendingReport || (backlogBlocksReport && pendingPreviousDays && pendingPreviousDays.total > 0)}
-                            title={backlogBlocksReport && pendingPreviousDays && pendingPreviousDays.total > 0 ? 'Resolvé el trabajo atrasado de días anteriores antes de poder enviar' : undefined}
-                            onClick={abrirResumenDelDia}
-                            className="h-[52px] px-8 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black uppercase text-[11px] tracking-widest rounded-full transition-all cursor-pointer flex items-center gap-2"
-                            style={{ background: 'var(--v6-gradb)', boxShadow: '0 10px 15px -3px color-mix(in srgb, var(--ln-brand-2, #1323c6) 35%, transparent)' }}
-                        >
-                            {sendingReport ? <Loader2 size={14} className="animate-spin" /> : null}
-                            {sendingReport ? 'Enviando...' : reportSent ? 'Actualizar y reenviar reporte' : reportandoHoy ? 'Enviar reporte del día' : 'Enviar reporte de ayer'}
-                        </button>
-                    </div>
-
-                    {/* Trabajo atrasado de días ANTERIORES — pedido del usuario (feedback en video,
-                        28/ago/2026): "ponlo al final, que se vea chiquitico, no muy grande... no me
-                        gusta cómo se ve ahí, está muy aparatoso". Antes era un bloque grande con lista
-                        de viñetas entre el selector de fecha y los KPI; ahora es una píldora chica al
-                        final de la página, sin perder la función de bloqueo (el botón de enviar sigue
-                        chequeando `backlogBlocksReport`/`pendingPreviousDays` directo, sin depender de
-                        que este aviso esté visible). */}
-                    {pendingPreviousDays && pendingPreviousDays.total > 0 && (
-                        <div className={`flex items-center gap-2.5 flex-wrap px-4 py-2.5 rounded-full border text-[10.5px] font-bold ${backlogBlocksReport ? 'bg-rose-500/10 border-rose-500/30 text-rose-300' : 'bg-amber-500/10 border-amber-500/30 text-amber-300'}`}>
-                            <span>{backlogBlocksReport ? '🚫' : '⏳'}</span>
-                            <span>
-                                {pendingPreviousDays.total} tarea{pendingPreviousDays.total === 1 ? '' : 's'} atrasada{pendingPreviousDays.total === 1 ? '' : 's'} de días anteriores
-                                {backlogBlocksReport ? ' — traba el envío' : ''}
-                            </span>
-                            <button
-                                type="button"
-                                className="ml-auto underline font-black uppercase tracking-wide cursor-pointer"
-                                onClick={() => setActiveView('inbox')}
-                            >
-                                Ir a resolver
-                            </button>
-                        </div>
-                    )}
-                </div>
+                    /* El reporte único (docs/plan_reporte_unico.md): Hoy + Historial, sin botón de enviar.
+                       Cada cambio del día de hoy le avisa al dock para su marca. */
+                    <ReporteSeccion onDia={actualizarMarcaDelReporte} />
                 ) : activeView === 'compartidos' ? (
                     <CompartidosConmigo />
                 ) : activeView === 'abandonos' ? (
@@ -2734,15 +2268,6 @@ const CloserWorkflowPage = () => {
                     <DashboardComercial embebido seccionFija="analizar"
                         onIrASeccion={() => irASeccion('cartera')} />
                 )}
-
-            {resumenAbierto && (
-                <ResumenDelDia dia={reportDate} datos={resumenDatos} cargando={resumenCargando}
-                    enviando={sendingReport} reenvio={reportSent}
-                    onSeguir={() => setResumenAbierto(false)}
-                    onCorregir={corregirDesdeResumen}
-                    onVerAtrasadas={() => { setResumenAbierto(false); setActiveView('inbox'); }}
-                    onEnviar={enviarReporte} />
-            )}
 
             {/* Fijo abajo. Dentro de un `.dc-shell` porque de ahí cuelgan sus estilos; el resto de
                 la página NO va adentro: el reset de botones del shell le borraría el Tailwind. */}

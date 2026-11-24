@@ -15,6 +15,7 @@ from .financial import FinancialSale, FinancialAgenda, ExcludedSale, TeamMember,
 from .conciliacion import ConciliacionCarga, ConciliacionMovimiento, ConciliacionRevision
 from .liquidez import FinanceLiquidity
 from .triage_report import TriageDailyReport
+from .daily_close import DailyClose
 from .triage_tracker import TriageTrackerReport
 from .workshop import WorkshopEvent, WorkshopGoals, WorkshopAction
 from .workshop_grupo import WorkshopGrupo
@@ -39,6 +40,7 @@ from .playbook import (
     PlaybookLessonProgress, PlaybookCompletion, QUESTION_TYPES
 )
 from .instagram import InstagramWebhookEvento
+from .whatsapp import WhatsappWebhookEvento, WaDifusion, WaDifusionDestino
 from .ai_usage import AiUsage
 from .intento_limitado import IntentoLimitado
 from .tag import Tag, TagGroup, TARGET_IG_CONTACT
@@ -58,7 +60,7 @@ __all__ = [
     'MetaAnuncio', 'MetaGastoDiario', 'MetaGastoHorario', 'MetaCampanaPrograma',
     'SetterDailyStats', 'CloserDailyStats', 'CloserDailyReport', 'ReporteDirector', 'ReporteDirectorPersona', 'DailyReportQuestion', 'DailyReportAnswer', 'Expense', 'RecurringExpense',
     'Pipeline', 'PipelineStage', 'UserSetting', 'Notification', 'LeadEventLog', 'FeatureToggle',
-    'Integration', 'PublicRegistration', 'FinancialSale', 'FinancialAgenda', 'ExcludedSale', 'TriageDailyReport', 'TriageTrackerReport',
+    'Integration', 'PublicRegistration', 'FinancialSale', 'FinancialAgenda', 'ExcludedSale', 'TriageDailyReport', 'TriageTrackerReport', 'DailyClose',
     'TeamMember', 'MonthlyPayroll', 'MonthlyPaymentMethodBalance', 'MonthlySaving',
     'ConciliacionCarga', 'ConciliacionMovimiento', 'ConciliacionRevision',
     'WorkshopEvent',
