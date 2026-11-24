@@ -93,7 +93,7 @@ function Guion({ fase, contacto, onElegir }) {
     );
 }
 
-const programados = (items) => (items || []).filter((s) => s.estado === 'programado' || s.estado === 'error');
+const programados = (items) => (items || []).filter((s) => s.estado === 'programado' || (s.estado === 'error' && !s.cadencia) || s.vigente);
 const cuando = (iso) => new Date(iso).toLocaleString('es-AR', { weekday: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
 export default function Composer({ contacto, fase, ejecucion, seguimientos, yo, onCambio, onEnviar, onLearnito, pegar, selector, onSelector }) {
@@ -220,7 +220,7 @@ export default function Composer({ contacto, fase, ejecucion, seguimientos, yo, 
                 {pendientes.length > 0 && (
                     <Chip as="button" type="button" subtle color="#7D63E6" icon={<AlarmClock />} aria-expanded={verSeguimientos}
                         data-tip="Seguimiento programado|Tocalo para verlo o cancelarlo" onClick={() => setVerSeguimientos((v) => !v)}>
-                        {pendientes.length > 1 ? `${pendientes.length} seguimientos` : pendientes[0].estado === 'error' ? 'No salió' : cuando(pendientes[0].enviar_en)}
+                        {pendientes.length > 1 ? `${pendientes.length} seguimientos` : pendientes[0].vigente ? pendientes[0].texto : pendientes[0].estado === 'error' ? 'No salió' : cuando(pendientes[0].enviar_en)}
                         {verSeguimientos ? <ChevronDown size={11} /> : <ChevronUp size={11} />}
                     </Chip>
                 )}

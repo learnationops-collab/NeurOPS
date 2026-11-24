@@ -116,11 +116,18 @@ def tick(momento=None, transporte=None):
 
 
 def mandar_seguimientos(momento=None, transporte=None):
-    """Los seguimientos condicionales que ya tocan (`seguimientos.py`)."""
+    """Los seguimientos condicionales que ya tocan (`seguimientos.py`) y las cadencias por fase (`cadencias.py`)."""
     if modo() == APAGADO and transporte is None:
         return 0
-    from app.automatizaciones import seguimientos  # usa `escribir`, que importa el motor: acá no es circular
-    return seguimientos.mandar_vencidos(_motor(transporte, momento or ahora()))
+    from app.automatizaciones import cadencias, seguimientos  # usan `escribir`, que importa el motor: acá no es circular
+    motor = _motor(transporte, momento or ahora())
+    enviados = seguimientos.mandar_vencidos(motor)
+    try:
+        enviados += cadencias.mandar(motor)
+    except Exception:  # una cadencia rota no puede frenar el resto del reloj
+        db.session.rollback()
+        logger.exception('[MOTOR IG] Falló la vuelta de las cadencias')
+    return enviados
 
 
 # --- El reloj del proceso ------------------------------------------------------------------------

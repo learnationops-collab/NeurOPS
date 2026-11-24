@@ -70,14 +70,19 @@ export const inboxApi = {
     guardarCampana: (id, campana) => api.put(`/inbox/campanas/${id}`, campana).then(datos),
     borrarCampana: (id) => api.delete(`/inbox/campanas/${id}`),
     campanasMeta: () => api.get('/inbox/campanas/meta').then((r) => r.data.campanas),
-    // La Guía del setting (app/automatizaciones/api_guia.py, ADR-W197)
-    guia: () => api.get('/inbox/guia').then(datos),
-    publicarGuia: (contenido, base, nota) => api.put('/inbox/guia', { contenido, base, nota }).then(datos),
-    historialGuia: () => api.get('/inbox/guia/historial').then((r) => r.data.versiones),
+    // La Guía del setting (app/automatizaciones/api_guia.py, ADR-W197). Una por embudo (ADR-W204): sin embudo, Conversión.
+    guia: (embudo) => api.get('/inbox/guia', { params: embudo ? { embudo } : undefined }).then(datos),
+    publicarGuia: (contenido, base, nota, embudo) => api.put('/inbox/guia', { contenido, base, nota }, { params: embudo ? { embudo } : undefined }).then(datos),
+    historialGuia: (embudo) => api.get('/inbox/guia/historial', { params: embudo ? { embudo } : undefined }).then((r) => r.data.versiones),
     restaurarGuia: (vid) => api.post(`/inbox/guia/versiones/${vid}/restaurar`).then(datos),
     propuestasGuia: () => api.get('/inbox/guia/propuestas').then((r) => r.data.propuestas),
     proponerGuia: (texto, etapa) => api.post('/inbox/guia/propuestas', { texto, etapa }).then(datos),
     responderPropuestaGuia: (pid, estado, respuesta) => api.put(`/inbox/guia/propuestas/${pid}`, { estado, respuesta }).then(datos),
+    // Embudos (app/automatizaciones/api_embudos.py, ADR-W204)
+    embudos: () => api.get('/inbox/embudos').then(datos),
+    crearEmbudo: (embudo) => api.post('/inbox/embudos', embudo).then(datos),
+    guardarEmbudo: (slug, cambios) => api.put(`/inbox/embudos/${slug}`, cambios).then(datos),
+    simularEmbudo: (slug, acciones, borrador) => api.post(`/inbox/embudos/${slug}/simular`, { acciones, borrador }).then(datos),
     catalogo: () => api.get('/inbox/catalogo').then((r) => r.data.mensajes),
     setters: () => api.get('/inbox/setters').then((r) => r.data.setters),
 };

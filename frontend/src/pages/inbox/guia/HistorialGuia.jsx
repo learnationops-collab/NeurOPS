@@ -68,15 +68,15 @@ function Propuesta({ p, puede, onCambio }) {
     );
 }
 
-export default function HistorialGuia({ puede, inicial = 'versiones', onRestaurada, onCerrar }) {
+export default function HistorialGuia({ puede, embudo, inicial = 'versiones', onRestaurada, onCerrar }) {
     const [vista, setVista] = useState(inicial);
     const [versiones, setVersiones] = useState(null);
     const [propuestas, setPropuestas] = useState(null);
     const pedirPropuestas = () => inboxApi.propuestasGuia().then(setPropuestas, () => setPropuestas([]));
     useEffect(() => {
-        inboxApi.historialGuia().then(setVersiones, () => setVersiones([]));
+        inboxApi.historialGuia(embudo).then(setVersiones, () => setVersiones([]));
         pedirPropuestas();
-    }, []);
+    }, [embudo]);
     const restaurar = async (v) => {
         try {
             onRestaurada(await inboxApi.restaurarGuia(v.id));

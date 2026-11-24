@@ -42,6 +42,8 @@ def efectiva(contacto, avance):
     sugerida = derivada(avance)
     if contacto.fase in SALIDAS:
         return contacto.fase
+    if getattr(contacto, 'embudo_id', None):  # otro embudo (ADR-W204): su fase es la marcada
+        return contacto.fase or sugerida
     if contacto.fase not in EMBUDO:
         return sugerida
     return max(contacto.fase, sugerida, key=EMBUDO.index)

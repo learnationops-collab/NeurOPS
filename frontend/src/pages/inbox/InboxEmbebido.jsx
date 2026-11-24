@@ -6,15 +6,15 @@ import { PageHeader, Toaster, Tooltip } from '../../components/standard';
 import '../agendas_v2/thalamus.css';
 import './inbox.css';
 import Conversaciones from './Conversaciones';
-import GuiaSetting from './guia/GuiaSetting';
+import Embudos from './embudos/Embudos';
 
-// `seccion`: 'conversaciones' (la bandeja) o 'guia' (la Guía del setting, ADR-W197).
+// `seccion`: 'conversaciones' (la bandeja) o 'guia' (Embudos: la Guía de cada fase y sus seguimientos, ADR-W204).
 export default function InboxEmbebido({ seccion = 'conversaciones' }) {
     const apariencia = useApariencia();
     return (
         <div className="thalamus inbox inbox-embebido" data-theme={dataThemeDe(apariencia, undefined)}>
-            <PageHeader size="sm" title={seccion === 'guia' ? 'Guía' : 'Conversaciones'} />
-            {seccion === 'guia' ? <GuiaSetting /> : <Conversaciones />}
+            <PageHeader size="sm" title={seccion === 'guia' ? 'Embudos' : 'Conversaciones'} />
+            {seccion === 'guia' ? <Embudos /> : <Conversaciones />}
             <Toaster />
             <Tooltip />
         </div>

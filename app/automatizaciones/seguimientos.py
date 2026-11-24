@@ -12,7 +12,7 @@ from datetime import timedelta
 from app import db
 from app.automatizaciones import escribir
 from app.automatizaciones.acciones import AccionInvalida
-from app.automatizaciones.modelos import AutSeguimiento, IgContacto
+from app.automatizaciones.modelos import AutSeguimiento, IgContacto, IgMensaje
 
 # Más allá de esto la ventana de Instagram ya está cerrada (HUMAN_AGENT vale 7 días desde el último mensaje).
 HORAS_MAXIMAS = 6 * 24
@@ -38,9 +38,35 @@ def programar(contacto, autor_id, horas, ahora, texto=None, audio=None, url_audi
     return s
 
 
-def resumen(s):
+def resumen(s, vigente=False):
     return {'id': s.id, 'texto': s.texto, 'audio': s.nombre_audio, 'estado': s.estado, 'detalle': s.detalle,
-            'enviar_en': s.enviar_en.isoformat() + 'Z', 'autor': s.autor.username if s.autor else None}
+            'enviar_en': s.enviar_en.isoformat() + 'Z', 'autor': s.autor.username if s.autor else None,
+            'cadencia': s.cadencia, 'vigente': vigente}
+
+
+def _del_equipo_despues(contacto_ids):
+    """{contacto_id: último mensaje del equipo (no el bot)}."""
+    return dict(db.session.query(IgMensaje.contacto_id, db.func.max(IgMensaje.enviado_en))
+                .filter(IgMensaje.contacto_id.in_(contacto_ids), IgMensaje.origen == IgMensaje.OTRO)
+                .group_by(IgMensaje.contacto_id).all())
+
+
+def avisos(contactos):
+    """{contacto_id: «Toca seguimiento N»} de la cadencia de su fase (ADR-W204): del silencio actual y sin
+    que nadie del equipo le haya escrito después del aviso."""
+    por_id = {c.id: c for c in contactos}
+    if not por_id:
+        return {}
+    filas = (AutSeguimiento.query.filter(AutSeguimiento.contacto_id.in_(list(por_id)),
+                                         AutSeguimiento.estado == AutSeguimiento.AVISO)
+             .order_by(AutSeguimiento.resuelto_en).all())
+    equipo = _del_equipo_despues(list(por_id))
+    salida = {}
+    for s in filas:
+        c = por_id[s.contacto_id]
+        if s.ciclo == c.ultimo_entrante_en and not (equipo.get(c.id) and equipo[c.id] > s.resuelto_en):
+            salida[c.id] = s.texto
+    return salida
 
 
 def de_contacto(contacto_id, ultimos=5):
@@ -50,7 +76,11 @@ def de_contacto(contacto_id, ultimos=5):
     resueltos = (AutSeguimiento.query.filter(AutSeguimiento.contacto_id == contacto_id,
                                              AutSeguimiento.estado != AutSeguimiento.PROGRAMADO)
                  .order_by(AutSeguimiento.resuelto_en.desc()).limit(ultimos).all())
-    return [resumen(s) for s in programados + resueltos]
+    contacto = db.session.get(IgContacto, contacto_id)
+    toca = avisos([contacto]).get(contacto_id) if contacto else None
+    return [resumen(s, vigente=bool(toca and s.estado == AutSeguimiento.AVISO and s.texto == toca
+                                    and s.ciclo == contacto.ultimo_entrante_en))
+            for s in programados + resueltos]
 
 
 def proximos(contacto_ids):

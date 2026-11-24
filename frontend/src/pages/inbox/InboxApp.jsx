@@ -4,7 +4,7 @@
 // los componentes estándar y el dock de las áreas de la dirección comercial. Cada sección manda sus
 // filtros y botones a la cabecera con <HeaderActions>.
 import { useEffect, useState } from 'react';
-import { BookOpen, Lock, Megaphone, MessagesSquare, Workflow } from 'lucide-react';
+import { Filter, Lock, Megaphone, MessagesSquare } from 'lucide-react';
 import '../agendas_v2/thalamus.css';
 import '../comercial/comercial.css';
 import './inbox.css';
@@ -16,16 +16,15 @@ import { rotuloDeRol } from '../../utils/cuentasVinculadas';
 import { Chip, EmptyState, PageHeader, Status, Toaster, Tooltip } from '../../components/standard';
 import DockSecciones from '../comercial/components/DockSecciones';
 import MenuSesion from '../comercial/components/MenuSesion';
-import Flujos from './Flujos';
 import Conversaciones from './Conversaciones';
-import GuiaSetting from './guia/GuiaSetting';
+import Embudos from './embudos/Embudos';
 import Campanas from './Campanas';
 import { inboxApi } from './api';
 import { recordado, recordar } from './recuerdo';
 
 export const SECCIONES = [
-    { id: 'flujos', label: 'Flujos', Icono: Workflow },
-    { id: 'guia', label: 'Guía', Icono: BookOpen },
+    // Embudos junta lo que antes eran Flujos y Guía, más los seguimientos por fase (ADR-W204).
+    { id: 'embudos', label: 'Embudos', Icono: Filter },
     { id: 'campanas', label: 'Campañas', Icono: Megaphone },
     { id: 'conversaciones', label: 'Conversaciones', Icono: MessagesSquare },
 ];
@@ -39,9 +38,9 @@ const MODO = {
 function seccionGuardada() {
     try {
         const s = window.localStorage.getItem(CLAVE_SECCION);
-        return SECCIONES.some((x) => x.id === s) ? s : 'flujos';
+        return SECCIONES.some((x) => x.id === s) ? s : 'embudos';
     } catch {
-        return 'flujos';
+        return 'embudos';
     }
 }
 
@@ -97,8 +96,7 @@ export default function InboxApp() {
                         )} />
                     <main className="vista">
                         {!estado && <EmptyState>Cargando…</EmptyState>}
-                        {estado && actual.id === 'flujos' && <Flujos puedeEditar={!lectura} />}
-                        {estado && actual.id === 'guia' && <GuiaSetting />}
+                        {estado && actual.id === 'embudos' && <Embudos />}
                         {estado && actual.id === 'campanas' && <Campanas puedeEditar={!lectura} />}
                         {estado && actual.id === 'conversaciones' && <Conversaciones />}
                     </main>

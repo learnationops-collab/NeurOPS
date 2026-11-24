@@ -5,7 +5,7 @@ from flask import jsonify, request
 from flask_login import current_user
 
 from app import db
-from app.automatizaciones import fases, progreso, servicio
+from app.automatizaciones import embudos, fases, progreso, servicio
 from app.automatizaciones.api import bp
 from app.automatizaciones.api_trabajo import _contacto_o_404, evento
 from app.automatizaciones.modelos import IgContacto, IgMensaje
@@ -41,15 +41,25 @@ def mover_fase(contacto_id):
     contacto, error = _contacto_o_404(contacto_id)
     if error:
         return error
-    fase = _cuerpo().get('fase')
-    if fase not in fases.TODAS:
+    datos = _cuerpo()
+    fase = datos.get('fase')
+    # `embudo` lo pasa a otro embudo (ADR-W204); una fase de Conversión desde otro embudo lo devuelve ahí.
+    destino = embudos.por_slug(datos.get('embudo')) if datos.get('embudo') else embudos.de_contacto(contacto)
+    if destino is not None and fase not in embudos.ids_de(destino) and fase in fases.TODAS:
+        destino = embudos.conversion()
+    if destino is None or fase not in embudos.ids_de(destino):
         return jsonify({'message': 'Fase desconocida'}), 400
     ahora = servicio.ahora()
     desde = progreso.uno(contacto, ahora, current_user.id).get('fase')
+    if embudos.id_guardado(destino) != contacto.embudo_id:
+        embudos.mover_a(contacto, destino)
+        evento(contacto.id, f'Embudo: {destino.nombre}')
+        desde = None
     if fase != desde:
+        nombre = {f['id']: f['nombre'] for f in embudos.fases_de(destino)}.get(fase) or fases.NOMBRES.get(fase, fase)
         fases.mover(contacto, fase, current_user.id, desde)
-        evento(contacto.id, f'Fase: {fases.NOMBRES[fase]}')
-        db.session.commit()
+        evento(contacto.id, f'Fase: {nombre}')
+    db.session.commit()
     return jsonify({**progreso.uno(contacto, ahora, current_user.id), 'fases': fases.historial(contacto.id)})
 
 

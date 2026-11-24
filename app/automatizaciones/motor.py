@@ -18,7 +18,7 @@ Reglas que garantiza:
 from datetime import timedelta
 
 from app import db
-from app.automatizaciones import acciones, campanas, efectos, etapas, perfil, registro, reparto
+from app.automatizaciones import acciones, campanas, efectos, embudos, etapas, perfil, registro, reparto
 from app.automatizaciones.modelos import AutEjecucion, AutFlujo, AutFlujoVersion, IgContacto, IgMensaje
 from app.automatizaciones.nucleo import eventos as ev
 from app.automatizaciones.nucleo import grafo as g
@@ -141,12 +141,15 @@ class Motor:
                       meta_ad_id=evento.anuncio_id)
         return 'flujo_iniciado'
 
-    def despertar_vencidas(self):
-        """Las esperas que ya vencieron: un nodo «esperar» o el «sin respuesta» de un mensaje."""
-        vencidas = (AutEjecucion.query
-                    .filter(AutEjecucion.estado.in_((AutEjecucion.ESPERANDO_TIEMPO, AutEjecucion.ESPERANDO_RESPUESTA)),
-                            AutEjecucion.despertar_en.isnot(None), AutEjecucion.despertar_en <= self.ahora)
-                    .order_by(AutEjecucion.despertar_en).all())
+    def despertar_vencidas(self, contacto_id=None):
+        """Las esperas que ya vencieron: un nodo «esperar» o el «sin respuesta» de un mensaje. `contacto_id`:
+        solo las de ese contacto (la simulación de Embudos)."""
+        q = AutEjecucion.query.filter(
+            AutEjecucion.estado.in_((AutEjecucion.ESPERANDO_TIEMPO, AutEjecucion.ESPERANDO_RESPUESTA)),
+            AutEjecucion.despertar_en.isnot(None), AutEjecucion.despertar_en <= self.ahora)
+        if contacto_id is not None:
+            q = q.filter(AutEjecucion.contacto_id == contacto_id)
+        vencidas = q.order_by(AutEjecucion.despertar_en).all()
         for ejecucion in vencidas:
             contacto = ejecucion.contacto
             if contacto.bot_pausado_hasta and contacto.bot_pausado_hasta > self.ahora:
@@ -263,6 +266,7 @@ class Motor:
                                  meta_ad_id=meta_ad_id)
         db.session.add(ejecucion)
         db.session.flush()
+        embudos.al_arrancar(contacto, version.flujo)
         if campana or not contacto.username:
             perfil.completar(self.transporte, contacto)
         if campana:

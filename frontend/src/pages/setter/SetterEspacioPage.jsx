@@ -75,7 +75,7 @@ const SECCIONES = [
     // Las conversaciones de Instagram, sin salir a /inbox (Social Selling, 17/11/2026: un solo lugar de trabajo).
     { id: 'conversaciones', label: 'Conversaciones', Icono: MessagesSquare, sub: 'Los que te escribieron, por espera.' },
     // Lo que se manda en cada etapa del setting, editable (ADR-W197).
-    { id: 'guia', label: 'Guía', Icono: BookOpen, sub: 'Lo que mandás en cada etapa.' },
+    { id: 'guia', label: 'Embudos', Icono: BookOpen, sub: 'Lo que se manda en cada fase y sus seguimientos.' },
     // El reporte único (pages/reporte/): trae sus propias pestañas Hoy / Historial.
     { id: 'reporte', label: 'Reporte', Icono: ClipboardList, sub: 'Así cerraste el día.' },
     // El Analizar del dashboard comercial, el mismo tablero de setters que ve la dirección, con sus

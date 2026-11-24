@@ -812,3 +812,9 @@
 ### 23/11/2026 · Darian sin Momentum y sin canceladas fantasma
 - En Confirmaciones, el triage ya no ve las Momentum de otros closers: las confirma el closer con su alumno (ADR-W202, pedido de Darian).
 - «Canceladas en tu Google Calendar» ya no pide motivo si el lead tiene otra agenda más adelante sin cancelar. Le pasaba a Darian con Gerardo Morales: la movida del 05/11 había dejado dos filas, reportó una y la otra se canceló sola (ADR-W202).
+
+### 24/11/2026 · Embudos: flujos, Guía y seguimientos por fase en un solo lugar
+- En el Inbox, Flujos y Guía pasan a ser una sola sección, **Embudos** (también en el espacio del setter). Puede haber varios embudos: Conversión, el de siempre, y otros que se crean aparte, como uno de lead magnet, con sus fases y variables. Cada fase muestra lo que manda el bot (sus flujos), lo que manda el setter (la Guía) y «Si no contesta», la cadencia de seguimientos.
+- Cada seguimiento sale a tantas horas del último mensaje del lead, si lo último es nuestro. Lo escribe el setter (le aparece «Toca seguimiento N» en la conversación) o lo manda el motor, con texto y botón con link, siempre antes de las 24 horas. Sirve para la invitación al workshop del proyecto #195 (Estrategia 23/11).
+- Los seguimientos arrancan apagados en cada embudo. Al prenderlos queda la fecha y desde ahí solo cuentan las conversaciones nuevas.
+- «Simular conversación» prueba el embudo entero con el borrador: escribir como el lead, contestar como setter, adelantar el reloj. No manda ni guarda nada (ADR-W204).

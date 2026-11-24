@@ -86,6 +86,12 @@ export default function Fila({ c, elegida, ahora, yo, conAsignado, borrador, onE
                                 se cierra en {textoEspera(cierre)}
                             </Chip>
                         )}
+                        {c.toca && (
+                            <Chip subtle color="var(--brand-secondary)" icon={<AlarmClock />}
+                                data-tip="Toca seguimiento|Lo pide la cadencia de su fase en Embudos: el lead no contestó">
+                                {c.toca}
+                            </Chip>
+                        )}
                         {c.seguimiento && (
                             <span className="cv-vence" data-tip={`Seguimiento programado|Sale ${hora(c.seguimiento)} si no responde`}>
                                 <AlarmClock size={11} aria-hidden="true" />{hora(c.seguimiento)}

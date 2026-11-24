@@ -1,0 +1,102 @@
+/* Embudos (ADR-W204): barra, mapa de fases, los tres bloques de la fase, seguimientos y simulador. */
+.thalamus.inbox .em{display:grid;gap:var(--s3)}
+.thalamus.inbox .em-barra,.thalamus.inbox .em-estado{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap}
+.thalamus.inbox .em-barra-der{margin-left:auto;display:flex;gap:var(--s2);flex-wrap:wrap}
+.thalamus.inbox .em-estado .gu-pend{margin-left:auto}
+.thalamus.inbox .em-prender{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--text-muted);cursor:pointer}
+
+/* Mapa */
+.thalamus.inbox .em-mapa{display:flex;gap:var(--s2);overflow-x:auto;padding-bottom:2px}
+.thalamus.inbox .em-tramo{display:grid;gap:6px;flex:var(--n) 1 0;min-width:calc(var(--n) * 128px)}
+.thalamus.inbox .em-tramo-t{font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:var(--c,var(--text-muted));
+  border-bottom:2px solid var(--c,var(--border-main));padding-bottom:3px}
+.thalamus.inbox .em-tramo-f{display:grid;grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:6px}
+.thalamus.inbox .em-fase{display:grid;gap:4px;align-content:start;text-align:left;padding:9px 10px;border-radius:12px;border:1px solid var(--border-subtle);
+  background:var(--bg-element);color:var(--text-on-surface);cursor:pointer;min-width:0}
+.thalamus.inbox .em-fase b{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.thalamus.inbox .em-fase:hover{border-color:var(--border-main)}
+.thalamus.inbox .em-fase--on{border-color:var(--brand-secondary);box-shadow:inset 0 0 0 1px var(--brand-secondary)}
+.thalamus.inbox .em-fase-ic{display:flex;gap:4px;flex-wrap:wrap}
+.thalamus.inbox .em-ic{font-style:normal;font-size:9.5px;font-weight:800;padding:1px 5px;border-radius:5px;background:var(--bg-item);color:var(--text-muted)}
+.thalamus.inbox .em-ic--bot{background:color-mix(in srgb,var(--info) 18%,transparent);color:var(--info)}
+.thalamus.inbox .em-ic--auto{background:var(--brand-secondary-surface);color:var(--brand-secondary)}
+.thalamus.inbox .em-salidas{display:grid;gap:6px;align-content:start;min-width:120px}
+.thalamus.inbox .em-salida{padding:6px 10px;border-radius:10px;border:1px dashed var(--border-main);background:transparent;color:var(--text-muted);
+  font-size:12px;font-weight:700;text-align:left;cursor:pointer}
+
+/* Fase */
+.thalamus.inbox .em-cuerpo{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:var(--s3);align-items:start}
+.thalamus.inbox .em-centro{display:grid;gap:var(--s4,20px)}
+.thalamus.inbox .em-bloque{display:grid;gap:var(--s2)}
+.thalamus.inbox .em-bcab{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap}
+.thalamus.inbox .em-bcab h3{margin:0;font-size:14px}
+.thalamus.inbox .em-letra{width:24px;height:24px;border-radius:8px;display:grid;place-items:center;font-weight:900;font-size:12px;color:#fff;background:var(--c)}
+.thalamus.inbox .em-bloque--flujos .fl-grilla{grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+.thalamus.inbox .em-previa{display:grid;gap:var(--s2)}
+
+/* Lienzo abierto: solo el bloque de flujos, a todo el ancho */
+.thalamus.inbox .em--flujo > :not(.em-cuerpo),.thalamus.inbox .em--flujo .em-previa,
+.thalamus.inbox .em--flujo .em-centro > :not(.em-bloque--flujos),.thalamus.inbox .em--flujo .em-bloque--flujos > .em-bcab{display:none}
+.thalamus.inbox .em--flujo .em-cuerpo{grid-template-columns:1fr}
+.thalamus.inbox .em--flujo .em-centro{padding:0;border:0;background:none;box-shadow:none}
+
+/* Seguimientos */
+.thalamus.inbox .em-segs{display:grid;gap:var(--s2)}
+.thalamus.inbox .em-segs-item{display:grid;gap:var(--s2)}
+.thalamus.inbox .em-seg{display:grid;gap:8px;padding:10px 12px;border-radius:14px;border:1px solid var(--border-subtle);background:var(--bg-element)}
+.thalamus.inbox .em-seg--auto{border-color:color-mix(in srgb,var(--brand-secondary) 55%,transparent);
+  background:color-mix(in srgb,var(--brand-secondary) 5%,var(--bg-element))}
+.thalamus.inbox .em-seg-cab{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap}
+.thalamus.inbox .em-seg-n{width:22px;height:22px;border-radius:99px;display:grid;place-items:center;font-weight:900;font-size:11px;background:var(--bg-item)}
+.thalamus.inbox .em-seg-h{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--text-muted)}
+.thalamus.inbox .em-seg-h .ui-input{width:64px}
+.thalamus.inbox .em-seg-boton{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:var(--s2)}
+.thalamus.inbox .em-seg-vez{display:inline-flex;align-items:center;gap:8px;font-size:12px;color:var(--text-muted)}
+.thalamus.inbox .em-uso{font-size:11px;font-weight:700;color:var(--success);margin-left:auto}
+.thalamus.inbox .em-24{display:flex;align-items:center;gap:8px;font-size:10px;font-weight:900;color:var(--error);text-transform:uppercase;letter-spacing:.06em}
+.thalamus.inbox .em-24::before,.thalamus.inbox .em-24::after{content:"";flex:1;border-top:1.5px dashed var(--error)}
+.thalamus.inbox .em-segs-pie{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap}
+.thalamus.inbox .em-vars{margin-left:auto}
+
+/* Ajustes */
+.em-aj-fase{display:grid;grid-template-columns:22px minmax(0,1fr) 150px auto auto auto;gap:8px;align-items:center}
+.em-aj-var{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr) auto;gap:8px;align-items:center}
+.em-aj-fase .em-seg-n{width:22px;height:22px;border-radius:99px;display:grid;place-items:center;font-weight:900;font-size:11px;background:var(--bg-item)}
+
+/* Simulador */
+.em-sim-modal{width:min(1100px,96vw)}
+.em-sim{display:grid;grid-template-columns:minmax(0,1fr) 340px;min-height:0;height:min(680px,calc(100vh - 160px))}
+.em-sim-chat{display:grid;grid-template-rows:1fr auto;min-height:0;border-right:1px solid var(--border-subtle)}
+.em-sim-hilo{overflow:auto;display:grid;gap:7px;align-content:start;padding:14px;background:var(--bg-item)}
+.em-sim-hilo[aria-busy="true"]{opacity:.7}
+.em-sim-vacio{justify-self:center;text-align:center;max-width:340px;margin-top:40px}
+.em-sim-caja{margin:10px}
+.em-sim-lado{display:grid;gap:14px;align-content:start;padding:14px;overflow:auto}
+.em-sim-estado{display:grid;gap:6px;padding:12px;border-radius:12px;background:var(--bg-item);font-size:12px}
+.em-sim-estado > div{display:flex;justify-content:space-between;gap:8px}
+.em-sim-estado span{color:var(--text-muted)}
+.em-sim-bloque{display:grid;gap:6px}
+.em-sim-fila{display:flex;gap:6px;flex-wrap:wrap}
+.em-sim-paso{display:grid;gap:2px;text-align:left;padding:8px 10px;border-radius:10px;border:1px solid var(--border-subtle);background:var(--bg-element);
+  color:var(--text-on-surface);font-size:12px;line-height:1.4;cursor:pointer}
+.em-sim-paso span{font-size:10.5px;font-weight:800;color:#7D63E6}
+.em-sim-paso:hover{border-color:#7D63E6}
+.em-msg{max-width:80%;display:grid;gap:3px;padding:8px 11px;border-radius:14px;font-size:13px;line-height:1.42;white-space:pre-wrap}
+.em-msg--lead{justify-self:start;background:var(--bg-element);color:var(--text-on-surface);border-bottom-left-radius:4px}
+.em-msg--bot,.em-msg--setter,.em-msg--auto{justify-self:end;border-bottom-right-radius:4px}
+.em-msg--bot{background:color-mix(in srgb,var(--info) 18%,var(--bg-element));color:var(--text-on-surface)}
+.em-msg--setter{background:color-mix(in srgb,#7D63E6 18%,var(--bg-element));color:var(--text-on-surface)}
+.em-msg--auto{background:var(--brand-secondary-surface);border:1.5px solid var(--brand-secondary);color:var(--text-on-surface)}
+.em-msg-tag{font-size:9.5px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;color:var(--text-muted)}
+.em-msg-h{font-size:10px;color:var(--text-muted)}
+.em-msg-btns{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.em-msg-btns button,.em-msg-btns a{padding:5px 10px;border-radius:9px;border:1px solid var(--border-main);background:var(--bg-element);
+  color:var(--text-on-surface);font:inherit;font-size:12px;font-weight:700;cursor:pointer;text-decoration:none}
+.em-sim-ev{justify-self:center;text-align:center;font-size:11px;font-weight:800;padding:3px 10px;border-radius:99px;
+  background:color-mix(in srgb,#7D63E6 14%,transparent);color:var(--text-on-surface)}
+.em-sim-ev--aviso{background:var(--warning-surface)}
+.em-sim-ev--error{background:color-mix(in srgb,var(--error) 14%,transparent)}
+.em-sim-ev--flujo{background:color-mix(in srgb,var(--info) 16%,transparent)}
+
+@media (max-width:1100px){.thalamus.inbox .em-cuerpo{grid-template-columns:1fr}}
+@media (max-width:860px){.em-sim{grid-template-columns:1fr;height:auto}.em-sim-chat{border-right:0;min-height:420px}}

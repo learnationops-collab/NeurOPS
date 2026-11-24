@@ -7,9 +7,11 @@ import { nuevoId } from './useGuia';
 
 const DEL_BOT = new Set(['apertura', 'nolead']);
 
-export default function EditorEtapa({ fase, etapa, guia, editados, onCambiar, onProponer }) {
-    const f = faseDe(fase);
-    const sig = siguiente(fase);
+// `info` ({n, label, tramo, siguiente}) reemplaza la fase de Conversión en otro embudo (ADR-W204); sin `cabecera`,
+// el título lo pone quien lo usa (Embudos).
+export default function EditorEtapa({ fase, etapa, guia, editados, onCambiar, onProponer, info, cabecera = true }) {
+    const f = info || faseDe(fase);
+    const sig = info ? (info.siguiente ? { label: info.siguiente } : null) : siguiente(fase);
     const pasos = etapa.pasos || [];
     const set = (x) => onCambiar({ ...etapa, ...x });
     const cambiarPaso = (i, p) => set({ pasos: pasos.map((x, k) => (k === i ? p : x)) });
@@ -26,11 +28,11 @@ export default function EditorEtapa({ fase, etapa, guia, editados, onCambiar, on
     };
     return (
         <div className="gu-editor">
-            <div className="gu-ecab">
+            {cabecera && <div className="gu-ecab">
                 <Chip subtle color={TRAMOS[f.tramo].color}>{TRAMOS[f.tramo].nombre}</Chip>
                 <h2>{f.n}. {f.label}</h2>
                 <Button variant="ghost" className="gu-der" onClick={onProponer}>Proponer un cambio a la etapa</Button>
-            </div>
+            </div>}
             {DEL_BOT.has(fase) && <p className="gu-bot">Esta etapa la arranca el bot. Lo de abajo es para mandarlo a mano si el bot no salió.</p>}
             <TextArea className="gu-nota" value={etapa.nota || ''} onChange={(e) => set({ nota: e.target.value })}
                 placeholder="Nota de la etapa (opcional): sale arriba de los mensajes cuando el lead pasa a esta etapa" aria-label="Nota de la etapa" />
