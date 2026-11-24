@@ -58,9 +58,29 @@ def _mandar(motor, contacto, cuerpo, etiqueta):
         transporte.liberar_control(contacto.igsid)
 
 
+def _por_whatsapp(contacto, cuerpo, ahora):
+    """WhatsApp no tiene HUMAN_AGENT: fuera de las 24 h solo se puede con una plantilla."""
+    from app.whatsapp.cliente import ClienteWhatsapp, telefono_de
+    if ventana(contacto, ahora) != 'abierta':
+        raise AccionInvalida('Pasaron más de 24 h desde el último mensaje del lead: WhatsApp solo deja escribirle '
+                             'con una plantilla aprobada')
+    cliente, telefono = ClienteWhatsapp(), telefono_de(contacto.igsid)
+    try:
+        if 'attachment' in cuerpo:
+            return cliente.audio(telefono, cuerpo['attachment']['payload']['url'])
+        return cliente.texto(telefono, cuerpo['text'])
+    except ErrorDeEnvio as error:
+        raise AccionInvalida(f'WhatsApp no lo aceptó: {error}')
+
+
 def enviar(motor, contacto, autor_id, texto=None, url_audio=None, nombre_audio=None, pausar=True, guia=None):
     """Manda el mensaje del equipo y lo deja en la conversación. Devuelve el `IgMensaje`. `pausar=False`
     deja al bot seguir (la casilla del chat). `guia`: el paso de la Guía que se mandó (ADR-W197)."""
+    from app.whatsapp.cliente import es_whatsapp
+    if es_whatsapp(contacto.igsid):
+        cuerpo = cuerpo_de(texto, url_audio)
+        mid = _por_whatsapp(contacto, cuerpo, motor.ahora)
+        return _guardar(contacto, mid, cuerpo, autor_id, nombre_audio, guia, motor.ahora)
     estado = ventana(contacto, motor.ahora)
     if estado == 'cerrada':
         raise AccionInvalida('Pasaron más de 7 días desde el último mensaje del lead: Instagram no deja escribirle '
@@ -72,9 +92,13 @@ def enviar(motor, contacto, autor_id, texto=None, url_audio=None, nombre_audio=N
         mid = _mandar(motor, contacto, cuerpo, HUMAN_AGENT if estado == 'humana' else None)
     except ErrorDeEnvio as error:
         raise AccionInvalida(f'Instagram no lo aceptó: {error}')
+    return _guardar(contacto, mid, cuerpo, autor_id, nombre_audio, guia, motor.ahora)
+
+
+def _guardar(contacto, mid, cuerpo, autor_id, nombre_audio, guia, ahora):
     texto_visible = cuerpo.get('text') or f'🎤 {nombre_audio or "Audio"}'
     mensaje = IgMensaje(contacto_id=contacto.id, mid=mid, direccion=IgMensaje.SALIENTE, origen=IgMensaje.OTRO,
-                        texto=texto_visible, contenido=cuerpo, enviado_en=motor.ahora, autor_id=autor_id,
+                        texto=texto_visible, contenido=cuerpo, enviado_en=ahora, autor_id=autor_id,
                         guia=guia)
     db.session.add(mensaje)
     db.session.flush()

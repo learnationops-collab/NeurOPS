@@ -822,3 +822,9 @@
 ### 24/11/2026 · Webhook de WhatsApp y arreglo del deploy de Embudos
 - El deploy de Embudos falló en producción: su migración repetía el ID `c4e6a8b0d2f4`, que ya usaba una de hiring, y Alembic quedó con dos heads. Pasa a `e8f0a2c4b6d1`. Producción siguió con el deploy anterior; no se aplicó nada a medias.
 - Nuevo `/api/webhooks/whatsapp` para la app propia «Learnation Contacts» (Neurocogniciones LLC), primer paso del broadcast de WhatsApp al inbox de setters (proyecto #192, Estrategia 23/11). Verifica la suscripción con `WA_WEBHOOK_VERIFY_TOKEN`, comprueba la firma con `WA_APP_SECRET` y guarda cada evento crudo en `whatsapp_webhook_eventos`; el procesamiento al inbox va aparte.
+
+### 24/11/2026 · Broadcast de WhatsApp: backend
+- Difusiones de WhatsApp desde Work (proyecto #192): una plantilla aprobada sale a una lista de números de a poco, de 9 a 21 h de Argentina y con tope diario por difusión (arranca en 30; Mario: subir a 60 y 100 si no hay errores). A quien recibió otra difusión en los últimos 7 días no se le vuelve a mandar.
+- Sale por el +54 9 387 547-2662 («Neurocogniciones»), no por el +55, que también usa Whatchimp para los avisos de agenda: si el broadcast lo quema, los avisos siguen.
+- Las respuestas entran al Inbox de setters como conversaciones de WhatsApp (`wa:<número>`), asignadas al setter con menos WhatsApp nuevos en 24 h y marcadas con la difusión de origen. El setter contesta desde la misma caja, dentro de las 24 h.
+- API `/api/whatsapp` (admin): difusiones (crear con lista o CSV, sumar números, activar/pausar, tope) y plantillas (listar y crear).

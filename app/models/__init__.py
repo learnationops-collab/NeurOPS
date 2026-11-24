@@ -39,7 +39,7 @@ from .playbook import (
     PlaybookLessonProgress, PlaybookCompletion, QUESTION_TYPES
 )
 from .instagram import InstagramWebhookEvento
-from .whatsapp import WhatsappWebhookEvento
+from .whatsapp import WhatsappWebhookEvento, WaDifusion, WaDifusionDestino
 from .ai_usage import AiUsage
 from .intento_limitado import IntentoLimitado
 from .tag import Tag, TagGroup, TARGET_IG_CONTACT

@@ -93,6 +93,8 @@ def _candidatos(embudo, horas_max, ahora):
     guardado = embudos.id_guardado(embudo)
     q = IgContacto.query.filter(IgContacto.ultimo_entrante_en >= ahora - timedelta(hours=horas_max) - TOLERANCIA)
     q = q.filter(IgContacto.embudo_id.is_(None) if guardado is None else IgContacto.embudo_id == guardado)
+    # Las cadencias son de Instagram: los WhatsApp del broadcast los sigue el setter a mano.
+    q = q.filter(~IgContacto.igsid.like('wa:%'))
     contactos = q.all()
     if not contactos:
         return []

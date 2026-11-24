@@ -112,7 +112,20 @@ def tick(momento=None, transporte=None):
             resumen['procesados'] += procesar_pendientes(momento)['procesados']
     resumen['despertadas'] = despertar(momento, transporte)
     resumen['seguimientos'] = mandar_seguimientos(momento, transporte)
+    if transporte is None:
+        resumen['whatsapp'] = _whatsapp(momento)
     return resumen
+
+
+def _whatsapp(momento):
+    """Lo de WhatsApp en la misma vuelta: eventos que no se procesaron en el webhook y la tanda del broadcast."""
+    from app.whatsapp import difusion, entrantes
+    try:
+        return {'eventos': entrantes.procesar_pendientes(), 'difusion': difusion.enviar_tanda(momento)}
+    except Exception:  # WhatsApp no puede frenar el reloj de Instagram
+        db.session.rollback()
+        logger.exception('[MOTOR IG] Falló la vuelta de WhatsApp')
+        return None
 
 
 def mandar_seguimientos(momento=None, transporte=None):
