@@ -46,17 +46,17 @@ class ClienteWhatsapp:
         self.sesion = sesion or requests
 
     def texto(self, telefono, texto):
-        return self._mandar(telefono, {'type': 'text', 'text': {'body': texto, 'preview_url': True}})
+        return self.mandar(telefono, {'type': 'text', 'text': {'body': texto, 'preview_url': True}})
 
     def audio(self, telefono, url):
-        return self._mandar(telefono, {'type': 'audio', 'audio': {'link': url}})
+        return self.mandar(telefono, {'type': 'audio', 'audio': {'link': url}})
 
     def plantilla(self, telefono, nombre, idioma, parametros=None):
         plantilla = {'name': nombre, 'language': {'code': idioma}}
         if parametros:
             plantilla['components'] = [{'type': 'body', 'parameters': [
                 {'type': 'text', 'text': str(p)} for p in parametros]}]
-        return self._mandar(telefono, {'type': 'template', 'template': plantilla})
+        return self.mandar(telefono, {'type': 'template', 'template': plantilla})
 
     def plantillas(self):
         """Las plantillas de la cuenta: [{name, status, category, language, components}]."""
@@ -68,7 +68,7 @@ class ClienteWhatsapp:
         return self._pedir('post', f'{self.waba_id}/message_templates', json={
             'name': nombre, 'language': idioma, 'category': categoria, 'components': componentes})
 
-    def _mandar(self, telefono, cuerpo):
+    def mandar(self, telefono, cuerpo):
         datos = self._pedir('post', f'{self.phone_number_id}/messages',
                             json={'messaging_product': 'whatsapp', 'to': telefono, **cuerpo})
         return ((datos.get('messages') or [{}])[0]).get('id')

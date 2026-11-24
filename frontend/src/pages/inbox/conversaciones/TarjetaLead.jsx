@@ -7,7 +7,7 @@ import useEnPantalla from '../../../components/ui/useEnPantalla';
 import { Avatar, Button, Chip, IconButton, Panel, toast } from '../../../components/standard';
 import { inboxApi } from '../api';
 import MenuBot, { EJECUCION } from './AccionesFlujo';
-import { examenDe, quien } from './colas';
+import { esWhatsapp, examenDe, quien } from './colas';
 import Etiquetas from './Etiquetas';
 import { Califica } from './Fila';
 import { FASES, TRAMOS, colorDe, faseDe, ordenDe, siguiente } from './fasesSetting';
@@ -164,7 +164,7 @@ export default function TarjetaLead({ datos, fase, canal, yo, onCambio, onMover 
                         <Califica valor={contacto.variables?._califica} />
                     </span>
                 </div>
-                {contacto.username && (
+                {contacto.username && !esWhatsapp(contacto) && (
                     <IconButton size="sm" label={`Abrir @${contacto.username} en Instagram`} data-tip="Abrir en Instagram" icon={<Instagram size={15} />}
                         onClick={() => window.open(`https://www.instagram.com/${encodeURIComponent(contacto.username)}/`, '_blank', 'noopener')} />
                 )}

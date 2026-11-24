@@ -49,7 +49,9 @@ def modo():
 def _motor(transporte, momento):
     actual = modo()
     if transporte is None:
-        transporte = TransporteMeta() if actual == REAL else TransporteSimulado()
+        from app.whatsapp.transporte import TransporteMixto
+        # En real, los contactos `wa:` salen por WhatsApp (esperas vencidas, flujos de una difusión).
+        transporte = TransporteMixto(TransporteMeta()) if actual == REAL else TransporteSimulado()
     return Motor(transporte, momento, pausar_ante_ecos=(actual == REAL))
 
 
@@ -121,7 +123,8 @@ def _whatsapp(momento):
     """Lo de WhatsApp en la misma vuelta: eventos que no se procesaron en el webhook y la tanda del broadcast."""
     from app.whatsapp import difusion, entrantes
     try:
-        return {'eventos': entrantes.procesar_pendientes(), 'difusion': difusion.enviar_tanda(momento)}
+        motor = _motor(None, momento) if modo() == REAL else None
+        return {'eventos': entrantes.procesar_pendientes(motor), 'difusion': difusion.enviar_tanda(momento)}
     except Exception:  # WhatsApp no puede frenar el reloj de Instagram
         db.session.rollback()
         logger.exception('[MOTOR IG] Falló la vuelta de WhatsApp')

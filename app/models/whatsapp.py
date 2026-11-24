@@ -36,6 +36,7 @@ class WaDifusion(db.Model):
 
     `destino` dice a dónde lleva (setting o workshop) para medir de dónde vienen los leads. Las respuestas
     entran al Inbox de setters como contactos `wa:<número>` con `variables.difusion` = id de esta difusión.
+    Mandar no crea contactos: en la bandeja aparecen solo los que contestan.
     """
     __tablename__ = 'wa_difusiones'
 
@@ -52,6 +53,8 @@ class WaDifusion(db.Model):
     estado = db.Column(db.String(20), nullable=False, default=PAUSADA)
     creado_en = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     creado_por_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    # El flujo que sigue cuando tocan un botón de la plantilla (`app/whatsapp/flujos.py`). Sin flujo, todo va al setter.
+    flujo_id = db.Column(db.Integer, db.ForeignKey('aut_flujos.id', ondelete='SET NULL'), nullable=True)
 
 
 class WaDifusionDestino(db.Model):

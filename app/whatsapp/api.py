@@ -1,9 +1,11 @@
 """/api/whatsapp: difusiones (broadcast) y plantillas. Solo admin.
 
   · GET  /difusiones                 → lista con el conteo por estado.
-  · POST /difusiones                 → {nombre, plantilla, idioma?, con_nombre?, destino?, tope_diario?, numeros: [{telefono, nombre}] | csv}
+  · POST /difusiones                 → {nombre, plantilla, idioma?, con_nombre?, destino?, tope_diario?, flujo_id?,
+                                         numeros: [{telefono, nombre}] | csv}
   · POST /difusiones/<id>/numeros    → suma números (mismo formato).
-  · PATCH /difusiones/<id>           → {estado?: activa|pausada, tope_diario?}
+  · PATCH /difusiones/<id>           → {estado?: activa|pausada, tope_diario?, flujo_id?}
+    `flujo_id`: el flujo que sigue al tocar un botón de la plantilla (`flujos.py`); null lo saca.
   · GET  /plantillas                 → las de la cuenta, con su estado de aprobación.
   · POST /plantillas                 → {nombre, texto, categoria?: MARKETING|UTILITY, idioma?, ejemplo_nombre?}
 """
@@ -15,6 +17,7 @@ from flask_login import current_user, login_required
 
 from app import db
 from app.automatizaciones.transporte import ErrorDeEnvio
+from app.automatizaciones.modelos import AutFlujo
 from app.decorators import admin_required
 from app.models.whatsapp import WaDifusion
 from app.whatsapp import difusion as dif
@@ -44,6 +47,14 @@ def _filas(datos):
              'nombre': f[i_nom] if i_nom is not None and len(f) > i_nom else None} for f in filas if f]
 
 
+def _flujo(valor):
+    """(flujo_id, error)."""
+    if valor in (None, ''):
+        return None, None
+    flujo = db.session.get(AutFlujo, valor) if str(valor).isdigit() else None
+    return (flujo.id, None) if flujo else (None, 'Ese flujo no existe')
+
+
 def _tope(valor, por_defecto=30):
     try:
         return max(1, min(int(valor), TOPE_MAXIMO))
@@ -67,9 +78,13 @@ def crear():
     if not nombre or not plantilla:
         return jsonify({'message': 'Falta el nombre o la plantilla'}), 400
     destino = datos.get('destino') if datos.get('destino') in DESTINOS else 'setting'
+    flujo_id, error = _flujo(datos.get('flujo_id'))
+    if error:
+        return jsonify({'message': error}), 400
     difusion = WaDifusion(nombre=nombre[:150], plantilla=plantilla[:120], idioma=(datos.get('idioma') or 'es')[:10],
                           con_nombre=datos.get('con_nombre', True) is not False, destino=destino,
-                          tope_diario=_tope(datos.get('tope_diario')), creado_por_id=current_user.id)
+                          tope_diario=_tope(datos.get('tope_diario')), flujo_id=flujo_id,
+                          creado_por_id=current_user.id)
     db.session.add(difusion)
     db.session.flush()
     carga = dif.cargar(difusion, _filas(datos))
@@ -103,6 +118,10 @@ def editar(difusion_id):
         difusion.estado = datos['estado']
     if 'tope_diario' in datos:
         difusion.tope_diario = _tope(datos['tope_diario'], difusion.tope_diario)
+    if 'flujo_id' in datos:
+        difusion.flujo_id, error = _flujo(datos['flujo_id'])
+        if error:
+            return jsonify({'message': error}), 400
     db.session.commit()
     return jsonify({'difusion': dif.resumen(difusion)})
 

@@ -17,7 +17,8 @@ import TarjetaLead from './TarjetaLead';
 import useEnvio from './useEnvio';
 import { ChipFase } from './Fila';
 import { Puntos } from './Progreso';
-import { REFRESCO, cierreMin, colorEspera, esperaMin, quien, textoEspera } from './colas';
+import { REFRESCO, avisoCierre, cierreMin, colorEspera, esperaMin, esWhatsapp, quien, textoEspera } from './colas';
+import IconoCanal from './IconoCanal';
 import { completarGuia, pasosDe, siguienteId, useGuia, useLinkAgenda, visibles } from '../guia/useGuia';
 
 function Linea({ contacto, avance, mensajes }) {
@@ -27,14 +28,17 @@ function Linea({ contacto, avance, mensajes }) {
     const queda = cierreMin(contacto, ahora);
     return (
         <div className="cv-chat-linea-sup">
+            <IconoCanal c={contacto} size={14} />
             <b>{quien(contacto)}</b>
             <Puntos etapas={avance?.etapas} />
             <ChipFase fase={avance?.fase} />
             <span className="cv-chat-tiempos">
                 {espera != null && <Chip subtle color={colorEspera(espera)} icon={<Clock />} data-tip="Desde su último mensaje">espera {textoEspera(espera)}</Chip>}
                 {queda != null
-                    ? <Chip subtle color={queda <= 24 * 60 ? 'var(--error)' : 'var(--success)'} icon={<Hourglass />}
-                        data-tip="Para responder|Instagram deja escribirle hasta 7 días después de su último mensaje">quedan {textoEspera(queda)} para responder</Chip>
+                    ? <Chip subtle color={queda <= avisoCierre(contacto) ? 'var(--error)' : 'var(--success)'} icon={<Hourglass />}
+                        data-tip={esWhatsapp(contacto)
+                            ? 'Para responder|WhatsApp deja escribirle hasta 24 h después de su último mensaje'
+                            : 'Para responder|Instagram deja escribirle hasta 7 días después de su último mensaje'}>quedan {textoEspera(queda)} para responder</Chip>
                     : <Chip subtle color="var(--error)" icon={<Hourglass />}>ventana cerrada</Chip>}
             </span>
         </div>

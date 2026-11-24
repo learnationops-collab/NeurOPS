@@ -4,7 +4,8 @@
 // programado y cuánto falta para que Instagram no deje escribirle (últimas 24 h).
 import { AlarmClock, Bot, Check, Clock, Hourglass, PencilLine, User, X } from 'lucide-react';
 import { Avatar, Chip } from '../../../components/standard';
-import { AVISO_CIERRE, cierreMin, colorEspera, esperaMin, examenDe, quien, textoEspera } from './colas';
+import { avisoCierre, cierreMin, colorEspera, esperaMin, esWhatsapp, examenDe, quien, textoEspera } from './colas';
+import IconoCanal from './IconoCanal';
 import { Etiqueta } from './Etiquetas';
 import { colorDe, corto, faseDe } from './fasesSetting';
 import { Puntos } from './Progreso';
@@ -59,6 +60,7 @@ export default function Fila({ c, elegida, ahora, yo, conAsignado, borrador, onE
                 <Avatar name={c.username || c.nombre || '?'} size="sm" />
                 <span className="cv-item-cuerpo">
                     <span className="cv-item-cab">
+                        <IconoCanal c={c} />
                         <strong>{quien(c)}</strong>
                         {examen && <Chip subtle className="cv-examen">{examen}</Chip>}
                         <span className="mut cv-item-hora">{hora(c.ultimo_en)}</span>
@@ -80,9 +82,11 @@ export default function Fila({ c, elegida, ahora, yo, conAsignado, borrador, onE
                             </Chip>
                         )}
                         <Vence tarea={c.tarea} ahora={ahora} />
-                        {cierre != null && cierre <= AVISO_CIERRE && (
+                        {cierre != null && cierre <= avisoCierre(c) && (
                             <Chip subtle color={cierre <= 3 * 60 ? 'var(--error)' : 'var(--warning)'} icon={<Hourglass />}
-                                data-tip="Se cierra la ventana|Pasado esto Instagram no deja escribirle hasta que vuelva a escribir">
+                                data-tip={esWhatsapp(c)
+                                    ? 'Se cierra la ventana|Pasado esto WhatsApp solo deja escribirle con una plantilla'
+                                    : 'Se cierra la ventana|Pasado esto Instagram no deja escribirle hasta que vuelva a escribir'}>
                                 se cierra en {textoEspera(cierre)}
                             </Chip>
                         )}

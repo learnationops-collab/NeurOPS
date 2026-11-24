@@ -17,6 +17,7 @@ from flask_login import login_required
 from app import db
 from app.decorators import LARGO_MINIMO_DE_SECRETO, _iguales_en_tiempo_constante, admin_required
 from app.models.whatsapp import WhatsappWebhookEvento
+from app.automatizaciones import servicio as motor
 from app.whatsapp import entrantes
 
 bp = Blueprint('whatsapp_webhook', __name__)
@@ -80,11 +81,15 @@ def recibir_evento():
     db.session.add(evento)
     db.session.commit()
     current_app.logger.info('[WA WEBHOOK] Evento %s guardado (%s)', evento.id, evento.tipos or 'sin tipo')
-    try:
-        entrantes.procesar(evento)
-    except Exception:  # el evento ya está guardado: el reloj del motor lo reprocesa
-        db.session.rollback()
-        current_app.logger.exception('[WA WEBHOOK] No se pudo procesar el evento %s', evento.id)
+    if motor.modo() != motor.APAGADO:
+        # Lo procesa el reloj del motor, con su candado: un botón puede avanzar un flujo.
+        motor.avisar(current_app._get_current_object())
+    else:
+        try:
+            entrantes.procesar(evento)
+        except Exception:  # el evento ya está guardado: se reprocesa después
+            db.session.rollback()
+            current_app.logger.exception('[WA WEBHOOK] No se pudo procesar el evento %s', evento.id)
     # Meta solo necesita un 200 rápido; si no lo recibe reintenta y termina desactivando el webhook.
     return 'EVENT_RECEIVED', 200, {'Content-Type': 'text/plain; charset=utf-8'}
 
