@@ -828,3 +828,6 @@
 - Sale por el +54 9 387 547-2662 («Neurocogniciones»), no por el +55, que también usa Whatchimp para los avisos de agenda: si el broadcast lo quema, los avisos siguen.
 - Las respuestas entran al Inbox de setters como conversaciones de WhatsApp (`wa:<número>`), asignadas al setter con menos WhatsApp nuevos en 24 h y marcadas con la difusión de origen. El setter contesta desde la misma caja, dentro de las 24 h.
 - API `/api/whatsapp` (admin): difusiones (crear con lista o CSV, sumar números, activar/pausar, tope) y plantillas (listar y crear).
+
+### 24/11/2026 · Darian recibe el WhatsApp de las agendas de los closers
+- El WhatsApp de agenda nueva que recibe cada closer le llega también al triage (Darian), con el nombre del closer y la hora en su zona. No le llegan las Momentum ni se le duplica el de sus propias agendas (ADR-W205).
