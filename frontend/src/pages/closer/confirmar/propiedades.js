@@ -8,12 +8,14 @@ export const PROPIEDADES_AGENDA = [
     { clave: 'telefono', titulo: 'Teléfono', ancho: '160px' },
     { clave: 'closer', titulo: 'Closer', ancho: '130px', soloTriage: true },
     { clave: 'etapa', titulo: 'Etapa', ancho: '150px' },
+    { clave: 'tipo', titulo: 'Tipo de llamada', ancho: '130px' },
     { clave: 'segmento', titulo: 'Segmento', ancho: '110px' },
     { clave: 'avisos', titulo: 'Avisos', ancho: '210px' },
     { clave: 'origen', titulo: 'Origen', ancho: '160px' },
     { clave: 'examen', titulo: 'Examen', ancho: '140px' },
     { clave: 'inversion', titulo: 'Inversión', ancho: '170px' },
     { clave: 'decision', titulo: 'Decisión', ancho: '150px' },
+    { clave: 'ingresos', titulo: 'Ingresos', ancho: '160px' },
     { clave: 'notas_setter', titulo: 'Nota del setter', ancho: '280px' },
 ];
 
@@ -49,6 +51,21 @@ export const decisionDe = (a) => {
     const k = Object.keys(fd).find(x => /decisi|decid|acompa|qui[eé]n\s+(paga|financ|apoya)|apoyo/i.test(x));
     return k ? texto(fd[k]) : '';
 };
+
+export const ingresosDe = (a) => {
+    const fd = respuestas(a);
+    const k = Object.keys(fd).find(x => /ingres|gan[aá]s|sueldo|salario|factur/i.test(x));
+    return k ? texto(fd[k]) : '';
+};
+
+// Triage o closing: lo dice el rol de quien toma la llamada; sin rol (datos viejos), la del triage que mira
+// es de triage. Momentum y 2ª llamada se aclaran.
+export function tipoDe(a, { userId, esTriage } = {}) {
+    const triage = a.closer_role ? a.closer_role === 'triage' : !!(esTriage && userId && a.closer_id === userId);
+    if (triage) return { clave: 'triage', titulo: 'Triage' };
+    const extra = a.tipo_llamada === 'segunda' ? ' · 2ª' : a.tipo_llamada === 'momentum' ? ' · Momentum' : '';
+    return { clave: 'closing', titulo: 'Closing' + extra };
+}
 
 export const avisosDe = (a) => [
     a.desplazada && 'Reagendar: horario tomado',

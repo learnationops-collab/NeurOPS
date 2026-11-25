@@ -1,11 +1,13 @@
 // La fila de Confirmar (ADR-W201): el título, las vistas guardadas como pestañas y, a la derecha, los
 // controles de la vista activa (filtro, orden, agrupación, propiedades y tipo), como en Notion.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { ArrowUpDown, ChevronDown, ChevronLeft, ChevronRight, Filter, Layers, Plus, SlidersHorizontal, X } from 'lucide-react';
-import { subirACapa } from '../../../components/standard';
+import { ArrowUpDown, ChevronDown, ChevronLeft, ChevronRight, Filter, Layers, Minus, Plus, SlidersHorizontal, X } from 'lucide-react';
+import { Segmented, subirACapa } from '../../../components/standard';
 import PopoverVista from './PopoverVista';
 import { IconoDeVista } from './iconos';
-import { TIPOS_DE_VISTA } from './vistasConfirmar';
+import { ALTOS_CALENDARIO, TIPOS_DE_VISTA } from './vistasConfirmar';
+
+const RANGOS = [{ value: 1, label: 'Día' }, { value: 2, label: '2 días' }, { value: 3, label: '3 días' }, { value: 7, label: 'Semana' }];
 
 function Pestana({ vista, activa, puedeBorrar, onElegir, onRenombrar, onBorrar }) {
     const [editando, setEditando] = useState(false);
@@ -32,9 +34,29 @@ function Pestana({ vista, activa, puedeBorrar, onElegir, onRenombrar, onBorrar }
     );
 }
 
+// Segunda fila del calendario: moverse por el período, cuántos días ver y el zoom (como Planning de Leadership).
+function BarraCalendario({ c }) {
+    const nivel = ALTOS_CALENDARIO.indexOf(c.alto);
+    const unidad = c.dias === 1 ? 'Día' : c.dias === 7 ? 'Semana' : `${c.dias} días`;
+    return (
+        <div className="cv-calbar">
+            <button type="button" className={`cv-hoy${c.desplazado ? '' : ' cv-hoy--on'}`} onClick={() => c.mover(0)}>Hoy</button>
+            <button type="button" className="cv-redondo" aria-label={`${unidad} anterior`} onClick={() => c.mover(-1)}><ChevronLeft aria-hidden="true" /></button>
+            <button type="button" className="cv-redondo" aria-label={`${unidad} siguiente`} onClick={() => c.mover(1)}><ChevronRight aria-hidden="true" /></button>
+            <b key={c.rotulo} className="cv-rotulo">{c.rotulo}</b>
+            <span className="cv-sep" />
+            <Segmented size="sm" label="Días a la vista" value={c.dias} options={RANGOS} onChange={(dias) => c.cambiar({ dias })} />
+            <span className="cv-zoom" role="group" aria-label="Zoom">
+                <button type="button" aria-label="Alejar" disabled={nivel <= 0} onClick={() => c.cambiar({ alto: ALTOS_CALENDARIO[nivel - 1] })}><Minus aria-hidden="true" /></button>
+                <button type="button" aria-label="Acercar" disabled={nivel >= ALTOS_CALENDARIO.length - 1} onClick={() => c.cambiar({ alto: ALTOS_CALENDARIO[nivel + 1] })}><Plus aria-hidden="true" /></button>
+            </span>
+        </div>
+    );
+}
+
 export default function BarraVistas({
     titulo, vistas, vista, onElegir, onCambio, onCrear, onBorrar, onRestablecer, puedeCrear,
-    catalogo, closers, segmentos, esTriage, semana,
+    catalogo, closers, segmentos, esTriage, calendario,
 }) {
     const [abierto, setAbierto] = useState(null); // { tipo, x, y }
     const popRef = useRef(null);
@@ -78,21 +100,13 @@ export default function BarraVistas({
                 )}
             </div>
             <span className="cv-sep" />
-            {vista.tipo === 'semana' && semana && (
-                <span className="cv-semnav">
-                    <button type="button" className="cv-ctl" aria-label="Semana anterior" onClick={() => semana.mover(-1)}><ChevronLeft aria-hidden="true" /></button>
-                    <b>{semana.rotulo}</b>
-                    <button type="button" className="cv-ctl" aria-label="Semana siguiente" onClick={() => semana.mover(1)}><ChevronRight aria-hidden="true" /></button>
-                    {semana.desplazada && <button type="button" className="cv-ctl" onClick={() => semana.mover(0)}>Esta semana</button>}
-                    <span className="cv-vsep" />
-                </span>
-            )}
             {ctl('filtro', Filter, 'Filtro', nFiltros > 0 && <span className="cv-n">{nFiltros}</span>, nFiltros ? 'cv-ctl--act' : '')}
-            {ctl('orden', ArrowUpDown, 'Ordenar')}
+            {vista.tipo !== 'semana' && ctl('orden', ArrowUpDown, 'Ordenar')}
             {vista.tipo !== 'semana' && ctl('agrupar', Layers, 'Agrupar')}
             {ctl('props', SlidersHorizontal, 'Propiedades', <span className="cv-n cv-n--suave">{nProps}</span>)}
             <span className="cv-vsep" />
             {ctl('tipo', () => <IconoDeVista tipo={vista.tipo} />, TIPOS_DE_VISTA[vista.tipo], <ChevronDown className="cv-chev" aria-hidden="true" />)}
+            {vista.tipo === 'semana' && calendario && <BarraCalendario c={calendario} />}
 
             {abierto && (
                 <div ref={popRef} className="cv-pop" style={{ left: abierto.x, top: abierto.y }} role="dialog" aria-label="Opciones de la vista">

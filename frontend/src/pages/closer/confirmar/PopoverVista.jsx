@@ -71,7 +71,20 @@ function Filtro({ vista, closers, segmentos, onCambio }) {
     const algo = f.closers.length + f.etapas.length + f.segmentos.length > 0;
     return (
         <>
-            {closers.length > 1 && <><Titulo>Closer</Titulo>{closers.map(c => opcion('closers', c.valor, c.titulo, c.cuenta))}</>}
+            {closers.length > 1 && [['triage', 'Triage'], ['closer', 'Closing']].map(([rol, titulo]) => {
+                const del = closers.filter(c => c.rol === rol);
+                if (!del.length) return null;
+                const valores = del.map(c => c.valor);
+                const solo = valores.length === f.closers.length && valores.every(v => f.closers.includes(v));
+                return (
+                    <div key={rol}>
+                        <Titulo accion={<button type="button" onClick={() => onCambio({ filtro: { ...f, closers: solo ? [] : valores } })}>{solo ? 'Ver todos' : 'Solo ' + titulo.toLowerCase()}</button>}>
+                            {titulo}
+                        </Titulo>
+                        {del.map(c => opcion('closers', c.valor, c.titulo, c.cuenta))}
+                    </div>
+                );
+            })}
             <Titulo>Etapa</Titulo>
             {ETAPAS_CONFIRMACION.map(e => opcion('etapas', e.clave, e.titulo))}
             {segmentos.length > 0 && <><Titulo>Segmento</Titulo>{segmentos.map(s => opcion('segmentos', s.valor, s.titulo, s.cuenta))}</>}
