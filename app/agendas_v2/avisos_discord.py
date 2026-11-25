@@ -28,8 +28,10 @@ TIPOS = {
     'abandono': {'titulo': 'No terminó de agendar', 'emoji': '⏳', 'color': 0xE67E22},
 }
 # A quién le interesa cada aviso: el que no califica, al setter (lo sigue); la agenda nueva, a los dos;
-# la reprogramada, solo al closer (el setter ya la cerró).
-ETIQUETA = {'nueva': ('closer', 'setter'), 'reprogramada': ('closer',), 'pase': ('closer',), 'no_califica': ('setter',), 'abandono': ('triage',)}
+# la reprogramada, solo al closer (el setter ya la cerró). En las agendas de closing, además, al triage que las
+# confirma (ADR-W207; sin las Momentum ni la suya, ver `_triage_que_confirma`).
+ETIQUETA = {'nueva': ('closer', 'setter', 'triage'), 'reprogramada': ('closer', 'triage'), 'pase': ('closer', 'triage'),
+            'no_califica': ('setter',), 'abandono': ('triage',)}
 FUNNELS = {'setting': 'Setting', 'workshop': 'Workshop', 'otro': '', 'manual': ''}
 MOTIVOS = {
     'respuesta': 'Eligió una respuesta que descalifica',
@@ -247,6 +249,7 @@ def _datos_de_pase(appt, payload, origen, por, nota):
         'horario': _horario(appt.start_time, lead, closer),
         'antes': None,
         'meet': payload.get('meet') or '',
+        'triage_discord': _triage_que_confirma(appt),
         'pie': f'Agendas 2.0 · agenda #{appt.id} · viene de la #{origen.id}',
         'setter': f'Triage · {por}',
         'funnel': FUNNELS.get(funnel, str(funnel or '').capitalize()),
@@ -277,6 +280,7 @@ def datos_de_agenda(appt):
         'horario': _horario(appt.start_time, lead, closer),
         'antes': _antes(payload.get('reprogramada_desde'), lead) if reprogramada else None,
         'meet': payload.get('meet') or '',
+        'triage_discord': _triage_que_confirma(appt),
         'pie': f'Agendas 2.0 · agenda #{appt.id}',
     }
 
@@ -296,6 +300,17 @@ def _ids_triage():
     from app.services import triage_service
 
     return [t.discord_id or '' for t in triage_service.triages()]
+
+
+def _triage_que_confirma(appt):
+    """Los IDs de Discord del triage que confirma esta agenda (ADR-W200): todas las de los closers menos las
+    Momentum (las confirma el closer, ADR-W202) y menos la propia, que ya la etiqueta como closer. Solo las que
+    tienen ID: una sin cargar no hace saltar el @everyone."""
+    from app.services import triage_service
+
+    if 'momentum' in (appt.origin or '').lower():
+        return []
+    return [t.discord_id for t in triage_service.triages() if t.discord_id and t.id != appt.closer_id]
 
 
 def datos_de_abandono(payload, setter, evento_nombre, hasta_donde):
