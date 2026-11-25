@@ -850,3 +850,10 @@
 - La usa Learnation Marketing (Publicación › Testeo, Escalado y Apagado) junto con los números de Meta. Se carga en claude.ai como conector propio «Learnation Work».
 - `workshop_metrics_service.resumen_periodo`: las cifras del workshop para cualquier período, con el criterio de `calcular_prefill`.
 - Variable nueva en Railway: `MCP_PUBLICACION_TOKEN`.
+
+### 25/11/2026 · Confirmación y reprogramar, rehechos (ADR-W209)
+- Confirmación: el pie queda con «Seguir después» y el CTA «Listo · 100% confirmado», más grande. Arriba, «¿Cambió algo con la llamada?» con Reprogramar, Canceló y Descalificado en tarjetas iguales que dicen qué hacen; «Eliminar lead» pasa a un link chico.
+- Reprogramar en tres pasos (con quién → día y hora → motivo): grupo Closers/Triage (por defecto el de quien tiene la llamada) y una persona o «Cualquiera» con sus horarios libres contados. Días y horas se tocan, en la hora del lead con la tuya debajo, en mañana/tarde/noche y de a 30 min.
+- «Con al menos»: la anticipación mínima de los horarios ofrecidos (15 min, 1 h, 2 h, 4 h o 1 día; 1 h por defecto, se recuerda).
+- Con «Cualquiera» la llamada queda con la persona actual si está libre; si no, con la que tiene más horarios libres (se puede cambiar entre las libres a esa hora).
+- `GET /api/ficha/<id>/reprogramar/opciones` devuelve los horarios de todo el grupo por persona con una sola lectura de ocupación (`a_triage.horarios_de_varios`).
