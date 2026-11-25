@@ -998,3 +998,6 @@
 - Desde el 23/11 los reportes de setter y closer llegaban a #📄-reports de fulfillment (la variable del webhook de reportes apuntaba a otro canal). Ahora los de closer, setter y triage salen por el bot al canal fijo de #📋-reportes de adquisitions; el webhook queda solo si no hay bot ([envio.py](../../app/services/discord_avisos/envio.py)). Se borraron los 10 mensajes que llegaron mal.
 - Los reportes ya no etiquetan a todos (pedido de Santi).
 - El reporte de closer cerrado solo a las 10:00 salía siempre «enviado tarde»: tomaba la hora del cierre como hora de envío. Ahora toma la última vez que escribió la persona ([cierre.py](../../app/reporte_dia/cierre.py)).
+
+### 25/11/2026 · Novedades: «Después» hasta 3 días (ADR-W225)
+- La portada de novedades ofrece «Después» con los días que quedan: lo deja hasta mañana. A los 3 días de haber aparecido ya no se puede aplazar y hay que hacer el recorrido ([Novedades.jsx](../../frontend/src/pages/closer/novedades/Novedades.jsx)).

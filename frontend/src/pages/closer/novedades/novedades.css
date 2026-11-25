@@ -67,7 +67,8 @@
 .nv-cta__aura i:nth-child(1) { left: -10%; top: -60%; background: var(--nv-vio); animation: nvAura1 5s ease-in-out infinite; }
 .nv-cta__aura i:nth-child(2) { left: 50%; top: -20%; background: #5B9BFF; animation: nvAura2 7s ease-in-out infinite; }
 .nv-cta__aura i:nth-child(3) { left: 20%; top: 30%; background: #FF8AD0; animation: nvAura3 6s ease-in-out infinite; }
-.nv-despues { padding: 6px 12px; border: 0; background: none; color: var(--nv-mut); font-size: 14px; font-weight: 600; cursor: pointer; }
+.nv-despues { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 12px; border: 0; background: none; color: var(--nv-mut); font-size: 14px; font-weight: 600; cursor: pointer; }
+.nv-despues small { font-size: 11px; font-weight: 500; opacity: .7; }
 .nv-despues:hover { color: #fff; }
 
 /* ---------- Recorrido ---------- */

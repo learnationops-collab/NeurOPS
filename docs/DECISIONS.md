@@ -2012,3 +2012,11 @@
 - **Decisión:** «días hábiles» cuenta y ofrece de lunes a sábado; solo el domingo queda afuera. Desde un miércoles, 3 hábiles son jueves, viernes y sábado.
 - **Qué se pierde:** no hay forma de pedir «solo lunes a viernes» con este modo; si hace falta, se usa el horario de cada persona (sin franjas el sábado).
 - **Consecuencias:** sin migración. Cambia en todos los eventos con «hábiles» (Sesión de Aceleración, Sesión diagnóstica, Consultoría): la ventana se acorta un día de calendario cuando la cruza un sábado y aparecen los horarios del sábado.
+
+## ADR-W225: «Después» en las novedades, con un plazo de 3 días
+
+- **Fecha:** 25/11/2026 · **Estado:** aceptada
+- **Contexto:** El changelog (ADR-W218, W222) era obligatorio apenas aparecía: quien entraba con una llamada encima no podía dejarlo para más tarde. Mario pidió poder aplazarlo hasta 3 días y que después ya no se pueda.
+- **Decisión:** Mientras el recorrido no esté terminado, la portada ofrece «Después» con los días que quedan; lo deja hasta el día siguiente (medianoche local). El plazo corre desde la primera vez que aparece cada tanda (huella `VISTA`) y vive en `localStorage` (`ln_novedades_<id>_aplazo`). Vencidos los 3 días vuelve a ser obligatorio: sin cruz, «Después» ni Esc. La cruz del recorrido también aplaza dentro del plazo.
+- **Qué se pierde:** El plazo es por navegador: en otro equipo arranca de nuevo. Se aceptó por simple; si hiciera falta, pasa a la cuenta como el dock.
+- **Consecuencias:** El cambio está en `Novedades.jsx`, que no entra en la huella: quien ya terminó el recorrido no lo vuelve a ver por esto.
