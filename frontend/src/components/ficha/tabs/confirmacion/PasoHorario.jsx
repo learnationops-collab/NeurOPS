@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, CalendarDays, Layers, Moon, Sun, Sunrise } from 'lucide-react';
-import { Avatar, Segmented, Select } from '../../../standard';
+import { Avatar } from '../../../standard';
 import { useMovimiento } from '../../piezas';
 import CalendarioDias from './CalendarioDias';
 import Bandera from './Bandera';
-import { ANTICIPACIONES, FRANJAS, ciudad, diaLargo, diasDelLead, franjaDe, horaEn } from './reprogramar';
+import { FRANJAS, ciudad, diaLargo, diasDelLead, franjaDe, horaEn } from './reprogramar';
 
 const SUAVE = [0.22, 0.7, 0.2, 1];
 const ICONO_FRANJA = { manana: Sunrise, tarde: Sun, noche: Moon };
@@ -14,9 +14,10 @@ const ICONO_FRANJA = { manana: Sunrise, tarde: Sun, noche: Moon };
  * Paso 2: primero el día (calendario), después la hora. Todos los horarios del día a la vista, en la
  * hora del lead, en una grilla compacta. Cada persona tiene su color: los puntos de cada hora dicen de
  * quién es, y una hora con dos o más libres (superpuesta) lo marca. Al elegir una, abajo se ve con quién
- * queda y qué hora es para esa persona; si hay varias libres, se elige ahí.
+ * queda y qué hora es para esa persona; si hay varias libres, se elige ahí. La zona del lead y la
+ * anticipación van en la cabecera (SubReprogramar).
  */
-const PasoHorario = ({ mapa, tzLead, onTzLead, zonas, zonaLeadTz, persona, colorDe, cuando, onCuando, quien, onQuien, anticipacion, onAnticipacion, paisDe }) => {
+const PasoHorario = ({ mapa, tzLead, persona, colorDe, cuando, onCuando, quien, onQuien, paisDe }) => {
     const mov = useMovimiento();
     const dias = diasDelLead(mapa, tzLead);
     const [dia, setDia] = useState(null);
@@ -33,29 +34,11 @@ const PasoHorario = ({ mapa, tzLead, onTzLead, zonas, zonaLeadTz, persona, color
     const quienesDe = (d) => [...new Set((dias.find((x) => x.dia === d)?.isos || []).flatMap((iso) => mapa[iso] || []))];
     const delDia = quienesDe(dia);
     const superpuestos = isos.filter((iso) => (mapa[iso] || []).length > 1).length;
-    const opcionesZona = [
-        ...(zonas.some((z) => z.tz === tzLead) ? [] : [{ value: tzLead, label: ciudad(tzLead) }]),
-        ...zonas.map((z) => ({ value: z.tz, icon: <Bandera c={z.pais} />, label: `${z.nombre}${z.tz === zonaLeadTz ? ' · la del lead' : ''}` })),
-    ];
     const libres = cuando ? mapa[cuando] || [] : [];
-
-    const controles = (
-        <div className="rp-controles">
-            <div className="rp-control">
-                <small className="t-rotulo">Hora del lead</small>
-                <Select size="sm" label="Zona del lead" value={tzLead} onChange={onTzLead} options={opcionesZona} />
-            </div>
-            <div className="rp-control">
-                <small className="t-rotulo">Anticipación</small>
-                <Segmented size="sm" radio label="Anticipación mínima" value={anticipacion} onChange={onAnticipacion} options={ANTICIPACIONES} />
-            </div>
-        </div>
-    );
 
     if (dias.length === 0) {
         return (
             <div className="rp-paso">
-                {controles}
                 <div className="rp-vacio">
                     <CalendarDays size={22} />
                     <b>Sin horarios libres</b>
@@ -67,7 +50,6 @@ const PasoHorario = ({ mapa, tzLead, onTzLead, zonas, zonaLeadTz, persona, color
 
     return (
         <div className="rp-paso">
-            {controles}
             <div className="rp-agenda">
                 <CalendarioDias dias={dias} tz={tzLead} valor={dia} onElegir={setDia} quienesDe={quienesDe} colorDe={colorDe} />
 

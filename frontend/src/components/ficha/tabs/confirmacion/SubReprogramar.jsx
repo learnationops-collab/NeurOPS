@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, CalendarClock, CalendarDays, Check, PenLine, Users } from 'lucide-react';
-import { Avatar, FieldError, TextArea } from '../../../standard';
+import { ArrowRight, CalendarClock, CalendarDays, Check, Hourglass, PenLine, Users } from 'lucide-react';
+import { Avatar, FieldError, Segmented, Select, TextArea } from '../../../standard';
 import api from '../../../../services/api';
 import { faltaDeMotivo, motivoAlcanza, preguntaDeMotivo } from '../../../../utils/motivoEstado';
 import { SubVista, useMovimiento } from '../../piezas';
@@ -9,7 +9,7 @@ import PasoPersona from './PasoPersona';
 import PasoHorario from './PasoHorario';
 import Bandera from './Bandera';
 import {
-    CUALQUIERA, ciudad, coloresDe, conAnticipacion, diaLargo, guardarAnticipacion, horaEn, leerAnticipacion,
+    ANTICIPACIONES, CUALQUIERA, ciudad, coloresDe, conAnticipacion, diaLargo, guardarAnticipacion, horaEn, leerAnticipacion,
     libresPorHorario, quienToma,
 } from './reprogramar';
 import './reprogramar.css';
@@ -116,6 +116,28 @@ const SubReprogramar = ({ ficha, onVolver, onConfirmar, guardando = false }) => 
             ))}
         </ol>
     );
+    // Zona del lead y anticipación, en la misma fila que el título y los pasos (solo en «Día y hora»).
+    const zonas = datos?.zonas || [];
+    const controles = paso === 1 && datos && !datos.error && (
+        <div className="rp-controles">
+            <div className="rp-control" data-tip="Hora del lead">
+                <Select size="sm" label="Hora del lead" value={lead} onChange={setTzLead}
+                    options={[
+                        ...(zonas.some((z) => z.tz === lead) ? [] : [{ value: lead, label: ciudad(lead) }]),
+                        ...zonas.map((z) => ({ value: z.tz, icon: <Bandera c={z.pais} />, label: z.nombre })),
+                    ]} />
+            </div>
+            <Segmented size="sm" radio label="Anticipación mínima" value={anticipacion} onChange={cambiarAnticipacion}
+                options={ANTICIPACIONES} data-tip="Anticipación mínima"
+                prefix={<span className="rp-seg-ico" aria-hidden="true"><Hourglass size={14} /></span>} />
+        </div>
+    );
+    const cabecera = (
+        <div className="rp-cab">
+            {pasos}
+            {controles}
+        </div>
+    );
     const titulo = (
         <span className="rp-titulo">
             <span className="rp-titulo-ico" aria-hidden="true"><CalendarClock size={18} /></span>
@@ -132,7 +154,7 @@ const SubReprogramar = ({ ficha, onVolver, onConfirmar, guardando = false }) => 
     const q = cuando && quien ? persona(quien) : null;
 
     return (
-        <SubVista titulo={titulo} extra={pasos} onVolver={atras}
+        <SubVista titulo={titulo} extra={cabecera} onVolver={atras}
             acciones={datos && !datos.error ? accion : null}>
             {datos === null && (
                 <div className="rp-cargando" role="status">
@@ -153,10 +175,8 @@ const SubReprogramar = ({ ficha, onVolver, onConfirmar, guardando = false }) => 
                     )}
 
                     {paso === 1 && (
-                        <PasoHorario mapa={mapa} tzLead={lead} onTzLead={setTzLead} zonas={datos.zonas || []}
-                            zonaLeadTz={datos.zona_lead?.tz} persona={persona} cuando={cuando} onCuando={elegirHora}
-                            quien={quien} onQuien={setQuien} paisDe={paisDe} colorDe={colorDe}
-                            anticipacion={anticipacion} onAnticipacion={cambiarAnticipacion} />
+                        <PasoHorario mapa={mapa} tzLead={lead} persona={persona} colorDe={colorDe}
+                            cuando={cuando} onCuando={elegirHora} quien={quien} onQuien={setQuien} paisDe={paisDe} />
                     )}
 
                     {paso === 2 && q && (
