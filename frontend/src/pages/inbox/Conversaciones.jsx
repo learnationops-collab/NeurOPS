@@ -29,7 +29,8 @@ import { recordado, recordar } from './recuerdo';
 import './conversaciones/trabajo.css';
 import './conversaciones/setting.css';
 
-const LIMITE = 300;
+// De a cuántas se cargan (pedido de los setters, 24/11: con 300 se perdían los seguimientos de hace 4 días).
+const LIMITE = 500;
 const VISTAS = [
     { value: 'chats', label: 'Chats', icon: <MessageSquare size={14} /> },
     { value: 'embudo', label: 'Embudo', icon: <Kanban size={14} /> },
@@ -46,19 +47,19 @@ function useAhora() {
 }
 
 // La lista: al buscar, a los 250 ms; después, cada REFRESCO sin vaciar lo que se ve. `vuelta` la pide ya.
-function useConversaciones(buscar) {
+function useConversaciones(buscar, limite) {
     const [datos, setDatos] = useState(() => recordado(`conversaciones:${buscar.trim()}`));
     const [error, setError] = useState(null);
     const [vuelta, setVuelta] = useState(0);
     useEffect(() => {
         let vivo = true;
-        const pedir = () => inboxApi.conversaciones(buscar.trim(), LIMITE)
+        const pedir = () => inboxApi.conversaciones(buscar.trim(), limite)
             .then((d) => { recordar(`conversaciones:${buscar.trim()}`, d); if (vivo) { setDatos(d); setError(null); } })
             .catch(() => { if (vivo) setError('No se pudieron cargar las conversaciones'); });
         const primera = setTimeout(pedir, vuelta ? 0 : 250);
         const cada = setInterval(pedir, REFRESCO);
         return () => { vivo = false; clearTimeout(primera); clearInterval(cada); };
-    }, [buscar, vuelta]);
+    }, [buscar, vuelta, limite]);
     const recargar = useCallback(() => setVuelta((v) => v + 1), []);
     return [datos, error, recargar];
 }
@@ -102,7 +103,8 @@ export default function Conversaciones() {
     const [marcadas, setMarcadas] = useState([]);
     const [etiquetando, setEtiquetando] = useState(false);
     const borradores = useBorradores();
-    const [datos, error, recargar] = useConversaciones(buscar);
+    const [limite, setLimite] = useState(LIMITE);
+    const [datos, error, recargar] = useConversaciones(buscar, limite);
     const ahora = useAhora();
 
     // Lo que acabo de leer deja de contar como «sin leer» sin esperar a la próxima vuelta (hasta que llegue otro).
@@ -161,6 +163,11 @@ export default function Conversaciones() {
                 </p>
                 <ul>{visibles.map((c) => <Fila key={c.id} c={c} ahora={ahora} yo={yo} conAsignado={conAsignado} elegida={elegida === c.id} borrador={borradores[c.id]} onElegir={setElegida}
                     eligiendo={eligiendo} marcada={marcadas.includes(c.id)} onMarcar={marcar} />)}</ul>
+                {lista.length >= limite && (
+                    <Button size="sm" variant="ghost" className="cv-mas" onClick={() => setLimite((n) => n + LIMITE)}>
+                        Cargar {LIMITE} más (los filtros miran solo las cargadas)
+                    </Button>
+                )}
                 {eligiendo ? (
                     <div className="cv-masiva">
                         <b>{marcadas.length ? `${marcadas.length} ${marcadas.length === 1 ? 'elegida' : 'elegidas'}` : 'Tocá las que querés etiquetar'}</b>

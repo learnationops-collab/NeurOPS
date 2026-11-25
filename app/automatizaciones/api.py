@@ -255,10 +255,14 @@ def borrar_flujo(flujo_id):
 
 # --- Conversaciones ---------------------------------------------------------------------------
 
+# Hasta cuántas conversaciones trae la bandeja (de a 500, con «Cargar más»): entran 60 a 100 por día.
+TOPE_BANDEJA = 2000
+
+
 @bp.route('/conversaciones', methods=['GET'])
 def listar_conversaciones():
     buscar = (request.args.get('buscar') or '').strip().lower()
-    limite = min(max(request.args.get('limite', 100, type=int) or 100, 1), 300)
+    limite = min(max(request.args.get('limite', 100, type=int) or 100, 1), TOPE_BANDEJA)
     ultimo = (db.session.query(IgMensaje.contacto_id, db.func.max(IgMensaje.enviado_en).label('ultimo'),
                                db.func.min(IgMensaje.enviado_en).label('primero'),
                                db.func.count(IgMensaje.id).label('cantidad'))
@@ -286,13 +290,16 @@ def listar_conversaciones():
     toca = seguimientos.avisos([c for c, _, _, _ in filas])
     avance = progreso.de_contactos([c for c, _, _, _ in filas], ejecuciones, ahora, current_user.id,
                                    {c.id: primero for c, _, _, primero in filas})
+    # El último mensaje de cada una, en una sola consulta (antes, una por conversación). En empate, el de id mayor.
+    ultimos = {m.contacto_id: m for m in IgMensaje.query.join(ultimo, db.and_(
+        ultimo.c.contacto_id == IgMensaje.contacto_id, ultimo.c.ultimo == IgMensaje.enviado_en))
+        .filter(IgMensaje.contacto_id.in_(ids)).order_by(IgMensaje.id).all()} if ids else {}
     salida = []
     for contacto, momento, cantidad, _ in filas:
         variables = contacto.variables or {}
         ejecucion = ejecuciones.get(contacto.id)
         abierta = ejecucion if ejecucion and ejecucion.estado in AutEjecucion.ABIERTOS else None
-        mensaje = (IgMensaje.query.filter_by(contacto_id=contacto.id)
-                   .order_by(IgMensaje.enviado_en.desc(), IgMensaje.id.desc()).first())
+        mensaje = ultimos.get(contacto.id)
         salida.append({
             'id': contacto.id,
             'igsid': contacto.igsid,
@@ -332,6 +339,7 @@ def ver_conversacion(contacto_id):
     mensajes = list(reversed(mensajes))
     recorrido = bandeja.recorrido(contacto.id)
     elegidos = bandeja.elegidos(mensajes)
+    comentarios = bandeja.comentarios(mensajes)
     from app.automatizaciones import api_trabajo  # cuelga de `bp`: importarlo arriba sería circular
     notas, tareas = api_trabajo.historial(contacto.id)
     from app.automatizaciones import api_fases, seguimientos
@@ -362,6 +370,8 @@ def ver_conversacion(contacto_id):
             'autor': m.autor.username if m.autor_id and m.autor else None,
             # Del bot: el botón que tocó el lead. Del lead: qué activó en el flujo (`efectos.py`).
             'elegido': elegidos.get(m.id),
+            # Vino de un comentario en una publicación, no de un DM: no siempre se le puede escribir.
+            'comentario': comentarios.get(m.id),
             'efecto': (m.contenido or {}).get('efecto') if isinstance(m.contenido, dict) else None,
         } for m in mensajes],
     })

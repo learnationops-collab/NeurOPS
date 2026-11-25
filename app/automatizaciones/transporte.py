@@ -50,6 +50,10 @@ class TransporteSimulado:
     def perfil(self, igsid):
         return self.perfiles.get(igsid, {})
 
+    def permalink(self, media_id):
+        """El link público de una publicación de la cuenta; None si Meta no lo da."""
+        return self._get(media_id, {'fields': 'permalink'}).get('permalink')
+
     def tomar_control(self, igsid):
         return True
 

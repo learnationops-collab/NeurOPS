@@ -136,3 +136,24 @@ def medianas_por_setter(ahora, horas=24):
             por_setter.setdefault((setter['id'], setter['username']), []).append(minutos)
     return sorted(({'id': sid, 'username': nombre, 'mediana': round(median(m)), 'respuestas': len(m)}
                    for (sid, nombre), m in por_setter.items()), key=lambda s: s['mediana'])
+
+
+def comentarios(mensajes):
+    """{mensaje_id: {'permalink'}} de los que son un comentario (no un DM), para marcarlos en el chat con su
+    publicación. El link se le pide a Meta una vez y queda en el mensaje."""
+    from sqlalchemy.orm.attributes import flag_modified
+    from app.automatizaciones.transporte import TransporteMeta
+    salida, transporte = {}, None
+    for m in mensajes:
+        c = m.contenido if isinstance(m.contenido, dict) else {}
+        if m.direccion != IgMensaje.ENTRANTE or not c.get('comentario_id'):
+            continue
+        if 'permalink' not in c and c.get('publicacion_id'):
+            transporte = transporte or TransporteMeta()
+            c['permalink'] = transporte.permalink(c['publicacion_id'])
+            m.contenido = c
+            flag_modified(m, 'contenido')
+        salida[m.id] = {'permalink': c.get('permalink')}
+    if transporte:
+        db.session.commit()
+    return salida

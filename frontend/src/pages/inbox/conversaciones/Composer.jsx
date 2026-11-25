@@ -97,7 +97,7 @@ function Guion({ fase, contacto, onElegir }) {
 const programados = (items) => (items || []).filter((s) => s.estado === 'programado' || (s.estado === 'error' && !s.cadencia) || s.vigente);
 const cuando = (iso) => new Date(iso).toLocaleString('es-AR', { weekday: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
-export default function Composer({ contacto, fase, ejecucion, seguimientos, yo, onCambio, onEnviar, onLearnito, pegar, selector, onSelector }) {
+export default function Composer({ contacto, fase, ejecucion, seguimientos, yo, onCambio, onEnviar, onEnviarVarios, onLearnito, pegar, selector, onSelector }) {
     const [modo, setModo] = useState('chat');
     const [texto, setTexto] = useState(() => borradorDe(contacto.id));
     const [rayo, setRayo] = useState(false);
@@ -164,10 +164,11 @@ export default function Composer({ contacto, fase, ejecucion, seguimientos, yo, 
         const elegido = deGuia;
         const lista = partes(texto);
         setDeGuia(null);
-        for (let i = 0; i < lista.length; i += 1) {
-            const ok = await enviar(i === 0 ? { texto: lista[i], guia: elegido.clave } : { texto: lista[i] });
-            if (!ok) return;
-        }
+        setTexto('');
+        guardarBorrador(contacto.id, '');
+        // Salen de a uno, con unos segundos entre cada uno (`useEnvio`); el primero lleva la marca de la Guía.
+        const ok = await onEnviarVarios(lista.map((t, i) => [{ texto: t, pausar, ...(i === 0 ? { guia: elegido.clave } : {}) }, t]));
+        if (!ok) return;
         if (elegido.pasaA) {
             try {
                 await inboxApi.moverFase(contacto.id, elegido.pasaA);

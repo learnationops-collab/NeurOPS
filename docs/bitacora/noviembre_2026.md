@@ -987,3 +987,9 @@
 
 ### 25/11/2026 · Agendas: «días hábiles» incluye el sábado (ADR-W224)
 - Los eventos con «N días hábiles» cuentan y ofrecen de lunes a sábado; solo el domingo queda afuera. Antes salteaban el sábado: el lead nunca veía esos horarios y la ventana se estiraba (un miércoles con 3 hábiles llegaba al lunes; a Mario le agendaron así). Ahora llega al sábado ([disponibilidad.py](../../app/agendas_v2/nucleo/disponibilidad.py), [disponibilidad.js](../../frontend/src/pages/agendas_v2/core/disponibilidad.js)).
+
+### 25/11/2026 · Inbox: lo que pidieron los setters (reunión del 24/11)
+- La bandeja carga 500 conversaciones (antes 300, que se llenaban en 4 días) y al final ofrece «Cargar 500 más», hasta 2000. El último mensaje de cada una sale en una sola consulta (antes, una por conversación en cada refresco).
+- En el chat, lo que entró por un comentario dice «Comentario en una publicación», con link a la publicación (se le pide a Meta una vez y queda guardado).
+- Los mensajes de la Guía con varias partes salen de a uno, con 5 segundos entre cada uno; los que esperan se ven «en cola». Si uno no sale, los siguientes quedan con Reintentar para mandarlos en orden (antes se perdían).
+- La caja de texto crece hasta 220 px y después se desplaza: lo que pasaba del alto quedaba cortado.

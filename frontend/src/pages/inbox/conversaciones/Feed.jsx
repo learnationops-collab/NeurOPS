@@ -3,7 +3,7 @@
 // variable). Debajo de cada respuesta del lead, qué activó en el flujo. Al final, lo que el setter acaba de
 // mandar y todavía no confirmó Instagram (`useEnvio`): «enviando…» o «no salió» con Reintentar.
 import { useEffect, useRef } from 'react';
-import { Bot, CalendarCheck, Check, History, RotateCcw, StickyNote, X, Zap } from 'lucide-react';
+import { Bot, CalendarCheck, Check, History, MessageCircle, RotateCcw, StickyNote, X, Zap } from 'lucide-react';
 import { Button, IconButton } from '../../../components/standard';
 import { rotuloPaso } from '../estadoFlujo';
 
@@ -31,6 +31,12 @@ function textoEfecto(e) {
 function Burbuja({ m }) {
     return (
         <li className={`cv-burbuja cv-burbuja--${m.direccion} cv-burbuja--${m.origen}`} data-mensaje={m.id} data-direccion={m.direccion}>
+            {m.comentario && (
+                <span className="cv-comentario" data-tip="No es un DM|Comentó una publicación: si no abrió la conversación, puede que no se le pueda escribir">
+                    <MessageCircle size={12} aria-hidden="true" />Comentario en una publicación
+                    {m.comentario.permalink && <a href={m.comentario.permalink} target="_blank" rel="noreferrer">Ver publicación</a>}
+                </span>
+            )}
             {m.texto && <p>{m.texto}</p>}
             {m.adjuntos.map((a, i) => <p key={i} className="mut">📎 {a}</p>)}
             {m.botones.length > 0 && (
@@ -90,7 +96,7 @@ function Pendiente({ p, onReintentar, onDescartar }) {
                     <Button size="sm" icon={<RotateCcw size={12} />} onClick={() => onReintentar(p)}>Reintentar</Button>
                     <IconButton size="xs" label="Descartar" icon={<X size={12} />} onClick={() => onDescartar(p.id)} />
                 </span>
-            ) : <span className="cv-meta">Vos · enviando…</span>}
+            ) : <span className="cv-meta">Vos · {p.estado === 'cola' ? 'en cola, sale en unos segundos' : 'enviando…'}</span>}
         </li>
     );
 }

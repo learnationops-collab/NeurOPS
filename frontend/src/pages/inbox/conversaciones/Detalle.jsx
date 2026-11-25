@@ -61,7 +61,7 @@ function Chat({ datos, yo, onCambio, pegar, selector, onSelector }) {
                 pendientes={pendientes} onReintentar={envio.reintentar} onDescartar={envio.descartar}
                 onSeleccion={() => setSeleccion(seleccionDelLead())} />
             <Composer contacto={contacto} fase={avance?.fase} ejecucion={datos.ejecucion} seguimientos={datos.seguimientos} yo={yo} onCambio={onCambio}
-                onEnviar={envio.enviar} onLearnito={abrirLearnito} pegar={pegar} selector={selector} onSelector={onSelector} />
+                onEnviar={envio.enviar} onEnviarVarios={envio.enviarVarios} onLearnito={abrirLearnito} pegar={pegar} selector={selector} onSelector={onSelector} />
             {seleccion && <GloboCita contactoId={contacto.id} seleccion={seleccion} onCerrar={cerrarSeleccion} onHecho={() => { setSeleccion(null); onCambio(); }} />}
         </Panel>
     );
