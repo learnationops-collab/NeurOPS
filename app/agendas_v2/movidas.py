@@ -7,6 +7,9 @@
 - Cancelada o borrada, si todavía no pasó: Work la cancela como el botón «Canceló» de la ficha. Los closers
   cancelan en Google y casi nunca lo reportan (3 de 241 en los 30 días al 26/10/2026). Una que ya pasó no se
   toca: borrar el evento después de la llamada no dice qué pasó, eso lo reporta el closer.
+- Una que ya pasó y sigue sin reportar también se sigue si su evento se movió a una hora futura: es el
+  triage o el closer que reagenda en Google al que no se presentó (Melanie Rivera, 25/11/2026: movida al
+  domingo y Work la seguía mostrando atrasada, porque solo miraba hasta 2 h para atrás).
 """
 
 import logging
@@ -19,6 +22,8 @@ logger = logging.getLogger(__name__)
 MINUTOS = 15
 # Qué agendas se revisan: las vigentes que empiezan entre ATRAS antes y ADELANTE después de ahora.
 ATRAS = timedelta(hours=2)
+# Las que ya pasaron sin reportar se siguen mirando hasta PASADAS atrás, solo por una movida al futuro.
+PASADAS = timedelta(days=14)
 ADELANTE = timedelta(days=30)
 CANCELADAS = ('cancelado', 'borrado')
 
@@ -49,7 +54,7 @@ def sincronizar_movidas(ahora=None):
     from app.models import Appointment
 
     ahora = ahora or datetime.utcnow()
-    desde, hasta = ahora - ATRAS, ahora + ADELANTE
+    desde, hasta = ahora - PASADAS, ahora + ADELANTE
     filas = Appointment.query.filter(
         Appointment.calendar_evento_id.isnot(None),
         Appointment.start_time >= desde,
@@ -74,6 +79,8 @@ def sincronizar_movidas(ahora=None):
             try:
                 if estado == 'movido' and traza.get('inicio_nuevo') is not None:
                     inicio = _dt(traza['inicio_nuevo'])
+                    if a.start_time < ahora - ATRAS and inicio <= ahora:
+                        continue
                     if evento_sigue.quedo_atras(a, inicio):
                         # El evento quedó en la hora de la que Work movió la agenda: manda Work. Seguirlo
                         # devolvía la agenda a la hora vieja con otra fila (Gerardo Morales, 05/11/2026).

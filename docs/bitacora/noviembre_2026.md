@@ -1041,3 +1041,6 @@
 
 ### 25/11/2026 · Broadcast de WhatsApp: al azar entre plantillas (ADR-W232)
 - Cada número recibe una de las marcadas, en partes iguales, y el historial compara cuánto leyó y respondió cada una.
+
+### 25/11/2026 · Agendas: Work sigue la reagenda hecha en Google después de la llamada (ADR-W233)
+- Dari movió en su Google Calendar la llamada de Melanie Rivera al domingo y Work la seguía mostrando atrasada: solo seguía los eventos movidos hasta 2 h después de la hora de la agenda. Ahora también sigue los de agendas sin reportar de los últimos 14 días, cuando el evento quedó en una hora futura ([movidas.py](../../app/agendas_v2/movidas.py)).
