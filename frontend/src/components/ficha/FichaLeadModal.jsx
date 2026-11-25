@@ -6,6 +6,7 @@ import FichaTabs from './FichaTabs';
 import { Aviso, diaLegible, useMovimiento } from './piezas';
 import NotaEnTooltip from './piezas/NotaEnTooltip';
 import BarraGuardado from './piezas/BarraGuardado';
+import VolverArriba from './piezas/volverArriba';
 import { Hueso } from '../huesos/Huesos';
 import { enSoloLectura, leerEstado } from './estadoFicha';
 import { ejecutarAccion, ejecutarConsulta, mensajeDeError, obtenerFicha } from './fichaApi';
@@ -365,6 +366,9 @@ const FichaLeadModal = ({
     // y esa tarea; las pestañas y la barra de guardado vuelven al tocar «Volver» (25/11/2026).
     const [enfoque, setEnfoque] = useState(false);
     useEffect(() => { setEnfoque(false); }, [pestana, appointmentId]);
+    // El «Volver» de la sub-vista abierta, que se dibuja en la cabecera (piezas/volverArriba.js).
+    const [volver, setVolver] = useState(null);
+    const volverArriba = useMemo(() => ({ registrar: (fn) => setVolver(() => fn) }), []);
 
     const props = { ficha, onAccion, onConsultar, onRecargar, irA, puedeEditar: estado.puedeEditar, onEnfoque: setEnfoque };
 
@@ -403,7 +407,7 @@ const FichaLeadModal = ({
                             <button type="button" className="ibtn" aria-label="Cerrar" onClick={onCerrar}>×</button>
                         </div>
                     ) : (
-                        <FichaHeader ficha={ficha} onAccion={onAccion}
+                        <FichaHeader ficha={ficha} onAccion={onAccion} onVolver={volver}
                             onCerrar={onCerrar} puedeEditar={estado.puedeEditar} />
                     )}
                 </div>
@@ -415,6 +419,7 @@ const FichaLeadModal = ({
                         contadores={{ com: ficha.comunicacion?.notas?.length || 0 }} />
                 )}
 
+                <VolverArriba.Provider value={volverArriba}>
                 <div className="fi-modal-panel"
                     id={pestana ? `fi-panel-${pestana}` : undefined}
                     role={pestana ? 'tabpanel' : undefined}
@@ -449,6 +454,7 @@ const FichaLeadModal = ({
                         )}
                     </div>
                 </div>
+                </VolverArriba.Provider>
             </div>
         </div>
     );

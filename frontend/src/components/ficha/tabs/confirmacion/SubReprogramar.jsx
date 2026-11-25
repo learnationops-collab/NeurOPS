@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, Briefcase, CalendarClock, Headphones, Hourglass } from 'lucide-react';
+import { Briefcase, CalendarClock, Headphones, Hourglass } from 'lucide-react';
 import { Avatar, FieldError, Segmented, Select, TextArea } from '../../../standard';
 import api from '../../../../services/api';
 import { faltaDeMotivo, motivoAlcanza, preguntaDeMotivo } from '../../../../utils/motivoEstado';
@@ -17,8 +17,8 @@ import './reprogramar.css';
 const SUAVE = [0.22, 0.7, 0.2, 1];
 
 /**
- * Reprogramar la llamada, en tres pasos (con quién → día y hora → motivo), sin indicador: se avanza con
- * «Siguiente» y se vuelve con «Volver». Mientras está abierto, la
+ * Reprogramar la llamada, en tres pasos (con quién → día y hora → motivo), sin indicador: tocar a una
+ * persona pasa al paso 2, «Siguiente» aparece en el horario elegido y «Volver» está en la cabecera. Mientras está abierto, la
  * ficha muestra solo la cabecera y esta tarea (`onEnfoque` de la pestaña).
  *
  * Solo se ofrecen horarios libres (horario de Team, agendas y Google), así que no hay choques. Se elige
@@ -76,7 +76,11 @@ const SubReprogramar = ({ ficha, onVolver, onConfirmar, guardando = false }) => 
         setCuando(iso);
         setQuien(elegida === CUALQUIERA ? quienToma(mapa[iso], datos.actual_id, porPersona) : elegida);
     };
-    const elegirPersona = (p) => { setElegida(p); setCuando(null); setQuien(null); };
+    // Tocar a una persona ya es elegirla: pasa sola a «Día y hora» (después del gesto de la tarjeta).
+    const elegirPersona = (p) => {
+        setElegida(p); setCuando(null); setQuien(null);
+        window.setTimeout(() => { dir.current = 1; setPaso(1); }, mov.quieto ? 0 : 220);
+    };
     const cambiarAnticipacion = (m) => {
         setAnticipacion(m);
         guardarAnticipacion(m);
@@ -87,16 +91,13 @@ const SubReprogramar = ({ ficha, onVolver, onConfirmar, guardando = false }) => 
     const ir = (i) => { dir.current = i >= paso ? 1 : -1; setPaso(i); };
     const atras = () => (paso === 0 ? onVolver() : ir(paso - 1));
 
-    const accion = paso < 2 ? (
-        <button type="button" className="btn btn--cta" disabled={!listo[paso]} onClick={() => ir(paso + 1)}>
-            Siguiente <ArrowRight size={14} />
-        </button>
-    ) : (
+    // El pie solo lleva la acción final; «Siguiente» del paso 2 va en la franja del horario elegido.
+    const accion = paso === 2 ? (
         <button type="button" className="btn btn--cta" disabled={!listo.every(Boolean) || guardando}
             onClick={() => onConfirmar({ inicio: cuando, persona_id: quien, motivo: motivo.trim() })}>
             {guardando ? 'Reprogramando…' : 'Reprogramar'}
         </button>
-    );
+    ) : null;
 
     // Zona del lead y anticipación, en la misma fila que el título (solo en «Día y hora»).
     const zonas = datos?.zonas || [];
@@ -167,7 +168,8 @@ const SubReprogramar = ({ ficha, onVolver, onConfirmar, guardando = false }) => 
 
                     {paso === 1 && (
                         <PasoHorario mapa={mapa} tzLead={lead} persona={persona} colorDe={colorDe}
-                            cuando={cuando} onCuando={elegirHora} quien={quien} onQuien={setQuien} paisDe={paisDe} />
+                            cuando={cuando} onCuando={elegirHora} quien={quien} onQuien={setQuien} paisDe={paisDe}
+                            onSiguiente={listo[1] ? () => ir(2) : null} />
                     )}
 
                     {paso === 2 && q && (

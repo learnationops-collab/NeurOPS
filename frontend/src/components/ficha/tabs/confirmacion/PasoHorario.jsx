@@ -17,7 +17,7 @@ const ICONO_FRANJA = { manana: Sunrise, tarde: Sun, noche: Moon };
  * queda y qué hora es para esa persona; si hay varias libres, se elige ahí. La zona del lead y la
  * anticipación van en la cabecera (SubReprogramar).
  */
-const PasoHorario = ({ mapa, tzLead, persona, colorDe, cuando, onCuando, quien, onQuien, paisDe }) => {
+const PasoHorario = ({ mapa, tzLead, persona, colorDe, cuando, onCuando, quien, onQuien, paisDe, onSiguiente }) => {
     const mov = useMovimiento();
     const dias = diasDelLead(mapa, tzLead);
     const [dia, setDia] = useState(null);
@@ -137,6 +137,11 @@ const PasoHorario = ({ mapa, tzLead, persona, colorDe, cuando, onCuando, quien, 
                                             );
                                         })}
                                     </div>
+                                    {onSiguiente && (
+                                        <button type="button" className="btn btn--cta rp-detalle-sig" onClick={onSiguiente}>
+                                            Siguiente <ArrowRight size={14} />
+                                        </button>
+                                    )}
                                 </motion.div>
                             )}
                         </motion.div>

@@ -915,3 +915,8 @@
 - Configuración: Google Calendar y WhatsApp son pestañas separadas.
 - WhatsApp con sus tres pasos (número, prueba, confirmado) y «Mandarme otra prueba».
 - Cupos con número que cuenta, aura y barras de color; la primera es «Hoy».
+
+### 25/11/2026 · Reprogramar más directo; «Volver» en la cabecera de la ficha
+- Tocar a una persona (o «Cualquiera») pasa solo a «Día y hora».
+- «Siguiente» aparece en la franja del horario elegido; el pie de abajo queda solo para «Reprogramar» en el último paso.
+- El «Volver» de toda sub-vista de la ficha (Reprogramar, Canceló, No show, cobros…) pasa a la cabecera, al lado de los íconos y de cerrar.
