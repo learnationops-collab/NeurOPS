@@ -955,3 +955,8 @@
 ### 25/11/2026 · Novedades otra vez para todos y obligatorias (ADR-W219)
 - Vuelve a aparecer a todos los closers y triage, también a quien ya lo había visto.
 - No se puede cerrar ni posponer hasta terminar el último paso; recargar a la mitad lo empieza de nuevo.
+
+### 25/11/2026 · Confirmar: propiedades que no saltan, orden arrastrando y Hora que se apaga (ADR-W220)
+- Prender o apagar una propiedad ya no cambia el orden de la lista (antes la fila tocada saltaba y parecía que no cambiaba).
+- Cualquier fila se ordena arrastrándola; las etiquetas de la llamada salen en ese orden.
+- En el calendario, Hora prende y apaga la hora del título.

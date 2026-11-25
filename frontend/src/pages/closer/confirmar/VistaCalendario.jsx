@@ -75,6 +75,8 @@ export default function VistaCalendario({ vista, agendas, periodo, hoy, ahora, n
     const desde = Math.max(0, Math.min(8, Math.floor(Math.min(...minutos, 8 * 60) / 60)));
     const hasta = Math.min(24, Math.max(21, Math.ceil((Math.max(...minutos, 0) + DURACION) / 60)));
     const props = vista.props.filter(k => k !== 'hora' && catalogo.some(p => p.clave === k));
+    // La hora va en el título, no como etiqueta: se ve solo si está prendida (antes salía siempre).
+    const conHora = vista.props.includes('hora');
 
     const days = periodo.dias.map((d, i) => {
         const k = claves[i], del = porDia.get(k) || [];
@@ -112,7 +114,7 @@ export default function VistaCalendario({ vista, agendas, periodo, hoy, ahora, n
                                 style={{ '--c': etapa.color, '--h': `${DURACION / 60 * alto - 3}px`, left: `calc(${izq}% + 3px)`, right: 'auto', width: `calc(${ancho}% - 6px)`, zIndex: 1 + carril }}
                                 top={calendarY(Math.min(Math.max(minuto, desde * 60), hasta * 60 - DURACION), desde, alto) + 1}
                                 height={DURACION / 60 * alto - 3}
-                                title={<><span className="cv-ev__h">{hora}</span>{a.lead_name || 'Sin nombre'}</>}
+                                title={<>{conHora && <span className="cv-ev__h">{hora}</span>}{a.lead_name || 'Sin nombre'}</>}
                                 line={<span className="cv-ev__chips"><Chips lista={chipsDe(a, props, ctx)} /></span>}
                                 tooltip={`${a.lead_name || 'Sin nombre'} · ${hora}|${detalle}`} />
                         </div>

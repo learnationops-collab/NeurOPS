@@ -1,57 +1,15 @@
 // Lo que abre cada control de la barra de Confirmar (ADR-W201): propiedades, filtro, orden, agrupación y
 // tipo de vista. Cada cambio se aplica al momento sobre la vista activa.
-import { useState } from 'react';
-import { Check, GripVertical } from 'lucide-react';
-import { Switch } from '../../../components/standard';
+import { Check } from 'lucide-react';
 import { ETAPAS_CONFIRMACION } from './etapas';
 import { AGRUPACIONES, ORDENES } from './propiedades';
 import { TIPOS_DE_VISTA } from './vistasConfirmar';
 import { IconoDeVista } from './iconos';
+import Propiedades from './PopoverPropiedades';
 
 const Titulo = ({ children, accion }) => (
     <div className="cv-pop__tit"><span>{children}</span>{accion}</div>
 );
-
-function Propiedades({ vista, catalogo, onCambio }) {
-    const [q, setQ] = useState('');
-    const [arrastrada, setArrastrada] = useState(null);
-    const [sobre, setSobre] = useState(null);
-    const visibles = vista.props.filter(k => catalogo.some(p => p.clave === k));
-    const orden = [...visibles, ...catalogo.map(p => p.clave).filter(k => !visibles.includes(k))];
-    const de = (formulario) => orden.map(k => catalogo.find(p => p.clave === k))
-        .filter(p => !!p.formulario === formulario && p.titulo.toLowerCase().includes(q.trim().toLowerCase()));
-    const alternar = (k) => onCambio({ props: visibles.includes(k) ? visibles.filter(x => x !== k) : [...visibles, k] });
-    const soltar = (destino) => {
-        if (!arrastrada || arrastrada === destino) return;
-        const sin = visibles.filter(x => x !== arrastrada);
-        const i = sin.indexOf(destino);
-        sin.splice(i < 0 ? sin.length : i, 0, arrastrada);
-        onCambio({ props: sin });
-    };
-    const fila = (p) => (
-        <div key={p.clave} className={`cv-op${arrastrada === p.clave ? ' cv-op--arr' : ''}${sobre === p.clave ? ' cv-op--sobre' : ''}`}
-            draggable onDragStart={() => setArrastrada(p.clave)} onDragEnd={() => { setArrastrada(null); setSobre(null); }}
-            onDragOver={(e) => { e.preventDefault(); setSobre(p.clave); }} onDragLeave={() => setSobre(null)}
-            onDrop={(e) => { e.preventDefault(); soltar(p.clave); setSobre(null); }}>
-            <GripVertical className="cv-op__asa" aria-hidden="true" />
-            <span className="cv-op__t" title={p.titulo}>{p.titulo}</span>
-            <Switch checked={visibles.includes(p.clave)} onChange={() => alternar(p.clave)} label={`Mostrar ${p.titulo}`} />
-        </div>
-    );
-    const agenda = de(false), formulario = de(true);
-    return (
-        <>
-            <input className="cv-pop__q" placeholder="Buscar una propiedad" value={q} onChange={(e) => setQ(e.target.value)} autoFocus />
-            <Titulo accion={visibles.length > 0 && <button type="button" onClick={() => onCambio({ props: [] })}>Ocultar todas</button>}>Agenda</Titulo>
-            <div className="cv-op cv-op--fija"><span className="cv-op__t">Nombre</span><small>siempre</small></div>
-            {agenda.map(fila)}
-            <Titulo accion={formulario.length > 0 && (
-                <button type="button" onClick={() => onCambio({ props: [...new Set([...visibles, ...formulario.map(p => p.clave)])] })}>Mostrar todas</button>
-            )}>Respuestas del formulario</Titulo>
-            {formulario.length ? formulario.map(fila) : <p className="cv-pop__nada">Ningún lead del tablero respondió un formulario.</p>}
-        </>
-    );
-}
 
 function Filtro({ vista, closers, segmentos, onCambio }) {
     const f = vista.filtro;

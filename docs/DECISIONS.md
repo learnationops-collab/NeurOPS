@@ -1972,3 +1972,11 @@
 - **Decisión:** `VERSION` pasa a `2026-11-25-2`, así le aparece a todos de nuevo. Mientras no lo terminó, no hay cruz, «Después» ni Esc en la portada ni en el recorrido; queda visto recién al tocar «Listo» o «Abrir mi horario» en el último paso (si recarga a la mitad, vuelve a empezar). Ya visto, abrirlo desde Herramientas › Novedades o con `?novedades=1` deja cerrarlo.
 - **Qué se pierde:** posponerlo. Sigue guardado por navegador: en otra computadora se vuelve a pedir.
 - **Consecuencias:** sin backend.
+
+## ADR-W220: Propiedades de Confirmar con filas quietas, orden arrastrando cualquier fila y la hora del calendario que se apaga
+
+- **Fecha:** 2026-11-25 · **Subsistema:** Confirmar (`confirmar/PopoverPropiedades.jsx` nuevo, `PopoverVista.jsx`, `VistaCalendario.jsx`, `vistasConfirmar.js`, `confirmar.css`). Sigue a ADR-W201 y W214 · **Estado:** implementada
+- **Contexto:** Mario (25/11), en el calendario de Confirmar: apagar y prender Hora no cambiaba nada; Teléfono sí, pero Etapa, Segmento y las demás «no»; y no se podían ordenar arrastrando. Probado: el cambio sí se guardaba, pero las prendidas se dibujaban primero, así que la fila tocada saltaba abajo y bajo el mouse quedaba otra todavía prendida (Teléfono no saltaba porque ya estaba justo debajo de las prendidas). La hora del calendario se mostraba siempre. El arrastre era el nativo del navegador y solo ordenaba entre las prendidas.
+- **Decisión:** la lista tiene un orden fijo que se guarda en la vista (`ordenProps`); prender o apagar no mueve nada. Se ordena arrastrando cualquier fila, prendida o no (dnd-kit, con 4 px antes de arrancar para que el switch se siga tocando), dentro de su sección; lo prendido se guarda en ese orden y las etiquetas salen así. En el calendario la hora del título se ve solo con Hora prendida; los calendarios guardados (versión `cal` 3) la suman prendida, así nadie la pierde.
+- **Qué se pierde:** las prendidas ya no se juntan arriba solas.
+- **Consecuencias:** sin backend; las vistas suman `ordenProps` y `cal: 3`.

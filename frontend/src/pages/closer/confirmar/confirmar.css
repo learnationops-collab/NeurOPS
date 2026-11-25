@@ -79,8 +79,10 @@
 .cv-op__t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cv-op__asa{cursor:grab;color:var(--cv-faint)}
 .cv-op--fija{cursor:default;padding-left:31px}
-.cv-op--arr{opacity:.4}
-.cv-op--sobre{box-shadow:inset 0 2px 0 var(--cv-acento)}
+.cv-op--arr{position:relative;z-index:2;background:var(--cv-suave);box-shadow:0 8px 24px rgba(0,0,0,.35)}
+.cv-op--orden{cursor:grab;touch-action:none}
+.cv-op--orden:active{cursor:grabbing}
+.cv-op__mango{display:inline-flex}
 .cv-chk{width:16px;height:16px;border-radius:5px;border:1.5px solid var(--cv-linea-2);display:grid;place-items:center;flex-shrink:0;color:#fff}
 .cv-chk svg{width:11px;height:11px}
 .cv-chk--on{background:var(--cv-acento);border-color:var(--cv-acento)}
