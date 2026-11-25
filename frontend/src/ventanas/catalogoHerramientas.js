@@ -3,7 +3,7 @@
 // Las opciones salen de cada pantalla (MenuSesion), del catálogo en ventana (herramientas.js) y de las
 // secciones ocultas; acá solo se les da lugar. Una opción que no está acá cae en «Esta pantalla».
 
-export const GRUPOS = ['Crear', 'Buscar', 'Agendas', 'Asistente', 'Pendientes', 'Esta pantalla', 'Secciones ocultas', 'Ir a', 'Sesión'];
+export const GRUPOS = ['Crear', 'Buscar', 'Agendas', 'Asistente', 'Pendientes', 'Mi cuenta', 'Esta pantalla', 'Secciones ocultas', 'Ir a', 'Sesión'];
 
 const CATALOGO = {
     nuevo: { grupo: 'Crear', desc: 'Una agenda, un pago, una venta o un pedido al equipo técnico.', color: 'rosa' },
@@ -17,6 +17,7 @@ const CATALOGO = {
     avisos: { grupo: 'Pendientes', desc: 'Lo que el sistema te avisó.', color: 'ambar' },
     conflictos: { grupo: 'Pendientes', desc: 'Datos sueltos para revisar.', color: 'rojo' },
     'mis-reportes': { grupo: 'Pendientes', desc: 'Lo que reportaste o pediste, y sus respuestas.', color: 'verde' },
+    'tool:mi-sueldo': { grupo: 'Mi cuenta', desc: 'Tu sueldo del mes: base, comisiones, bonos y los pagos que las suman.', color: 'verde' },
     procrastinar: { grupo: 'Esta pantalla', desc: 'Un seguimiento al azar para arrancar.', color: 'ambar' },
     portal: { grupo: 'Ir a', desc: 'Otra área o rol, Cortex (Playbook) y Simular.', color: 'azul' },
     'mi-espacio': { grupo: 'Ir a', desc: 'Tu pantalla de trabajo.', color: 'gris', va: true },

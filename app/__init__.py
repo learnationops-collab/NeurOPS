@@ -108,6 +108,10 @@ def create_app(config_class=Config):
     from app.api.comercial import bp as comercial_api_bp
     app.register_blueprint(comercial_api_bp, url_prefix='/api/comercial')
 
+    # «Mi sueldo» (ADR-W223): la composición del sueldo del mes de setters, closers y el director comercial.
+    from app.api.mi_sueldo import bp as mi_sueldo_api_bp
+    app.register_blueprint(mi_sueldo_api_bp, url_prefix='/api/mi-sueldo')
+
     # Agendas 2.0 (Thalamus): gestion para la direccion comercial (guardia en su before_request) y la
     # pagina publica de reserva (anonima, exenta de CSRF). Modulo aislado: ver app/agendas_v2.
     from app import agendas_v2

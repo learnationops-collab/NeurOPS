@@ -976,3 +976,8 @@
 
 ### 25/11/2026 · Inbox: el buscador encuentra lo que el equipo ya escribió
 - El buscador de Conversaciones busca por usuario o nombre; con «#palabra» (por ejemplo «#resúmenes») busca en los mensajes que el equipo le mandó a cada lead: sirve para encontrar una devolución ya dada y reusarla (pedido de Paula).
+
+### 25/11/2026 · «Mi sueldo» en Herramientas (ADR-W223)
+- Setters, closers y el director comercial tienen «Mi sueldo» en Herramientas › Mi cuenta: el total del mes con su estado, de qué se compone (sueldo base, comisión por primer pago, cuotas, renovaciones y upsells —o ventas propias y como director—, ajuste manual, bonos y descuentos) y los últimos 4 meses.
+- A la derecha, los pagos que suman la comisión; tocar un concepto deja solo los suyos. El «?» explica cómo se calcula.
+- El director, admin y operador eligen a cualquiera del equipo comercial (pedido de Marlon).
