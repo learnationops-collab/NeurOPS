@@ -841,3 +841,6 @@
 
 ### 24/11/2026 · Darian etiquetada en los avisos de agenda de Discord
 - El aviso de agenda nueva, reprogramada o pasada a closing en Discord etiqueta también a Darian (triage), además del closer y el setter. No en las Momentum ni en sus propias agendas (ADR-W207, pedido de Mario).
+
+### 25/11/2026 · Un «Training» personal vuelve a ocupar
+- El filtro de capacitaciones internas (29/10) tomaba cualquier título con «training», así que el «🥊 Training» diario de Mario (13:30, su calendario personal) no bloqueaba y le cayó una agenda encima. Ahora solo se saltean «Training Session», «Trainning…» y «Capacitación»; las «Trainning Session» de Andrés siguen sin ocupar.

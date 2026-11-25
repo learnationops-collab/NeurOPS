@@ -37,8 +37,8 @@ SCOPES_CONEXION = SCOPES + [SCOPE_MEET]
 ERRORES_DE_TOKEN = ('invalid_grant', 'unauthorized_client')
 
 # Las capacitaciones internas («Training Session», «Trainning», «Capacitación») no bloquean horarios
-# de agenda (Santi, 29/10/2026).
-_CAPACITACION = re.compile(r'\btrai+n+i+n+g|capacitaci[oó]n', re.I)
+# de agenda (Santi, 29/10/2026). Un «Training» suelto es del gimnasio y ocupa («🥊 Training» de Mario, 24/11).
+_CAPACITACION = re.compile(r'\btrai+n+i+n+g\s+session|\btrai+nn+i+n+g|capacitaci[oó]n', re.I)
 
 
 def es_capacitacion(titulo):
