@@ -1,6 +1,6 @@
 """WhatsApp: una sola tabla de envíos (wa_envios) en lugar de wa_difusiones + wa_difusion_destinos (ADR-W229)
 
-Revision ID: b8d0f2a4c6e1
+Revision ID: e3a1c5f7b9d2
 Revises: a7c9e1f3b5d8
 Create Date: 2026-11-25
 
@@ -9,7 +9,7 @@ Las dos tablas viejas estaban vacías en producción (25/11/2026). Idempotente.
 import sqlalchemy as sa
 from alembic import op
 
-revision = 'b8d0f2a4c6e1'
+revision = 'e3a1c5f7b9d2'
 down_revision = 'a7c9e1f3b5d8'
 branch_labels = None
 depends_on = None
