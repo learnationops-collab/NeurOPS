@@ -1012,3 +1012,8 @@
 
 ### 25/11/2026 · #agendas de fulfillment: solo los resultados de Momentum
 - El resultado de cada llamada que reporta el closer iba entero a #agendas (y al canal Agendas del chat de la Academia). Ahora solo van las Momentum (seña y cierre); las llamadas de venta ya no se avisan ahí (pedido de Mario, 19/11 y 25/11) ([resultado.py](../../app/services/discord_avisos/resultado.py)).
+
+### 25/11/2026 · Work en el celular (ADR-W228)
+- El riel ya no queda encimado con el tablero: en el celular es una tira de tarjetas que se desliza; las vistas y sus controles van en dos filas deslizables; las etapas del tablero se deslizan de costado; la lista deja el nombre fijo; el calendario arranca en 3 días ([sidebar-v6.css](../../frontend/src/pages/closer/sidebar-v6.css), [confirmar.css](../../frontend/src/pages/closer/confirmar/confirmar.css)).
+- La ficha se abre a pantalla completa con la cabecera compacta, y las etapas de confirmación ya no se pisan ([ficha-telefono.css](../../frontend/src/components/ficha/ficha-telefono.css)).
+- El dock tapa bien las secciones detrás de Herramientas y el avatar. En el recorrido de novedades, la barra «Probando» vuelve a su alto (también en la compu).

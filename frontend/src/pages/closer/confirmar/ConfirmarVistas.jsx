@@ -2,6 +2,7 @@
 // semana) sobre las agendas del pool. El tablero lo sigue dibujando la página (`renderTablero`), con las
 // tarjetas de siempre; acá se filtra, ordena y agrupa.
 import { useEffect, useMemo, useState } from 'react';
+import { useTelefono } from './useTelefono';
 import { localToday, localDateFromNow } from '../../../utils/datetime';
 import BarraVistas from './BarraVistas';
 import { agrupacionesDe } from './PopoverVista';
@@ -43,7 +44,11 @@ export default function ConfirmarVistas({ agendas, user, esTriage, ahora, fechaB
         () => agrupar(filtradas, agrupacion, { hoy, manana: localDateFromNow(1), ahora, nombreCloser }),
         [filtradas, agrupacion, hoy, ahora], // eslint-disable-line react-hooks/exhaustive-deps
     );
-    const periodo = periodoDe(fechaBase || hoy, offset, vista.dias || 7);
+    // En el teléfono el calendario guarda sus propios días (3 de entrada): la semana de la compu no entra.
+    const telefono = useTelefono();
+    const campoDias = telefono ? 'diasTel' : 'dias';
+    const dias = vista[campoDias] || (telefono ? 3 : 7);
+    const periodo = periodoDe(fechaBase || hoy, offset, dias);
 
     // En el calendario: las teclas 1 a 9 eligen cuántos días ver; ← y → se mueven; T vuelve a hoy. No con el foco
     // en un campo ni con una ventana abierta (la ficha).
@@ -56,13 +61,13 @@ export default function ConfirmarVistas({ agendas, user, esTriage, ahora, fechaB
             if (t?.closest?.('input, textarea, select, [contenteditable="true"], [role="dialog"], .ui-modal')) return;
             if (document.querySelector('[aria-modal="true"]')) return;
             const dias = /^[1-9]$/.test(e.key) ? Number(e.key) : 0;
-            if (dias) { e.preventDefault(); setOffset(0); actualizar(vista.id, { dias }); return; }
+            if (dias) { e.preventDefault(); setOffset(0); actualizar(vista.id, { [campoDias]: dias }); return; }
             if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); setOffset(o => o + (e.key === 'ArrowLeft' ? -1 : 1)); return; }
             if (e.key === 't' || e.key === 'T') setOffset(0);
         };
         window.addEventListener('keydown', tecla);
         return () => window.removeEventListener('keydown', tecla);
-    }, [esCalendario, vista.id, actualizar]);
+    }, [esCalendario, vista.id, actualizar, campoDias]);
 
     const elegir = (id) => { setActivaId(id); setOffset(0); };
     const nueva = (tipo) => { const id = crear(tipo); if (id) setActivaId(id); };
@@ -74,9 +79,12 @@ export default function ConfirmarVistas({ agendas, user, esTriage, ahora, fechaB
                 onRestablecer={() => { restablecer(); setActivaId(null); }} puedeCrear={puedeCrear}
                 catalogo={catalogo} closers={esTriage ? closers : []} segmentos={segmentos} esTriage={esTriage}
                 calendario={{
-                    rotulo: periodo.rotulo, desplazado: offset !== 0, dias: vista.dias || 7, alto: vista.alto || 104,
+                    rotulo: periodo.rotulo, desplazado: offset !== 0, dias, alto: vista.alto || 104,
                     mover: (d) => setOffset(o => (d === 0 ? 0 : o + d)),
-                    cambiar: (cambios) => { if (cambios.dias) setOffset(0); actualizar(vista.id, cambios); },
+                    cambiar: ({ dias: d, ...resto }) => {
+                        if (d) setOffset(0);
+                        actualizar(vista.id, d ? { ...resto, [campoDias]: d } : resto);
+                    },
                 }} />
             {vista.tipo === 'tablero' && renderTablero({ grupos, agrupacion, props: new Set(vista.props) })}
             {vista.tipo === 'lista' && (

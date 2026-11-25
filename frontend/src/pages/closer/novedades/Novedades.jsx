@@ -3,6 +3,7 @@ import { ArrowRight, X, Sparkles, PanelRight, CalendarDays, UserSquare2, CheckCi
 import { VERSION, FECHA, PORTADA, PASOS } from './contenido';
 import Recorrido from './Recorrido';
 import { useCuenta } from './Mocks';
+import { useTelefono } from '../confirmar/useTelefono';
 // La huella del recorrido (ADR-W222): cambia sola con cualquier cambio de contenido, escenas o recorrido, así
 // el changelog nuevo le vuelve a aparecer a todos (también a quien ya lo terminó) sin tocar VERSION a mano.
 import fuenteContenido from './contenido.js?raw';
@@ -90,8 +91,13 @@ const Portada = ({ obligatorio, quedan, onEmpezar, onDespues }) => {
     );
 };
 
+// En el teléfono el riel va arriba, no a la derecha. Se ajusta acá y no en `contenido.js` para no cambiar
+// la huella: si no, a todos los que ya lo vieron les volvería a aparecer por un texto del teléfono.
+const paraTelefono = (pasos) => pasos.map(p => (p.id === 'riel' ? { ...p, titulo: 'Tu día, siempre arriba' } : p));
+
 const Novedades = ({ user, ctx }) => {
     const [fase, setFase] = useState(null);
+    const telefono = useTelefono();
     const vista = () => localStorage.getItem(clave(user)) === VISTA;
     // Sin terminar, se puede aplazar mientras queden días del plazo (`quedan`); después, obligatorio.
     const [quedan, setQuedan] = useState(0);
@@ -125,7 +131,7 @@ const Novedades = ({ user, ctx }) => {
         );
     }
     return (
-        <Recorrido pasos={PASOS} ctx={ctx} obligatorio={obligatorio} onCerrar={despues}
+        <Recorrido pasos={telefono ? paraTelefono(PASOS) : PASOS} ctx={ctx} obligatorio={obligatorio} onCerrar={despues}
             onCompletar={() => { localStorage.setItem(clave(user), VISTA); setFase(null); }} />
     );
 };

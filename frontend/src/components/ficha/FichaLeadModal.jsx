@@ -19,6 +19,7 @@ import TabFormulario from './tabs/TabFormulario';
 import TabComunicacion from './tabs/TabComunicacion';
 import ResultadoTriage from './tabs/ResultadoTriage';
 import './ficha.css';
+import './ficha-telefono.css';
 
 /**
  * Cascarón de la ficha del lead: scrim, cabecera, tablist y UN panel.

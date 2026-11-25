@@ -267,7 +267,14 @@
 
 @media (max-width: 720px) {
   .nv-portada__iconos > span { width: 80px; }
-  .nv-card { left: 12px !important; right: 12px; width: auto !important; top: auto !important; bottom: 16px; }
+  .nv-card { left: 12px !important; right: 12px; width: auto !important; top: auto !important; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
+  /* La tarjeta es más angosta: las líneas de «Y además» pasan a dos renglones y la última se cortaba. */
+  .nv-m-extras { gap: 6px; }
+  .nv-m-extras span { padding: 8px 10px; font-size: 12px; line-height: 1.3; }
+  /* «Probando»: de borde a borde abajo; el título se corta antes que el botón. */
+  .nv-probando { left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); border-radius: 22px; gap: 10px; }
+  .nv-probando__t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .nv-probando .nv-card__cta { flex-shrink: 0; white-space: nowrap; height: 40px; padding: 0 14px; font-size: 13px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .nv-portada *, .nv-rec *, .nv-probando *, .nv-humo i { animation-duration: .01ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; }

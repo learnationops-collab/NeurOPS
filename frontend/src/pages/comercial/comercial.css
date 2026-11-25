@@ -599,6 +599,10 @@
   display:flex;align-items:center;gap:var(--s1)}
 .dc-shell .dock--desborda .dock-despues{padding-left:14px;margin-left:-10px;
   background:linear-gradient(90deg,transparent,var(--bg-surface) 14px)}
+/* `--bg-surface` es translúcido: las secciones que pasaban por debajo se veían a través de Herramientas y
+   el avatar (en el teléfono quedaban encimados). Debajo va el fondo de la página, opaco: suma el mismo tono del dock. */
+@media (max-width:720px){.dc-shell .dock--desborda .dock-despues{
+  background:linear-gradient(90deg,transparent,var(--bg-surface) 14px),linear-gradient(90deg,transparent,var(--ln-page-base,#020617) 14px)}}
 /* La sesión al final del dock (ver `MenuSesion`): el avatar, con la cuenta de lo pendiente
    encima (los videos del Playbook) para que guardarlo en un menú no lo esconda. */
 .dc-shell .dock-sesion{position:relative;z-index:1;flex-shrink:0;display:grid;place-items:center;

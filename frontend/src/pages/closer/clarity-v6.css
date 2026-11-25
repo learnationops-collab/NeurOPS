@@ -783,3 +783,15 @@
 .clarity-v6 .kc-eliminar:focus-within { opacity: 1; }
 .clarity-v6 .kc-eliminar-confirma { flex: 1 0 100%; cursor: default; }
 @media (hover: none) { .clarity-v6 .kc-eliminar { opacity: .7; } }
+
+/* Teléfono: las etapas del tablero se deslizan de costado, una por pantalla con la siguiente asomando,
+   como en la compu, en vez de apilarse (había que bajar todo Por contactar para llegar a Confirmado). */
+@media (max-width: 720px) {
+  .clarity-v6 .kb-etapas {
+    grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: min(86%, 360px); gap: 10px;
+    overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; overscroll-behavior-x: contain;
+    margin: 0 calc(-1 * var(--ws-pad, 16px)); padding: 0 var(--ws-pad, 16px); scroll-padding: 0 var(--ws-pad, 16px);
+  }
+  .clarity-v6 .kb-etapas::-webkit-scrollbar { display: none; }
+  .clarity-v6 .kb-etapas .kcol-v6 { scroll-snap-align: start; }
+}

@@ -1,0 +1,30 @@
+/* ============================================================
+   FICHA EN EL TELÉFONO (25/11/2026). Mario: «se ve muy mal todo» en el celular. La cabecera
+   ocupaba la pantalla entera (cinco datos uno debajo del otro) antes de llegar a las pestañas,
+   los botones se salían con «Volver» y el modal flotaba con márgenes. Acá: hoja a pantalla
+   completa, botones arriba a la derecha, el nombre debajo y los datos de a dos.
+   ============================================================ */
+@media (max-width:520px){
+  .dc-shell.scrim:has(> .fi-modal){padding:10px 0 0}
+  .dc-shell .fi-modal{width:100%;max-height:calc(100dvh - 10px);border-radius:22px 22px 0 0;border-bottom:0}
+  .dc-shell .fi-modal-cab{padding:12px 12px 8px}
+  .dc-shell .fi-modal-panel{padding:16px 14px calc(24px + env(safe-area-inset-bottom,0px))}
+
+  .dc-shell .fi-cab{padding:12px 14px 14px;gap:12px;border-radius:18px}
+  .dc-shell .fi-cab-titulo{flex-wrap:wrap;gap:8px}
+  .dc-shell .fi-cab-acciones{order:-1;flex:1 0 100%;justify-content:flex-end;gap:6px}
+  .dc-shell .fi-cab-nombre-seg{flex:1 1 100%;gap:8px}
+  .dc-shell .fi-cab-nombre-seg > .t-h2{font-size:24px;line-height:1.15}
+
+  .dc-shell .fi-cab-datos:not(.fi-cab-editor){grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-flow:row dense;gap:12px 16px}
+  /* La llamada, el closer y el teléfono van enteros (se cortaban); examen y fuente, cortos, de a dos. */
+  .dc-shell .fi-cab-datos:not(.fi-cab-editor) > :is(.fi-llamada,:has(.fi-closer-btn,.fi-closer-fijo,.fi-tel)){grid-column:1 / -1}
+  .dc-shell .fi-dato{gap:4px}
+  .dc-shell .fi-val{font-size:14px;line-height:24px;overflow:hidden;text-overflow:ellipsis}
+  .dc-shell .fi-closer-btn{max-width:100%;min-width:0;overflow:hidden}
+
+  /* Las etapas: los rótulos de una palabra («VideoAsk», «Testimonio») se pisaban. */
+  .dc-shell .fi-stepper{gap:4px}
+  .dc-shell .fi-paso-lbl{font-size:11px;line-height:1.25;overflow-wrap:anywhere}
+  .dc-shell .fi-paso-sub{font-size:10.5px}
+}

@@ -106,12 +106,15 @@ export default function BarraVistas({
                 )}
             </div>
             <span className="cv-sep" />
-            {ctl('filtro', Filter, 'Filtro', nFiltros > 0 && <span className="cv-n">{nFiltros}</span>, nFiltros ? 'cv-ctl--act' : '')}
-            {vista.tipo !== 'semana' && ctl('orden', ArrowUpDown, 'Ordenar')}
-            {vista.tipo !== 'semana' && ctl('agrupar', Layers, 'Agrupar')}
-            {ctl('props', SlidersHorizontal, 'Propiedades', <span className="cv-n cv-n--suave">{nProps}</span>)}
-            <span className="cv-vsep" />
-            {ctl('tipo', () => <IconoDeVista tipo={vista.tipo} />, TIPOS_DE_VISTA[vista.tipo], <ChevronDown className="cv-chev" aria-hidden="true" />)}
+            {/* En la compu son parte de la barra (display: contents); en el teléfono, una fila que se desliza. */}
+            <div className="cv-ctls">
+                {ctl('filtro', Filter, 'Filtro', nFiltros > 0 && <span className="cv-n">{nFiltros}</span>, nFiltros ? 'cv-ctl--act' : '')}
+                {vista.tipo !== 'semana' && ctl('orden', ArrowUpDown, 'Ordenar')}
+                {vista.tipo !== 'semana' && ctl('agrupar', Layers, 'Agrupar')}
+                {ctl('props', SlidersHorizontal, 'Propiedades', <span className="cv-n cv-n--suave">{nProps}</span>)}
+                <span className="cv-vsep" />
+                {ctl('tipo', () => <IconoDeVista tipo={vista.tipo} />, TIPOS_DE_VISTA[vista.tipo], <ChevronDown className="cv-chev" aria-hidden="true" />)}
+            </div>
             {vista.tipo === 'semana' && calendario && <BarraCalendario c={calendario} />}
 
             {abierto && (

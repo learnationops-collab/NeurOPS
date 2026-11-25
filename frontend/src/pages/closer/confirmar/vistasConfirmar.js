@@ -48,6 +48,8 @@ function sana(v) {
         agrupar: typeof v.agrupar === 'string' ? v.agrupar : 'etapa', orden: typeof v.orden === 'string' ? v.orden : 'hora', asc: v.asc !== false,
         props, ordenProps: lista(v.ordenProps), filtro: { closers: lista(f.closers), etapas: lista(f.etapas), segmentos: lista(f.segmentos) },
         dias: DIAS_CALENDARIO.includes(v.dias) ? v.dias : 7,
+        // En el teléfono se eligen aparte (useTelefono): una semana no entra en 390 px.
+        diasTel: DIAS_CALENDARIO.includes(v.diasTel) ? v.diasTel : 3,
         alto: ALTOS_CALENDARIO.includes(v.alto) ? v.alto : 104,
         cal: 3,
     };

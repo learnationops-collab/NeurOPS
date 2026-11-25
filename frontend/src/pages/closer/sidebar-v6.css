@@ -12,8 +12,9 @@
   background:linear-gradient(to left,rgba(255,255,255,.022) calc(var(--ws-rail) - 1px),rgba(255,255,255,.07) calc(var(--ws-rail) - 1px) var(--ws-rail),transparent var(--ws-rail));
   max-width:none;margin:0;padding:0;min-height:calc(100dvh - var(--ws-top,64px))}
 .ws-area > *{grid-column:1;min-width:0}
-/* El contenido: sin margen arriba (la barra de Confirmar va pegada al header) y con lugar abajo para el dock. */
-.ws-area > :not(.ws-side):not(.dc-shell){padding:0 var(--ws-pad) calc(var(--ws-dock) + 20px + env(safe-area-inset-bottom,0px))}
+/* El contenido: sin margen arriba (la barra de Confirmar va pegada al header) y con lugar abajo para el dock.
+   Las capas de Novedades se montan acá pero son fijas: con este relleno la barra «Probando» medía 172 px. */
+.ws-area > :not(.ws-side):not(.dc-shell):not(.nv-portada):not(.nv-rec):not(.nv-probando){padding:0 var(--ws-pad) calc(var(--ws-dock) + 20px + env(safe-area-inset-bottom,0px))}
 /* Las vistas sin barra pegada (Reportar, Seguir, Mis datos…) arrancan con aire. */
 .ws-area > :not(.ws-side):not(.dc-shell) > :first-child:not(:has(.cv)){margin-top:20px}
 
@@ -102,12 +103,31 @@
 
 @keyframes rail-crece{from{transform:scaleX(0)}}
 
-/* Pantallas angostas: el riel vuelve a ser una franja arriba del contenido. */
+/* Pantallas angostas: el riel vuelve a ser una franja arriba del contenido. Sin scroll propio: con
+   `overflow:auto` la grilla le daba a su fila 33 px y el tablero se dibujaba encima del riel. */
 @media (max-width:1100px){
   .ws-area.ws-area{grid-template-columns:minmax(0,1fr);background:none}
-  .ws-area > .ws-side{grid-column:1;position:static;height:auto;-webkit-mask-image:none;mask-image:none;border-left:0;border-bottom:1px solid rgba(255,255,255,.07);
+  .ws-area > .ws-side{grid-column:1;position:static;height:auto;overflow:visible;-webkit-mask-image:none;mask-image:none;border-left:0;border-bottom:1px solid rgba(255,255,255,.07);
     display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:0 20px;padding:16px var(--ws-pad)}
   .ws-area > .ws-side > *{border-top:0}
   .ws-area > :not(.ws-side):not(.dc-shell){grid-row:2}
+}
+/* Teléfono: el riel es una tira de tarjetas que se desliza de costado (progreso, Hoy, comisión), así el
+   tablero arranca a la vista. Las tarjetas miden lo mismo y asoma la siguiente. */
+@media (max-width:720px){
+  .ws-pagina{--ws-pad:16px;--ws-dock:96px}
+  /* En columna y no en grilla: la tira scrollea de costado y la grilla volvía a darle una fila de 33 px. */
+  .ws-area.ws-area{display:flex;flex-direction:column;align-items:stretch}
+  .ws-area > *{flex-shrink:0}
+  .ws-area > .ws-side{display:flex;flex-direction:row;gap:10px;overflow-x:auto;overflow-y:hidden;min-height:min-content;scroll-snap-type:x mandatory;scroll-padding:0 var(--ws-pad);
+    scrollbar-width:none;padding:12px var(--ws-pad);border-bottom:0}
+  .ws-area > .ws-side::-webkit-scrollbar{display:none}
+  .ws-area > .ws-side > *{flex:0 0 min(84%,320px);scroll-snap-align:start;margin:0;padding:14px;border-radius:16px;
+    border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03)}
+  .ws-area .ws-side .ws-com{margin-top:0;padding:14px;border:1px solid rgba(255,255,255,.08);border-radius:16px;background:rgba(255,255,255,.03)}
+  .rail-sec .rail-cifra{margin-bottom:10px}
+  .rail-leyenda{margin-top:8px;gap:2px}
+  .rail-hoy button{height:32px}
+  .rail-logros{margin-top:8px}
 }
 @media (prefers-reduced-motion:reduce){.rail-barra i,.rail-hoy .rail-flecha{animation:none;transition:none}}
