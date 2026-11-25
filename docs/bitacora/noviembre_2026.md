@@ -869,3 +869,10 @@
 - Reprogramar: primero el día en un calendario (con cuántos horarios tiene), después la hora. Cada hora está en la del lead y dice de quién es y qué hora es para esa persona («Marlon · 10:30 en Bogotá»).
 - Tarjetas de personas con su cuenta de horarios y ciudad; resumen final con día, hora del lead y quién; movimiento en los pasos.
 - El pie de las sub-vistas ya no deja el hueco a la derecha en pantallas anchas.
+
+### 25/11/2026 · Confirmar: calendario de 1, 2, 3 o 7 días y barra siempre pegada (ADR-W212)
+- La fila de Confirmar (vistas, filtro, propiedades) queda pegada debajo del header en todas las vistas. El calendario es una sola caja del alto de la pantalla con la fila de días pegada y arranca una hora antes de ahora.
+- «Semana» pasa a «Calendario»: Hoy, anterior/siguiente, Día · 2 días · 3 días · Semana y zoom −/+.
+- Cada llamada muestra hora, nombre, etapa en texto y etiquetas: Triage/Closing, closer, decide, invierte, ingresos, segmento y respuestas del formulario. Las que se pisan se escalonan.
+- Propiedades nuevas: «Tipo de llamada» e «Ingresos». El filtro separa Triage de Closing.
+- El mazo de confirmaciones manda `closer_role`.
