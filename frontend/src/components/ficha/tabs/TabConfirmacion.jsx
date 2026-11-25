@@ -6,6 +6,7 @@ import SubReprogramar from './confirmacion/SubReprogramar';
 import SubCancelo from './confirmacion/SubCancelo';
 import SubDescalificar from './confirmacion/SubDescalificar';
 import SubEliminar from './confirmacion/SubEliminar';
+import './confirmacion/reprogramar.css';
 
 /**
  * Pestaña de confirmación (precall).
@@ -128,42 +129,53 @@ const TabConfirmacion = ({ ficha, onAccion, irA, puedeEditar = true }) => {
                     onBlur={() => { if (!bloqueado && nota !== (conf.nota || '')) disparar('nota_llamada', { nota }); }} />
             </div>
 
-            <div className="fi-pie">
-                <div className="fila" style={{ flexWrap: 'wrap', gap: 'var(--s2)' }}>
-                    <TarjetaAccion linea tono="info" icono={Calendar} label="Reprogramar"
+            {/* Jerarquía (25/11/2026): el CTA «Listo · 100% confirmado» manda en el pie; lo que cambió
+                con la llamada va arriba en tres tarjetas iguales con su explicación, y eliminar queda
+                aparte y chico, que es lo raro y lo que no tiene vuelta. */}
+            <div className="cf-cambio">
+                <div className="cf-cambio-cab">
+                    <small className="t-rotulo">¿Cambió algo con la llamada?</small>
+                    <button type="button" className="cf-eliminar"
+                        disabled={!puedeEditar || ficha?.permisos?.eliminar === false}
+                        onClick={() => setModo('elim')}>
+                        <Trash2 size={13} /> Eliminar lead
+                    </button>
+                </div>
+                <div className="cf-cambio-grid">
+                    <TarjetaAccion tono="info" icono={Calendar} label="Reprogramar" detalle="Otro día, otra hora u otra persona"
                         deshabilitado={bloqueado} onClick={() => setModo('repro')} />
-                    <TarjetaAccion linea tono="warning" icono={CalendarX} label="Canceló"
-                        titulo="La llamada no se hace, pero el lead sigue vivo"
+                    <TarjetaAccion tono="warning" icono={CalendarX} label="Canceló" detalle="No se hace, pero el lead sigue vivo"
                         deshabilitado={bloqueado} onClick={() => setModo('cancelo')} />
                     {/* Reemplaza al «Descartar lead», que marcaba «No Lead»: es lo mismo (23/10/2026). */}
-                    <TarjetaAccion linea tono="warning" icono={UserX} label="Descalificado"
-                        titulo="No califica: se cancela la llamada y queda marcada como descalificada"
+                    <TarjetaAccion tono="error" icono={UserX} label="Descalificado" detalle="No califica: se cancela la llamada"
                         deshabilitado={bloqueado || ficha?.permisos?.reportar === false}
                         onClick={() => setModo('descal')} />
-                    <TarjetaAccion linea tono="error" icono={Trash2} label="Eliminar lead"
-                        deshabilitado={!puedeEditar || ficha?.permisos?.eliminar === false}
-                        onClick={() => setModo('elim')} />
                 </div>
-                <div className="fi-pie-der">
-                    {cerrada ? (
+            </div>
+
+            <div className="fi-pie">
+                {cerrada ? (
+                    <>
+                        <span />
                         <button type="button" className="btn btn--linea" disabled={guardando}
                             onClick={() => correr('etapa_confirmacion', { cerrada: false })}>
                             Deshacer
                         </button>
-                    ) : (
-                        <>
-                            <button type="button" className="btn btn--linea" onClick={() => irA?.('hist')}>
-                                Seguir después
-                            </button>
-                            <button type="button" className="btn btn--cta"
-                                disabled={bloqueado || !listaParaCerrar || guardando}
-                                onClick={() => correr('cerrar_confirmacion', {})}>
-                                <CheckCircle2 size={14} />
-                                Listo · 100% confirmado
-                            </button>
-                        </>
-                    )}
-                </div>
+                    </>
+                ) : (
+                    <>
+                        <button type="button" className="btn btn--linea" onClick={() => irA?.('hist')}>
+                            Seguir después
+                        </button>
+                        <button type="button" className="btn btn--cta cf-cta"
+                            disabled={bloqueado || !listaParaCerrar || guardando}
+                            title={!listaParaCerrar ? 'Primero marcá que lo contactaste' : undefined}
+                            onClick={() => correr('cerrar_confirmacion', {})}>
+                            <CheckCircle2 size={16} />
+                            Listo · 100% confirmado
+                        </button>
+                    </>
+                )}
             </div>
 
             {/* La hora ya pasó y el lead nunca confirmó: esa hora no puede pasar en

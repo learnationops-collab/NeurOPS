@@ -1,115 +1,145 @@
-import React, { useEffect, useState } from 'react';
-import { FieldError, Select, TextArea } from '../../../standard';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ArrowRight } from 'lucide-react';
+import { Avatar, FieldError, TextArea } from '../../../standard';
 import api from '../../../../services/api';
 import { browserTimezone } from '../../../../utils/datetime';
 import { faltaDeMotivo, motivoAlcanza, preguntaDeMotivo } from '../../../../utils/motivoEstado';
 import { SubVista } from '../../piezas';
+import PasoPersona from './PasoPersona';
+import PasoHorario from './PasoHorario';
+import { CUALQUIERA, conAnticipacion, horaEn, leerAnticipacion, guardarAnticipacion, libresPorHorario, quienToma, rotuloDia } from './reprogramar';
+import './reprogramar.css';
 
-const enZona = (iso, tz, o) => new Date(iso).toLocaleString('es', { timeZone: tz, ...o });
-const DIA = { weekday: 'short', day: 'numeric', month: 'numeric' };
-const HORA = { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' };
+const PASOS = ['Con quién', 'Día y hora', 'Motivo'];
 
 /**
- * Reprogramar la llamada: con quién y a qué hora, y por qué.
+ * Reprogramar la llamada, en tres pasos (con quién → día y hora → motivo).
  *
- * Solo se ofrecen horarios libres de esa persona (su horario de Team, sus agendas y su Google), así que no
- * hay choques. Se ven en la hora de quien reprograma y, al elegir uno, también en la del lead (la de su
- * WhatsApp, que se puede cambiar). Con otra persona la llamada se le pasa: de closer a triage, de triage a
- * closer o entre closers.
+ * Solo se ofrecen horarios libres (horario de Team, agendas y Google), así que no hay choques. Se elige
+ * el grupo (closers o triage: por defecto el de quien tiene la llamada) y una persona o «cualquiera»:
+ * con «cualquiera» se ven los horarios de todo el grupo y la llamada queda con la persona actual si está
+ * libre, o con la que tiene más horarios libres. Las horas se leen en la del lead, con la tuya debajo.
  */
 const SubReprogramar = ({ ficha, onVolver, onConfirmar, guardando = false }) => {
     const apptId = ficha?.identidad?.appointment_id;
+    const [paso, setPaso] = useState(0);
+    const [pedido, setPedido] = useState(null);
     const [datos, setDatos] = useState(null);
-    const [persona, setPersona] = useState(null);
-    const [dia, setDia] = useState('');
+    const [elegida, setElegida] = useState(null);
     const [cuando, setCuando] = useState(null);
+    const [quien, setQuien] = useState(null);
     const [motivo, setMotivo] = useState('');
     const [tzLead, setTzLead] = useState(null);
+    const [anticipacion, setAnticipacion] = useState(leerAnticipacion);
     const miZona = browserTimezone();
 
     useEffect(() => {
         let vivo = true;
         setDatos(null);
-        setDia('');
         setCuando(null);
-        api.get(`/ficha/${apptId}/reprogramar/opciones`, { params: persona ? { persona_id: persona } : {} })
-            .then((res) => { if (vivo) { setDatos(res.data || {}); setTzLead((t) => t || res.data?.zona_lead?.tz || null); } })
+        api.get(`/ficha/${apptId}/reprogramar/opciones`, { params: pedido ? { rol: pedido } : {} })
+            .then((res) => {
+                if (!vivo) return;
+                const d = res.data || {};
+                setDatos(d);
+                setTzLead((t) => t || d.zona_lead?.tz || null);
+                const libreActual = (d.horarios_por_persona?.[String(d.actual_id)] || []).length > 0;
+                setElegida(libreActual ? d.actual_id : CUALQUIERA);
+            })
             .catch(() => vivo && setDatos({ error: true }));
         return () => { vivo = false; };
-    }, [apptId, persona]);
+    }, [apptId, pedido]);
 
+    const rol = datos?.rol || pedido;
+    // Solo los horarios con la anticipación elegida (1 h, 2 h…): cuentan también en el paso 1.
+    const porPersona = useMemo(() => conAnticipacion(datos?.horarios_por_persona, anticipacion), [datos, anticipacion]);
     const personas = datos?.personas || [];
-    const horarios = datos?.horarios || [];
-    const dias = horarios.reduce((acc, iso) => {
-        const dia = enZona(iso, miZona, DIA);
-        (acc[dia] = acc[dia] || []).push(iso);
-        return acc;
-    }, {});
+    const nombre = (id) => personas.find((p) => p.id === id)?.nombre || '—';
+    const mapa = useMemo(() => libresPorHorario(porPersona, elegida), [porPersona, elegida]); // eslint-disable-line react-hooks/exhaustive-deps
+    const totalGrupo = useMemo(() => Object.keys(libresPorHorario(porPersona, CUALQUIERA)).length, [porPersona]); // eslint-disable-line react-hooks/exhaustive-deps
     const lead = tzLead || miZona;
-    const puede = !!cuando && !!datos?.persona_id && motivoAlcanza(motivo) && !guardando;
+    const libres = cuando ? mapa[cuando] || [] : [];
+
+    const elegirHora = (iso) => {
+        setCuando(iso);
+        setQuien(elegida === CUALQUIERA ? quienToma(mapa[iso], datos.actual_id, porPersona) : elegida);
+    };
+    const elegirPersona = (p) => { setElegida(p); setCuando(null); setQuien(null); };
+
+    const listo = [elegida != null && totalGrupo > 0, !!cuando && !!quien, motivoAlcanza(motivo)];
+    const atras = () => (paso === 0 ? onVolver() : setPaso(paso - 1));
+    const accion = paso < 2 ? (
+        <button type="button" className="btn btn--cta" disabled={!listo[paso]} onClick={() => setPaso(paso + 1)}>
+            Siguiente <ArrowRight size={14} />
+        </button>
+    ) : (
+        <button type="button" className="btn btn--cta" disabled={!listo.every(Boolean) || guardando}
+            onClick={() => onConfirmar({ inicio: cuando, persona_id: quien, motivo: motivo.trim() })}>
+            {guardando ? 'Reprogramando…' : 'Reprogramar'}
+        </button>
+    );
 
     return (
-        <SubVista titulo="Reprogramar llamada" onVolver={onVolver}
-            acciones={(
-                <button type="button" className="btn btn--cta" disabled={!puede}
-                    onClick={() => onConfirmar({ inicio: cuando, persona_id: datos.persona_id, motivo: motivo.trim() })}>
-                    {guardando ? 'Reprogramando…' : 'Reprogramar'}
-                </button>
-            )}>
-            {datos === null && <small className="t-cap mut">Buscando horarios libres…</small>}
+        <SubVista titulo="Reprogramar llamada" onVolver={atras} acciones={datos && !datos.error ? accion : null}>
+            <ol className="rp-pasos" aria-label="Pasos">
+                {PASOS.map((p, i) => (
+                    <li key={p} data-estado={i < paso ? 'hecho' : i === paso ? 'actual' : 'pendiente'}>
+                        <button type="button" disabled={i > paso && !listo.slice(0, i).every(Boolean)} onClick={() => setPaso(i)}>
+                            <span>{i + 1}</span>{p}
+                        </button>
+                    </li>
+                ))}
+            </ol>
+
+            {datos === null && <small className="t-cap mut">Buscando horarios libres de todos…</small>}
             {datos?.error && <small className="t-cap mut">No se pudieron cargar los horarios. Cerrá y volvé a abrir la ficha.</small>}
-            {datos && !datos.error && (
-                <div style={{ display: 'grid', gap: 'var(--s4)' }}>
-                    <div className="grid-2">
-                        <div style={{ display: 'grid', gap: 'var(--s1)' }}>
-                            <small className="t-rotulo">¿Con quién?</small>
-                            <Select size="sm" label="¿Con quién?" value={String(datos.persona_id || '')}
-                                onChange={(v) => setPersona(Number(v))}
-                                options={personas.map((p) => ({
-                                    value: String(p.id),
-                                    label: `${p.nombre} · ${p.rol === 'triage' ? 'triage' : 'closer'}${p.id === datos.actual_id ? ' (la actual)' : ''}`,
-                                }))} />
+
+            {datos && !datos.error && paso === 0 && (
+                <PasoPersona rol={rol} onRol={(r) => { if (r !== rol) setPedido(r); }} personas={personas}
+                    porPersona={porPersona} actualId={datos.actual_id} elegida={elegida}
+                    onElegir={elegirPersona} totalGrupo={totalGrupo} />
+            )}
+
+            {datos && !datos.error && paso === 1 && (
+                <>
+                    <PasoHorario mapa={mapa} tzLead={lead} onTzLead={setTzLead} zonas={datos.zonas || []}
+                        zonaLeadTz={datos.zona_lead?.tz} miZona={miZona} cuando={cuando} onCuando={elegirHora}
+                        nombres={elegida === CUALQUIERA ? nombre : null}
+                        anticipacion={anticipacion} onAnticipacion={(m) => {
+                            setAnticipacion(m); guardarAnticipacion(m);
+                            if (cuando && new Date(cuando).getTime() < Date.now() + m * 60000) { setCuando(null); setQuien(null); }
+                        }} />
+                    {cuando && elegida === CUALQUIERA && libres.length > 1 && (
+                        <div className="rp-fila">
+                            <small className="t-rotulo">Libres a esa hora</small>
+                            {libres.map((id) => (
+                                <button key={id} type="button" className="fi-pildora" aria-pressed={quien === id} onClick={() => setQuien(id)}>
+                                    {nombre(id)}{id === datos.actual_id ? ' · la actual' : ''}
+                                </button>
+                            ))}
                         </div>
-                        <div style={{ display: 'grid', gap: 'var(--s1)' }}>
-                            <small className="t-rotulo">Hora del lead</small>
-                            <Select size="sm" label="Hora del lead" value={lead} onChange={setTzLead}
-                                options={[...((datos.zonas || []).some((z) => z.tz === lead) ? [] : [{ value: lead, label: lead }]),
-                                    ...(datos.zonas || []).map((z) => ({ value: z.tz, label: `${z.nombre}${z.tz === datos.zona_lead?.tz ? ' · del lead' : ''}` }))]} />
+                    )}
+                </>
+            )}
+
+            {datos && !datos.error && paso === 2 && cuando && (
+                <div className="rp-paso">
+                    <div className="rp-resumen">
+                        <Avatar name={nombre(quien)} size="md" />
+                        <div>
+                            <b>{`${rotuloDia(new Date(cuando).toLocaleDateString('en-CA', { timeZone: lead }), lead)} · ${horaEn(cuando, lead)} para el lead`}</b>
+                            <small>
+                                {`${miZona !== lead ? `${horaEn(cuando, miZona)} tuya · ` : ''}con ${nombre(quien)}`}
+                                {quien !== datos.actual_id && ` · se le pasa la llamada (era de ${nombre(datos.actual_id)})`}
+                            </small>
                         </div>
                     </div>
-
-                    {horarios.length === 0 ? (
-                        <small className="t-cap mut">No tiene horarios libres en los próximos días: probá con otra persona.</small>
-                    ) : (
-                        <div className="grid-2">
-                            <div style={{ display: 'grid', gap: 'var(--s1)' }}>
-                                <small className="t-rotulo">Día</small>
-                                <Select size="sm" label="Día" value={dia} onChange={(v) => { setDia(v); setCuando(null); }}
-                                    options={[{ value: '', label: 'Elegí el día' },
-                                        ...Object.entries(dias).map(([d, lista]) => ({ value: d, label: `${d} · ${lista.length} ${lista.length === 1 ? 'horario' : 'horarios'}` }))]} />
-                            </div>
-                            <div style={{ display: 'grid', gap: 'var(--s1)' }}>
-                                <small className="t-rotulo">{`Hora en tu zona (${miZona})`}</small>
-                                <Select size="sm" label="Hora" value={cuando || ''} disabled={!dia} onChange={(v) => setCuando(v || null)}
-                                    options={[{ value: '', label: dia ? 'Elegí la hora' : 'Primero el día' },
-                                        ...(dias[dia] || []).map((iso) => ({ value: iso, label: `${enZona(iso, miZona, HORA)} · ${enZona(iso, lead, HORA)} para el lead` }))]} />
-                            </div>
-                        </div>
-                    )}
-
-                    {cuando && (
-                        <small className="t-sm">
-                            {`${enZona(cuando, miZona, { ...DIA, ...HORA })} para vos · `}
-                            <b>{`${enZona(cuando, lead, { ...DIA, ...HORA })} para el lead`}</b>
-                        </small>
-                    )}
-
                     <div style={{ display: 'grid', gap: 'var(--s1)' }}>
                         <small className="t-rotulo">{preguntaDeMotivo('Reagendado')}</small>
-                        <TextArea aria-label="Motivo" rows={3} value={motivo}
+                        <TextArea aria-label="Motivo" rows={3} value={motivo} autoFocus
                             invalid={!!motivo && !motivoAlcanza(motivo)} placeholder="Ej.: pidió cambiar el horario porque trabaja de guardia"
                             onChange={(e) => setMotivo(e.target.value)} />
-                        {faltaDeMotivo(motivo) && <FieldError role="note" icon={false}>{faltaDeMotivo(motivo)}</FieldError>}
+                        {motivo && faltaDeMotivo(motivo) && <FieldError role="note" icon={false}>{faltaDeMotivo(motivo)}</FieldError>}
                     </div>
                 </div>
             )}

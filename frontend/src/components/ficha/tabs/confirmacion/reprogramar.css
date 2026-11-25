@@ -1,0 +1,84 @@
+/* Reprogramar (Confirmación): pasos, personas, días y horas. Mismos tokens que ficha.css. */
+
+.dc-shell .rp-pasos{display:flex;gap:var(--s2);list-style:none;margin:0;padding:0;flex-wrap:wrap}
+.dc-shell .rp-pasos button{display:inline-flex;align-items:center;gap:var(--s2);height:30px;
+  padding:0 var(--s3) 0 var(--s1);border-radius:var(--radius-pill);border:1px solid var(--border-subtle);
+  background:transparent;color:var(--text-muted);font-size:13px;font-weight:600;cursor:pointer}
+.dc-shell .rp-pasos button:disabled{cursor:default;opacity:.5}
+.dc-shell .rp-pasos span{width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;
+  justify-content:center;font-size:12px;font-weight:800;border:1px solid var(--border-main)}
+.dc-shell .rp-pasos [data-estado="actual"] button{color:var(--text-on-surface);border-color:var(--brand-secondary)}
+.dc-shell .rp-pasos [data-estado="actual"] span{background:var(--brand-secondary);border-color:var(--brand-secondary);color:var(--ink)}
+.dc-shell .rp-pasos [data-estado="hecho"] span{background:var(--success);border-color:var(--success);color:var(--ink)}
+
+.dc-shell .rp-paso{display:grid;gap:var(--s4);animation:rp-entra .22s ease-out backwards}
+@keyframes rp-entra{from{opacity:0;transform:translateY(6px)}}
+@media (prefers-reduced-motion:reduce){.dc-shell .rp-paso{animation:none}}
+.dc-shell .rp-fila{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s3)}
+
+/* Personas: tarjetas que se tocan */
+.dc-shell .rp-personas{display:grid;gap:var(--s2);grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+.dc-shell .rp-persona{display:flex;align-items:center;gap:var(--s3);min-height:60px;padding:var(--s2) var(--s4);
+  border-radius:var(--radius-control);border:1px solid var(--border-main);background:var(--bg-element);
+  color:var(--text-on-surface);text-align:left;cursor:pointer;transition:border-color .15s,background .15s,transform .15s}
+.dc-shell .rp-persona:hover:not(:disabled){background:var(--bg-element-hover)}
+.dc-shell .rp-persona:active:not(:disabled){transform:scale(.985)}
+.dc-shell .rp-persona:disabled{opacity:.45;cursor:default}
+.dc-shell .rp-persona[aria-pressed="true"]{border-color:var(--brand-secondary);
+  background:color-mix(in srgb,var(--brand-secondary) 12%,transparent);
+  box-shadow:0 0 0 3px var(--brand-secondary-surface)}
+.dc-shell .rp-persona-ico{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:var(--bg-element-hover);color:var(--brand-secondary);flex-shrink:0}
+.dc-shell .rp-persona-txt{display:grid;gap:2px;min-width:0}
+.dc-shell .rp-persona-txt b{font-size:14px;font-weight:600}
+.dc-shell .rp-persona-txt em{font-style:normal;font-weight:400;color:var(--text-muted)}
+.dc-shell .rp-persona-txt small{font-size:12px;color:var(--text-muted)}
+
+/* Días: una fila que se desliza */
+.dc-shell .rp-dias{display:flex;gap:var(--s2);overflow-x:auto;padding-bottom:var(--s1);scrollbar-width:thin}
+.dc-shell .rp-dia{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:72px;padding:var(--s2) var(--s3);
+  border-radius:var(--radius-control);border:1px solid var(--border-main);background:transparent;
+  color:var(--text-on-surface);cursor:pointer;flex-shrink:0;text-transform:capitalize;transition:border-color .15s,background .15s}
+.dc-shell .rp-dia b{font-size:13px;font-weight:600;white-space:nowrap}
+.dc-shell .rp-dia small{font-size:11px;color:var(--text-muted)}
+.dc-shell .rp-dia:hover{background:var(--bg-element-hover)}
+.dc-shell .rp-dia[aria-checked="true"]{border-color:var(--brand-secondary);background:var(--brand-secondary);color:var(--ink)}
+.dc-shell .rp-dia[aria-checked="true"] small{color:var(--ink);opacity:.75}
+
+/* Horas */
+.dc-shell .rp-franja{display:grid;gap:var(--s2)}
+.dc-shell .rp-horas{display:grid;gap:var(--s2);grid-template-columns:repeat(auto-fill,minmax(84px,1fr))}
+.dc-shell .rp-hora{display:flex;flex-direction:column;align-items:center;gap:1px;padding:var(--s2) var(--s1);
+  border-radius:var(--radius-control);border:1px solid var(--border-subtle);background:var(--bg-element);
+  color:var(--text-on-surface);cursor:pointer;transition:border-color .15s,background .15s,transform .15s}
+.dc-shell .rp-hora b{font-size:15px;font-weight:700;font-variant-numeric:tabular-nums}
+.dc-shell .rp-hora small{font-size:11px;color:var(--text-muted);font-variant-numeric:tabular-nums}
+.dc-shell .rp-hora:hover{border-color:var(--border-main);background:var(--bg-element-hover)}
+.dc-shell .rp-hora:active{transform:scale(.97)}
+.dc-shell .rp-hora[aria-checked="true"]{border-color:var(--brand-secondary);background:var(--brand-secondary);color:var(--ink)}
+.dc-shell .rp-hora[aria-checked="true"] small{color:var(--ink);opacity:.75}
+.dc-shell .rp-link{justify-self:start;background:none;border:0;padding:0;color:var(--text-muted);
+  font-size:12px;text-decoration:underline;cursor:pointer}
+
+/* Resumen antes de confirmar */
+.dc-shell .rp-resumen{display:flex;align-items:center;gap:var(--s3);padding:var(--s3) var(--s4);
+  border-radius:var(--radius-control);border:1px solid var(--brand-secondary);
+  background:color-mix(in srgb,var(--brand-secondary) 10%,transparent)}
+.dc-shell .rp-resumen > div{display:grid;gap:2px}
+.dc-shell .rp-resumen b{font-size:15px;font-weight:600}
+.dc-shell .rp-resumen b::first-letter{text-transform:uppercase}
+.dc-shell .rp-resumen small{font-size:13px;color:var(--text-muted)}
+
+/* Pie de Confirmación: el CTA manda; lo que cambió va arriba en tarjetas iguales; eliminar, aparte. */
+.dc-shell .cf-cambio{display:grid;gap:var(--s3)}
+.dc-shell .cf-cambio-cab{display:flex;align-items:center;justify-content:space-between;gap:var(--s3)}
+.dc-shell .cf-cambio-grid{display:grid;gap:var(--s2);grid-template-columns:repeat(3,minmax(0,1fr))}
+@media (max-width:700px){.dc-shell .cf-cambio-grid{grid-template-columns:1fr}}
+.dc-shell .cf-cambio-grid .fi-accion{min-height:64px;flex-direction:row;align-items:center;justify-content:flex-start;
+  gap:var(--s3);padding:var(--s3) var(--s4);font-size:14px}
+.dc-shell .cf-cambio-grid .fi-accion small{display:block;font-size:12px;font-weight:400;color:var(--text-muted);margin-top:2px}
+.dc-shell .cf-eliminar{background:none;border:0;padding:var(--s1) 0;display:inline-flex;align-items:center;gap:var(--s1);
+  color:var(--text-muted);font-size:12px;cursor:pointer}
+.dc-shell .cf-eliminar:hover:not(:disabled){color:var(--error)}
+.dc-shell .cf-eliminar:disabled{opacity:.4;cursor:default}
+.dc-shell .cf-cta{min-height:48px;padding:0 var(--s6);font-size:14px}

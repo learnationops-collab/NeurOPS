@@ -1,0 +1,81 @@
+// Cuentas del reprogramar: horarios libres por persona → días y horas en la zona del lead.
+
+export const CUALQUIERA = 'cualquiera';
+
+const partes = (iso, tz) => {
+    const f = new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+    const o = Object.fromEntries(f.formatToParts(new Date(iso)).map((p) => [p.type, p.value]));
+    return { dia: `${o.year}-${o.month}-${o.day}`, hora: `${o.hour}:${o.minute}`, h: Number(o.hour), min: Number(o.minute) };
+};
+
+export const horaEn = (iso, tz) => partes(iso, tz).hora;
+
+/** {iso: [ids libres]} de las personas elegidas (una, o todas con «cualquiera»). */
+export const libresPorHorario = (porPersona, elegida) => {
+    const mapa = {};
+    Object.entries(porPersona || {}).forEach(([id, lista]) => {
+        if (elegida !== CUALQUIERA && String(elegida) !== id) return;
+        lista.forEach((iso) => { (mapa[iso] = mapa[iso] || []).push(Number(id)); });
+    });
+    return mapa;
+};
+
+/** Días (en la zona del lead) con sus horarios ordenados: [{dia, isos}]. */
+export const diasDelLead = (mapa, tz) => {
+    const dias = {};
+    Object.keys(mapa).sort().forEach((iso) => { const { dia } = partes(iso, tz); (dias[dia] = dias[dia] || []).push(iso); });
+    return Object.entries(dias).map(([dia, isos]) => ({ dia, isos }));
+};
+
+/** «Hoy», «Mañana» o «jue 27/11», contado en la zona del lead. */
+export const rotuloDia = (dia, tz) => {
+    const hoy = partes(new Date().toISOString(), tz).dia;
+    const manana = partes(new Date(Date.now() + 864e5).toISOString(), tz).dia;
+    if (dia === hoy) return 'Hoy';
+    if (dia === manana) return 'Mañana';
+    const [y, m, d] = dia.split('-').map(Number);
+    const sem = new Date(Date.UTC(y, m - 1, d, 12)).toLocaleDateString('es', { weekday: 'short', timeZone: 'UTC' }).replace('.', '');
+    return `${sem} ${d}/${m}`;
+};
+
+export const FRANJAS = [
+    { clave: 'manana', label: 'Mañana', desde: 0, hasta: 12 },
+    { clave: 'tarde', label: 'Tarde', desde: 12, hasta: 19 },
+    { clave: 'noche', label: 'Noche', desde: 19, hasta: 24 },
+];
+
+export const franjaDe = (iso, tz) => {
+    const { h } = partes(iso, tz);
+    return FRANJAS.find((f) => h >= f.desde && h < f.hasta).clave;
+};
+
+export const enPuntoOMedia = (iso, tz) => partes(iso, tz).min % 30 === 0;
+
+/** Con «cualquiera», a quién le queda: la persona que ya tenía la llamada si está libre; si no, la que
+ *  tiene más horarios libres (la menos cargada). */
+export const quienToma = (libres, actualId, porPersona) => {
+    if (!libres?.length) return null;
+    if (libres.includes(actualId)) return actualId;
+    return [...libres].sort((a, b) => (porPersona[b]?.length || 0) - (porPersona[a]?.length || 0))[0];
+};
+
+/** Anticipación mínima (minutos) para ofrecer un horario: la elige cada uno y se recuerda en el navegador. */
+export const ANTICIPACIONES = [
+    { value: 15, label: '15 min' },
+    { value: 60, label: '1 h' },
+    { value: 120, label: '2 h' },
+    { value: 240, label: '4 h' },
+    { value: 1440, label: '1 día' },
+];
+const CLAVE_ANTICIPACION = 'reprogramar_anticipacion_min';
+
+export const leerAnticipacion = () => {
+    const n = Number(typeof localStorage !== 'undefined' && localStorage.getItem(CLAVE_ANTICIPACION));
+    return ANTICIPACIONES.some((a) => a.value === n) ? n : 60;
+};
+export const guardarAnticipacion = (n) => { try { localStorage.setItem(CLAVE_ANTICIPACION, String(n)); } catch { /* sin storage: no se recuerda */ } };
+
+export const conAnticipacion = (porPersona, minutos) => {
+    const desde = Date.now() + minutos * 60000;
+    return Object.fromEntries(Object.entries(porPersona || {}).map(([id, l]) => [id, l.filter((iso) => new Date(iso).getTime() >= desde)]));
+};

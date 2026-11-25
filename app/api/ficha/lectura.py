@@ -190,17 +190,20 @@ def opciones_de_reprogramacion(appt_id):
         return jsonify({'message': 'Lead no encontrado'}), 404
     if not ficha_lead_service.permisos_de(current_user, appt)['confirmar']:
         return sin_permiso('confirmar')
-    persona_id = request.args.get('persona_id', type=int) or appt.closer_id
     personas = a_triage.personas_que_atienden()
-    if persona_id not in {p['id'] for p in personas}:
-        persona_id = None
+    actual = next((p for p in personas if p['id'] == appt.closer_id), None)
+    # `?rol=closer|triage`: los horarios de todo ese grupo, por persona (para elegir a una o «cualquiera»).
+    # Por defecto, el grupo de quien tiene la llamada: si ya es del closer, se reagenda con closers.
+    rol = request.args.get('rol') or (actual['rol'] if actual else 'closer')
+    grupo = [p['id'] for p in personas if p['rol'] == rol]
+    por_persona = a_triage.horarios_de_varios(grupo) if grupo else {}
     lead = (appt.agenda_payload or {}).get('lead') or {'telefono': appt.client.phone if appt.client else None}
     zona, pais = zona_del_lead(lead)
     return jsonify({
         'personas': personas,
         'actual_id': appt.closer_id,
-        'persona_id': persona_id,
-        'horarios': a_triage.horarios_de(persona_id) if persona_id else [],
+        'rol': rol,
+        'horarios_por_persona': {str(k): v for k, v in por_persona.items()},
         'zona_lead': {'tz': zona.key, 'pais': pais['n']},
         'zonas': [{'tz': z['tz'], 'nombre': z['n']} for z in ZONAS],
     }), 200
