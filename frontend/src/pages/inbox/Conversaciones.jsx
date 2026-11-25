@@ -122,7 +122,7 @@ export default function Conversaciones() {
     const buscador = (
         <InputGroup className="cv-buscar" prefix={<Search size={16} />}>
             <label className="sr" htmlFor="cv-buscar">Buscar por usuario</label>
-            <input id="cv-buscar" value={buscar} onChange={(e) => setBuscar(e.target.value)} placeholder="Buscar por usuario o nombre" autoComplete="off" />
+            <input id="cv-buscar" value={buscar} onChange={(e) => setBuscar(e.target.value)} placeholder="Usuario o nombre · #palabra en lo que le escribiste" autoComplete="off" />
         </InputGroup>
     );
     const macro = <MacroFiltro lista={lista} filtro={filtro} onCambiar={setFiltro} ahora={ahora} yo={yo} />;

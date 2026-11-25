@@ -13,6 +13,7 @@ export default function useEnvio(contactoId, onCambio) {
             await inboxApi.escribir(contactoId, p.cuerpo);
         } catch (e) {
             cambiar(p.id, { estado: 'error', motivo: e.response?.data?.message || 'No se pudo enviar' });
+            Promise.resolve(onCambio()).catch(() => {}); // si salió igual, el chat lo trae y el «no salió» se va (Detalle)
             return false;
         }
         try {

@@ -265,7 +265,12 @@ def listar_conversaciones():
               .group_by(IgMensaje.contacto_id).subquery())
     consulta = (db.session.query(IgContacto, ultimo.c.ultimo, ultimo.c.cantidad, ultimo.c.primero)
                 .join(ultimo, ultimo.c.contacto_id == IgContacto.id))
-    if buscar:
+    if buscar.startswith('#'):
+        # «#palabra»: lo que el equipo ya le escribió (buscar una devolución dada a otro lead).
+        patron = f'%{buscar[1:].strip()}%'
+        consulta = consulta.filter(IgContacto.id.in_(db.session.query(IgMensaje.contacto_id).filter(
+            IgMensaje.direccion == IgMensaje.SALIENTE, db.func.lower(IgMensaje.texto).like(patron))))
+    elif buscar:
         patron = f'%{buscar}%'
         consulta = consulta.filter(db.or_(db.func.lower(IgContacto.username).like(patron),
                                           db.func.lower(IgContacto.nombre).like(patron),

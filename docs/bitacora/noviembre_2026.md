@@ -969,3 +969,10 @@
 - El servidor rechazaba las preferencias del dock de más de 20 000 caracteres sin avisar: el cambio de propiedades se perdía al recargar. Tope 100 000 y el rechazo queda en el log.
 - Prender o apagar una propiedad no guarda el orden; arrastrar guarda uno corto (sin las preguntas del formulario).
 - Novedades: cualquier cambio en el recorrido lo vuelve a mostrar a todos, también a quien ya lo terminó.
+
+### 25/11/2026 · Inbox: un mensaje que «no salió» ya no se manda dos veces
+- Cuando la conversación es de otra app (Kommo, ManyChat), Instagram a veces devuelve error y el mensaje sale igual: el setter veía «no salió» y al reintentar el lead lo recibía dos veces (4 casos de Paula hoy, también a Eli). Ahora, si Instagram ya entregó ese mismo texto hace menos de 2 minutos y quedó sin autor, Work no lo vuelve a mandar: lo da por enviado y lo pone a nombre de quien lo escribió.
+- En el chat, el «no salió» desaparece solo cuando el mensaje aparece como enviado.
+
+### 25/11/2026 · Inbox: el buscador encuentra lo que el equipo ya escribió
+- El buscador de Conversaciones busca por usuario o nombre; con «#palabra» (por ejemplo «#resúmenes») busca en los mensajes que el equipo le mandó a cada lead: sirve para encontrar una devolución ya dada y reusarla (pedido de Paula).

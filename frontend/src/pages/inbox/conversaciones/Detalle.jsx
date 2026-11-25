@@ -50,11 +50,15 @@ function Chat({ datos, yo, onCambio, pegar, selector, onSelector }) {
     const envio = useEnvio(contacto.id, onCambio);
     const [seleccion, setSeleccion] = useState(null);
     const cerrarSeleccion = useCallback(() => setSeleccion(null), []);
+    // Meta a veces devuelve error y el mensaje sale igual: cuando aparece en el chat, el «no salió» sobra.
+    const salio = (p) => p.estado === 'error' && datos.mensajes.some((m) => m.direccion === 'saliente'
+        && m.texto === p.rotulo?.trim() && new Date(m.en) >= new Date(p.en) - 60000);
+    const pendientes = envio.pendientes.filter((p) => !salio(p));
     return (
         <Panel as="section" size="sm" className="cv-detalle" aria-label="Conversación">
             <Linea contacto={contacto} avance={avance} mensajes={datos.mensajes} />
             <Feed mensajes={datos.mensajes} notas={datos.notas || []} tareas={datos.tareas || []}
-                pendientes={envio.pendientes} onReintentar={envio.reintentar} onDescartar={envio.descartar}
+                pendientes={pendientes} onReintentar={envio.reintentar} onDescartar={envio.descartar}
                 onSeleccion={() => setSeleccion(seleccionDelLead())} />
             <Composer contacto={contacto} fase={avance?.fase} ejecucion={datos.ejecucion} seguimientos={datos.seguimientos} yo={yo} onCambio={onCambio}
                 onEnviar={envio.enviar} onLearnito={abrirLearnito} pegar={pegar} selector={selector} onSelector={onSelector} />
