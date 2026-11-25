@@ -1885,3 +1885,11 @@
 - **Decisión:** los avisos de agenda nueva, reprogramada y pase de triage a closing etiquetan además a cada cuenta activa con el rol triage que tenga su ID de Discord. No en las Momentum (las confirma el closer) ni en la agenda de la propia persona de triage, que ya va etiquetada como closer. Una cuenta triage sin ID de Discord no se etiqueta y no dispara @everyone.
 - **Qué se pierde:** nada. El canal suma una mención por aviso.
 - **Consecuencias:** sin migración. Los abandonos ya etiquetaban al triage y no cambian.
+
+## ADR-W233: Work sigue la movida en Google de una agenda que ya pasó sin reportar
+
+- **Fecha:** 25/11/2026 · **Subsistema:** Agendas 2.0, seguimiento del Calendar (`app/agendas_v2/movidas.py`) · **Estado:** implementada
+- **Contexto:** Dari (triage) movió en su Google Calendar la llamada de Melanie Rivera al domingo 29/11, dos días después de que la del sábado 21/11 no se diera. Work la seguía mostrando en «Atrasadas» («1ª llamada hace 3 días 19 h»): solo revisaba las agendas que empezaban desde 2 h atrás, así que una movida hecha después de la llamada no llegaba.
+- **Decisión:** se revisan también las agendas sin reportar de los últimos 14 días. En las que ya pasaron hace más de 2 h, Work sigue la movida solo si el evento quedó en una hora futura: es una reagenda. Las cancelaciones no cambian: un evento borrado o cancelado después de la llamada no cancela nada en Work.
+- **Qué se pierde:** una agenda vieja cuyo evento se corrió a otra hora también pasada (por ejemplo, para dejar anotada la hora real) no se toca: eso lo sigue reportando el closer. Más allá de 14 días, una movida no se sigue.
+- **Consecuencias:** sin migración. La lectura del Calendar de cada closer cubre 14 días más hacia atrás. El 25/11 el ensayo sobre producción (solo lectura) encontró una sola agenda en ese caso, la de Melanie.

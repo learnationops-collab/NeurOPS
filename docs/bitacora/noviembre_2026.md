@@ -848,3 +848,6 @@
 
 ### 24/11/2026 · Darian etiquetada en los avisos de agenda de Discord
 - El aviso de agenda nueva, reprogramada o pasada a closing en Discord etiqueta también a Darian (triage), además del closer y el setter. No en las Momentum ni en sus propias agendas (ADR-W207, pedido de Mario).
+
+### 25/11/2026 · Agendas: Work sigue la reagenda hecha en Google después de la llamada (ADR-W233)
+- Dari movió en su Google Calendar la llamada de Melanie Rivera al domingo y Work la seguía mostrando atrasada: solo seguía los eventos movidos hasta 2 h después de la hora de la agenda. Ahora también sigue los de agendas sin reportar de los últimos 14 días, cuando el evento quedó en una hora futura ([movidas.py](../../app/agendas_v2/movidas.py)).
