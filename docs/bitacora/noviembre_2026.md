@@ -933,3 +933,7 @@
 - El sidebar de tarjetas pasa a ser un riel de 288 px de arriba abajo: siguiente lead con sus etiquetas, barra por etapa animada, «Hoy» (pendientes por sección, racha, XP), próximas llamadas y comisión.
 - La barra de vistas de Confirmar queda pegada justo debajo del header, de borde a borde; el tablero y el calendario llenan el alto hasta el dock.
 
+
+### 25/11/2026 · Riel del Workspace: el siguiente lead entero y sin pisarse con el dock
+- La tarjeta del siguiente lead se achicaba (el riel la comprimía) y no se veían el nombre ni el botón: ahora ninguna pieza del riel se achica y el riel scrollea si no entra.
+- El riel termina arriba del dock y se desvanece al final; el fondo y la línea siguen hasta abajo. Secciones un poco más compactas.

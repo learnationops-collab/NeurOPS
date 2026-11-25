@@ -7,7 +7,9 @@
 /* El header se alinea con el contenido en vez de centrarse en 1280 px. */
 .ws-pagina header.top-v6 .topin{max-width:none;padding-left:var(--ws-pad);padding-right:var(--ws-pad)}
 
+/* El fondo y la línea del riel los pinta el área, así llegan hasta abajo aunque el riel termine sobre el dock. */
 .ws-area.ws-area{display:grid;grid-template-columns:minmax(0,1fr) var(--ws-rail);gap:0;align-items:start;
+  background:linear-gradient(to left,rgba(255,255,255,.022) calc(var(--ws-rail) - 1px),rgba(255,255,255,.07) calc(var(--ws-rail) - 1px) var(--ws-rail),transparent var(--ws-rail));
   max-width:none;margin:0;padding:0;min-height:calc(100dvh - var(--ws-top,64px))}
 .ws-area > *{grid-column:1;min-width:0}
 /* El contenido: sin margen arriba (la barra de Confirmar va pegada al header) y con lugar abajo para el dock. */
@@ -19,10 +21,11 @@
 .ws-area .kb-v6 .kcol-v6{min-height:calc(100dvh - var(--ws-top,64px) - 52px - 20px - var(--ws-dock) - 20px)}
 
 /* ---------- Riel ---------- */
-.ws-area > .ws-side{grid-column:2;grid-row:1;position:sticky;top:var(--ws-top,64px);height:calc(100dvh - var(--ws-top,64px));
+/* El riel termina arriba del dock (no se pisa con el grupo de la derecha) y scrollea si no entra todo. */
+.ws-area > .ws-side{grid-column:2;grid-row:1;position:sticky;top:var(--ws-top,64px);height:calc(100dvh - var(--ws-top,64px) - var(--ws-dock) - 12px);
+  -webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 20px),transparent);mask-image:linear-gradient(to bottom,#000 calc(100% - 20px),transparent);
   display:flex;flex-direction:column;gap:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.14) transparent;
-  padding:16px 16px calc(var(--ws-dock) + 8px);border-left:1px solid rgba(255,255,255,.07);
-  background:linear-gradient(180deg,rgba(255,255,255,.028),rgba(255,255,255,.012));
+  padding:16px 16px 20px;
   --cv-text:#fff;--cv-muted:rgba(255,255,255,.62);--cv-faint:rgba(255,255,255,.42)}
 
 /* Ahora: el siguiente lead, con su aura (la única pieza con fondo propio del riel). */
@@ -36,13 +39,14 @@
 .ws-area .ws-side .tsp-sub-v6{display:none}
 .ws-area .ws-side .tsp-cta-v6{height:38px;min-height:0;padding:0 14px;font-size:11px;letter-spacing:.12em;border-radius:99px;margin-top:2px}
 .ws-area .ws-side .tsp-done-v6 .tsp-name-v6{font-size:16px}
+.ws-area > .ws-side > *{flex-shrink:0}
 .rail-chips{display:flex;flex-wrap:wrap;gap:4px;position:relative}
 
 /* Secciones: separadas por aire y una línea, no por cajas. Más aire arriba del título que abajo. */
-.rail-sec{padding:20px 4px 16px;border-top:1px solid rgba(255,255,255,.07)}
-.rail-h{margin:0 0 12px;font-size:13px;font-weight:700;color:var(--cv-muted);letter-spacing:0}
+.rail-sec{padding:16px 4px 14px;border-top:1px solid rgba(255,255,255,.07)}
+.rail-h{margin:0 0 10px;font-size:13px;font-weight:700;color:var(--cv-muted);letter-spacing:0}
 .rail-cifra{margin:0 0 12px;display:flex;align-items:baseline;gap:6px;font-variant-numeric:tabular-nums}
-.rail-cifra b{font-size:30px;font-weight:800;line-height:1;color:#fff;letter-spacing:-.02em}
+.rail-cifra b{font-size:26px;font-weight:800;line-height:1;color:#fff;letter-spacing:-.02em}
 .rail-cifra span{font-size:13px;color:var(--cv-muted)}
 .rail-cifra em{margin-left:auto;font-style:normal;font-size:13px;font-weight:700;color:var(--cl-magenta-light,#FF6AD5)}
 
@@ -50,7 +54,7 @@
 .rail-barra{display:flex;gap:3px;height:8px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden}
 .rail-barra i{display:block;min-width:6px;border-radius:99px;background:var(--c);transform-origin:left;
   animation:rail-crece .5s ease-out backwards}
-.rail-leyenda{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:6px}
+.rail-leyenda{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:4px}
 .rail-leyenda li{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--cv-muted)}
 .rail-leyenda li i{width:8px;height:8px;border-radius:99px;background:var(--c)}
 .rail-leyenda li b{margin-left:auto;font-weight:700;color:#fff;font-variant-numeric:tabular-nums}
@@ -58,7 +62,7 @@
 
 /* Hoy: cada sección pendiente es un acceso. */
 .rail-hoy{list-style:none;margin:0;padding:0;display:grid;gap:2px}
-.rail-hoy button{all:unset;box-sizing:border-box;cursor:pointer;width:100%;display:flex;align-items:center;gap:10px;height:38px;padding:0 8px 0 10px;
+.rail-hoy button{all:unset;box-sizing:border-box;cursor:pointer;width:100%;display:flex;align-items:center;gap:10px;height:34px;padding:0 8px 0 10px;
   border-radius:10px;font-size:13px;color:rgba(255,255,255,.86);transition:background .2s,color .2s}
 .rail-hoy button:hover{background:rgba(255,255,255,.06)}
 .rail-hoy button[aria-current]{background:color-mix(in srgb,var(--cl-magenta,#FF3FA4) 12%,transparent);color:#fff}
@@ -90,7 +94,7 @@
 .rail-prox small{font-size:11px;color:var(--cv-faint)}
 
 /* Comisión: al final del riel. */
-.ws-area .ws-side .ws-com{margin-top:auto;padding:20px 4px 4px;border:0;border-top:1px solid rgba(255,255,255,.07);border-radius:0;background:none;box-shadow:none;min-height:0}
+.ws-area .ws-side .ws-com{margin-top:auto;padding:16px 4px 4px;border:0;border-top:1px solid rgba(255,255,255,.07);border-radius:0;background:none;box-shadow:none;min-height:0}
 .ws-area .ws-side .ws-com .tud-lbl-v6{font-size:13px;font-weight:700;letter-spacing:0;text-transform:none;color:var(--cv-muted)}
 .ws-area .ws-side .ws-com .com-monto-v6{font-size:28px;line-height:1.1;margin-top:8px;font-variant-numeric:tabular-nums}
 .ws-area .ws-side .ws-com .tud-foot-row-v6{margin-top:4px}
@@ -100,8 +104,8 @@
 
 /* Pantallas angostas: el riel vuelve a ser una franja arriba del contenido. */
 @media (max-width:1100px){
-  .ws-area.ws-area{grid-template-columns:minmax(0,1fr)}
-  .ws-area > .ws-side{grid-column:1;position:static;height:auto;border-left:0;border-bottom:1px solid rgba(255,255,255,.07);
+  .ws-area.ws-area{grid-template-columns:minmax(0,1fr);background:none}
+  .ws-area > .ws-side{grid-column:1;position:static;height:auto;-webkit-mask-image:none;mask-image:none;border-left:0;border-bottom:1px solid rgba(255,255,255,.07);
     display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:0 20px;padding:16px var(--ws-pad)}
   .ws-area > .ws-side > *{border-top:0}
   .ws-area > :not(.ws-side):not(.dc-shell){grid-row:2}
