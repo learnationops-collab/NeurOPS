@@ -3,6 +3,8 @@
 
 Sale cuando el closer reporta en la ficha (POST /ficha/<id>/resultado) o en el mazo viejo. La llamada de
 triage no se avisa: es antes de la venta. La venta no pasa por acá: «Sí, cerró» va por la ruta de venta y la avisa venta.py.
+Desde el 25/11/2026 solo se avisan las Momentum (seña y cierre), lo que le sirve a fulfillment: las llamadas de
+venta llenaban el canal sin interesarle a nadie ahí.
 El texto lleva nombre y número (para buscar en Discord junto a la agenda); el resto va en la imagen.
 """
 from datetime import timezone
@@ -168,9 +170,10 @@ def avisar_resultado(appt, datos, usuario):
     """Avisa el resultado de la llamada. Un mismo resultado guardado de nuevo (corregir una nota) no se repite:
     el último avisado queda en `agenda_payload.discord_resultado`. Nunca lanza."""
     try:
+        from app.services.momentum_academia import es_momentum
         from app.services.triage_service import es_de_triage
 
-        if not appt or not (appt.closer_result or '').strip() or es_de_triage(appt):
+        if not appt or not (appt.closer_result or '').strip() or es_de_triage(appt) or not es_momentum(appt):
             return False
         aviso = armar(appt, datos or {}, usuario)
         payload = dict(appt.agenda_payload or {})

@@ -1009,3 +1009,6 @@
 ### 25/11/2026 · Portal: los setters ven Agendamiento
 - La tarjeta Agendamiento aparece en el Portal de los setters (Eli y Paula), en solo lectura como ya lo permitía el servidor desde el 10/10. Antes el rol setter solo tenía Setting e Inbox ([areas.js](../../frontend/src/utils/areas.js)).
 - Los setters ya no entran en solo lectura: configuran Agendamiento igual que la dirección comercial (ADR-W227, [api_admin.py](../../app/agendas_v2/api_admin.py)).
+
+### 25/11/2026 · #agendas de fulfillment: solo los resultados de Momentum
+- El resultado de cada llamada que reporta el closer iba entero a #agendas (y al canal Agendas del chat de la Academia). Ahora solo van las Momentum (seña y cierre); las llamadas de venta ya no se avisan ahí (pedido de Mario, 19/11 y 25/11) ([resultado.py](../../app/services/discord_avisos/resultado.py)).
