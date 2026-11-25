@@ -1,7 +1,7 @@
 // La fila de Confirmar (ADR-W201): el título, las vistas guardadas como pestañas y, a la derecha, los
 // controles de la vista activa (filtro, orden, agrupación, propiedades y tipo), como en Notion.
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { ArrowUpDown, ChevronDown, ChevronLeft, ChevronRight, Filter, Layers, Minus, Plus, SlidersHorizontal, X } from 'lucide-react';
+import { ArrowUpDown, ChevronDown, ChevronLeft, ChevronRight, Filter, Layers, Minus, Pencil, Plus, SlidersHorizontal, X } from 'lucide-react';
 import { Segmented, subirACapa } from '../../../components/standard';
 import PopoverVista from './PopoverVista';
 import { IconoDeVista } from './iconos';
@@ -13,6 +13,7 @@ const RANGOS = [[1, 'Día'], [2, '2 días'], [3, '3 días'], [7, 'Semana']]
 function Pestana({ vista, activa, puedeBorrar, onElegir, onRenombrar, onBorrar }) {
     const [editando, setEditando] = useState(false);
     const [nombre, setNombre] = useState(vista.nombre);
+    const editar = () => { setNombre(vista.nombre); setEditando(true); };
     const terminar = () => { setEditando(false); const n = nombre.trim(); if (n && n !== vista.nombre) onRenombrar(n); else setNombre(vista.nombre); };
     if (editando) {
         return (
@@ -25,8 +26,11 @@ function Pestana({ vista, activa, puedeBorrar, onElegir, onRenombrar, onBorrar }
     }
     return (
         <button type="button" className={`cv-tab${activa ? ' cv-tab--on' : ''}`} aria-pressed={activa} onClick={onElegir}
-            onDoubleClick={() => { setNombre(vista.nombre); setEditando(true); }} title="Doble clic para renombrar">
+            onDoubleClick={editar} title="Doble clic o el lápiz para renombrar">
             <IconoDeVista tipo={vista.tipo} />{vista.nombre}
+            {/* Al pasar el mouse aparece el lápiz para renombrar (25/11/2026). */}
+            <span className="cv-tab__lapiz" role="button" tabIndex={-1} aria-label={`Renombrar la vista ${vista.nombre}`}
+                onClick={(e) => { e.stopPropagation(); editar(); }}><Pencil aria-hidden="true" /></span>
             {activa && puedeBorrar && (
                 <span className="cv-tab__x" role="button" tabIndex={-1} aria-label={`Borrar la vista ${vista.nombre}`}
                     onClick={(e) => { e.stopPropagation(); onBorrar(); }}><X aria-hidden="true" /></span>

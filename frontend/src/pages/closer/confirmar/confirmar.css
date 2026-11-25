@@ -22,6 +22,12 @@
 .cv-tab__x svg{width:12px;height:12px}
 .cv-tab--on:hover .cv-tab__x{display:grid}
 .cv-tab__x:hover{background:var(--cv-linea);color:var(--cv-text)}
+.cv-tab__lapiz{display:grid;place-items:center;width:0;height:18px;margin-left:-7px;border-radius:5px;overflow:hidden;opacity:0;
+  color:var(--cv-faint);transition:width .2s cubic-bezier(.16,1,.3,1),margin .2s cubic-bezier(.16,1,.3,1),opacity .15s ease}
+.cv-tab__lapiz svg{width:12px;height:12px;flex-shrink:0}
+.cv-tab:hover .cv-tab__lapiz,.cv-tab:focus-visible .cv-tab__lapiz{width:18px;margin-left:0;opacity:1}
+.cv-tab__lapiz:hover{background:var(--cv-linea);color:var(--cv-acento)}
+@media (prefers-reduced-motion:reduce){.cv-tab__lapiz{transition:none}}
 .cv-tab__input{all:unset;width:130px;font-size:13px;font-weight:800;color:var(--cv-text);border-bottom:1px solid var(--cv-acento)}
 .cv-sep{flex:1}
 .cv-ctl{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 9px;border-radius:8px;

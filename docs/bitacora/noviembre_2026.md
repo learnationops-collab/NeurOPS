@@ -925,3 +925,6 @@
 - Calendario de Confirmar: cada llamada se ve entera desde el principio (todas sus etiquetas), sin tener que pasar el mouse.
 - Las teclas 1 a 9 eligen cuántos días ver (antes solo 1, 2, 3 y 7); desde 5 días las columnas van angostas.
 - Menos movimiento: las tarjetas y etiquetas aparecen al instante (sin escalonar ni agrandarse), igual que la columna de la derecha del Workspace y la Configuración (Disponibilidad, cupos, WhatsApp).
+
+### 25/11/2026 · Confirmar: lápiz para renombrar las vistas
+- Al pasar el mouse por una vista (Por etapa, Mis llamadas, Mi calendario…) aparece un lápiz que la renombra; el doble clic sigue andando.
