@@ -1609,7 +1609,7 @@
 /* WhatsApp: los tres pasos (número, prueba, confirmado) con el actual latiendo. */
 .thalamus .cu-pasos{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .thalamus .cu-pasos li{display:flex;align-items:center;gap:10px;min-width:0;padding:10px 12px;border-radius:16px;background:var(--mat-1);border:1px solid var(--border-subtle);
-  font-size:13px;font-weight:800;color:var(--text-muted);animation:hcal-entra .4s cubic-bezier(.2,.8,.2,1) backwards;animation-delay:calc(var(--i) * 70ms);
+  font-size:13px;font-weight:800;color:var(--text-muted);animation:hcal-entra .2s ease-out backwards;
   transition:color .3s ease,border-color .3s ease,box-shadow .3s ease}
 .thalamus .cu-pasos li span{flex-shrink:0;display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:var(--hueco);font-size:11.5px;font-weight:900;transition:background-color .3s ease}
 .thalamus .cu-pasos li.ahora{color:var(--text-on-surface);border-color:color-mix(in srgb,var(--brand-secondary) 50%,transparent);box-shadow:0 0 0 3px color-mix(in srgb,var(--brand-secondary) 14%,transparent)}
@@ -1624,7 +1624,7 @@
 .thalamus .cupos--cargando{opacity:.6}
 .thalamus .cupos-num{display:flex;align-items:center;gap:12px;min-width:0}
 .thalamus .cupos-num b{font-size:42px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;color:var(--text-on-surface);
-  animation:cupos-entra .35s cubic-bezier(.2,.8,.2,1)}
+  }
 .thalamus .cupos-num span{display:grid;gap:2px;font-size:13.5px;font-weight:800;color:var(--text-on-surface)}
 .thalamus .cupos-num small{font-size:11.5px;font-weight:500;color:var(--text-muted)}
 .thalamus .cupos-num em{font-style:normal;font-size:12px;font-weight:900;padding:3px 9px;border-radius:999px;animation:cupos-delta 4s ease forwards}
@@ -1636,7 +1636,7 @@
 .thalamus .cupos-barra i{position:absolute;left:0;right:0;bottom:0;border-radius:6px;transition:height .45s cubic-bezier(.2,.8,.2,1)}
 .thalamus .cupos-tot{background:var(--hueco)}
 .thalamus .cupos-lib{--hc:color-mix(in oklab,var(--brand-secondary) calc(100% - var(--i) * 9%),var(--brand-primary,#7B5CFF));
-  background:linear-gradient(180deg,color-mix(in srgb,var(--hc) 80%,#fff),var(--hc));box-shadow:0 4px 16px -4px color-mix(in srgb,var(--hc) 70%,transparent);transform-origin:bottom;animation:cupos-crece .6s cubic-bezier(.2,.8,.2,1) backwards;animation-delay:calc(var(--i) * 45ms)}
+  background:linear-gradient(180deg,color-mix(in srgb,var(--hc) 80%,#fff),var(--hc));box-shadow:0 4px 16px -4px color-mix(in srgb,var(--hc) 70%,transparent);transform-origin:bottom;animation:cupos-crece .3s ease-out backwards}
 .thalamus .cupos-dia b{font-size:12px;font-weight:900;line-height:1.2;font-variant-numeric:tabular-nums;color:var(--text-on-surface)}
 .thalamus .cupos-dia span{font-size:10px;font-weight:800;color:var(--text-muted-40)}
 .thalamus .cupos-dia--off b{color:var(--text-muted-40)}
@@ -1920,7 +1920,7 @@
 .thalamus .hcal-eje{position:relative;margin-top:58px;height:var(--hcal-alto)}
 .thalamus .hcal-eje span{position:absolute;right:3px;transform:translateY(-50%);font-size:9.5px;font-weight:700;color:var(--text-muted-40);font-variant-numeric:tabular-nums}
 .thalamus .hcal-col{--hc:color-mix(in oklab,var(--brand-secondary) calc(100% - var(--i) * 12%),var(--brand-primary,#7B5CFF));
-  display:grid;grid-template-rows:52px auto;gap:6px;min-width:0;animation:hcal-entra .45s cubic-bezier(.2,.8,.2,1) backwards;animation-delay:calc(var(--i) * 40ms)}
+  display:grid;grid-template-rows:52px auto;gap:6px;min-width:0;animation:hcal-entra .2s ease-out backwards}
 .thalamus .hcal-cab{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px}
 .thalamus .hcal-cab .dia-l{background:var(--hc);color:#fff;box-shadow:0 4px 14px -4px color-mix(in srgb,var(--hc) 80%,transparent);transition:background-color .2s ease}
 .thalamus .hcal-col--off .hcal-cab .dia-l{background:var(--hueco);color:var(--text-muted);box-shadow:none}
@@ -1939,7 +1939,7 @@
   overflow:hidden;cursor:grab;color:#fff;touch-action:none;
   background:linear-gradient(180deg,color-mix(in srgb,var(--hc) 82%,#fff),var(--hc));
   box-shadow:0 8px 20px -8px color-mix(in srgb,var(--hc) 80%,transparent),inset 0 1px 0 rgba(255,255,255,.28);
-  animation:hcal-bloque .35s cubic-bezier(.2,.8,.2,1) backwards;transition:top .14s ease,height .14s ease,box-shadow .15s ease}
+  animation:hcal-bloque .15s ease-out backwards;transition:top .14s ease,height .14s ease,box-shadow .15s ease}
 .thalamus .hcal-bloque:hover{box-shadow:0 10px 26px -8px color-mix(in srgb,var(--hc) 95%,transparent),inset 0 1px 0 rgba(255,255,255,.35)}
 .thalamus .hcal--arrastrando .hcal-bloque{transition:none}
 .thalamus .hcal--arrastrando,.thalamus .hcal--arrastrando .hcal-bloque{cursor:grabbing}
@@ -1959,8 +1959,8 @@
 .thalamus .hcal-borde--fin::after{bottom:3px}
 .thalamus .hcal-bloque:hover .hcal-borde::after{opacity:1}
 .thalamus .hcal--bloqueado :is(.hcal-cuerpo,.hcal-bloque,.hcal-borde){cursor:default}
-@keyframes hcal-entra{from{opacity:0;transform:translateY(8px)}}
-@keyframes hcal-bloque{from{opacity:0;transform:scaleY(.7)}}
+@keyframes hcal-entra{from{opacity:0}}
+@keyframes hcal-bloque{from{opacity:0}}
 @media (max-width:560px){.thalamus .hcal{grid-template-columns:20px repeat(7,minmax(0,1fr));gap:0 3px}.thalamus .hcal-hora--fin{display:none}}
 @media (prefers-reduced-motion:reduce){.thalamus :is(.hcal,.cu-pasos) *{animation:none !important;transition:none !important}}
 

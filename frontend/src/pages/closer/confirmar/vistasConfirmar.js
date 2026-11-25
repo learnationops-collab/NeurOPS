@@ -4,9 +4,9 @@
 import { useCallback, useSyncExternalStore } from 'react';
 import { avisarCambio, registrarParte } from '../../../sesion/dockServidor';
 
-// La clave `semana` queda por las vistas ya guardadas; hoy es el calendario de 1, 2, 3 o 7 días.
+// La clave `semana` queda por las vistas ya guardadas; hoy es el calendario de 1 a 9 días.
 export const TIPOS_DE_VISTA = { tablero: 'Tablero', lista: 'Lista', semana: 'Calendario' };
-export const DIAS_CALENDARIO = [1, 2, 3, 7];
+export const DIAS_CALENDARIO = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 export const ALTOS_CALENDARIO = [56, 80, 104, 136];
 const PROPS_CALENDARIO = ['etapa', 'segmento', 'decision', 'inversion'];
 const MAX_VISTAS = 8;

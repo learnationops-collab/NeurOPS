@@ -46,7 +46,8 @@ function BarraCalendario({ c }) {
             <button type="button" className="cv-redondo" aria-label={`${unidad} siguiente`} onClick={() => c.mover(1)}><ChevronRight aria-hidden="true" /></button>
             <b key={c.rotulo} className="cv-rotulo">{c.rotulo}</b>
             <span className="cv-sep" />
-            <Segmented size="sm" label="Días a la vista" value={c.dias} options={RANGOS} onChange={(dias) => c.cambiar({ dias })} />
+            <Segmented size="sm" label="Días a la vista" value={c.dias} onChange={(dias) => c.cambiar({ dias })}
+                options={RANGOS.some(r => r.value === c.dias) ? RANGOS : [...RANGOS, { value: c.dias, label: `${c.dias} días`, props: { title: `${c.dias} días · tecla ${c.dias}` } }]} />
             <span className="cv-zoom" role="group" aria-label="Zoom">
                 <button type="button" aria-label="Alejar" disabled={nivel <= 0} onClick={() => c.cambiar({ alto: ALTOS_CALENDARIO[nivel - 1] })}><Minus aria-hidden="true" /></button>
                 <button type="button" aria-label="Acercar" disabled={nivel >= ALTOS_CALENDARIO.length - 1} onClick={() => c.cambiar({ alto: ALTOS_CALENDARIO[nivel + 1] })}><Plus aria-hidden="true" /></button>

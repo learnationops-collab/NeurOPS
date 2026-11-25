@@ -19,7 +19,7 @@ function useContar(valor) {
         const a = desde.current, t0 = performance.now();
         let raf;
         const paso = (t) => {
-            const k = Math.min(1, (t - t0) / 700);
+            const k = Math.min(1, (t - t0) / 350);
             desde.current = Math.round(a + (valor - a) * (1 - Math.pow(1 - k, 3)));
             setN(desde.current);
             if (k < 1) raf = requestAnimationFrame(paso);

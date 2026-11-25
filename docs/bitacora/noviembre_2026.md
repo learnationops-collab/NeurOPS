@@ -920,3 +920,8 @@
 - Tocar a una persona (o «Cualquiera») pasa solo a «Día y hora».
 - «Siguiente» aparece en la franja del horario elegido; el pie de abajo queda solo para «Reprogramar» en el último paso.
 - El «Volver» de toda sub-vista de la ficha (Reprogramar, Canceló, No show, cobros…) pasa a la cabecera, al lado de los íconos y de cerrar.
+
+### 25/11/2026 · Confirmar: tarjetas enteras de entrada, teclas 1 a 9 y menos movimiento
+- Calendario de Confirmar: cada llamada se ve entera desde el principio (todas sus etiquetas), sin tener que pasar el mouse.
+- Las teclas 1 a 9 eligen cuántos días ver (antes solo 1, 2, 3 y 7); desde 5 días las columnas van angostas.
+- Menos movimiento: las tarjetas y etiquetas aparecen al instante (sin escalonar ni agrandarse), igual que la columna de la derecha del Workspace y la Configuración (Disponibilidad, cupos, WhatsApp).

@@ -57,7 +57,7 @@ export default function ConfirmarVistas({ agendas, user, esTriage, ahora, fechaB
     );
     const periodo = periodoDe(fechaBase || hoy, offset, vista.dias || 7);
 
-    // En el calendario: 1, 2, 3 y 7 eligen cuántos días ver; ← y → se mueven; T vuelve a hoy. No con el foco
+    // En el calendario: las teclas 1 a 9 eligen cuántos días ver; ← y → se mueven; T vuelve a hoy. No con el foco
     // en un campo ni con una ventana abierta (la ficha).
     const esCalendario = vista.tipo === 'semana';
     useEffect(() => {
@@ -67,7 +67,7 @@ export default function ConfirmarVistas({ agendas, user, esTriage, ahora, fechaB
             const t = e.target;
             if (t?.closest?.('input, textarea, select, [contenteditable="true"], [role="dialog"], .ui-modal')) return;
             if (document.querySelector('[aria-modal="true"]')) return;
-            const dias = { 1: 1, 2: 2, 3: 3, 7: 7 }[e.key];
+            const dias = /^[1-9]$/.test(e.key) ? Number(e.key) : 0;
             if (dias) { e.preventDefault(); setOffset(0); actualizar(vista.id, { dias }); return; }
             if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); setOffset(o => o + (e.key === 'ArrowLeft' ? -1 : 1)); return; }
             if (e.key === 't' || e.key === 'T') setOffset(0);

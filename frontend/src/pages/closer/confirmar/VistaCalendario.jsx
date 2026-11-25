@@ -1,4 +1,4 @@
-// Vista Calendario de Confirmar (ADR-W201, 25/11/2026): las llamadas de 1, 2, 3 o 7 días en el calendario
+// Vista Calendario de Confirmar (ADR-W201, 25/11/2026): las llamadas de 1 a 9 días en el calendario
 // estándar. Cada llamada dice su etapa con texto y las propiedades que la vista tiene prendidas (tipo,
 // closer, decisión, inversión…). La cabecera de días queda pegada al scrollear. Tocar una abre la ficha.
 import { useLayoutEffect, useRef } from 'react';
@@ -16,7 +16,7 @@ const pad = (n) => String(n).padStart(2, '0');
 const iso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const corto = (t, n = 26) => (t.length > n ? t.slice(0, n - 1).trimEnd() + '…' : t);
 
-/** Los días a la vista: la semana (lunes a domingo) o 1-3 días desde `base`, corridos `offset` períodos. */
+/** Los días a la vista: la semana (lunes a domingo) o de 1 a 9 días desde `base`, corridos `offset` períodos. */
 export function periodoDe(base, offset = 0, dias = 7) {
     const d = new Date(base + 'T12:00:00');
     if (dias === 7) d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
@@ -64,7 +64,7 @@ function ubicar(items) {
 
 const VERDE = 'var(--cl-success, #2FBF8F)', AMBAR = 'var(--cl-warning, #D9A441)', ROJO = 'var(--ui-danger, #f87171)';
 
-// Una etiqueta por propiedad prendida, cada una con su color y su ícono. Entran escalonadas.
+// Una etiqueta por propiedad prendida, cada una con su color y su ícono.
 function chipsDe(a, claves, ctx) {
     const out = [];
     claves.forEach(k => {
@@ -94,9 +94,9 @@ function chipsDe(a, claves, ctx) {
 }
 
 function Chips({ lista }) {
-    return lista.map((x, i) => (
+    return lista.map((x) => (
         <i key={x.k} className={`cv-chip${x.neutro ? ' cv-chip--neutro' : ''}${x.fuerte ? ' cv-chip--fuerte' : ''}`}
-            style={{ '--c': x.c, animationDelay: `${120 + i * 45}ms` }} title={x.title}>
+            style={{ '--c': x.c }} title={x.title}>
             {x.icono}{x.pre && <small>{x.pre}</small>}{x.t}
         </i>
     ));
@@ -135,8 +135,8 @@ export default function VistaCalendario({ vista, agendas, periodo, hoy, ahora, n
     }, [periodo.rotulo, alto, nDias]); // eslint-disable-line react-hooks/exhaustive-deps
 
     return (
-        <div ref={caja} className={`cv-semana cv-cal cv-cal--d${nDias}`}>
-            <Calendar days={days} startHour={desde} endHour={hasta} hourHeight={alto} zoneLabel={viewerTimezoneLabel()} minWidth={nDias === 7 ? 860 : 0}
+        <div ref={caja} className={`cv-semana cv-cal cv-cal--d${nDias}${nDias >= 5 ? ' cv-cal--angosto' : ''}`}>
+            <Calendar days={days} startHour={desde} endHour={hasta} hourHeight={alto} zoneLabel={viewerTimezoneLabel()} minWidth={nDias >= 5 ? 860 : 0}
                 nowMinutes={ahoraMin}
                 columnProps={(day) => ({ 'data-finde': day.finde || undefined })}
                 renderColumn={(day) => ubicar(porDia.get(day.key) || []).map(({ a, minuto, hora, izq, ancho, carril }) => {

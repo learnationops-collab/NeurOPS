@@ -47,7 +47,7 @@ export default function TarjetaAnillo({ rotulo, pct, cuenta, racha, chips = [] }
             </div>
             {chips.length > 0 && (
                 <div className="ws-chips">
-                    {chips.map((c, i) => <span key={c.k} className="ws-chip" data-tipo={c.tipo} style={{ animationDelay: `${300 + i * 60}ms` }} title={c.title}>{c.t}</span>)}
+                    {chips.map((c) => <span key={c.k} className="ws-chip" data-tipo={c.tipo} title={c.title}>{c.t}</span>)}
                 </div>
             )}
         </div>
