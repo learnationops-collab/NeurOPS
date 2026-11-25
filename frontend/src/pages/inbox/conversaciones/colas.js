@@ -118,6 +118,9 @@ const enviadoPor = (c) => (c.ultimo_envio?.de === 'bot' ? 'bot' : c.ultimo_envio
 // `asignado`: null (todos) · 'ninguno' · el id de un setter. `califica`: 'si' · 'no'. `fases` y `etiquetas`:
 // listas (alcanza con una). `envioPor`: 'lead' (lo último lo escribió el lead), 'bot' o el id del setter.
 export function cumpleFiltro(c, f, ahora) {
+    // No lead / In-abrible que no volvió a escribir: fuera de la bandeja, salvo que se pida esa etapa en el filtro.
+    if (c.cerrada && !f.conCerradas && !(f.fases || []).includes(c.fase)) return false;
+    if (f.canal && (f.canal === 'wa') !== esWhatsapp(c)) return false;
     if (f.etiqueta && !(c.etiquetas || []).some((e) => claveEtiqueta(e) === f.etiqueta)) return false;
     if (f.etiquetas?.length && !(c.etiquetas || []).some((e) => f.etiquetas.includes(claveEtiqueta(e)))) return false;
     if (f.fases?.length && !f.fases.includes(c.fase)) return false;
@@ -162,8 +165,13 @@ export function filtrar(lista, { ahora, ...f }) {
 }
 
 // Sin usuario: Instagram no da el perfil de quien nunca escribió (solo le escribimos nosotros); al responder se completa.
+/** El @usuario de Instagram cuando arriba se muestra el nombre; null si no hace falta repetirlo. */
+export const usuarioDe = (c) => (!esWhatsapp(c) && c.nombre && c.username ? `@${c.username}` : null);
+
 export function quien(c) {
+    // El nombre primero (Mario, 25/11: «Nieves Pupo» se leía como @zpg_snow); el @usuario va debajo (`usuarioDe`).
     if (esWhatsapp(c)) return c.nombre || c.username || 'Sin nombre';
+    if (c.nombre) return c.nombre;
     if (c.username) return `@${c.username}`;
     return c.nombre || (c.ultimo_entrante_en ? 'Sin usuario' : 'Todavía no respondió');
 }

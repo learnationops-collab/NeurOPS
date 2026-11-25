@@ -7,7 +7,7 @@ import useEnPantalla from '../../../components/ui/useEnPantalla';
 import { Avatar, Button, Chip, IconButton, Panel, toast } from '../../../components/standard';
 import { inboxApi } from '../api';
 import MenuBot, { EJECUCION } from './AccionesFlujo';
-import { esWhatsapp, examenDe, quien } from './colas';
+import { esWhatsapp, examenDe, quien, usuarioDe } from './colas';
 import Etiquetas from './Etiquetas';
 import { Califica } from './Fila';
 import { FASES, TRAMOS, colorDe, faseDe, ordenDe, siguiente } from './fasesSetting';
@@ -152,6 +152,7 @@ export default function TarjetaLead({ datos, fase, canal, yo, onCambio, onMover 
     const { contacto, asignado } = datos;
     const examen = examenDe({ examen: contacto.variables?.examen });
     const nombre = contacto.variables?.nombre || contacto.nombre;
+    const debajo = [usuarioDe(contacto), nombre && nombre !== quien(contacto) ? nombre : null, examen].filter(Boolean);
     const ejecucion = datos.ejecucion;
     return (
         <Panel as="section" size="sm" className="cv-tarjeta" aria-label="El lead">
@@ -160,7 +161,7 @@ export default function TarjetaLead({ datos, fase, canal, yo, onCambio, onMover 
                 <div className="cv-tarjeta-nombre">
                     <h3 className="t-h3">{quien(contacto)}</h3>
                     <span className="cv-chat-linea">
-                        {[nombre, examen].filter(Boolean).length > 0 && <span className="t-cap mut">{[nombre, examen].filter(Boolean).join(' · ')}</span>}
+                        {debajo.length > 0 && <span className="t-cap mut">{debajo.join(' · ')}</span>}
                         <Califica valor={contacto.variables?._califica} />
                     </span>
                 </div>

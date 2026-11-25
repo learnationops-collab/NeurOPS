@@ -1029,3 +1029,9 @@
 
 ### 25/11/2026 · Inbox: abren las conversaciones que empezaron por un comentario
 - Las conversaciones que arrancaron con un comentario en una publicación no cargaban (31 en las últimas 48 h; lo reportó un setter): el link a la publicación se le pedía al transporte real, pero el método había quedado en el de simulación. Ahora está en el real ([transporte.py](../../app/automatizaciones/transporte.py)).
+
+### 25/11/2026 · Inbox: el feedback de Mario
+- No lead e In-abrible salen de la bandeja: solo queda lo pendiente. Si el lead vuelve a escribir, reaparece; se ven filtrando por esa etapa y siguen en el Embudo (ADR-W230).
+- Filtro por canal (Instagram o WhatsApp), con cuántos hay de cada uno.
+- El nombre del lead va primero y grande (lista, chat y tarjeta); el @usuario queda debajo en la tarjeta.
+- Lo que Meta no deja ver se explica en palabras: «Mensaje que WhatsApp no deja ver acá: miralo en el teléfono» en vez de «[unsupported]», y los adjuntos de Instagram («📷 Imagen», «🎬 Compartió un reel»…) en vez de «📎 unsupported_type».

@@ -5,11 +5,11 @@
 // (con `…Desde` y `…Hasta`, fechas yyyy-mm-dd). `envioPor`: 'lead', 'bot' o el id del setter. `fases` y
 // `etiquetas`: listas (ADR-W184); `orden`: el de `ORDENES` (null: el de la cola). Se guarda con el filtro.
 export const VACIO = {
-    cola: 'todas', asignado: null, etiqueta: null, etapa: null, califica: null, fases: [], etiquetas: [], orden: null,
+    cola: 'todas', canal: null, asignado: null, etiqueta: null, etapa: null, califica: null, fases: [], etiquetas: [], orden: null,
     inicio: null, inicioDesde: '', inicioHasta: '', envioPor: null, envio: null, envioDesde: '', envioHasta: '',
 };
 // Las que cuentan como «un filtro puesto» (las fechas de un rango van con su filtro; el orden no filtra).
-const CLAVES = ['cola', 'asignado', 'etiqueta', 'etapa', 'califica', 'fases', 'etiquetas', 'inicio', 'envioPor', 'envio'];
+const CLAVES = ['cola', 'canal', 'asignado', 'etiqueta', 'etapa', 'califica', 'fases', 'etiquetas', 'inicio', 'envioPor', 'envio'];
 const CLAVE = 'inbox-filtros';
 
 export const predefinidos = (yo) => [
@@ -56,6 +56,7 @@ const cuando = (f, k) => (f[k] === 'rango' ? `del ${dia(f[`${k}Desde`])} al ${di
 export function resumen(f, { colas, etapas, nombre, etiqueta, fase = (x) => x }) {
     const partes = [];
     if (f.cola !== 'todas') partes.push({ texto: colas.find((c) => c.value === f.cola)?.label || f.cola, quitar: { cola: 'todas' } });
+    if (f.canal) partes.push({ texto: f.canal === 'wa' ? 'Por WhatsApp' : 'Por Instagram', quitar: { canal: null } });
     if (f.asignado === 'ninguno') partes.push({ texto: 'Sin asignar', quitar: { asignado: null } });
     else if (f.asignado != null) partes.push({ texto: `Asignadas a ${nombre(f.asignado)}`, quitar: { asignado: null } });
     if (f.etapa) partes.push({ texto: `En etapa ${etapas.find((e) => e.value === f.etapa)?.label || f.etapa}`, quitar: { etapa: null } });

@@ -294,6 +294,7 @@ def listar_conversaciones():
     ultimos = {m.contacto_id: m for m in IgMensaje.query.join(ultimo, db.and_(
         ultimo.c.contacto_id == IgMensaje.contacto_id, ultimo.c.ultimo == IgMensaje.enviado_en))
         .filter(IgMensaje.contacto_id.in_(ids)).order_by(IgMensaje.id).all()} if ids else {}
+    cerradas = fases.cerradas([c for c, _, _, _ in filas])
     salida = []
     for contacto, momento, cantidad, _ in filas:
         variables = contacto.variables or {}
@@ -323,6 +324,8 @@ def listar_conversaciones():
             'asignado': asignados.get(contacto.id),
             'canal': fases.canal(contacto, asignados.get(contacto.id)),
             'etiquetas': etiquetas.get(str(contacto.id), []),
+            # No lead / In-abrible sin mensajes nuevos del lead: sale de la bandeja (pedido de Mario, 25/11).
+            'cerrada': contacto.id in cerradas,
             **avance.get(contacto.id, {}),
         })
     return jsonify({'conversaciones': salida, 'mediana_respuesta': bandeja.mediana_respuesta(ahora),

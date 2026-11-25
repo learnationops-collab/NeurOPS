@@ -8,6 +8,12 @@ import { Button, IconButton } from '../../../components/standard';
 import { rotuloPaso } from '../estadoFlujo';
 
 const ABIERTA = ['en_curso', 'esperando_respuesta', 'esperando_tiempo'];
+// Lo que manda Instagram, en palabras (`unsupported_type`: historia, reel o algo que la API no entrega).
+const ADJUNTOS = {
+    image: '📷 Imagen', video: '🎬 Video', audio: '🎤 Audio', file: '📄 Archivo', share: '🔗 Compartió una publicación',
+    story_mention: '📣 Te mencionó en una historia', ig_reel: '🎬 Compartió un reel',
+    unsupported_type: '⚠️ Algo que Instagram no deja ver acá (historia, reel…): miralo en la app',
+};
 
 export function momento(iso) {
     const d = new Date(iso);
@@ -38,7 +44,7 @@ function Burbuja({ m }) {
                 </span>
             )}
             {m.texto && <p>{m.texto}</p>}
-            {m.adjuntos.map((a, i) => <p key={i} className="mut">📎 {a}</p>)}
+            {m.adjuntos.map((a, i) => <p key={i} className="mut">{ADJUNTOS[a] || `📎 ${a}`}</p>)}
             {m.botones.length > 0 && (
                 <div className={`cv-botones${m.elegido ? ' cv-botones--respondido' : ''}`}>
                     {m.botones.map((b) => (b === m.elegido

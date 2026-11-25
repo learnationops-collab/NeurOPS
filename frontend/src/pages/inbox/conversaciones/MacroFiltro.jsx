@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ChevronDown, Search, SlidersHorizontal, Star } from 'lucide-react';
 import useEnPantalla from '../../../components/ui/useEnPantalla';
 import { Button, Chip, IconButton, Input, InputGroup, Segmented, toast } from '../../../components/standard';
-import { COLAS, asignados, claveEtiqueta, cumpleFiltro, etiquetasDe, filtrar } from './colas';
+import { COLAS, asignados, claveEtiqueta, cumpleFiltro, esWhatsapp, etiquetasDe, filtrar } from './colas';
 import { FASES, colorDe, corto } from './fasesSetting';
 import { useGuardados } from './guardados';
 import Resumen from './Resumen';
@@ -157,6 +157,11 @@ export default function MacroFiltro({ lista, filtro, onCambiar, ahora, yo }) {
                             options={COLAS.map((c) => ({ value: c.value, label: c.label, count: sinCola.filter((x) => c.cumple(x, ahora)).length }))} />
                     </div>
                     <div className="cv-macro-col">
+                        <span className="t-rotulo">Canal</span>
+                        <Opciones valor={filtro.canal} onElegir={(canal) => cambiar({ canal })} opciones={[
+                            ['ig', 'Instagram', lista.filter((c) => !esWhatsapp(c)).length],
+                            ['wa', 'WhatsApp', lista.filter(esWhatsapp).length, 'var(--success)'],
+                        ]} />
                         <span className="t-rotulo">Etapa del setting</span>
                         <Fases lista={lista} elegidas={filtro.fases || []} onCambiar={(fases) => cambiar({ fases })} />
                         <span className="t-rotulo">Etiqueta</span>

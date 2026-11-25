@@ -194,7 +194,7 @@ export default function Conversaciones() {
                     </div>
                 </div>
             </HeaderActions>
-            {vista === 'embudo' ? <Embudo lista={visibles} ahora={ahora} onAbrir={abrir} onMovida={recargar} /> : (
+            {vista === 'embudo' ? <Embudo lista={filtrar(lista, { ...filtro, ahora, conCerradas: true })} ahora={ahora} onAbrir={abrir} onMovida={recargar} /> : (
                 <div className={`cv${elegida ? ' cv--abierta' : ''}`}>
                     <Panel as="section" size="sm" className="cv-lista" aria-label="Conversaciones">
                         <div className="cv-lista-buscar">

@@ -63,6 +63,19 @@ def mover(contacto, fase, usuario_id, desde=None):
     contacto.etapa = _SUBETAPA.get(fase, 'conversando' if fase in EMBUDO else contacto.etapa)
 
 
+def cerradas(contactos):
+    """Los ids marcados No lead o In-abrible que no volvieron a escribir desde que se los marcó. Si el lead
+    escribe de nuevo, vuelve a la bandeja (puede haber cambiado de idea)."""
+    salidos = [c for c in contactos if c.fase in SALIDAS]
+    if not salidos:
+        return set()
+    marcas = dict(db.session.query(IgFase.contacto_id, db.func.max(IgFase.en))
+                  .filter(IgFase.contacto_id.in_([c.id for c in salidos]), IgFase.fase.in_(SALIDAS))
+                  .group_by(IgFase.contacto_id).all())
+    return {c.id for c in salidos
+            if not (c.ultimo_entrante_en and marcas.get(c.id) and c.ultimo_entrante_en > marcas[c.id])}
+
+
 def historial(contacto_id, limite=30):
     filas = (IgFase.query.filter_by(contacto_id=contacto_id).order_by(IgFase.en.desc(), IgFase.id.desc())
              .limit(limite).all())

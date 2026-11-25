@@ -21,7 +21,10 @@ logger = logging.getLogger(__name__)
 
 ESTADOS_META = {'sent': WaEnvio.ENVIADO, 'delivered': WaEnvio.ENTREGADO, 'read': WaEnvio.LEIDO, 'failed': WaEnvio.FALLO}
 SIN_TEXTO = {'image': '📷 Imagen', 'audio': '🎤 Audio', 'video': '🎬 Video', 'document': '📄 Documento',
-             'sticker': 'Sticker', 'location': '📍 Ubicación', 'contacts': '👤 Contacto'}
+             'sticker': 'Sticker', 'location': '📍 Ubicación', 'contacts': '👤 Contacto',
+             # Lo que la API no entrega (encuesta, «ver una vez», editado…): se ve solo en el teléfono.
+             'unsupported': '⚠️ Mensaje que WhatsApp no deja ver acá: miralo en el teléfono',
+             'reaction': '👍 Reacción'}
 
 
 def texto_de(mensaje):
@@ -37,7 +40,7 @@ def texto_de(mensaje):
     if tipo == 'reaction':
         return (mensaje.get('reaction') or {}).get('emoji') or ''
     leyenda = (mensaje.get(tipo) or {}).get('caption') if isinstance(mensaje.get(tipo), dict) else None
-    base = SIN_TEXTO.get(tipo, f'[{tipo}]')
+    base = SIN_TEXTO.get(tipo, f'Mensaje de tipo «{tipo}» que no se puede mostrar')
     return f'{base}: {leyenda}' if leyenda else base
 
 
