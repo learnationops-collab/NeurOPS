@@ -1,0 +1,38 @@
+/* Turnos › «Lo que ve el lead» (LoQueVe.jsx). */
+.thalamus .lv{display:grid;gap:var(--s3)}
+.thalamus .lv-intro{margin:0}
+.thalamus .lv-card{display:grid;gap:var(--s3);padding:var(--s3) var(--s4);border:1px solid var(--border-subtle);border-radius:14px}
+.thalamus .lv-top{display:flex;align-items:center;gap:var(--s3);flex-wrap:wrap}
+.thalamus .lv-nom{display:grid;gap:2px;margin-right:auto;min-width:0}
+.thalamus .lv-nom b{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:800}
+.thalamus .lv-punto{width:9px;height:9px;border-radius:50%;flex-shrink:0;display:inline-block}
+.thalamus .lv-ventana,.thalamus .lv-elegir{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap}
+.thalamus .lv-elegir .lv-ventana{margin-left:auto}
+.thalamus .lv-estado{font-size:11.5px;font-weight:800;padding:3px 9px;border-radius:999px;background:var(--success-surface);color:var(--success);border:1px solid var(--success-border)}
+.thalamus .lv-estado--guardando{background:var(--warning-surface);color:var(--warning);border-color:var(--warning-border)}
+.thalamus .lv-botones{display:inline-flex;gap:var(--s2)}
+.thalamus .lv-resumen b{font-weight:900}
+.thalamus .lv-pie{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);flex-wrap:wrap;font-size:13px;color:var(--text-muted)}
+.thalamus .lv-pie b{color:var(--text-on-surface)}
+
+.thalamus .lv-grilla{display:grid;grid-template-columns:minmax(150px,200px) repeat(var(--lv-dias),minmax(44px,1fr));gap:5px;overflow-x:auto;align-items:stretch}
+.thalamus .lv-gh{font-size:10.5px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted-40);text-align:center;align-self:end}
+.thalamus .lv-gh i{font-style:normal;color:var(--text-muted)}
+.thalamus .lv-gh.lv-hoy{color:var(--brand-secondary)}
+.thalamus .lv-rot{display:grid;align-content:center;gap:1px;min-width:0;padding-right:6px}
+.thalamus .lv-rot b{display:flex;align-items:center;gap:7px;font-size:13.5px;font-weight:800}
+.thalamus .lv-dia{display:grid;justify-items:center;gap:1px;padding:6px 2px;border-radius:10px;border:1px solid transparent;background:transparent;font:inherit;color:inherit;cursor:pointer;transition:border-color .15s ease,background-color .15s ease}
+.thalamus .lv-dia b{font-size:17px;font-weight:900}
+.thalamus .lv-dia small{font-size:10px;font-weight:700;color:var(--text-muted-40);min-height:12px}
+.thalamus .lv-dia:disabled{cursor:default}
+.thalamus .lv-dia.lv-ve{background:var(--bg-element);border-color:var(--border-subtle)}
+.thalamus .lv-dia.lv-ve:hover:not(:disabled),.thalamus .lv-dia.lv-sel{border-color:var(--brand-secondary)}
+.thalamus .lv-dia.lv-fuera b{color:var(--text-muted-40);font-weight:700}
+.thalamus .lv-dia.lv-cero{background:var(--warning-surface);border-color:var(--warning-border)}
+.thalamus .lv-dia.lv-cero b{color:var(--warning)}
+.thalamus .lv-horas{display:grid;gap:var(--s2);padding-top:var(--s2);border-top:1px dashed var(--border-subtle)}
+
+.thalamus .lv-leyenda{display:flex;gap:var(--s3);flex-wrap:wrap}
+.thalamus .lv-leyenda i{display:inline-block;width:12px;height:12px;border-radius:4px;margin-right:6px;vertical-align:-2px;border:1px solid var(--border-subtle)}
+.thalamus .lv-leyenda i.lv-ve{background:var(--bg-element)}
+.thalamus .lv-leyenda i.lv-cero{background:var(--warning-surface);border-color:var(--warning-border)}

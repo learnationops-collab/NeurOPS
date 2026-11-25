@@ -11,6 +11,7 @@ from flask import Blueprint, jsonify, request
 from flask_login import current_user, login_required
 
 from app.agendas_v2 import paquete, servicio, videos
+from app.agendas_v2 import turnos_lead as turnos_lead_svc
 from app.agendas_v2.nucleo.normalizar import COLECCIONES
 from app.models.user import ROLE_ADMIN, ROLE_CLOSER, ROLE_DIRECTOR_COMERCIAL, ROLE_SETTER
 
@@ -21,7 +22,9 @@ ROLES_CON_ACCESO = (ROLE_ADMIN, ROLE_DIRECTOR_COMERCIAL)
 # agendamiento. Lo que se configura es de todos (un funnel o un evento borrado deja sin agendas a todo
 # el equipo), asi que queda para la direccion. Vale el rol ACTIVO, como en toda la app.
 ROLES_DE_LECTURA = (ROLE_SETTER,)
-VISTAS_DE_LECTURA = frozenset({'estado', 'estadisticas', 'version', 'ocupacion', 'fichas', 'usuarios'})
+VISTAS_DE_LECTURA = frozenset({'estado', 'estadisticas', 'version', 'ocupacion', 'fichas', 'usuarios', 'turnos_lead'})
+# Lo que el setter también puede cambiar: los días del link desde Turnos (Santi, 25/11/2026, ADR-W226).
+VISTAS_DEL_SETTER = frozenset({'cambiar_dias'})
 ID_VALIDO = re.compile(r'^[A-Za-z0-9_-]{1,40}$')
 
 # Lo que un rol de lectura recibe de cada reserva: lo que dibuja la ocupacion de cada closer. Fuera
@@ -39,6 +42,8 @@ def _guardia():
         return None
     vista = (request.endpoint or '').rpartition('.')[2]
     if current_user.role in ROLES_DE_LECTURA and request.method == 'GET' and vista in VISTAS_DE_LECTURA:
+        return None
+    if current_user.role in ROLES_DE_LECTURA and vista in VISTAS_DEL_SETTER:
         return None
     return jsonify({'message': 'Forbidden'}), 403
 
@@ -178,6 +183,30 @@ def prueba_horarios(evento_id):
         return jsonify({'message': 'Not found'}), 404
     r = servicio.horarios_prueba(servicio.colecciones(), evento_id, _cuerpo().get('grupo'))
     return jsonify(r) if r else (jsonify({'message': 'Not found'}), 404)
+
+
+@bp.route('/turnos-lead', methods=['GET'])
+def turnos_lead():
+    """Lo que ve ahora un lead de cada segmento en cada link con segmentación (turnos_lead.vista).
+    ?tz: la zona en que se cuentan los días."""
+    # El setter copia los links de Setting con su código (?o=…), así la agenda queda a su nombre.
+    codigo = servicio.codigo_setter(current_user.id) if current_user.role == ROLE_SETTER else ''
+    return jsonify({**turnos_lead_svc.vista(request.args.get('tz')), 'codigo': codigo})
+
+
+@bp.route('/eventos/<evento_id>/dias', methods=['PUT'])
+def cambiar_dias(evento_id):
+    """{n, tipo: 'habiles'|'corridos'} → la ventana del link, en vivo (borrador y publicado)."""
+    if not ID_VALIDO.match(evento_id or ''):
+        return jsonify({'message': 'Not found'}), 404
+    cuerpo = _cuerpo()
+    try:
+        reservas = turnos_lead_svc.cambiar_dias(evento_id, cuerpo.get('n'), cuerpo.get('tipo'), usuario_id=current_user.id)
+    except ValueError as e:
+        return jsonify({'message': str(e)}), 400
+    if reservas is None:
+        return jsonify({'message': 'Not found'}), 404
+    return jsonify({'reservas': reservas, 'version': servicio.version()})
 
 
 @bp.route('/usuarios', methods=['GET'])

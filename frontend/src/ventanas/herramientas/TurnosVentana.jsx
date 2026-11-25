@@ -14,12 +14,17 @@ import { rangoSemana } from '../../pages/agendas_v2/secciones/team/cobertura';
 import { setTeam } from '../../pages/agendas_v2/secciones/team/comun';
 import { agendasDeVista, useAhora, useOcupacionGoogle, useZonaVista } from '../../pages/agendas_v2/secciones/team/semana';
 import TurnosEquipo, { ofrecidas } from '../../pages/agendas_v2/secciones/team/TurnosEquipo.jsx';
+import LoQueVe from '../../pages/agendas_v2/secciones/team/LoQueVe.jsx';
 import { ZONAS } from '../../pages/agendas_v2/core/catalogos';
-import { Button, IconButton, Input } from '../../components/standard';
+import { Button, IconButton, Input, Segmented } from '../../components/standard';
 
 const DIA_MS = 86400000;
 const CLAVE_TZ = 'turnos-zona';
+const CLAVE_VISTA = 'turnos-vista';
 const leerZona = () => { try { return window.localStorage.getItem(CLAVE_TZ); } catch { return null; } };
+// Lo que ve el lead primero (ADR-W226); la semana del equipo es la tabla de antes.
+const VISTAS = [{ value: 'link', label: 'Por link' }, { value: 'segmento', label: 'Por segmento' }, { value: 'semana', label: 'Semana del equipo' }];
+const leerVista = () => { try { return window.localStorage.getItem(CLAVE_VISTA) || 'link'; } catch { return 'link'; } };
 
 export default function TurnosVentana() {
     useIniciarAlmacen();
@@ -31,6 +36,12 @@ export default function TurnosVentana() {
     const zonaPropia = useZonaVista();
     // La hora en que se leen los turnos: la elegida (se recuerda en este navegador) o la propia.
     const [zonaElegida, setZonaElegida] = useState(leerZona);
+    const [vistaElegida, setVistaElegida] = useState(leerVista);
+    const elegirVista = (v) => {
+        setVistaElegida(v);
+        try { window.localStorage.setItem(CLAVE_VISTA, v); } catch { /* sin almacenamiento */ }
+    };
+    const enSemana = vistaElegida === 'semana';
     const tz = zonaElegida || zonaPropia;
     const elegirZona = (z) => {
         setZonaElegida(z || null);
@@ -38,7 +49,7 @@ export default function TurnosVentana() {
     };
     const personas = useMemo(() => (d ? ofrecidas(ord(d, 'personas'), elegibles).filter(p => (esCloser(d, p) || esTriage(d, p)) && horasSemana(p) > 0) : []), [d, elegibles]);
     const { desde, hasta, lunes } = rangoSemana(personas, semana, ahora, tz);
-    const google = useOcupacionGoogle(desde, hasta, !cargando && personas.length > 0);
+    const google = useOcupacionGoogle(desde, hasta, enSemana && !cargando && personas.length > 0);
     const vista = useMemo(() => agendasDeVista(reservas, google), [reservas, google]);
     const ir = (v) => setTeam({ semana: v === 0 ? 0 : semana + v });
     const claveDe = (ms) => new Date(ms).toISOString().slice(0, 10);
@@ -47,10 +58,13 @@ export default function TurnosVentana() {
     return (
         <div className="thalamus vt-thalamus" data-theme={tematica}>
             <div className="av-nav vt-nav">
-                <IconButton label="Semana anterior" icon={<Icono n="chevron-left" />} size="sm" data-nav="" onClick={() => ir(-1)} />
-                <Button data-nav="" disabled={!semana} onClick={() => ir(0)}>Esta semana</Button>
-                <IconButton label="Semana siguiente" icon={<Icono n="chevron-right" />} size="sm" data-nav="" onClick={() => ir(1)} />
-                {lunes != null && <b className="av-rango" aria-live="polite">{fechaCorta(claveDe(lunes)) + ' – ' + fechaCorta(claveDe(lunes + 6 * DIA_MS))}</b>}
+                <Segmented size="sm" value={vistaElegida} options={VISTAS} onChange={elegirVista} label="Vista" itemProps={{ 'data-nav': '' }} />
+                {enSemana && <>
+                    <IconButton label="Semana anterior" icon={<Icono n="chevron-left" />} size="sm" data-nav="" onClick={() => ir(-1)} />
+                    <Button data-nav="" disabled={!semana} onClick={() => ir(0)}>Esta semana</Button>
+                    <IconButton label="Semana siguiente" icon={<Icono n="chevron-right" />} size="sm" data-nav="" onClick={() => ir(1)} />
+                    {lunes != null && <b className="av-rango" aria-live="polite">{fechaCorta(claveDe(lunes)) + ' – ' + fechaCorta(claveDe(lunes + 6 * DIA_MS))}</b>}
+                </>}
                 <label className="vt-zona">
                     <span className="t-sm mut">Ver en hora de</span>
                     <Input as="select" data-nav="" value={zonaElegida || ''} onChange={(e) => elegirZona(e.target.value)} aria-label="Zona horaria">
@@ -59,9 +73,11 @@ export default function TurnosVentana() {
                     </Input>
                 </label>
             </div>
-            {cargando
-                ? <p className="t-sm mut">Leyendo los horarios del equipo…</p>
-                : <TurnosEquipo vista={vista} google={google} semana={semana} ahora={ahora} tz={tz} />}
+            {!enSemana
+                ? <LoQueVe modo={vistaElegida} tz={tz} />
+                : cargando
+                    ? <p className="t-sm mut">Leyendo los horarios del equipo…</p>
+                    : <TurnosEquipo vista={vista} google={google} semana={semana} ahora={ahora} tz={tz} />}
             <Tooltip />
         </div>
     );

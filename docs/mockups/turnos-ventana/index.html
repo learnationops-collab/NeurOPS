@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Mockup · Turnos: lo que ve el lead</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #dcdcf0; --win: #e6e6e9; --panel: #ececef; --line: #d6d6dc;
+    --ink: #1c2033; --mut: #5f6478; --mut2: #8a8ea0;
+    --hoy: #1a8fa0; --ok: #1f9d6b; --warn: #c98a14; --in: #ffffff;
+    --sA: #1f9d6b; --sB: #3b7dd8; --sC: #c98a14; --sD: #c0398f; --sAl: #6a4fd1;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; font-family: Inter, system-ui, sans-serif; color: var(--ink);
+         background: radial-gradient(1200px 600px at 20% 0%, #cfd0f5, transparent), var(--bg); padding: 32px; }
+  .nota { max-width: 1180px; margin: 0 auto 14px; font-size: 13px; color: var(--mut); }
+  .win { max-width: 1180px; margin: 0 auto; background: var(--win); border-radius: 22px;
+         box-shadow: 0 20px 60px rgba(30, 30, 80, .18); overflow: hidden; }
+  .cab { display: flex; align-items: center; gap: 10px; padding: 16px 20px; border-bottom: 1px solid var(--line); }
+  .cab b { font-weight: 500; font-size: 17px; }
+  .cab .sp { flex: 1; }
+  .ib { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: var(--panel);
+        display: grid; place-items: center; color: var(--mut); font-size: 16px; }
+  .cuerpo { padding: 20px 22px 24px; }
+  .barra { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+  .seg { display: inline-flex; background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 3px; }
+  .seg button { border: 0; background: transparent; padding: 7px 14px; border-radius: 999px; font: 600 12px Inter;
+                letter-spacing: .06em; text-transform: uppercase; color: var(--mut); cursor: pointer; }
+  .seg button.on { background: var(--in); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .barra .sp { flex: 1; }
+  .barra .tz { font-size: 14px; color: var(--mut); }
+  .sel { border: 1px solid var(--line); background: var(--panel); border-radius: 14px; padding: 9px 14px; font-size: 14px; }
+
+  .resumen { font-size: 15px; color: var(--mut); margin: 0 0 14px; }
+  .resumen b { color: var(--ink); }
+  .alerta { display: flex; gap: 10px; align-items: center; background: #fdf1dc; color: #8a5d0a; border-radius: 14px;
+            padding: 10px 14px; font-size: 13.5px; margin-bottom: 14px; }
+  .alerta b { color: #6b4706; }
+  .alerta a { margin-left: auto; color: #6b4706; font-weight: 700; text-decoration: none; }
+
+  .ev { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 16px 18px 14px; margin-bottom: 14px; }
+  .ev-top { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .ev-nom { display: flex; flex-direction: column; min-width: 230px; }
+  .ev-nom b { font-size: 16px; font-weight: 700; }
+  .ev-nom span { font-size: 12.5px; color: var(--mut); margin-top: 2px; }
+  .ev-top .sp { flex: 1; }
+
+  .ventana { display: flex; align-items: center; gap: 10px; }
+  .ventana .lbl { font-size: 13px; color: var(--mut); }
+  .step { display: inline-flex; align-items: center; border: 1px solid var(--line); background: var(--in); border-radius: 12px; overflow: hidden; }
+  .step button { width: 34px; height: 34px; border: 0; background: transparent; font-size: 18px; color: var(--ink); cursor: pointer; }
+  .step button:hover { background: #f1f1f5; }
+  .step output { min-width: 28px; text-align: center; font-weight: 800; font-size: 16px; font-variant-numeric: tabular-nums; }
+  .mini { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--in); }
+  .mini button { border: 0; background: transparent; padding: 8px 10px; font: 600 12px Inter; color: var(--mut); cursor: pointer; }
+  .mini button.on { background: var(--ink); color: #fff; }
+  .estado { font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: #dff3ea; color: var(--ok); white-space: nowrap; }
+  .estado.guardando { background: #fdf1dc; color: var(--warn); }
+  .btn { border: 1px solid var(--line); background: var(--in); border-radius: 10px; padding: 7px 11px; font: 600 12.5px Inter;
+         color: var(--ink); cursor: pointer; white-space: nowrap; }
+  .btn:hover { border-color: var(--hoy); color: var(--hoy); }
+
+  /* Grilla: rótulo + 10 días */
+  .grilla { display: grid; grid-template-columns: 210px repeat(10, 1fr); gap: 6px; margin-top: 14px; align-items: stretch; }
+  .gh { font-size: 11px; font-weight: 700; letter-spacing: .07em; color: var(--mut2); text-transform: uppercase; text-align: center; padding-bottom: 2px; }
+  .gh i { font-style: normal; font-weight: 600; }
+  .gh.hoy { color: var(--hoy); }
+  .rot { display: flex; flex-direction: column; justify-content: center; padding-right: 6px; }
+  .rot b { font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 7px; }
+  .rot span { font-size: 12px; color: var(--mut); margin-top: 2px; }
+  .punto { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  .dia { border-radius: 11px; padding: 7px 4px; text-align: center; border: 1px solid transparent; transition: .18s; }
+  .dia .n { display: block; font-size: 19px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .dia .q { display: block; font-size: 10.5px; color: var(--mut2); min-height: 13px; }
+  .dia.ve { background: var(--in); border-color: #cfe7ea; }
+  .dia.fuera .n { color: #b5b8c4; font-weight: 600; }
+  .dia.cerrado .n { color: #c9cbd4; }
+  .dia.cero.ve { background: #fdf1dc; border-color: #f2dcae; }
+  .dia.cero.ve .n { color: var(--warn); }
+  .dia.ve:not(.cero):hover { cursor: pointer; border-color: var(--hoy); }
+  .dia.sel { border-color: var(--hoy); box-shadow: 0 0 0 2px #1a8fa033; }
+
+  .ev-pie { display: flex; gap: 18px; margin-top: 12px; font-size: 13px; color: var(--mut); flex-wrap: wrap; align-items: center; }
+  .ev-pie b { color: var(--ink); }
+  .ev-pie .aviso { color: var(--warn); }
+  .ev-pie .der { margin-left: auto; display: flex; gap: 8px; }
+
+  .horas { display: none; margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--line); }
+  .horas.on { display: block; }
+  .horas b { font-size: 13px; }
+  .horas .lista { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .horas .lista span { background: var(--in); border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px;
+                       font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .horas .lista span small { color: var(--mut2); font-weight: 500; margin-left: 4px; }
+
+  /* Por segmentación */
+  .links { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+  .links .lbl { font-size: 13px; color: var(--mut); margin-right: 4px; }
+  .segcard { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 14px 18px; margin-bottom: 12px; }
+  .seg-top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .seg-top .quien { font-size: 13px; color: var(--mut); }
+  .seg-top .quien b { color: var(--ink); }
+  .seg-top .sp { flex: 1; }
+  .chip { font-size: 11.5px; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: #fff; border: 1px solid var(--line); }
+  .criterio { font-size: 12.5px; color: var(--mut); margin-top: 6px; }
+
+  .leyenda { display: flex; gap: 16px; font-size: 12px; color: var(--mut); margin-top: 6px; flex-wrap: wrap; }
+  .leyenda i { display: inline-block; width: 12px; height: 12px; border-radius: 4px; vertical-align: -2px; margin-right: 5px; }
+  .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(20px); opacity: 0;
+           background: var(--ink); color: #fff; padding: 11px 18px; border-radius: 12px; font-size: 14px; transition: .25s; }
+  .toast.on { opacity: 1; transform: translateX(-50%); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+
+<p class="nota">Mockup v2 · Turnos con foco en lo que ve el lead. Se puede tocar: las pestañas, − / +, hábiles / corridos, «Copiar link» y cada día. Equipo y reglas reales de producción; horarios de ejemplo. Hoy, miércoles 25/11.</p>
+
+<div class="win">
+  <div class="cab">
+    <span>📅</span><b>Turnos</b><span class="sp"></span>
+    <span class="ib">—</span><span class="ib">⤢</span><span class="ib">✕</span>
+  </div>
+  <div class="cuerpo">
+    <div class="barra">
+      <div class="seg" id="vista">
+        <button data-v="links" class="on">Por link</button>
+        <button data-v="segs">Por segmentación</button>
+        <button data-v="semana">Semana del equipo</button>
+      </div>
+      <span class="sp"></span>
+      <span class="tz">Ver en hora de</span>
+      <span class="sel">La mía (America/Buenos_Aires) ▾</span>
+    </div>
+
+    <div class="alerta">⚠ <span><b>Juliana Avila</b> es triage pero no está en ningún segmento: no le llegan agendas.</span><a href="#">Ir a Estrategias →</a></div>
+
+    <div id="v-links">
+      <p class="resumen">Si un lead abre el link <b>ahora</b>, esto es lo que puede elegir según a dónde lo mande el formulario. Los días se cambian acá y el link se actualiza al instante.</p>
+      <div id="eventos"></div>
+    </div>
+
+    <div id="v-segs" hidden>
+      <div class="links">
+        <span class="lbl">Entró por</span>
+        <div class="seg" id="linkSel"></div>
+        <span class="sp" style="flex:1"></span>
+        <span class="ventana" id="ventanaSeg"></span>
+      </div>
+      <div id="segmentos"></div>
+    </div>
+
+    <div id="v-semana" hidden>
+      <p class="resumen">(La tabla de hoy, «Turnos que quedan» por grupo y día de la semana, sin cambios.)</p>
+    </div>
+
+    <div class="leyenda">
+      <span><i style="background:#fff;border:1px solid #cfe7ea"></i>El lead lo ve</span>
+      <span><i style="background:#ececef;border:1px solid #d6d6dc"></i>Hay lugar, pero queda fuera de la ventana</span>
+      <span><i style="background:#fdf1dc;border:1px solid #f2dcae"></i>En la ventana, sin horarios</span>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const DIAS = [
+  { k: '25', dow: 3, n: 'mié' }, { k: '26', dow: 4, n: 'jue' }, { k: '27', dow: 5, n: 'vie' }, { k: '28', dow: 6, n: 'sáb' },
+  { k: '29', dow: 0, n: 'dom' }, { k: '30', dow: 1, n: 'lun' }, { k: '1', dow: 2, n: 'mar' }, { k: '2', dow: 3, n: 'mié' },
+  { k: '3', dow: 4, n: 'jue' }, { k: '4', dow: 5, n: 'vie' },
+];
+// Los links: la ventana es del evento que abre el lead (aunque C/D tomen la Sesión diagnóstica).
+const LINKS = [
+  { id: 'ws', nombre: 'Workshop', evento: 'Sesión de Aceleración', ruta: '/agendas-v2/agenda/workshop/sesion-de-aceleracion', n: 3, tipo: 'habiles', antel: '30 min' },
+  { id: 'st', nombre: 'Setting', evento: 'Sesión de Aceleración', ruta: '/agendas-v2/agenda/st/sesion-de-aceleracion', n: 3, tipo: 'habiles', antel: '2 h', setters: true },
+  { id: 'aw', nombre: 'Academy Web', evento: 'Academy Web', ruta: '/agendas-v2/agenda/academy-web/academy-web', n: 2, tipo: 'corridos', antel: '4 h' },
+];
+// Segmentos del formulario «Sesión de Aceleración» (el mismo en los tres links).
+const SEGS = [
+  { id: 'alfa', nombre: 'Segmento Alfa', color: 'var(--sAl)', sesion: 'Sesión de Aceleración · 45 min', quien: 'Mario Bühler y Marlon Garcia', reparto: 'Distribuida',
+    criterio: '1 regla', libres: [3, 6, 8, 5, 0, 9, 9, 8, 9, 7], gente: ['Mario', 'Marlon'] },
+  { id: 'a', nombre: 'Segmento A', color: 'var(--sA)', sesion: 'Sesión de Aceleración · 45 min', quien: 'Mario Bühler y Marlon Garcia', reparto: 'Distribuida',
+    criterio: '8 reglas (ej.: USD 200–500 + servicio rural o médico general)', libres: [3, 6, 8, 5, 0, 9, 9, 8, 9, 7], gente: ['Mario', 'Marlon'] },
+  { id: 'b', nombre: 'Segmento B', color: 'var(--sB)', sesion: 'Sesión de Aceleración · 45 min', quien: 'Mario Bühler y Marlon Garcia', reparto: 'Distribuida',
+    criterio: '6 reglas', libres: [3, 6, 8, 5, 0, 9, 9, 8, 9, 7], gente: ['Mario', 'Marlon'] },
+  { id: 'c', nombre: 'Segmento C', color: 'var(--sC)', sesion: 'Sesión diagnóstica · 30 min', quien: 'Dari González (triage) + Mario y Marlon hasta 5 por día', reparto: 'Triage',
+    criterio: '4 reglas · toma la Sesión diagnóstica', libres: [2, 14, 14, 8, 0, 15, 15, 15, 15, 14], gente: ['Dari', 'Dari', 'Mario', 'Dari', 'Marlon'] },
+  { id: 'd', nombre: 'Segmento D', color: 'var(--sD)', sesion: 'Sesión diagnóstica · 30 min', quien: 'Dari González (triage)', reparto: 'Triage',
+    criterio: 'Todo lo demás (resto) · toma la Sesión diagnóstica', libres: [0, 10, 10, 5, 0, 10, 10, 10, 10, 10], gente: ['Dari'] },
+];
+const HORAS = ['09:00', '09:30', '10:00', '11:00', '11:30', '14:15', '15:30', '16:00', '17:00', '18:15', '18:45', '19:30', '20:00', '20:30', '21:00'];
+const DOM = 'https://work.thelearnation.com';
+// Closers (Alfa/A/B) y triage (C/D) en cada link.
+const FILAS = [
+  { nombre: 'Closers', sub: 'Alfa, A y B · Mario y Marlon', color: 'var(--sA)', base: SEGS[1] },
+  { nombre: 'Triage', sub: 'C y D · Dari (C suma Mario y Marlon)', color: 'var(--sD)', base: SEGS[3] },
+];
+
+const $ = (s, r = document) => r.querySelector(s);
+let linkSeg = 'st';
+
+function enVentana(l) {
+  const out = []; let h = 0;
+  DIAS.forEach((d, i) => {
+    if (l.tipo === 'habiles') {
+      if (d.dow === 0) { out.push(false); return; }
+      if (i > 0) h++;
+      out.push(h <= l.n);
+    } else out.push(i <= l.n);
+  });
+  return out;
+}
+const hasta = (l) => { const u = enVentana(l).lastIndexOf(true); return DIAS[u].n + ' ' + DIAS[u].k; };
+
+function ventanaHTML(l) {
+  return `<span class="lbl">Se puede agendar hasta</span>
+    <div class="step" data-l="${l.id}"><button data-a="menos" aria-label="Un día menos">−</button><output>${l.n}</output><button data-a="mas" aria-label="Un día más">+</button></div>
+    <div class="mini" data-l="${l.id}"><button data-t="habiles" class="${l.tipo === 'habiles' ? 'on' : ''}">días hábiles</button><button data-t="corridos" class="${l.tipo === 'corridos' ? 'on' : ''}">corridos</button></div>
+    <span class="estado" data-estado="${l.id}">En vivo</span>`;
+}
+
+function cabeceraDias() {
+  return '<div></div>' + DIAS.map((d, i) => `<div class="gh ${i === 0 ? 'hoy' : ''}">${d.n} <i>${d.k}</i></div>`).join('');
+}
+function filaDias(key, v, libres) {
+  return DIAS.map((d, i) => {
+    const cls = ['dia', v[i] ? 've' : (d.dow === 0 ? 'cerrado' : 'fuera'), v[i] && !libres[i] && d.dow !== 0 ? 'cero' : ''].join(' ');
+    const q = d.dow === 0 ? 'cerrado' : v[i] ? (i === 0 ? 'hoy' : '') : 'no lo ve';
+    return `<div class="${cls}" data-k="${key}" data-i="${i}"><span class="n">${d.dow === 0 ? '–' : libres[i]}</span><span class="q">${q}</span></div>`;
+  }).join('');
+}
+const suma = (v, libres) => libres.reduce((s, x, i) => s + (v[i] ? x : 0), 0);
+
+function renderLinks() {
+  $('#eventos').innerHTML = LINKS.map(l => {
+    const v = enVentana(l);
+    const tot = FILAS.map(f => suma(v, f.base.libres));
+    const vacios = FILAS.filter(f => f.base.libres.some((x, i) => v[i] && !x && DIAS[i].dow !== 0 && i > 0)).map(f => f.nombre);
+    return `
+    <section class="ev" data-card="${l.id}">
+      <div class="ev-top">
+        <div class="ev-nom"><b>${l.nombre}</b><span>${l.evento} · ${l.antel} antes${l.setters ? ' · cada setter con su código' : ''}</span></div>
+        <span class="sp"></span>
+        <div class="ventana">${ventanaHTML(l)}</div>
+      </div>
+      <div class="grilla">
+        ${cabeceraDias()}
+        ${FILAS.map((f, j) => `<div class="rot"><b><span class="punto" style="background:${f.color}"></span>${f.nombre}</b><span>${f.sub}</span></div>${filaDias(l.id + ':' + j, v, f.base.libres)}`).join('')}
+      </div>
+      <div class="ev-pie">
+        <span>Hasta el <b>${hasta(l)}</b> · closers <b>${tot[0]}</b> horarios · triage <b>${tot[1]}</b></span>
+        ${vacios.length ? `<span class="aviso">⚠ ${vacios.join(' y ')}: hoy sin horarios (por la antelación)</span>` : ''}
+        <span class="der"><button class="btn" data-copiar="${l.id}">Copiar link</button><button class="btn">Abrir ↗</button></span>
+      </div>
+      <div class="horas"></div>
+    </section>`;
+  }).join('');
+}
+
+function renderSegs() {
+  const l = LINKS.find(x => x.id === linkSeg), v = enVentana(l);
+  $('#linkSel').innerHTML = LINKS.map(x => `<button data-ls="${x.id}" class="${x.id === linkSeg ? 'on' : ''}">${x.nombre}</button>`).join('');
+  $('#ventanaSeg').innerHTML = ventanaHTML(l);
+  $('#segmentos').innerHTML = SEGS.map(s => `
+    <section class="segcard" data-card="seg-${s.id}">
+      <div class="seg-top">
+        <span class="punto" style="background:${s.color};width:11px;height:11px"></span>
+        <b style="font-size:16px">${s.nombre}</b>
+        <span class="chip">${s.reparto}</span>
+        <span class="quien">${s.sesion} · <b>${s.quien}</b></span>
+        <span class="sp"></span>
+        <span class="quien">Ve <b>${suma(v, s.libres)}</b> horarios hasta el <b>${hasta(l)}</b></span>
+        <button class="btn" data-copiar="${l.id}" data-seg="${s.nombre}">Copiar link</button>
+        <button class="btn">Probar como ${s.nombre.replace('Segmento ', '')} ↗</button>
+      </div>
+      <div class="criterio">${s.criterio}</div>
+      <div class="grilla">${cabeceraDias()}<div class="rot"><span>${s.reparto === 'Triage' ? 'Llamadas de triage' : 'Llamadas con closer'}</span></div>${filaDias('seg-' + s.id, v, s.libres)}</div>
+      <div class="horas"></div>
+    </section>`).join('');
+}
+
+function render() { renderLinks(); renderSegs(); }
+
+function toast(txt) {
+  const t = $('#toast'); t.textContent = txt; t.classList.add('on');
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('on'), 2400);
+}
+function guardar(l) {
+  document.querySelectorAll(`[data-estado="${l.id}"]`).forEach(e => { e.textContent = 'Guardando…'; e.classList.add('guardando'); });
+  setTimeout(() => {
+    document.querySelectorAll(`[data-estado="${l.id}"]`).forEach(e => { e.textContent = 'En vivo'; e.classList.remove('guardando'); });
+    toast(`${l.nombre}: el link ya ofrece hasta el ${hasta(l)}`);
+  }, 450);
+}
+
+document.addEventListener('click', (e) => {
+  const vb = e.target.closest('#vista [data-v]');
+  if (vb) {
+    document.querySelectorAll('#vista button').forEach(x => x.classList.toggle('on', x === vb));
+    ['links', 'segs', 'semana'].forEach(k => $('#v-' + k).hidden = k !== vb.dataset.v);
+    return;
+  }
+  const ls = e.target.closest('[data-ls]');
+  if (ls) { linkSeg = ls.dataset.ls; renderSegs(); return; }
+  const a = e.target.closest('[data-a]'), t = e.target.closest('[data-t]');
+  if (a || t) {
+    const l = LINKS.find(x => x.id === (a || t).parentElement.dataset.l);
+    if (a) l.n = Math.max(0, Math.min(30, l.n + (a.dataset.a === 'mas' ? 1 : -1)));
+    else if (t.dataset.t === l.tipo) return; else l.tipo = t.dataset.t;
+    render(); guardar(l); return;
+  }
+  const c = e.target.closest('[data-copiar]');
+  if (c) {
+    const l = LINKS.find(x => x.id === c.dataset.copiar);
+    const url = DOM + l.ruta + (l.setters ? '?o=<tu código>' : '');
+    navigator.clipboard?.writeText(url);
+    toast('Copiado: ' + url);
+    return;
+  }
+  const d = e.target.closest('.dia.ve:not(.cero)');
+  if (d) {
+    const card = d.closest('[data-card]'), h = $('.horas', card), i = +d.dataset.i, dd = DIAS[i];
+    const segId = card.dataset.card.startsWith('seg-') ? card.dataset.card.slice(4) : null;
+    const fila = segId ? SEGS.find(s => s.id === segId) : FILAS[+d.dataset.k.split(':')[1]].base;
+    const mismo = h.classList.contains('on') && h.dataset.k === d.dataset.k + i;
+    card.querySelectorAll('.dia.sel').forEach(x => x.classList.remove('sel'));
+    h.classList.toggle('on', !mismo); h.dataset.k = d.dataset.k + i;
+    if (!mismo) d.classList.add('sel');
+    h.innerHTML = `<b>${dd.n} ${dd.k} · lo que ve el lead</b><div class="lista">${HORAS.slice(0, fila.libres[i]).map((x, j) =>
+      `<span>${x}<small>${fila.gente[j % fila.gente.length]}</small></span>`).join('')}</div>`;
+  }
+});
+render();
+</script>
+</body>
+</html>

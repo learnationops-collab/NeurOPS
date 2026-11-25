@@ -18,10 +18,10 @@ export const HERRAMIENTAS = [
     {
         key: 'turnos',
         label: 'Turnos',
-        hint: 'Los turnos que quedan de triage y de closers, por día',
+        hint: 'Lo que ve el lead en cada link y segmento, y los días que se pueden agendar',
         Icono: CalendarClock,
         roles: ['setter', 'closer', 'triage', 'admin', 'director_comercial', 'operator'],
-        ancho: 820,
+        ancho: 1040,
         Componente: lazy(() => import('./herramientas/TurnosVentana.jsx')),
     },
     // Mi sueldo (ADR-W223, pedido de Marlon): de qué se compone el sueldo del mes. El director ve a cualquiera del equipo.
