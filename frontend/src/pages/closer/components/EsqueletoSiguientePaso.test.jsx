@@ -19,7 +19,7 @@ describe('EsqueletoSiguientePaso', () => {
 
     it('no dice que no queda nada: el rótulo va escrito y el resto en hueso', () => {
         const { container } = render(<EsqueletoSiguientePaso />);
-        expect(container.querySelector('.tsp-lbl-v6').textContent).toBe('Tu siguiente paso');
+        expect(container.querySelector('.tsp-lbl-v6').textContent).toBe('Siguiente');
         expect(container.textContent).not.toMatch(/resuelto/);
         const huesos = [...container.querySelectorAll('.hueso')];
         expect(huesos.at(-1).style.height).toBe('46px');

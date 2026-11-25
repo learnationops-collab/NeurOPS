@@ -18,7 +18,7 @@ const EsqueletoSiguientePaso = () => (
     <Esqueleto rotulo="Cargando tu siguiente paso…" className="tsp-v6 tsp-done-v6">
         <div className="tsp-top-v6" aria-hidden="true">
             <span className="tsp-dot-v6"></span>
-            <span className="tsp-lbl-v6">Tu siguiente paso</span>
+            <span className="tsp-lbl-v6">Siguiente</span>
             <div className="flex-1"></div>
             {/* La cuenta regresiva (`.tsp-badge-v6`): 10 px de letra en 15, más 5 + 5 de padding. */}
             <Hueso alto={25} ancho={88} radio={99} />

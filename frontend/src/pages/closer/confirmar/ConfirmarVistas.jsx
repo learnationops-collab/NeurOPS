@@ -1,7 +1,7 @@
 // Confirmar con vistas (ADR-W201): la fila de vistas y controles, y la vista activa (tablero, lista o
 // semana) sobre las agendas del pool. El tablero lo sigue dibujando la página (`renderTablero`), con las
 // tarjetas de siempre; acá se filtra, ordena y agrupa.
-import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { localToday, localDateFromNow } from '../../../utils/datetime';
 import BarraVistas from './BarraVistas';
 import { agrupacionesDe } from './PopoverVista';
@@ -57,13 +57,32 @@ export default function ConfirmarVistas({ agendas, user, esTriage, ahora, fechaB
     );
     const periodo = periodoDe(fechaBase || hoy, offset, vista.dias || 7);
 
+    // En el calendario: 1, 2, 3 y 7 eligen cuántos días ver; ← y → se mueven; T vuelve a hoy. No con el foco
+    // en un campo ni con una ventana abierta (la ficha).
+    const esCalendario = vista.tipo === 'semana';
+    useEffect(() => {
+        if (!esCalendario) return undefined;
+        const tecla = (e) => {
+            if (e.metaKey || e.ctrlKey || e.altKey || e.defaultPrevented) return;
+            const t = e.target;
+            if (t?.closest?.('input, textarea, select, [contenteditable="true"], [role="dialog"], .ui-modal')) return;
+            if (document.querySelector('[aria-modal="true"]')) return;
+            const dias = { 1: 1, 2: 2, 3: 3, 7: 7 }[e.key];
+            if (dias) { e.preventDefault(); setOffset(0); actualizar(vista.id, { dias }); return; }
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); setOffset(o => o + (e.key === 'ArrowLeft' ? -1 : 1)); return; }
+            if (e.key === 't' || e.key === 'T') setOffset(0);
+        };
+        window.addEventListener('keydown', tecla);
+        return () => window.removeEventListener('keydown', tecla);
+    }, [esCalendario, vista.id, actualizar]);
+
     const elegir = (id) => { setActivaId(id); setOffset(0); };
     const nueva = (tipo) => { const id = crear(tipo); if (id) setActivaId(id); };
     const quitar = (id) => { borrar(id); if (id === vista.id) setActivaId(null); };
 
     return (
         <div className="cv" ref={raiz}>
-            <BarraVistas titulo="Confirmar" vistas={vistas} vista={vista} onElegir={elegir} onCambio={actualizar} onCrear={nueva} onBorrar={quitar}
+            <BarraVistas vistas={vistas} vista={vista} onElegir={elegir} onCambio={actualizar} onCrear={nueva} onBorrar={quitar}
                 onRestablecer={() => { restablecer(); setActivaId(null); }} puedeCrear={puedeCrear}
                 catalogo={catalogo} closers={esTriage ? closers : []} segmentos={segmentos} esTriage={esTriage}
                 calendario={{

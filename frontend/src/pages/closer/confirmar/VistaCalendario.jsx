@@ -2,15 +2,16 @@
 // estándar. Cada llamada dice su etapa con texto y las propiedades que la vista tiene prendidas (tipo,
 // closer, decisión, inversión…). La cabecera de días queda pegada al scrollear. Tocar una abre la ficha.
 import { useLayoutEffect, useRef } from 'react';
+import { DollarSign, PhoneCall, UserCheck, Users } from 'lucide-react';
 import { Calendar, CalendarEvent, calendarY } from '../../../components/standard';
 import { viewerTimezoneLabel } from '../../../utils/datetime';
 import { ETAPAS_CONFIRMACION, etapaDeConfirmacion } from './etapas';
-import { cuandoEs, tipoDe } from './propiedades';
+import { cuandoEs, decisorCorto, inversionCorta, inversionDe, tipoDe } from './propiedades';
 import { TONO_SEGMENTO, TONO_TIPO, textoDe } from './Celda';
 
 const DURACION = 45;
 const DIAS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-const PREFIJO = { decision: 'Decide', inversion: 'Invierte', ingresos: 'Ingresos', examen: 'Examen', origen: 'Origen' };
+const PREFIJO = { decision: 'Decide', inversion: 'Invierte', ingresos: 'Ingresos', examen: 'Examen', origen: 'Origen', telefono: 'Tel' };
 const pad = (n) => String(n).padStart(2, '0');
 const iso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const corto = (t, n = 26) => (t.length > n ? t.slice(0, n - 1).trimEnd() + '…' : t);
@@ -61,15 +62,44 @@ function ubicar(items) {
     return ord;
 }
 
-function Chips({ a, claves, ctx }) {
-    return claves.map(k => {
-        if (k === 'etapa') return null;
-        if (k === 'tipo') { const t = tipoDe(a, ctx); return <i key={k} className="cv-chip" style={{ '--c': TONO_TIPO[t.clave] }}>{t.titulo}</i>; }
-        if (k === 'segmento') return a.segmento ? <i key={k} className="cv-chip" style={{ '--c': TONO_SEGMENTO[a.segmento] }}>Seg. {a.segmento}</i> : null;
-        const t = textoDe(a, k, ctx);
-        if (!t) return null;
-        return <i key={k} className="cv-chip cv-chip--neutro" title={t}>{PREFIJO[k] && <small>{PREFIJO[k]}</small>}{corto(t)}</i>;
+const VERDE = 'var(--cl-success, #2FBF8F)', AMBAR = 'var(--cl-warning, #D9A441)', ROJO = 'var(--ui-danger, #f87171)';
+
+// Una etiqueta por propiedad prendida, cada una con su color y su ícono. Entran escalonadas.
+function chipsDe(a, claves, ctx) {
+    const out = [];
+    claves.forEach(k => {
+        if (k === 'etapa') {
+            const e = ETAPAS_CONFIRMACION.find(x => x.clave === etapaDeConfirmacion(a));
+            out.push({ k, c: e.color, icono: <b className={`cv-punto${e.clave === 'por_contactar' ? ' cv-punto--late' : ''}`} />, t: e.titulo, fuerte: true });
+        } else if (k === 'segmento') {
+            if (a.segmento) out.push({ k, c: TONO_SEGMENTO[a.segmento], t: a.segmento_puntos != null ? `${a.segmento} · ${Number(a.segmento_puntos) > 0 ? '+' : ''}${Number(a.segmento_puntos).toLocaleString('es-AR', { maximumFractionDigits: 1 })}` : a.segmento, fuerte: true, title: 'Segmento' });
+        } else if (k === 'inversion') {
+            const txt = inversionDe(a);
+            if (txt) { const v = inversionCorta(txt); out.push({ k, c: v.sin ? ROJO : VERDE, icono: <DollarSign />, t: v.texto.replace(' USD', ''), title: txt }); }
+        } else if (k === 'decision') {
+            const d = decisorCorto(a);
+            if (d) out.push({ k, c: d.solo === false ? AMBAR : d.solo ? VERDE : 'var(--cl-info, #4E8BD8)', icono: d.solo ? <UserCheck /> : <Users />, t: d.texto, title: d.title });
+        } else if (k === 'tipo') {
+            const t = tipoDe(a, ctx);
+            out.push({ k, c: TONO_TIPO[t.clave], icono: <PhoneCall />, t: t.titulo });
+        } else if (k === 'closer') {
+            const n = textoDe(a, k, ctx);
+            if (n) out.push({ k, c: 'var(--cl-lila, #7D8BFF)', icono: <i className="cv-ini">{n.trim()[0]}</i>, t: n.split(' ')[0], title: n });
+        } else {
+            const t = textoDe(a, k, ctx);
+            if (t) out.push({ k, neutro: true, pre: PREFIJO[k], t: corto(t), title: t });
+        }
     });
+    return out;
+}
+
+function Chips({ lista }) {
+    return lista.map((x, i) => (
+        <i key={x.k} className={`cv-chip${x.neutro ? ' cv-chip--neutro' : ''}${x.fuerte ? ' cv-chip--fuerte' : ''}`}
+            style={{ '--c': x.c, animationDelay: `${120 + i * 45}ms` }} title={x.title}>
+            {x.icono}{x.pre && <small>{x.pre}</small>}{x.t}
+        </i>
+    ));
 }
 
 export default function VistaCalendario({ vista, agendas, periodo, hoy, ahora, nombreCloser, catalogo, userId, esTriage, seleccionada, onAbrir }) {
@@ -87,7 +117,6 @@ export default function VistaCalendario({ vista, agendas, periodo, hoy, ahora, n
     const desde = Math.max(0, Math.min(8, Math.floor(Math.min(...minutos, 8 * 60) / 60)));
     const hasta = Math.min(24, Math.max(21, Math.ceil((Math.max(...minutos, 0) + DURACION) / 60)));
     const props = vista.props.filter(k => k !== 'hora' && catalogo.some(p => p.clave === k));
-    const conEtapa = props.includes('etapa');
 
     const days = periodo.dias.map((d, i) => {
         const k = claves[i], del = porDia.get(k) || [];
@@ -122,16 +151,11 @@ export default function VistaCalendario({ vista, agendas, periodo, hoy, ahora, n
                             onClick={() => onAbrir(a)} onKeyDown={(e) => { if (e.key === 'Enter') onAbrir(a); }}>
                             <CalendarEvent
                                 className={`cv-ev${seleccionada === a.id ? ' cv-ev--sel' : ''}${pasada ? ' cv-ev--pasada' : ''}`}
-                                style={{ '--c': etapa.color, left: `calc(${izq}% + 3px)`, right: 'auto', width: `calc(${ancho}% - 6px)`, zIndex: 1 + carril }}
+                                style={{ '--c': etapa.color, '--h': `${DURACION / 60 * alto - 3}px`, left: `calc(${izq}% + 3px)`, right: 'auto', width: `calc(${ancho}% - 6px)`, zIndex: 1 + carril }}
                                 top={calendarY(Math.min(Math.max(minuto, desde * 60), hasta * 60 - DURACION), desde, alto) + 1}
                                 height={DURACION / 60 * alto - 3}
                                 title={<><span className="cv-ev__h">{hora}</span>{a.lead_name || 'Sin nombre'}</>}
-                                line={(
-                                    <span className="cv-ev__chips">
-                                        {conEtapa && <i className="cv-estado"><b aria-hidden="true" />{etapa.titulo}</i>}
-                                        <Chips a={a} claves={props} ctx={ctx} />
-                                    </span>
-                                )}
+                                line={<span className="cv-ev__chips"><Chips lista={chipsDe(a, props, ctx)} /></span>}
                                 tooltip={`${a.lead_name || 'Sin nombre'} · ${hora}|${detalle}`} />
                         </div>
                     );

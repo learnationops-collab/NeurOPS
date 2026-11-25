@@ -870,7 +870,7 @@
 - Tarjetas de personas con su cuenta de horarios y ciudad; resumen final con día, hora del lead y quién; movimiento en los pasos.
 - El pie de las sub-vistas ya no deja el hueco a la derecha en pantallas anchas.
 
-### 25/11/2026 · Confirmar: calendario de 1, 2, 3 o 7 días y barra siempre pegada (ADR-W212)
+### 25/11/2026 · Confirmar: calendario de 1, 2, 3 o 7 días y barra siempre pegada (ADR-W214)
 - La fila de Confirmar (vistas, filtro, propiedades) queda pegada debajo del header en todas las vistas. El calendario es una sola caja del alto de la pantalla con la fila de días pegada y arranca una hora antes de ahora.
 - «Semana» pasa a «Calendario»: Hoy, anterior/siguiente, Día · 2 días · 3 días · Semana y zoom −/+.
 - Cada llamada muestra hora, nombre, etapa en texto y etiquetas: Triage/Closing, closer, decide, invierte, ingresos, segmento y respuestas del formulario. Las que se pisan se escalonan.
@@ -897,3 +897,10 @@
 ### 25/11/2026 · Reprogramar: pasos y controles en la fila del título
 - El título «Reprogramar», los pasos y, en «Día y hora», la zona del lead y la anticipación van en una sola fila: más lugar para el calendario y los horarios.
 - La zona del lead dice solo el país («Chile»), sin «· la del lead».
+
+### 25/11/2026 · Workspace con sidebar y calendario con etiquetas (ADR-W215)
+- Siguiente, Confirmación y Comisión pasan a un sidebar chico a la derecha, pegado al scrollear: anillo animado, racha y chips, menos texto.
+- La barra de Confirmar arranca con las pestañas (sin repetir «Confirmar»).
+- Calendario: cada llamada con etiquetas de color (etapa, segmento, decisor, inversión por defecto) que entran animadas; al pasar el mouse se abre entera. Teclas 1, 2, 3, 7 (días), ← → y T (hoy).
+- El calendario de Confirmar (antes anotado como ADR-W212, número repetido) queda como ADR-W214.
+

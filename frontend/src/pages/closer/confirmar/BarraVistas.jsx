@@ -7,7 +7,8 @@ import PopoverVista from './PopoverVista';
 import { IconoDeVista } from './iconos';
 import { ALTOS_CALENDARIO, TIPOS_DE_VISTA } from './vistasConfirmar';
 
-const RANGOS = [{ value: 1, label: 'Día' }, { value: 2, label: '2 días' }, { value: 3, label: '3 días' }, { value: 7, label: 'Semana' }];
+const RANGOS = [[1, 'Día'], [2, '2 días'], [3, '3 días'], [7, 'Semana']]
+    .map(([value, label]) => ({ value, label, props: { title: `${label} · tecla ${value}` } }));
 
 function Pestana({ vista, activa, puedeBorrar, onElegir, onRenombrar, onBorrar }) {
     const [editando, setEditando] = useState(false);
@@ -87,7 +88,7 @@ export default function BarraVistas({
 
     return (
         <div className="cv-barra">
-            <h2 className="cv-titulo">{titulo}</h2>
+            {titulo && <h2 className="cv-titulo">{titulo}</h2>}
             <div className="cv-tabs">
                 {vistas.map(v => (
                     <Pestana key={v.id} vista={v} activa={v.id === vista.id} puedeBorrar={vistas.length > 1}

@@ -142,27 +142,44 @@
 .cv-cal .ui-cal__now{background:var(--cl-magenta,#ff3fa4);box-shadow:0 0 10px color-mix(in srgb,var(--cl-magenta,#ff3fa4) 60%,transparent)}
 .cv-cal .ui-cal__now::before{background:var(--cl-magenta,#ff3fa4)}
 
-/* Llamada */
-.cv-cal .cv-ev.ui-cal-event{cursor:pointer;padding:6px 8px 6px 10px;border-radius:10px;color:var(--cv-text);
-  background:linear-gradient(135deg,color-mix(in srgb,var(--c) 26%,#0b1030),color-mix(in srgb,var(--c) 12%,#0b1030));
-  border:1px solid color-mix(in srgb,var(--c) 32%,transparent);box-shadow:inset 3px 0 0 var(--c),0 4px 14px rgba(0,0,0,.25);
-  transition:transform .25s var(--cl-spring,cubic-bezier(.32,.72,0,1)),box-shadow .25s;animation:cv-entra .4s var(--cl-spring,cubic-bezier(.32,.72,0,1)) backwards}
-.cv-cal .cv-ev.ui-cal-event:hover{z-index:10!important;transform:translateY(-1px);box-shadow:inset 3px 0 0 var(--c),0 10px 26px rgba(0,0,0,.45)}
+/* Llamada: el color de su etapa de fondo, nombre arriba y una etiqueta por dato. Al pasar el mouse se abre
+   entera (todas las etiquetas) por encima de las otras. */
+.cv-cal .cv-ev.ui-cal-event{cursor:pointer;padding:6px 7px 6px 10px;border-radius:12px;color:#fff;
+  background:radial-gradient(120% 90% at 0% 0%,color-mix(in srgb,var(--c) 42%,transparent),transparent 70%),
+    linear-gradient(160deg,color-mix(in srgb,var(--c) 24%,#0b1030),color-mix(in srgb,var(--c) 10%,#070a24));
+  border:1px solid color-mix(in srgb,var(--c) 40%,transparent);box-shadow:inset 3px 0 0 var(--c),0 4px 14px rgba(0,0,0,.28);
+  transition:transform .3s var(--cl-spring,cubic-bezier(.32,.72,0,1)),box-shadow .3s,border-color .3s;
+  animation:cv-ev-in .5s var(--cl-spring,cubic-bezier(.32,.72,0,1)) backwards}
+.cv-cal .cv-ev.ui-cal-event:hover,.cv-cal [role="button"]:focus-visible > .cv-ev.ui-cal-event{z-index:30!important;height:auto!important;min-height:var(--h);
+  transform:translateY(-2px) scale(1.02);border-color:var(--c);
+  box-shadow:inset 3px 0 0 var(--c),0 14px 34px rgba(0,0,0,.55),0 0 0 1px color-mix(in srgb,var(--c) 30%,transparent),0 0 26px color-mix(in srgb,var(--c) 30%,transparent)}
+.cv-cal .cv-ev.ui-cal-event:hover .cv-ev__chips{max-height:none}
 .cv-cal .cv-ev--sel.ui-cal-event{outline:2px solid var(--cl-magenta,#ff3fa4);outline-offset:1px}
-.cv-cal .cv-ev--pasada.ui-cal-event{opacity:.5}
-.cv-ev .ui-cal-event__title{font-size:12.5px;font-weight:800}
-.cv-ev__h{font-weight:700;color:var(--cv-muted);margin-right:6px;font-variant-numeric:tabular-nums}
-.cv-ev .ui-cal-event__line{white-space:normal;margin-top:4px}
-.cv-ev__chips{display:flex;flex-wrap:wrap;gap:4px;overflow:hidden;max-height:100%}
-.cv-estado,.cv-chip{font-style:normal;display:inline-flex;align-items:center;gap:5px;height:18px;padding:0 7px;border-radius:99px;font-size:10.5px;font-weight:700;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
-.cv-estado{color:var(--c);background:color-mix(in srgb,var(--c) 18%,transparent)}
-.cv-estado b{width:6px;height:6px;border-radius:99px;background:var(--c);flex:none}
-.cv-chip{color:var(--c);background:color-mix(in srgb,var(--c) 16%,transparent)}
-.cv-chip--neutro{color:var(--cv-text);background:rgba(255,255,255,.07);font-weight:600}
-.cv-chip small{font-size:9.5px;font-weight:800;color:var(--cv-faint);text-transform:uppercase;letter-spacing:.06em}
-/* Semana: siete columnas angostas, la línea de chips se achica */
-.cv-cal--d7 .cv-estado,.cv-cal--d7 .cv-chip{height:16px;padding:0 6px;font-size:10px}
-@media (prefers-reduced-motion:reduce){.cv-cal .cv-ev.ui-cal-event,.cv-rotulo{animation:none;transition:none}}
+.cv-cal .cv-ev--pasada.ui-cal-event{opacity:.45;filter:saturate(.6)}
+.cv-cal .cv-ev--pasada.ui-cal-event:hover{opacity:1;filter:none}
+.cv-ev .ui-cal-event__title{font-size:12.5px;font-weight:800;letter-spacing:-.01em}
+.cv-ev__h{display:inline-block;font-size:10.5px;font-weight:800;color:var(--c);margin-right:6px;font-variant-numeric:tabular-nums;
+  padding:1px 5px;border-radius:5px;background:color-mix(in srgb,var(--c) 22%,transparent);filter:brightness(1.35)}
+.cv-ev .ui-cal-event__line{white-space:normal;margin-top:5px;overflow:visible}
+.cv-ev__chips{display:flex;flex-wrap:wrap;gap:4px;overflow:hidden;max-height:calc(var(--h) - 34px)}
+.cv-chip{font-style:normal;display:inline-flex;align-items:center;gap:4px;height:19px;padding:0 7px;border-radius:99px;font-size:10.5px;font-weight:700;
+  white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;color:color-mix(in srgb,var(--c) 70%,#fff);
+  background:color-mix(in srgb,var(--c) 20%,transparent);border:1px solid color-mix(in srgb,var(--c) 34%,transparent);
+  animation:cv-chip-in .45s var(--cl-spring,cubic-bezier(.32,.72,0,1)) backwards;transition:transform .2s,background .2s}
+.cv-chip:hover{transform:translateY(-1px);background:color-mix(in srgb,var(--c) 32%,transparent)}
+.cv-chip--fuerte{color:#fff;background:color-mix(in srgb,var(--c) 34%,transparent)}
+.cv-chip svg{width:11px!important;height:11px!important;flex:none}
+.cv-chip--neutro{--c:#c9cde6;color:var(--cv-text);background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.1);font-weight:600}
+.cv-chip small{font-size:9px;font-weight:800;color:var(--cv-faint);text-transform:uppercase;letter-spacing:.06em}
+.cv-punto{width:6px;height:6px;border-radius:99px;background:var(--c);flex:none;box-shadow:0 0 6px var(--c)}
+.cv-punto--late{animation:cv-late 1.6s ease-in-out infinite}
+.cv-ini{font-style:normal;width:13px;height:13px;border-radius:99px;display:grid;place-items:center;font-size:8px;font-weight:900;color:#0b1030;background:var(--c);flex:none}
+@keyframes cv-ev-in{from{opacity:0;transform:translateY(6px) scale(.97)}}
+@keyframes cv-chip-in{from{opacity:0;transform:translateY(4px) scale(.85)}}
+@keyframes cv-late{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--c) 70%,transparent)}50%{box-shadow:0 0 0 4px transparent}}
+/* Semana: siete columnas angostas, etiquetas un poco más chicas */
+.cv-cal--d7 .cv-chip{height:17px;padding:0 6px;font-size:10px}
+@media (prefers-reduced-motion:reduce){.cv-cal .cv-ev.ui-cal-event,.cv-rotulo,.cv-chip,.cv-punto--late{animation:none;transition:none}}
 
 /* Tablero con columnas que no son etapas (closer, día, segmento): todas del mismo tono. */
 .cv-col-neutra .kch-v6 .dt-v6{background:var(--cv-acento)}

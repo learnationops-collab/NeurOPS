@@ -31,6 +31,8 @@ import { useConfiguracion } from '../../sesion/ConfiguracionContext';
 import '../comercial/comercial.css';
 import '../../components/dashboard/pareja.css';
 import './clarity-v6.css';
+import TarjetaAnillo from './components/TarjetaAnillo';
+import './sidebar-v6.css';
 import ComisionMesCard from './components/ComisionMesCard';
 import TriageAbandonos from '../triage/components/TriageAbandonos';
 import CompartidosConmigo, { useCompartidos } from '../../components/compartidos/CompartidosConmigo';
@@ -49,7 +51,7 @@ import { agendaParaVender, ejecutarAccion, mensajeDeError } from '../../componen
 import { ayudaDeResultado } from '../../utils/estadosAgenda';
 import ConfirmarVistas from './confirmar/ConfirmarVistas';
 import { etapaDeConfirmacion } from './confirmar/etapas';
-import { esDeFormulario, respuestaDe } from './confirmar/propiedades';
+import { decisorCorto, esDeFormulario, inversionCorta, respuestaDe } from './confirmar/propiedades';
 
 const ORDINALES = ['primer', 'segundo', 'tercer', 'cuarto', 'quinto', 'sexto', 'séptimo', 'octavo', 'noveno', 'décimo'];
 
@@ -80,36 +82,8 @@ const ETAPAS_DEL_TABLERO = [
     { clave: 'contactado', titulo: 'Contactado', lista: 'contactado', fase: 'conversando', clase: 'k2-v6', columna: 1, vacio: '✓ Nadie esperando confirmar' },
     { clave: 'confirmado', titulo: 'Confirmado', lista: 'confirmado', fase: 'confirmado', clase: 'k3-v6', columna: 2, vacio: 'Sin leads confirmados.' },
 ];
-// La inversión del formulario en pocas palabras, para la tarjeta: «Entre $200 y $500 USD.» →
-// «$200–500 USD», «Más de 1000 USD» → «+$1.000 USD» y cualquier forma de «no puedo» → «Sin
-// inversión» (pedido del 23/10/2026). El texto completo queda en el `title`.
-const milesAr = (n) => Number(n).toLocaleString('es-AR');
-const inversionCorta = (txt) => {
-    const t = String(txt || '').trim().replace(/\.$/, '');
-    if (/\b(no\s+(puedo|estoy|tengo|cuento|dispongo)|ninguna|nada|sin\s+(inversi|presupuesto|dinero))/i.test(t)) return { texto: 'Sin inversión', sin: true };
-    const nums = (t.match(/\d[\d.,]*/g) || []).map(x => Number(x.replace(/[.,](?=\d{3}\b)/g, '').replace(',', '.'))).filter(n => n > 0);
-    const usd = /usd|d[oó]lar/i.test(t) ? ' USD' : '';
-    if (nums.length >= 2) return { texto: `$${milesAr(nums[0])}–${milesAr(nums[1])}${usd}` };
-    if (nums.length === 1) {
-        const signo = /m[aá]s\s+de|desde|\+/i.test(t) ? '+' : /menos\s+de|hasta/i.test(t) ? '<' : '';
-        return { texto: `${signo}$${milesAr(nums[0])}${usd}` };
-    }
-    return { texto: t.length > 22 ? `${t.slice(0, 21)}…` : t };
-};
-
-// Si decide solo o necesita a alguien más, sacado del formulario: la pregunta que habla de
-// decidir, de acompañamiento o de quién paga. Sin una pregunta así, no se muestra nada.
-const decisionDe = (a) => {
-    const fd = a.form_data && typeof a.form_data === 'object' ? a.form_data : {};
-    const clave = Object.keys(fd).find(k => /decisi|decid|acompa|qui[eé]n\s+(paga|financ|apoya)|apoyo/i.test(k));
-    const v = clave ? String(fd[clave] ?? '').trim() : '';
-    if (!v) return null;
-    if (/pareja|familia|padre|madre|espos|consult|acompa|otra persona|alguien|junto|no\b/i.test(v)) {
-        return { texto: 'No decisor', solo: false, title: v };
-    }
-    if (/yo\b|solo|sola|m[ií] mism|por mi cuenta|s[ií]\b/i.test(v)) return { texto: 'Decisor', solo: true, title: v };
-    return { texto: v.length > 20 ? `${v.slice(0, 19)}…` : v, solo: null, title: v };
-};
+// La inversión y el decisor en pocas palabras: `inversionCorta` y `decisorCorto` (confirmar/propiedades.js),
+// los mismos que usa el calendario de Confirmar.
 
 // Color del segmento en la tarjeta: A y B son los que más importan, C y D los que se pueden desplazar.
 const TONO_SEGMENTO = { A: 'var(--cl-success)', B: 'var(--cl-info)', C: 'var(--cl-warning)', D: 'var(--cl-magenta)' };
@@ -1300,7 +1274,7 @@ const CloserWorkflowPage = () => {
         const iniciales = (a.lead_name || '?').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
         const inversionTxt = inversionDe(a);
         const inversion = inversionTxt ? inversionCorta(inversionTxt) : null;
-        const decision = decisionDe(a);
+        const decision = decisorCorto(a);
         const telefono = (a.phone || '').trim();
         const tagDeCloser = ver('closer') && esTriage && a.closer_id && a.closer_id !== user?.id;
         const etiquetas = [
@@ -1821,9 +1795,13 @@ const CloserWorkflowPage = () => {
             </header>
 
             {/* Área de Trabajo Principal */}
-            <div className="flex-1 max-w-7xl w-full mx-auto px-6 py-6 flex flex-col gap-6">
+            {/* Con el sidebar a la derecha (25/11/2026) el contenido va a la izquierda; en «Cerrar el día» no
+                hay sidebar. */}
+            <div className={`flex-1 max-w-7xl w-full mx-auto px-6 py-6 flex flex-col gap-6${activeView !== 'report' ? ' ws-area' : ''}`}>
                 
-                {/* TU SIGUIENTE PASO · TU DÍA · COMISIÓN: tres tarjetas iguales en una fila (pedido del
+                {/* SIGUIENTE · CONFIRMACIÓN (o TU DÍA) · COMISIÓN: desde el 25/11/2026 un sidebar chico a la
+                    derecha, pegado al scrollear, con menos texto y más movimiento (pedido de Mario). Antes,
+                    tres tarjetas iguales en una fila (pedido del
                     30/09/2026). Antes eran dos arriba y la comisión en otra fila entera: entre las dos
                     filas y las pestañas, lo que había que mirar —el tablero, los datos— empezaba a
                     media pantalla. En `.pareja` para que, si no entran las tres, se apilen las tres
@@ -1896,7 +1874,7 @@ const CloserWorkflowPage = () => {
                     const heroCountdown = heroLead ? formatCountdown(heroLead.start_time, nowTick) : null;
                     const heroBadgeCls = !heroCountdown ? '' : heroCountdown.kind === 'now' ? 'now' : heroCountdown.kind === 'soon' ? 'soon' : heroCountdown.kind === 'past' ? 'late' : '';
                     return (
-                        <div className="tsprow-v6 pareja">
+                        <aside className="tsprow-v6 ws-side" aria-label="Tu día">
                             {/* En la primera carga, en hueso: con los contadores todavía en su cero
                                 inicial, las ramas de abajo caían en "todo el día resuelto" mientras el
                                 kanban de al lado decía que estaba cargando. Si la carga termina sin
@@ -1908,7 +1886,7 @@ const CloserWorkflowPage = () => {
                                 <div className="tsp-v6" onClick={() => handleSelectLead(heroLead)}>
                                     <div className="tsp-top-v6">
                                         <span className="tsp-dot-v6"></span>
-                                        <span className="tsp-lbl-v6">Tu siguiente paso</span>
+                                        <span className="tsp-lbl-v6">Siguiente</span>
                                         <div className="flex-1"></div>
                                         {heroCountdown && (
                                             <AgendaCountdown
@@ -1924,7 +1902,7 @@ const CloserWorkflowPage = () => {
                                         className="tsp-cta-v6"
                                         onClick={(e) => { e.stopPropagation(); handleSelectLead(heroLead); }}
                                     >
-                                        {activeStep === 'confirmations' ? 'Ir a confirmar' : 'Ir a reportar'} →
+                                        {activeStep === 'confirmations' ? 'Confirmar' : 'Reportar'} →
                                     </button>
                                 </div>
                             ) : activeView === 'inbox' && activeStep === 'seguimientos' && seguimientoHero ? (
@@ -1939,7 +1917,7 @@ const CloserWorkflowPage = () => {
                                 <div className="tsp-v6" onClick={() => handleSelectLead(seguimientoHero.payload)}>
                                     <div className="tsp-top-v6">
                                         <span className="tsp-dot-v6"></span>
-                                        <span className="tsp-lbl-v6">Tu siguiente paso</span>
+                                        <span className="tsp-lbl-v6">Siguiente</span>
                                     </div>
                                     <h3 className="tsp-name-v6 truncate" title={seguimientoHero.item.lead_name || undefined}>{seguimientoHero.item.lead_name || 'Sin Nombre'}</h3>
                                     <p className="tsp-sub-v6 truncate">
@@ -2002,7 +1980,7 @@ const CloserWorkflowPage = () => {
                                         <div className="tsp-v6 tsp-done-v6">
                                             <div className="tsp-top-v6">
                                                 <span className="tsp-dot-v6 ok"></span>
-                                                <span className="tsp-lbl-v6">Tu siguiente paso</span>
+                                                <span className="tsp-lbl-v6">Siguiente</span>
                                             </div>
                                             <h3 className="tsp-name-v6">🎉 Tenés absolutamente todo el día resuelto</h3>
                                             <p className="tsp-sub-v6">Nada pendiente en confirmar, reportar ni seguir.</p>
@@ -2013,7 +1991,7 @@ const CloserWorkflowPage = () => {
                                     <div className="tsp-v6 tsp-done-v6">
                                         <div className="tsp-top-v6">
                                             <span className="tsp-dot-v6 ok"></span>
-                                            <span className="tsp-lbl-v6">Tu siguiente paso</span>
+                                            <span className="tsp-lbl-v6">Siguiente</span>
                                         </div>
                                         <h3 className="tsp-name-v6">Te falta {next.count} por {next.accion}</h3>
                                         <button
@@ -2028,54 +2006,18 @@ const CloserWorkflowPage = () => {
                             })()}
 
                             {metrica ? (
-                            <div className="tud-v6">
-                                <div className="flex items-start justify-between gap-2">
-                                    <div className="tud-lbl-v6">{metrica.lbl}</div>
-                                    <div className="tud-xp-v6">🔥 Racha {streakDays} d</div>
-                                </div>
-                                <div className="tud-pct-row-v6">
-                                    <span className="tud-pct-v6">{metricaPct}%</span>
-                                    <span className="tud-sub-v6">{metrica.sub}</span>
-                                </div>
-                                <div className="pbarw-v6">
-                                    <i style={{ width: `${metricaPct}%` }}></i>
-                                </div>
-                                <div className="tud-foot-row-v6">
-                                    <span className="tud-foot-v6">{metrica.pie}</span>
-                                    <span className="tud-foot-v6">{metrica.pendientes} {metrica.pendientes === 1 ? 'pendiente' : 'pendientes'}</span>
-                                </div>
-                                {metrica.partes?.length > 0 && (
-                                    <div className="tud-partes-v6">
-                                        {metrica.partes.map(p => (
-                                            <span key={p.tipo} className="tud-parte-v6" data-tipo={p.tipo}>
-                                                <b>{p.lbl}</b> {p.texto}
-                                            </span>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
+                                <TarjetaAnillo rotulo={metrica.lbl} pct={metricaPct} cuenta={`${metrica.hechas}/${metrica.total}`} racha={streakDays}
+                                    chips={[
+                                        ...(metrica.pendientes ? [{ k: 'pend', tipo: 'pendiente', t: `${metrica.pendientes} ${metrica.pendientes === 1 ? 'pendiente' : 'pendientes'}`, title: metrica.pie }] : []),
+                                        ...(metrica.partes || []).map(p => ({ k: p.tipo, tipo: p.tipo, t: `${p.lbl} ${p.texto}` })),
+                                    ]} />
                             ) : (
-                            <div className="tud-v6">
-                                <div className="flex items-start justify-between gap-2">
-                                    <div className="tud-lbl-v6">Tu día</div>
-                                    <div className="tud-xp-v6">🔥 Racha {streakDays} d</div>
-                                </div>
-                                <div className="tud-pct-row-v6">
-                                    <span className="tud-pct-v6">{pct}%</span>
-                                    <span className="tud-sub-v6">del día completado</span>
-                                </div>
-                                <div className="pbarw-v6">
-                                    <i style={{ width: `${pct}%` }}></i>
-                                </div>
-                                <div className="tud-foot-row-v6">
-                                    <span className="tud-foot-v6">{doneToday} de {totalToday} resueltos hoy</span>
-                                    <span className="tud-foot-xp-v6">⚡ {xp} XP</span>
-                                </div>
-                            </div>
+                                <TarjetaAnillo rotulo="Tu día" pct={pct} cuenta={`${doneToday}/${totalToday}`} racha={streakDays}
+                                    chips={[{ k: 'xp', tipo: 'xp', t: `⚡ ${xp} XP`, title: `${doneToday} de ${totalToday} resueltos hoy` }]} />
                             )}
 
                             {!esTriage && <ComisionMesCard />}
-                        </div>
+                        </aside>
                     );
                 })()}
 
