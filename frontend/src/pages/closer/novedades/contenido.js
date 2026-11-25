@@ -5,13 +5,38 @@
 // - `target`: selector (o función que devuelve el elemento) que se ilumina; sin él, la tarjeta va al centro.
 // - `antes(ctx)`: lo que hace Work antes de mostrarlo (ir a una sección, cambiar de vista).
 // - `tocar`: el elemento se puede tocar y tocarlo avanza (la tarjeta dice «Tocá acá»).
-// - `accion`: un botón extra en la tarjeta `{ label, hacer(ctx) }`, que además cierra el recorrido.
+// - `probar(ctx)`: lo que abre «Probalo» (una llamada, Reprogramar, tu horario). Con «Probalo», o tocando el
+//   lugar iluminado, el recorrido se achica a un botón y se puede usar Work de verdad (ADR-W221).
 
 // «-2»: se volvió a mostrar a todos (también a quien ya lo había visto), ahora obligatorio.
 export const VERSION = '2026-11-25-2';
 export const FECHA = '25 nov';
 
 const tab = (tipo) => () => document.querySelector(`.cv-tab[data-tipo="${tipo}"]`);
+const esperar = async (buscar, ms = 3000) => {
+    for (let t = 0; t < ms; t += 150) {
+        const el = buscar();
+        if (el) return el;
+        await new Promise(r => setTimeout(r, 150));
+    }
+    return null;
+};
+const porTexto = (sel, re) => [...document.querySelectorAll(sel)].find(e => re.test(e.textContent || ''));
+
+// Abre la primera llamada del tablero (o del calendario) en su pestaña Confirmación.
+const abrirConfirmacion = async () => {
+    const llamada = document.querySelector('.kcard-v6') || document.querySelector('.cv-ev');
+    if (!llamada) return false;
+    llamada.click();
+    const tab = await esperar(() => porTexto('.fi-tab', /Confirmaci/));
+    if (tab && tab.getAttribute('aria-selected') !== 'true') tab.click();
+    return !!(await esperar(() => document.querySelector('.cf-cambio-grid')));
+};
+const abrirReprogramar = async () => {
+    if (!(await abrirConfirmacion())) return;
+    (await esperar(() => porTexto('.cf-cambio-grid .fi-accion', /Reprogramar/)))?.click();
+};
+
 const clicTab = (tipo) => () => {
     const el = tab(tipo)();
     if (el && el.getAttribute('aria-pressed') !== 'true') el.click();
@@ -51,12 +76,12 @@ export const PASOS = [
         texto: 'El segmento es la letra sobre la foto. Debajo del teléfono, el examen y el país.',
     },
     {
-        id: 'confirmacion', mock: 'confirmacion', target: '.kcard-v6',
+        id: 'confirmacion', mock: 'confirmacion', target: '.kcard-v6', probar: abrirConfirmacion,
         titulo: 'Confirmación, más simple',
         texto: 'Abrí una llamada: un solo botón para confirmar. Si algo cambió, Reprogramar, Canceló o No show.',
     },
     {
-        id: 'reprogramar', mock: 'reprogramar',
+        id: 'reprogramar', mock: 'reprogramar', probar: abrirReprogramar,
         titulo: 'Reprogramar en dos toques',
         texto: 'Tocá con quién, el día y la hora. Cada persona con su color y la hora del lead con su bandera.',
     },
@@ -69,6 +94,6 @@ export const PASOS = [
         id: 'horario', mock: 'horario', target: '.dock-sesion',
         titulo: 'Tu horario, arrastrando',
         texto: 'En Configuración › Disponibilidad lo marcás sobre un calendario y ves tus cupos libres de los próximos 7 días.',
-        accion: { label: 'Abrir mi horario', hacer: (ctx) => ctx.abrirConfiguracion('disponibilidad') },
+        probar: (ctx) => ctx.abrirConfiguracion('disponibilidad'),
     },
 ];

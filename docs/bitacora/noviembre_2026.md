@@ -960,3 +960,7 @@
 - Prender o apagar una propiedad ya no cambia el orden de la lista (antes la fila tocada saltaba y parecía que no cambiaba).
 - Cualquier fila se ordena arrastrándola; las etiquetas de la llamada salen en ese orden.
 - En el calendario, Hora prende y apaga la hora del título.
+
+### 25/11/2026 · Novedades: se puede probar todo durante el recorrido (ADR-W221)
+- «Probalo» en cada paso: abre una llamada en Confirmación, Reprogramar o tu horario; tocar lo iluminado también deja usarlo.
+- Mientras se prueba, el recorrido queda como un botón abajo a la izquierda, «Seguir el recorrido».

@@ -1980,3 +1980,11 @@
 - **Decisión:** la lista tiene un orden fijo que se guarda en la vista (`ordenProps`); prender o apagar no mueve nada. Se ordena arrastrando cualquier fila, prendida o no (dnd-kit, con 4 px antes de arrancar para que el switch se siga tocando), dentro de su sección; lo prendido se guarda en ese orden y las etiquetas salen así. En el calendario la hora del título se ve solo con Hora prendida; los calendarios guardados (versión `cal` 3) la suman prendida, así nadie la pierde.
 - **Qué se pierde:** las prendidas ya no se juntan arriba solas.
 - **Consecuencias:** sin backend; las vistas suman `ordenProps` y `cal: 3`.
+
+## ADR-W221: en el recorrido de Novedades se puede probar todo
+
+- **Fecha:** 2026-11-25 · **Subsistema:** Workspace (`pages/closer/novedades/`). Sigue a ADR-W218 y W219 · **Estado:** implementada
+- **Contexto:** Mario: durante el recorrido había cosas que no dejaba abrir (la llamada para ver Confirmación, el calendario); tiene que dejar experimentar todo.
+- **Decisión:** el lugar iluminado siempre se puede tocar. Cada paso con algo para usar tiene «Probalo»: en Confirmación abre la primera llamada en su pestaña Confirmación; en Reprogramar, además toca Reprogramar; en Tu horario abre Configuración › Disponibilidad; en el resto deja usar lo iluminado. Al probar (con «Probalo» o tocando el lugar) el velo y la tarjeta se van y queda abajo a la izquierda «Probando · <paso>» con «Seguir el recorrido», que vuelve al mismo paso. Mientras se prueba, el recorrido no toma ninguna tecla (Esc cierra la ficha, ← → mueven el calendario). Sigue siendo obligatorio: el botón no se puede cerrar.
+- **Qué se pierde:** «Abrir mi horario» ya no cierra el recorrido; ahora es «Probalo» y el último paso se termina con «Listo».
+- **Consecuencias:** sin backend. Los pasos suman `probar(ctx)` en `contenido.js`.

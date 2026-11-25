@@ -1,5 +1,5 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { ChevronLeft, X, ArrowRight, MousePointerClick, Check } from 'lucide-react';
+import { ChevronLeft, X, ArrowRight, MousePointerClick, Check, Play, Sparkles } from 'lucide-react';
 import Mock from './Mocks';
 
 // El recorrido por Work (ADR-W218): oscurece la pantalla menos el lugar del paso (un agujero con un
@@ -39,19 +39,29 @@ const ubicar = (r, alto) => {
 
 const mismo = (a, b) => a && b && ['top', 'left', 'width', 'height'].every(k => Math.abs(a[k] - b[k]) < 0.5);
 
-// `obligatorio`: sin cruz ni Esc; solo se sale terminando (Listo o la acción del último paso).
+// `obligatorio`: sin cruz ni Esc; solo se sale terminando (Listo en el último paso).
+// Probar (ADR-W221): «Probalo» o tocar el lugar iluminado sacan el velo y dejan usar Work de verdad (abrir la
+// llamada, Reprogramar, el calendario, tu horario); el recorrido queda como un botón para seguir.
 const Recorrido = ({ pasos, ctx, obligatorio, onCompletar, onCerrar }) => {
     const [i, setI] = useState(0);
     const [el, setEl] = useState(null);
     const [rect, setRect] = useState(null);
     const [listo, setListo] = useState(false);
     const [alto, setAlto] = useState(340);
+    const [probando, setProbando] = useState(false);
+    const [vuelta, setVuelta] = useState(0);
     const tarjeta = useRef(null);
     const paso = pasos[i];
     const ultimo = i === pasos.length - 1;
 
     const siguiente = () => (ultimo ? onCompletar() : setI(n => n + 1));
     const anterior = () => setI(n => Math.max(0, n - 1));
+    const probar = () => {
+        setProbando(true);
+        Promise.resolve(paso.probar?.(ctx)).catch(e => console.error(`Novedades: ${e}`));
+    };
+    // Volver del modo probar: el mismo paso, buscando el lugar de nuevo (la pantalla pudo cambiar).
+    const volver = () => { setProbando(false); setVuelta(v => v + 1); };
 
     // Al entrar a un paso: lo que Work hace antes, buscar el lugar y traerlo a la vista.
     useEffect(() => {
@@ -72,7 +82,7 @@ const Recorrido = ({ pasos, ctx, obligatorio, onCompletar, onCerrar }) => {
             setListo(true);
         })();
         return () => { vivo = false; };
-    }, [i]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [i, vuelta]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // El lugar se sigue cuadro a cuadro: la página scrollea, el riel es sticky y las vistas se animan.
     useEffect(() => {
@@ -88,19 +98,21 @@ const Recorrido = ({ pasos, ctx, obligatorio, onCompletar, onCerrar }) => {
         return () => cancelAnimationFrame(raf);
     }, [el]);
 
-    // «Tocá acá»: el toque real pasa (cambia la vista) y el recorrido avanza.
+    // El toque real siempre pasa. Con «Tocá acá» (cambia la vista) el recorrido avanza; en el resto, lo que se
+    // abrió (la ficha, la configuración) queda para usar y el recorrido se achica.
     useEffect(() => {
-        if (!el || !paso.tocar) return undefined;
-        const alTocar = () => setTimeout(siguiente, 380);
+        if (!el || probando) return undefined;
+        const alTocar = paso.tocar ? () => setTimeout(siguiente, 380) : () => setProbando(true);
         el.addEventListener('click', alTocar);
         return () => el.removeEventListener('click', alTocar);
-    }, [el, paso]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [el, paso, probando]); // eslint-disable-line react-hooks/exhaustive-deps
 
     useLayoutEffect(() => {
         if (tarjeta.current) setAlto(tarjeta.current.offsetHeight);
     }, [i, listo]);
 
     useEffect(() => {
+        if (probando) return undefined;
         const tecla = (e) => {
             if (e.key === 'Escape') { e.stopPropagation(); if (!obligatorio) onCerrar(); }
             if (e.key === 'ArrowRight') { e.stopPropagation(); e.preventDefault(); siguiente(); }
@@ -119,6 +131,16 @@ const Recorrido = ({ pasos, ctx, obligatorio, onCompletar, onCerrar }) => {
         : FONDO;
     const pos = ubicar(rect, alto);
 
+    if (probando) {
+        return (
+            <div className="nv-probando" role="status">
+                <span className="nv-probando__ico" aria-hidden="true"><Sparkles /></span>
+                <span className="nv-probando__t"><small>Probando</small>{paso.titulo}</span>
+                <button type="button" className="nv-card__cta" onClick={volver}>Seguir el recorrido<ArrowRight /></button>
+            </div>
+        );
+    }
+
     return (
         <div className="nv-rec" role="dialog" aria-modal="true" aria-label="Recorrido por las novedades de Work">
             <svg className="nv-rec__velo" aria-hidden="true">
@@ -127,8 +149,6 @@ const Recorrido = ({ pasos, ctx, obligatorio, onCompletar, onCerrar }) => {
             {hueco && (
                 <>
                     <span className="nv-rec__aro" style={{ left: hueco.x, top: hueco.y, width: hueco.w, height: hueco.h }} aria-hidden="true" />
-                    {/* Sin «Tocá acá», el lugar se ve pero no se toca (abriría la ficha encima del recorrido). */}
-                    {!paso.tocar && <span className="nv-rec__tapa" style={{ left: hueco.x, top: hueco.y, width: hueco.w, height: hueco.h }} />}
                     {paso.tocar && (
                         <span className="nv-rec__toca" style={{ left: hueco.x + hueco.w / 2, top: hueco.y + hueco.h + 10 }} aria-hidden="true">
                             <MousePointerClick />Tocá acá
@@ -151,10 +171,8 @@ const Recorrido = ({ pasos, ctx, obligatorio, onCompletar, onCerrar }) => {
                         {i > 0 && (
                             <button type="button" className="nv-card__atras" onClick={anterior} aria-label="Anterior"><ChevronLeft /></button>
                         )}
-                        {paso.accion && (
-                            <button type="button" className="nv-card__sec" onClick={() => { onCompletar(); paso.accion.hacer(ctx); }}>
-                                {paso.accion.label}
-                            </button>
+                        {(paso.probar || (el && !paso.tocar)) && (
+                            <button type="button" className="nv-card__sec" onClick={probar}><Play />Probalo</button>
                         )}
                         <button type="button" className="nv-card__cta" onClick={siguiente} autoFocus>
                             {ultimo ? <><Check />Listo</> : <>Siguiente<ArrowRight /></>}

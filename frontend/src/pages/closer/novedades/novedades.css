@@ -1,6 +1,6 @@
 /* ===== Novedades del Workspace (ADR-W218): portada tipo estreno, recorrido y escenas =====
    Mismo lenguaje que la presentación de Pareto en Leadership (clarity-pareto.css, `cl-pi-*`). */
-.nv-portada, .nv-rec {
+.nv-portada, .nv-rec, .nv-probando {
   --nv-mag: #FF3FA4; --nv-vio: #A78BFF; --nv-azul: #5B7CFF; --nv-cian: #22D3EE; --nv-verde: #2FBF8F;
   --nv-txt: #F4F5FF; --nv-mut: rgba(244, 245, 255, .62); --nv-mut2: rgba(244, 245, 255, .42);
   --nv-spring: cubic-bezier(.32, .72, 0, 1);
@@ -77,7 +77,6 @@
 .nv-rec__aro { position: absolute; border-radius: 18px; border: 2px solid var(--nv-mag); box-shadow: 0 0 0 4px rgba(255, 63, 164, .18), 0 0 40px rgba(255, 63, 164, .45);
   transition: left .45s var(--nv-spring), top .45s var(--nv-spring), width .45s var(--nv-spring), height .45s var(--nv-spring); pointer-events: none; }
 .nv-rec__aro::after { content: ""; position: absolute; inset: -2px; border-radius: inherit; border: 2px solid var(--nv-mag); animation: nvAro 1.8s ease-out infinite; }
-.nv-rec__tapa { position: absolute; pointer-events: auto; cursor: default; }
 .nv-rec__toca { position: absolute; display: inline-flex; align-items: center; gap: 7px; padding: 7px 14px; border-radius: 99px; background: var(--nv-mag); color: #fff;
   font-size: 13px; font-weight: 700; white-space: nowrap; box-shadow: 0 10px 30px rgba(255, 63, 164, .5); animation: nvRebota 1.2s ease-in-out infinite; pointer-events: none; }
 .nv-rec__toca svg { width: 16px; height: 16px; }
@@ -108,6 +107,19 @@
 .nv-card__atras svg { width: 18px; height: 18px; }
 .nv-card__sec { height: 42px; padding: 0 16px; border: 1px solid rgba(255, 255, 255, .18); border-radius: 99px; background: rgba(255, 255, 255, .05); color: #fff; font-size: 13.5px; font-weight: 600; cursor: pointer; }
 .nv-card__sec:hover { background: rgba(255, 255, 255, .12); }
+.nv-card__sec { display: inline-flex; align-items: center; gap: 7px; }
+.nv-card__sec svg { width: 14px; height: 14px; color: var(--nv-mag); fill: var(--nv-mag); }
+
+/* Probando: el recorrido achicado a un botón, abajo a la izquierda, sin tapar Work */
+@keyframes nvBrota { from { opacity: 0; transform: translateY(16px) scale(.96); } to { opacity: 1; transform: none; } }
+.nv-probando { position: fixed; left: 20px; bottom: 20px; z-index: 2000; display: flex; align-items: center; gap: 12px; padding: 8px 8px 8px 10px; border-radius: 99px;
+  border: 1px solid rgba(255, 63, 164, .45); background: linear-gradient(160deg, rgba(22, 26, 70, .96), rgba(6, 8, 30, .97)); color: #F4F5FF;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .5), 0 0 30px rgba(255, 63, 164, .25); backdrop-filter: blur(14px); animation: nvBrota .45s cubic-bezier(.32, .72, 0, 1) both; }
+.nv-probando *, .nv-probando *::before, .nv-probando *::after { box-sizing: border-box; }
+.nv-probando__ico { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: rgba(255, 63, 164, .18); color: #FF3FA4; }
+.nv-probando__ico svg { width: 17px; height: 17px; animation: nvLatido 1.6s ease-in-out infinite; }
+.nv-probando__t { display: flex; flex-direction: column; font-size: 13.5px; font-weight: 700; line-height: 1.2; white-space: nowrap; }
+.nv-probando__t small { font-size: 10.5px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: rgba(244, 245, 255, .55); }
 .nv-card__cta { display: inline-flex; align-items: center; gap: 8px; height: 42px; padding: 0 20px; border: 0; border-radius: 99px; background: var(--nv-mag); color: #fff;
   font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: 0 10px 30px rgba(255, 63, 164, .4); transition: transform .2s; }
 .nv-card__cta:hover { transform: translateY(-1px); }
@@ -257,5 +269,5 @@
   .nv-card { left: 12px !important; right: 12px; width: auto !important; top: auto !important; bottom: 16px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .nv-portada *, .nv-rec *, .nv-humo i { animation-duration: .01ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; }
+  .nv-portada *, .nv-rec *, .nv-probando *, .nv-humo i { animation-duration: .01ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; }
 }
