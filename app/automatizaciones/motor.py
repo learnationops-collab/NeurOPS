@@ -434,9 +434,13 @@ class Motor:
             self._cerrar(ejecucion, AutEjecucion.VENTANA_VENCIDA, 'Pasaron más de 24 h desde el último mensaje del contacto')
             return False
         variables = {**(contacto.variables or {}), 'nombre': contacto.nombre or '', 'usuario': contacto.username or ''}
+        # Cada mensaje con la hora en que sale (las pausas de «escribiendo» corren entre uno y otro), no la del
+        # arranque de la vuelta: si el lead contesta en el medio, el chat tiene que quedar en ese orden.
+        demora = timedelta()
         for cuerpo, pausa in zip(mensajes.construir(nodo, variables, ejecucion.version_id), mensajes.pausas(nodo)):
             if pausa and not ejecucion.comentario_id:
                 self.transporte.escribiendo(contacto.igsid, pausa)
+                demora += timedelta(seconds=pausa)
             if ejecucion.comentario_id:
                 # Respuesta privada al comentario: Instagram permite UNA; después hace falta que conteste.
                 destinatario = {'comment_id': ejecucion.comentario_id}
@@ -451,8 +455,9 @@ class Motor:
                 return False
             db.session.add(IgMensaje(contacto_id=contacto.id, mid=mid, direccion=IgMensaje.SALIENTE,
                                      origen=IgMensaje.MOTOR, texto=mensajes.texto_visible(cuerpo), contenido=cuerpo,
-                                     ejecucion_id=ejecucion.id, nodo_id=nodo['id'], enviado_en=self.ahora))
+                                     ejecucion_id=ejecucion.id, nodo_id=nodo['id'], enviado_en=self.ahora + demora))
             db.session.flush()
+            demora += timedelta(milliseconds=1)  # sin pausa, igual quedan en el orden en que salieron
         registro.envio(ejecucion, nodo, self.ahora)
         return True
 

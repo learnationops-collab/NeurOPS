@@ -124,7 +124,7 @@ export default function Conversaciones() {
     const buscador = (
         <InputGroup className="cv-buscar" prefix={<Search size={16} />}>
             <label className="sr" htmlFor="cv-buscar">Buscar por usuario</label>
-            <input id="cv-buscar" value={buscar} onChange={(e) => setBuscar(e.target.value)} placeholder="Usuario o nombre · #palabra en lo que le escribiste" autoComplete="off" />
+            <input id="cv-buscar" value={buscar} onChange={(e) => setBuscar(e.target.value)} placeholder="Usuario, nombre o #palabra" autoComplete="off" />
         </InputGroup>
     );
     const macro = <MacroFiltro lista={lista} filtro={filtro} onCambiar={setFiltro} ahora={ahora} yo={yo} />;
@@ -164,9 +164,8 @@ export default function Conversaciones() {
                 <ul>{visibles.map((c) => <Fila key={c.id} c={c} ahora={ahora} yo={yo} conAsignado={conAsignado} elegida={elegida === c.id} borrador={borradores[c.id]} onElegir={setElegida}
                     eligiendo={eligiendo} marcada={marcadas.includes(c.id)} onMarcar={marcar} />)}</ul>
                 {lista.length >= limite && (
-                    <Button size="sm" variant="ghost" className="cv-mas" onClick={() => setLimite((n) => n + LIMITE)}>
-                        Cargar {LIMITE} más (los filtros miran solo las cargadas)
-                    </Button>
+                    <button type="button" className="cv-mas" data-tip="Cargar más|Los filtros miran solo las conversaciones cargadas"
+                        onClick={() => setLimite((n) => n + LIMITE)}>Cargar {LIMITE} más</button>
                 )}
                 {eligiendo ? (
                     <div className="cv-masiva">

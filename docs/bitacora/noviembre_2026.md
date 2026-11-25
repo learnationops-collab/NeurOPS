@@ -1017,3 +1017,7 @@
 - El riel ya no queda encimado con el tablero: en el celular es una tira de tarjetas que se desliza; las vistas y sus controles van en dos filas deslizables; las etapas del tablero se deslizan de costado; la lista deja el nombre fijo; el calendario arranca en 3 días ([sidebar-v6.css](../../frontend/src/pages/closer/sidebar-v6.css), [confirmar.css](../../frontend/src/pages/closer/confirmar/confirmar.css)).
 - La ficha se abre a pantalla completa con la cabecera compacta, y las etapas de confirmación ya no se pisan ([ficha-telefono.css](../../frontend/src/components/ficha/ficha-telefono.css)).
 - El dock tapa bien las secciones detrás de Herramientas y el avatar. En el recorrido de novedades, la barra «Probando» vuelve a su alto (también en la compu).
+
+### 25/11/2026 · Inbox: el chat en el orden real y ajustes visuales
+- Los mensajes del bot se guardaban todos con la hora en que arrancó a responder, sin contar las pausas de «escribiendo…»: si el lead contestaba en el medio, su mensaje quedaba al final y el chat figuraba «sin respuesta» (caso de Paula). Ahora cada uno lleva la hora en que sale. Los chats anteriores no se corrigen.
+- «Cargar 500 más» pasa a ser un link chico dentro de la lista (se salía del panel) y el buscador dice «Usuario, nombre o #palabra» (el texto largo quedaba cortado).
