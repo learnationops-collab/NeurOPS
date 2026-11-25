@@ -1026,3 +1026,6 @@
 - Herramienta nueva «Broadcast de WhatsApp» (Herramientas › Crear, admin y operador): se carga el CSV, se elige una plantilla aprobada y se manda a los próximos N, con el tope de 100 por día a la vista y «Frenar» ([broadcastWa/](../../frontend/src/ventanas/herramientas/broadcastWa/)).
 - «Historial» muestra cada envío con entregados, leídos, respondieron y fallaron; cada número con el botón que tocó, su chat en el Inbox y el setter. Se descarga en CSV.
 - Una sola tabla, `wa_envios`, en lugar de las dos de difusiones (vacías); sin envío automático ni flujo por difusión ([envios.py](../../app/whatsapp/envios.py)).
+
+### 25/11/2026 · Inbox: abren las conversaciones que empezaron por un comentario
+- Las conversaciones que arrancaron con un comentario en una publicación no cargaban (31 en las últimas 48 h; lo reportó un setter): el link a la publicación se le pedía al transporte real, pero el método había quedado en el de simulación. Ahora está en el real ([transporte.py](../../app/automatizaciones/transporte.py)).

@@ -51,8 +51,7 @@ class TransporteSimulado:
         return self.perfiles.get(igsid, {})
 
     def permalink(self, media_id):
-        """El link público de una publicación de la cuenta; None si Meta no lo da."""
-        return self._get(media_id, {'fields': 'permalink'}).get('permalink')
+        return None
 
     def tomar_control(self, igsid):
         return True
@@ -98,6 +97,10 @@ class TransporteMeta:
         """{'username', 'name', 'is_user_follow_business'} del contacto (los DMs no los traen); {} si
         Instagram no los da."""
         return self._get(igsid, {'fields': 'name,username,is_user_follow_business'})
+
+    def permalink(self, media_id):
+        """El link público de una publicación de la cuenta; None si Meta no lo da."""
+        return self._get(media_id, {'fields': 'permalink'}).get('permalink')
 
     def tomar_control(self, igsid):
         """True si la conversación quedó bajo el control de esta app."""
