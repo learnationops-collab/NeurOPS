@@ -100,7 +100,7 @@ def sesion_propia_de(user):
 
 
 def personas_que_atienden():
-    """[{id, nombre, rol}] de las cuentas activas con horario en Team que toman llamadas (closers y triage):
+    """[{id, nombre, rol, tz}] de las cuentas activas con horario en Team que toman llamadas (closers y triage):
     a quién se le puede mover una agenda."""
     d = servicio.colecciones()
     usuarios = servicio._usuarios_de_personas(d)
@@ -110,7 +110,8 @@ def personas_que_atienden():
         u = users.get(usuarios.get(p['id']))
         triage = es_triage(d, p)
         if u and (triage or es_closer(d, p)) and horas_semana(p) > 0:
-            filas.append({'id': u.id, 'nombre': u.username, 'rol': 'triage' if triage else 'closer'})
+            filas.append({'id': u.id, 'nombre': u.username, 'rol': 'triage' if triage else 'closer',
+                          'tz': p.get('tz') or TZ_DEF})
     return sorted(filas, key=lambda f: f['nombre'].lower())
 
 

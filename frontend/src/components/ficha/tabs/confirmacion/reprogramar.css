@@ -1,73 +1,159 @@
-/* Reprogramar (Confirmación): pasos, personas, días y horas. Mismos tokens que ficha.css. */
+/* Reprogramar (Confirmación): pasos, personas, calendario y horas. Mismos tokens que ficha.css.
+   Marca: rosa (--brand-secondary) solo para lo elegido y el paso actual; el resto, superficies del tema. */
 
-.dc-shell .rp-pasos{display:flex;gap:var(--s2);list-style:none;margin:0;padding:0;flex-wrap:wrap}
-.dc-shell .rp-pasos button{display:inline-flex;align-items:center;gap:var(--s2);height:30px;
-  padding:0 var(--s3) 0 var(--s1);border-radius:var(--radius-pill);border:1px solid var(--border-subtle);
-  background:transparent;color:var(--text-muted);font-size:13px;font-weight:600;cursor:pointer}
-.dc-shell .rp-pasos button:disabled{cursor:default;opacity:.5}
-.dc-shell .rp-pasos span{width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;
-  justify-content:center;font-size:12px;font-weight:800;border:1px solid var(--border-main)}
-.dc-shell .rp-pasos [data-estado="actual"] button{color:var(--text-on-surface);border-color:var(--brand-secondary)}
-.dc-shell .rp-pasos [data-estado="actual"] span{background:var(--brand-secondary);border-color:var(--brand-secondary);color:var(--ink)}
-.dc-shell .rp-pasos [data-estado="hecho"] span{background:var(--success);border-color:var(--success);color:var(--ink)}
+/* Título y pasos en una fila */
+.dc-shell .fi-sub-cab{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--s3) var(--s5)}
 
-.dc-shell .rp-paso{display:grid;gap:var(--s4);animation:rp-entra .22s ease-out backwards}
-@keyframes rp-entra{from{opacity:0;transform:translateY(6px)}}
-@media (prefers-reduced-motion:reduce){.dc-shell .rp-paso{animation:none}}
-.dc-shell .rp-fila{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s3)}
+.dc-shell .rp-pasos{display:flex;align-items:center;list-style:none;margin:0;padding:0}
+.dc-shell .rp-pasos li{display:flex;align-items:center}
+.dc-shell .rp-pasos li + li::before{content:"";width:28px;height:2px;margin:0 var(--s2);border-radius:2px;
+  background:var(--border-main);transition:background .3s ease}
+.dc-shell .rp-pasos li[data-estado="hecho"] + li::before,
+.dc-shell .rp-pasos li[data-estado="actual"]::before{background:var(--success)}
+.dc-shell .rp-pasos li[data-estado="actual"]::before{background:linear-gradient(90deg,var(--success),var(--brand-secondary))}
+.dc-shell .rp-pasos button{display:inline-flex;align-items:center;gap:var(--s2);padding:0;background:none;border:0;
+  color:var(--text-muted);font-size:13px;font-weight:600;cursor:pointer;transition:color .2s ease}
+.dc-shell .rp-pasos button:disabled{cursor:default;opacity:.55}
+.dc-shell .rp-pasos button:not(:disabled):hover{color:var(--text-on-surface)}
+.dc-shell .rp-pasos-n{width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:800;border:1.5px solid var(--border-main);transition:background .25s ease,border-color .25s ease,box-shadow .25s ease}
+.dc-shell .rp-pasos [data-estado="actual"] button{color:var(--text-on-surface)}
+.dc-shell .rp-pasos [data-estado="actual"] .rp-pasos-n{background:var(--brand-secondary);border-color:var(--brand-secondary);
+  color:var(--ink);box-shadow:0 0 0 5px var(--brand-secondary-surface)}
+.dc-shell .rp-pasos [data-estado="hecho"] .rp-pasos-n{background:var(--success);border-color:var(--success);color:var(--ink)}
 
-/* Personas: tarjetas que se tocan */
-.dc-shell .rp-personas{display:grid;gap:var(--s2);grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
-.dc-shell .rp-persona{display:flex;align-items:center;gap:var(--s3);min-height:60px;padding:var(--s2) var(--s4);
+.dc-shell .rp-paso{display:grid;gap:var(--s5)}
+
+/* Cargando */
+.dc-shell .rp-cargando{display:flex;align-items:center;gap:var(--s3);padding:var(--s6) 0;color:var(--text-muted);font-size:13px}
+.dc-shell .rp-pulso{width:10px;height:10px;border-radius:50%;background:var(--brand-secondary);animation:rp-pulso 1.1s ease-in-out infinite}
+@keyframes rp-pulso{0%,100%{transform:scale(.7);opacity:.5}50%{transform:scale(1.15);opacity:1}}
+@media (prefers-reduced-motion:reduce){.dc-shell .rp-pulso{animation:none}}
+
+/* Paso 1: grupo y personas */
+.dc-shell .rp-grupo{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s4)}
+.dc-shell .rp-personas{display:grid;gap:var(--s3);grid-template-columns:repeat(auto-fill,minmax(250px,1fr))}
+.dc-shell .rp-persona{position:relative;display:flex;align-items:center;gap:var(--s3);min-height:84px;padding:var(--s4) var(--s5);
   border-radius:var(--radius-control);border:1px solid var(--border-main);background:var(--bg-element);
-  color:var(--text-on-surface);text-align:left;cursor:pointer;transition:border-color .15s,background .15s,transform .15s}
-.dc-shell .rp-persona:hover:not(:disabled){background:var(--bg-element-hover)}
-.dc-shell .rp-persona:active:not(:disabled){transform:scale(.985)}
-.dc-shell .rp-persona:disabled{opacity:.45;cursor:default}
+  color:var(--text-on-surface);text-align:left;cursor:pointer;
+  transition:border-color .2s ease,background .2s ease,box-shadow .25s ease,transform .2s ease}
+.dc-shell .rp-persona:hover:not(:disabled){background:var(--bg-element-hover);transform:translateY(-2px);
+  box-shadow:0 8px 20px -12px rgb(0 0 0 / .6)}
+.dc-shell .rp-persona:active:not(:disabled){transform:translateY(0) scale(.99)}
+.dc-shell .rp-persona:disabled{opacity:.4;cursor:default}
 .dc-shell .rp-persona[aria-pressed="true"]{border-color:var(--brand-secondary);
-  background:color-mix(in srgb,var(--brand-secondary) 12%,transparent);
-  box-shadow:0 0 0 3px var(--brand-secondary-surface)}
-.dc-shell .rp-persona-ico{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;
-  background:var(--bg-element-hover);color:var(--brand-secondary);flex-shrink:0}
-.dc-shell .rp-persona-txt{display:grid;gap:2px;min-width:0}
-.dc-shell .rp-persona-txt b{font-size:14px;font-weight:600}
-.dc-shell .rp-persona-txt em{font-style:normal;font-weight:400;color:var(--text-muted)}
+  background:color-mix(in srgb,var(--brand-secondary) 10%,var(--bg-element));
+  box-shadow:0 10px 28px -14px color-mix(in srgb,var(--brand-secondary) 70%,transparent)}
+.dc-shell .rp-persona-txt{display:grid;gap:3px;min-width:0;flex:1}
+.dc-shell .rp-persona-txt b{font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dc-shell .rp-persona-txt small{font-size:12px;color:var(--text-muted)}
+.dc-shell .rp-persona-n{display:grid;justify-items:end;line-height:1.1}
+.dc-shell .rp-persona-n b{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+.dc-shell .rp-persona-n small{font-size:11px;color:var(--text-muted)}
+.dc-shell .rp-persona-check{position:absolute;top:-8px;right:-8px;width:22px;height:22px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;background:var(--brand-secondary);color:var(--ink);
+  transform:scale(0);transition:transform .28s cubic-bezier(.16,1,.3,1)}
+.dc-shell .rp-persona[aria-pressed="true"] .rp-persona-check{transform:scale(1)}
+.dc-shell .rp-pila{display:flex;flex-shrink:0}
+.dc-shell .rp-pila > * + *{margin-left:-10px}
+.dc-shell .rp-pila > *{box-shadow:0 0 0 2px var(--bg-element)}
 
-/* Días: una fila que se desliza */
-.dc-shell .rp-dias{display:flex;gap:var(--s2);overflow-x:auto;padding-bottom:var(--s1);scrollbar-width:thin}
-.dc-shell .rp-dia{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:72px;padding:var(--s2) var(--s3);
-  border-radius:var(--radius-control);border:1px solid var(--border-main);background:transparent;
-  color:var(--text-on-surface);cursor:pointer;flex-shrink:0;text-transform:capitalize;transition:border-color .15s,background .15s}
-.dc-shell .rp-dia b{font-size:13px;font-weight:600;white-space:nowrap}
-.dc-shell .rp-dia small{font-size:11px;color:var(--text-muted)}
-.dc-shell .rp-dia:hover{background:var(--bg-element-hover)}
-.dc-shell .rp-dia[aria-checked="true"]{border-color:var(--brand-secondary);background:var(--brand-secondary);color:var(--ink)}
-.dc-shell .rp-dia[aria-checked="true"] small{color:var(--ink);opacity:.75}
+/* Paso 2: controles */
+.dc-shell .rp-controles{display:flex;flex-wrap:wrap;align-items:flex-end;gap:var(--s4) var(--s6)}
+.dc-shell .rp-control{display:grid;gap:var(--s2);min-width:200px}
 
-/* Horas */
+/* Paso 2: calendario + horas */
+.dc-shell .rp-agenda{display:grid;grid-template-columns:minmax(280px,340px) minmax(0,1fr);gap:var(--s5);align-items:start}
+@media (max-width:820px){.dc-shell .rp-agenda{grid-template-columns:1fr}}
+
+.dc-shell .rp-cal{padding:var(--s4);border-radius:var(--radius-control);border:1px solid var(--border-subtle);background:var(--bg-element)}
+.dc-shell .rp-cal-cab{display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--s3);min-height:28px}
+.dc-shell .rp-cal-cab b{font-size:14px;font-weight:600;text-transform:capitalize}
+.dc-shell .rp-cal-nav{display:flex;gap:var(--s1)}
+.dc-shell .rp-cal-nav button{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  border:1px solid var(--border-main);background:transparent;color:var(--text-on-surface);cursor:pointer}
+.dc-shell .rp-cal-nav button:disabled{opacity:.3;cursor:default}
+.dc-shell .rp-cal-nav button:not(:disabled):hover{background:var(--bg-element-hover)}
+.dc-shell .rp-cal-grilla{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.dc-shell .rp-cal-sem{text-align:center;font-size:11px;font-weight:700;color:var(--text-muted);padding-bottom:var(--s1)}
+.dc-shell .rp-cal-dia{position:relative;aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+  border-radius:10px;border:1px solid transparent;background:color-mix(in srgb,var(--brand-secondary) 8%,transparent);
+  color:var(--text-on-surface);font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;cursor:pointer;
+  transition:background .18s ease,border-color .18s ease,transform .18s ease,color .18s ease}
+.dc-shell .rp-cal-dia small{font-size:10px;font-weight:600;color:var(--brand-secondary);line-height:1}
+.dc-shell .rp-cal-dia:hover:not(:disabled){border-color:var(--brand-secondary);transform:scale(1.06)}
+.dc-shell .rp-cal-dia:disabled{background:transparent;color:var(--text-muted);opacity:.35;cursor:default;font-weight:400}
+.dc-shell .rp-cal-dia[data-hoy]::after{content:"";position:absolute;bottom:3px;width:4px;height:4px;border-radius:50%;background:currentColor;opacity:.6}
+.dc-shell .rp-cal-dia[data-hoy] small{display:none}
+.dc-shell .rp-cal-dia[aria-pressed="true"]{background:var(--brand-secondary);border-color:var(--brand-secondary);color:var(--ink);
+  transform:scale(1.04);box-shadow:0 6px 16px -6px color-mix(in srgb,var(--brand-secondary) 80%,transparent)}
+.dc-shell .rp-cal-dia[aria-pressed="true"] small{color:var(--ink)}
+
+.dc-shell .rp-horas-col{min-height:340px;display:grid}
+.dc-shell .rp-horas-lista{display:grid;gap:var(--s3);align-content:start}
+.dc-shell .rp-horas-cab{display:grid;gap:2px}
+.dc-shell .rp-horas-cab b{font-size:16px;font-weight:600}
+.dc-shell .rp-horas-cab b::first-letter{text-transform:uppercase}
+.dc-shell .rp-horas-cab small{font-size:12px;color:var(--text-muted)}
+.dc-shell .rp-horas-scroll{display:grid;gap:var(--s4);max-height:380px;overflow-y:auto;padding:2px var(--s2) var(--s2) 2px;
+  overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:var(--border-main) transparent}
 .dc-shell .rp-franja{display:grid;gap:var(--s2)}
-.dc-shell .rp-horas{display:grid;gap:var(--s2);grid-template-columns:repeat(auto-fill,minmax(84px,1fr))}
-.dc-shell .rp-hora{display:flex;flex-direction:column;align-items:center;gap:1px;padding:var(--s2) var(--s1);
-  border-radius:var(--radius-control);border:1px solid var(--border-subtle);background:var(--bg-element);
-  color:var(--text-on-surface);cursor:pointer;transition:border-color .15s,background .15s,transform .15s}
-.dc-shell .rp-hora b{font-size:15px;font-weight:700;font-variant-numeric:tabular-nums}
-.dc-shell .rp-hora small{font-size:11px;color:var(--text-muted);font-variant-numeric:tabular-nums}
-.dc-shell .rp-hora:hover{border-color:var(--border-main);background:var(--bg-element-hover)}
-.dc-shell .rp-hora:active{transform:scale(.97)}
-.dc-shell .rp-hora[aria-checked="true"]{border-color:var(--brand-secondary);background:var(--brand-secondary);color:var(--ink)}
-.dc-shell .rp-hora[aria-checked="true"] small{color:var(--ink);opacity:.75}
-.dc-shell .rp-link{justify-self:start;background:none;border:0;padding:0;color:var(--text-muted);
-  font-size:12px;text-decoration:underline;cursor:pointer}
+.dc-shell .rp-franja-tit{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted)}
 
-/* Resumen antes de confirmar */
-.dc-shell .rp-resumen{display:flex;align-items:center;gap:var(--s3);padding:var(--s3) var(--s4);
-  border-radius:var(--radius-control);border:1px solid var(--brand-secondary);
-  background:color-mix(in srgb,var(--brand-secondary) 10%,transparent)}
-.dc-shell .rp-resumen > div{display:grid;gap:2px}
-.dc-shell .rp-resumen b{font-size:15px;font-weight:600}
-.dc-shell .rp-resumen b::first-letter{text-transform:uppercase}
-.dc-shell .rp-resumen small{font-size:13px;color:var(--text-muted)}
+.dc-shell .rp-slot{border-radius:var(--radius-control);border:1px solid var(--border-subtle);background:var(--bg-element);
+  transition:border-color .2s ease,background .2s ease,box-shadow .25s ease}
+.dc-shell .rp-slot:hover{border-color:var(--border-main)}
+.dc-shell .rp-slot[data-sel]{border-color:var(--brand-secondary);background:color-mix(in srgb,var(--brand-secondary) 9%,var(--bg-element));
+  box-shadow:0 8px 22px -14px color-mix(in srgb,var(--brand-secondary) 80%,transparent)}
+.dc-shell .rp-slot-btn{width:100%;display:grid;grid-template-columns:96px minmax(0,1fr) 24px;align-items:center;gap:var(--s4);
+  padding:var(--s3) var(--s4);background:none;border:0;color:var(--text-on-surface);text-align:left;cursor:pointer}
+.dc-shell .rp-slot-hora{display:grid;gap:1px}
+.dc-shell .rp-slot-hora b{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.dc-shell .rp-slot-hora small{font-size:11px;color:var(--text-muted)}
+.dc-shell .rp-slot-gente{display:flex;flex-wrap:wrap;gap:var(--s2) var(--s4)}
+.dc-shell .rp-slot-p{display:inline-flex;align-items:center;gap:var(--s2);font-size:13px;font-weight:600}
+.dc-shell .rp-slot-p em{font-style:normal;font-weight:400;color:var(--text-muted);font-variant-numeric:tabular-nums}
+.dc-shell .rp-slot[data-sel] .rp-slot-p:not([data-elegida]){opacity:.55}
+.dc-shell .rp-slot-check{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  border:1.5px solid var(--border-main);color:var(--ink);transition:background .2s ease,border-color .2s ease}
+.dc-shell .rp-slot[data-sel] .rp-slot-check{background:var(--brand-secondary);border-color:var(--brand-secondary)}
+.dc-shell .rp-slot-con{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2);padding:0 var(--s4) var(--s3) calc(96px + var(--s4) * 2);
+  animation:rp-abre .22s ease-out backwards}
+.dc-shell .rp-slot-con small{font-size:12px;color:var(--text-muted)}
+@keyframes rp-abre{from{opacity:0;transform:translateY(-4px)}}
+@media (max-width:640px){
+  .dc-shell .rp-slot-btn{grid-template-columns:72px minmax(0,1fr) 24px;gap:var(--s3)}
+  .dc-shell .rp-slot-con{padding-left:var(--s4)}
+}
+.dc-shell .rp-link{justify-self:start;background:none;border:0;padding:0;color:var(--text-muted);
+  font-size:12px;text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.dc-shell .rp-link:hover{color:var(--text-on-surface)}
+
+.dc-shell .rp-vacio{display:grid;justify-items:center;align-content:center;gap:var(--s2);padding:var(--s6);text-align:center;
+  border-radius:var(--radius-control);border:1px dashed var(--border-main);color:var(--text-muted)}
+.dc-shell .rp-vacio svg{color:var(--brand-secondary);opacity:.8}
+.dc-shell .rp-vacio b{font-size:15px;font-weight:600;color:var(--text-on-surface)}
+.dc-shell .rp-vacio small{font-size:13px;max-width:36ch}
+
+/* Paso 3: resumen y motivo */
+.dc-shell .rp-resumen{display:grid;grid-template-columns:auto auto minmax(0,1fr);align-items:center;gap:var(--s6);
+  padding:var(--s5) var(--s6);border-radius:var(--radius-control);border:1px solid var(--brand-secondary);
+  background:color-mix(in srgb,var(--brand-secondary) 9%,var(--bg-element))}
+@media (max-width:700px){.dc-shell .rp-resumen{grid-template-columns:auto 1fr;gap:var(--s4)}
+  .dc-shell .rp-resumen-quien{grid-column:1 / -1}}
+.dc-shell .rp-resumen-dia{display:grid;justify-items:center;width:72px;padding:var(--s2) 0;border-radius:12px;
+  background:var(--brand-secondary);color:var(--ink);line-height:1.1}
+.dc-shell .rp-resumen-dia small{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.dc-shell .rp-resumen-dia b{font-size:28px;font-weight:800;font-variant-numeric:tabular-nums}
+.dc-shell .rp-resumen-hora{display:grid;gap:2px}
+.dc-shell .rp-resumen-hora b{font-size:32px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.02em;line-height:1}
+.dc-shell .rp-resumen-hora small{font-size:12px;color:var(--text-muted)}
+.dc-shell .rp-resumen-quien{display:flex;align-items:center;gap:var(--s3);padding-left:var(--s6);border-left:1px solid var(--border-main)}
+@media (max-width:700px){.dc-shell .rp-resumen-quien{padding-left:0;border-left:0}}
+.dc-shell .rp-resumen-quien > div{display:grid;gap:2px}
+.dc-shell .rp-resumen-quien b{font-size:15px;font-weight:600}
+.dc-shell .rp-resumen-quien small{font-size:12px;color:var(--text-muted)}
+.dc-shell .rp-motivo{display:grid;gap:var(--s2)}
 
 /* Pie de Confirmación: el CTA manda; lo que cambió va arriba en tarjetas iguales; eliminar, aparte. */
 .dc-shell .cf-cambio{display:grid;gap:var(--s3)}

@@ -79,3 +79,44 @@ export const conAnticipacion = (porPersona, minutos) => {
     const desde = Date.now() + minutos * 60000;
     return Object.fromEntries(Object.entries(porPersona || {}).map(([id, l]) => [id, l.filter((iso) => new Date(iso).getTime() >= desde)]));
 };
+
+/** «Sao Paulo» de «America/Sao_Paulo». */
+export const ciudad = (tz) => String(tz || '').split('/').pop().replace(/_/g, ' ');
+
+export const hoyEn = (tz) => partes(new Date().toISOString(), tz).dia;
+
+const mesDe = (dia) => dia.slice(0, 7);
+const sumarMes = (ym, n) => {
+    const [y, m] = ym.split('-').map(Number);
+    const d = new Date(Date.UTC(y, m - 1 + n, 1));
+    return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+};
+
+/** Los meses (YYYY-MM) que cubren los días con horarios, del primero al último. */
+export const mesesDe = (dias) => {
+    if (!dias.length) return [];
+    const fin = mesDe(dias[dias.length - 1].dia);
+    const out = [mesDe(dias[0].dia)];
+    while (out[out.length - 1] < fin) out.push(sumarMes(out[out.length - 1], 1));
+    return out;
+};
+
+/** Las celdas del mes, semana de lunes a domingo: 'YYYY-MM-DD' o null para el hueco del principio. */
+export const grillaMes = (ym) => {
+    const [y, m] = ym.split('-').map(Number);
+    const primero = (new Date(Date.UTC(y, m - 1, 1)).getUTCDay() + 6) % 7;
+    const largo = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    return [...Array(primero).fill(null),
+        ...Array.from({ length: largo }, (_, i) => `${ym}-${String(i + 1).padStart(2, '0')}`)];
+};
+
+export const nombreMes = (ym) => {
+    const [y, m] = ym.split('-').map(Number);
+    return new Date(Date.UTC(y, m - 1, 15)).toLocaleDateString('es', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+};
+
+/** «jueves 27 de noviembre». */
+export const diaLargo = (dia) => {
+    const [y, m, d] = dia.split('-').map(Number);
+    return new Date(Date.UTC(y, m - 1, d, 12)).toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' });
+};

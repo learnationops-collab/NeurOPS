@@ -7,10 +7,17 @@ import { ArrowLeft } from 'lucide-react';
  * Es la pieza que hace posible la regla "un solo modal": una acción abre una
  * sub-vista DENTRO del panel, nunca un diálogo encima del diálogo. `Volver`
  * siempre a la izquierda y la acción a la derecha, igual en las cuatro pestañas.
+ *
+ * `extra` va en la fila del título, a la derecha (los pasos de un asistente).
  */
-const SubVista = ({ titulo, onVolver, acciones = null, aviso = null, children }) => (
+const SubVista = ({ titulo, onVolver, acciones = null, aviso = null, extra = null, children }) => (
     <div style={{ display: 'grid', gap: 'var(--s4)' }}>
-        <h3 className="t-h3">{titulo}</h3>
+        {extra ? (
+            <div className="fi-sub-cab">
+                <h3 className="t-h3">{titulo}</h3>
+                {extra}
+            </div>
+        ) : <h3 className="t-h3">{titulo}</h3>}
         {aviso}
         {children}
         <div className="fi-pie" style={{ justifyContent: 'space-between' }}>

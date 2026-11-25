@@ -863,3 +863,9 @@
 - «No show»: motivo obligatorio y fecha para volver a escribirle (opcional); deja la cita en «No Show». Ruta nueva `POST /api/ficha/<id>/no-show`.
 - «Listo · 100% confirmado» va solo, a todo el ancho.
 - Las pestañas de la ficha (Confirmación, Resultado, Historial…) se reparten todo el ancho en pantalla ancha.
+
+### 25/11/2026 · Reprogramar con calendario y la ficha en modo enfoque (ADR-W211)
+- Al abrir Reprogramar, Canceló o No show, la ficha muestra solo la cabecera del lead y esa tarea: sin pestañas ni barra de guardado hasta «Volver».
+- Reprogramar: primero el día en un calendario (con cuántos horarios tiene), después la hora. Cada hora está en la del lead y dice de quién es y qué hora es para esa persona («Marlon · 10:30 en Bogotá»).
+- Tarjetas de personas con su cuenta de horarios y ciudad; resumen final con día, hora del lead y quién; movimiento en los pasos.
+- El pie de las sub-vistas ya no deja el hueco a la derecha en pantallas anchas.

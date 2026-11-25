@@ -490,7 +490,9 @@
 .dc-shell .fi-pie{display:flex;flex-wrap:wrap;justify-content:space-between;
   align-items:center;gap:var(--s4);padding-top:var(--s6);
   border-top:1px solid var(--border-subtle);padding-right:168px}
-@media (max-width:900px){
+/* El hueco solo hace falta cuando el modal (1120 px) llega hasta el botón de bugs (a 96 px del borde,
+   ~56 de ancho): en pantallas de 1430 px o más queda afuera y el CTA va pegado a la derecha. */
+@media (max-width:900px), (min-width:1430px){
   .dc-shell .fi-pie{padding-right:0}
 }
 .dc-shell .fi-pie-der{display:flex;flex-wrap:wrap;align-items:center;
@@ -503,7 +505,7 @@
    «Registrar la venta» no entraba en lo que quedaba al lado del hueco. */
 .dc-shell .fi-botonera{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;
   gap:var(--s3);padding-right:168px}
-@media (max-width:900px){
+@media (max-width:900px), (min-width:1430px){
   .dc-shell .fi-botonera{padding-right:0}
 }
 

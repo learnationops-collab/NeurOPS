@@ -24,8 +24,9 @@ import './confirmacion/reprogramar.css';
  * `CloserWorkflowPage.jsx` y por eso el mazo y el libro de la dirección muestran
  * listas distintas del mismo campo.
  */
-const TabConfirmacion = ({ ficha, onAccion, irA, puedeEditar = true }) => {
+const TabConfirmacion = ({ ficha, onAccion, irA, puedeEditar = true, onEnfoque }) => {
     const [modo, setModo] = useState('menu');
+    useEffect(() => { onEnfoque?.(modo !== 'menu'); }, [modo, onEnfoque]);
     const mov = useMovimiento();
     const [guardando, setGuardando] = useState(false);
     const conf = ficha?.confirmacion || {};

@@ -361,7 +361,12 @@ const FichaLeadModal = ({
     }, []);
     const onRecargar = useCallback(() => cargar(), [cargar]);
 
-    const props = { ficha, onAccion, onConsultar, onRecargar, irA, puedeEditar: estado.puedeEditar };
+    // Enfoque: con una sub-vista abierta (reprogramar, canceló, no show…) la ficha muestra solo la cabecera
+    // y esa tarea; las pestañas y la barra de guardado vuelven al tocar «Volver» (25/11/2026).
+    const [enfoque, setEnfoque] = useState(false);
+    useEffect(() => { setEnfoque(false); }, [pestana, appointmentId]);
+
+    const props = { ficha, onAccion, onConsultar, onRecargar, irA, puedeEditar: estado.puedeEditar, onEnfoque: setEnfoque };
 
     const panel = () => {
         switch (pestana) {
@@ -405,7 +410,7 @@ const FichaLeadModal = ({
 
                 {/* El tablist espera a la ficha: sin ella `estado.pestanas` es el catálogo
                     entero y se verían seis pestañas que todavía no se sabe si aplican. */}
-                {ficha && estado.pestanas.length > 0 && (
+                {ficha && !enfoque && estado.pestanas.length > 0 && (
                     <FichaTabs pestanas={estado.pestanas} activa={pestana} onCambiar={setPestana}
                         contadores={{ com: ficha.comunicacion?.notas?.length || 0 }} />
                 )}
@@ -415,7 +420,7 @@ const FichaLeadModal = ({
                     role={pestana ? 'tabpanel' : undefined}
                     aria-labelledby={pestana ? `fi-tab-${pestana}` : undefined}>
                     <div style={{ display: 'grid', gap: 'var(--s3)' }}>
-                        {ficha && !soloLectura && estado.puedeEditar && <BarraGuardado leidaEn={leidaEn} onVerificar={() => cargar()} />}
+                        {ficha && !enfoque && !soloLectura && estado.puedeEditar && <BarraGuardado leidaEn={leidaEn} onVerificar={() => cargar()} />}
                         {aviso && (
                             <Aviso tono={aviso.tono} titulo={aviso.texto} onCerrar={() => setAviso(null)} />
                         )}
@@ -423,7 +428,7 @@ const FichaLeadModal = ({
                             vista en cualquier pestaña para que el closer llegue con contexto. */}
                         {/* Solo el título: la nota completa (que también queda en Comunicación) se
                             lee con formato al pasar el ratón, para no ocupar media ficha. */}
-                        {ficha?.triage?.viene_de_triage && (
+                        {!enfoque && ficha?.triage?.viene_de_triage && (
                             <NotaEnTooltip texto={ficha.triage.viene_de_triage.nota || 'Sin nota del triage.'}>
                                 <Aviso tono="info" titulo={[
                                     `Viene de triage · aprobado por ${ficha.triage.viene_de_triage.por || 'el triage'}`,
