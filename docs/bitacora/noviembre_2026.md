@@ -1005,3 +1005,6 @@
 ### 25/11/2026 · Turnos: lo que ve el lead y los días de cada link (ADR-W226)
 - Turnos abre en «Por link»: Workshop, Setting y Academy Web con los próximos 10 días, closers y triage, qué días ve el lead, qué queda fuera y los horarios de cada día con quién atiende. «Por segmento» muestra A, B, C y D del link elegido. La tabla de antes queda en «Semana del equipo».
 - Los días del link se cambian ahí mismo (− / +, hábiles o corridos) y van directo al link en vivo; los puede cambiar también el setter. «Copiar link» y «Abrir» en cada tarjeta; al setter le copia su link con su código.
+
+### 25/11/2026 · Portal: los setters ven Agendamiento
+- La tarjeta Agendamiento aparece en el Portal de los setters (Eli y Paula), en solo lectura como ya lo permitía el servidor desde el 10/10. Antes el rol setter solo tenía Setting e Inbox ([areas.js](../../frontend/src/utils/areas.js)).

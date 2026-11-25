@@ -32,7 +32,7 @@ const AREAS_POR_ROL = {
     admin: ['operaciones', 'ventas', 'agendamiento', 'inbox', 'marketing', 'talent'],
     director_comercial: ['ventas', 'agendamiento', 'inbox'],
     closer: ['cierres'],
-    setter: ['setting', 'inbox'],
+    setter: ['setting', 'agendamiento', 'inbox'],
     triage: ['triage'],
     operator: ['operaciones', 'inbox'],
     director_marketing: ['marketing'],
