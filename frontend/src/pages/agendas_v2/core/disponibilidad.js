@@ -19,7 +19,7 @@ export function agendaOpt(ag, dur) {
 }
 
 // Días (claves YYYY-MM-DD en la zona `tz`) en los que el evento ofrece horarios, desde hoy.
-// "Días hábiles" cuenta y ofrece solo de lunes a viernes.
+// "Días hábiles" cuenta y ofrece de lunes a sábado: el equipo atiende los sábados.
 export function diasDelHorizonte(o, tz, ahora) {
     const hoy = claveDia(ahora, tz).split('-').map(Number), out = [];
     const tope = o.modo === 'siempre' ? MAX_DIAS : o.modo === 'rango' ? 400 : o.tipo === 'habiles' ? o.n * 2 + 6 : o.n + 1;
@@ -27,7 +27,7 @@ export function diasDelHorizonte(o, tz, ahora) {
     for (let i = 0; i < Math.min(tope, 400) && out.length < MAX_DIAS; i++) {
         const b = new Date(Date.UTC(hoy[0], hoy[1] - 1, hoy[2] + i)), dow = b.getUTCDay(), clave = b.toISOString().slice(0, 10);
         if (o.modo === 'dias' && o.tipo === 'habiles') {
-            if (dow === 0 || dow === 6) continue;
+            if (dow === 0) continue;
             if (i > 0) habiles++;
             if (habiles > o.n) break;
         }

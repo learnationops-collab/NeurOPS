@@ -984,3 +984,6 @@
 
 ### 25/11/2026 · Mi sueldo: lo que da 0 no aparece
 - Un sueldo base de 0 o un concepto sin comisión (por ejemplo, con todos sus pagos excluidos) ya no se muestra en la lista ni como filtro de pagos.
+
+### 25/11/2026 · Agendas: «días hábiles» incluye el sábado (ADR-W224)
+- Los eventos con «N días hábiles» cuentan y ofrecen de lunes a sábado; solo el domingo queda afuera. Antes salteaban el sábado: el lead nunca veía esos horarios y la ventana se estiraba (un miércoles con 3 hábiles llegaba al lunes; a Mario le agendaron así). Ahora llega al sábado ([disponibilidad.py](../../app/agendas_v2/nucleo/disponibilidad.py), [disponibilidad.js](../../frontend/src/pages/agendas_v2/core/disponibilidad.js)).

@@ -94,9 +94,9 @@ def test_despues_de_algo_ocupado_la_cadena_sigue_cuando_termina():
     assert s == [date_utc(2026, 9, 5, 14), date_utc(2026, 9, 5, 14, 45)]
 
 
-def test_dias_habiles_no_ofrece_sabados_ni_domingos():
-    dias = dias_del_horizonte(agenda_opt(ag(reservas={'n': 5, 'tipo': 'habiles'}), 45), 'America/La_Paz', LUNES)
-    assert [x['dow'] for x in dias] == [1, 2, 3, 4, 5, 1]
+def test_dias_habiles_cuenta_el_sabado_y_no_el_domingo():
+    dias = dias_del_horizonte(agenda_opt(ag(reservas={'n': 6, 'tipo': 'habiles'}), 45), 'America/La_Paz', LUNES)
+    assert [x['dow'] for x in dias] == [1, 2, 3, 4, 5, 6, 1]
 
 
 def test_dias_corridos_incluye_hoy_y_los_n_siguientes():

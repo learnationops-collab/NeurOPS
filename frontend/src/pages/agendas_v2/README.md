@@ -52,7 +52,7 @@ Lo que el backend tiene que hacer, en el orden del plan (paso 2 aislado, paso 3 
 - **Llenar en orden**: el lead ve solo la agenda del primer closer mientras le quede lugar en los próximos 7 días (`VENTANA_LLENAR_DIAS`).
 - **Repartir parejo**: cada horario va a quien tiene menos agendas por delante.
 - **Publicar** guarda una copia del evento y de su formulario. Editar un formulario no cambia los links en vivo hasta volver a publicar.
-- **"Días hábiles"** no ofrece sábados ni domingos.
+- **"Días hábiles"** van de lunes a sábado: no ofrece domingos (ADR-W224).
 - **Zona por defecto**: `America/La_Paz`, la misma que asume el backend actual.
 - **Teléfono** en formato internacional (`+591…`) en la reserva.
 - **Origen**: el `?o=` del link se guarda en la reserva, con el setter correspondiente.
