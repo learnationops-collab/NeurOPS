@@ -838,3 +838,13 @@
 
 ### 24/11/2026 · Darian recibe el WhatsApp de las agendas de los closers
 - El WhatsApp de agenda nueva que recibe cada closer le llega también al triage (Darian), con el nombre del closer y la hora en su zona. No le llegan las Momentum ni se le duplica el de sus propias agendas (ADR-W205).
+
+### 24/11/2026 · Broadcast de WhatsApp: flujos e Inbox (ADR-W206)
+- Los flujos del Inbox funcionan por WhatsApp: una difusión puede tener un flujo, y tocar un botón de la plantilla sigue por el botón del nodo de inicio que se llama igual (por ejemplo «Sí, tengo conocidos» → el link del grupo). Lo que el flujo no responde queda para el setter en «Esperan respuesta».
+- WhatsApp no dispara las campañas por palabra clave ni la bienvenida de Instagram. Si un setter escribe, el bot se pausa como en Instagram.
+- El webhook de WhatsApp despierta al reloj del motor y los eventos se procesan con su candado.
+- Inbox: ícono de Instagram o WhatsApp en la lista y en el chat. En WhatsApp la ventana es de 24 h (avisa en las últimas 3 h) y el nombre sale del perfil, no como @usuario.
+- Migración `a7c9e1f3b5d8` (`flujo_id` en `wa_difusiones`, idempotente).
+
+### 24/11/2026 · Darian etiquetada en los avisos de agenda de Discord
+- El aviso de agenda nueva, reprogramada o pasada a closing en Discord etiqueta también a Darian (triage), además del closer y el setter. No en las Momentum ni en sus propias agendas (ADR-W207, pedido de Mario).

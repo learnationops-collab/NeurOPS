@@ -278,6 +278,8 @@
 .thalamus.inbox .cv-item-cuerpo{flex:1;min-width:0;display:grid;gap:3px}
 .thalamus.inbox .cv-item-cab{display:flex;align-items:center;gap:6px;font-size:13px;min-width:0}
 .thalamus.inbox .cv-item-cab strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.thalamus.inbox .cv-canal{display:inline-flex;flex:none;color:var(--text-muted)}
+.thalamus.inbox .cv-canal--wa{color:#25D366}
 .thalamus.inbox .cv-item-hora{margin-left:auto;font-size:11px;white-space:nowrap}
 .thalamus.inbox .cv-item .cv-examen.ui-chip{height:18px;padding:0 6px;font-size:10px;flex-shrink:0}
 .thalamus.inbox .cv-item-texto{display:flex;gap:5px;align-items:center;font-size:12px;min-width:0}

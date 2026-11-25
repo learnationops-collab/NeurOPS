@@ -27,16 +27,21 @@ export function colorEspera(min) {
     return 'var(--text-muted)';
 }
 
-// Minutos hasta que Instagram ya no deja escribirle (7 días desde su último mensaje, `ventana.js`). null si ya se
-// cerró o nunca escribió. Se avisa desde las últimas 24 h.
+// Un contacto de WhatsApp (el backend los guarda como `wa:<número>`).
+export const esWhatsapp = (c) => Boolean(c?.igsid?.startsWith('wa:'));
+
+// Minutos hasta que ya no se le puede escribir (`ventana.js`): Instagram 7 días desde su último mensaje,
+// WhatsApp 24 h. null si ya se cerró o nunca escribió. Se avisa desde las últimas 24 h (WhatsApp: 3 h).
 const CIERRE = 7 * 24 * HORA;
+const CIERRE_WA = 24 * HORA;
 export const AVISO_CIERRE = 24 * HORA;
+export const avisoCierre = (c) => (esWhatsapp(c) ? 3 * HORA : AVISO_CIERRE);
 export function cierreMin(c, ahora) {
     if (!c.ultimo_entrante_en) return null;
-    const falta = CIERRE - Math.floor((ahora - new Date(c.ultimo_entrante_en)) / 60000);
+    const falta = (esWhatsapp(c) ? CIERRE_WA : CIERRE) - Math.floor((ahora - new Date(c.ultimo_entrante_en)) / 60000);
     return falta > 0 ? falta : null;
 }
-const porCerrarse = (c, ahora) => { const m = cierreMin(c, ahora); return m != null && m <= AVISO_CIERRE; };
+const porCerrarse = (c, ahora) => { const m = cierreMin(c, ahora); return m != null && m <= avisoCierre(c); };
 
 // Sin ningún recorrido: escribió pero ninguna palabra clave arrancó un flujo.
 export const flujoCortado = (c) => !c.ejecucion || CORTADOS.includes(c.ejecucion.estado);
@@ -157,6 +162,7 @@ export function filtrar(lista, { ahora, ...f }) {
 
 // Sin usuario: Instagram no da el perfil de quien nunca escribió (solo le escribimos nosotros); al responder se completa.
 export function quien(c) {
+    if (esWhatsapp(c)) return c.nombre || c.username || 'Sin nombre';
     if (c.username) return `@${c.username}`;
     return c.nombre || (c.ultimo_entrante_en ? 'Sin usuario' : 'Todavía no respondió');
 }

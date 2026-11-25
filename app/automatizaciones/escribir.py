@@ -80,6 +80,8 @@ def enviar(motor, contacto, autor_id, texto=None, url_audio=None, nombre_audio=N
     if es_whatsapp(contacto.igsid):
         cuerpo = cuerpo_de(texto, url_audio)
         mid = _por_whatsapp(contacto, cuerpo, motor.ahora)
+        if pausar:  # WhatsApp no manda ecos: la pausa va acá, una vez que salió
+            motor.pausar(contacto, CORTADA_POR_ECO)
         return _guardar(contacto, mid, cuerpo, autor_id, nombre_audio, guia, motor.ahora)
     estado = ventana(contacto, motor.ahora)
     if estado == 'cerrada':

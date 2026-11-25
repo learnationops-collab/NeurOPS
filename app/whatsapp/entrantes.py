@@ -6,6 +6,8 @@
     `variables.difusion` y `variables.origen = 'broadcast'` (para medir de dónde vienen los leads).
   · Si el contacto no tiene setter, se le asigna al setter activo con menos WhatsApp nuevos en 24 h.
   · Estado de un mensaje enviado (sent/delivered/read/failed): actualiza el destino de la difusión.
+  · Con el motor (`motor`, lo pasa el reloj en modo real), el mensaje sigue por `flujos.py`: un botón avanza el
+    flujo de la difusión. Sin motor solo se guarda.
 """
 import logging
 from datetime import datetime, timedelta
@@ -74,7 +76,7 @@ def _marcar_difusion(contacto, telefono, ahora):
                                               WaDifusionDestino.enviado_en.isnot(None))
                .order_by(WaDifusionDestino.enviado_en.desc()).first())
     if destino is None:
-        return
+        return None
     if destino.estado != WaDifusionDestino.RESPONDIO:
         destino.estado, destino.actualizado_en = WaDifusionDestino.RESPONDIO, ahora
     destino.contacto_id = contacto.id
@@ -84,9 +86,10 @@ def _marcar_difusion(contacto, telefono, ahora):
         variables.update(difusion=destino.difusion_id, origen='broadcast',
                          destino=difusion.destino if difusion else None)
         contacto.variables = variables
+    return destino
 
 
-def _entrante(mensaje, nombres, ahora):
+def _entrante(mensaje, nombres, ahora, motor=None):
     wamid = mensaje.get('id')
     if wamid and IgMensaje.query.filter_by(mid=wamid).first():
         return 'repetido'
@@ -94,11 +97,16 @@ def _entrante(mensaje, nombres, ahora):
     contacto = _contacto(telefono, nombres.get(telefono), ahora)
     momento = datetime.utcfromtimestamp(int(mensaje['timestamp'])) if mensaje.get('timestamp') else ahora
     contacto.ultimo_entrante_en = max(contacto.ultimo_entrante_en or momento, momento)
-    db.session.add(IgMensaje(contacto_id=contacto.id, mid=wamid, direccion=IgMensaje.ENTRANTE,
-                             origen=IgMensaje.LEAD, texto=texto_de(mensaje), contenido={'whatsapp': mensaje},
-                             enviado_en=momento))
-    _marcar_difusion(contacto, telefono, ahora)
-    return 'mensaje'
+    entrante = IgMensaje(contacto_id=contacto.id, mid=wamid, direccion=IgMensaje.ENTRANTE,
+                         origen=IgMensaje.LEAD, texto=texto_de(mensaje), contenido={'whatsapp': mensaje},
+                         enviado_en=momento)
+    db.session.add(entrante)
+    db.session.flush()
+    destino = _marcar_difusion(contacto, telefono, ahora)
+    if motor is None:
+        return 'mensaje'
+    from app.whatsapp import flujos
+    return flujos.procesar(motor, contacto, entrante, mensaje, destino)
 
 
 def _estado(estado, ahora):
@@ -114,16 +122,16 @@ def _estado(estado, ahora):
     return f"estado_{estado.get('status')}"
 
 
-def procesar(evento, ahora=None):
+def procesar(evento, ahora=None, motor=None):
     """Pasa un `WhatsappWebhookEvento` y lo marca procesado. Un error queda en `resultado` (se puede reprocesar)."""
-    ahora = ahora or datetime.utcnow()
+    ahora = motor.ahora if motor else (ahora or datetime.utcnow())
     resultados = []
     try:
         for entry in evento.payload.get('entry') or []:
             for cambio in entry.get('changes') or []:
                 valor = cambio.get('value') or {}
                 nombres = {c.get('wa_id'): (c.get('profile') or {}).get('name') for c in valor.get('contacts') or []}
-                resultados += [_entrante(m, nombres, ahora) for m in valor.get('messages') or []]
+                resultados += [_entrante(m, nombres, ahora, motor) for m in valor.get('messages') or []]
                 resultados += [_estado(s, ahora) for s in valor.get('statuses') or []]
         evento.resultado = ','.join(dict.fromkeys(resultados))[:200] or 'sin_eventos'
     except Exception as error:  # el evento queda guardado: se reprocesa después
@@ -135,9 +143,9 @@ def procesar(evento, ahora=None):
     db.session.commit()
 
 
-def procesar_pendientes(limite=200):
+def procesar_pendientes(motor=None, limite=200):
     pendientes = (WhatsappWebhookEvento.query.filter(WhatsappWebhookEvento.procesado_en.is_(None))
                   .order_by(WhatsappWebhookEvento.id).limit(limite).all())
     for evento in pendientes:
-        procesar(evento)
+        procesar(evento, motor=motor)
     return len(pendientes)

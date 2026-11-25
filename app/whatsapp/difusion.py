@@ -115,6 +115,6 @@ def resumen(difusion, ahora=None):
     return {
         'id': difusion.id, 'nombre': difusion.nombre, 'plantilla': difusion.plantilla, 'idioma': difusion.idioma,
         'con_nombre': difusion.con_nombre, 'destino': difusion.destino, 'tope_diario': difusion.tope_diario,
-        'estado': difusion.estado, 'creado_en': difusion.creado_en.isoformat() + 'Z',
+        'estado': difusion.estado, 'flujo_id': difusion.flujo_id, 'creado_en': difusion.creado_en.isoformat() + 'Z',
         'total': sum(conteo.values()), 'por_estado': conteo, 'enviados_hoy': enviados_hoy(difusion.id, ahora),
     }

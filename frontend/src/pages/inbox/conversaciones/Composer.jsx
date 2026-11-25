@@ -18,6 +18,7 @@ import useEquipo from './useEquipo';
 import { faseDe } from './fasesSetting';
 import { LETRAS, completarGuia, faltaCompletar, notaDe, partes, pasosDe, siguienteId, useGuia, useLinkAgenda, visibles } from '../guia/useGuia';
 import { ventanaDe } from './ventana';
+import { esWhatsapp } from './colas';
 
 const MODOS = [
     { value: 'chat', label: 'Chat', icon: <MessageSquare size={13} /> },
@@ -146,7 +147,7 @@ export default function Composer({ contacto, fase, ejecucion, seguimientos, yo, 
             toast(e.response?.data?.message || 'No se pudo guardar la nota', 'error');
         }
     };
-    const ventana = ventanaDe(contacto.ultimo_entrante_en);
+    const ventana = ventanaDe(contacto.ultimo_entrante_en, undefined, esWhatsapp(contacto));
     // Sale al instante en el chat; si Instagram no lo acepta, queda ahí con Reintentar.
     const enviar = (cuerpo, rotulo) => {
         if (cuerpo.texto) {
