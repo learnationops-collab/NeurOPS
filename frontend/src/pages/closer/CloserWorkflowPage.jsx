@@ -9,8 +9,9 @@ import {
     Save, ArrowLeft, ArrowRight, CheckCircle2, User, PenTool, Pencil,
     DollarSign, UserPlus,
     CalendarCheck, PhoneCall, MessageCircle, ClipboardList, BarChart3, Briefcase, FileSearch,
-    CalendarPlus, Gift, Hourglass, Ghost, Filter, UserX, Share2
+    CalendarPlus, Gift, Hourglass, Ghost, Filter, UserX, Share2, Sparkles
 } from 'lucide-react';
+import Novedades, { abrirNovedades } from './novedades/Novedades';
 import api from '../../services/api';
 import { guardarCache, leerCache } from '../../services/cacheDeVistas';
 import { useAuth } from '../../contexts/AuthContext';
@@ -1558,6 +1559,8 @@ const CloserWorkflowPage = () => {
                 { id: 'agenda', label: 'Nueva agenda', Icono: CalendarPlus, onClick: abrirNuevaAgenda, nuevo: true },
                 { id: 'referido', label: 'Referido manual', Icono: Gift, onClick: () => setManualRefModalOpen(true), nuevo: true },
             ]),
+            // Las novedades del Workspace (ADR-W218): vuelve a abrir la portada y el recorrido.
+            { id: 'novedades', label: 'Novedades', Icono: Sparkles, onClick: abrirNovedades },
             ...(counts.seguimientos > 0
                 ? [{ id: 'procrastinar', label: 'Quiero procrastinar', Icono: Hourglass, onClick: () => setShowProcrastinar(true) }]
                 : []),
@@ -2110,6 +2113,9 @@ const CloserWorkflowPage = () => {
                             grupos={gruposDeSesion} />
                     )} />
             </div>
+
+            {/* Novedades del Workspace (ADR-W218): portada a pantalla completa y recorrido por Work. */}
+            <Novedades user={user} ctx={{ ir: irASeccion, abrirConfiguracion }} />
 
             {/* Modal de Detalle de Lead v7 (ovLead) */}
             {/* Sin AnimatePresence a propósito: con esta versión de framer-motion el overlay nunca

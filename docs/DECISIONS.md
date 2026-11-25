@@ -1956,3 +1956,11 @@
 - **Qué se pierde:** el anillo de ADR-W215. El riel le quita 288 px al contenido en todas las vistas menos «Cerrar el día».
 - **Consecuencias:** sin backend. `--ws-top` (alto del header) lo mide la página y lo usan la barra y el riel; Confirmar ya no lo mide por su cuenta.
 
+
+## ADR-W218: Novedades del Workspace con portada a pantalla completa y recorrido por los lugares reales de Work
+
+- **Fecha:** 2026-11-25 · **Subsistema:** Workspace del closer y del triage (`pages/closer/novedades/`: `contenido.js`, `Novedades.jsx`, `Recorrido.jsx`, `Mocks.jsx`, `novedades.css`; `CloserWorkflowPage.jsx`; `data-tipo` en las pestañas de `confirmar/BarraVistas.jsx`) · **Estado:** implementada
+- **Contexto:** Mario (25/11) quiso que closers y triage se enteren de todo lo que cambió hoy (riel, calendario de Confirmar, tarjetas, Confirmación, Reprogramar, horario) con un aviso que aparezca solo y los lleve por cada cambio («abrí por acá»), no con un mensaje aparte. El `OnboardingTour` viejo (MainLayout) no llega al Workspace, que no usa MainLayout, y tiene el estilo anterior.
+- **Decisión:** la primera vez que alguien entra al Workspace después de una tanda (`VERSION`) ve una portada a pantalla completa tipo estreno (humo, título grande, los seis cambios en íconos, «Mostrame» y «Después»), con el lenguaje de la presentación de Pareto en Leadership. «Mostrame» arranca un recorrido de ocho pasos: oscurece la pantalla menos el lugar real del cambio (aro magenta que late), y al lado una tarjeta con una escena animada del cambio, título y una línea. Work se mueve solo a donde hace falta (Confirmar, la vista Tablero o Calendario); en «Nuevo: Calendario» la pestaña se puede tocar y tocarla avanza. Si el lugar no está (sin llamadas), la tarjeta va al centro y la escena lo explica igual. El último paso ofrece «Abrir mi horario» (Configuración › Disponibilidad). Se vuelve a ver desde Herramientas › Novedades o con `?novedades=1`. Teclas: ← →, Esc cierra.
+- **Qué se pierde:** lo visto se guarda en el navegador (por usuario), no en la cuenta: en otra computadora la portada aparece de nuevo. «Después» la pospone solo hasta la próxima visita.
+- **Consecuencias:** sin backend ni migración. Para la próxima tanda se cambian `VERSION` y `PASOS` en `contenido.js` (y las escenas en `Mocks.jsx` si hacen falta); el resto no cambia.

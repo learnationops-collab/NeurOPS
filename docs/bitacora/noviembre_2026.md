@@ -946,3 +946,8 @@
 - Riel: sin la tarjeta del siguiente lead ni «Próximas llamadas» (pedido de Mario); queda Confirmación, Hoy y la comisión, y entra todo.
 - Tarjeta del tablero: el segmento es solo la letra (A, B, C, D) sobre el avatar, con los puntos en el title; la fila de datos queda en inversión · decisor · origen, y debajo del teléfono una línea chica con examen y país (sale del prefijo del teléfono).
 - Calendario y lista también muestran el segmento como letra sola.
+
+### 25/11/2026 · Novedades del Workspace: portada y recorrido (ADR-W218)
+- Closers y triage ven, al entrar, una portada a pantalla completa «Hay novedades en Work» con los seis cambios del día y «Mostrame».
+- El recorrido ilumina cada lugar real (riel, pestaña Calendario, calendario, tarjeta, la llamada para Confirmación, el personaje del dock) con una tarjeta animada al lado; Reprogramar y «Y además» van al centro.
+- Se vuelve a abrir desde Herramientas › Novedades o con `?novedades=1`. Se muestra una vez por persona y navegador.

@@ -25,7 +25,7 @@ function Pestana({ vista, activa, puedeBorrar, onElegir, onRenombrar, onBorrar }
         );
     }
     return (
-        <button type="button" className={`cv-tab${activa ? ' cv-tab--on' : ''}`} aria-pressed={activa} onClick={onElegir}
+        <button type="button" className={`cv-tab${activa ? ' cv-tab--on' : ''}`} aria-pressed={activa} onClick={onElegir} data-tipo={vista.tipo}
             onDoubleClick={editar} title="Doble clic o el lápiz para renombrar">
             <IconoDeVista tipo={vista.tipo} />{vista.nombre}
             {/* Al pasar el mouse aparece el lápiz para renombrar (25/11/2026). */}
