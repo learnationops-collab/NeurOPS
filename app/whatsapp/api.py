@@ -1,31 +1,27 @@
-"""/api/whatsapp: difusiones (broadcast) y plantillas. Solo admin.
+"""/api/whatsapp: la herramienta «Broadcast de WhatsApp» (ADR-W229) y las plantillas. Solo admin y operador.
 
-  · GET  /difusiones                 → lista con el conteo por estado.
-  · POST /difusiones                 → {nombre, plantilla, idioma?, con_nombre?, destino?, tope_diario?, flujo_id?,
-                                         numeros: [{telefono, nombre}] | csv}
-  · POST /difusiones/<id>/numeros    → suma números (mismo formato).
-  · PATCH /difusiones/<id>           → {estado?: activa|pausada, tope_diario?, flujo_id?}
-    `flujo_id`: el flujo que sigue al tocar un botón de la plantilla (`flujos.py`); null lo saca.
-  · GET  /plantillas                 → las de la cuenta, con su estado de aprobación.
-  · POST /plantillas                 → {nombre, texto, categoria?: MARKETING|UTILITY, idioma?, ejemplo_nombre?}
+  · POST /envios/revisar            → {csv} → cuántos hay para mandar, ya recibieron, inválidos, repetidos.
+  · POST /envios                    → {csv, plantilla, idioma?, cantidad} → manda a los próximos `cantidad`.
+  · GET  /envios                    → el historial: cada envío (lote) con su conteo, y el tope de hoy.
+  · GET  /envios/<lote>             → los números de ese envío.
+  · POST /envios/<lote>/frenar      → saca lo que todavía no salió.
+  · GET  /plantillas                → las de la cuenta, con su estado de aprobación.
+  · POST /plantillas                → {nombre, texto, categoria?: MARKETING|UTILITY, idioma?, ejemplo_nombre?}
 """
 import csv
 import io
+from datetime import datetime
 
 from flask import Blueprint, jsonify, request
 from flask_login import current_user, login_required
 
 from app import db
 from app.automatizaciones.transporte import ErrorDeEnvio
-from app.automatizaciones.modelos import AutFlujo
 from app.decorators import admin_required
-from app.models.whatsapp import WaDifusion
-from app.whatsapp import difusion as dif
+from app.whatsapp import envios, historial
 from app.whatsapp.cliente import ClienteWhatsapp
 
 bp = Blueprint('whatsapp', __name__)
-DESTINOS = ('setting', 'workshop')
-TOPE_MAXIMO = 250  # lo que deja Meta sin verificar el negocio
 
 
 def _filas(datos):
@@ -47,83 +43,67 @@ def _filas(datos):
              'nombre': f[i_nom] if i_nom is not None and len(f) > i_nom else None} for f in filas if f]
 
 
-def _flujo(valor):
-    """(flujo_id, error)."""
-    if valor in (None, ''):
-        return None, None
-    flujo = db.session.get(AutFlujo, valor) if str(valor).isdigit() else None
-    return (flujo.id, None) if flujo else (None, 'Ese flujo no existe')
-
-
-def _tope(valor, por_defecto=30):
+def _plantilla(nombre, idioma):
+    """La plantilla aprobada (o un error) y si lleva {{1}}."""
     try:
-        return max(1, min(int(valor), TOPE_MAXIMO))
-    except (TypeError, ValueError):
-        return por_defecto
+        todas = ClienteWhatsapp().plantillas()
+    except ErrorDeEnvio as error:
+        raise envios.EnvioInvalido(f'Meta no respondió: {error}')
+    p = next((x for x in todas if x['name'] == nombre and x.get('language') == idioma), None)
+    if p is None or p.get('status') != 'APPROVED':
+        raise envios.EnvioInvalido('Esa plantilla no está aprobada')
+    cuerpo = next((c.get('text') or '' for c in p.get('components') or [] if c.get('type') == 'BODY'), '')
+    return '{{1}}' in cuerpo
 
 
-@bp.route('/difusiones', methods=['GET'])
+def _hoy():
+    ahora = datetime.utcnow()
+    return {'usados': envios.usados_hoy(ahora), 'tope': envios.TOPE_DIARIO}
+
+
+@bp.route('/envios/revisar', methods=['POST'])
+@login_required
+@admin_required
+def revisar():
+    r = envios.revisar(_filas(request.get_json(silent=True) or {}))
+    return jsonify({**r, 'para_mandar': len(r['para_mandar']), 'hoy': _hoy()})
+
+
+@bp.route('/envios', methods=['POST'])
+@login_required
+@admin_required
+def enviar():
+    datos = request.get_json(silent=True) or {}
+    plantilla, idioma = (datos.get('plantilla') or '').strip(), (datos.get('idioma') or 'es').strip()
+    try:
+        cantidad = int(datos.get('cantidad') or 0)
+        con_nombre = _plantilla(plantilla, idioma)
+        lote, n = envios.crear_lote(_filas(datos), plantilla, idioma, con_nombre, cantidad,
+                                    current_user.id, datetime.utcnow())
+    except (TypeError, ValueError) as error:
+        return jsonify({'message': str(error) if isinstance(error, envios.EnvioInvalido) else 'Cantidad inválida'}), 400
+    return jsonify({'lote': lote, 'cantidad': n, 'hoy': _hoy()}), 201
+
+
+@bp.route('/envios', methods=['GET'])
 @login_required
 @admin_required
 def listar():
-    return jsonify({'difusiones': [dif.resumen(d) for d in WaDifusion.query.order_by(WaDifusion.id.desc()).all()]})
+    return jsonify({'lotes': historial.lotes(), 'hoy': _hoy()})
 
 
-@bp.route('/difusiones', methods=['POST'])
+@bp.route('/envios/<lote>', methods=['GET'])
 @login_required
 @admin_required
-def crear():
-    datos = request.get_json(silent=True) or {}
-    nombre, plantilla = (datos.get('nombre') or '').strip(), (datos.get('plantilla') or '').strip()
-    if not nombre or not plantilla:
-        return jsonify({'message': 'Falta el nombre o la plantilla'}), 400
-    destino = datos.get('destino') if datos.get('destino') in DESTINOS else 'setting'
-    flujo_id, error = _flujo(datos.get('flujo_id'))
-    if error:
-        return jsonify({'message': error}), 400
-    difusion = WaDifusion(nombre=nombre[:150], plantilla=plantilla[:120], idioma=(datos.get('idioma') or 'es')[:10],
-                          con_nombre=datos.get('con_nombre', True) is not False, destino=destino,
-                          tope_diario=_tope(datos.get('tope_diario')), flujo_id=flujo_id,
-                          creado_por_id=current_user.id)
-    db.session.add(difusion)
-    db.session.flush()
-    carga = dif.cargar(difusion, _filas(datos))
-    db.session.commit()
-    return jsonify({'difusion': dif.resumen(difusion), 'carga': carga}), 201
+def numeros(lote):
+    return jsonify({'numeros': historial.numeros(lote)})
 
 
-@bp.route('/difusiones/<int:difusion_id>/numeros', methods=['POST'])
+@bp.route('/envios/<lote>/frenar', methods=['POST'])
 @login_required
 @admin_required
-def sumar_numeros(difusion_id):
-    difusion = db.session.get(WaDifusion, difusion_id)
-    if difusion is None:
-        return jsonify({'message': 'Not found'}), 404
-    carga = dif.cargar(difusion, _filas(request.get_json(silent=True) or {}))
-    if difusion.estado == WaDifusion.TERMINADA and carga['agregados']:
-        difusion.estado = WaDifusion.PAUSADA
-    db.session.commit()
-    return jsonify({'difusion': dif.resumen(difusion), 'carga': carga})
-
-
-@bp.route('/difusiones/<int:difusion_id>', methods=['PATCH'])
-@login_required
-@admin_required
-def editar(difusion_id):
-    difusion = db.session.get(WaDifusion, difusion_id)
-    if difusion is None:
-        return jsonify({'message': 'Not found'}), 404
-    datos = request.get_json(silent=True) or {}
-    if datos.get('estado') in (WaDifusion.ACTIVA, WaDifusion.PAUSADA):
-        difusion.estado = datos['estado']
-    if 'tope_diario' in datos:
-        difusion.tope_diario = _tope(datos['tope_diario'], difusion.tope_diario)
-    if 'flujo_id' in datos:
-        difusion.flujo_id, error = _flujo(datos['flujo_id'])
-        if error:
-            return jsonify({'message': error}), 400
-    db.session.commit()
-    return jsonify({'difusion': dif.resumen(difusion)})
+def frenar(lote):
+    return jsonify({'frenados': envios.frenar(lote), 'hoy': _hoy()})
 
 
 @bp.route('/plantillas', methods=['GET'])

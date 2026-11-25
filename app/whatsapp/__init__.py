@@ -2,5 +2,5 @@
 
   · `cliente`: manda texto, audio y plantillas por la Graph API.
   · `entrantes`: pasa los eventos del webhook al Inbox (contactos `wa:<número>`) y a las difusiones.
-  · `difusion`: el broadcast con tope diario, que corre en el reloj del motor del Inbox.
+  · `envios` e `historial`: el broadcast a mano de la herramienta «Broadcast de WhatsApp» (ADR-W229).
 """

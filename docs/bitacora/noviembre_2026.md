@@ -1021,3 +1021,8 @@
 ### 25/11/2026 · Inbox: el chat en el orden real y ajustes visuales
 - Los mensajes del bot se guardaban todos con la hora en que arrancó a responder, sin contar las pausas de «escribiendo…»: si el lead contestaba en el medio, su mensaje quedaba al final y el chat figuraba «sin respuesta» (caso de Paula). Ahora cada uno lleva la hora en que sale. Los chats anteriores no se corrigen.
 - La columna de la lista se desbordaba sobre el chat (buscador, filtros y «Elegir»): ahora respeta su ancho y «Asignadas a» se achica con «…». «Cargar 500 más» pasa a ser un link chico y el buscador dice «Usuario, nombre o #palabra».
+
+### 25/11/2026 · Broadcast de WhatsApp a mano (ADR-W229)
+- Herramienta nueva «Broadcast de WhatsApp» (Herramientas › Crear, admin y operador): se carga el CSV, se elige una plantilla aprobada y se manda a los próximos N, con el tope de 100 por día a la vista y «Frenar» ([broadcastWa/](../../frontend/src/ventanas/herramientas/broadcastWa/)).
+- «Historial» muestra cada envío con entregados, leídos, respondieron y fallaron; cada número con el botón que tocó, su chat en el Inbox y el setter. Se descarga en CSV.
+- Una sola tabla, `wa_envios`, en lugar de las dos de difusiones (vacías); sin envío automático ni flujo por difusión ([envios.py](../../app/whatsapp/envios.py)).

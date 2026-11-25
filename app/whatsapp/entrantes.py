@@ -2,12 +2,11 @@
 
   · Mensaje entrante: el contacto es un `IgContacto` con `igsid = 'wa:<número>'` (así lo ven la bandeja, la
     conversación y el reparto igual que uno de Instagram). Abre la ventana de 24 h y queda como `IgMensaje`
-    del lead. Si respondió a una difusión, el destino pasa a «respondió» y el contacto se marca con
-    `variables.difusion` y `variables.origen = 'broadcast'` (para medir de dónde vienen los leads).
+    del lead. Si respondió a un broadcast, su `WaEnvio` pasa a «respondió» (con lo que escribió) y el contacto
+    se marca con `variables.origen = 'broadcast'` y la plantilla (para medir de dónde vienen los leads).
   · Si el contacto no tiene setter, se le asigna al setter activo con menos WhatsApp nuevos en 24 h.
-  · Estado de un mensaje enviado (sent/delivered/read/failed): actualiza el destino de la difusión.
-  · Con el motor (`motor`, lo pasa el reloj en modo real), el mensaje sigue por `flujos.py`: un botón avanza el
-    flujo de la difusión. Sin motor solo se guarda.
+  · Estado de un mensaje enviado (sent/delivered/read/failed): actualiza su `WaEnvio`.
+  · Con el motor (`motor`, lo pasa el reloj en modo real), el mensaje sigue por `flujos.py`. Sin motor solo se guarda.
 """
 import logging
 from datetime import datetime, timedelta
@@ -15,13 +14,12 @@ from datetime import datetime, timedelta
 from app import db
 from app.automatizaciones.modelos import IgContacto, IgMensaje
 from app.automatizaciones.reparto import setters_activos
-from app.models.whatsapp import WaDifusion, WaDifusionDestino, WhatsappWebhookEvento
+from app.models.whatsapp import WaEnvio, WhatsappWebhookEvento
 from app.whatsapp.cliente import PREFIJO
 
 logger = logging.getLogger(__name__)
 
-ESTADOS_META = {'sent': WaDifusionDestino.ENVIADO, 'delivered': WaDifusionDestino.ENTREGADO,
-                'read': WaDifusionDestino.LEIDO, 'failed': WaDifusionDestino.FALLO}
+ESTADOS_META = {'sent': WaEnvio.ENVIADO, 'delivered': WaEnvio.ENTREGADO, 'read': WaEnvio.LEIDO, 'failed': WaEnvio.FALLO}
 SIN_TEXTO = {'image': '📷 Imagen', 'audio': '🎤 Audio', 'video': '🎬 Video', 'document': '📄 Documento',
              'sticker': 'Sticker', 'location': '📍 Ubicación', 'contacts': '👤 Contacto'}
 
@@ -71,22 +69,19 @@ def _contacto(telefono, nombre, ahora):
     return contacto
 
 
-def _marcar_difusion(contacto, telefono, ahora):
-    destino = (WaDifusionDestino.query.filter(WaDifusionDestino.telefono == telefono,
-                                              WaDifusionDestino.enviado_en.isnot(None))
-               .order_by(WaDifusionDestino.enviado_en.desc()).first())
-    if destino is None:
-        return None
-    if destino.estado != WaDifusionDestino.RESPONDIO:
-        destino.estado, destino.actualizado_en = WaDifusionDestino.RESPONDIO, ahora
-    destino.contacto_id = contacto.id
-    difusion = db.session.get(WaDifusion, destino.difusion_id)
+def _marcar_envio(contacto, telefono, texto, ahora):
+    envio = (WaEnvio.query.filter(WaEnvio.telefono == telefono, WaEnvio.enviado_en.isnot(None))
+             .order_by(WaEnvio.enviado_en.desc()).first())
+    if envio is None:
+        return
+    if envio.estado != WaEnvio.RESPONDIO:
+        envio.estado, envio.actualizado_en = WaEnvio.RESPONDIO, ahora
+        envio.respuesta = (texto or '')[:200] or None
+    envio.contacto_id = contacto.id
     variables = dict(contacto.variables or {})
-    if variables.get('difusion') != destino.difusion_id:
-        variables.update(difusion=destino.difusion_id, origen='broadcast',
-                         destino=difusion.destino if difusion else None)
+    if variables.get('broadcast') != envio.lote:
+        variables.update(origen='broadcast', broadcast=envio.lote, plantilla=envio.plantilla)
         contacto.variables = variables
-    return destino
 
 
 def _entrante(mensaje, nombres, ahora, motor=None):
@@ -102,23 +97,23 @@ def _entrante(mensaje, nombres, ahora, motor=None):
                          enviado_en=momento)
     db.session.add(entrante)
     db.session.flush()
-    destino = _marcar_difusion(contacto, telefono, ahora)
+    _marcar_envio(contacto, telefono, entrante.texto, ahora)
     if motor is None:
         return 'mensaje'
     from app.whatsapp import flujos
-    return flujos.procesar(motor, contacto, entrante, mensaje, destino)
+    return flujos.procesar(motor, contacto, entrante, mensaje)
 
 
 def _estado(estado, ahora):
-    destino = WaDifusionDestino.query.filter_by(wamid=estado.get('id')).first()
-    if destino is None:
+    envio = WaEnvio.query.filter_by(wamid=estado.get('id')).first()
+    if envio is None:
         return 'estado_ajeno'
     nuevo = ESTADOS_META.get(estado.get('status'))
-    if nuevo and WaDifusionDestino.ORDEN[nuevo] > WaDifusionDestino.ORDEN[destino.estado]:
-        destino.estado, destino.actualizado_en = nuevo, ahora
-        if nuevo == WaDifusionDestino.FALLO:
+    if nuevo and WaEnvio.ORDEN[nuevo] > WaEnvio.ORDEN[envio.estado]:
+        envio.estado, envio.actualizado_en = nuevo, ahora
+        if nuevo == WaEnvio.FALLO:
             error = (estado.get('errors') or [{}])[0]
-            destino.error = f"{error.get('code')}: {error.get('title') or error.get('message')}"[:300]
+            envio.error = f"{error.get('code')}: {error.get('title') or error.get('message')}"[:300]
     return f"estado_{estado.get('status')}"
 
 

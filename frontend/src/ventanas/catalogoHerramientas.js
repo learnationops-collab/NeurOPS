@@ -8,6 +8,7 @@ export const GRUPOS = ['Crear', 'Buscar', 'Agendas', 'Asistente', 'Pendientes', 
 const CATALOGO = {
     nuevo: { grupo: 'Crear', desc: 'Una agenda, un pago, una venta o un pedido al equipo técnico.', color: 'rosa' },
     'tool:pedido-devs': { grupo: 'Crear', desc: 'Un cambio, un error o una duda de la plataforma, al Inbox de los devs.', color: 'violeta' },
+    'tool:broadcast-wa': { grupo: 'Crear', desc: 'Una plantilla de WhatsApp a una lista de números, con el historial de lo mandado.', color: 'verde' },
     'tool:buscar': { grupo: 'Buscar', desc: 'Cualquier lead y su ficha · Ctrl+K', color: 'rosa' },
     playbook: { grupo: 'Asistente', desc: 'Los videos del Playbook.', color: 'verde' },
     simular: { grupo: 'Ir a', desc: 'Ver Work como lo ve otra persona.', color: 'violeta' },

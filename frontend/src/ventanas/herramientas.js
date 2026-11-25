@@ -2,7 +2,7 @@
 // Academia y `DockTools` de Leadership. Cada una aparece en el menú de sesión (y se puede fijar en el dock)
 // y se abre encima de cualquier pantalla. Sumar una es agregar un item acá y su componente en ./herramientas/.
 import { lazy } from 'react';
-import { CalendarClock, Compass, MessageCircle, MessageSquarePlus, Search, Settings, Wallet } from 'lucide-react';
+import { CalendarClock, Compass, Megaphone, MessageCircle, MessageSquarePlus, Search, Settings, Wallet } from 'lucide-react';
 import AccionesConfiguracion from '../sesion/AccionesConfiguracion';
 
 export const HERRAMIENTAS = [
@@ -33,6 +33,16 @@ export const HERRAMIENTAS = [
         roles: ['setter', 'closer', 'director_comercial', 'admin', 'operator'],
         ancho: 1040,
         Componente: lazy(() => import('./herramientas/miSueldo/MiSueldoVentana.jsx')),
+    },
+    // Broadcast de WhatsApp (ADR-W229): una plantilla aprobada a los próximos N de un CSV, a mano, con historial.
+    {
+        key: 'broadcast-wa',
+        label: 'Broadcast de WhatsApp',
+        hint: 'Mandar una plantilla aprobada a una lista de números y ver qué pasó con cada uno',
+        Icono: Megaphone,
+        roles: ['admin', 'operator'],
+        ancho: 620,
+        Componente: lazy(() => import('./herramientas/broadcastWa/BroadcastVentana.jsx')),
     },
     // El chat del equipo, que vive en la Academia (ADR-W171): General · Equipo, quién está conectado y Learnito.
     {
