@@ -49,7 +49,8 @@ export const flujoCortado = (c) => !c.ejecucion || CORTADOS.includes(c.ejecucion
 const vencida = (t, ahora) => Boolean(t?.vence) && new Date(t.vence) < ahora;
 
 export const COLAS = [
-    { value: 'esperan', label: 'Esperan respuesta', cumple: (c, ahora) => esperaMin(c, ahora) != null, porEspera: true },
+    // Por último mensaje: por espera, arriba quedaban las viejas que ya no van (Paula, 25/11/2026).
+    { value: 'esperan', label: 'Esperan respuesta', cumple: (c, ahora) => esperaMin(c, ahora) != null },
     { value: 'esperan_hora', label: 'Esperan más de 1 h', cumple: (c, ahora) => esperaMin(c, ahora) >= HORA, porEspera: true },
     { value: 'sin_leer', label: 'Sin leer', cumple: (c) => c.sin_leer > 0 },
     { value: 'por_cerrarse', label: 'Se cierra la ventana', cumple: porCerrarse, porCierre: true, alerta: true },

@@ -890,3 +890,6 @@
 - Sesiones es una pestaña propia.
 - Google Calendar: arriba los calendarios que te bloquean, abajo los que no, en dos columnas. WhatsApp en una fila.
 - Cupos libres de los próximos 7 días, por día, en Disponibilidad y en Google Calendar; se recalculan al editar el horario o cambiar un calendario y muestran cuánto subió o bajó (`POST /api/auth/me/disponibilidad/cupos`).
+
+### 25/11/2026 · Inbox: «Esperan respuesta» por último mensaje
+- La cola «Esperan respuesta» ordena por defecto por el último mensaje (el más reciente arriba), no por el que más espera: arriba quedaban los chats viejos ya cerrados y tapaban los importantes (pedido de Paula). «Esperan más de 1 h» sigue por espera, y cada uno puede cambiar el orden con Ordenar.
