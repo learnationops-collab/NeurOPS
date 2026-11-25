@@ -882,3 +882,11 @@
 - Todos los horarios del día a la vista, en chips chicos por mañana/tarde/noche. Al elegir uno se ve con quién queda y su hora, con banderas.
 - Menos texto en los pasos; íconos en la cabecera, el grupo y las franjas.
 - Confirmación: tarjetas Reprogramar/Canceló/No show, pestañas y «Listo · 100% confirmado» con más calidad y movimiento.
+
+### 25/11/2026 · Configuración: Disponibilidad a lo ancho, Sesiones aparte y cupos libres (ADR-W213)
+- La ventana de Configuración abre más ancha (1240 px) y el horario se ve en 7 columnas.
+- Disponibilidad sin descripciones; zona y tope semanal más cortos, con ícono; se saca «Vaciar».
+- El tope por semana de la Configuración ahora se guarda (antes se perdía).
+- Sesiones es una pestaña propia.
+- Google Calendar: arriba los calendarios que te bloquean, abajo los que no, en dos columnas. WhatsApp en una fila.
+- Cupos libres de los próximos 7 días, por día, en Disponibilidad y en Google Calendar; se recalculan al editar el horario o cambiar un calendario y muestran cuánto subió o bajó (`POST /api/auth/me/disponibilidad/cupos`).

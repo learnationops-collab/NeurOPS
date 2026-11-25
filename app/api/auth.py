@@ -258,10 +258,23 @@ def mi_disponibilidad():
     if request.method == 'PUT':
         datos = request.get_json(silent=True) or {}
         try:
-            return jsonify(servicio.guardar_disponibilidad(current_user, datos.get('horario'), datos.get('tz'))), 200
+            return jsonify(servicio.guardar_disponibilidad(
+                current_user, datos.get('horario'), datos.get('tz'), datos.get('llamadas_semana'))), 200
         except ValueError as e:
             return jsonify({"message": str(e)}), 400
     return jsonify(servicio.disponibilidad_de(current_user)), 200
+
+
+@bp.route('/auth/me/disponibilidad/cupos', methods=['POST'])
+@login_required
+def mis_cupos():
+    """Cuántos cupos libres le quedan en los próximos 7 días (app/agendas_v2/cupos.py). {horario?, tz?}: con
+    un horario sin guardar; {fresco: true}: vuelve a leer su Google (recién cambió sus calendarios)."""
+    from app.agendas_v2 import cupos
+    if not (current_user.tiene_rol('closer') or current_user.tiene_rol('triage')):
+        return jsonify({'en_team': False}), 200
+    datos = request.get_json(silent=True) or {}
+    return jsonify(cupos.cupos_de(current_user, datos.get('horario'), datos.get('tz'), bool(datos.get('fresco')))), 200
 
 
 @bp.route('/auth/me/sesiones', methods=['GET', 'PUT'])

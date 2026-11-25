@@ -1,16 +1,16 @@
-// Lo de cada cuenta, con el estilo de Thalamus: datos, Google Calendar, WhatsApp, disponibilidad y sesiones.
+// Lo de cada cuenta, con el estilo de Thalamus: datos, Google Calendar y WhatsApp (disponibilidad y sesiones,
+// en disponibilidad.jsx).
 // Lo usan la Configuración de Agendamiento y la del closer (que lo envuelve en `.thalamus`). No tiene
 // lógica propia: habla con los mismos endpoints de NeurOPS (/google/*, /auth/me/*).
 //
 // Google Calendar y el WhatsApp confirmado son obligatorios para recibir agendas (app/agendas_v2/
-// servicio.py, solo_elegibles). La disponibilidad es el horario de la persona de Team de la cuenta.
+// servicio.py, solo_elegibles).
 
 import { useEffect, useState } from 'react';
 import api from '../../../../services/api';
 import { rotuloDeRol } from '../../../../utils/cuentasVinculadas';
 import { Icono, Sx } from '../../ui/base';
-import { HorarioEditor } from '../team/Horario';
-import { EditorSesiones } from '../team/Sesiones';
+import Cupos from './Cupos';
 import FotoCuenta from './FotoCuenta';
 import { Button, Chip, FieldError, InputGroup, Panel, Switch } from '../../../../components/standard';
 
@@ -21,9 +21,9 @@ export function Estado({ ok, si, no }) {
 }
 
 // Tarjeta de un ajuste: ícono, título, para qué sirve y su estado.
-export function Tarjeta({ icono, titulo, texto, estado, children }) {
+export function Tarjeta({ icono, titulo, texto, estado, clase = '', children }) {
     return (
-        <Panel as="section" className="cu-tarjeta">
+        <Panel as="section" className={'cu-tarjeta ' + clase}>
             <header className="cu-cab">
                 <span className="icono-m"><Icono n={icono} s={19} /></span>
                 <div className="cu-tit"><h3 className="t-h3">{titulo}</h3>{texto && <p className="t-sm mut">{texto}</p>}</div>
@@ -108,6 +108,7 @@ export function TarjetaCalendar({ volver }) {
     const [destino, setDestino] = useState('primary');
     const [msg, setMsg] = useState(() => leerVueltaDeGoogle());
     const [ocupado, setOcupado] = useState(false);
+    const [version, setVersion] = useState(0); // al cambiar un calendario, los cupos vuelven a leer Google
 
     const leer = () => api.get('/google/calendars').then((r) => {
         setSt(r.data);
@@ -127,6 +128,7 @@ export function TarjetaCalendar({ volver }) {
         setDestino(v);
         await api.post('/google/calendars', { calendar_id: v });
         setMsg({ aviso: 'Las agendas nuevas se crean en ese calendario.' });
+        setVersion(n => n + 1);
     });
     // Como en Calendly: en qué calendarios se miran los conflictos antes de ofrecerte a un lead.
     const alternarConflicto = (id, on) => correr(async () => {
@@ -134,6 +136,7 @@ export function TarjetaCalendar({ volver }) {
         const nuevo = on ? [...actual, id] : actual.filter(x => x !== id);
         const r = await api.post('/google/calendars', { conflicto: nuevo });
         setSt(x => ({ ...x, conflicto: r.data?.conflicto || nuevo }));
+        setVersion(n => n + 1);
     });
     const desconectar = () => correr(async () => {
         await api.post('/google/disconnect');
@@ -142,35 +145,50 @@ export function TarjetaCalendar({ volver }) {
     });
 
     const conectado = !!st?.connected;
+    const activos = new Set(st?.conflicto || []);
+    const todos = st?.todos || [];
+    const fila = (c) => {
+        const on = activos.has(c.id);
+        return (
+            <label key={c.id} className={'cu-cal' + (on ? ' cu-cal--on' : '')}>
+                <Switch checked={on} disabled={ocupado} label={'Revisar conflictos en ' + c.summary} onChange={v => alternarConflicto(c.id, v)} />
+                <span className="trunc">{c.summary}</span>
+                {c.id === destino && <Chip color="var(--info)" subtle>Agendas</Chip>}
+                {!c.escribe && <span className="t-cap mut40">lectura</span>}
+            </label>
+        );
+    };
     return (
         <Tarjeta icono="calendar" titulo="Google Calendar"
-            texto="Ahí se crea cada agenda, con su Meet. Sin él, el sistema de agendas no te ofrece a los leads."
             estado={st && <Estado ok={conectado} si="Conectado" no={st.vencido ? 'Vencido' : 'Sin conectar'} />}>
             {!st ? <p className="t-sm mut">Cargando…</p> : conectado ? (
-                <div className="cu-fila">
-                    <span className="t-rotulo">Calendario de destino</span>
-                    <Sx id="cu-cal" label="Calendario de destino" valor={destino} disabled={ocupado} onChange={elegir}
-                        opciones={(st.calendars || []).map((c) => ({ v: c.id, n: c.summary + (c.primary ? ' (principal)' : ''), icono: 'calendar', color: 'var(--info)' }))} />
-                    <Button variant="danger" disabled={ocupado} onClick={desconectar}>Desconectar</Button>
-                    {(st.todos || []).length > 0 && (
+                <>
+                    <div className="cu-fila">
+                        <span className="t-rotulo">Agendas en</span>
+                        <Sx id="cu-cal" label="Calendario donde se crean las agendas" valor={destino} disabled={ocupado} onChange={elegir}
+                            opciones={(st.calendars || []).map((c) => ({ v: c.id, n: c.summary + (c.primary ? ' (principal)' : ''), icono: 'calendar', color: 'var(--info)' }))} />
+                        <Button variant="danger" disabled={ocupado} onClick={desconectar}>Desconectar</Button>
+                    </div>
+                    <Cupos version={version} />
+                    {todos.length > 0 && (
                         <div className="cu-cals" role="group" aria-labelledby="cu-conf-tit">
-                            <span className="t-rotulo" id="cu-conf-tit">Revisar conflictos en</span>
-                            <p className="t-cap mut">Si tenés algo en estos calendarios, en ese horario no te ofrecemos a los leads.</p>
-                            {st.todos.map((c) => {
-                                const on = (st.conflicto || []).includes(c.id);
-                                return (
-                                    <label key={c.id} className="cu-cal">
-                                        <Switch checked={on} disabled={ocupado} label={'Revisar conflictos en ' + c.summary} onChange={v => alternarConflicto(c.id, v)} />
-                                        <span className="trunc">{c.summary}</span>
-                                        {c.primary && <Chip color="var(--idle)" subtle>Principal</Chip>}
-                                        {c.id === destino && <Chip color="var(--info)" subtle>Agendamiento</Chip>}
-                                        {!c.escribe && <span className="t-cap mut40">solo lectura</span>}
-                                    </label>
-                                );
-                            })}
+                            <p className="cu-cals-cab">
+                                <span className="t-rotulo" id="cu-conf-tit">Te bloquean</span>
+                                <span className="t-cap mut">Solo lo marcado como Ocupado. Lo Disponible no te bloquea.</span>
+                            </p>
+                            <div className="cu-cals-grilla">
+                                {todos.filter(c => activos.has(c.id)).map(fila)}
+                                {!activos.size && <p className="t-cap mut40">Ninguno: no se revisa tu calendario.</p>}
+                            </div>
+                            {todos.some(c => !activos.has(c.id)) && (
+                                <>
+                                    <span className="t-rotulo cu-cals-sep">No se revisan</span>
+                                    <div className="cu-cals-grilla">{todos.filter(c => !activos.has(c.id)).map(fila)}</div>
+                                </>
+                            )}
                         </div>
                     )}
-                </div>
+                </>
             ) : (
                 <div className="cu-fila">
                     <p className="t-sm mut" style={{ flex: '1 1 220px' }}>
@@ -219,11 +237,11 @@ export function TarjetaWhatsapp() {
 
     const cambio = estado && numero.replace(/\D/g, '') !== (estado.numero || '');
     return (
-        <Tarjeta icono="whatsapp" titulo="WhatsApp" texto="Te avisamos cada agenda nueva con los datos del lead."
+        <Tarjeta icono="whatsapp" titulo="WhatsApp" texto="Cada agenda nueva te llega acá." clase="cu-tarjeta--fila"
             estado={estado && <Estado ok={estado.confirmado && !cambio} si="Confirmado" no="Sin confirmar" />}>
             {!estado && !error ? <p className="t-sm mut">Cargando…</p> : (
                 <div className="cu-fila">
-                    <InputGroup prefix={<>+</>} style={{ flex: '1 1 240px' }}>
+                    <InputGroup prefix={<>+</>} style={{ flex: '1 1 240px' }} data-tip="Con código de país, sin + ni espacios">
                         <label className="sr" htmlFor="cu-wa">Tu número, con código de país</label>
                         <input id="cu-wa" type="tel" inputMode="numeric" placeholder="5491122334455" value={numero}
                             onChange={(e) => { setNumero(e.target.value); setPaso('editar'); }} />
@@ -240,120 +258,7 @@ export function TarjetaWhatsapp() {
                     )}
                 </div>
             )}
-            <p className="t-cap mut40">Con código de país, sin + ni espacios.</p>
             <Mensajes error={error} aviso={aviso} />
-        </Tarjeta>
-    );
-}
-
-const EVENTO_HORARIO = 'neurops:horario';
-
-/** La disponibilidad: el horario de la persona de Team de esta cuenta, con el mismo editor de Team. */
-export function TarjetaDisponibilidad() {
-    const [datos, setDatos] = useState(null);
-    const [horario, setHorario] = useState({});
-    const [tz, setTz] = useState('');
-    const [cambios, setCambios] = useState(false);
-    const [ocupado, setOcupado] = useState(false);
-    const [error, setError] = useState(null);
-    const [aviso, setAviso] = useState(null);
-
-    const aplicar = (r) => { setDatos(r); setHorario(r.horario || {}); setTz(r.tz); setCambios(false); };
-    useEffect(() => {
-        api.get('/auth/me/disponibilidad').then((r) => aplicar(r.data)).catch(() => setError('No se pudo leer tu disponibilidad.'));
-    }, []);
-    const editar = (campos) => {
-        // Mis sesiones muestra cuántas entran con este horario: se entera mientras se edita.
-        if (campos.horario) window.dispatchEvent(new CustomEvent(EVENTO_HORARIO, { detail: campos.horario }));
-        if (campos.horario) setHorario(campos.horario);
-        if (campos.tz) setTz(campos.tz);
-        setCambios(true); setAviso(null);
-    };
-    const guardar = async () => {
-        setOcupado(true); setError(null);
-        try {
-            const r = await api.put('/auth/me/disponibilidad', { horario, tz });
-            aplicar(r.data);
-            setAviso('Listo: tu disponibilidad quedó guardada.');
-        } catch (e) {
-            setError(e?.response?.data?.message || 'No se pudo guardar. Probá de nuevo.');
-        } finally { setOcupado(false); }
-    };
-
-    return (
-        <Tarjeta icono="clock" titulo="Disponibilidad" texto="Los horarios en los que el sistema te ofrece a los leads. La dirección comercial también puede ajustarlos.">
-            {!datos ? <p className="t-sm mut">{error || 'Cargando…'}</p> : datos.fuente === 'leadership' ? (
-                // Con su horario cargado en Leadership, se edita allá (ADR-W133): acá se ve como queda.
-                <>
-                    <p className="t-sm mut">Tu horario se edita en Leadership (Setting · Disponibilidad). Tus bloqueos y rituals con hora también cuentan como ocupado.</p>
-                    <div className="horario--horizontal" style={{ pointerEvents: 'none', opacity: 0.75 }} aria-disabled="true">
-                        <HorarioEditor p={{ id: 'yo', horario, tz }} onGuardar={() => {}} />
-                    </div>
-                </>
-            ) : (
-                <>
-                    <div className="horario--horizontal"><HorarioEditor p={{ id: 'yo', horario, tz }} onGuardar={editar} /></div>
-                    <div className="cu-fila cu-fila--fin">
-                        <Mensajes error={error} aviso={aviso} />
-                        <Button variant="primary" disabled={ocupado || !cambios} onClick={guardar}>
-                            {ocupado ? 'Guardando…' : 'Guardar disponibilidad'}
-                        </Button>
-                    </div>
-                </>
-            )}
-        </Tarjeta>
-    );
-}
-
-/** Mis sesiones: cuánto dura cada sesión y el margen que se deja después, por evento. La propuesta es la
- * del evento; lo que se ajusta acá queda en su persona de Team, donde la dirección comercial lo revisa. */
-export function TarjetaSesiones() {
-    const [datos, setDatos] = useState(null);
-    const [sesiones, setSesiones] = useState({});
-    const [horario, setHorario] = useState(null);
-    const [cambios, setCambios] = useState(false);
-    const [ocupado, setOcupado] = useState(false);
-    const [error, setError] = useState(null);
-    const [aviso, setAviso] = useState(null);
-
-    const aplicar = (r) => {
-        setDatos(r);
-        setHorario(r.horario || null);
-        setSesiones(Object.fromEntries((r.eventos || []).filter(e => e.propia && Object.keys(e.propia).length).map(e => [e.id, e.propia])));
-        setCambios(false);
-    };
-    useEffect(() => {
-        api.get('/auth/me/sesiones').then((r) => aplicar(r.data)).catch(() => setError('No se pudieron leer tus sesiones.'));
-        const alCambiarHorario = (e) => setHorario(e.detail);
-        window.addEventListener(EVENTO_HORARIO, alCambiarHorario);
-        return () => window.removeEventListener(EVENTO_HORARIO, alCambiarHorario);
-    }, []);
-    const guardar = async () => {
-        setOcupado(true); setError(null);
-        try {
-            const r = await api.put('/auth/me/sesiones', { sesiones });
-            aplicar(r.data);
-            setAviso('Listo: tus sesiones quedaron guardadas.');
-        } catch (e) {
-            setError(e?.response?.data?.message || 'No se pudo guardar. Probá de nuevo.');
-        } finally { setOcupado(false); }
-    };
-
-    return (
-        <Tarjeta icono="clock" titulo="Mis sesiones"
-            texto="Cuánto dura cada sesión y el margen que te dejás después para poder extenderla, y cuántas te entran por semana con tu horario. El lead ve solo la duración; el margen bloquea tu agenda.">
-            {!datos ? <p className="t-sm mut">{error || 'Cargando…'}</p> : (
-                <>
-                    <EditorSesiones eventos={datos.eventos || []} sesiones={sesiones} horario={horario}
-                        onCambio={(s) => { setSesiones(s); setCambios(true); setAviso(null); }} />
-                    <div className="cu-fila cu-fila--fin">
-                        <Mensajes error={error} aviso={aviso} />
-                        <Button variant="primary" disabled={ocupado || !cambios} onClick={guardar}>
-                            {ocupado ? 'Guardando…' : 'Guardar sesiones'}
-                        </Button>
-                    </div>
-                </>
-            )}
         </Tarjeta>
     );
 }

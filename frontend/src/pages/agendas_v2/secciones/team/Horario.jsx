@@ -1,4 +1,4 @@
-// Horario semanal de una persona: zona, atajos (L a V 9–18, copiar de otro closer, vaciar) y
+// Horario semanal de una persona: zona, tope por semana, atajos (L a V 9–18, copiar de otro closer) y
 // hasta 6 franjas por día de a 30 min, con "copiar a otros días". También la ventana emergente
 // con las pestañas Horario y Semana.
 
@@ -6,7 +6,6 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { DIAS, HORAS, ZONAS, aMin } from '../../core/catalogos';
 import { closers, colorVar, horasSemana, ord } from '../../core/datos';
-import { normalHorario } from '../../core/normalizar';
 import { nombreSim, puedeHorarioDe } from '../../core/permisos';
 import { gmtTxt } from '../../core/tiempo';
 import { clonar, fmt, mayus } from '../../core/util';
@@ -21,9 +20,10 @@ import { Button, IconButton, ModalHeader } from '../../../../components/standard
 
 const OPS_DESDE = HORAS.slice(0, -1).map(h => ({ v: h, n: h }));
 const OPS_HASTA = HORAS.slice(1).map(h => ({ v: h, n: h }));
-const OPS_ZONA = ZONAS.map(z => ({ v: z.tz, n: z.n + ' · ' + gmtTxt(z.tz) }));
+const OPS_ZONA = ZONAS.map(z => ({ v: z.tz, n: z.n + ' · ' + gmtTxt(z.tz), icono: 'globo' }));
 // Tope de agendas por semana (lunes a domingo): con la semana llena no se le ofrecen horarios.
-const OPS_TOPE = [{ v: '0', n: 'Sin tope por semana' }, ...[5, 10, 15, 20, 25, 30, 35, 40, 50].map(n => ({ v: String(n), n: `Hasta ${n} por semana` }))];
+const OPS_TOPE = [{ v: '0', n: 'Sin tope semanal', icono: 'calendar' },
+    ...[5, 10, 15, 20, 25, 30, 35, 40, 50].map(n => ({ v: String(n), n: `Máx. ${n} por semana`, icono: 'calendar' }))];
 
 // Popover "Copiar horas a…": cierra con Escape o con un clic afuera.
 function CopiarA({ desde, onAplicar, onCerrar }) {
@@ -55,9 +55,10 @@ function CopiarA({ desde, onAplicar, onCerrar }) {
 /**
  * Editor del horario. `bloqueado`: solo lectura (todo deshabilitado).
  * onGuardar({horario?, tz?}): fuera de Thalamus (la Configuración del closer) guarda ahí en vez de en
- * la persona de Team, y no ofrece copiar de otro closer.
+ * la persona de Team, y no ofrece copiar de otro closer. `acciones`: lo que la pantalla suma al final de la
+ * barra (Guardar).
  */
-export function HorarioEditor({ p, bloqueado = false, onGuardar = null }) {
+export function HorarioEditor({ p, bloqueado = false, onGuardar = null, acciones = null }) {
     const { d } = useDatos();
     const [copiar, setCopiar] = useState(null);   // día con el popover abierto
     const raiz = useRef(null);
@@ -102,7 +103,7 @@ export function HorarioEditor({ p, bloqueado = false, onGuardar = null }) {
                             opciones={[{ v: '', n: 'Copiar de…' }, ...otros.map(o => ({ v: o.id, n: o.nombre }))]}
                             onChange={v => { const o = otros.find(x => x.id === v); if (!o) return; guardar(clonar(o.horario), { tz: o.tz }); toast('Horario copiado de ' + o.nombre); }} />
                     )}
-                    <Button disabled={dis} onClick={() => guardar(normalHorario({}))}>Vaciar</Button>
+                    {acciones}
                 </div>
             </div>
             <div className="dias">

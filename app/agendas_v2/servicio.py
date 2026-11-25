@@ -166,6 +166,7 @@ def disponibilidad_de(user):
         'fuente': 'leadership' if leadership.foto(user.id) else 'thalamus',
         'horario': p['horario'] if p else NORM['personas']('x', {'horario': {}})['horario'],
         'tz': p['tz'] if p and p['tz'] != TZ_DEF else zona_de_usuario(user),
+        'llamadas_semana': (p or {}).get('llamadas_semana') or 0,
         'zonas': [{'tz': z['tz'], 'n': z['n']} for z in ZONAS],
         'horas': HORAS,
     }
@@ -183,21 +184,25 @@ def _persona_nueva(d, user, **campos):
     return buscar(colecciones(), 'personas', pid)
 
 
-def guardar_disponibilidad(user, horario, tz):
-    """Guarda el horario y la zona del closer en su persona de Team (si no está en Team, la crea: así la
-    dirección comercial lo ve y lo puede sumar a una prioridad). La zona también queda en su cuenta."""
+def guardar_disponibilidad(user, horario, tz, llamadas_semana=None):
+    """Guarda el horario, la zona y el tope de agendas por semana del closer en su persona de Team (si no
+    está en Team, la crea: así la dirección comercial lo ve y lo puede sumar a una prioridad). La zona
+    también queda en su cuenta."""
     from app.agendas_v2 import leadership
 
     if leadership.foto(user.id):
         raise ValueError('Tu horario se edita en Leadership (Setting · Disponibilidad).')
     if not zona_valida(tz):
         raise ValueError('Elegí una zona horaria de la lista.')
+    campos = {'horario': horario, 'tz': tz}
+    if llamadas_semana is not None:
+        campos['llamadas_semana'] = llamadas_semana
     d = colecciones()
     p = persona_de_usuario(d, user)
     if p:
-        guardar_doc('personas', p['id'], {'horario': horario, 'tz': tz}, usuario_id=user.id, parcial=True)
+        guardar_doc('personas', p['id'], campos, usuario_id=user.id, parcial=True)
     else:
-        _persona_nueva(d, user, horario=horario, tz=tz)
+        _persona_nueva(d, user, **campos)
     user.timezone = tz
     db.session.commit()
     return disponibilidad_de(user)

@@ -2,7 +2,8 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import api from '../../../../services/api';
-import { TarjetaCalendar, TarjetaDisponibilidad, TarjetaSesiones, TarjetaWhatsapp } from './cuenta';
+import { TarjetaCalendar, TarjetaWhatsapp } from './cuenta';
+import { TarjetaDisponibilidad, TarjetaSesiones } from './disponibilidad';
 
 vi.mock('../../../../services/api', () => ({ default: { get: vi.fn(), put: vi.fn(), post: vi.fn() } }));
 

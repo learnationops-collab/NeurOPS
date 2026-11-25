@@ -63,7 +63,7 @@ export const HERRAMIENTAS = [
         Icono: Settings,
         roles: null,
         enMenu: false,
-        ancho: 900,
+        ancho: 1240,
         Acciones: AccionesConfiguracion,
         Componente: lazy(() => import('../sesion/ConfiguracionVentana.jsx')),
     },

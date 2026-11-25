@@ -12,8 +12,9 @@
 // Integraciones y la tarjeta de Calendar muestra el resultado.
 
 import { useState } from 'react';
-import { Bell, CalendarDays, ChevronLeft, Clock, KeyRound, LifeBuoy, Palette, PanelBottom, Plug, User, Users } from 'lucide-react';
-import { TarjetaCalendar, TarjetaDisponibilidad, TarjetaSesiones, TarjetaWhatsapp } from '../pages/agendas_v2/secciones/conf/cuenta';
+import { Bell, CalendarDays, ChevronLeft, Clock, KeyRound, Timer, LifeBuoy, Palette, PanelBottom, Plug, User, Users } from 'lucide-react';
+import { TarjetaCalendar, TarjetaWhatsapp } from '../pages/agendas_v2/secciones/conf/cuenta';
+import { TarjetaDisponibilidad, TarjetaSesiones } from '../pages/agendas_v2/secciones/conf/disponibilidad';
 import MisEventos from '../pages/agendas_v2/secciones/conf/MisEventos';
 import TeamManagementPage from '../pages/admin/team/TeamManagementPage';
 import TabApariencia from '../temas/TabApariencia';
@@ -30,7 +31,8 @@ const SECCIONES = [
     { id: 'apariencia', nombre: 'Apariencia', desc: 'Tema, modo, efectos y letra', Icono: Palette, grupo: 'Vos', para: (rol) => puedeElegirTema(rol) },
     { id: 'dock', nombre: 'Dock', desc: 'Abajo o barra lateral', Icono: PanelBottom, grupo: 'Vos', para: () => true },
     { id: 'notificaciones', nombre: 'Notificaciones', desc: 'Qué te avisa y por dónde', Icono: Bell, grupo: 'Vos', para: () => true },
-    { id: 'disponibilidad', nombre: 'Disponibilidad', desc: 'Tus horarios para recibir agendas', Icono: Clock, grupo: 'Trabajo', para: (rol) => RECIBEN_AGENDAS.includes(rol) },
+    { id: 'disponibilidad', nombre: 'Disponibilidad', desc: 'Cuándo te ofrecemos a los leads', Icono: Clock, grupo: 'Trabajo', para: (rol) => RECIBEN_AGENDAS.includes(rol) },
+    { id: 'sesiones', nombre: 'Sesiones', desc: 'Duración y margen de cada sesión', Icono: Timer, grupo: 'Trabajo', para: (rol) => ['closer', 'triage'].includes(rol) },
     { id: 'integraciones', nombre: 'Integraciones', desc: 'Google Calendar y WhatsApp', Icono: Plug, grupo: 'Trabajo', para: (rol) => RECIBEN_AGENDAS.includes(rol) },
     { id: 'eventos', nombre: 'Mis eventos', desc: 'Tus links de agendamiento', Icono: CalendarDays, grupo: 'Trabajo', para: (rol) => rol === 'closer' },
     { id: 'equipo', nombre: 'Equipo', desc: 'Altas, roles y contraseñas', Icono: Users, grupo: 'Trabajo', para: (rol) => rol === 'admin' },
@@ -43,7 +45,8 @@ export const pestanasDe = (rol) => SECCIONES.filter(p => p.para(rol));
 const tabDeLaUrl = () => (new URLSearchParams(window.location.search).get('google_connected') ? 'integraciones' : null);
 
 function Cuerpo({ id, user }) {
-    if (id === 'disponibilidad') return <><TarjetaDisponibilidad />{['closer', 'triage'].includes(user?.role) && <TarjetaSesiones />}</>;
+    if (id === 'disponibilidad') return <TarjetaDisponibilidad />;
+    if (id === 'sesiones') return <TarjetaSesiones />;
     if (id === 'integraciones') return <><TarjetaCalendar /><TarjetaWhatsapp /></>;
     if (id === 'eventos') return <MisEventos />;
     if (id === 'equipo') return <TeamManagementPage embebido />;

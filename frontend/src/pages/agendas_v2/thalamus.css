@@ -1600,6 +1600,46 @@
 .thalamus .cu-cals{flex:1 1 100%;display:grid;gap:6px;margin-top:4px;padding:14px;border-radius:20px;background:var(--hundido);border:1px solid var(--border-subtle)}
 .thalamus .cu-cal{display:flex;align-items:center;gap:10px;min-width:0;padding:4px 0;font-size:14px;font-weight:700}
 .thalamus .cu-cal .trunc{flex:0 1 auto}
+.thalamus .cu-cals-cab{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:0}
+.thalamus .cu-cals-grilla{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:0 20px}
+.thalamus .cu-cals-sep{margin-top:6px;padding-top:10px;border-top:1px solid var(--border-subtle)}
+.thalamus .cu-cals-grilla .cu-cal{padding:3px 0;font-size:13.5px;animation:cu-cal-entra .25s ease backwards}
+.thalamus .cu-cal:not(.cu-cal--on) .trunc{color:var(--text-muted)}
+@keyframes cu-cal-entra{from{opacity:0;transform:translateY(4px)}}
+/* WhatsApp en una fila: título a la izquierda, número y botones a la derecha. */
+.thalamus :is(.panel,.ui-panel).cu-tarjeta.cu-tarjeta--fila{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s3) var(--s6)}
+.thalamus .cu-tarjeta--fila > .cu-cab{flex:1 1 300px}
+.thalamus .cu-tarjeta--fila > .cu-fila{flex:2 1 380px}
+.thalamus .cu-tarjeta--fila > :is(.ui-field-error,.campo-err,.cu-ok){flex-basis:100%}
+/* Cupos libres de los próximos 7 días (conf/Cupos.jsx): el número y una barra por día. */
+.thalamus .cupos{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:end;gap:8px 32px;padding:14px 18px;border-radius:20px;
+  background:var(--hundido);border:1px solid var(--border-subtle);transition:opacity .2s ease}
+.thalamus .cupos--cargando{opacity:.6}
+.thalamus .cupos-num{display:flex;align-items:center;gap:12px;min-width:0}
+.thalamus .cupos-num b{font-size:42px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;color:var(--text-on-surface);
+  animation:cupos-entra .35s cubic-bezier(.2,.8,.2,1)}
+.thalamus .cupos-num span{display:grid;gap:2px;font-size:13.5px;font-weight:800;color:var(--text-on-surface)}
+.thalamus .cupos-num small{font-size:11.5px;font-weight:500;color:var(--text-muted)}
+.thalamus .cupos-num em{font-style:normal;font-size:12px;font-weight:900;padding:3px 9px;border-radius:999px;animation:cupos-delta 4s ease forwards}
+.thalamus .cupos-num em.sube{color:var(--success);background:var(--success-surface)}
+.thalamus .cupos-num em.baja{color:var(--warning);background:var(--warning-surface)}
+.thalamus .cupos-dias{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;height:84px}
+.thalamus .cupos-dia{display:grid;grid-template-rows:minmax(0,1fr) auto auto;justify-items:center;gap:2px;min-width:0}
+.thalamus .cupos-barra{position:relative;width:100%;max-width:38px;height:100%}
+.thalamus .cupos-barra i{position:absolute;left:0;right:0;bottom:0;border-radius:6px;transition:height .45s cubic-bezier(.2,.8,.2,1)}
+.thalamus .cupos-tot{background:var(--hueco)}
+.thalamus .cupos-lib{background:var(--brand-secondary);transform-origin:bottom;animation:cupos-crece .6s cubic-bezier(.2,.8,.2,1) backwards;animation-delay:calc(var(--i) * 45ms)}
+.thalamus .cupos-dia b{font-size:12px;font-weight:900;line-height:1.2;font-variant-numeric:tabular-nums;color:var(--text-on-surface)}
+.thalamus .cupos-dia span{font-size:10px;font-weight:800;color:var(--text-muted-40)}
+.thalamus .cupos-dia--off b{color:var(--text-muted-40)}
+.thalamus .cupos-nota{grid-column:1/-1;margin:0;font-size:11.5px;font-weight:600;color:var(--warning)}
+@keyframes cupos-entra{from{opacity:0;transform:translateY(6px)}}
+@keyframes cupos-crece{from{transform:scaleY(0)}}
+@keyframes cupos-delta{0%{opacity:0;transform:translateY(4px)}8%{opacity:1;transform:none}80%{opacity:1}100%{opacity:0}}
+@media (max-width:620px){.thalamus .cupos{grid-template-columns:minmax(0,1fr)}}
+@media (prefers-reduced-motion:reduce){.thalamus :is(.cupos,.cu-cals) *{animation:none !important;transition:none !important}}
+/* Disponibilidad en Configuración: sin la tarjeta de título, el horario va directo bajo los cupos. */
+.thalamus .disp-conf .horario{padding:0;border-top:0}
 
 /* Lienzo navegable (ui/Lienzo.jsx): arrastrar, zoom y pantalla completa. */
 .thalamus .lienzo{position:relative;border-radius:18px;border:1px solid var(--border-subtle);overflow:hidden;
@@ -1696,7 +1736,7 @@
 .thalamus.cu-hoja > .tabs{justify-self:start}
 .thalamus .cu-cuerpo{display:grid;gap:var(--s4);min-width:0}
 /* Disponibilidad a lo ancho: un día por columna cuando entra (Configuración). */
-@container (min-width:900px){
+@container (min-width:760px){
   .thalamus .horario--horizontal .dias{grid-template-columns:repeat(7,minmax(0,1fr));column-gap:10px}
   .thalamus .horario--horizontal .dia{grid-template-columns:minmax(0,1fr);justify-items:start;border-top:0;border-left:1px solid var(--border-subtle);padding:4px 0 4px 10px}
   .thalamus .horario--horizontal .dia:first-child{border-left:0;padding-left:0}
