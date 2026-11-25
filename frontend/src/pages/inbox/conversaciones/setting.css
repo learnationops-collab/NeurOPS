@@ -6,10 +6,12 @@
 .thalamus.inbox.inbox-embebido .ui-header{margin-bottom:var(--s2)}
 
 /* La lista no recorta lo que sale de sus bordes (filtro, ordenar): solo scrollea la lista de chats */
-.thalamus.inbox .cv-lista{overflow:visible;position:relative;z-index:5}
+.thalamus.inbox .cv-lista{overflow:visible;position:relative;z-index:5;min-width:0}
 .thalamus.inbox .cv-lista ul{flex:1;min-height:0}
-.thalamus.inbox .cv-lista-buscar{display:grid;gap:6px;padding:2px 2px 8px}
-.thalamus.inbox .cv-lista-filtros{display:flex;gap:6px;align-items:center}
+/* Sin recorte, lo ancho se metía en el chat: la columna manda y «Asignadas a» se achica con «…» */
+.thalamus.inbox .cv-lista-buscar{display:grid;grid-template-columns:minmax(0,1fr);gap:6px;padding:2px 2px 8px;min-width:0}
+.thalamus.inbox .cv-lista-filtros{display:flex;gap:6px;align-items:center;min-width:0}
+.thalamus.inbox .cv-lista-filtros > :not(.cv-asignado-sel){flex:none}
 .thalamus.inbox .cv-asignado-sel.ui-select{flex:1;min-width:0}
 .thalamus.inbox .cv-lista-buscar .cv-macro-pop{left:0;right:auto;width:min(640px,calc(100vw - 32px));z-index:40}
 .thalamus.inbox .cv-chips-guardados{display:flex;gap:5px;overflow-x:auto;padding:0 4px 8px;scrollbar-width:none}

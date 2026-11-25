@@ -1020,4 +1020,4 @@
 
 ### 25/11/2026 · Inbox: el chat en el orden real y ajustes visuales
 - Los mensajes del bot se guardaban todos con la hora en que arrancó a responder, sin contar las pausas de «escribiendo…»: si el lead contestaba en el medio, su mensaje quedaba al final y el chat figuraba «sin respuesta» (caso de Paula). Ahora cada uno lleva la hora en que sale. Los chats anteriores no se corrigen.
-- «Cargar 500 más» pasa a ser un link chico dentro de la lista (se salía del panel) y el buscador dice «Usuario, nombre o #palabra» (el texto largo quedaba cortado).
+- La columna de la lista se desbordaba sobre el chat (buscador, filtros y «Elegir»): ahora respeta su ancho y «Asignadas a» se achica con «…». «Cargar 500 más» pasa a ser un link chico y el buscador dice «Usuario, nombre o #palabra».
