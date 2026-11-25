@@ -88,9 +88,9 @@ def test_el_mensaje_de_discord_avisa_que_llego_tarde(db, closer):
     a_tiempo = _mensaje_discord(_prepare_report_data(
         reporte(db, closer, date(2026, 9, 30), datetime(2026, 9, 30, 20, 0))))
 
-    assert tarde.endswith('· 29/09/2026 · enviado tarde, el 30/09 @everyone')
+    assert tarde.endswith('· 29/09/2026 · enviado tarde, el 30/09')
     assert 'enviado tarde' not in a_tiempo
-    assert a_tiempo.endswith('· 30/09/2026 @everyone')
+    assert a_tiempo.endswith('· 30/09/2026')
 
 
 def test_la_imagen_dice_de_que_dia_es(app, db, closer):

@@ -239,7 +239,7 @@ def persistir(user, dia, close, vals):
     row.reflections = {'victory': victoria, 'opportunity': close.tomorrow or '',
                        'platform_issue': close.platform_issue or ''}
     # «Enviado»: la última vez que la persona escribió (si fue a la mañana siguiente, sale tarde).
-    row.created_at = close.updated_at or datetime.utcnow()
+    row.created_at = getattr(close, 'escrito_en', None) or close.updated_at or datetime.utcnow()
     return row
 
 

@@ -993,3 +993,8 @@
 - En el chat, lo que entró por un comentario dice «Comentario en una publicación», con link a la publicación (se le pide a Meta una vez y queda guardado).
 - Los mensajes de la Guía con varias partes salen de a uno, con 5 segundos entre cada uno; los que esperan se ven «en cola». Si uno no sale, los siguientes quedan con Reintentar para mandarlos en orden (antes se perdían).
 - La caja de texto crece hasta 220 px y después se desplaza: lo que pasaba del alto quedaba cortado.
+
+### 25/11/2026 · Discord: los reportes vuelven a #📋-reportes y sin @everyone
+- Desde el 23/11 los reportes de setter y closer llegaban a #📄-reports de fulfillment (la variable del webhook de reportes apuntaba a otro canal). Ahora los de closer, setter y triage salen por el bot al canal fijo de #📋-reportes de adquisitions; el webhook queda solo si no hay bot ([envio.py](../../app/services/discord_avisos/envio.py)). Se borraron los 10 mensajes que llegaron mal.
+- Los reportes ya no etiquetan a todos (pedido de Santi).
+- El reporte de closer cerrado solo a las 10:00 salía siempre «enviado tarde»: tomaba la hora del cierre como hora de envío. Ahora toma la última vez que escribió la persona ([cierre.py](../../app/reporte_dia/cierre.py)).

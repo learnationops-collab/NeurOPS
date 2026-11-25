@@ -153,7 +153,7 @@ def test_un_dia_no_laborable_con_tarjeta_sale_en_una_linea(client, elias, auth_h
     client.post(URL, json=reporte_v2(elias.id, is_non_working_day=True), headers=auth_headers(elias))
 
     assert contenido(enviados['salidas'][0])['content'] == (
-        "🚀 **Reporte de setter** · Elias · 10/10/2026 · día no laborable @everyone")
+        "🚀 **Reporte de setter** · Elias · 10/10/2026 · día no laborable")
 
 
 def test_el_v1_sale_como_antes(client, elias, auth_headers, enviados):
@@ -162,7 +162,7 @@ def test_el_v1_sale_como_antes(client, elias, auth_headers, enviados):
 
     assert enviados['tarjetas'] == {'v1': 1, 'v2': 0}
     texto = contenido(enviados['salidas'][0])['content']
-    assert texto == "🚀 **Reporte de setter** · Elias · 10/10/2026 @everyone"
+    assert texto == "🚀 **Reporte de setter** · Elias · 10/10/2026"
 
 
 def test_la_tarjeta_v2_se_dibuja_con_sus_datos(app, db, elias):

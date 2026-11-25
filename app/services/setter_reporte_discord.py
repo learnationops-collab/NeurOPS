@@ -255,9 +255,9 @@ def texto_corto(stat, setter_name):
     no_laborable = setter_reporte_v2.leer(stat)['no_laborable']
     linea = f"🚀 **Reporte de setter** · {setter_name} · {stat.date.strftime('%d/%m/%Y')}"
     if no_laborable:
-        return linea + " · día no laborable @everyone"
+        return linea + " · día no laborable"
     agendas = linea_de_agendas(stat)
-    return linea + (f"\n{agendas}" if agendas else '') + " @everyone"
+    return linea + (f"\n{agendas}" if agendas else '')
 
 
 def texto_de_discord(stat, setter_name):
@@ -271,7 +271,7 @@ def texto_de_discord(stat, setter_name):
         "━━━━━━━━━━━━━━━━━━━━━━━━\n"
     )
     if lectura['no_laborable']:
-        return cabecera + "🌙 **Día no laborable**\n@everyone"
+        return cabecera + "🌙 **Día no laborable**"
 
     tot = lectura['totales']
     ads, inb = lectura['canales']['anuncios'], lectura['canales']['inbound']
@@ -311,4 +311,4 @@ def texto_de_discord(stat, setter_name):
         lineas.append(f"🧭 **Flujo de trabajo:** {_recortar(reflexion['flujo_trabajo'])}")
     if reflexion['win_del_dia'].strip():
         lineas.append(f"🏆 **Win del día:** {_recortar(reflexion['win_del_dia'])}")
-    return cabecera + '\n'.join(lineas) + "\n━━━━━━━━━━━━━━━━━━━━━━━━\n@everyone"
+    return cabecera + '\n'.join(lineas) + "\n━━━━━━━━━━━━━━━━━━━━━━━━"
