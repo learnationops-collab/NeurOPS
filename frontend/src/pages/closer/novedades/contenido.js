@@ -7,7 +7,8 @@
 // - `tocar`: el elemento se puede tocar y tocarlo avanza (la tarjeta dice «Tocá acá»).
 // - `accion`: un botón extra en la tarjeta `{ label, hacer(ctx) }`, que además cierra el recorrido.
 
-export const VERSION = '2026-11-25';
+// «-2»: se volvió a mostrar a todos (también a quien ya lo había visto), ahora obligatorio.
+export const VERSION = '2026-11-25-2';
 export const FECHA = '25 nov';
 
 const tab = (tipo) => () => document.querySelector(`.cv-tab[data-tipo="${tipo}"]`);

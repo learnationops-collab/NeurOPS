@@ -951,3 +951,7 @@
 - Closers y triage ven, al entrar, una portada a pantalla completa «Hay novedades en Work» con los seis cambios del día y «Mostrame».
 - El recorrido ilumina cada lugar real (riel, pestaña Calendario, calendario, tarjeta, la llamada para Confirmación, el personaje del dock) con una tarjeta animada al lado; Reprogramar y «Y además» van al centro.
 - Se vuelve a abrir desde Herramientas › Novedades o con `?novedades=1`. Se muestra una vez por persona y navegador.
+
+### 25/11/2026 · Novedades otra vez para todos y obligatorias (ADR-W219)
+- Vuelve a aparecer a todos los closers y triage, también a quien ya lo había visto.
+- No se puede cerrar ni posponer hasta terminar el último paso; recargar a la mitad lo empieza de nuevo.

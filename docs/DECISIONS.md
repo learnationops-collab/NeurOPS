@@ -1964,3 +1964,11 @@
 - **Decisión:** la primera vez que alguien entra al Workspace después de una tanda (`VERSION`) ve una portada a pantalla completa tipo estreno (humo, título grande, los seis cambios en íconos, «Mostrame» y «Después»), con el lenguaje de la presentación de Pareto en Leadership. «Mostrame» arranca un recorrido de ocho pasos: oscurece la pantalla menos el lugar real del cambio (aro magenta que late), y al lado una tarjeta con una escena animada del cambio, título y una línea. Work se mueve solo a donde hace falta (Confirmar, la vista Tablero o Calendario); en «Nuevo: Calendario» la pestaña se puede tocar y tocarla avanza. Si el lugar no está (sin llamadas), la tarjeta va al centro y la escena lo explica igual. El último paso ofrece «Abrir mi horario» (Configuración › Disponibilidad). Se vuelve a ver desde Herramientas › Novedades o con `?novedades=1`. Teclas: ← →, Esc cierra.
 - **Qué se pierde:** lo visto se guarda en el navegador (por usuario), no en la cuenta: en otra computadora la portada aparece de nuevo. «Después» la pospone solo hasta la próxima visita.
 - **Consecuencias:** sin backend ni migración. Para la próxima tanda se cambian `VERSION` y `PASOS` en `contenido.js` (y las escenas en `Mocks.jsx` si hacen falta); el resto no cambia.
+
+## ADR-W219: las Novedades del Workspace, otra vez para todos y obligatorias
+
+- **Fecha:** 2026-11-25 · **Subsistema:** Workspace (`pages/closer/novedades/`). Sigue a ADR-W218 · **Estado:** implementada
+- **Contexto:** Mario pidió que el recorrido vuelva a salir también a quien ya lo vio (él incluido) y que sea obligatorio completarlo.
+- **Decisión:** `VERSION` pasa a `2026-11-25-2`, así le aparece a todos de nuevo. Mientras no lo terminó, no hay cruz, «Después» ni Esc en la portada ni en el recorrido; queda visto recién al tocar «Listo» o «Abrir mi horario» en el último paso (si recarga a la mitad, vuelve a empezar). Ya visto, abrirlo desde Herramientas › Novedades o con `?novedades=1` deja cerrarlo.
+- **Qué se pierde:** posponerlo. Sigue guardado por navegador: en otra computadora se vuelve a pedir.
+- **Consecuencias:** sin backend.

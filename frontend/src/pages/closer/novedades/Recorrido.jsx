@@ -39,7 +39,8 @@ const ubicar = (r, alto) => {
 
 const mismo = (a, b) => a && b && ['top', 'left', 'width', 'height'].every(k => Math.abs(a[k] - b[k]) < 0.5);
 
-const Recorrido = ({ pasos, ctx, onCerrar }) => {
+// `obligatorio`: sin cruz ni Esc; solo se sale terminando (Listo o la acción del último paso).
+const Recorrido = ({ pasos, ctx, obligatorio, onCompletar, onCerrar }) => {
     const [i, setI] = useState(0);
     const [el, setEl] = useState(null);
     const [rect, setRect] = useState(null);
@@ -49,7 +50,7 @@ const Recorrido = ({ pasos, ctx, onCerrar }) => {
     const paso = pasos[i];
     const ultimo = i === pasos.length - 1;
 
-    const siguiente = () => (ultimo ? onCerrar() : setI(n => n + 1));
+    const siguiente = () => (ultimo ? onCompletar() : setI(n => n + 1));
     const anterior = () => setI(n => Math.max(0, n - 1));
 
     // Al entrar a un paso: lo que Work hace antes, buscar el lugar y traerlo a la vista.
@@ -101,7 +102,7 @@ const Recorrido = ({ pasos, ctx, onCerrar }) => {
 
     useEffect(() => {
         const tecla = (e) => {
-            if (e.key === 'Escape') { e.stopPropagation(); onCerrar(); }
+            if (e.key === 'Escape') { e.stopPropagation(); if (!obligatorio) onCerrar(); }
             if (e.key === 'ArrowRight') { e.stopPropagation(); e.preventDefault(); siguiente(); }
             if (e.key === 'ArrowLeft') { e.stopPropagation(); e.preventDefault(); anterior(); }
         };
@@ -142,7 +143,7 @@ const Recorrido = ({ pasos, ctx, onCerrar }) => {
                     <div className="nv-card__barras" aria-hidden="true">
                         {pasos.map((p, k) => <i key={p.id} className={k < i ? 'is-ya' : k === i ? 'is-ahora' : ''} />)}
                     </div>
-                    <button type="button" className="nv-card__x" onClick={onCerrar} aria-label="Cerrar el recorrido"><X /></button>
+                    {!obligatorio && <button type="button" className="nv-card__x" onClick={onCerrar} aria-label="Cerrar el recorrido"><X /></button>}
                     <div className="nv-card__escena"><Mock tipo={paso.mock} /></div>
                     <h3 className="nv-card__titulo">{paso.titulo}</h3>
                     {paso.texto && <p className="nv-card__texto">{paso.texto}</p>}
@@ -151,7 +152,7 @@ const Recorrido = ({ pasos, ctx, onCerrar }) => {
                             <button type="button" className="nv-card__atras" onClick={anterior} aria-label="Anterior"><ChevronLeft /></button>
                         )}
                         {paso.accion && (
-                            <button type="button" className="nv-card__sec" onClick={() => { onCerrar(); paso.accion.hacer(ctx); }}>
+                            <button type="button" className="nv-card__sec" onClick={() => { onCompletar(); paso.accion.hacer(ctx); }}>
                                 {paso.accion.label}
                             </button>
                         )}

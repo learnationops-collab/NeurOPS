@@ -7,29 +7,28 @@ import './novedades.css';
 
 // Las novedades del Workspace de closers y triage (ADR-W218). La primera vez que alguien entra
 // después de una tanda nueva (VERSION) ve la portada a pantalla completa; «Mostrame» arranca el
-// recorrido por los lugares reales de Work. «Después» la vuelve a mostrar en la próxima visita;
-// empezar el recorrido la da por vista. Se vuelve a abrir desde Herramientas › Novedades
-// (`abrirNovedades()`) o con `?novedades=1` en la dirección.
+// recorrido por los lugares reales de Work. Es obligatorio: sin cruz, «Después» ni Esc, y queda
+// visto recién al terminar el último paso (si se recarga a la mitad, vuelve a empezar). Ya visto,
+// se puede volver a abrir (y cerrar) desde Herramientas › Novedades o con `?novedades=1`.
 
 const EVENTO = 'ln:novedades';
 const clave = (user) => `ln_novedades_${user?.id ?? 'anon'}`;
-const POSPUESTA = 'ln_novedades_despues';
 
 export const abrirNovedades = () => window.dispatchEvent(new Event(EVENTO));
 
 const ICONOS = { riel: PanelRight, calendario: CalendarDays, tarjeta: UserSquare2, confirmacion: CheckCircle2, reprogramar: CalendarClock, horario: Clock };
 
-const Portada = ({ onEmpezar, onDespues }) => {
+const Portada = ({ obligatorio, onEmpezar, onDespues }) => {
     const n = useCuenta(PORTADA.length, 900, 700);
     useEffect(() => {
-        const tecla = (e) => { if (e.key === 'Escape') { e.stopPropagation(); onDespues(); } };
+        const tecla = (e) => { if (e.key === 'Escape') { e.stopPropagation(); if (!obligatorio) onDespues(); } };
         window.addEventListener('keydown', tecla, true);
         return () => window.removeEventListener('keydown', tecla, true);
-    }, [onDespues]);
+    }, [obligatorio, onDespues]);
     return (
         <div className="nv-portada" role="dialog" aria-modal="true" aria-label="Novedades de Work">
             <span className="nv-humo" aria-hidden="true"><i /><i /><i /><i /></span>
-            <button type="button" className="nv-portada__x" onClick={onDespues} aria-label="Después"><X /></button>
+            {!obligatorio && <button type="button" className="nv-portada__x" onClick={onDespues} aria-label="Cerrar"><X /></button>}
             <div className="nv-portada__centro">
                 <span className="nv-chip"><i />Novedades · {FECHA}</span>
                 <h1 className="nv-h1">
@@ -53,7 +52,7 @@ const Portada = ({ onEmpezar, onDespues }) => {
                         <span className="nv-cta__aura" aria-hidden="true"><i /><i /><i /></span>
                         <span>Mostrame</span><ArrowRight aria-hidden="true" />
                     </button>
-                    <button type="button" className="nv-despues" onClick={onDespues}>Después</button>
+                    {!obligatorio && <button type="button" className="nv-despues" onClick={onDespues}>Cerrar</button>}
                 </div>
             </div>
         </div>
@@ -62,31 +61,32 @@ const Portada = ({ onEmpezar, onDespues }) => {
 
 const Novedades = ({ user, ctx }) => {
     const [fase, setFase] = useState(null);
+    const vista = () => localStorage.getItem(clave(user)) === VERSION;
+    // Obligatorio mientras no lo haya terminado; se decide al abrir.
+    const [obligatorio, setObligatorio] = useState(true);
+    const abrir = () => { setObligatorio(!vista()); setFase('portada'); };
 
     useEffect(() => {
         if (!user) return;
         const forzada = new URLSearchParams(window.location.search).get('novedades') === '1';
-        const vista = localStorage.getItem(clave(user)) === VERSION;
-        const pospuesta = sessionStorage.getItem(POSPUESTA) === VERSION;
-        if (forzada || (!vista && !pospuesta)) setFase('portada');
+        if (forzada || !vista()) abrir();
     }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => {
-        const abrir = () => setFase('portada');
         window.addEventListener(EVENTO, abrir);
         return () => window.removeEventListener(EVENTO, abrir);
-    }, []);
+    }); // eslint-disable-line react-hooks/exhaustive-deps
 
     if (!fase) return null;
     if (fase === 'portada') {
         return (
-            <Portada
-                onEmpezar={() => { localStorage.setItem(clave(user), VERSION); setFase('recorrido'); }}
-                onDespues={() => { sessionStorage.setItem(POSPUESTA, VERSION); setFase(null); }}
-            />
+            <Portada obligatorio={obligatorio} onEmpezar={() => setFase('recorrido')} onDespues={() => setFase(null)} />
         );
     }
-    return <Recorrido pasos={PASOS} ctx={ctx} onCerrar={() => setFase(null)} />;
+    return (
+        <Recorrido pasos={PASOS} ctx={ctx} obligatorio={obligatorio} onCerrar={() => setFase(null)}
+            onCompletar={() => { localStorage.setItem(clave(user), VERSION); setFase(null); }} />
+    );
 };
 
 export default Novedades;
