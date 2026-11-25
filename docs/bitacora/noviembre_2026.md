@@ -1035,3 +1035,6 @@
 - Filtro por canal (Instagram o WhatsApp), con cuántos hay de cada uno.
 - El nombre del lead va primero y grande (lista, chat y tarjeta); el @usuario queda debajo en la tarjeta.
 - Lo que Meta no deja ver se explica en palabras: «Mensaje que WhatsApp no deja ver acá: miralo en el teléfono» en vez de «[unsupported]», y los adjuntos de Instagram («📷 Imagen», «🎬 Compartió un reel»…) en vez de «📎 unsupported_type».
+
+### 25/11/2026 · Inbox: el bot contesta en público los comentarios (ADR-W231)
+- Cuando un comentario dispara un flujo, además del DM el bot contesta debajo del comentario («¡Te escribí por privado! 📩» y otras cuatro, al azar), como hacía ManyChat: al lead le llega la notificación y es más probable que abra el mensaje ([respuesta_publica.py](../../app/automatizaciones/respuesta_publica.py)).

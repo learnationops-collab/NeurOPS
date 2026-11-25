@@ -2060,3 +2060,11 @@
 - **Decisión:** un chat marcado No lead o In-abrible no aparece en ninguna cola de la lista. Si el lead escribe por DM después de la marca, vuelve solo. Se ven pidiendo esa etapa en el filtro, y el Embudo los sigue mostrando en su columna. Marcar la salida es la forma de cerrar un chat; no hay un «archivar» aparte.
 - **Qué se pierde:** verlos de un vistazo en la lista: quien busca uno cerrado tiene que filtrar por esa etapa (el buscador tampoco los muestra sin ese filtro).
 - **Consecuencias:** sin migración: la marca sale de `ig_fases` (la última salida) contra `ultimo_entrante_en`. La lista recibe `cerrada` por conversación.
+
+## ADR-W231: el bot contesta en público el comentario que dispara un flujo
+
+- **Fecha:** 25/11/2026 · **Subsistema:** Motor de Instagram (`app/automatizaciones/respuesta_publica.py`, `motor.py` `_iniciar`, `transporte.py` `responder_comentario`) · **Estado:** implementada
+- **Contexto:** un setter avisó que no se activaba la respuesta automática a los comentarios. El motor mandaba solo la respuesta privada (el DM). ManyChat además contestaba debajo del comentario, y eso le manda una notificación al lead, que así abre más el DM.
+- **Decisión:** cuando un comentario arranca un flujo y la respuesta privada sale, el bot contesta el comentario en público con una frase corta que avisa del DM. Elige al azar entre cinco frases fijas para que Instagram no lo tome como spam. Si Meta la rechaza, queda en el log y el flujo sigue igual.
+- **Qué se pierde:** las frases no se eligen por flujo ni por campaña: son las mismas para todos y se cambian en el código.
+- **Consecuencias:** sin migración. Hace falta el permiso de comentarios del token (`instagram_business_manage_comments`, el mismo que ya trae los comentarios por webhook). La respuesta pública no se guarda como mensaje del chat.

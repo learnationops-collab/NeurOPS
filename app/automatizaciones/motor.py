@@ -18,7 +18,7 @@ Reglas que garantiza:
 from datetime import timedelta
 
 from app import db
-from app.automatizaciones import acciones, campanas, efectos, embudos, etapas, perfil, registro, reparto
+from app.automatizaciones import acciones, campanas, efectos, embudos, etapas, perfil, registro, reparto, respuesta_publica
 from app.automatizaciones.modelos import AutEjecucion, AutFlujo, AutFlujoVersion, IgContacto, IgMensaje
 from app.automatizaciones.nucleo import eventos as ev
 from app.automatizaciones.nucleo import grafo as g
@@ -275,6 +275,9 @@ class Motor:
             self._guardar(contacto, {SETTER: setter.username if setter else ''})
         registro.entrada(ejecucion, self.ahora)
         self._correr(ejecucion)
+        if comentario_id and ejecucion.comentario_id is None and ejecucion.estado not in (
+                AutEjecucion.ERROR, AutEjecucion.VENTANA_VENCIDA):
+            respuesta_publica.responder(self.transporte, comentario_id)
         efectos.anotar(self._entrante, ejecucion, tipo='inicio', clave=clave)
         return ejecucion
 
