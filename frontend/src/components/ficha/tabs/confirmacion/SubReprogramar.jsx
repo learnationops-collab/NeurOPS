@@ -102,16 +102,20 @@ const SubReprogramar = ({ ficha, onVolver, onConfirmar, guardando = false }) => 
     const zonas = datos?.zonas || [];
     const controles = paso === 1 && datos && !datos.error && (
         <div className="rp-controles">
-            <div className="rp-control" data-tip="Hora del lead">
+            <div className="rp-control">
+                <span className="rp-control-rot">Lead:</span>
                 <Select size="sm" label="Hora del lead" value={lead} onChange={setTzLead}
                     options={[
                         ...(zonas.some((z) => z.tz === lead) ? [] : [{ value: lead, label: ciudad(lead) }]),
                         ...zonas.map((z) => ({ value: z.tz, icon: <Bandera c={z.pais} />, label: z.nombre })),
                     ]} />
             </div>
-            <Segmented size="sm" radio label="Anticipación mínima" value={anticipacion} onChange={cambiarAnticipacion}
-                options={ANTICIPACIONES} data-tip="Anticipación mínima"
-                prefix={<span className="rp-seg-ico" aria-hidden="true"><Hourglass size={14} /></span>} />
+            <span className="rp-control-sep" aria-hidden="true" />
+            <div className="rp-control">
+                <span className="rp-control-rot"><Hourglass size={14} />Espera:</span>
+                <Segmented size="sm" radio label="Anticipación mínima" value={anticipacion} onChange={cambiarAnticipacion}
+                    options={ANTICIPACIONES} />
+            </div>
         </div>
     );
     // Paso 1: el grupo (closers o triage) también va en la fila del título.

@@ -57,8 +57,13 @@
 .dc-shell .rp-cab{flex:1;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--s3) var(--s5)}
 .dc-shell .rp-controles{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s3);margin-left:auto;
   animation:rp-abre .3s cubic-bezier(.16,1,.3,1) backwards}
-.dc-shell .rp-control{min-width:150px}
-.dc-shell .rp-seg-ico{display:inline-flex;align-items:center;padding:0 6px 0 8px;color:var(--brand-secondary)}
+.dc-shell .rp-controles{gap:var(--s3) var(--s5)}
+.dc-shell .rp-control{display:flex;align-items:center;gap:var(--s2)}
+.dc-shell .rp-control .ui-select{min-width:130px}
+.dc-shell .rp-control-rot{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--text-muted);white-space:nowrap}
+.dc-shell .rp-control-rot svg{color:var(--brand-secondary)}
+.dc-shell .rp-control-sep{width:1px;height:24px;background:var(--border-main)}
+@media (max-width:760px){.dc-shell .rp-control-sep{display:none}}
 
 /* Paso 2: calendario + horas */
 .dc-shell .rp-agenda{display:grid;grid-template-columns:minmax(280px,330px) minmax(0,1fr);gap:var(--s6);align-items:start}

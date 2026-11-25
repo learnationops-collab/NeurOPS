@@ -907,3 +907,4 @@
 
 ### 25/11/2026 · Reprogramar sin indicador de pasos
 - Se saca la fila «Con quién · Día y hora · Motivo»: se avanza con «Siguiente» y se vuelve con «Volver». Closers/Triage pasa a la fila del título, como la zona del lead y la anticipación.
+- Los controles de «Día y hora» dicen qué son en una palabra: «Lead:» con la bandera y «Espera:» con el reloj de arena, separados por una línea y con más aire entre ellos.
