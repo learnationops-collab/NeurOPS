@@ -857,3 +857,9 @@
 - «Con al menos»: la anticipación mínima de los horarios ofrecidos (15 min, 1 h, 2 h, 4 h o 1 día; 1 h por defecto, se recuerda).
 - Con «Cualquiera» la llamada queda con la persona actual si está libre; si no, con la que tiene más horarios libres (se puede cambiar entre las libres a esa hora).
 - `GET /api/ficha/<id>/reprogramar/opciones` devuelve los horarios de todo el grupo por persona con una sola lectura de ocupación (`a_triage.horarios_de_varios`).
+
+### 25/11/2026 · Confirmación: No show, CTA a todo el ancho y pestañas repartidas (ADR-W210)
+- Las tarjetas de «¿Cambió algo con la llamada?» son Reprogramar, Canceló y No show, sin descripción. Se sacan «Descalificado» y «Seguir después».
+- «No show»: motivo obligatorio y fecha para volver a escribirle (opcional); deja la cita en «No Show». Ruta nueva `POST /api/ficha/<id>/no-show`.
+- «Listo · 100% confirmado» va solo, a todo el ancho.
+- Las pestañas de la ficha (Confirmación, Resultado, Historial…) se reparten todo el ancho en pantalla ancha.

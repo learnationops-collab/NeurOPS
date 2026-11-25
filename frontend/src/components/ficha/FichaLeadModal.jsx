@@ -113,6 +113,7 @@ const MENSAJES = {
     quitar_acceso_academia: 'Acceso a la Academia quitado: vence hoy. Se puede renovar cuando haga falta.',
     reprogramar: 'Llamada reprogramada.',
     cancelar: 'Cancelación registrada.',
+    no_show: 'No show registrado.',
     descalificar: 'Lead descalificado: la llamada se canceló.',
     pasar_a_recuperacion: 'Llamada pasada a seguimiento de recuperación: está en tu pestaña Seguimientos.',
     eliminar: 'Lead eliminado.',

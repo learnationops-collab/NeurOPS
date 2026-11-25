@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, CalendarX, CheckCircle2, Trash2, UserX } from 'lucide-react';
+import { Calendar, CalendarX, CheckCircle2, PhoneMissed, Trash2 } from 'lucide-react';
 import { Aviso, StepperFicha, TarjetaAccion, useMovimiento } from '../piezas';
 import SubReprogramar from './confirmacion/SubReprogramar';
 import SubCancelo from './confirmacion/SubCancelo';
-import SubDescalificar from './confirmacion/SubDescalificar';
+import SubNoShow from './confirmacion/SubNoShow';
 import SubEliminar from './confirmacion/SubEliminar';
 import './confirmacion/reprogramar.css';
 
@@ -93,9 +93,9 @@ const TabConfirmacion = ({ ficha, onAccion, irA, puedeEditar = true }) => {
                     <SubCancelo ficha={ficha} guardando={guardando} onVolver={volver}
                         onConfirmar={(p) => correr('cancelar', p)} />
                 )}
-                {modo === 'descal' && (
-                    <SubDescalificar ficha={ficha} guardando={guardando} onVolver={volver}
-                        onConfirmar={(p) => correr('descalificar', p)} />
+                {modo === 'noshow' && (
+                    <SubNoShow guardando={guardando} onVolver={volver}
+                        onConfirmar={(p) => correr('no_show', p)} />
                 )}
                 {modo === 'elim' && (
                     <SubEliminar ficha={ficha} onVolver={volver}
@@ -129,9 +129,10 @@ const TabConfirmacion = ({ ficha, onAccion, irA, puedeEditar = true }) => {
                     onBlur={() => { if (!bloqueado && nota !== (conf.nota || '')) disparar('nota_llamada', { nota }); }} />
             </div>
 
-            {/* Jerarquía (25/11/2026): el CTA «Listo · 100% confirmado» manda en el pie; lo que cambió
-                con la llamada va arriba en tres tarjetas iguales con su explicación, y eliminar queda
-                aparte y chico, que es lo raro y lo que no tiene vuelta. */}
+            {/* Jerarquía (25/11/2026): lo que cambió con la llamada en tres tarjetas iguales y, abajo, el CTA
+                «Listo · 100% confirmado» a todo el ancho. Sin «Seguir después» (no hacía nada que cerrar la
+                ficha no haga) ni «Descalificado»: una llamada no se descalifica desde la confirmación. Eliminar
+                queda aparte y chico, que es lo raro y lo que no tiene vuelta. */}
             <div className="cf-cambio">
                 <div className="cf-cambio-cab">
                     <small className="t-rotulo">¿Cambió algo con la llamada?</small>
@@ -142,41 +143,33 @@ const TabConfirmacion = ({ ficha, onAccion, irA, puedeEditar = true }) => {
                     </button>
                 </div>
                 <div className="cf-cambio-grid">
-                    <TarjetaAccion tono="info" icono={Calendar} label="Reprogramar" detalle="Otro día, otra hora u otra persona"
+                    <TarjetaAccion tono="info" icono={Calendar} label="Reprogramar"
                         deshabilitado={bloqueado} onClick={() => setModo('repro')} />
-                    <TarjetaAccion tono="warning" icono={CalendarX} label="Canceló" detalle="No se hace, pero el lead sigue vivo"
-                        deshabilitado={bloqueado} onClick={() => setModo('cancelo')} />
-                    {/* Reemplaza al «Descartar lead», que marcaba «No Lead»: es lo mismo (23/10/2026). */}
-                    <TarjetaAccion tono="error" icono={UserX} label="Descalificado" detalle="No califica: se cancela la llamada"
+                    <TarjetaAccion tono="warning" icono={CalendarX} label="Canceló"
+                        deshabilitado={bloqueado || ficha?.permisos?.reportar === false} onClick={() => setModo('cancelo')} />
+                    <TarjetaAccion tono="error" icono={PhoneMissed} label="No show"
+                        titulo="No contestó ni apareció"
                         deshabilitado={bloqueado || ficha?.permisos?.reportar === false}
-                        onClick={() => setModo('descal')} />
+                        onClick={() => setModo('noshow')} />
                 </div>
             </div>
 
-            <div className="fi-pie">
-                {cerrada ? (
-                    <>
-                        <span />
-                        <button type="button" className="btn btn--linea" disabled={guardando}
-                            onClick={() => correr('etapa_confirmacion', { cerrada: false })}>
-                            Deshacer
-                        </button>
-                    </>
-                ) : (
-                    <>
-                        <button type="button" className="btn btn--linea" onClick={() => irA?.('hist')}>
-                            Seguir después
-                        </button>
-                        <button type="button" className="btn btn--cta cf-cta"
-                            disabled={bloqueado || !listaParaCerrar || guardando}
-                            title={!listaParaCerrar ? 'Primero marcá que lo contactaste' : undefined}
-                            onClick={() => correr('cerrar_confirmacion', {})}>
-                            <CheckCircle2 size={16} />
-                            Listo · 100% confirmado
-                        </button>
-                    </>
-                )}
-            </div>
+            {cerrada ? (
+                <div className="cf-pie">
+                    <button type="button" className="btn btn--linea" disabled={guardando}
+                        onClick={() => correr('etapa_confirmacion', { cerrada: false })}>
+                        Deshacer confirmación
+                    </button>
+                </div>
+            ) : (
+                <button type="button" className="btn btn--cta cf-cta"
+                    disabled={bloqueado || !listaParaCerrar || guardando}
+                    title={!listaParaCerrar ? 'Primero marcá que lo contactaste' : undefined}
+                    onClick={() => correr('cerrar_confirmacion', {})}>
+                    <CheckCircle2 size={18} />
+                    Listo · 100% confirmado
+                </button>
+            )}
 
             {/* La hora ya pasó y el lead nunca confirmó: esa hora no puede pasar en
                 silencio. No se reporta desde acá — el árbol de resultado vive en su

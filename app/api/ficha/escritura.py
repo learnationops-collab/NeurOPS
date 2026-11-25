@@ -192,6 +192,11 @@ def cancelar(appt_id):
     return _ejecutar(appt_id, 'reportar', acciones.cancelar)
 
 
+@bp.route('/<int:appt_id>/no-show', methods=['POST'])
+def no_show(appt_id):
+    return _ejecutar(appt_id, 'reportar', acciones.no_show)
+
+
 @bp.route('/<int:appt_id>/descalificar', methods=['POST'])
 def descalificar(appt_id):
     """El closer ve al confirmar que no califica: cancela la llamada y la marca «Descalificado»."""

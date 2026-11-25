@@ -441,6 +441,15 @@
   border:1px solid var(--border-main);color:var(--text-on-surface);
   font-size:10px;font-weight:800;font-variant-numeric:tabular-nums}
 
+/* En pantalla ancha las pestañas se reparten todo el ancho, centradas, con el subrayado del ancho de
+   cada una (25/11/2026, pedido de Mario: todas amontonadas a la izquierda dejaban la mitad vacía).
+   En pantalla angosta vuelven a su ancho y el riel se desliza. */
+@media (min-width:641px){
+  .dc-shell .fi-tabs{gap:var(--s1)}
+  .dc-shell .fi-tab{flex:1 1 0;justify-content:center;padding:13px var(--s2) 12px;
+    border-radius:var(--radius-control) var(--radius-control) 0 0;transition:color .16s ease,background .16s ease}
+  .dc-shell .fi-tab:hover{background:var(--bg-element)}
+}
 @media (max-width:640px){
   .dc-shell .fi-tabs{gap:var(--s4);padding:0 var(--s4)}
 }
