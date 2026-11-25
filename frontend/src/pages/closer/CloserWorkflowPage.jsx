@@ -31,7 +31,9 @@ import { useConfiguracion } from '../../sesion/ConfiguracionContext';
 import '../comercial/comercial.css';
 import '../../components/dashboard/pareja.css';
 import './clarity-v6.css';
-import TarjetaAnillo from './components/TarjetaAnillo';
+import RailResumen from './components/RailResumen';
+import { Chips, chipsDe } from './confirmar/ChipsLead';
+import { useAltoHeader } from './useAltoHeader';
 import './sidebar-v6.css';
 import ComisionMesCard from './components/ComisionMesCard';
 import TriageAbandonos from '../triage/components/TriageAbandonos';
@@ -1586,6 +1588,9 @@ const CloserWorkflowPage = () => {
     // La página scrollea dentro de su propio contenedor, no en la ventana: al cambiar de sección se
     // vuelve arriba ahí, para no caer en la mitad de la otra.
     const paginaRef = useRef(null);
+    // El riel derecho va en todas las vistas menos «Cerrar el día» (ADR-W217); --ws-top es el alto del header.
+    const conRiel = activeView !== 'report';
+    useAltoHeader(paginaRef);
     const irASeccion = (id) => {
         if (id === seccionDelDock) return;
         if (PASOS_DEL_MAZO.includes(id)) {
@@ -1599,8 +1604,8 @@ const CloserWorkflowPage = () => {
 
 
     return (
-        <div ref={paginaRef} className={`h-screen overflow-y-auto bg-v6 text-slate-100 flex flex-col custom-scrollbar${activeView === 'inbox' && (activeStep === 'confirmations' || activeStep === 'calls') ? ' clarity-v6' : ''}`}
-            style={{ paddingBottom: 'calc(132px + env(safe-area-inset-bottom, 0px))' }}>
+        <div ref={paginaRef} className={`h-screen overflow-y-auto bg-v6 text-slate-100 flex flex-col custom-scrollbar${activeView === 'inbox' && (activeStep === 'confirmations' || activeStep === 'calls') ? ' clarity-v6' : ''}${conRiel ? ' ws-pagina' : ''}`}
+            style={{ paddingBottom: conRiel ? 0 : 'calc(132px + env(safe-area-inset-bottom, 0px))' }}>
 
             {/* Header del Espacio de Trabajo Premium v6. Solo la marca y el buscador (pedido del
                 30/09/2026): crear una agenda o un referido, "Quiero procrastinar" y la sesión
@@ -1797,7 +1802,7 @@ const CloserWorkflowPage = () => {
             {/* Área de Trabajo Principal */}
             {/* Con el sidebar a la derecha (25/11/2026) el contenido va a la izquierda; en «Cerrar el día» no
                 hay sidebar. */}
-            <div className={`flex-1 max-w-7xl w-full mx-auto px-6 py-6 flex flex-col gap-6${activeView !== 'report' ? ' ws-area' : ''}`}>
+            <div className={`flex-1 max-w-7xl w-full mx-auto px-6 py-6 flex flex-col gap-6${conRiel ? ' ws-area' : ''}`}>
                 
                 {/* SIGUIENTE · CONFIRMACIÓN (o TU DÍA) · COMISIÓN: desde el 25/11/2026 un sidebar chico a la
                     derecha, pegado al scrollear, con menos texto y más movimiento (pedido de Mario). Antes,
@@ -1897,6 +1902,7 @@ const CloserWorkflowPage = () => {
                                     </div>
                                     <h3 className="tsp-name-v6 truncate" title={heroLead.lead_name || undefined}>{heroLead.lead_name || 'Sin Nombre'}</h3>
                                     <p className="tsp-sub-v6 truncate">{heroLead.origin || 'Meta Ads'} · @{heroLead.instagram ? heroLead.instagram.replace('@', '') : 'usuario'}</p>
+                                    <span className="rail-chips"><Chips lista={chipsDe(heroLead, ['etapa', 'segmento', 'decision', 'inversion'], { userId: user?.id, esTriage })} /></span>
                                     <button
                                         type="button"
                                         className="tsp-cta-v6"
@@ -2005,16 +2011,12 @@ const CloserWorkflowPage = () => {
                                 );
                             })()}
 
-                            {metrica ? (
-                                <TarjetaAnillo rotulo={metrica.lbl} pct={metricaPct} cuenta={`${metrica.hechas}/${metrica.total}`} racha={streakDays}
-                                    chips={[
-                                        ...(metrica.pendientes ? [{ k: 'pend', tipo: 'pendiente', t: `${metrica.pendientes} ${metrica.pendientes === 1 ? 'pendiente' : 'pendientes'}`, title: metrica.pie }] : []),
-                                        ...(metrica.partes || []).map(p => ({ k: p.tipo, tipo: p.tipo, t: `${p.lbl} ${p.texto}` })),
-                                    ]} />
-                            ) : (
-                                <TarjetaAnillo rotulo="Tu día" pct={pct} cuenta={`${doneToday}/${totalToday}`} racha={streakDays}
-                                    chips={[{ k: 'xp', tipo: 'xp', t: `⚡ ${xp} XP`, title: `${doneToday} de ${totalToday} resueltos hoy` }]} />
-                            )}
+                            <RailResumen paso={activeView === 'inbox' ? activeStep : null} agendas={agendas} ahora={nowTick}
+                                progreso={metrica
+                                    ? { titulo: metrica.lbl, hechas: metrica.hechas, total: metrica.total, detalle: metrica.partes?.map(p => `${p.lbl} ${p.texto}`).join(' · ') }
+                                    : { titulo: 'Tu día', hechas: doneToday, total: totalToday }}
+                                pendientes={{ confirmations: confirmacionesPendientes, calls: counts.calls, seguimientos: counts.seguimientos }}
+                                racha={streakDays} xp={xp} onIr={irASeccion} onAbrir={handleSelectLead} />
 
                             {!esTriage && <ComisionMesCard />}
                         </aside>

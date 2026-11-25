@@ -928,3 +928,8 @@
 
 ### 25/11/2026 · Confirmar: lápiz para renombrar las vistas
 - Al pasar el mouse por una vista (Por etapa, Mis llamadas, Mi calendario…) aparece un lápiz que la renombra; el doble clic sigue andando.
+
+### 25/11/2026 · Workspace: riel derecho a toda la altura y barra pegada al header (ADR-W217)
+- El sidebar de tarjetas pasa a ser un riel de 288 px de arriba abajo: siguiente lead con sus etiquetas, barra por etapa animada, «Hoy» (pendientes por sección, racha, XP), próximas llamadas y comisión.
+- La barra de vistas de Confirmar queda pegada justo debajo del header, de borde a borde; el tablero y el calendario llenan el alto hasta el dock.
+

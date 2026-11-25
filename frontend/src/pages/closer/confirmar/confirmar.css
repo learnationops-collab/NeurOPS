@@ -1,23 +1,27 @@
 /* Confirmar con vistas (ADR-W201). Variables del sistema estándar (--ui-*), con respaldo para el mazo. */
-.cv{display:grid;gap:14px;min-width:0;
+.cv{display:grid;gap:20px;min-width:0;
   --cv-text:var(--ui-text,#e8e9f3);--cv-muted:var(--ui-muted,#9aa0b8);--cv-faint:var(--ui-faint,#6b7089);
   --cv-linea:var(--ui-border-subtle,rgba(255,255,255,.08));--cv-linea-2:var(--ui-border-main,rgba(255,255,255,.16));
   --cv-suave:var(--ui-inset,rgba(255,255,255,.04));--cv-acento:var(--ui-brand,#7c6cff)}
 .cv svg{width:15px;height:15px;flex-shrink:0}
 
 /* Fila: título, vistas y controles */
-/* Pegada debajo del header del Workspace en todas las vistas (--cv-top lo mide ConfirmarVistas). */
-.cv-barra{display:flex;align-items:center;gap:4px;flex-wrap:wrap;border-bottom:1px solid var(--cv-linea);padding:8px 10px 6px;margin:0 -10px;
-  position:sticky;top:var(--cv-top,64px);z-index:30;border-radius:0 0 14px 14px;
-  background:color-mix(in srgb,var(--ln-page-base,#0a0e3d) 86%,transparent);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+/* Barra de vistas: pegada justo debajo del header (--ws-top lo mide la página), a todo el ancho del panel,
+   con la pestaña activa subrayada sobre la línea de abajo. El contenido pasa por debajo, de ahí el velo. */
+.cv-barra{display:flex;align-items:center;gap:2px;flex-wrap:wrap;position:sticky;top:var(--ws-top,64px);z-index:30;
+  margin:0 calc(-1 * var(--ws-pad,24px));padding:0 var(--ws-pad,24px);min-height:52px;
+  border-bottom:1px solid var(--cv-linea);
+  background:color-mix(in srgb,var(--ln-page-base,#060a2c) 82%,transparent);backdrop-filter:blur(16px) saturate(1.2);-webkit-backdrop-filter:blur(16px) saturate(1.2)}
 .cv-titulo{margin:0 14px 0 2px;font-size:20px;font-weight:900;color:var(--cv-text);white-space:nowrap}
 .cv-tabs{display:flex;align-items:center;gap:2px;flex-wrap:wrap;min-width:0}
-.cv-tab{all:unset;cursor:pointer;position:relative;display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 11px;border-radius:9px;
+.cv-tab{all:unset;cursor:pointer;position:relative;display:inline-flex;align-items:center;gap:7px;height:52px;padding:0 12px;border-radius:0;transition:color .2s;
   color:var(--cv-muted);font-size:13px;font-weight:600;white-space:nowrap}
-.cv-tab:hover{background:var(--cv-suave);color:var(--cv-text)}
-.cv-tab:focus-visible,.cv-ctl:focus-visible{outline:2px solid var(--cv-acento);outline-offset:1px}
+.cv-tab:hover{color:var(--cv-text)}
+.cv-tab:focus-visible,.cv-ctl:focus-visible{outline:2px solid var(--cl-magenta,#ff3fa4);outline-offset:-2px;border-radius:8px}
 .cv-tab--on{color:var(--cv-text);font-weight:800}
-.cv-tab--on::after{content:"";position:absolute;left:8px;right:8px;bottom:-7px;height:2px;border-radius:2px;background:var(--cv-text)}
+.cv-tab::after{content:"";position:absolute;left:12px;right:12px;bottom:-1px;height:2px;border-radius:2px 2px 0 0;background:var(--cl-magenta,#ff3fa4);transform:scaleX(0);transition:transform .35s var(--cl-spring,cubic-bezier(.32,.72,0,1))}
+.cv-tab--on::after{transform:scaleX(1)}
+.cv-tab:first-child{margin-left:-12px}
 .cv-tab__x{display:none;width:18px;height:18px;border-radius:5px;place-items:center;color:var(--cv-faint)}
 .cv-tab__x svg{width:12px;height:12px}
 .cv-tab--on:hover .cv-tab__x{display:grid}
@@ -39,7 +43,7 @@
 .cv-n--suave{background:var(--cv-linea);color:var(--cv-text)}
 .cv-vsep{width:1px;height:18px;background:var(--cv-linea);margin:0 4px;display:inline-block}
 /* Segunda fila del calendario */
-.cv-calbar{flex-basis:100%;display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding-top:8px;margin-top:6px;border-top:1px solid var(--cv-linea)}
+.cv-calbar{flex-basis:100%;display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-height:48px;border-top:1px solid var(--cv-linea)}
 .cv-hoy{all:unset;cursor:pointer;height:28px;padding:0 12px;border-radius:99px;font-size:10.5px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;
   color:var(--cv-text);background:var(--cv-suave);border:1px solid var(--cv-linea);transition:background .2s,color .2s,border-color .2s}
 .cv-hoy:hover{background:var(--cv-linea)}
@@ -125,7 +129,7 @@
 
 /* Calendario: una sola caja que scrollea, del alto de la pantalla, con la fila de días pegada arriba. */
 .cv-semana{overflow:auto;border:1px solid var(--cv-linea);border-radius:18px;overscroll-behavior:contain;
-  height:calc(100dvh - var(--cv-top,64px) - 230px);min-height:420px;
+  height:calc(100dvh - var(--ws-top,64px) - 100px - 20px - 112px);min-height:420px;
   background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,.01))}
 .cv-cal .ui-cal.ui-cal{overflow:visible}
 .cv-cal .ui-cal__head{position:sticky;top:0;z-index:20;padding:12px 0 10px;border-bottom:1px solid var(--cv-linea);
@@ -150,15 +154,15 @@
 
 /* Llamada: el color de su etapa de fondo, nombre arriba y una etiqueta por dato. Se ve entera siempre (todas
    las etiquetas, aunque pase el alto de su duración); al pasar el mouse queda por encima de las otras. */
-.cv-cal .cv-ev.ui-cal-event{cursor:pointer;padding:6px 7px 6px 10px;border-radius:12px;color:#fff;
+.cv-cal .cv-ev.ui-cal-event{cursor:pointer;padding:6px 8px;border-radius:12px;color:#fff;
   background:radial-gradient(120% 90% at 0% 0%,color-mix(in srgb,var(--c) 42%,transparent),transparent 70%),
     linear-gradient(160deg,color-mix(in srgb,var(--c) 24%,#0b1030),color-mix(in srgb,var(--c) 10%,#070a24));
-  border:1px solid color-mix(in srgb,var(--c) 40%,transparent);box-shadow:inset 3px 0 0 var(--c),0 4px 14px rgba(0,0,0,.28);
+  border:1px solid color-mix(in srgb,var(--c) 40%,transparent);box-shadow:0 4px 14px rgba(0,0,0,.28);
   height:auto!important;min-height:var(--h);
   transition:box-shadow .15s ease,border-color .15s ease;
   animation:cv-ev-in .18s ease-out backwards}
 .cv-cal .cv-ev.ui-cal-event:hover,.cv-cal [role="button"]:focus-visible > .cv-ev.ui-cal-event{z-index:30!important;border-color:var(--c);
-  box-shadow:inset 3px 0 0 var(--c),0 14px 34px rgba(0,0,0,.55),0 0 0 1px color-mix(in srgb,var(--c) 30%,transparent),0 0 26px color-mix(in srgb,var(--c) 30%,transparent)}
+  box-shadow:0 14px 34px rgba(0,0,0,.55),0 6px 22px color-mix(in srgb,var(--c) 28%,transparent)}
 .cv-cal .cv-ev--sel.ui-cal-event{outline:2px solid var(--cl-magenta,#ff3fa4);outline-offset:1px}
 .cv-cal .cv-ev--pasada.ui-cal-event{opacity:.45;filter:saturate(.6)}
 .cv-cal .cv-ev--pasada.ui-cal-event:hover{opacity:1;filter:none}

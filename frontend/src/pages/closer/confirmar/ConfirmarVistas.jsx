@@ -1,7 +1,7 @@
 // Confirmar con vistas (ADR-W201): la fila de vistas y controles, y la vista activa (tablero, lista o
 // semana) sobre las agendas del pool. El tablero lo sigue dibujando la página (`renderTablero`), con las
 // tarjetas de siempre; acá se filtra, ordena y agrupa.
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { localToday, localDateFromNow } from '../../../utils/datetime';
 import BarraVistas from './BarraVistas';
 import { agrupacionesDe } from './PopoverVista';
@@ -17,18 +17,6 @@ export default function ConfirmarVistas({ agendas, user, esTriage, ahora, fechaB
     const [activaId, setActivaId] = useState(null);
     const [offset, setOffset] = useState(0);
     const vista = vistas.find(v => v.id === activaId) || vistas[0];
-    const raiz = useRef(null);
-
-    // La barra queda pegada debajo del header del Workspace, que puede cambiar de alto (envuelve).
-    useLayoutEffect(() => {
-        const header = document.querySelector('header.top-v6');
-        if (!header || !raiz.current) return undefined;
-        const medir = () => raiz.current?.style.setProperty('--cv-top', header.offsetHeight + 'px');
-        medir();
-        const ro = new ResizeObserver(medir);
-        ro.observe(header);
-        return () => ro.disconnect();
-    }, []);
 
     const nombreCloser = (a) => (a.closer_id && a.closer_id === user?.id ? `${a.closer_name || 'Vos'} (vos)` : a.closer_name || 'Sin closer');
     const catalogo = useMemo(() => catalogoDePropiedades(agendas, esTriage), [agendas, esTriage]);
@@ -81,7 +69,7 @@ export default function ConfirmarVistas({ agendas, user, esTriage, ahora, fechaB
     const quitar = (id) => { borrar(id); if (id === vista.id) setActivaId(null); };
 
     return (
-        <div className="cv" ref={raiz}>
+        <div className="cv">
             <BarraVistas vistas={vistas} vista={vista} onElegir={elegir} onCambio={actualizar} onCrear={nueva} onBorrar={quitar}
                 onRestablecer={() => { restablecer(); setActivaId(null); }} puedeCrear={puedeCrear}
                 catalogo={catalogo} closers={esTriage ? closers : []} segmentos={segmentos} esTriage={esTriage}
