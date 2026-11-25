@@ -1,6 +1,6 @@
 import re
 
-from flask import request, jsonify
+from flask import request, jsonify, current_app
 from flask_login import login_user, logout_user, current_user, login_required
 import sqlalchemy as sa
 from app import db
@@ -184,7 +184,11 @@ def guardar_mi_dock():
     if get_impersonation_state()[0]:
         return jsonify({"message": "Simulando no se guarda el dock"}), 403
     prefs = (request.get_json(silent=True) or {}).get('dock_prefs')
-    if not isinstance(prefs, dict) or len(json.dumps(prefs)) > 20000:
+    # Tope 100 000 (antes 20 000, ADR-W222): las vistas de Confirmar con preguntas del formulario lo pasaban y el
+    # cambio no se guardaba (al recargar volvía lo de antes).
+    tamano = len(json.dumps(prefs)) if isinstance(prefs, dict) else 0
+    if not isinstance(prefs, dict) or tamano > 100000:
+        current_app.logger.warning(f"dock_prefs rechazado: usuario {current_user.id}, {tamano} caracteres")
         return jsonify({"message": "Preferencias del dock inválidas"}), 400
     current_user.dock_prefs = prefs
     db.session.commit()

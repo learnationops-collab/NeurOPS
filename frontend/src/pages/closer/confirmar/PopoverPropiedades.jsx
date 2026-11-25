@@ -1,6 +1,7 @@
-// Propiedades de una vista de Confirmar (ADR-W220): qué se ve y en qué orden. Las filas no se mueven al
+// Propiedades de una vista de Confirmar (ADR-W220, W222): qué se ve y en qué orden. Las filas no se mueven al
 // prender o apagar (antes las prendidas subían y la fila tocada saltaba de lugar); se ordenan arrastrando
-// cualquier fila (dnd-kit, en vez del arrastre nativo). El orden completo se guarda en `ordenProps`.
+// cualquier fila (dnd-kit). El orden se guarda en `ordenProps` solo al arrastrar, y sin las preguntas del
+// formulario salvo que se hayan ordenado: con todas, las preferencias pasaban el tope del servidor y no se guardaban.
 import { useState } from 'react';
 import { GripVertical } from 'lucide-react';
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core';
@@ -12,13 +13,13 @@ const Titulo = ({ children, accion }) => (
     <div className="cv-pop__tit"><span>{children}</span>{accion}</div>
 );
 
-// El orden de todas las propiedades: el guardado y, detrás, lo nuevo (las prendidas primero, como antes).
+// El orden de todas las propiedades: el que se arrastró y, detrás, el del catálogo. No depende de qué está
+// prendido, así prender o apagar no mueve ninguna fila.
 export function ordenDePropiedades(vista, catalogo) {
     const claves = catalogo.map(p => p.clave);
     const visibles = vista.props.filter(k => claves.includes(k));
     const guardado = (vista.ordenProps || []).filter(k => claves.includes(k));
-    const base = [...visibles, ...claves.filter(k => !visibles.includes(k))];
-    return { visibles, orden: [...guardado, ...base.filter(k => !guardado.includes(k))] };
+    return { visibles, guardado, orden: [...guardado, ...claves.filter(k => !guardado.includes(k))] };
 }
 
 function Fila({ p, on, onAlternar }) {
@@ -36,18 +37,22 @@ function Fila({ p, on, onAlternar }) {
 export default function Propiedades({ vista, catalogo, onCambio }) {
     const [q, setQ] = useState('');
     const sensores = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
-    const { visibles, orden } = ordenDePropiedades(vista, catalogo);
+    const { visibles, guardado, orden } = ordenDePropiedades(vista, catalogo);
+    const esFormulario = (k) => !!catalogo.find(p => p.clave === k)?.formulario;
     const buscado = q.trim().toLowerCase();
     const de = (formulario) => orden.map(k => catalogo.find(p => p.clave === k))
         .filter(p => !!p.formulario === formulario && p.titulo.toLowerCase().includes(buscado));
     // Lo prendido siempre en el orden de la lista: así las etiquetas salen en ese orden.
-    const guardar = (nuevoOrden, nuevasVisibles) => onCambio({ ordenProps: nuevoOrden, props: nuevoOrden.filter(k => nuevasVisibles.includes(k)) });
-    const alternar = (k) => guardar(orden, visibles.includes(k) ? visibles.filter(x => x !== k) : [...visibles, k]);
+    const mostrar = (nuevasVisibles) => onCambio({ props: orden.filter(k => nuevasVisibles.includes(k)) });
+    const alternar = (k) => mostrar(visibles.includes(k) ? visibles.filter(x => x !== k) : [...visibles, k]);
     const soltar = ({ active, over }) => {
-        if (!over || active.id === over.id) return;
-        const formulario = (k) => !!catalogo.find(p => p.clave === k)?.formulario;
-        if (formulario(active.id) !== formulario(over.id)) return;
-        guardar(arrayMove(orden, orden.indexOf(active.id), orden.indexOf(over.id)), visibles);
+        if (!over || active.id === over.id || esFormulario(active.id) !== esFormulario(over.id)) return;
+        const nuevo = arrayMove(orden, orden.indexOf(active.id), orden.indexOf(over.id));
+        const conFormulario = esFormulario(active.id) || guardado.some(esFormulario);
+        onCambio({
+            ordenProps: nuevo.filter(k => conFormulario || !esFormulario(k)),
+            props: nuevo.filter(k => visibles.includes(k)),
+        });
     };
     const lista = (items) => (
         <SortableContext items={items.map(p => p.clave)} strategy={verticalListSortingStrategy}>
@@ -58,11 +63,11 @@ export default function Propiedades({ vista, catalogo, onCambio }) {
     return (
         <DndContext sensors={sensores} collisionDetection={closestCenter} onDragEnd={soltar}>
             <input className="cv-pop__q" placeholder="Buscar una propiedad" value={q} onChange={(e) => setQ(e.target.value)} autoFocus />
-            <Titulo accion={visibles.length > 0 && <button type="button" onClick={() => guardar(orden, [])}>Ocultar todas</button>}>Agenda</Titulo>
+            <Titulo accion={visibles.length > 0 && <button type="button" onClick={() => mostrar([])}>Ocultar todas</button>}>Agenda</Titulo>
             <div className="cv-op cv-op--fija"><span className="cv-op__t">Nombre</span><small>siempre</small></div>
             {lista(agenda)}
             <Titulo accion={formulario.length > 0 && (
-                <button type="button" onClick={() => guardar(orden, [...visibles, ...formulario.map(p => p.clave)])}>Mostrar todas</button>
+                <button type="button" onClick={() => mostrar([...visibles, ...formulario.map(p => p.clave)])}>Mostrar todas</button>
             )}>Respuestas del formulario</Titulo>
             {formulario.length ? lista(formulario) : <p className="cv-pop__nada">Ningún lead del tablero respondió un formulario.</p>}
         </DndContext>

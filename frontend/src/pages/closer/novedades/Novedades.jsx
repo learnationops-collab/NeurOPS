@@ -3,6 +3,11 @@ import { ArrowRight, X, Sparkles, PanelRight, CalendarDays, UserSquare2, CheckCi
 import { VERSION, FECHA, PORTADA, PASOS } from './contenido';
 import Recorrido from './Recorrido';
 import { useCuenta } from './Mocks';
+// La huella del recorrido (ADR-W222): cambia sola con cualquier cambio de contenido, escenas o recorrido, así
+// el changelog nuevo le vuelve a aparecer a todos (también a quien ya lo terminó) sin tocar VERSION a mano.
+import fuenteContenido from './contenido.js?raw';
+import fuenteMocks from './Mocks.jsx?raw';
+import fuenteRecorrido from './Recorrido.jsx?raw';
 import './novedades.css';
 
 // Las novedades del Workspace de closers y triage (ADR-W218). La primera vez que alguien entra
@@ -12,6 +17,8 @@ import './novedades.css';
 // se puede volver a abrir (y cerrar) desde Herramientas › Novedades o con `?novedades=1`.
 
 const EVENTO = 'ln:novedades';
+const huella = (t) => { let h = 5381; for (let k = 0; k < t.length; k += 1) h = ((h << 5) + h + t.charCodeAt(k)) | 0; return (h >>> 0).toString(36); };
+const VISTA = `${VERSION}-${huella(fuenteContenido + fuenteMocks + fuenteRecorrido)}`;
 const clave = (user) => `ln_novedades_${user?.id ?? 'anon'}`;
 
 export const abrirNovedades = () => window.dispatchEvent(new Event(EVENTO));
@@ -61,7 +68,7 @@ const Portada = ({ obligatorio, onEmpezar, onDespues }) => {
 
 const Novedades = ({ user, ctx }) => {
     const [fase, setFase] = useState(null);
-    const vista = () => localStorage.getItem(clave(user)) === VERSION;
+    const vista = () => localStorage.getItem(clave(user)) === VISTA;
     // Obligatorio mientras no lo haya terminado; se decide al abrir.
     const [obligatorio, setObligatorio] = useState(true);
     const abrir = () => { setObligatorio(!vista()); setFase('portada'); };
@@ -85,7 +92,7 @@ const Novedades = ({ user, ctx }) => {
     }
     return (
         <Recorrido pasos={PASOS} ctx={ctx} obligatorio={obligatorio} onCerrar={() => setFase(null)}
-            onCompletar={() => { localStorage.setItem(clave(user), VERSION); setFase(null); }} />
+            onCompletar={() => { localStorage.setItem(clave(user), VISTA); setFase(null); }} />
     );
 };
 

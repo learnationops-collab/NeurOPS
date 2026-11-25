@@ -964,3 +964,8 @@
 ### 25/11/2026 · Novedades: se puede probar todo durante el recorrido (ADR-W221)
 - «Probalo» en cada paso: abre una llamada en Confirmación, Reprogramar o tu horario; tocar lo iluminado también deja usarlo.
 - Mientras se prueba, el recorrido queda como un botón abajo a la izquierda, «Seguir el recorrido».
+
+### 25/11/2026 · Propiedades que quedan guardadas y changelog que vuelve con cada cambio (ADR-W222)
+- El servidor rechazaba las preferencias del dock de más de 20 000 caracteres sin avisar: el cambio de propiedades se perdía al recargar. Tope 100 000 y el rechazo queda en el log.
+- Prender o apagar una propiedad no guarda el orden; arrastrar guarda uno corto (sin las preguntas del formulario).
+- Novedades: cualquier cambio en el recorrido lo vuelve a mostrar a todos, también a quien ya lo terminó.

@@ -17,7 +17,10 @@ function guardarPronto() {
     clearTimeout(timer);
     timer = setTimeout(() => {
         if (!usuario || !prefs) return;
-        api.put('/auth/me/dock', { dock_prefs: prefs }).catch(() => { /* queda en el navegador; se reintenta con el próximo cambio */ });
+        api.put('/auth/me/dock', { dock_prefs: prefs }).catch((e) => {
+            // Queda en el navegador y se reintenta con el próximo cambio; pero al recargar gana lo de la cuenta.
+            console.error(`Dock: no se guardó en la cuenta (${e?.response?.status || e?.message})`);
+        });
     }, 800);
 }
 
