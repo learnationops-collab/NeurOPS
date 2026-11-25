@@ -1,16 +1,16 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Briefcase, Check, Headphones, Shuffle } from 'lucide-react';
-import { Avatar, Segmented } from '../../../standard';
+import { Check, Shuffle } from 'lucide-react';
+import { Avatar } from '../../../standard';
 import { useMovimiento } from '../../piezas';
 import Bandera from './Bandera';
 import { CUALQUIERA, ciudad } from './reprogramar';
 
 const SUAVE = [0.22, 0.7, 0.2, 1];
 
-/** Paso 1: con quién queda la llamada. El grupo (closers o triage) y una persona o «Cualquiera» (los
+/** Paso 1: con quién queda la llamada (el grupo se elige en la cabecera): una persona o «Cualquiera» (los
  *  horarios de todo el grupo). Cada tarjeta: quién, de dónde (bandera) y cuántos horarios libres tiene. */
-const PasoPersona = ({ rol, onRol, personas, porPersona, actualId, elegida, onElegir, totalGrupo, paisDe, colorDe }) => {
+const PasoPersona = ({ rol, personas, porPersona, actualId, elegida, onElegir, totalGrupo, paisDe, colorDe }) => {
     const mov = useMovimiento();
     const delGrupo = personas
         .filter((p) => p.rol === rol)
@@ -40,11 +40,6 @@ const PasoPersona = ({ rol, onRol, personas, porPersona, actualId, elegida, onEl
 
     return (
         <div className="rp-paso">
-            <Segmented size="md" radio label="Grupo" value={rol} onChange={onRol} className="rp-grupo"
-                options={[
-                    { value: 'closer', label: 'Closers', icon: <Briefcase size={15} /> },
-                    { value: 'triage', label: 'Triage', icon: <Headphones size={15} /> },
-                ]} />
 
             <div className="rp-personas">
                 {tarjeta(CUALQUIERA, 0, (

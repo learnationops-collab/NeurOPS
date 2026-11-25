@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, CalendarClock, CalendarDays, Check, Hourglass, PenLine, Users } from 'lucide-react';
+import { ArrowRight, Briefcase, CalendarClock, Headphones, Hourglass } from 'lucide-react';
 import { Avatar, FieldError, Segmented, Select, TextArea } from '../../../standard';
 import api from '../../../../services/api';
 import { faltaDeMotivo, motivoAlcanza, preguntaDeMotivo } from '../../../../utils/motivoEstado';
@@ -14,15 +14,11 @@ import {
 } from './reprogramar';
 import './reprogramar.css';
 
-const PASOS = [
-    { label: 'Con quién', Icono: Users },
-    { label: 'Día y hora', Icono: CalendarDays },
-    { label: 'Motivo', Icono: PenLine },
-];
 const SUAVE = [0.22, 0.7, 0.2, 1];
 
 /**
- * Reprogramar la llamada, en tres pasos (con quién → día y hora → motivo). Mientras está abierto, la
+ * Reprogramar la llamada, en tres pasos (con quién → día y hora → motivo), sin indicador: se avanza con
+ * «Siguiente» y se vuelve con «Volver». Mientras está abierto, la
  * ficha muestra solo la cabecera y esta tarea (`onEnfoque` de la pestaña).
  *
  * Solo se ofrecen horarios libres (horario de Team, agendas y Google), así que no hay choques. Se elige
@@ -102,21 +98,7 @@ const SubReprogramar = ({ ficha, onVolver, onConfirmar, guardando = false }) => 
         </button>
     );
 
-    // Los pasos: ícono en un círculo, unidos por una línea que se llena al avanzar.
-    const pasos = (
-        <ol className="rp-pasos" aria-label="Pasos">
-            {PASOS.map(({ label, Icono }, i) => (
-                <li key={label} data-estado={i < paso ? 'hecho' : i === paso ? 'actual' : 'pendiente'}>
-                    <button type="button" disabled={i > paso && !listo.slice(0, i).every(Boolean)} onClick={() => ir(i)}
-                        aria-current={i === paso ? 'step' : undefined} aria-label={label}>
-                        <span className="rp-pasos-n">{i < paso ? <Check size={15} strokeWidth={3} /> : <Icono size={15} />}</span>
-                        <span className="rp-pasos-txt">{label}</span>
-                    </button>
-                </li>
-            ))}
-        </ol>
-    );
-    // Zona del lead y anticipación, en la misma fila que el título y los pasos (solo en «Día y hora»).
+    // Zona del lead y anticipación, en la misma fila que el título (solo en «Día y hora»).
     const zonas = datos?.zonas || [];
     const controles = paso === 1 && datos && !datos.error && (
         <div className="rp-controles">
@@ -132,12 +114,17 @@ const SubReprogramar = ({ ficha, onVolver, onConfirmar, guardando = false }) => 
                 prefix={<span className="rp-seg-ico" aria-hidden="true"><Hourglass size={14} /></span>} />
         </div>
     );
-    const cabecera = (
-        <div className="rp-cab">
-            {pasos}
-            {controles}
+    // Paso 1: el grupo (closers o triage) también va en la fila del título.
+    const grupo = paso === 0 && datos && !datos.error && (
+        <div className="rp-controles">
+            <Segmented size="sm" radio label="Grupo" value={rol} onChange={(r) => { if (r !== rol) setPedido(r); }}
+                options={[
+                    { value: 'closer', label: 'Closers', icon: <Briefcase size={14} /> },
+                    { value: 'triage', label: 'Triage', icon: <Headphones size={14} /> },
+                ]} />
         </div>
     );
+    const cabecera = <div className="rp-cab">{grupo}{controles}</div>;
     const titulo = (
         <span className="rp-titulo">
             <span className="rp-titulo-ico" aria-hidden="true"><CalendarClock size={18} /></span>
@@ -168,7 +155,7 @@ const SubReprogramar = ({ ficha, onVolver, onConfirmar, guardando = false }) => 
                 <motion.div key={paso} {...entrada}>
                     {paso === 0 && (
                         <div style={{ opacity: cargandoGrupo ? 0.5 : 1, transition: 'opacity .2s' }}>
-                            <PasoPersona rol={rol} onRol={(r) => { if (r !== rol) setPedido(r); }} personas={personas}
+                            <PasoPersona rol={rol} personas={personas}
                                 porPersona={porPersona} actualId={datos.actual_id} elegida={elegida}
                                 onElegir={elegirPersona} totalGrupo={totalGrupo} paisDe={paisDe} colorDe={colorDe} />
                         </div>

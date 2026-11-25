@@ -904,3 +904,6 @@
 - Calendario: cada llamada con etiquetas de color (etapa, segmento, decisor, inversión por defecto) que entran animadas; al pasar el mouse se abre entera. Teclas 1, 2, 3, 7 (días), ← → y T (hoy).
 - El calendario de Confirmar (antes anotado como ADR-W212, número repetido) queda como ADR-W214.
 
+
+### 25/11/2026 · Reprogramar sin indicador de pasos
+- Se saca la fila «Con quién · Día y hora · Motivo»: se avanza con «Siguiente» y se vuelve con «Volver». Closers/Triage pasa a la fila del título, como la zona del lead y la anticipación.

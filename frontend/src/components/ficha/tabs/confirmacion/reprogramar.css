@@ -1,5 +1,5 @@
-/* Reprogramar (Confirmación): pasos, personas, calendario y horas. Mismos tokens que ficha.css.
-   Rosa (--brand-secondary) = lo elegido y el paso actual. Cada persona tiene su color (--p), el mismo en
+/* Reprogramar (Confirmación): personas, calendario y horas. Mismos tokens que ficha.css.
+   Rosa (--brand-secondary) = lo elegido. Cada persona tiene su color (--p), el mismo en
    su tarjeta, en los puntos del calendario y en cada hora. */
 
 .dc-shell .rp-bandera{display:inline-block;width:18px;height:12px;border-radius:2px;overflow:hidden;flex-shrink:0;
@@ -7,30 +7,13 @@
 .dc-shell .rp-bandera svg{display:block;width:100%;height:100%}
 .dc-shell .rp-con-bandera{display:inline-flex;align-items:center;gap:6px}
 
-/* Cabecera: título con ícono y pasos en una fila */
+/* Cabecera: título con ícono y, al lado, los controles del paso */
 .dc-shell .fi-sub-cab{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s3) var(--s6)}
 .dc-shell .rp-titulo{display:inline-flex;align-items:center;gap:var(--s3)}
 .dc-shell .rp-titulo-ico{width:36px;height:36px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;
   color:var(--brand-secondary);background:color-mix(in srgb,var(--brand-secondary) 16%,transparent);
   box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--brand-secondary) 35%,transparent)}
 
-.dc-shell .rp-pasos{display:flex;align-items:center;list-style:none;margin:0;padding:0}
-.dc-shell .rp-pasos li{display:flex;align-items:center}
-.dc-shell .rp-pasos li + li::before{content:"";width:32px;height:2px;margin:0 var(--s2);border-radius:2px;
-  background:linear-gradient(90deg,var(--success) 50%,var(--border-main) 50%);background-size:200% 100%;background-position:100% 0;
-  transition:background-position .5s cubic-bezier(.16,1,.3,1)}
-.dc-shell .rp-pasos li[data-estado="hecho"] + li::before{background-position:0 0}
-.dc-shell .rp-pasos button{display:inline-flex;align-items:center;gap:var(--s2);padding:0;background:none;border:0;
-  color:var(--text-muted);font-size:13px;font-weight:600;cursor:pointer;transition:color .2s ease}
-.dc-shell .rp-pasos button:disabled{cursor:default;opacity:.5}
-.dc-shell .rp-pasos button:not(:disabled):hover{color:var(--text-on-surface)}
-.dc-shell .rp-pasos-n{width:30px;height:30px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;
-  border:1.5px solid var(--border-main);transition:background .3s ease,border-color .3s ease,box-shadow .3s ease,transform .3s cubic-bezier(.16,1,.3,1)}
-.dc-shell .rp-pasos [data-estado="actual"] button{color:var(--text-on-surface)}
-.dc-shell .rp-pasos [data-estado="actual"] .rp-pasos-n{background:var(--brand-secondary);border-color:var(--brand-secondary);
-  color:var(--ink);transform:scale(1.08);box-shadow:0 0 0 5px var(--brand-secondary-surface),0 6px 16px -6px var(--brand-secondary)}
-.dc-shell .rp-pasos [data-estado="hecho"] .rp-pasos-n{background:var(--success);border-color:var(--success);color:var(--ink)}
-@media (max-width:760px){.dc-shell .rp-pasos [data-estado="pendiente"] .rp-pasos-txt,.dc-shell .rp-pasos [data-estado="hecho"] .rp-pasos-txt{display:none}}
 
 .dc-shell .rp-paso{display:grid;gap:var(--s5)}
 
@@ -40,8 +23,6 @@
 @keyframes rp-pulso{0%,100%{transform:scale(.7);opacity:.5}50%{transform:scale(1.15);opacity:1}}
 
 /* Paso 1: grupo y personas (las tarjetas llenan todo el ancho) */
-.dc-shell .rp-grupo{justify-self:start}
-.dc-shell .rp-grupo svg{margin-right:6px;vertical-align:-2px}
 .dc-shell .rp-personas{display:grid;gap:var(--s3);grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
 .dc-shell .rp-persona{--p:var(--brand-secondary);position:relative;isolation:isolate;overflow:visible;display:flex;align-items:center;gap:var(--s3);
   min-height:88px;padding:var(--s4) var(--s5);border-radius:var(--radius-control);border:1px solid var(--border-main);
@@ -191,7 +172,7 @@
 
 @media (prefers-reduced-motion:reduce){
   .dc-shell .rp-pulso{animation:none}
-  .dc-shell .rp-persona,.dc-shell .rp-cal-dia,.dc-shell .rp-chip,.dc-shell .rp-pasos-n{transition:none}
+  .dc-shell .rp-persona,.dc-shell .rp-cal-dia,.dc-shell .rp-chip{transition:none}
 }
 
 /* Pie de Confirmación: lo que cambió en tres tarjetas y el CTA a todo el ancho; eliminar, aparte.
