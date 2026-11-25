@@ -1,19 +1,24 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight, Check } from 'lucide-react';
+import { ArrowRight, CalendarClock, CalendarDays, Check, PenLine, Users } from 'lucide-react';
 import { Avatar, FieldError, TextArea } from '../../../standard';
 import api from '../../../../services/api';
 import { faltaDeMotivo, motivoAlcanza, preguntaDeMotivo } from '../../../../utils/motivoEstado';
 import { SubVista, useMovimiento } from '../../piezas';
 import PasoPersona from './PasoPersona';
 import PasoHorario from './PasoHorario';
+import Bandera from './Bandera';
 import {
-    CUALQUIERA, ciudad, conAnticipacion, diaLargo, guardarAnticipacion, horaEn, leerAnticipacion,
+    CUALQUIERA, ciudad, coloresDe, conAnticipacion, diaLargo, guardarAnticipacion, horaEn, leerAnticipacion,
     libresPorHorario, quienToma,
 } from './reprogramar';
 import './reprogramar.css';
 
-const PASOS = ['Con quién', 'Día y hora', 'Motivo'];
+const PASOS = [
+    { label: 'Con quién', Icono: Users },
+    { label: 'Día y hora', Icono: CalendarDays },
+    { label: 'Motivo', Icono: PenLine },
+];
 const SUAVE = [0.22, 0.7, 0.2, 1];
 
 /**
@@ -67,6 +72,9 @@ const SubReprogramar = ({ ficha, onVolver, onConfirmar, guardando = false }) => 
     const totalGrupo = useMemo(() => Object.keys(libresPorHorario(porPersona, CUALQUIERA)).length, [porPersona]);
     const lead = tzLead || 'UTC';
     const nombreZona = (datos?.zonas || []).find((z) => z.tz === lead)?.nombre || ciudad(lead);
+    const colores = useMemo(() => coloresDe(personas), [datos]); // eslint-disable-line react-hooks/exhaustive-deps
+    const colorDe = (id) => colores[id] || 'var(--idle)';
+    const paisDe = (tz) => (datos?.zonas || []).find((z) => z.tz === tz)?.pais;
 
     const elegirHora = (iso) => {
         setCuando(iso);
@@ -94,18 +102,25 @@ const SubReprogramar = ({ ficha, onVolver, onConfirmar, guardando = false }) => 
         </button>
     );
 
+    // Los pasos: ícono en un círculo, unidos por una línea que se llena al avanzar.
     const pasos = (
         <ol className="rp-pasos" aria-label="Pasos">
-            {PASOS.map((p, i) => (
-                <li key={p} data-estado={i < paso ? 'hecho' : i === paso ? 'actual' : 'pendiente'}>
+            {PASOS.map(({ label, Icono }, i) => (
+                <li key={label} data-estado={i < paso ? 'hecho' : i === paso ? 'actual' : 'pendiente'}>
                     <button type="button" disabled={i > paso && !listo.slice(0, i).every(Boolean)} onClick={() => ir(i)}
-                        aria-current={i === paso ? 'step' : undefined}>
-                        <span className="rp-pasos-n">{i < paso ? <Check size={12} strokeWidth={3} /> : i + 1}</span>
-                        {p}
+                        aria-current={i === paso ? 'step' : undefined} aria-label={label}>
+                        <span className="rp-pasos-n">{i < paso ? <Check size={15} strokeWidth={3} /> : <Icono size={15} />}</span>
+                        <span className="rp-pasos-txt">{label}</span>
                     </button>
                 </li>
             ))}
         </ol>
+    );
+    const titulo = (
+        <span className="rp-titulo">
+            <span className="rp-titulo-ico" aria-hidden="true"><CalendarClock size={18} /></span>
+            Reprogramar
+        </span>
     );
 
     const entrada = mov.quieto ? {} : {
@@ -117,12 +132,12 @@ const SubReprogramar = ({ ficha, onVolver, onConfirmar, guardando = false }) => 
     const q = cuando && quien ? persona(quien) : null;
 
     return (
-        <SubVista titulo="Reprogramar llamada" extra={pasos} onVolver={atras}
+        <SubVista titulo={titulo} extra={pasos} onVolver={atras}
             acciones={datos && !datos.error ? accion : null}>
             {datos === null && (
                 <div className="rp-cargando" role="status">
                     <span className="rp-pulso" aria-hidden="true" />
-                    Buscando los horarios libres de todo el equipo…
+                    Buscando horarios libres…
                 </div>
             )}
             {datos?.error && <small className="t-cap mut">No se pudieron cargar los horarios. Cerrá y volvé a abrir la ficha.</small>}
@@ -133,14 +148,14 @@ const SubReprogramar = ({ ficha, onVolver, onConfirmar, guardando = false }) => 
                         <div style={{ opacity: cargandoGrupo ? 0.5 : 1, transition: 'opacity .2s' }}>
                             <PasoPersona rol={rol} onRol={(r) => { if (r !== rol) setPedido(r); }} personas={personas}
                                 porPersona={porPersona} actualId={datos.actual_id} elegida={elegida}
-                                onElegir={elegirPersona} totalGrupo={totalGrupo} />
+                                onElegir={elegirPersona} totalGrupo={totalGrupo} paisDe={paisDe} colorDe={colorDe} />
                         </div>
                     )}
 
                     {paso === 1 && (
                         <PasoHorario mapa={mapa} tzLead={lead} onTzLead={setTzLead} zonas={datos.zonas || []}
                             zonaLeadTz={datos.zona_lead?.tz} persona={persona} cuando={cuando} onCuando={elegirHora}
-                            quien={quien} onQuien={setQuien}
+                            quien={quien} onQuien={setQuien} paisDe={paisDe} colorDe={colorDe}
                             anticipacion={anticipacion} onAnticipacion={cambiarAnticipacion} />
                     )}
 
@@ -154,15 +169,16 @@ const SubReprogramar = ({ ficha, onVolver, onConfirmar, guardando = false }) => 
                                 </div>
                                 <div className="rp-resumen-hora">
                                     <b>{horaEn(cuando, lead)}</b>
-                                    <small>{`hora del lead · ${nombreZona}`}</small>
+                                    <small className="rp-con-bandera"><Bandera c={paisDe(lead)} />{`Lead · ${nombreZona}`}</small>
                                 </div>
                                 <div className="rp-resumen-quien">
-                                    <Avatar name={q.nombre} size="md" />
+                                    <Avatar name={q.nombre} size="lg" color={colorDe(quien)} />
                                     <div>
                                         <b>{q.nombre}</b>
-                                        <small>
-                                            {q.tz === lead ? 'misma hora' : `${horaEn(cuando, q.tz)} en ${ciudad(q.tz)}`}
-                                            {quien !== datos.actual_id && ` · se la pasa ${persona(datos.actual_id).nombre}`}
+                                        <small className="rp-con-bandera">
+                                            <Bandera c={paisDe(q.tz)} />
+                                            {q.tz === lead ? 'misma hora' : `${horaEn(cuando, q.tz)} su hora`}
+                                            {quien !== datos.actual_id && ` · era de ${persona(datos.actual_id).nombre.split(' ')[0]}`}
                                         </small>
                                     </div>
                                 </div>

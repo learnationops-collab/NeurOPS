@@ -876,3 +876,9 @@
 - Cada llamada muestra hora, nombre, etapa en texto y etiquetas: Triage/Closing, closer, decide, invierte, ingresos, segmento y respuestas del formulario. Las que se pisan se escalonan.
 - Propiedades nuevas: «Tipo de llamada» e «Ingresos». El filtro separa Triage de Closing.
 - El mazo de confirmaciones manda `closer_role`.
+
+### 25/11/2026 · Reprogramar con colores por closer, todos los horarios y banderas (ADR-W212)
+- Cada closer tiene su color: en su tarjeta, en los puntos del calendario y en cada hora. Las horas con más de uno libre se marcan como superpuestas.
+- Todos los horarios del día a la vista, en chips chicos por mañana/tarde/noche. Al elegir uno se ve con quién queda y su hora, con banderas.
+- Menos texto en los pasos; íconos en la cabecera, el grupo y las franjas.
+- Confirmación: tarjetas Reprogramar/Canceló/No show, pestañas y «Listo · 100% confirmado» con más calidad y movimiento.

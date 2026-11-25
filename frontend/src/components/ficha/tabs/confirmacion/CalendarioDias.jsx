@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { grillaMes, hoyEn, mesesDe, nombreMes } from './reprogramar';
+import { grillaMes, hoyEn, mesCorto, mesesDe, nombreMes } from './reprogramar';
 
 const SEMANA = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 
-/** Calendario del mes: solo se tocan los días con horarios libres; el número chico es cuántos hay. */
-const CalendarioDias = ({ dias, tz, valor, onElegir }) => {
+/** Calendario del mes: solo se tocan los días con horarios libres. Debajo del número, un punto por cada
+ *  persona libre ese día, en su color. */
+const CalendarioDias = ({ dias, tz, valor, onElegir, quienesDe, colorDe }) => {
     const meses = mesesDe(dias);
     const [i, setI] = useState(0);
     useEffect(() => {
@@ -21,7 +22,7 @@ const CalendarioDias = ({ dias, tz, valor, onElegir }) => {
     return (
         <div className="rp-cal">
             <div className="rp-cal-cab">
-                <b>{nombreMes(mes)}</b>
+                <b>{mesCorto(mes)}</b>
                 {meses.length > 1 && (
                     <div className="rp-cal-nav">
                         <button type="button" aria-label="Mes anterior" disabled={i === 0} onClick={() => setI(i - 1)}><ChevronLeft size={16} /></button>
@@ -40,7 +41,11 @@ const CalendarioDias = ({ dias, tz, valor, onElegir }) => {
                             aria-label={`${Number(dia.slice(8))}${n ? ` · ${n} horarios` : ' · sin horarios'}`}
                             onClick={() => onElegir(dia)}>
                             <span>{Number(dia.slice(8))}</span>
-                            {n > 0 && <small>{n}</small>}
+                            {n > 0 && (
+                                <span className="rp-cal-puntos" aria-hidden="true">
+                                    {quienesDe(dia).map((id) => <i key={id} style={{ background: colorDe(id) }} />)}
+                                </span>
+                            )}
                         </button>
                     );
                 })}

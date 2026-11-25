@@ -204,8 +204,8 @@ def opciones_de_reprogramacion(appt_id):
         'actual_id': appt.closer_id,
         'rol': rol,
         'horarios_por_persona': {str(k): v for k, v in por_persona.items()},
-        'zona_lead': {'tz': zona.key, 'pais': pais['n']},
-        'zonas': [{'tz': z['tz'], 'nombre': z['n']} for z in ZONAS],
+        'zona_lead': {'tz': zona.key, 'pais': pais['n'], 'codigo': pais['c']},
+        'zonas': [{'tz': z['tz'], 'nombre': z['n'], 'pais': z['c']} for z in ZONAS],
     }), 200
 
 

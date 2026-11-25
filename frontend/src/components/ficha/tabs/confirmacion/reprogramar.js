@@ -49,7 +49,6 @@ export const franjaDe = (iso, tz) => {
     return FRANJAS.find((f) => h >= f.desde && h < f.hasta).clave;
 };
 
-export const enPuntoOMedia = (iso, tz) => partes(iso, tz).min % 30 === 0;
 
 /** Con «cualquiera», a quién le queda: la persona que ya tenía la llamada si está libre; si no, la que
  *  tiene más horarios libres (la menos cargada). */
@@ -119,4 +118,18 @@ export const nombreMes = (ym) => {
 export const diaLargo = (dia) => {
     const [y, m, d] = dia.split('-').map(Number);
     return new Date(Date.UTC(y, m - 1, d, 12)).toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' });
+};
+
+/** Un color por persona (el rosa queda para lo elegido): el mismo en su tarjeta, en el calendario y en
+ *  cada horario, así se ve de un vistazo de quién es cada uno. Fijo por orden de id. */
+const COLORES = ['#3B82F6', '#F59E0B', '#10B981', '#A855F7', '#06B6D4', '#F97316', '#84CC16', '#EF4444'];
+export const coloresDe = (personas) => {
+    const ids = [...personas].map((p) => p.id).sort((a, b) => a - b);
+    return Object.fromEntries(ids.map((id, i) => [id, COLORES[i % COLORES.length]]));
+};
+
+/** «Noviembre 2026» (sin el «de», que con capitalize quedaba «Noviembre De 2026»). */
+export const mesCorto = (ym) => {
+    const t = nombreMes(ym).replace(' de ', ' ');
+    return t.charAt(0).toUpperCase() + t.slice(1);
 };
