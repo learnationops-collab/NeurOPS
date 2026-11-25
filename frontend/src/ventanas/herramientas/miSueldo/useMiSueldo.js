@@ -22,7 +22,8 @@ export function filasDelMes(mes) {
             detalle: `La comisión se escribió a mano en Finanzas: ${dinero(mes.comision_manual)} (el cálculo da ${dinero(mes.comision_calculada)})` });
     }
     if (mes.bonos > 0.004) filas.push({ k: 'bonos', titulo: 'Bonos', detalle: 'Cargados a mano en la Nómina de Finanzas', monto: mes.bonos });
-    return filas;
+    // Lo que da 0 (un fijo de 0, un concepto con todo excluido) no se muestra: desanima y no explica nada.
+    return filas.filter(f => Math.abs(f.monto) > 0.004);
 }
 
 export function useMiSueldo() {

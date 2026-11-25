@@ -36,7 +36,7 @@ export default function PagosDelMes({ pagos, conceptos, filtro, onFiltro }) {
     const neto = suman.reduce((t, p) => t + p.neto, 0);
     const comision = suman.reduce((t, p) => t + p.comision, 0);
     const opciones = [{ value: '', label: 'Todos', count: pagos.filter(p => !p.excluida).length },
-        ...conceptos.map(c => ({ value: c.k, label: c.titulo, count: c.pagos, icon: punto(c.k) }))];
+        ...conceptos.filter(c => c.monto > 0.004).map(c => ({ value: c.k, label: c.titulo, count: c.pagos, icon: punto(c.k) }))];
 
     return (
         <div className="ms-der">

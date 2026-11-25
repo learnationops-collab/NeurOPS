@@ -981,3 +981,6 @@
 - Setters, closers y el director comercial tienen «Mi sueldo» en Herramientas › Mi cuenta: el total del mes con su estado, de qué se compone (sueldo base, comisión por primer pago, cuotas, renovaciones y upsells —o ventas propias y como director—, ajuste manual, bonos y descuentos) y los últimos 4 meses.
 - A la derecha, los pagos que suman la comisión; tocar un concepto deja solo los suyos. El «?» explica cómo se calcula.
 - El director, admin y operador eligen a cualquiera del equipo comercial (pedido de Marlon).
+
+### 25/11/2026 · Mi sueldo: lo que da 0 no aparece
+- Un sueldo base de 0 o un concepto sin comisión (por ejemplo, con todos sus pagos excluidos) ya no se muestra en la lista ni como filtro de pagos.
