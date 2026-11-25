@@ -5,8 +5,10 @@ plantilla aprobada y manda a los próximos N. Todo queda en `WaEnvio` (una fila 
     vuelta (una por minuto). «Frenar» borra las pendientes del lote: no salieron, vuelven con el mismo CSV.
   · TOPE_DIARIO es del número, sumando plantillas (lo enviado hoy en Argentina más lo pendiente).
   · Un número va una sola vez: si ya tiene una fila, el CSV lo saltea.
+  · Con varias plantillas, cada número recibe una al azar, en partes iguales: así se comparan entre sí.
 """
 import logging
+import random
 import uuid
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -57,8 +59,9 @@ def revisar(filas):
     return {'total': len(filas), 'para_mandar': para, **resumen}
 
 
-def crear_lote(filas, plantilla, idioma, con_nombre, cantidad, usuario_id, ahora):
-    """Deja los próximos `cantidad` del CSV en pendiente. Devuelve el lote y cuántos van."""
+def crear_lote(filas, plantillas, cantidad, usuario_id, ahora):
+    """Deja los próximos `cantidad` del CSV en pendiente. `plantillas`: [(nombre, idioma, con_nombre)]; con más
+    de una, se reparten al azar en partes iguales. Devuelve el lote y cuántos van."""
     libres = TOPE_DIARIO - usados_hoy(ahora)
     if cantidad < 1:
         raise EnvioInvalido('Elegí cuántos mandar')
@@ -70,7 +73,9 @@ def crear_lote(filas, plantilla, idioma, con_nombre, cantidad, usuario_id, ahora
     if not proximos:
         raise EnvioInvalido('No queda nadie para mandar en esta lista')
     lote = str(uuid.uuid4())
-    for f in proximos:
+    turnos = [plantillas[i % len(plantillas)] for i in range(len(proximos))]
+    random.shuffle(turnos)
+    for f, (plantilla, idioma, con_nombre) in zip(proximos, turnos):
         db.session.add(WaEnvio(lote=lote, plantilla=plantilla, idioma=idioma, con_nombre=con_nombre,
                                telefono=f['telefono'], nombre=f['nombre'], enviado_por_id=usuario_id, creado_en=ahora))
     db.session.commit()

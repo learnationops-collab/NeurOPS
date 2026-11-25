@@ -1,17 +1,38 @@
 // El historial (ADR-W229): cada «Enviar» con sus cuentas; tocando uno, sus números con lo que pasó y, si
-// respondió, qué tocó y su chat en el Inbox.
+// respondió, qué tocó y su chat en el Inbox. Un envío al azar entre plantillas muestra cómo le fue a cada una.
 import { useEffect, useState } from 'react';
 import { Chip, EmptyState, LinkButton, Segmented, Skeleton, SkeletonPanel } from '../../../components/standard';
 import { ESTADOS, embudo } from './useBroadcast';
 
 const fecha = (iso) => (iso ? new Date(iso).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '');
 
+const pct = (a, b) => (b ? `${Math.round((a / b) * 100)}%` : '—');
+
+// Cada plantilla del envío: de los que les llegó, cuántos lo leyeron y cuántos respondieron.
+function Comparacion({ plantillas }) {
+    const filas = Object.entries(plantillas).map(([nombre, porEstado]) => ({ nombre, ...embudo(porEstado) }))
+        .sort((a, b) => a.nombre.localeCompare(b.nombre));
+    return (
+        <span className="bw-compara">
+            {filas.map((f) => (
+                <span key={f.nombre}>
+                    <b>{f.nombre}</b>
+                    <span>{f.enviados} enviados</span>
+                    <span>leyó {pct(f.leidos, f.entregados)}</span>
+                    <span className="bw-resp">respondió {pct(f.respondieron, f.entregados)} ({f.respondieron})</span>
+                </span>
+            ))}
+        </span>
+    );
+}
+
 function Lote({ lote, elegido, onElegir }) {
     const e = embudo(lote.por_estado);
+    const nombres = Object.keys(lote.plantillas || {});
     return (
         <button type="button" className={`bw-lote${elegido ? ' bw-lote--on' : ''}`} aria-pressed={elegido} onClick={onElegir}>
             <span className="bw-lote-top">
-                <b>{lote.plantilla}</b>
+                <b>{nombres.length > 1 ? `Al azar entre ${nombres.length} plantillas` : nombres[0]}</b>
                 <span className="bw-s">{fecha(lote.creado_en)} · {lote.por || '—'} · {lote.total} números</span>
                 {e.pendientes > 0 ? <Chip subtle color="var(--ln-success, #1f9d6b)">Mandando</Chip> : null}
             </span>
@@ -20,16 +41,17 @@ function Lote({ lote, elegido, onElegir }) {
                 <span><b>{e.leidos}</b> leídos</span><span><b>{e.respondieron}</b> respondieron</span>
                 {e.fallaron > 0 && <span><b>{e.fallaron}</b> fallaron</span>}
             </span>
+            {nombres.length > 1 && <Comparacion plantillas={lote.plantillas} />}
         </button>
     );
 }
 
 function descargar(lote, filas) {
     const celda = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-    const lineas = [['telefono', 'nombre', 'estado', 'enviado', 'respuesta', 'error', 'setter'].join(',')]
-        .concat(filas.map((f) => [f.telefono, f.nombre, ESTADOS[f.estado]?.label, f.enviado_en, f.respuesta, f.error, f.setter].map(celda).join(',')));
+    const lineas = [['telefono', 'nombre', 'plantilla', 'estado', 'enviado', 'respuesta', 'error', 'setter'].join(',')]
+        .concat(filas.map((f) => [f.telefono, f.nombre, f.plantilla, ESTADOS[f.estado]?.label, f.enviado_en, f.respuesta, f.error, f.setter].map(celda).join(',')));
     const url = URL.createObjectURL(new Blob([lineas.join('\n')], { type: 'text/csv;charset=utf-8' }));
-    Object.assign(document.createElement('a'), { href: url, download: `broadcast_${lote.plantilla}_${lote.creado_en.slice(0, 10)}.csv` }).click();
+    Object.assign(document.createElement('a'), { href: url, download: `broadcast_${lote.creado_en.slice(0, 10)}.csv` }).click();
     URL.revokeObjectURL(url);
 }
 
@@ -53,7 +75,7 @@ function Numeros({ lote, datos }) {
                         {vistas.map((f) => (
                             <tr key={f.telefono}>
                                 <td>{f.nombre || 'Sin nombre'}<br /><span className="bw-tel">+{f.telefono}</span></td>
-                                <td><Chip subtle color={ESTADOS[f.estado]?.color}>{ESTADOS[f.estado]?.label || f.estado}</Chip></td>
+                                <td><Chip subtle color={ESTADOS[f.estado]?.color}>{ESTADOS[f.estado]?.label || f.estado}</Chip><br /><span className="bw-s">{f.plantilla}</span></td>
                                 <td>
                                     {f.contacto_id
                                         ? <>{f.respuesta ? `«${f.respuesta}» · ` : ''}<a className="bw-link" href={`/inbox?c=${f.contacto_id}`}>Abrir chat</a>{f.setter && <><br /><span className="bw-s">{f.setter}</span></>}</>

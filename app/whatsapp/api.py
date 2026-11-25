@@ -1,7 +1,8 @@
 """/api/whatsapp: la herramienta «Broadcast de WhatsApp» (ADR-W229) y las plantillas. Solo admin y operador.
 
   · POST /envios/revisar            → {csv} → cuántos hay para mandar, ya recibieron, inválidos, repetidos.
-  · POST /envios                    → {csv, plantilla, idioma?, cantidad} → manda a los próximos `cantidad`.
+  · POST /envios                    → {csv, plantillas: [{nombre, idioma}], cantidad} → manda a los próximos
+                                       `cantidad`; con varias plantillas, cada número recibe una al azar.
   · GET  /envios                    → el historial: cada envío (lote) con su conteo, y el tope de hoy.
   · GET  /envios/<lote>             → los números de ese envío.
   · POST /envios/<lote>/frenar      → saca lo que todavía no salió.
@@ -43,17 +44,23 @@ def _filas(datos):
              'nombre': f[i_nom] if i_nom is not None and len(f) > i_nom else None} for f in filas if f]
 
 
-def _plantilla(nombre, idioma):
-    """La plantilla aprobada (o un error) y si lleva {{1}}."""
+def _plantillas(pedidas):
+    """[(nombre, idioma, con_nombre)] de las pedidas, todas aprobadas (si no, error). con_nombre: lleva {{1}}."""
+    if not pedidas:
+        raise envios.EnvioInvalido('Elegí una plantilla')
     try:
         todas = ClienteWhatsapp().plantillas()
     except ErrorDeEnvio as error:
         raise envios.EnvioInvalido(f'Meta no respondió: {error}')
-    p = next((x for x in todas if x['name'] == nombre and x.get('language') == idioma), None)
-    if p is None or p.get('status') != 'APPROVED':
-        raise envios.EnvioInvalido('Esa plantilla no está aprobada')
-    cuerpo = next((c.get('text') or '' for c in p.get('components') or [] if c.get('type') == 'BODY'), '')
-    return '{{1}}' in cuerpo
+    salida = []
+    for pedida in pedidas:
+        nombre, idioma = (pedida.get('nombre') or '').strip(), (pedida.get('idioma') or 'es').strip()
+        p = next((x for x in todas if x['name'] == nombre and x.get('language') == idioma), None)
+        if p is None or p.get('status') != 'APPROVED':
+            raise envios.EnvioInvalido(f'{nombre or "Esa plantilla"} no está aprobada')
+        cuerpo = next((c.get('text') or '' for c in p.get('components') or [] if c.get('type') == 'BODY'), '')
+        salida.append((nombre, idioma, '{{1}}' in cuerpo))
+    return salida
 
 
 def _hoy():
@@ -74,12 +81,10 @@ def revisar():
 @admin_required
 def enviar():
     datos = request.get_json(silent=True) or {}
-    plantilla, idioma = (datos.get('plantilla') or '').strip(), (datos.get('idioma') or 'es').strip()
     try:
         cantidad = int(datos.get('cantidad') or 0)
-        con_nombre = _plantilla(plantilla, idioma)
-        lote, n = envios.crear_lote(_filas(datos), plantilla, idioma, con_nombre, cantidad,
-                                    current_user.id, datetime.utcnow())
+        plantillas = _plantillas([p for p in datos.get('plantillas') or [] if isinstance(p, dict)])
+        lote, n = envios.crear_lote(_filas(datos), plantillas, cantidad, current_user.id, datetime.utcnow())
     except (TypeError, ValueError) as error:
         return jsonify({'message': str(error) if isinstance(error, envios.EnvioInvalido) else 'Cantidad inválida'}), 400
     return jsonify({'lote': lote, 'cantidad': n, 'hoy': _hoy()}), 201

@@ -2068,3 +2068,11 @@
 - **Decisión:** cuando un comentario arranca un flujo y la respuesta privada sale, el bot contesta el comentario en público con una frase corta que avisa del DM. Elige al azar entre cinco frases fijas para que Instagram no lo tome como spam. Si Meta la rechaza, queda en el log y el flujo sigue igual.
 - **Qué se pierde:** las frases no se eligen por flujo ni por campaña: son las mismas para todos y se cambian en el código.
 - **Consecuencias:** sin migración. Hace falta el permiso de comentarios del token (`instagram_business_manage_comments`, el mismo que ya trae los comentarios por webhook). La respuesta pública no se guarda como mensaje del chat.
+
+## ADR-W232: el broadcast reparte al azar entre plantillas para compararlas
+
+- **Fecha:** 2026-11-25 · **Subsistema:** herramienta «Broadcast de WhatsApp» (ADR-W229: `app/whatsapp/envios.py`, `historial.py`, `ventanas/herramientas/broadcastWa/`) · **Estado:** implementada
+- **Contexto:** la reactivación (#192) tiene tres textos aprobados (reactivacion_a, b y c) y la idea es ver cuál responde mejor.
+- **Decisión:** con más de una plantilla aprobada, la herramienta arranca en «Al azar entre N» (se pueden desmarcar). En cada «Enviar» los números se reparten en partes iguales y en orden al azar. El historial muestra, por plantilla, cuántos se enviaron, qué porcentaje leyó y qué porcentaje respondió (sobre los entregados); cada número dice qué plantilla recibió, también en el CSV descargado.
+- **Qué se pierde:** con envíos chicos (100 por día, unos 33 por plantilla) la diferencia entre plantillas puede ser azar; hay que juntar varios días antes de elegir.
+- **Consecuencias:** sin migración: la plantilla ya se guardaba por número. El POST /envios pasa a recibir `plantillas: [{nombre, idioma}]`.

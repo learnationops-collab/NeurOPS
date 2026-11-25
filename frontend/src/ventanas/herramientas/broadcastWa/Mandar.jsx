@@ -1,7 +1,7 @@
 // La vista de mandar (ADR-W229): el CSV, la plantilla como le llega a la persona y cuántos mandar ahora.
 import { useRef, useState } from 'react';
 import { FileSpreadsheet, Send } from 'lucide-react';
-import { Button, Chip, EmptyState, LinkButton, Select, Stepper, toast } from '../../../components/standard';
+import { Button, Chip, EmptyState, LinkButton, Segmented, Select, Stepper, toast } from '../../../components/standard';
 import { embudo, partesDe } from './useBroadcast';
 
 function Lista({ archivo, revision, onArchivo }) {
@@ -42,18 +42,59 @@ function Vista({ plantilla }) {
     );
 }
 
+const AZAR = '*';
+const clave = (p) => `${p.name}|${p.language}`;
+
+// Con «Al azar», cada número recibe una de las marcadas (en partes iguales); la vista previa muestra una por vez.
+function Plantillas({ plantillas, elegida, onElegir, marcadas, onMarcar }) {
+    const azar = elegida === AZAR;
+    const enJuego = azar ? plantillas.filter((p) => marcadas.includes(clave(p))) : plantillas.filter((p) => clave(p) === elegida);
+    const [vista, setVista] = useState(null);
+    const previa = enJuego.find((p) => clave(p) === vista) || enJuego[0];
+    const opciones = [...(plantillas.length > 1 ? [{ value: AZAR, label: `Al azar entre ${marcadas.length}` }] : []),
+        ...plantillas.map((p) => ({ value: clave(p), label: p.name }))];
+    return (
+        <div>
+            <span className="bw-rotulo">Plantilla</span>
+            <div className="bw-fila">
+                <Select size="sm" label="Plantilla" value={elegida} options={opciones} onChange={onElegir} />
+                <Chip subtle color="var(--ln-success, #1f9d6b)">Aprobada{azar ? 's' : ''}</Chip>
+            </div>
+            {azar && (
+                <div className="bw-fila bw-marcas">
+                    {plantillas.map((p) => (
+                        <Chip key={clave(p)} as="button" aria-pressed={marcadas.includes(clave(p))} subtle={!marcadas.includes(clave(p))}
+                            color="var(--ln-info, #3b7dd8)" onClick={() => onMarcar(clave(p))}>{p.name}</Chip>
+                    ))}
+                    <span className="bw-s">Cada número recibe una al azar, en partes iguales</span>
+                </div>
+            )}
+            {enJuego.length > 1 && (
+                <Segmented size="sm" label="Ver plantilla" value={clave(previa)} onChange={setVista}
+                    options={enJuego.map((p) => ({ value: clave(p), label: p.name.replace(/^.*_/, '').toUpperCase() }))} />
+            )}
+            {previa && <Vista plantilla={previa} />}
+        </div>
+    );
+}
+
 export default function Mandar({ datos }) {
     const { plantillas, historial, mandando } = datos;
     const [csv, setCsv] = useState(null);
     const [archivo, setArchivo] = useState(null);
     const [revision, setRevision] = useState(null);
-    const [elegida, setElegida] = useState('');
+    const [elegida, setElegida] = useState(null);
+    const [marcadas, setMarcadas] = useState(null);
     const [cantidad, setCantidad] = useState(33);
     const [enviando, setEnviando] = useState(false);
 
     const hoy = historial?.hoy || { usados: 0, tope: 100 };
     const libres = Math.max(0, hoy.tope - hoy.usados);
-    const plantilla = (plantillas || []).find((p) => `${p.name}|${p.language}` === elegida) || plantillas?.[0];
+    const todas = plantillas || [];
+    const marcadasYa = marcadas ?? todas.map(clave);
+    const eleccion = elegida ?? (todas.length > 1 ? AZAR : todas[0] && clave(todas[0]));
+    const elegidas = todas.filter((p) => (eleccion === AZAR ? marcadasYa.includes(clave(p)) : clave(p) === eleccion));
+    const marcar = (k) => setMarcadas(marcadasYa.includes(k) ? marcadasYa.filter((x) => x !== k) : [...marcadasYa, k]);
     const maximo = Math.min(libres, revision?.para_mandar ?? 0);
     const n = Math.min(cantidad, maximo);
 
@@ -65,8 +106,8 @@ export default function Mandar({ datos }) {
     const enviar = async () => {
         setEnviando(true);
         try {
-            const r = await datos.enviar({ csv, plantilla: plantilla.name, idioma: plantilla.language, cantidad: n });
-            toast(`Saliendo ${r.cantidad} mensajes con ${plantilla.name}`);
+            const r = await datos.enviar({ csv, cantidad: n, plantillas: elegidas.map((p) => ({ nombre: p.name, idioma: p.language })) });
+            toast(`Saliendo ${r.cantidad} mensajes${elegidas.length > 1 ? `, al azar entre ${elegidas.length} plantillas` : ` con ${elegidas[0].name}`}`);
             setRevision(await datos.revisar(csv));
         } catch (e) {
             toast(datos.mensaje(e, 'No se pudo mandar'), 'error');
@@ -80,18 +121,10 @@ export default function Mandar({ datos }) {
     return (
         <div className="bw-cuerpo">
             <Lista archivo={archivo} revision={revision} onArchivo={leer} />
-            <div>
-                <span className="bw-rotulo">Plantilla</span>
-                <div className="bw-fila">
-                    <Select size="sm" label="Plantilla" value={plantilla ? `${plantilla.name}|${plantilla.language}` : ''}
-                        options={(plantillas || []).map((p) => ({ value: `${p.name}|${p.language}`, label: p.name }))} onChange={setElegida} />
-                    {plantilla && <Chip subtle color="var(--ln-success, #1f9d6b)">Aprobada</Chip>}
-                </div>
-                {plantilla && <Vista plantilla={plantilla} />}
-            </div>
+            {plantillas && <Plantillas plantillas={todas} elegida={eleccion} onElegir={setElegida} marcadas={marcadasYa} onMarcar={marcar} />}
             <div className="bw-envio">
                 <Stepper label="Cuántos mandar" value={n} min={maximo ? 1 : 0} max={maximo} onChange={setCantidad} disabled={!maximo} />
-                <Button variant="primary" icon={<Send />} disabled={!csv || !plantilla || !n || enviando} onClick={enviar}>
+                <Button variant="primary" icon={<Send />} disabled={!csv || !elegidas.length || !n || enviando} onClick={enviar}>
                     {n ? `Enviar a ${n}` : 'Enviar'}
                 </Button>
                 <span className="bw-cupo" data-tip="Tope del día|Es del número, sumando todas las plantillas (hora de Argentina)">
@@ -103,7 +136,7 @@ export default function Mandar({ datos }) {
             </div>
             {curso && (
                 <div className="bw-curso">
-                    <span>Mandando <b>{mandando.plantilla}</b>: {mandando.total - curso.pendientes} de {mandando.total}</span>
+                    <span>Mandando: <b>{mandando.total - curso.pendientes} de {mandando.total}</b></span>
                     <span className="bw-prog"><i style={{ width: `${((mandando.total - curso.pendientes) / mandando.total) * 100}%` }} /></span>
                     <Button size="sm" onClick={() => datos.frenar(mandando.lote).then(() => toast('Frenado: lo que no salió queda para la próxima'))}>Frenar</Button>
                 </div>

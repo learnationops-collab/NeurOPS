@@ -13,25 +13,27 @@ def _iso(momento):
 
 
 def lotes():
-    filas = (db.session.query(WaEnvio.lote, WaEnvio.plantilla, db.func.min(WaEnvio.creado_en),
-                              db.func.min(WaEnvio.enviado_por_id))
-             .group_by(WaEnvio.lote, WaEnvio.plantilla).order_by(db.func.min(WaEnvio.creado_en).desc())
-             .limit(LOTES).all())
-    ids = [f[0] for f in filas]
-    conteo = {}
-    for lote, estado, n in (db.session.query(WaEnvio.lote, WaEnvio.estado, db.func.count(WaEnvio.id))
-                            .filter(WaEnvio.lote.in_(ids)).group_by(WaEnvio.lote, WaEnvio.estado)):
-        conteo.setdefault(lote, {})[estado] = n
-    usuarios = {u.id: u.username for u in User.query.filter(User.id.in_({f[3] for f in filas if f[3]}))}
-    return [{'lote': lote, 'plantilla': plantilla, 'creado_en': _iso(creado), 'por': usuarios.get(por),
+    """Cada envío con su conteo por estado, en total y por plantilla (`plantillas`: {nombre: {estado: n}})."""
+    filas = (db.session.query(WaEnvio.lote, db.func.min(WaEnvio.creado_en), db.func.min(WaEnvio.enviado_por_id))
+             .group_by(WaEnvio.lote).order_by(db.func.min(WaEnvio.creado_en).desc()).limit(LOTES).all())
+    conteo, por_plantilla = {}, {}
+    for lote, plantilla, estado, n in (db.session.query(WaEnvio.lote, WaEnvio.plantilla, WaEnvio.estado,
+                                                        db.func.count(WaEnvio.id))
+                                       .filter(WaEnvio.lote.in_([f[0] for f in filas]))
+                                       .group_by(WaEnvio.lote, WaEnvio.plantilla, WaEnvio.estado)):
+        total = conteo.setdefault(lote, {})
+        total[estado] = total.get(estado, 0) + n
+        por_plantilla.setdefault(lote, {}).setdefault(plantilla, {})[estado] = n
+    usuarios = {u.id: u.username for u in User.query.filter(User.id.in_({f[2] for f in filas if f[2]}))}
+    return [{'lote': lote, 'plantillas': por_plantilla.get(lote, {}), 'creado_en': _iso(creado), 'por': usuarios.get(por),
              'total': sum(conteo.get(lote, {}).values()), 'por_estado': conteo.get(lote, {})}
-            for lote, plantilla, creado, por in filas]
+            for lote, creado, por in filas]
 
 
 def numeros(lote):
     filas = (db.session.query(WaEnvio, IgContacto.setter_id).outerjoin(IgContacto, IgContacto.id == WaEnvio.contacto_id)
              .filter(WaEnvio.lote == lote).order_by(WaEnvio.id).all())
     setters = {u.id: u.username for u in User.query.filter(User.id.in_({s for _, s in filas if s}))}
-    return [{'telefono': e.telefono, 'nombre': e.nombre, 'estado': e.estado, 'enviado_en': _iso(e.enviado_en),
+    return [{'telefono': e.telefono, 'nombre': e.nombre, 'plantilla': e.plantilla, 'estado': e.estado, 'enviado_en': _iso(e.enviado_en),
              'error': e.error, 'respuesta': e.respuesta, 'contacto_id': e.contacto_id, 'setter': setters.get(s)}
             for e, s in filas]

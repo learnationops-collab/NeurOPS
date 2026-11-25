@@ -49,3 +49,10 @@
 .bw-tel{font-size:12px;color:var(--ln-text-muted);font-variant-numeric:tabular-nums}
 .bw-link{font-weight:600;color:var(--ln-info,#3b7dd8)}
 .bw-pie{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;color:var(--ln-text-muted)}
+.bw-marcas{margin-top:8px}
+.bw-marcas .ui-chip{cursor:pointer}
+.bw-cuerpo .ui-seg{margin-top:10px}
+.bw-compara{display:grid;gap:4px;padding-top:6px;border-top:1px solid var(--ln-border-subtle)}
+.bw-compara>span{display:grid;grid-template-columns:minmax(0,1.3fr) repeat(3,minmax(0,1fr));gap:8px;font-size:12px;color:var(--ln-text-muted)}
+.bw-compara b{font-size:12.5px;color:var(--ln-text-in);overflow:hidden;text-overflow:ellipsis}
+.bw-compara .bw-resp{color:#7D63E6;font-weight:700}

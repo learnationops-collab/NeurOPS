@@ -1038,3 +1038,6 @@
 
 ### 25/11/2026 · Inbox: el bot contesta en público los comentarios (ADR-W231)
 - Cuando un comentario dispara un flujo, además del DM el bot contesta debajo del comentario («¡Te escribí por privado! 📩» y otras cuatro, al azar), como hacía ManyChat: al lead le llega la notificación y es más probable que abra el mensaje ([respuesta_publica.py](../../app/automatizaciones/respuesta_publica.py)).
+
+### 25/11/2026 · Broadcast de WhatsApp: al azar entre plantillas (ADR-W232)
+- Cada número recibe una de las marcadas, en partes iguales, y el historial compara cuánto leyó y respondió cada una.
