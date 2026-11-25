@@ -1874,3 +1874,11 @@
 - **Decisión:** los avisos de agenda nueva, reprogramada y pase de triage a closing etiquetan además a cada cuenta activa con el rol triage que tenga su ID de Discord. No en las Momentum (las confirma el closer) ni en la agenda de la propia persona de triage, que ya va etiquetada como closer. Una cuenta triage sin ID de Discord no se etiqueta y no dispara @everyone.
 - **Qué se pierde:** nada. El canal suma una mención por aviso.
 - **Consecuencias:** sin migración. Los abandonos ya etiquetaban al triage y no cambian.
+
+## ADR-W208: Work como conector MCP de claude.ai para la tabla de Testeo de Learnation Marketing
+
+- **Fecha:** 2026-11-25 · **Subsistema:** Marketing (`app/api/mcp_publicacion.py`, `app/services/publicacion_metricas_service.py`, `workshop_metrics_service.resumen_periodo`) · **Estado:** implementado.
+- **Contexto:** Mario mira lo publicado desde el artifact Learnation Marketing (pestañas Testeo, Escalado y Apagado) y necesita junto a los números de Meta lo que solo sabe Work: clics al grupo de WhatsApp, agendas, ventas y cobrado. Un artifact no puede llamar a work.thelearnation.com; solo habla con los conectores de claude.ai. Se descartó dejar un archivo en Drive cada hora (Mario no lo quiere: otra pieza y datos viejos).
+- **Decisión:** Work expone un servidor MCP mínimo (HTTP, respuestas JSON, sin SSE) en `/api/mcp/<MCP_PUBLICACION_TOKEN>` con una sola herramienta de lectura, `metricas_publicacion(desde, hasta, zona)`: visitas y clics a WhatsApp por anuncio de Meta (`utm_content`), los números del embudo de DM por campaña (`anuncios_service.tablero`) y las agendas, ventas y cobrado neto del workshop del período. Se agrega en claude.ai como conector propio «Learnation Work»; la página lo llama al entrar y con Actualizar.
+- **Qué se pierde:** las agendas y ventas del workshop no se parten por anuncio ni por campaña (el lead de la landing es anónimo hasta que agenda): con dos campañas de workshop a la vez van solo al total. El secreto va en la dirección, no en una cabecera (claude.ai no manda cabeceras a un conector sin OAuth).
+- **Consecuencias:** variable nueva `MCP_PUBLICACION_TOKEN` (20+ caracteres) en Railway; sin ella la ruta responde 503 y con otro secreto, 401. Cambiar el secreto obliga a volver a cargar el conector en claude.ai.

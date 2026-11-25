@@ -844,3 +844,9 @@
 
 ### 25/11/2026 · Un «Training» personal vuelve a ocupar
 - El filtro de capacitaciones internas (29/10) tomaba cualquier título con «training», así que el «🥊 Training» diario de Mario (13:30, su calendario personal) no bloqueaba y le cayó una agenda encima. Ahora solo se saltean «Training Session», «Trainning…» y «Capacitación»; las «Trainning Session» de Andrés siguen sin ocupar.
+
+### 25/11/2026 · Work como conector de claude.ai para la tabla de Testeo (ADR-W208)
+- Ruta nueva `/api/mcp/<MCP_PUBLICACION_TOKEN>`: un servidor MCP de solo lectura con la herramienta `metricas_publicacion` (visitas y clics a WhatsApp por anuncio de Meta, entrantes/agendas/ventas/cobrado por campaña de DM y agendas/ventas/cobrado del workshop del período, neto).
+- La usa Learnation Marketing (Publicación › Testeo, Escalado y Apagado) junto con los números de Meta. Se carga en claude.ai como conector propio «Learnation Work».
+- `workshop_metrics_service.resumen_periodo`: las cifras del workshop para cualquier período, con el criterio de `calcular_prefill`.
+- Variable nueva en Railway: `MCP_PUBLICACION_TOKEN`.
