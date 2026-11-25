@@ -12,7 +12,7 @@
 // Integraciones y la tarjeta de Calendar muestra el resultado.
 
 import { useState } from 'react';
-import { Bell, CalendarDays, ChevronLeft, Clock, KeyRound, Timer, LifeBuoy, Palette, PanelBottom, Plug, User, Users } from 'lucide-react';
+import { Bell, CalendarCheck, CalendarDays, ChevronLeft, Clock, KeyRound, LifeBuoy, MessageCircle, Palette, PanelBottom, Timer, User, Users } from 'lucide-react';
 import { TarjetaCalendar, TarjetaWhatsapp } from '../pages/agendas_v2/secciones/conf/cuenta';
 import { TarjetaDisponibilidad, TarjetaSesiones } from '../pages/agendas_v2/secciones/conf/disponibilidad';
 import MisEventos from '../pages/agendas_v2/secciones/conf/MisEventos';
@@ -21,6 +21,7 @@ import TabApariencia from '../temas/TabApariencia';
 import { puedeElegirTema, useApariencia } from '../context/AparienciaContext';
 import { useTemaDeHoja } from './temaDeHoja';
 import TabDock from './TabDock';
+import { Tooltip } from '../components/standard';
 import { TabAyuda, TabCuenta, TabNotificaciones, TabSeguridad, IdentidadConfiguracion, resumenDe } from './configuracionSecciones';
 import '../pages/agendas_v2/thalamus.css';
 import './configuracion.css';
@@ -33,7 +34,8 @@ const SECCIONES = [
     { id: 'notificaciones', nombre: 'Notificaciones', desc: 'Qué te avisa y por dónde', Icono: Bell, grupo: 'Vos', para: () => true },
     { id: 'disponibilidad', nombre: 'Disponibilidad', desc: 'Cuándo te ofrecemos a los leads', Icono: Clock, grupo: 'Trabajo', para: (rol) => RECIBEN_AGENDAS.includes(rol) },
     { id: 'sesiones', nombre: 'Sesiones', desc: 'Duración y margen de cada sesión', Icono: Timer, grupo: 'Trabajo', para: (rol) => ['closer', 'triage'].includes(rol) },
-    { id: 'integraciones', nombre: 'Integraciones', desc: 'Google Calendar y WhatsApp', Icono: Plug, grupo: 'Trabajo', para: (rol) => RECIBEN_AGENDAS.includes(rol) },
+    { id: 'google', nombre: 'Google Calendar', desc: 'Dónde se crean tus agendas y qué te bloquea', Icono: CalendarCheck, grupo: 'Trabajo', para: (rol) => RECIBEN_AGENDAS.includes(rol) },
+    { id: 'whatsapp', nombre: 'WhatsApp', desc: 'Dónde te avisamos cada agenda nueva', Icono: MessageCircle, grupo: 'Trabajo', para: (rol) => RECIBEN_AGENDAS.includes(rol) },
     { id: 'eventos', nombre: 'Mis eventos', desc: 'Tus links de agendamiento', Icono: CalendarDays, grupo: 'Trabajo', para: (rol) => rol === 'closer' },
     { id: 'equipo', nombre: 'Equipo', desc: 'Altas, roles y contraseñas', Icono: Users, grupo: 'Trabajo', para: (rol) => rol === 'admin' },
     { id: 'seguridad', nombre: 'Seguridad', desc: 'Cómo entrás y tus sesiones', Icono: KeyRound, grupo: 'Cuenta', para: () => true },
@@ -41,13 +43,15 @@ const SECCIONES = [
 ];
 export const pestanasDe = (rol) => SECCIONES.filter(p => p.para(rol));
 
-// Volviendo de Google se abre en Integraciones, donde está el resultado.
-const tabDeLaUrl = () => (new URLSearchParams(window.location.search).get('google_connected') ? 'integraciones' : null);
+// Volviendo de Google se abre en Google Calendar, donde está el resultado. 'integraciones' es el nombre viejo.
+const tabDeLaUrl = () => (new URLSearchParams(window.location.search).get('google_connected') ? 'google' : null);
+const ALIAS = { integraciones: 'google' };
 
 function Cuerpo({ id, user }) {
     if (id === 'disponibilidad') return <TarjetaDisponibilidad />;
     if (id === 'sesiones') return <TarjetaSesiones />;
-    if (id === 'integraciones') return <><TarjetaCalendar /><TarjetaWhatsapp /></>;
+    if (id === 'google') return <TarjetaCalendar />;
+    if (id === 'whatsapp') return <TarjetaWhatsapp />;
     if (id === 'eventos') return <MisEventos />;
     if (id === 'equipo') return <TeamManagementPage embebido />;
     if (id === 'apariencia') return <TabApariencia />;
@@ -66,7 +70,7 @@ export default function Configuracion({ user = null, tabInicial = null, onTab = 
     const secciones = pestanasDe(user?.role);
     const { ajustes } = useApariencia();
     const vista = ajustes?.vista === 'baldosas' ? 'baldosas' : 'pestanas';
-    const [elegida, setElegida] = useState(() => tabInicial || tabDeLaUrl());
+    const [elegida, setElegida] = useState(() => ALIAS[tabInicial] || tabInicial || tabDeLaUrl());
     const actual = secciones.find(p => p.id === elegida) || null;
     const elegir = (id) => { setElegida(id); onTab(id); };
     const [raiz, dataTheme] = useTemaDeHoja();
@@ -81,6 +85,7 @@ export default function Configuracion({ user = null, tabInicial = null, onTab = 
                         </button>
                         <Cabeza s={actual} />
                         <div className="cu-cuerpo"><Cuerpo id={actual.id} user={user} /></div>
+                        <Tooltip />
                     </div>
                 ) : (
                     <div className="cu-baldosas">
@@ -119,8 +124,9 @@ export default function Configuracion({ user = null, tabInicial = null, onTab = 
             </nav>
             <div className="cu-panel" id="cu-cuerpo" role="tabpanel">
                 <Cabeza s={enPestana} />
-                <div className="cu-cuerpo"><Cuerpo id={enPestana.id} user={user} /></div>
+                <div className="cu-cuerpo" key={enPestana.id}><Cuerpo id={enPestana.id} user={user} /></div>
             </div>
+            <Tooltip />
         </div>
     );
 }

@@ -21,9 +21,9 @@ export function Estado({ ok, si, no }) {
 }
 
 // Tarjeta de un ajuste: ícono, título, para qué sirve y su estado.
-export function Tarjeta({ icono, titulo, texto, estado, clase = '', children }) {
+export function Tarjeta({ icono, titulo, texto, estado, clase = '', aura, children }) {
     return (
-        <Panel as="section" className={'cu-tarjeta ' + clase}>
+        <Panel as="section" className={'cu-tarjeta ' + clase} aura={aura} soft>
             <header className="cu-cab">
                 <span className="icono-m"><Icono n={icono} s={19} /></span>
                 <div className="cu-tit"><h3 className="t-h3">{titulo}</h3>{texto && <p className="t-sm mut">{texto}</p>}</div>
@@ -204,6 +204,9 @@ export function TarjetaCalendar({ volver }) {
     );
 }
 
+const PASOS_WA = ['Tu número', 'La prueba', 'Confirmado'];
+const AURA_WA = ['var(--success)', 'var(--brand-secondary)', 'var(--success)', 'var(--brand-navy)'];
+
 /** WhatsApp: guardar el número, mandar una prueba y confirmar que llegó. Cambiar el número lo vuelve a pedir. */
 export function TarjetaWhatsapp() {
     const [estado, setEstado] = useState(null); // { numero, confirmado }
@@ -236,10 +239,20 @@ export function TarjetaWhatsapp() {
     });
 
     const cambio = estado && numero.replace(/\D/g, '') !== (estado.numero || '');
+    const etapa = estado?.confirmado && !cambio ? 3 : paso === 'enviado' ? 2 : 1;
     return (
-        <Tarjeta icono="whatsapp" titulo="WhatsApp" texto="Cada agenda nueva te llega acá." clase="cu-tarjeta--fila"
+        <Tarjeta icono="whatsapp" titulo="WhatsApp" texto="Cada agenda nueva te llega con los datos del lead." clase="cu-wa"
+            aura={etapa === 3 ? AURA_WA : undefined}
             estado={estado && <Estado ok={estado.confirmado && !cambio} si="Confirmado" no="Sin confirmar" />}>
             {!estado && !error ? <p className="t-sm mut">Cargando…</p> : (
+                <>
+                <ol className="cu-pasos" aria-label="Cómo se confirma">
+                    {PASOS_WA.map((t, i) => (
+                        <li key={t} className={etapa === 3 || i + 1 < etapa ? 'hecho' : i + 1 === etapa ? 'ahora' : ''} style={{ '--i': i }}>
+                            <span>{i + 1 < etapa || etapa === 3 ? <Icono n="check" s={13} /> : i + 1}</span>{t}
+                        </li>
+                    ))}
+                </ol>
                 <div className="cu-fila">
                     <InputGroup prefix={<>+</>} style={{ flex: '1 1 240px' }} data-tip="Con código de país, sin + ni espacios">
                         <label className="sr" htmlFor="cu-wa">Tu número, con código de país</label>
@@ -251,12 +264,15 @@ export function TarjetaWhatsapp() {
                             <Button disabled={ocupado} onClick={probar}>No me llegó, reenviar</Button>
                             <Button variant="primary" icon={<Icono n="check" />} disabled={ocupado} onClick={confirmar}>Sí, me llegó</Button>
                         </>
-                    ) : (!estado?.confirmado || cambio) && (
+                    ) : (!estado?.confirmado || cambio) ? (
                         <Button variant="primary" icon={<Icono n="whatsapp" />} disabled={ocupado || numero.replace(/\D/g, '').length < 8} onClick={probar}>
                             Mandarme una prueba
                         </Button>
+                    ) : (
+                        <Button icon={<Icono n="whatsapp" />} disabled={ocupado} onClick={probar}>Mandarme otra prueba</Button>
                     )}
                 </div>
+                </>
             )}
             <Mensajes error={error} aviso={aviso} />
         </Tarjeta>

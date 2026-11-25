@@ -16,7 +16,15 @@ import Available from './Available';
 import { MAX_FRANJAS, horarioLaV } from './cobertura';
 import { HUMO_PERSONA, SemanaMini, setTeam } from './comun';
 import { EditorSesiones } from './Sesiones';
-import { Button, IconButton, ModalHeader } from '../../../../components/standard';
+import HorarioCalendario from './HorarioCalendario';
+import { Button, IconButton, ModalHeader, Segmented } from '../../../../components/standard';
+
+// Calendario (arrastrar) o Lista (desplegables); se recuerda en el navegador.
+const CLAVE_VISTA = 'horario_vista';
+const VISTAS = [
+    { value: 'calendario', label: 'Calendario', icon: <Icono n="calendar" s={14} /> },
+    { value: 'lista', label: 'Lista', icon: <Icono n="opciones" s={14} /> },
+];
 
 const OPS_DESDE = HORAS.slice(0, -1).map(h => ({ v: h, n: h }));
 const OPS_HASTA = HORAS.slice(1).map(h => ({ v: h, n: h }));
@@ -26,7 +34,7 @@ const OPS_TOPE = [{ v: '0', n: 'Sin tope semanal', icono: 'calendar' },
     ...[5, 10, 15, 20, 25, 30, 35, 40, 50].map(n => ({ v: String(n), n: `Máx. ${n} por semana`, icono: 'calendar' }))];
 
 // Popover "Copiar horas a…": cierra con Escape o con un clic afuera.
-function CopiarA({ desde, onAplicar, onCerrar }) {
+export function CopiarA({ desde, onAplicar, onCerrar }) {
     const ref = useRef(null);
     const [sel, setSel] = useState({});
     const cerrarRef = useRef(onCerrar);
@@ -61,6 +69,8 @@ function CopiarA({ desde, onAplicar, onCerrar }) {
 export function HorarioEditor({ p, bloqueado = false, onGuardar = null, acciones = null }) {
     const { d } = useDatos();
     const [copiar, setCopiar] = useState(null);   // día con el popover abierto
+    const [vista, setVista] = useState(() => (localStorage.getItem(CLAVE_VISTA) === 'lista' ? 'lista' : 'calendario'));
+    const elegirVista = (v) => { setVista(v); localStorage.setItem(CLAVE_VISTA, v); };
     const raiz = useRef(null);
     const otros = onGuardar ? [] : closers(d).filter(x => x.id !== p.id && horasSemana(x) > 0);
     const editarPersona = (campos) => (onGuardar ? onGuardar(campos) : almacen.editar('personas', p.id, campos, true));
@@ -93,6 +103,7 @@ export function HorarioEditor({ p, bloqueado = false, onGuardar = null, acciones
     return (
         <div className="horario" ref={raiz}>
             <div className="horario-barra">
+                <Segmented size="sm" label="Vista del horario" value={vista} options={VISTAS} onChange={elegirVista} />
                 <Sx sm label="Zona horaria" valor={p.tz} opciones={OPS_ZONA} disabled={dis} onChange={v => editarPersona({ tz: v })} />
                 <Sx sm label="Llamadas por semana" valor={String(p.llamadas_semana || 0)} opciones={OPS_TOPE} disabled={dis}
                     onChange={v => editarPersona({ llamadas_semana: Number(v) })} />
@@ -106,7 +117,7 @@ export function HorarioEditor({ p, bloqueado = false, onGuardar = null, acciones
                     {acciones}
                 </div>
             </div>
-            <div className="dias">
+            {vista === 'calendario' ? <HorarioCalendario horario={p.horario} bloqueado={bloqueado} onCambio={hz => guardar(hz)} /> : <div className="dias">
                 {DIAS.map(dd => {
                     const rs = p.horario[dd.d] || [];
                     return (
@@ -115,18 +126,18 @@ export function HorarioEditor({ p, bloqueado = false, onGuardar = null, acciones
                             <div className="dia-cuerpo">
                                 {!rs.length && (
                                     <div className="dia-no">No disponible
-                                        <IconButton label={'Agregar horario el ' + dd.n} icon={<Icono n="plus" />} size="xs" disabled={dis} onClick={() => sumar(dd.d)} />
+                                        <IconButton label={'Agregar horario el ' + dd.n} data-tip="Agregar un horario" icon={<Icono n="plus" />} size="xs" disabled={dis} onClick={() => sumar(dd.d)} />
                                     </div>
                                 )}
                                 {rs.map((r, j) => (
                                     <div key={j} className={'rango' + (aMin(r[1]) <= aMin(r[0]) ? ' mal' : '')} data-r={j}>
-                                        <Sx sm label={'Desde, ' + dd.n} valor={r[0]} opciones={OPS_DESDE} disabled={dis} onChange={v => fijar(dd.d, j, 0, v)} />–
+                                        <Sx sm label={'Desde, ' + dd.n} valor={r[0]} opciones={OPS_DESDE} disabled={dis} onChange={v => fijar(dd.d, j, 0, v)} /><span className="rango-a">–</span>
                                         <Sx sm label={'Hasta, ' + dd.n} valor={r[1]} opciones={OPS_HASTA} disabled={dis} onChange={v => fijar(dd.d, j, 1, v)} />
-                                        <IconButton label={'Quitar ' + r[0] + '–' + r[1] + ', ' + dd.n} icon={<Icono n="x" />} size="xs" danger disabled={dis} onClick={() => quitar(dd.d, j)} />
+                                        <IconButton label={'Quitar ' + r[0] + '–' + r[1] + ', ' + dd.n} data-tip="Quitar este horario" icon={<Icono n="x" />} size="xs" danger disabled={dis} onClick={() => quitar(dd.d, j)} />
                                         {j === 0 && (
                                             <div className="dia-acc">
-                                                <IconButton label="Agregar otro horario" icon={<Icono n="plus" />} size="xs" disabled={dis || rs.length >= MAX_FRANJAS} onClick={() => sumar(dd.d)} />
-                                                <IconButton label="Copiar a otros días" icon={<Icono n="copiar" />} size="xs" data-copiar-btn="" disabled={dis} aria-expanded={copiar === dd.d}
+                                                <IconButton label="Agregar otro horario" data-tip="Sumar otro horario este día" icon={<Icono n="plus" />} size="xs" disabled={dis || rs.length >= MAX_FRANJAS} onClick={() => sumar(dd.d)} />
+                                                <IconButton label="Copiar a otros días" data-tip="Copiar este día a otros" icon={<Icono n="copiar" />} size="xs" data-copiar-btn="" disabled={dis} aria-expanded={copiar === dd.d}
                                                     onClick={() => setCopiar(copiar === dd.d ? null : dd.d)} />
                                             </div>
                                         )}
@@ -158,7 +169,7 @@ export function HorarioEditor({ p, bloqueado = false, onGuardar = null, acciones
                         </div>
                     );
                 })}
-            </div>
+            </div>}
         </div>
     );
 }

@@ -32,7 +32,7 @@ export function ConfiguracionProvider({ children }) {
     // Volviendo de Google (o entrando con ?vista=configuracion), se abre sola; Configuracion elige Integraciones.
     useEffect(() => {
         if (!user || !pideAbrir()) return;
-        abrirVentana('configuracion', { tab: new URLSearchParams(window.location.search).get('google_connected') ? 'integraciones' : null });
+        abrirVentana('configuracion', { tab: new URLSearchParams(window.location.search).get('google_connected') ? 'google' : null });
         limpiarUrl();
     }, [user]);
 

@@ -908,3 +908,10 @@
 ### 25/11/2026 · Reprogramar sin indicador de pasos
 - Se saca la fila «Con quién · Día y hora · Motivo»: se avanza con «Siguiente» y se vuelve con «Volver». Closers/Triage pasa a la fila del título, como la zona del lead y la anticipación.
 - Los controles de «Día y hora» dicen qué son en una palabra: «Lead:» con la bandera y «Espera:» con el reloj de arena, separados por una línea y con más aire entre ellos.
+
+### 25/11/2026 · Horario en calendario, Google Calendar y WhatsApp separados (ADR-W216)
+- El horario se marca en un calendario: arrastrar para marcar (también varios días de una), mover un bloque, estirar sus bordes, × para quitar, copiar el día desde su cabecera. La vista Lista queda como opción.
+- En la Lista, la ×, el + y copiar van en una sola fila; todos los íconos explican qué hacen al pasar el mouse.
+- Configuración: Google Calendar y WhatsApp son pestañas separadas.
+- WhatsApp con sus tres pasos (número, prueba, confirmado) y «Mandarme otra prueba».
+- Cupos con número que cuenta, aura y barras de color; la primera es «Hoy».

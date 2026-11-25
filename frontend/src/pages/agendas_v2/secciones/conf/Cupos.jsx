@@ -6,8 +6,29 @@
 import { useEffect, useRef, useState } from 'react';
 import api from '../../../../services/api';
 import { DIAS } from '../../core/catalogos';
+import { Aura, BRAND_AURA } from '../../../../components/standard';
 
 const LETRA = Object.fromEntries(DIAS.map(x => [x.d, x]));
+
+// El número cuenta hasta el valor nuevo (desde 0 la primera vez).
+function useContar(valor) {
+    const [n, setN] = useState(0);
+    const desde = useRef(0);
+    useEffect(() => {
+        if (valor == null) return undefined;
+        const a = desde.current, t0 = performance.now();
+        let raf;
+        const paso = (t) => {
+            const k = Math.min(1, (t - t0) / 700);
+            desde.current = Math.round(a + (valor - a) * (1 - Math.pow(1 - k, 3)));
+            setN(desde.current);
+            if (k < 1) raf = requestAnimationFrame(paso);
+        };
+        raf = requestAnimationFrame(paso);
+        return () => cancelAnimationFrame(raf);
+    }, [valor]);
+    return n;
+}
 
 /** `borrador`: {horario, tz} sin guardar (o null: lo guardado). `version`: al cambiar, vuelve a leer Google. */
 export default function Cupos({ borrador = null, version = 0 }) {
@@ -37,6 +58,7 @@ export default function Cupos({ borrador = null, version = 0 }) {
         return () => { vivo = false; clearTimeout(t); };
     }, [clave, version]);
 
+    const contado = useContar(datos?.libres);
     useEffect(() => {
         if (!delta) return undefined;
         const t = setTimeout(() => setDelta(0), 4000);
@@ -47,8 +69,9 @@ export default function Cupos({ borrador = null, version = 0 }) {
     const max = Math.max(1, ...datos.dias.map(d => d.total));
     return (
         <section className={'cupos' + (cargando ? ' cupos--cargando' : '')} aria-live="polite" aria-label="Cupos libres de los próximos 7 días">
+            <Aura colors={BRAND_AURA} size="card" soft />
             <div className="cupos-num">
-                <b key={datos.libres}>{datos.libres}</b>
+                <b>{contado}</b>
                 <span>cupos libres<small>próximos 7 días · de {datos.total} en tu horario</small></span>
                 {delta !== 0 && <em key={delta + '-' + datos.libres} className={delta > 0 ? 'sube' : 'baja'}>{delta > 0 ? '+' : '−'}{Math.abs(delta)}</em>}
             </div>
@@ -64,7 +87,7 @@ export default function Cupos({ borrador = null, version = 0 }) {
                                 <i className="cupos-lib" style={{ height: (d.libres / max) * 100 + '%' }} />
                             </div>
                             <b>{d.libres}</b>
-                            <span>{dia.c}</span>
+                            <span>{i === 0 ? 'Hoy' : dia.c}</span>
                         </div>
                     );
                 })}
