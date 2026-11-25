@@ -1,7 +1,7 @@
 """API de gestion de Agendas 2.0 (/api/agendas-v2): la usa Thalamus, la herramienta del director
 comercial. Toda ruta exige sesion; la guarda vive en el before_request, asi que ninguna vista puede
-olvidarse de chequearlo. La direccion configura todo. El setter (10/10/2026) entra a mirar: solo las
-lecturas de VISTAS_DE_LECTURA y sin los datos personales de otros (`_para_lectura`).
+olvidarse de chequearlo. La direccion y los setters configuran todo (desde el 25/11/2026, ADR-W227;
+antes el setter solo miraba). ROLES_DE_LECTURA queda vacio: si un rol vuelve a solo mirar, se suma ahi.
 Contrato: docs/agendas_v2_api.md.
 """
 
@@ -17,11 +17,11 @@ from app.models.user import ROLE_ADMIN, ROLE_CLOSER, ROLE_DIRECTOR_COMERCIAL, RO
 
 bp = Blueprint('agendas_v2_admin', __name__)
 
-ROLES_CON_ACCESO = (ROLE_ADMIN, ROLE_DIRECTOR_COMERCIAL)
-# Ven Thalamus sin cambiar nada: funnels, formularios, equipo y Stats, su link y la prueba del
-# agendamiento. Lo que se configura es de todos (un funnel o un evento borrado deja sin agendas a todo
-# el equipo), asi que queda para la direccion. Vale el rol ACTIVO, como en toda la app.
-ROLES_DE_LECTURA = (ROLE_SETTER,)
+# Los setters configuran Agendamiento igual que la direccion (Mario, 25/11/2026, ADR-W227).
+ROLES_CON_ACCESO = (ROLE_ADMIN, ROLE_DIRECTOR_COMERCIAL, ROLE_SETTER)
+# Ven Thalamus sin cambiar nada (funnels, formularios, equipo y Stats, su link y la prueba). Hoy ninguno.
+# Vale el rol ACTIVO, como en toda la app.
+ROLES_DE_LECTURA = ()
 VISTAS_DE_LECTURA = frozenset({'estado', 'estadisticas', 'version', 'ocupacion', 'fichas', 'usuarios', 'turnos_lead'})
 # Lo que el setter también puede cambiar: los días del link desde Turnos (Santi, 25/11/2026, ADR-W226).
 VISTAS_DEL_SETTER = frozenset({'cambiar_dias'})

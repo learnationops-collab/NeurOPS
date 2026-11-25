@@ -1008,3 +1008,4 @@
 
 ### 25/11/2026 · Portal: los setters ven Agendamiento
 - La tarjeta Agendamiento aparece en el Portal de los setters (Eli y Paula), en solo lectura como ya lo permitía el servidor desde el 10/10. Antes el rol setter solo tenía Setting e Inbox ([areas.js](../../frontend/src/utils/areas.js)).
+- Los setters ya no entran en solo lectura: configuran Agendamiento igual que la dirección comercial (ADR-W227, [api_admin.py](../../app/agendas_v2/api_admin.py)).
