@@ -20,7 +20,6 @@ import { abrirSimulacion } from '../../sesion/simulacion';
 import CloserLeadsAudit from './audit/CloserLeadsAudit';
 import SeguimientosPane from './components/SeguimientosPane';
 import EsqueletoKanban from './components/EsqueletoKanban';
-import EsqueletoSiguientePaso from './components/EsqueletoSiguientePaso';
 import { escalonDe, useVentanaDeEntrada } from '../../components/huesos/Huesos';
 import DashboardComercial from '../comercial/DashboardComercial';
 import DockSecciones from '../comercial/components/DockSecciones';
@@ -32,7 +31,6 @@ import '../comercial/comercial.css';
 import '../../components/dashboard/pareja.css';
 import './clarity-v6.css';
 import RailResumen from './components/RailResumen';
-import { Chips, chipsDe } from './confirmar/ChipsLead';
 import { useAltoHeader } from './useAltoHeader';
 import './sidebar-v6.css';
 import ComisionMesCard from './components/ComisionMesCard';
@@ -53,7 +51,7 @@ import { agendaParaVender, ejecutarAccion, mensajeDeError } from '../../componen
 import { ayudaDeResultado } from '../../utils/estadosAgenda';
 import ConfirmarVistas from './confirmar/ConfirmarVistas';
 import { etapaDeConfirmacion } from './confirmar/etapas';
-import { decisorCorto, esDeFormulario, inversionCorta, respuestaDe } from './confirmar/propiedades';
+import { decisorCorto, esDeFormulario, inversionCorta, paisDe, respuestaDe } from './confirmar/propiedades';
 
 const ORDINALES = ['primer', 'segundo', 'tercer', 'cuarto', 'quinto', 'sexto', 'séptimo', 'octavo', 'noveno', 'décimo'];
 
@@ -247,7 +245,7 @@ const CloserWorkflowPage = () => {
     // A quién seguir primero (cobros -> hot -> fríos), reportado por SeguimientosPane — ver su
     // prop `onTopPending`. `undefined` = todavía no se sabe (recién montado/cargando), `null` =
     // no hay nadie a quien seguir, objeto = { item, tipo, source, payload }.
-    const [seguimientoHero, setSeguimientoHero] = useState(undefined);
+    const [, setSeguimientoHero] = useState(undefined);
 
     // Chequeo silencioso del estado de hoy al cargar el mazo, sin depender de que el closer
     // entre a la pestaña de reporte — la tarjeta "Tu día" necesita `activity` (trabajo real de
@@ -283,7 +281,7 @@ const CloserWorkflowPage = () => {
     // Contadores de pestañas (v6)
     const [counts, setCounts] = useState({ confirmations: 0, calls: 0, seguimientos: 0 });
     // Si `counts` ya vino del servidor alguna vez. Los ceros de arriba son el valor inicial, no un
-    // "no hay nada": hasta que llegan, "Tu siguiente paso" va en hueso (ver EsqueletoSiguientePaso).
+    // "no hay nada": hasta que llegan, "Tu siguiente paso" va en hueso.
     const [countsCargados, setCountsCargados] = useState(false);
 
     // "Quiero procrastinar" (v7): calculadora de "esto vale la pena antes de irte a scrollear",
@@ -1131,30 +1129,6 @@ const CloserWorkflowPage = () => {
         }
     };
 
-    // "Tu siguiente paso": el lead más urgente dentro de la pestaña activa, para no tener que
-    // escanear toda la bandeja buscando qué tocar primero. Se arma con los mismos datos que ya
-    // trajo esa pestaña (sin pegarle de nuevo a la API); por eso solo aplica a 'confirmations' y
-    // 'calls' -las dos que manejan su lista acá- y no a 'seguimientos', que vive aparte en
-    // SeguimientosPane y no expone sus datos a este nivel.
-    const heroLead = useMemo(() => {
-        if (activeView !== 'inbox') return null;
-        let pool;
-        if (activeStep === 'confirmations') {
-            pool = [...confirmationsPipeline.porContactar, ...confirmationsPipeline.contactado];
-        } else if (activeStep === 'calls') {
-            pool = filteredAgendas;
-        } else {
-            return null;
-        }
-        if (!pool.length) return null;
-        // El más atrasado primero (fecha agendada más vieja); si nada está atrasado, el más próximo.
-        return pool.slice().sort((a, b) => {
-            const da = parseUtcIso(a.start_time)?.getTime() ?? Infinity;
-            const db = parseUtcIso(b.start_time)?.getTime() ?? Infinity;
-            return da - db;
-        })[0];
-    }, [activeView, activeStep, confirmationsPipeline, filteredAgendas]);
-
     // Pipeline Kanban para Llamadas (v7), calcado de la referencia visual: "Atrasadas" (sin
     // reportar, de días anteriores al seleccionado), "Hoy" (sin reportar, del día seleccionado —
     // "por tomar") y "Reportadas" (del día seleccionado, ya procesadas). A diferencia del
@@ -1279,6 +1253,8 @@ const CloserWorkflowPage = () => {
         const decision = decisorCorto(a);
         const telefono = (a.phone || '').trim();
         const tagDeCloser = ver('closer') && esTriage && a.closer_id && a.closer_id !== user?.id;
+        // Examen y país, chiquitos debajo del teléfono.
+        const meta = [ver('examen') && a.examen, ver('telefono') && paisDe(a)].filter(Boolean);
         const etiquetas = [
             ver('avisos') && a.desplazada && { texto: 'Reagendar: horario tomado', tono: 'var(--cl-warning)', title: 'Un lead A/B o una Momentum tomó este horario. La agenda sigue en pie: acordá otro con el lead.' },
             // ADR-W199: al agendar, el lead avisó que ningún horario le sirve.
@@ -1286,11 +1262,7 @@ const CloserWorkflowPage = () => {
             ver('avisos') && isPendingReferral && { texto: 'Contactar y acordar fecha', tono: 'var(--cl-lila)' },
             // El triage confirma las agendas de todos los closers (ADR-W200): la tarjeta dice de quién es.
             tagDeCloser
-                && { texto: `${ver('segmento') ? a.segmento || '' : ''} de ${a.closer_name}`.trim(), tono: 'var(--cl-info)', title: 'Confirmala antes de su llamada con el closer' },
-            // El segmento y sus puntos (la del triage ya lo dice en «A de <closer>»).
-            ver('segmento') && a.segmento && !tagDeCloser
-                && { texto: a.segmento_puntos != null ? `${a.segmento} · ${fmtPuntos(a.segmento_puntos)} pts` : a.segmento, tono: TONO_SEGMENTO[a.segmento] || 'var(--cl-info)', title: 'Segmento del lead según su formulario' },
-            ver('examen') && a.examen && { texto: a.examen, tono: 'var(--cl-lila)' },
+                && { texto: `De ${a.closer_name}`, tono: 'var(--cl-info)', title: 'Confirmala antes de su llamada con el closer' },
             (phase === 'call' || phase === 'call_done') && a.closer_result && a.closer_result !== 'Pendiente'
                 && { texto: a.closer_result, tono: 'var(--cl-magenta)', title: ayudaDeResultado(a.closer_result) },
             ver('avisos') && reminderBadge && { texto: reminderBadge.label, tono: reminderBadge.tono },
@@ -1346,7 +1318,14 @@ const CloserWorkflowPage = () => {
 
                 <div className="kc-cuerpo">
                 <div className="kc-top">
-                <span className="kc-av" aria-hidden="true">{iniciales}</span>
+                {/* El segmento va como letra sobre el avatar (25/11/2026): A, B, C o D, sin los puntos (en el title). */}
+                <span className="kc-av" aria-hidden="true">
+                    {iniciales}
+                    {ver('segmento') && a.segmento && (
+                        <span className="kc-seg" style={{ '--s': TONO_SEGMENTO[a.segmento] || 'var(--cl-info)' }}
+                            title={`Segmento ${a.segmento}${a.segmento_puntos != null ? ` · ${fmtPuntos(a.segmento_puntos)} pts` : ''}`}>{a.segmento}</span>
+                    )}
+                </span>
                 <div className="kc-id">
                 <b className="kc-nombre">
                     <span className="kc-nombre-t" title={a.lead_name || 'Sin Nombre'}>{a.lead_name || 'Sin Nombre'}</span>
@@ -1372,6 +1351,7 @@ const CloserWorkflowPage = () => {
                         </button>
                     </div>
                 )}
+                {(meta.length > 0) && <div className="kc-meta">{meta.join(' · ')}</div>}
                 </div>
                 {a.id > 0 && <EliminarLead agenda={a} onEliminado={alEliminarLead} />}
                 </div>
@@ -1827,16 +1807,11 @@ const CloserWorkflowPage = () => {
                     const confirmacionesPendientes = Math.max(0, counts.confirmations - (counts.confirmations_done || 0));
                     const pendingToday = confirmacionesPendientes + counts.calls + counts.seguimientos;
                     const totalToday = doneToday + pendingToday;
-                    const pct = totalToday ? Math.round((doneToday / totalToday) * 100) : 0;
                     // En Confirmar y Reportar la segunda tarjeta mide esa sección, no el día entero
                     // (pedido del 23/10/2026): Confirmar, el porcentaje de confirmación del pool;
                     // Reportar, el de asistencia de las llamadas reportadas del día. Asistió todo lo
                     // reportado menos No Show y Cancelada; una reagendada no cuenta para ningún lado.
                     let metrica = null;
-                    // En Reportar, sin nada por reportar, la primera tarjeta muestra la presentación
-                    // (llamadas con oferta presentada sobre las que asistieron) en vez de mandar a
-                    // Confirmar (pedido del 23/10/2026).
-                    let presentacion = null;
                     if (activeView === 'inbox' && activeStep === 'confirmations') {
                         const total = counts.confirmations || 0;
                         const hechas = counts.confirmations_done || 0;
@@ -1847,8 +1822,6 @@ const CloserWorkflowPage = () => {
                         const conShow = concluidas.filter(r => !['no show', 'cancelado', 'cancelada'].includes(res(r)));
                         const asistieron = conShow.length;
                         metrica = { lbl: 'Asistencia', sub: 'de asistencia', hechas: asistieron, total: concluidas.length, pie: `${asistieron} de ${concluidas.length} asistieron`, pendientes: counts.calls };
-                        const presentadas = conShow.filter(r => r.offer_presented === true).length;
-                        presentacion = { presentadas, asistieron, pct: asistieron ? Math.round((presentadas / asistieron) * 100) : 0 };
                         // Asistencia de cada tipo de llamada aparte (24/10/2026): las segundas y las
                         // Momentum, con sus reprogramaciones, que en el porcentaje no cuentan.
                         metrica.partes = partesPorTipo(reportedTodayCalls, (lista) => {
@@ -1864,7 +1837,6 @@ const CloserWorkflowPage = () => {
                             return [`${si} de ${lista.length} ${lista.length === 1 ? 'confirmada' : 'confirmadas'}`];
                         });
                     }
-                    const metricaPct = metrica && metrica.total ? Math.round((metrica.hechas / metrica.total) * 100) : 0;
                     // Puntos de experiencia: pondera cada acción real de hoy (no un número inventado —
                     // sale de las mismas cuentas de arriba) para darle una lectura más "de juego" al
                     // esfuerzo del día. Los pesos son una primera pasada editorial, no una medida
@@ -1876,147 +1848,14 @@ const CloserWorkflowPage = () => {
                     // backend) — reemplaza el "Racha de 12 días" que estaba hardcodeado acá sin salir
                     // de ningún dato (pedido del usuario, feedback en video del 27/ago/2026).
                     const streakDays = dailyActivity?.streak_days ?? 0;
-                    const heroCountdown = heroLead ? formatCountdown(heroLead.start_time, nowTick) : null;
-                    const heroBadgeCls = !heroCountdown ? '' : heroCountdown.kind === 'now' ? 'now' : heroCountdown.kind === 'soon' ? 'soon' : heroCountdown.kind === 'past' ? 'late' : '';
                     return (
                         <aside className="tsprow-v6 ws-side" aria-label="Tu día">
-                            {/* En la primera carga, en hueso: con los contadores todavía en su cero
-                                inicial, las ramas de abajo caían en "todo el día resuelto" mientras el
-                                kanban de al lado decía que estaba cargando. Si la carga termina sin
-                                contadores (falló la consulta), se vuelve a lo de siempre: un hueso que
-                                no se va nunca sería peor. */}
-                            {loading && !countsCargados ? (
-                                <EsqueletoSiguientePaso />
-                            ) : heroLead ? (
-                                <div className="tsp-v6" onClick={() => handleSelectLead(heroLead)}>
-                                    <div className="tsp-top-v6">
-                                        <span className="tsp-dot-v6"></span>
-                                        <span className="tsp-lbl-v6">Siguiente</span>
-                                        <div className="flex-1"></div>
-                                        {heroCountdown && (
-                                            <AgendaCountdown
-                                                startTime={heroLead.start_time}
-                                                className={`tsp-badge-v6 ${heroBadgeCls}`}
-                                            />
-                                        )}
-                                    </div>
-                                    <h3 className="tsp-name-v6 truncate" title={heroLead.lead_name || undefined}>{heroLead.lead_name || 'Sin Nombre'}</h3>
-                                    <p className="tsp-sub-v6 truncate">{heroLead.origin || 'Meta Ads'} · @{heroLead.instagram ? heroLead.instagram.replace('@', '') : 'usuario'}</p>
-                                    <span className="rail-chips"><Chips lista={chipsDe(heroLead, ['etapa', 'segmento', 'decision', 'inversion'], { userId: user?.id, esTriage })} /></span>
-                                    <button
-                                        type="button"
-                                        className="tsp-cta-v6"
-                                        onClick={(e) => { e.stopPropagation(); handleSelectLead(heroLead); }}
-                                    >
-                                        {activeStep === 'confirmations' ? 'Confirmar' : 'Reportar'} →
-                                    </button>
-                                </div>
-                            ) : activeView === 'inbox' && activeStep === 'seguimientos' && seguimientoHero ? (
-                                // Mismo mecanismo que confirmaciones/llamadas de arriba, pero para la pestaña
-                                // Seguir: antes acá nunca había un lead concreto (heroLead no la cubre, ver su
-                                // comentario), así que caía siempre en el fallback de "podés avanzar con" y
-                                // terminaba mostrando hasta 2 botones sueltos. Pedido del usuario (28/ago/2026):
-                                // "quiero que sea uno que me lleve a seguir a alguien... como prioridad va a
-                                // tomar algún cobro" — `seguimientoHero` (reportado por SeguimientosPane, ver su
-                                // prop `onTopPending`) ya viene con esa prioridad (cobros -> hot -> fríos),
-                                // primero de lo asignado hoy y si no hay nada, del pool sin fecha.
-                                <div className="tsp-v6" onClick={() => handleSelectLead(seguimientoHero.payload)}>
-                                    <div className="tsp-top-v6">
-                                        <span className="tsp-dot-v6"></span>
-                                        <span className="tsp-lbl-v6">Siguiente</span>
-                                    </div>
-                                    <h3 className="tsp-name-v6 truncate" title={seguimientoHero.item.lead_name || undefined}>{seguimientoHero.item.lead_name || 'Sin Nombre'}</h3>
-                                    <p className="tsp-sub-v6 truncate">
-                                        {seguimientoHero.item.origin || 'Meta Ads'} · @{seguimientoHero.item.instagram ? seguimientoHero.item.instagram.replace('@', '') : 'usuario'}
-                                    </p>
-                                    <button
-                                        type="button"
-                                        className="tsp-cta-v6"
-                                        onClick={(e) => { e.stopPropagation(); handleSelectLead(seguimientoHero.payload); }}
-                                    >
-                                        {seguimientoHero.tipo === 'cerrada' ? 'Ir a cobrar' : 'Ir a seguir'} →
-                                    </button>
-                                </div>
-                            ) : activeView === 'inbox' && activeStep === 'confirmations' ? (
-                                // En Confirmar, sin nadie por confirmar, la tarjeta muestra los confirmados
-                                // y nada más: no manda a otra sección (pedido del 23/10/2026, decía
-                                // «Te falta 1 por reportar» estando en Confirmar).
-                                <div className="tsp-v6 tsp-done-v6">
-                                    <div className="tsp-top-v6">
-                                        <span className="tsp-dot-v6 ok"></span>
-                                        <span className="tsp-lbl-v6">Confirmados</span>
-                                    </div>
-                                    <h3 className="tsp-name-v6">
-                                        {(counts.confirmations_done || 0) === 1 ? '1 confirmado' : `${counts.confirmations_done || 0} confirmados`}
-                                    </h3>
-                                    <p className="tsp-sub-v6">
-                                        {(counts.confirmations_done || 0) > 0 ? 'Listos para su llamada · nada por confirmar' : 'Nada por confirmar'}
-                                    </p>
-                                </div>
-                            ) : presentacion ? (
-                                <div className="tsp-v6 tsp-done-v6">
-                                    <div className="tsp-top-v6">
-                                        <span className="tsp-dot-v6 ok"></span>
-                                        <span className="tsp-lbl-v6">Presentación</span>
-                                    </div>
-                                    <h3 className="tsp-name-v6">{presentacion.pct}% de presentación</h3>
-                                    <p className="tsp-sub-v6">
-                                        {presentacion.asistieron
-                                            ? `Oferta presentada en ${presentacion.presentadas} de ${presentacion.asistieron} · nada por reportar`
-                                            : 'Nada por reportar'}
-                                    </p>
-                                </div>
-                            ) : (() => {
-                                // Una sola acción, no una lista de bandejas (pedido del usuario, 28/ago/2026:
-                                // "en ver mis datos, mi cartera y cerrar el día debería ser ese mismo mecanismo
-                                // de un solo botón y una sola acción") — se elige la de mayor prioridad (mismo
-                                // orden que la navegación 01-02-03) usando `counts`, ya cargado sin pegarle de
-                                // nuevo a la API. Cubre tanto "estoy en una pestaña del mazo que ya está vacía"
-                                // como "estoy en Ver mis datos/Mi cartera/Cerrar el día" — antes esas 3 vistas
-                                // no ofrecían ninguna acción concreta, o hasta 2 sueltas sin prioridad.
-                                const PRIORITY = [
-                                    { key: 'confirmations', label: 'Ir a confirmar', accion: 'confirmar', count: confirmacionesPendientes, step: 'confirmations' },
-                                    { key: 'calls', label: 'Ir a reportar', accion: 'reportar', count: counts.calls, step: 'calls' },
-                                    { key: 'seguimientos', label: 'Ir a seguir', accion: 'seguir', count: counts.seguimientos, step: 'seguimientos' }
-                                ];
-                                const next = PRIORITY.find(s => s.count > 0);
-
-                                if (!next) {
-                                    return (
-                                        <div className="tsp-v6 tsp-done-v6">
-                                            <div className="tsp-top-v6">
-                                                <span className="tsp-dot-v6 ok"></span>
-                                                <span className="tsp-lbl-v6">Siguiente</span>
-                                            </div>
-                                            <h3 className="tsp-name-v6">🎉 Tenés absolutamente todo el día resuelto</h3>
-                                            <p className="tsp-sub-v6">Nada pendiente en confirmar, reportar ni seguir.</p>
-                                        </div>
-                                    );
-                                }
-                                return (
-                                    <div className="tsp-v6 tsp-done-v6">
-                                        <div className="tsp-top-v6">
-                                            <span className="tsp-dot-v6 ok"></span>
-                                            <span className="tsp-lbl-v6">Siguiente</span>
-                                        </div>
-                                        <h3 className="tsp-name-v6">Te falta {next.count} por {next.accion}</h3>
-                                        <button
-                                            type="button"
-                                            className="tsp-cta-v6"
-                                            onClick={(e) => { e.stopPropagation(); irASeccion(next.step); }}
-                                        >
-                                            {next.label} →
-                                        </button>
-                                    </div>
-                                );
-                            })()}
-
-                            <RailResumen paso={activeView === 'inbox' ? activeStep : null} agendas={agendas} ahora={nowTick}
+                            <RailResumen paso={activeView === 'inbox' ? activeStep : null} agendas={agendas}
                                 progreso={metrica
                                     ? { titulo: metrica.lbl, hechas: metrica.hechas, total: metrica.total, detalle: metrica.partes?.map(p => `${p.lbl} ${p.texto}`).join(' · ') }
                                     : { titulo: 'Tu día', hechas: doneToday, total: totalToday }}
                                 pendientes={{ confirmations: confirmacionesPendientes, calls: counts.calls, seguimientos: counts.seguimientos }}
-                                racha={streakDays} xp={xp} onIr={irASeccion} onAbrir={handleSelectLead} />
+                                racha={streakDays} xp={xp} onIr={irASeccion} />
 
                             {!esTriage && <ComisionMesCard />}
                         </aside>

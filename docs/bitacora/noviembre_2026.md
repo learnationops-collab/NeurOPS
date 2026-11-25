@@ -941,3 +941,8 @@
 ### 25/11/2026 · Reintento solo cuando Work se está actualizando
 - «Application failed to respond» al guardar Sesiones no era un error del guardado: Work tiene un volumen en Railway y en cada deploy el servidor se apaga ~1 minuto (ese día hubo cinco seguidos).
 - Ahora `services/api.js` reintenta solo los pedidos repetibles (GET, PUT, DELETE; un POST con `reintentable: true`) que reciben 502/503/504, durante ~90 s, con el aviso «Work se está actualizando… reintentando solo». Si igual falla, el mensaje sale en castellano.
+
+### 25/11/2026 · Riel más corto y tarjeta de Confirmar más limpia
+- Riel: sin la tarjeta del siguiente lead ni «Próximas llamadas» (pedido de Mario); queda Confirmación, Hoy y la comisión, y entra todo.
+- Tarjeta del tablero: el segmento es solo la letra (A, B, C, D) sobre el avatar, con los puntos en el title; la fila de datos queda en inversión · decisor · origen, y debajo del teléfono una línea chica con examen y país (sale del prefijo del teléfono).
+- Calendario y lista también muestran el segmento como letra sola.

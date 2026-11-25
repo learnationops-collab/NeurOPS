@@ -17,7 +17,7 @@ export function chipsDe(a, claves, ctx) {
             const e = ETAPAS_CONFIRMACION.find(x => x.clave === etapaDeConfirmacion(a));
             out.push({ k, c: e.color, icono: <b className={`cv-punto${e.clave === 'por_contactar' ? ' cv-punto--late' : ''}`} />, t: e.titulo, fuerte: true });
         } else if (k === 'segmento') {
-            if (a.segmento) out.push({ k, c: TONO_SEGMENTO[a.segmento], t: a.segmento_puntos != null ? `${a.segmento} · ${Number(a.segmento_puntos) > 0 ? '+' : ''}${Number(a.segmento_puntos).toLocaleString('es-AR', { maximumFractionDigits: 1 })}` : a.segmento, fuerte: true, title: 'Segmento' });
+            if (a.segmento) out.push({ k, c: TONO_SEGMENTO[a.segmento], t: a.segmento, fuerte: true, title: `Segmento ${a.segmento}${a.segmento_puntos != null ? ` · ${a.segmento_puntos} pts` : ''}` });
         } else if (k === 'inversion') {
             const txt = inversionDe(a);
             if (txt) { const v = inversionCorta(txt); out.push({ k, c: v.sin ? ROJO : VERDE, icono: <DollarSign />, t: v.texto.replace(' USD', ''), title: txt }); }

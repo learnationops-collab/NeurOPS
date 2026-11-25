@@ -2,6 +2,7 @@
 // cada pregunta del formulario que respondieron los leads del tablero (`f:<pregunta>`).
 import { parseUtcIso, splitLocalDateTime } from '../../../utils/datetime';
 import { ETAPAS_CONFIRMACION, etapaDeConfirmacion } from './etapas';
+import { COUNTRY_CODES } from '../../public/booking/constants';
 
 export const PROPIEDADES_AGENDA = [
     { clave: 'hora', titulo: 'Hora', ancho: '150px' },
@@ -96,6 +97,14 @@ export const decisorCorto = (a) => {
     }
     if (/yo\b|solo|sola|m[ií] mism|por mi cuenta|s[ií]\b/i.test(v)) return { texto: 'Decisor', solo: true, title: v };
     return { texto: v.length > 20 ? `${v.slice(0, 19)}…` : v, solo: null, title: v };
+};
+
+// El país del lead por el prefijo de su teléfono («+56 9…» → Chile); el prefijo más largo gana.
+const PREFIJOS = [...COUNTRY_CODES].sort((x, y) => y.code.length - x.code.length);
+export const paisDe = (a) => {
+    const t = String(a?.phone || '').replace(/[^\d+]/g, '');
+    if (!t.startsWith('+')) return '';
+    return PREFIJOS.find(c => t.startsWith(c.code))?.country || '';
 };
 
 export const avisosDe = (a) => [

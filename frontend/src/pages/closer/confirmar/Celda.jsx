@@ -58,7 +58,7 @@ export default function Celda({ agenda: a, clave, ahora, nombreCloser }) {
     }
     if (clave === 'closer') return <span className="cv-txt">{textoDe(a, clave, { nombreCloser }) || '—'}</span>;
     if (clave === 'tipo') { const t = tipoDe(a); return <Etiqueta color={TONO_TIPO[t.clave]}>{t.titulo}</Etiqueta>; }
-    if (clave === 'segmento' && a.segmento) return <Etiqueta color={TONO_SEGMENTO[a.segmento]}>{textoDe(a, clave)}</Etiqueta>;
+    if (clave === 'segmento' && a.segmento) return <Etiqueta color={TONO_SEGMENTO[a.segmento]} title={textoDe(a, clave)}>{a.segmento}</Etiqueta>;
     if (clave === 'avisos') {
         const avisos = avisosDe(a);
         return avisos.length ? avisos.map(t => <Etiqueta key={t} color="var(--cl-warning, #f5b84a)">{t}</Etiqueta>) : <span className="cv-mute">—</span>;
