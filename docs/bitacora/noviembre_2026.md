@@ -838,3 +838,6 @@
 - El webhook de WhatsApp despierta al reloj del motor y los eventos se procesan con su candado.
 - Inbox: ícono de Instagram o WhatsApp en la lista y en el chat. En WhatsApp la ventana es de 24 h (avisa en las últimas 3 h) y el nombre sale del perfil, no como @usuario.
 - Migración `a7c9e1f3b5d8` (`flujo_id` en `wa_difusiones`, idempotente).
+
+### 24/11/2026 · Darian etiquetada en los avisos de agenda de Discord
+- El aviso de agenda nueva, reprogramada o pasada a closing en Discord etiqueta también a Darian (triage), además del closer y el setter. No en las Momentum ni en sus propias agendas (ADR-W207, pedido de Mario).
