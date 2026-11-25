@@ -937,3 +937,7 @@
 ### 25/11/2026 · Riel del Workspace: el siguiente lead entero y sin pisarse con el dock
 - La tarjeta del siguiente lead se achicaba (el riel la comprimía) y no se veían el nombre ni el botón: ahora ninguna pieza del riel se achica y el riel scrollea si no entra.
 - El riel termina arriba del dock y se desvanece al final; el fondo y la línea siguen hasta abajo. Secciones un poco más compactas.
+
+### 25/11/2026 · Reintento solo cuando Work se está actualizando
+- «Application failed to respond» al guardar Sesiones no era un error del guardado: Work tiene un volumen en Railway y en cada deploy el servidor se apaga ~1 minuto (ese día hubo cinco seguidos).
+- Ahora `services/api.js` reintenta solo los pedidos repetibles (GET, PUT, DELETE; un POST con `reintentable: true`) que reciben 502/503/504, durante ~90 s, con el aviso «Work se está actualizando… reintentando solo». Si igual falla, el mensaje sale en castellano.
