@@ -1071,3 +1071,4 @@
 
 ### 26/11/2026 · Broadcast de WhatsApp: tope de 200 por día
 - El tope propio del broadcast pasa de 100 a 200 por día ([envios.py](../../app/whatsapp/envios.py) `TOPE_DIARIO`). El número está en calidad verde y Meta permite 250 personas por día en este nivel; queda margen para las respuestas de los setters.
+- Un envío que falla ya no ocupa el tope del día ([envios.py](../../app/whatsapp/envios.py) `usados_hoy`): el primer lote real (64 no cerrados y 36 del taller) falló entero con «131042» (pago de Meta) y dejaba el día sin cupo.

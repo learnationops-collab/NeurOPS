@@ -36,9 +36,10 @@ def inicio_del_dia(ahora):
 
 
 def usados_hoy(ahora):
-    """Lo que ya ocupa el tope de hoy: lo enviado desde la medianoche y lo pendiente."""
+    """Lo que ya ocupa el tope de hoy: lo enviado desde la medianoche y lo pendiente. Lo que falló no llegó: no cuenta."""
     return WaEnvio.query.filter(db.or_(WaEnvio.enviado_en >= inicio_del_dia(ahora),
-                                       WaEnvio.estado == WaEnvio.PENDIENTE)).count()
+                                       WaEnvio.estado == WaEnvio.PENDIENTE),
+                                WaEnvio.estado != WaEnvio.FALLO).count()
 
 
 def revisar(filas):
