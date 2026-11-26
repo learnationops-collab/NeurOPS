@@ -1079,3 +1079,6 @@
 
 ### 26/11/2026 · Broadcast de WhatsApp: la respuesta a un botón puede esperar y saludar por el nombre (ADR-W236)
 - En «Cuando tocan un botón» cada respuesta elige si sale al instante o a 1, 2 o 5 minutos, y `{nombre}` pone el primer nombre del lead ([respuestas.py](../../app/whatsapp/respuestas.py)). Pedido de Marlon para que «soy mario no el bot» no llegue en un segundo. Migración `b3d5f7a9c1e2`.
+
+### 26/11/2026 · Inbox: el número de WhatsApp arriba del chat
+- En los chats de WhatsApp, el número del lead aparece al lado del nombre en la línea de arriba; tocarlo lo copia ([Detalle.jsx](../../frontend/src/pages/inbox/conversaciones/Detalle.jsx) `Telefono`). Pedido de Mario: con nombres como «👻» no había forma de saber quién era sin abrir la ficha.

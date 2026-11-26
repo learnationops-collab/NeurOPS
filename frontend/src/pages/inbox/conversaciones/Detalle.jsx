@@ -42,6 +42,21 @@ function Resolver({ contacto, marcada, onCambio }) {
             data-tip="No requiere respuesta|Sale de «Esperan respuesta» hasta que vuelva a escribir">No requiere respuesta</Button>;
 }
 
+// El número del lead de WhatsApp a la vista, al lado del nombre: tocarlo lo copia.
+function Telefono({ contacto }) {
+    if (!esWhatsapp(contacto)) return null;
+    const numero = `+${contacto.igsid.slice(3)}`;
+    const copiar = async () => {
+        try {
+            await navigator.clipboard.writeText(numero);
+            toast('Número copiado', 'success');
+        } catch {
+            toast('No se pudo copiar', 'error');
+        }
+    };
+    return <button type="button" className="cv-chat-tel" onClick={copiar} data-tip="Copiar número">{numero}</button>;
+}
+
 function Linea({ contacto, avance, mensajes, onCambio }) {
     const ahora = new Date();
     const ultimo = mensajes[mensajes.length - 1];
@@ -53,6 +68,7 @@ function Linea({ contacto, avance, mensajes, onCambio }) {
         <div className="cv-chat-linea-sup">
             <IconoCanal c={contacto} size={14} />
             <b>{quien(contacto)}</b>
+            <Telefono contacto={contacto} />
             <Puntos etapas={avance?.etapas} />
             <ChipFase fase={avance?.fase} />
             <span className="cv-chat-tiempos">
