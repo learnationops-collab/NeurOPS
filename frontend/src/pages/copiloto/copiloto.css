@@ -107,3 +107,51 @@
 @media (max-width:600px){
     .thalamus .learnito .cp-msg,.thalamus .learnito .cp-siguientes-fila{max-width:100%}
 }
+
+/* ADR-W251 (26/11/2026): el modal más ancho, con las conversaciones a la izquierda; la calificación se manda con «Enviar». */
+.thalamus .ui-modal.learnito-modal{width:min(1040px, calc(100vw - 48px))}
+.thalamus .learnito-cuerpo{flex:1;min-height:0;display:grid;grid-template-columns:232px minmax(0,1fr);gap:16px}
+.thalamus .learnito-cuerpo .learnito{min-height:0}
+.thalamus .lt{display:flex;flex-direction:column;gap:10px;min-height:0;padding-right:14px;border-right:1px solid var(--border-subtle)}
+.thalamus .lt-nueva{display:flex;align-items:center;gap:8px;height:36px;padding:0 12px;border-radius:10px;border:1px solid var(--border-main);
+  background:color-mix(in srgb,var(--text-main) 4%,transparent);color:var(--text-main);font:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:background .15s,border-color .15s}
+.thalamus .lt-nueva svg{color:var(--brand-secondary)}
+.thalamus .lt-nueva:hover:not(:disabled){background:color-mix(in srgb,var(--brand-secondary) 10%,transparent);border-color:color-mix(in srgb,var(--brand-secondary) 45%,transparent)}
+.thalamus .lt-nueva:disabled{opacity:.5;cursor:default}
+.thalamus .lt-lista{flex:1;min-height:0;overflow-y:auto;display:grid;align-content:start;gap:2px;margin:0 -4px;padding:0 4px}
+.thalamus .lt-lista ul{list-style:none;margin:0 0 8px;padding:0;display:grid;gap:1px}
+.thalamus .lt-rotulo{padding:6px 8px 2px;font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted)}
+.thalamus .lt-item{position:relative;display:flex;align-items:center;border-radius:8px;transition:background .15s}
+.thalamus .lt-item:hover{background:color-mix(in srgb,var(--text-main) 6%,transparent)}
+.thalamus .lt-item.is-actual{background:color-mix(in srgb,var(--brand-secondary) 14%,transparent)}
+.thalamus .lt-abrir{flex:1;min-width:0;display:flex;align-items:baseline;gap:8px;padding:7px 8px;border:0;background:none;color:var(--text-main);font:inherit;text-align:left;cursor:pointer}
+.thalamus .lt-titulo{flex:1;min-width:0;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.thalamus .lt-item.is-actual .lt-titulo{font-weight:600}
+.thalamus .lt-fecha{flex:none;font-size:10.5px;color:var(--text-muted)}
+.thalamus .lt-pin{position:absolute;left:-2px;top:-2px;color:var(--brand-secondary);transform:rotate(30deg)}
+.thalamus .lt-acciones{position:absolute;right:4px;top:50%;transform:translateY(-50%);display:none;gap:2px;padding-left:12px;
+  background:linear-gradient(90deg,transparent,var(--ui-panel-bg, #12153a) 12px)}
+.thalamus .lt-item:hover .lt-acciones,.thalamus .lt-item:focus-within .lt-acciones{display:flex}
+.thalamus .lt-ico{width:24px;height:24px;display:grid;place-items:center;border:0;border-radius:6px;background:none;color:var(--text-muted);cursor:pointer}
+.thalamus .lt-ico:hover{color:var(--text-main);background:color-mix(in srgb,var(--text-main) 10%,transparent)}
+.thalamus .lt-item--edita{gap:4px;padding:3px 4px;background:color-mix(in srgb,var(--text-main) 6%,transparent)}
+.thalamus .lt-item--edita input{flex:1;min-width:0;height:26px;padding:0 8px;border-radius:6px;border:1px solid var(--brand-secondary);background:transparent;color:var(--text-main);font:inherit;font-size:12.5px;outline:none}
+.thalamus .lt-vacio,.thalamus .lt-error{margin:8px;font-size:12px;color:var(--text-muted)}
+.thalamus .lt-error{color:var(--error)}
+
+.thalamus .learnito .cp-calif{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:12px;color:var(--text-muted)}
+.thalamus .learnito .cp-calif-t{margin-right:2px}
+.thalamus .learnito .cp-calif-cara{width:30px;height:30px;display:grid;place-items:center;border-radius:8px;border:1px solid var(--border-subtle);background:none;color:var(--text-muted);cursor:pointer;transition:all .15s}
+.thalamus .learnito .cp-calif-cara:hover{color:var(--c);border-color:color-mix(in srgb,var(--c) 45%,transparent)}
+.thalamus .learnito .cp-calif-cara[aria-pressed="true"]{color:var(--c);border-color:var(--c);background:color-mix(in srgb,var(--c) 14%,transparent);transform:scale(1.06)}
+.thalamus .learnito .cp-calif-nota{flex:1;min-width:140px;height:30px;padding:0 10px;border-radius:8px;border:1px solid var(--border-main);background:transparent;color:var(--text-main);font:inherit;font-size:12px;outline:none}
+.thalamus .learnito .cp-calif-nota:focus{border-color:var(--brand-secondary)}
+.thalamus .learnito .cp-calif--lista{color:var(--text-main)}
+.thalamus .learnito .cp-calif--lista > svg{color:var(--c)}
+.thalamus .learnito .cp-calif-ok{width:18px;height:18px;display:grid;place-items:center;border-radius:50%;background:var(--success);color:#fff;animation:cpOk .35s cubic-bezier(.3,1.6,.5,1) both}
+.thalamus .learnito .cp-calif-cambiar{border:0;background:none;padding:0;margin-left:4px;color:var(--text-muted);font:inherit;font-size:12px;text-decoration:underline;cursor:pointer}
+@keyframes cpOk{from{transform:scale(0)}to{transform:scale(1)}}
+@media (max-width:760px){
+  .thalamus .learnito-cuerpo{grid-template-columns:minmax(0,1fr)}
+  .thalamus .lt{display:none}
+}

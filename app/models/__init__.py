@@ -28,6 +28,7 @@ from .subscription import Subscription, SubscriptionEvent, SUBSCRIPTION_STATUSES
 from .ficha_opcion import FichaOpcion
 from .client_merge_log import ClientMergeLog
 from .system_log import SystemLog
+from .learnito_conversacion import LearnitoConversacion
 from .person import Person, PersonIdentity, PersonEvent, Conversation, IDENTITY_KINDS, IDENTITY_USOS, PERSON_EVENT_KINDS
 from .academy_snapshot import AcademySnapshot
 from .bug_report import BugReport, BugReportMessage, URGENCY_LEVELS, STATUS_VALUES, REPORT_TYPES, report_type_priority
@@ -73,6 +74,6 @@ __all__ = [
     'AssistantApplication', 'AssistantClarityWeight', 'HiringForm', 'HiringConfig',
     'PlaybookRoadmap', 'PlaybookModule', 'PlaybookLesson', 'PlaybookQuestion', 'PlaybookOption',
     'PlaybookLessonProgress', 'PlaybookCompletion', 'QUESTION_TYPES',
-    'InstagramWebhookEvento', 'AiUsage', 'IntentoLimitado',
+    'InstagramWebhookEvento', 'AiUsage', 'IntentoLimitado', 'LearnitoConversacion',
 ]
 

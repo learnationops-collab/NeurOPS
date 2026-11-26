@@ -1184,3 +1184,5 @@
 - Learnito: a un setter, «mis agendas» son las que cargó (`setter_id`, por fecha de carga) ([learnito_conector.py](../../app/services/learnito_conector.py)); en la Academia, las preguntas en primera persona y las aclaraciones escritas después de unas opciones van al modelo en vez de volver a ofrecer tablas (ADR-247 de la Academia).
 - En la lista y en la tarjeta, el sello del avatar va lleno: degradé de Instagram o verde de WhatsApp, con el ícono blanco ([setting.css](../../frontend/src/pages/inbox/conversaciones/setting.css)).
 - Etapa: las rayitas del avance van adentro del botón de la etapa, que queda del alto de «Adelantar»; Transferir, No lead e In-abrible en tres columnas iguales, sin tocar el borde derecho ([TarjetaLead.jsx](../../frontend/src/pages/inbox/conversaciones/TarjetaLead.jsx)).
+- Learnito (ADR-W251): modal más ancho con sidebar de conversaciones (nueva, abrir, fijar, renombrar); la calificación se manda con «Enviar» y avisa «Calificación enviada».
+- La lista del Inbox muestra solo el ícono de la red (Instagram o WhatsApp, en su color), sin las iniciales.

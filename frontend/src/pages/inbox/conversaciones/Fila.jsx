@@ -69,9 +69,9 @@ export default function Fila({ c, elegida, ahora, yo, conAsignado, borrador, onE
             <button type="button" className={`cv-item${c.sin_leer ? ' cv-item--nuevo' : ''}${marcada ? ' cv-item--marcada' : ''}`}
                 aria-pressed={eligiendo ? marcada : elegida} data-conversacion={c.id} onClick={() => (eligiendo ? onMarcar(c.id) : onElegir(c.id))}>
                 {eligiendo && <span className="cv-item-check" aria-hidden="true">{marcada && <Check size={12} strokeWidth={3} />}</span>}
-                <span className="cv-item-avatar">
-                    <Avatar name={nombre} size="sm" />
-                    <IconoCanal c={c} size={9} />
+                {/* Solo la red, grande (Mario, 26/11/2026): las iniciales no decían nada. */}
+                <span className="cv-item-avatar cv-item-avatar--red">
+                    <IconoCanal c={c} size={17} />
                 </span>
                 <span className="cv-item-cuerpo">
                     <span className="cv-item-cab">

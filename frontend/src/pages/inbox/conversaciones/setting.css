@@ -304,3 +304,7 @@
 .thalamus.inbox .cv-item-avatar .cv-canal--wa,.thalamus.inbox .cv-tarjeta-avatar .cv-canal--wa{background:#25D366}
 .thalamus.inbox .cv-item-avatar .cv-canal{width:16px;height:16px}
 .thalamus.inbox .cv-item-avatar .cv-canal svg{width:10px;height:10px}
+/* La fila de la lista lleva solo el ícono de la red, como ícono de app (sin iniciales). */
+.thalamus.inbox .cv-item-avatar--red .cv-canal{position:static;width:32px;height:32px;border-radius:10px;border:0;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.14),0 4px 12px -4px rgba(0,0,0,.5)}
+.thalamus.inbox .cv-item-avatar--red .cv-canal svg{width:17px;height:17px}

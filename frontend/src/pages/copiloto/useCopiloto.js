@@ -15,6 +15,7 @@ export function useCopiloto() {
     const [conversacion, setConversacion] = useState(null);
     const [calificacion, setCalificacion] = useState(null);
     const [pendientes, setPendientes] = useState([]);
+    const [historial, setHistorial] = useState([]);
 
     const cargarPendientes = useCallback(() => {
         api.get('/copiloto/learnito/pendientes').then(({ data }) => setPendientes(data.pendientes || [])).catch(() => {});
@@ -82,17 +83,55 @@ export function useCopiloto() {
         }
     }, [mensajes, conversacion]);
 
-    const calificar = useCallback(async (valor) => {
-        if (!conversacion) return;
-        const antes = calificacion;
-        const nueva = valor === antes ? null : valor;
-        setCalificacion(nueva);
+    // Se elige la cara y se manda con «Enviar» (con una nota opcional): devuelve null o el error (26/11/2026).
+    const calificar = useCallback(async (valor, nota = '') => {
+        if (!conversacion) return 'No hay conversación para calificar.';
         try {
-            await api.post('/copiloto/learnito/calificar', { conversacion_id: conversacion, calificacion: nueva });
-        } catch {
-            setCalificacion(antes);
+            await api.post('/copiloto/learnito/calificar', { conversacion_id: conversacion, calificacion: valor, nota: nota.trim() || undefined });
+            setCalificacion(valor);
+            setPendientes((l) => l.filter((x) => x.id !== conversacion));
+            setHistorial((h) => h.map((c) => (c.id === conversacion ? { ...c, calificacion: valor } : c)));
+            return null;
+        } catch (err) {
+            return err.response?.data?.error || 'No se pudo enviar la calificación.';
         }
-    }, [conversacion, calificacion]);
+    }, [conversacion]);
+
+    // El sidebar (ADR-W251): las conversaciones de quien pregunta, las fijadas arriba; abrir una la trae entera.
+    const cargarHistorial = useCallback(() => {
+        api.get('/copiloto/learnito/historial').then(({ data }) => setHistorial(data.conversaciones || [])).catch(() => {});
+    }, []);
+
+    const abrir = useCallback(async (id) => {
+        try {
+            const { data } = await api.get(`/copiloto/learnito/historial/${id}`);
+            const c = data.conversacion;
+            setMensajes((c.mensajes || []).filter((m) => m.role === 'user' || m.role === 'assistant').map((m) => (m.role === 'user'
+                ? { role: 'user', content: m.text || '' }
+                : { role: 'assistant', content: m.text || '', mensaje: m, indice: m.indice })));
+            setConversacion(c.id);
+            setCalificacion(c.calificacion || null);
+            setUso((u) => ({ ...(u || {}), conversacion: { porcentaje: c.porcentaje, agotada: c.agotada } }));
+            return null;
+        } catch (err) {
+            return err.response?.data?.error || 'No se pudo abrir la conversación.';
+        }
+    }, []);
+
+    // Renombrar ({titulo}) o fijar ({fijada}): se ve al toque y vuelve atrás si falla.
+    const ordenar = useCallback(async (id, cambios) => {
+        const antes = historial;
+        setHistorial((h) => {
+            const lista = h.map((c) => (c.id === id ? { ...c, ...cambios } : c));
+            return [...lista.filter((c) => c.fijada), ...lista.filter((c) => !c.fijada)];
+        });
+        try {
+            const { data } = await api.patch(`/copiloto/learnito/historial/${id}`, cambios);
+            if ('titulo' in cambios && !data.titulo) cargarHistorial();
+        } catch {
+            setHistorial(antes);
+        }
+    }, [historial, cargarHistorial]);
 
     const reiniciar = useCallback(() => {
         setMensajes([]);
@@ -106,10 +145,10 @@ export function useCopiloto() {
     const ultimaRespuesta = useCallback(() => ultima.current, []);
     return useMemo(() => ({
         mensajes, enviando, enviar, tocar, confirmar, reiniciar, uso, calificacion, calificar, ultimaRespuesta,
-        pendientes, cargarPendientes, calificarPendiente, agotada,
+        pendientes, cargarPendientes, calificarPendiente, agotada, conversacion, historial, cargarHistorial, abrir, ordenar,
         // Sin conversación abierta, las anteriores sin calificar traban la nueva.
         trabado: !conversacion && pendientes.length > 0,
         agotado: (uso?.porcentaje ?? 0) >= 100 || agotada,
     }), [mensajes, enviando, enviar, tocar, confirmar, reiniciar, uso, calificacion, calificar, ultimaRespuesta,
-        pendientes, cargarPendientes, calificarPendiente, agotada, conversacion]);
+        pendientes, cargarPendientes, calificarPendiente, agotada, conversacion, historial, cargarHistorial, abrir, ordenar]);
 }

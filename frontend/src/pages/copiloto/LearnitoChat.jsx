@@ -18,6 +18,7 @@ import Markdown from './Markdown';
 import { conMenciones, disparador, filtrarAcciones, insertar, seleccionValida } from './menciones';
 import { useDictado } from './useDictado';
 import UsoMensual from './UsoMensual';
+import Calificar from './Calificar';
 import './copiloto.css';
 
 const SUGERENCIAS = [
@@ -365,16 +366,7 @@ export default function LearnitoChat() {
                     </Button>
                 </div>
                 {(dictado.error || error) && <FieldError>{dictado.error || error}</FieldError>}
-                {respondio && (
-                    <div className="cp-calificar" role="group" aria-label="Calificar la conversación">
-                        <span>¿Cómo viene la conversación?</span>
-                        {CALIFICACIONES.map((c) => (
-                            <Button key={c.valor} icon={c.icono} aria-pressed={calificacion === c.valor}
-                                variant={calificacion === c.valor ? 'primary' : 'ghost'}
-                                onClick={() => calificar(c.valor)}>{c.texto}</Button>
-                        ))}
-                    </div>
-                )}
+                {respondio && <Calificar calificacion={calificacion} calificar={calificar} />}
                 <UsoMensual uso={uso} />
             </div>
         </div>

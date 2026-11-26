@@ -1,4 +1,5 @@
-// Learnito en un modal, encima de cualquier pantalla (se abre desde el dock o el menú de sesión).
+// Learnito en un modal, encima de cualquier pantalla (se abre desde el dock o el menú de sesión), con el sidebar de
+// conversaciones a la izquierda (ADR-W251).
 // Va envuelto en `.thalamus` para tener sus tokens fuera de las pantallas que ya lo traen, y siempre
 // con el tema Learnation (pedido del 19/10/2026), en el modo claro u oscuro de cada uno.
 import { RotateCcw, Sparkles } from 'lucide-react';
@@ -7,6 +8,7 @@ import { useApariencia } from '../../context/AparienciaContext';
 import { IconButton, Modal, ModalHeader } from '../../components/standard';
 import { useLearnito } from '../../sesion/LearnitoContext';
 import LearnitoChat from './LearnitoChat';
+import LearnitoLateral from './LearnitoLateral';
 
 export default function LearnitoModal({ onClose }) {
     const { modo, modoGuardado } = useApariencia();
@@ -23,7 +25,11 @@ export default function LearnitoModal({ onClose }) {
                         <IconButton size="sm" icon={<RotateCcw size={14} />} label="Nueva conversación"
                             title="Nueva conversación" onClick={reiniciar} disabled={enviando} />
                     )} />
-                <LearnitoChat />
+                {/* Más ancho y con sus conversaciones al costado (ADR-W251). */}
+                <div className="learnito-cuerpo">
+                    <LearnitoLateral />
+                    <LearnitoChat />
+                </div>
             </Modal>
         </div>
     );

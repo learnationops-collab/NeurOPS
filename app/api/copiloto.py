@@ -20,7 +20,9 @@ pasaron al conector (app/services/copiloto_herramientas.py).
 from flask import Blueprint, jsonify, request
 from flask_login import current_user
 
+from app import db
 from app.decorators import copiloto_required
+from app.models import LearnitoConversacion
 from app.services import learnito_conector
 from app.services.learnation_service import LearnationAPIError, LearnationService
 
@@ -128,7 +130,31 @@ def learnito_historial():
     data, estado = _a_la_academia('history', {})
     if estado != 200:
         return jsonify(data), estado
-    return jsonify({'conversaciones': data.get('conversaciones') or []}), 200
+    # Con lo de Work (ADR-W251): el nombre que le puso y si la fijó; las fijadas, arriba.
+    prefs = {p.conversacion_id: p for p in LearnitoConversacion.query.filter_by(user_id=current_user.id)}
+    lista = []
+    for c in data.get('conversaciones') or []:
+        p = prefs.get(c.get('id'))
+        lista.append({**c, 'titulo': (p and p.titulo) or c.get('titulo'), 'fijada': bool(p and p.fijada)})
+    lista.sort(key=lambda c: not c['fijada'])
+    return jsonify({'conversaciones': lista}), 200
+
+
+@bp.route('/learnito/historial/<int:conversacion_id>', methods=['PATCH'])
+@copiloto_required
+def learnito_ordenar(conversacion_id):
+    """{titulo?, fijada?}: renombra o fija una conversación propia, solo en Work (ADR-W251). Título vacío vuelve al de la Academia."""
+    cuerpo = request.get_json(silent=True) or {}
+    p = LearnitoConversacion.query.filter_by(user_id=current_user.id, conversacion_id=conversacion_id).first()
+    if not p:
+        p = LearnitoConversacion(user_id=current_user.id, conversacion_id=conversacion_id)
+        db.session.add(p)
+    if 'titulo' in cuerpo:
+        p.titulo = (str(cuerpo.get('titulo') or '').strip()[:120]) or None
+    if 'fijada' in cuerpo:
+        p.fijada = bool(cuerpo.get('fijada'))
+    db.session.commit()
+    return jsonify({'id': conversacion_id, 'titulo': p.titulo, 'fijada': p.fijada}), 200
 
 
 @bp.route('/learnito/historial/<int:conversacion_id>', methods=['GET'])

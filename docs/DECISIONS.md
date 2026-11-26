@@ -2242,3 +2242,11 @@
 - **Decisión:** el contador de espera, la ventana y «No requiere» (solo ícono) suben a la fila de la palabra clave; «Tus números» va arriba de Tareas en una fila de cuatro; Transferir, No lead, In-abrible, Adelantar, la etapa y las pastillas pasan a rectángulos de 6-8 px de radio, fondo neutro y el color solo en el ícono.
 - **Qué se pierde:** el texto «No requiere» a la vista (queda en el tooltip).
 - **Consecuencias:** sin migración.
+
+## 🏛️ ADR-W251: Learnito con sus conversaciones al costado (fijar y renombrar en Work) y calificación con «Enviar»
+
+- **Fecha:** 2026-11-26 · **Subsistema:** Learnito (modal)
+- **Contexto:** Mario pidió ver todas las conversaciones con Learnito, abrir una nueva, fijar y renombrar, y un modal más ancho. Al calificar, tocar una cara no confirmaba nada: no se sabía si se había mandado.
+- **Decisión:** el modal pasa a 1040 px con un sidebar: «Nueva conversación» arriba y la lista de la Academia (`/learnito/historial`), con las fijadas primero. Tocar una la abre entera (`/learnito/historial/<id>`) y se sigue escribiendo en ella. Fijar y renombrar se guardan en Work (tabla `learnito_conversaciones`: user_id, conversacion_id, titulo, fijada; `PATCH /learnito/historial/<id>`), porque es de la pantalla de cada uno y no cambia el contrato con el cerebro. La calificación se elige con una cara, admite una nota opcional (el `nota` que ya aceptaba `rate`) y se manda con «Enviar»; después queda «Calificación enviada» con «Cambiar».
+- **Qué se pierde (nombrado):** el nombre y el pin no viajan a la Academia (en su pantalla se ve el título automático). Debajo de 760 px el sidebar se oculta.
+- **Consecuencias:** migración `e7a2c4f6b8d1` (idempotente). Sin cambios en la Academia.
