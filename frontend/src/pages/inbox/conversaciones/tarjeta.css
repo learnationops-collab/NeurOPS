@@ -107,3 +107,15 @@
 .thalamus.inbox .cv-mis-dato b small{font-size:11px;letter-spacing:0}
 .thalamus.inbox .cv-mis-dato > span:last-child{font-size:11px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .thalamus.inbox .cv-ficha > .cv-mis-tit{margin:0 0 4px}
+
+/* Mario, 26/11/2026: las rayitas del avance van adentro del botón de la etapa (afuera lo hacían ver más chico que
+   «Adelantar»), y Transferir · No lead · In-abrible en tres columnas iguales, sin pasarse del borde derecho. */
+.thalamus.inbox .cv-etapa-btn{position:relative;padding:7px 10px 12px;border-radius:10px}
+.thalamus.inbox .cv-etapa-btn .cv-avance{position:absolute;left:10px;right:10px;bottom:5px;padding:0;gap:2px}
+.thalamus.inbox .cv-etapa-btn .cv-avance i{height:3px}
+.thalamus.inbox .cv-adelantar{border-radius:10px}
+.thalamus.inbox .cv-salidas{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;min-width:0}
+.thalamus.inbox .cv-salidas > *{min-width:0}
+.thalamus.inbox .cv-salidas .cv-accion{min-width:0;width:100%;gap:5px;padding:0 6px;white-space:nowrap;overflow:hidden;font-size:12px}
+.thalamus.inbox .cv-salidas .cv-accion svg{flex:none}
+.thalamus.inbox .cv-salidas .cv-salidas-fuera{grid-column:span 2}

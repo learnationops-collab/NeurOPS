@@ -29,7 +29,7 @@ function Avance({ fase }) {
     );
 }
 
-// La etapa del setting: cerrada muestra la actual y su avance; abierta, todas las fases por etapa y las salidas.
+// La etapa del setting: cerrada muestra la actual y su avance (la barrita, adentro del botón desde el 26/11/2026); abierta, todas las fases por etapa y las salidas.
 function Etapa({ fase, onMover }) {
     const d = useDesplegable();
     const f = faseDe(fase);
@@ -45,6 +45,7 @@ function Etapa({ fase, onMover }) {
                     <span className="cv-etapa-n">{f.n}</span>
                     <span className="cv-etapa-t"><b>{corto(f)}</b><small>{TRAMOS[f.tramo].nombre}</small></span>
                     <ChevronDown size={14} aria-hidden="true" />
+                    {f.tramo !== 'salida' && <Avance fase={fase} />}
                 </button>
                 {d.abierto && (
                     <div className="cv-tarjeta-pop cv-etapa-pop" role="menu" aria-label="Etapa del setting">
@@ -67,7 +68,6 @@ function Etapa({ fase, onMover }) {
                         ))}
                     </div>
                 )}
-                {f.tramo !== 'salida' && <Avance fase={fase} />}
             </div>
             {sig && (
                 <Button variant="primary" className="cv-adelantar" icon={<ChevronsRight />} data-tip={`Adelantar|Pasa a ${sig.n} · ${sig.label}`}
