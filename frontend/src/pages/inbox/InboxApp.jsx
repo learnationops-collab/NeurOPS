@@ -36,6 +36,8 @@ const MODO = {
 };
 
 function seccionGuardada() {
+    // El link del recorrido de seguimientos (`/inbox?tour=1`, ADR-W255) abre Conversaciones, donde vive el recorrido.
+    if (new URLSearchParams(window.location.search).get('tour') === '1') return 'conversaciones';
     try {
         const s = window.localStorage.getItem(CLAVE_SECCION);
         return SECCIONES.some((x) => x.id === s) ? s : 'embudos';
