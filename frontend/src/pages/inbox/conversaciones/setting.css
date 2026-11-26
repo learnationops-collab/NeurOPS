@@ -293,3 +293,14 @@
 .thalamus.inbox .cv-barra-btn:hover svg{transform:rotate(-8deg) scale(1.12)}
 .thalamus.inbox .cv-barra-n{min-width:18px;height:18px;padding:0 5px;border-radius:99px;display:grid;place-items:center;font-size:10.5px;font-weight:800;color:var(--on-brand);background:var(--brand-secondary);animation:ib-pop .3s cubic-bezier(.3,1.6,.5,1) both}
 .thalamus.inbox .cv-barra-n--alerta{background:var(--error)}
+
+/* Mario, 26/11/2026: cada red con su color, para que se note de dónde escribe. En el avatar, el sello lleno (degradé de
+   Instagram, verde de WhatsApp) con el ícono blanco; suelto, el ícono en su color. */
+.thalamus.inbox .cv-canal--ig{color:#E1306C}
+.thalamus.inbox .cv-canal--wa{color:#25D366}
+.thalamus.inbox .cv-item-avatar .cv-canal,.thalamus.inbox .cv-tarjeta-avatar .cv-canal{color:#fff;border:2px solid var(--bg-flotante, #0d1030)}
+.thalamus.inbox .cv-item-avatar .cv-canal--ig,.thalamus.inbox .cv-tarjeta-avatar .cv-canal--ig{
+  background:radial-gradient(circle at 30% 107%,#fdf497 0%,#fdf497 5%,#fd5949 45%,#d6249f 60%,#285aeb 90%)}
+.thalamus.inbox .cv-item-avatar .cv-canal--wa,.thalamus.inbox .cv-tarjeta-avatar .cv-canal--wa{background:#25D366}
+.thalamus.inbox .cv-item-avatar .cv-canal{width:16px;height:16px}
+.thalamus.inbox .cv-item-avatar .cv-canal svg{width:10px;height:10px}

@@ -168,9 +168,17 @@ def asker_note(quien):
               'los suyos (donde figura o personas con las que tuvo una agenda); las mediciones (totales, '
               'porcentajes, por closer o por programa) son de todo el equipo. Los datos de la Academia no los ve. Si '
               'pide algo de otro, decíselo en una línea y ofrecé el número del equipo.')
+    # Un setter no tiene agendas como closer: las suyas son las que cargó (Mario, 26/11/2026, Paula preguntaba «¿cuántas
+    # agendas tengo este mes?» y Learnito le ofrecía tres tablas en vez de contarlas).
+    if (q.get('rol') or '') in ('setter', 'triage'):
+        propio = (f"como {q.get('rol')}, las agendas que cargó: appointments con f.setter_id = {q.get('id')}, y \"este "
+                  f"mes\" o \"hoy\" se cuentan por f.created_at (cuándo la cargó, en su zona), no por la hora de la "
+                  f"llamada. Contá sin preguntar qué tabla usar.")
+    else:
+        propio = (f"como closer, las filas de su closer (closer_id {q.get('id')}, o el email {q.get('email')} en las "
+                  f"tablas que guardan el mail del closer).")
     return (f"Te escribe {q.get('nombre')} ({q.get('email')}), rol {q.get('rol')} en Work. {ve} Cuando diga \"mis "
-            f"agendas\", \"mis ventas\" o \"los míos\": como closer, las filas de su closer (closer_id {q.get('id')}, "
-            f"o el email {q.get('email')} en las tablas que guardan el mail del closer). Si no queda claro, decí cuál "
+            f"agendas\", \"mis ventas\", \"las que agendé\" o \"los míos\": {propio} Si no queda claro, decí cuál "
             f'usaste.')
 
 

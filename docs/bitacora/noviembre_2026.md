@@ -1179,3 +1179,7 @@
 ### 26/11/2026 · Tarjeta del lead: clave en una línea, «No requiere» junto al bot y panel de Estadísticas
 - La palabra clave va en minúscula y en una línea («DOCUMENTO 25» se partía); «No requiere» bajó al lado del interruptor «Pausar» del bot, con su rótulo abajo ([Ahora.jsx](../../frontend/src/pages/inbox/conversaciones/Ahora.jsx)).
 - «Tus números» pasa a ser el panel «Estadísticas», propio, entre la tarjeta y la ficha, con números grandes en 2×2; la ficha (Tareas, Notas, Variables, Recorrido) se titula «Seguimiento» ([MisStats.jsx](../../frontend/src/pages/inbox/conversaciones/MisStats.jsx), [Detalle.jsx](../../frontend/src/pages/inbox/conversaciones/Detalle.jsx)).
+
+### 26/11/2026 · Learnito cuenta «mis agendas» de un setter; Instagram y WhatsApp con su color
+- Learnito: a un setter, «mis agendas» son las que cargó (`setter_id`, por fecha de carga) ([learnito_conector.py](../../app/services/learnito_conector.py)); en la Academia, las preguntas en primera persona y las aclaraciones escritas después de unas opciones van al modelo en vez de volver a ofrecer tablas (ADR-247 de la Academia).
+- En la lista y en la tarjeta, el sello del avatar va lleno: degradé de Instagram o verde de WhatsApp, con el ícono blanco ([setting.css](../../frontend/src/pages/inbox/conversaciones/setting.css)).
