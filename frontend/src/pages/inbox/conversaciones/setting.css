@@ -67,12 +67,12 @@
 
 /* Tarjeta del lead (ADR-W238): quién es, su agenda, una línea de pastillas, etiquetas y la etapa con su avance */
 .thalamus.inbox .cv-tarjeta{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;padding:var(--s3);min-width:0}
-.thalamus.inbox .cv-tarjeta > *{animation:cv-entra .35s var(--spring, cubic-bezier(.22,.7,.2,1)) both}
+.thalamus.inbox .cv-tarjeta > *{animation:ib-entra .35s var(--spring, cubic-bezier(.22,.7,.2,1)) both}
 .thalamus.inbox .cv-tarjeta > :nth-child(2){animation-delay:.04s}
 .thalamus.inbox .cv-tarjeta > :nth-child(3){animation-delay:.08s}
 .thalamus.inbox .cv-tarjeta > :nth-child(4){animation-delay:.12s}
 .thalamus.inbox .cv-tarjeta > :nth-child(5){animation-delay:.16s}
-@keyframes cv-entra{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes ib-entra{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 .thalamus.inbox .cv-tarjeta-quien{display:flex;align-items:center;gap:10px;min-width:0}
 .thalamus.inbox .cv-tarjeta-avatar{position:relative;flex:none}
 .thalamus.inbox .cv-tarjeta-avatar .cv-canal{position:absolute;right:-3px;bottom:-3px;width:18px;height:18px;border-radius:50%;display:grid;place-items:center;background:var(--bg-flotante);border:1px solid var(--border-main)}
@@ -113,8 +113,8 @@
 .thalamus.inbox .cv-etapa-t small{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--c)}
 .thalamus.inbox .cv-avance{display:flex;gap:3px;padding:0 2px}
 .thalamus.inbox .cv-avance i{flex:1;height:4px;border-radius:99px;background:var(--bg-item);overflow:hidden;position:relative}
-.thalamus.inbox .cv-avance i.cv-avance--on::after{content:"";position:absolute;inset:0;border-radius:inherit;background:var(--c);transform-origin:left;animation:cv-avance .45s calc(var(--i) * 60ms) cubic-bezier(.22,.7,.2,1) both}
-@keyframes cv-avance{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.thalamus.inbox .cv-avance i.cv-avance--on::after{content:"";position:absolute;inset:0;border-radius:inherit;background:var(--c);transform-origin:left;animation:ib-avance .45s calc(var(--i) * 60ms) cubic-bezier(.22,.7,.2,1) both}
+@keyframes ib-avance{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 .thalamus.inbox .cv-etapa-pop{right:0;max-height:380px;overflow:auto}
 .thalamus.inbox .cv-etapa-grupo{display:grid;gap:1px}
 .thalamus.inbox .cv-etapa-grupo + .cv-etapa-grupo{border-top:1px solid var(--border-subtle);padding-top:4px;margin-top:2px}
@@ -148,7 +148,7 @@
 
 /* Ficha (ADR-W238): filas con ícono, título y cuenta; lo abierto entra deslizando */
 .thalamus.inbox .cv-ficha.cv-ficha{gap:2px}
-.thalamus.inbox .cv-ficha-sec{display:grid;gap:4px;animation:cv-entra .35s cubic-bezier(.22,.7,.2,1) both}
+.thalamus.inbox .cv-ficha-sec{display:grid;gap:4px;animation:ib-entra .35s cubic-bezier(.22,.7,.2,1) both}
 .thalamus.inbox .cv-ficha-sec:nth-child(2){animation-delay:.05s}
 .thalamus.inbox .cv-ficha-sec:nth-child(3){animation-delay:.1s}
 .thalamus.inbox .cv-ficha-sec:nth-child(4){animation-delay:.15s}
@@ -158,15 +158,15 @@
 .thalamus.inbox button.cv-ficha-cab:hover{background:var(--bg-item)}
 .thalamus.inbox .cv-ficha-ico{width:24px;height:24px;flex:none;display:grid;place-items:center;border-radius:8px;color:var(--c);background:color-mix(in srgb,var(--c) 14%,transparent)}
 .thalamus.inbox .cv-ficha-tit{flex:1;min-width:0;font-size:12.5px;font-weight:600}
-.thalamus.inbox .cv-ficha-n{min-width:20px;height:20px;padding:0 6px;border-radius:99px;display:grid;place-items:center;font-size:11px;font-weight:700;background:var(--bg-item);animation:cv-pop .3s cubic-bezier(.3,1.6,.5,1) both}
+.thalamus.inbox .cv-ficha-n{min-width:20px;height:20px;padding:0 6px;border-radius:99px;display:grid;place-items:center;font-size:11px;font-weight:700;background:var(--bg-item);animation:ib-pop .3s cubic-bezier(.3,1.6,.5,1) both}
 .thalamus.inbox .cv-ficha-n--0{opacity:.45}
-@keyframes cv-pop{from{transform:scale(.6);opacity:0}to{transform:none;opacity:1}}
+@keyframes ib-pop{from{transform:scale(.6);opacity:0}to{transform:none;opacity:1}}
 .thalamus.inbox .cv-ficha-flecha{flex:none;opacity:.6;transition:transform .2s}
 .thalamus.inbox .cv-ficha-cab[aria-expanded="true"] .cv-ficha-flecha{transform:rotate(180deg)}
 .thalamus.inbox .cv-ficha-barra{width:46px;height:4px;flex:none;border-radius:99px;background:var(--bg-item);overflow:hidden}
-.thalamus.inbox .cv-ficha-barra i{display:block;height:100%;width:calc(var(--p) * 100%);border-radius:inherit;background:var(--info);transition:width .5s cubic-bezier(.22,.7,.2,1);animation:cv-llena .6s .2s cubic-bezier(.22,.7,.2,1) both}
-@keyframes cv-llena{from{width:0}}
-.thalamus.inbox .cv-ficha-cuerpo{padding:0 6px 6px;display:grid;gap:6px;animation:cv-entra .25s ease-out both}
+.thalamus.inbox .cv-ficha-barra i{display:block;height:100%;width:calc(var(--p) * 100%);border-radius:inherit;background:var(--info);transition:width .5s cubic-bezier(.22,.7,.2,1);animation:ib-llena .6s .2s cubic-bezier(.22,.7,.2,1) both}
+@keyframes ib-llena{from{width:0}}
+.thalamus.inbox .cv-ficha-cuerpo{padding:0 6px 6px;display:grid;gap:6px;animation:ib-entra .25s ease-out both}
 .thalamus.inbox .cv-nota-venta-ult{margin:0;padding:5px 8px;border:0;border-left:2px solid var(--warning);border-radius:6px;background:var(--bg-item);color:var(--text-muted);font:inherit;font-size:11.5px;text-align:left;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media (prefers-reduced-motion:reduce){.thalamus.inbox :is(.cv-ficha-sec,.cv-ficha-n,.cv-ficha-cuerpo,.cv-ficha-barra i){animation:none}}
 .thalamus.inbox .cv-notas-venta{width:min(520px,100%);display:grid;gap:var(--s3)}
@@ -191,8 +191,8 @@
 .thalamus.inbox .cv-medio-foto{display:block;max-width:100%;max-height:300px;border-radius:10px}
 .thalamus.inbox .cv-medio-audio{display:block;width:240px;max-width:100%;height:36px}
 .thalamus.inbox .cv-medio-doc{color:inherit;text-decoration:underline}
-.thalamus.inbox .cv-burbuja--marcada{animation:cv-marcada 1.4s ease-out}
-@keyframes cv-marcada{0%,30%{box-shadow:0 0 0 3px var(--brand-secondary)}100%{box-shadow:0 0 0 3px transparent}}
+.thalamus.inbox .cv-burbuja--marcada{animation:ib-marcada 1.4s ease-out}
+@keyframes ib-marcada{0%,30%{box-shadow:0 0 0 3px var(--brand-secondary)}100%{box-shadow:0 0 0 3px transparent}}
 @media (prefers-reduced-motion:reduce){.thalamus.inbox .cv-burbuja--marcada{animation:none;outline:2px solid var(--brand-secondary)}}
 
 /* Indicadores compactos (ADR-W238): etapa en barrita, espera con reloj, anillo de la ventana */
@@ -200,15 +200,85 @@
 .thalamus.inbox .cv-etapa-mini-in{display:inline-flex;align-items:center;gap:6px;min-width:0;font-size:11px;font-weight:600;color:var(--c)}
 .thalamus.inbox .cv-etapa-mini-barra{display:inline-flex;gap:2px}
 .thalamus.inbox .cv-etapa-mini-barra i{width:5px;height:8px;border-radius:2px;background:var(--bg-item);position:relative;overflow:hidden}
-.thalamus.inbox .cv-etapa-mini-barra i.on::after{content:"";position:absolute;inset:0;background:var(--c);transform-origin:bottom;animation:cv-sube .35s calc(var(--i) * 45ms) cubic-bezier(.22,.7,.2,1) both}
-@keyframes cv-sube{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+.thalamus.inbox .cv-etapa-mini-barra i.on::after{content:"";position:absolute;inset:0;background:var(--c);transform-origin:bottom;animation:ib-sube .35s calc(var(--i) * 45ms) cubic-bezier(.22,.7,.2,1) both}
+@keyframes ib-sube{from{transform:scaleY(0)}to{transform:scaleY(1)}}
 .thalamus.inbox .cv-etapa-mini-salida{width:16px;height:16px;border-radius:50%;display:grid;place-items:center;font-size:10px;font-weight:800;background:color-mix(in srgb,var(--c) 16%,transparent)}
 .thalamus.inbox .cv-etapa-mini-bot{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;color:var(--c);background:color-mix(in srgb,var(--c) 14%,transparent)}
 .thalamus.inbox .cv-ind{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px 0 7px;border-radius:999px;font-size:11.5px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--c);background:color-mix(in srgb,var(--c) 12%,transparent)}
 .thalamus.inbox .cv-ventana svg{flex:none}
 .thalamus.inbox .cv-ventana-fondo{fill:none;stroke:color-mix(in srgb,var(--c) 22%,transparent);stroke-width:2.5}
-.thalamus.inbox .cv-ventana-resto{fill:none;stroke:var(--c);stroke-width:2.5;stroke-linecap:round;transition:stroke-dashoffset .6s cubic-bezier(.22,.7,.2,1);animation:cv-anillo .8s cubic-bezier(.22,.7,.2,1) both}
-@keyframes cv-anillo{from{stroke-dashoffset:var(--vuelta)}}
-.thalamus.inbox .cv-ventana--urgente svg{animation:cv-late 1.6s ease-in-out infinite}
-@keyframes cv-late{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+.thalamus.inbox .cv-ventana-resto{fill:none;stroke:var(--c);stroke-width:2.5;stroke-linecap:round;transition:stroke-dashoffset .6s cubic-bezier(.22,.7,.2,1);animation:ib-anillo .8s cubic-bezier(.22,.7,.2,1) both}
+@keyframes ib-anillo{from{stroke-dashoffset:var(--vuelta)}}
+.thalamus.inbox .cv-ventana--urgente svg{animation:ib-late 1.6s ease-in-out infinite}
+@keyframes ib-late{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
 @media (prefers-reduced-motion:reduce){.thalamus.inbox :is(.cv-etapa-mini-barra i::after,.cv-ventana-resto,.cv-ventana--urgente svg){animation:none}}
+
+/* Fila de la bandeja en dos líneas (ADR-W238) */
+.thalamus.inbox .cv-item{align-items:center;padding:9px 10px}
+.thalamus.inbox .cv-item-avatar{position:relative;flex:none}
+.thalamus.inbox .cv-item-avatar .cv-canal{position:absolute;right:-3px;bottom:-3px;width:15px;height:15px;border-radius:50%;display:grid;place-items:center;background:var(--bg-flotante);border:1px solid var(--border-main)}
+.thalamus.inbox .cv-item-cuerpo{gap:4px}
+.thalamus.inbox .cv-item-cab,.thalamus.inbox .cv-item-texto{display:flex;align-items:center;gap:6px;min-width:0}
+.thalamus.inbox .cv-item-examen{flex:none;padding:0 5px;border-radius:5px;font-size:9.5px;font-weight:700;letter-spacing:.04em;line-height:16px;color:var(--text-muted);background:var(--bg-item)}
+.thalamus.inbox .cv-item-der{margin-left:auto;flex:none;display:inline-flex;align-items:center;gap:5px}
+.thalamus.inbox .cv-item-texto > span:not(.cv-item-der){flex:1;min-width:0}
+.thalamus.inbox .cv-item-ico{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;color:var(--text-muted)}
+.thalamus.inbox .cv-item-ico--toca{color:var(--brand-secondary);background:var(--brand-secondary-surface);animation:ib-late 1.6s ease-in-out infinite}
+.thalamus.inbox .cv-item-tags{display:inline-flex;gap:2px}
+.thalamus.inbox .cv-item-tags i{width:7px;height:7px;border-radius:50%;background:var(--c);box-shadow:0 0 0 1.5px var(--bg-flotante)}
+.thalamus.inbox .cv-item-asig .ui-avatar.ui-avatar{width:18px;height:18px;font-size:8px}
+.thalamus.inbox .cv-item .cv-ind{height:20px;padding:0 7px 0 5px;font-size:10.5px}
+.thalamus.inbox .cv-item .cv-ind svg{width:11px;height:11px}
+.thalamus.inbox .cv-item .cv-vence{font-size:10.5px}
+.thalamus.inbox .cv-item .cv-sin-leer{animation:ib-pop .3s cubic-bezier(.3,1.6,.5,1) both}
+.thalamus.inbox .cv li:nth-child(-n+8) > .cv-item{animation:ib-entra .3s cubic-bezier(.22,.7,.2,1) both}
+.thalamus.inbox .cv li:nth-child(2) > .cv-item{animation-delay:.03s}
+.thalamus.inbox .cv li:nth-child(3) > .cv-item{animation-delay:.06s}
+.thalamus.inbox .cv li:nth-child(4) > .cv-item{animation-delay:.09s}
+.thalamus.inbox .cv li:nth-child(5) > .cv-item{animation-delay:.12s}
+.thalamus.inbox .cv li:nth-child(6) > .cv-item{animation-delay:.15s}
+@media (prefers-reduced-motion:reduce){.thalamus.inbox :is(.cv-item,.cv-item-ico--toca,.cv-item .cv-sin-leer){animation:none}}
+
+/* Tarjeta en bloques (ADR-W238): quién es · ahora y bot · asignación y etiquetas · etapa y salidas */
+.thalamus.inbox .cv-tarjeta.cv-tarjeta{gap:8px}
+.thalamus.inbox .cv-bloque{display:grid;gap:8px;min-width:0}
+.thalamus.inbox .cv-bloque + .cv-bloque:not(.cv-bloque--suave){padding-top:8px;border-top:1px solid var(--border-subtle)}
+.thalamus.inbox .cv-bloque--suave{padding:8px;border-radius:14px;background:var(--bg-item)}
+.thalamus.inbox .cv-bloque--suave + .cv-bloque{border-top:0;padding-top:0}
+.thalamus.inbox .cv-tel{display:inline-flex;align-items:center;gap:4px;padding:0;border:0;background:none;color:inherit;font:inherit;cursor:pointer;font-variant-numeric:tabular-nums}
+.thalamus.inbox .cv-tel svg{opacity:0;transition:opacity .15s}
+.thalamus.inbox .cv-tel:hover{color:var(--text-main)}
+.thalamus.inbox .cv-tel:hover svg{opacity:.8}
+.thalamus.inbox .cv-ahora{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.thalamus.inbox .cv-resolver{margin-left:auto;display:inline-flex;align-items:center;gap:4px;height:24px;padding:0 9px;border-radius:999px;border:1px dashed var(--border-main);background:none;color:var(--text-muted);font:inherit;font-size:11px;font-weight:600;cursor:pointer}
+.thalamus.inbox .cv-resolver:hover{border-style:solid;color:var(--text-main)}
+.thalamus.inbox .cv-resolver--on{border-style:solid;color:var(--success);border-color:color-mix(in srgb,var(--success) 45%,transparent)}
+.thalamus.inbox .cv-bot{display:flex;align-items:center;gap:8px;min-width:0}
+.thalamus.inbox .cv-bot .cv-menu-bot{flex:1;min-width:0}
+.thalamus.inbox .cv-bot-flujo{flex:1;min-width:0;display:flex;align-items:center;gap:8px;padding:0;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.thalamus.inbox .cv-bot-ico{width:28px;height:28px;flex:none;display:grid;place-items:center;border-radius:9px;color:var(--info);background:color-mix(in srgb,var(--info) 14%,transparent);transition:color .2s,background .2s}
+.thalamus.inbox .cv-bot--pausa .cv-bot-ico{color:var(--warning);background:color-mix(in srgb,var(--warning) 16%,transparent)}
+.thalamus.inbox .cv-bot-t{min-width:0;display:grid;line-height:1.25}
+.thalamus.inbox .cv-bot-t b{font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.thalamus.inbox .cv-bot-t small{font-size:10.5px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.thalamus.inbox .cv-bot-switch{flex:none;display:grid;justify-items:center;gap:2px}
+.thalamus.inbox .cv-bot-switch small{font-size:9.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-muted)}
+.thalamus.inbox .cv-bot--pausa .cv-bot-switch small{color:var(--warning)}
+.thalamus.inbox .cv-salidas{display:flex;gap:6px}
+.thalamus.inbox .cv-salida{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:5px;height:28px;border-radius:10px;border:1px solid color-mix(in srgb,var(--error) 30%,transparent);background:color-mix(in srgb,var(--error) 6%,transparent);color:color-mix(in srgb,var(--error) 85%,var(--text-main));font:inherit;font-size:11.5px;font-weight:600;cursor:pointer;transition:background .15s,transform .1s}
+.thalamus.inbox .cv-salida:hover{background:color-mix(in srgb,var(--error) 16%,transparent)}
+.thalamus.inbox .cv-salida:active{transform:scale(.97)}
+.thalamus.inbox .cv-salidas-fuera{margin:0;color:var(--error)}
+.thalamus.inbox .cv-salidas-fuera button{border:0;background:none;padding:0;color:var(--text-main);font:inherit;text-decoration:underline;cursor:pointer}
+
+/* Caja: herramientas en la fila de los modos, Learnito resaltado; el texto a todo el ancho */
+.thalamus.inbox .cv-comp-tools{display:inline-flex;align-items:center;gap:4px}
+.thalamus.inbox .cv-learnito-btn{position:relative;display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 13px;border-radius:999px;border:0;cursor:pointer;color:#fff;font:inherit;font-size:12px;font-weight:700;
+  background:linear-gradient(120deg,var(--brand-primary,#1323C6),#7D63E6,var(--brand-secondary,#FF3FA4),#7D63E6,var(--brand-primary,#1323C6));background-size:300% 100%;animation:ib-brillo 6s linear infinite;box-shadow:0 0 18px -4px color-mix(in srgb,#7D63E6 70%,transparent)}
+.thalamus.inbox .cv-learnito-btn svg{animation:ib-chispa 2.4s ease-in-out infinite}
+.thalamus.inbox .cv-learnito-btn:hover{box-shadow:0 0 24px -2px color-mix(in srgb,var(--brand-secondary,#FF3FA4) 70%,transparent)}
+.thalamus.inbox .cv-learnito-btn:disabled{opacity:.55;cursor:wait}
+@keyframes ib-brillo{to{background-position:300% 0}}
+@keyframes ib-chispa{0%,100%{transform:rotate(0) scale(1)}50%{transform:rotate(15deg) scale(1.15)}}
+.thalamus.inbox .cv-comp-cab .ui-chip{margin-left:auto}
+@media (prefers-reduced-motion:reduce){.thalamus.inbox :is(.cv-learnito-btn,.cv-learnito-btn svg){animation:none}}

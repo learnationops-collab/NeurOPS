@@ -296,6 +296,8 @@ def listar_conversaciones():
         ultimo.c.contacto_id == IgMensaje.contacto_id, ultimo.c.ultimo == IgMensaje.enviado_en))
         .filter(IgMensaje.contacto_id.in_(ids)).order_by(IgMensaje.id).all()} if ids else {}
     cerradas = fases.cerradas([c for c, _, _, _ in filas])
+    from app.automatizaciones import cliente_del_contacto
+    reales = cliente_del_contacto.nombres([c for c, _, _, _ in filas])
     salida = []
     for contacto, momento, cantidad, _ in filas:
         variables = contacto.variables or {}
@@ -307,6 +309,8 @@ def listar_conversaciones():
             'igsid': contacto.igsid,
             'username': contacto.username,
             'nombre': contacto.nombre,
+            # El nombre con que agendó en Work (ADR-W238): «👻» en WhatsApp se lee como la persona.
+            'nombre_real': reales.get(contacto.id),
             'mensajes': cantidad,
             'ultimo_en': _iso(momento),
             'ultimo_texto': (mensaje.texto or '')[:140] if mensaje else '',

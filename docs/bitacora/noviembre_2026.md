@@ -1091,3 +1091,10 @@
 - La tarjeta del lead muestra el nombre con que agendó en Work (no «👻»), su número y su última agenda; asignado, canal y bot en pastillas; la etapa con su avance y «Adelantar» al lado ([TarjetaLead.jsx](../../frontend/src/pages/inbox/conversaciones/TarjetaLead.jsx), [cliente_del_contacto.py](../../app/automatizaciones/cliente_del_contacto.py)).
 - La ficha (tareas, notas, variables, recorrido) son filas con ícono y cuenta ([FichaLead.jsx](../../frontend/src/pages/inbox/conversaciones/FichaLead.jsx)).
 - Arriba del chat y en la lista: barrita de etapa, reloj de espera y anillo de la ventana en vez de los tres puntos y los textos largos ([Indicadores.jsx](../../frontend/src/pages/inbox/conversaciones/Indicadores.jsx)).
+
+### 26/11/2026 · Inbox: tarjeta en bloques, chat más alto, caja más ancha y sin recuadro oscuro (ADR-W239)
+- El recuadro oscuro detrás de la barra de Conversaciones venía de Confirmar del closer, que usa las mismas clases; ahora no aplica dentro del Inbox ([confirmar.css](../../frontend/src/pages/closer/confirmar/confirmar.css)).
+- La tarjeta del lead va en bloques y trae lo que antes iba arriba del chat (número, espera, anillo, «No requiere»), el bot con «Pausar» y No lead / In-abrible a un toque ([Ahora.jsx](../../frontend/src/pages/inbox/conversaciones/Ahora.jsx), [TarjetaLead.jsx](../../frontend/src/pages/inbox/conversaciones/TarjetaLead.jsx)).
+- La caja de escribir: herramientas y Learnito en la fila de Chat/Nota/Tarea; el texto a todo el ancho ([Composer.jsx](../../frontend/src/pages/inbox/conversaciones/Composer.jsx)).
+- La fila de la bandeja en dos líneas, con el nombre con que agendó en Work ([Fila.jsx](../../frontend/src/pages/inbox/conversaciones/Fila.jsx)).
+- La bandeja termina arriba del dock ([useAltoLibre.js](../../frontend/src/pages/inbox/conversaciones/useAltoLibre.js)). «Volver a mi sesión» es una pastilla chica al lado del saludo.

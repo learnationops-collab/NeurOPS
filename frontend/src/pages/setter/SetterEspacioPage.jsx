@@ -230,6 +230,16 @@ const SetterEspacioPage = () => {
                                 Hola, {nombreDePila(nombre)}.{' '}
                                 {seccionActual.sub && <span className="sub">{seccionActual.sub}</span>}
                             </h1>
+                            {/* Simulando, la salida es terminar la simulación: una pastilla chica al lado del saludo, en
+                                ámbar, que solo ve quien simula (Mario, 26/11: el botón grande abajo del saludo se veía feo).
+                                También está en el menú del avatar. */}
+                            {user?.is_impersonating && (
+                                <button type="button" className="setter-simulando" disabled={saliendo}
+                                    title="Estás viendo su sesión. Tocá para volver a la tuya" onClick={volverAMiSesion}>
+                                    <Ghost size={12} />
+                                    {saliendo ? 'Volviendo…' : 'Simulando · volver'}
+                                </button>
+                            )}
                         </div>
                         {seccionActual.tabs && (
                             <Segmented opciones={seccionActual.tabs} valor={tab} onChange={elegirTab}
@@ -253,16 +263,6 @@ const SetterEspacioPage = () => {
                                 <span className="setter-link-t">Tálamus</span>
                             </button>
                         </MisLinks>
-                        {/* Simulando, la salida es terminar la simulación. Ya no es la ÚNICA
-                            salida de ningún lado: moverse entre secciones es el dock. También está
-                            en el menú del avatar, pero acá se ve sin buscarla. */}
-                        {user?.is_impersonating && (
-                            <button type="button" className="btn btn--linea btn--sm setter-volver" disabled={saliendo}
-                                title="Volver a tu sesión original" onClick={volverAMiSesion}>
-                                <Ghost size={15} />
-                                {saliendo ? 'Volviendo…' : 'Volver a mi sesión'}
-                            </button>
-                        )}
                     </header>
                 </div>
 

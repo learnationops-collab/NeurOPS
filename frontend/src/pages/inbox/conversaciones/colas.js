@@ -173,6 +173,8 @@ export const usuarioDe = (c) => (!esWhatsapp(c) && c.nombre && c.username ? `@${
 
 export function quien(c) {
     // El nombre primero (Mario, 25/11: «Nieves Pupo» se leía como @zpg_snow); el @usuario va debajo (`usuarioDe`).
+    // Si agendó, el de Work le gana al del perfil (ADR-W238: «👻» en WhatsApp).
+    if (c.nombre_real) return c.nombre_real;
     if (esWhatsapp(c)) return c.nombre || c.username || 'Sin nombre';
     if (c.nombre) return c.nombre;
     if (c.username) return `@${c.username}`;

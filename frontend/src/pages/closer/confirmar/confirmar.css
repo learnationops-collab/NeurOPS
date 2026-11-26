@@ -1,14 +1,14 @@
-/* Confirmar con vistas (ADR-W201). Variables del sistema estándar (--ui-*), con respaldo para el mazo. */
-.cv{display:grid;gap:20px;min-width:0;
+/* Confirmar con vistas (ADR-W201). Las clases que el Inbox también usa (cv-barra, cv-lista…) llevan :not(:where(.inbox *)) para no pisarlo. Variables del sistema estándar (--ui-*), con respaldo para el mazo. */
+.cv:not(:where(.inbox *)){display:grid;gap:20px;min-width:0;
   --cv-text:var(--ui-text,#e8e9f3);--cv-muted:var(--ui-muted,#9aa0b8);--cv-faint:var(--ui-faint,#6b7089);
   --cv-linea:var(--ui-border-subtle,rgba(255,255,255,.08));--cv-linea-2:var(--ui-border-main,rgba(255,255,255,.16));
   --cv-suave:var(--ui-inset,rgba(255,255,255,.04));--cv-acento:var(--ui-brand,#7c6cff)}
-.cv svg{width:15px;height:15px;flex-shrink:0}
+.cv:not(:where(.inbox *)) svg{width:15px;height:15px;flex-shrink:0}
 
 /* Fila: título, vistas y controles */
 /* Barra de vistas: pegada justo debajo del header (--ws-top lo mide la página), a todo el ancho del panel,
    con la pestaña activa subrayada sobre la línea de abajo. El contenido pasa por debajo, de ahí el velo. */
-.cv-barra{display:flex;align-items:center;gap:2px;flex-wrap:wrap;position:sticky;top:var(--ws-top,64px);z-index:30;
+.cv-barra:not(:where(.inbox *)){display:flex;align-items:center;gap:2px;flex-wrap:wrap;position:sticky;top:var(--ws-top,64px);z-index:30;
   margin:0 calc(-1 * var(--ws-pad,24px));padding:0 var(--ws-pad,24px);min-height:52px;
   border-bottom:1px solid var(--cv-linea);
   background:color-mix(in srgb,var(--ln-page-base,#060a2c) 82%,transparent);backdrop-filter:blur(16px) saturate(1.2);-webkit-backdrop-filter:blur(16px) saturate(1.2)}
@@ -62,12 +62,12 @@
 @keyframes cv-entra{from{opacity:0;transform:translateY(4px)}}
 
 /* Popover de los controles */
-.cv-pop{position:fixed;z-index:160;width:300px;max-height:min(70vh,520px);overflow:auto;padding:8px;border-radius:14px;margin:0;
+.cv-pop:not(:where(.inbox *)){position:fixed;z-index:160;width:300px;max-height:min(70vh,520px);overflow:auto;padding:8px;border-radius:14px;margin:0;
   background:var(--ui-popover-bg,#1b1c26);border:1px solid var(--cv-linea-2,rgba(255,255,255,.16));box-shadow:var(--ui-shadow,0 20px 50px rgba(0,0,0,.45));
   color:var(--ui-text,#e8e9f3);font-size:13px;
   --cv-text:var(--ui-text,#e8e9f3);--cv-muted:var(--ui-muted,#9aa0b8);--cv-faint:var(--ui-faint,#6b7089);--cv-linea:var(--ui-border-subtle,rgba(255,255,255,.08));
   --cv-linea-2:var(--ui-border-main,rgba(255,255,255,.16));--cv-suave:var(--ui-inset,rgba(255,255,255,.05));--cv-acento:var(--ui-brand,#7c6cff)}
-.cv-pop svg{width:15px;height:15px}
+.cv-pop:not(:where(.inbox *)) svg{width:15px;height:15px}
 .cv-pop__q{width:100%;box-sizing:border-box;height:32px;padding:0 10px;border-radius:9px;border:1px solid var(--cv-linea);background:var(--ui-input-bg,transparent);
   color:var(--cv-text);font:inherit;font-size:12.5px;margin-bottom:4px}
 .cv-pop__tit{display:flex;justify-content:space-between;align-items:center;margin:8px 8px 4px;font-size:10.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--cv-faint)}
@@ -100,13 +100,13 @@
 .cv-mute{color:var(--cv-faint);font-size:12px}
 .cv-hora b{font-variant-numeric:tabular-nums;color:var(--cv-text);font-size:13px}
 .cv-hora small{font-size:11px;font-weight:700}
-.cv-etapa{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:var(--c)}
-.cv-pasos{display:inline-flex;gap:3px}
-.cv-pasos i{width:13px;height:4px;border-radius:99px;background:var(--ui-track,rgba(255,255,255,.1))}
-.cv-pasos i.on{background:var(--c)}
+.cv-etapa:not(:where(.inbox *)){display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:var(--c)}
+.cv-pasos:not(:where(.inbox *)){display:inline-flex;gap:3px}
+.cv-pasos:not(:where(.inbox *)) i{width:13px;height:4px;border-radius:99px;background:var(--ui-track,rgba(255,255,255,.1))}
+.cv-pasos:not(:where(.inbox *)) i.on{background:var(--c)}
 
 /* Lista */
-.cv-lista{display:grid;gap:4px;min-width:0}
+.cv-lista:not(:where(.inbox *)){display:grid;gap:4px;min-width:0}
 .cv-grupo{all:unset;cursor:pointer;display:flex;align-items:center;gap:8px;padding:14px 4px 8px;font-size:12px;font-weight:800}
 .cv-grupo__car{width:13px!important;height:13px!important;color:var(--cv-faint);transition:transform .15s}
 .cv-grupo--plegado .cv-grupo__car{transform:rotate(-90deg)}
@@ -182,7 +182,7 @@
 .cv-chip svg{width:11px!important;height:11px!important;flex:none}
 .cv-chip--neutro{--c:#c9cde6;color:var(--cv-text);background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.1);font-weight:600}
 .cv-chip small{font-size:9px;font-weight:800;color:var(--cv-faint);text-transform:uppercase;letter-spacing:.06em}
-.cv-punto{width:6px;height:6px;border-radius:99px;background:var(--c);flex:none;box-shadow:0 0 6px var(--c)}
+.cv-punto:not(:where(.inbox *)){width:6px;height:6px;border-radius:99px;background:var(--c);flex:none;box-shadow:0 0 6px var(--c)}
 .cv-punto--late{animation:cv-late 1.6s ease-in-out infinite}
 .cv-ini{font-style:normal;width:13px;height:13px;border-radius:99px;display:grid;place-items:center;font-size:8px;font-weight:900;color:#0b1030;background:var(--c);flex:none}
 @keyframes cv-ev-in{from{opacity:0}}
@@ -202,7 +202,7 @@
 /* Teléfono: dos filas que se deslizan de costado, las vistas arriba y los controles abajo, en vez de cuatro
    renglones que se tapaban con el riel. Los menús se abren a lo ancho de la pantalla. */
 @media (max-width:720px){
-  .cv-barra{flex-wrap:wrap;gap:0;min-height:0}
+  .cv-barra:not(:where(.inbox *)){flex-wrap:wrap;gap:0;min-height:0}
   .cv-titulo{display:none}
   .cv-tabs,.cv-ctls{display:flex;flex:0 0 calc(100% + 2 * var(--ws-pad,16px));flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;
     margin:0 calc(-1 * var(--ws-pad,16px));padding:0 var(--ws-pad,16px)}
@@ -217,7 +217,7 @@
   .cv-ctls .cv-vsep{display:none}
   .cv-calbar{gap:4px;min-height:44px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
   .cv-calbar::-webkit-scrollbar{display:none}
-  .cv-pop{left:12px!important;right:12px;width:auto;max-height:60vh}
+  .cv-pop:not(:where(.inbox *)){left:12px!important;right:12px;width:auto;max-height:60vh}
   /* Lista: el nombre queda fijo a la izquierda mientras la tabla se desliza. */
   .cv-tabla{--cv-col1:150px}
   .cv-tr > div:first-child{position:sticky;left:0;z-index:1;background:var(--ln-page-base,#020617);box-shadow:1px 0 0 var(--cv-linea)}

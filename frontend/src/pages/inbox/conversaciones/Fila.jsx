@@ -6,7 +6,6 @@ import { AlarmClock, Bot, Check, Clock, PencilLine, User, X } from 'lucide-react
 import { Avatar, Chip } from '../../../components/standard';
 import { avisoCierre, cierreMin, esperaMin, examenDe, quien, vistaPrevia } from './colas';
 import IconoCanal from './IconoCanal';
-import { Etiqueta } from './Etiquetas';
 import { colorDe, corto, faseDe } from './fasesSetting';
 import { EtapaMini, Espera, Ventana } from './Indicadores';
 
@@ -17,7 +16,11 @@ export function hora(iso) {
     return d.toLocaleString('es', hoy ? { hour: '2-digit', minute: '2-digit' } : { day: 'numeric', month: 'short' });
 }
 
-export function Asignado({ asignado, yo }) {
+export function Asignado({ asignado, yo, mini }) {
+    if (mini) {
+        if (!asignado) return <span className="cv-item-ico cv-asignado--sin" data-tip="Sin asignar"><User size={12} aria-hidden="true" /></span>;
+        return <span className="cv-item-asig" data-tip={`Asignada a|${asignado.id === yo ? 'vos' : asignado.username}`}><Avatar name={asignado.username} size="xs" /></span>;
+    }
     if (!asignado) return <span className="cv-asignado cv-asignado--sin"><User size={12} aria-hidden="true" />Sin asignar</span>;
     const mio = asignado.id === yo;
     return (
@@ -27,7 +30,12 @@ export function Asignado({ asignado, yo }) {
     );
 }
 
-export function Califica({ valor }) {
+export function Califica({ valor, mini }) {
+    if (mini) {
+        if (valor == null) return null;
+        return <span className="cv-item-ico" style={{ color: valor ? 'var(--success)' : 'var(--error)' }} data-tip={valor ? 'Califica' : 'No califica'}>
+            {valor ? <Check size={12} strokeWidth={3} /> : <X size={12} strokeWidth={3} />}</span>;
+    }
     if (valor === true) return <Chip subtle color="var(--success)" icon={<Check />}>Califica</Chip>;
     if (valor === false) return <Chip subtle color="var(--error)" icon={<X />}>No califica</Chip>;
     return null;
@@ -48,54 +56,56 @@ export function ChipFase({ fase }) {
 }
 
 // `eligiendo`: con «Elegir» puesto, tocar la fila la marca para etiquetarla (1426) en lugar de abrirla.
+// Dos líneas (ADR-W238): quién es, su examen, cuánto espera y la hora; debajo, lo último que se dijo y, a la derecha,
+// en íconos, la etapa, la ventana si se cierra, tareas y seguimientos, las etiquetas como puntos y a quién está asignada.
 export default function Fila({ c, elegida, ahora, yo, conAsignado, borrador, onElegir, eligiendo, marcada, onMarcar }) {
     const espera = esperaMin(c, ahora);
     const cierre = cierreMin(c, ahora);
     const examen = examenDe(c);
+    const nombre = quien(c);
     return (
         <li>
             <button type="button" className={`cv-item${c.sin_leer ? ' cv-item--nuevo' : ''}${marcada ? ' cv-item--marcada' : ''}`}
                 aria-pressed={eligiendo ? marcada : elegida} data-conversacion={c.id} onClick={() => (eligiendo ? onMarcar(c.id) : onElegir(c.id))}>
                 {eligiendo && <span className="cv-item-check" aria-hidden="true">{marcada && <Check size={12} strokeWidth={3} />}</span>}
-                <Avatar name={c.username || c.nombre || '?'} size="sm" />
+                <span className="cv-item-avatar">
+                    <Avatar name={nombre} size="sm" />
+                    <IconoCanal c={c} size={9} />
+                </span>
                 <span className="cv-item-cuerpo">
                     <span className="cv-item-cab">
-                        <IconoCanal c={c} />
-                        <strong>{quien(c)}</strong>
-                        {examen && <Chip subtle className="cv-examen">{examen}</Chip>}
-                        <span className="mut cv-item-hora">{hora(c.ultimo_en)}</span>
+                        <strong data-tip={c.nombre_real && c.nombre && c.nombre !== c.nombre_real ? `En el perfil|${c.nombre}` : undefined}>{nombre}</strong>
+                        {examen && <span className="cv-item-examen">{examen}</span>}
+                        <Califica valor={c.califica} mini />
+                        <span className="cv-item-der">
+                            <Espera min={espera} desde={hora(c.ultimo_en)} />
+                            <span className="mut cv-item-hora">{hora(c.ultimo_en)}</span>
+                        </span>
                     </span>
                     <span className="cv-item-texto mut">
                         {c.ultimo_de === 'motor' ? <Bot size={12} aria-label="Bot" /> : c.ultimo_de === 'otro' ? <User size={12} aria-label="Equipo" /> : null}
                         {borrador && !elegida
-                            ? <span className="cv-borrador"><PencilLine size={11} aria-hidden="true" />Borrador: {borrador}</span>
+                            ? <span className="cv-borrador"><PencilLine size={11} aria-hidden="true" />{borrador}</span>
                             : <span>{vistaPrevia(c)}</span>}
-                        {c.sin_leer > 0 && <i className="cv-sin-leer" aria-label={`${c.sin_leer} sin leer`}>{c.sin_leer}</i>}
-                    </span>
-                    <span className="cv-item-chips">
-                        <EtapaMini fase={c.fase} etapas={c.etapas} />
-                        <Califica valor={c.califica} />
-                        <Espera min={espera} desde={hora(c.ultimo_en)} />
-                        <Vence tarea={c.tarea} ahora={ahora} />
-                        {cierre != null && cierre <= avisoCierre(c) && <Ventana contacto={c} queda={cierre} aviso={avisoCierre(c)} />}
-                        {c.toca && (
-                            <Chip subtle color="var(--brand-secondary)" icon={<AlarmClock />}
-                                data-tip="Toca seguimiento|Lo pide la cadencia de su fase en Embudos: el lead no contestó">
-                                {c.toca}
-                            </Chip>
-                        )}
-                        {c.seguimiento && (
-                            <span className="cv-vence" data-tip={`Seguimiento programado|Sale ${hora(c.seguimiento)} si no responde`}>
-                                <AlarmClock size={11} aria-hidden="true" />{hora(c.seguimiento)}
-                            </span>
-                        )}
-                    </span>
-                    {(conAsignado || (c.etiquetas || []).length > 0) && (
-                        <span className="cv-item-pie">
-                            {conAsignado && <Asignado asignado={c.asignado} yo={yo} />}
-                            {(c.etiquetas || []).map((e) => <Etiqueta key={e.id} e={e} />)}
+                        <span className="cv-item-der">
+                            <EtapaMini fase={c.fase} etapas={c.etapas} compacta />
+                            {cierre != null && cierre <= avisoCierre(c) && <Ventana contacto={c} queda={cierre} aviso={avisoCierre(c)} mini />}
+                            <Vence tarea={c.tarea} ahora={ahora} />
+                            {c.toca && (
+                                <span className="cv-item-ico cv-item-ico--toca" data-tip={`Toca seguimiento|${c.toca}: lo pide la cadencia de su fase`}><AlarmClock size={12} aria-hidden="true" /></span>
+                            )}
+                            {c.seguimiento && (
+                                <span className="cv-item-ico" data-tip={`Seguimiento programado|Sale ${hora(c.seguimiento)} si no responde`}><AlarmClock size={12} aria-hidden="true" /></span>
+                            )}
+                            {(c.etiquetas || []).length > 0 && (
+                                <span className="cv-item-tags" data-tip={`Etiquetas|${c.etiquetas.map((e) => e.name).join(' · ')}`}>
+                                    {c.etiquetas.slice(0, 4).map((e) => <i key={e.id} style={{ '--c': e.color || 'var(--text-muted)' }} />)}
+                                </span>
+                            )}
+                            {conAsignado && <Asignado asignado={c.asignado} yo={yo} mini />}
+                            {c.sin_leer > 0 && <i className="cv-sin-leer" aria-label={`${c.sin_leer} sin leer`}>{c.sin_leer}</i>}
                         </span>
-                    )}
+                    </span>
                 </span>
             </button>
         </li>

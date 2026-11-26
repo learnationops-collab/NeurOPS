@@ -5,11 +5,12 @@
 // tiene lista, el buscador y el filtro van en la cabecera. La lista y el chat abierto
 // se vuelven a pedir solos cada 20 s. Con el teclado: ↑↓ cambian de conversación y Esc la cierra. Las sin leer
 // van al título de la pestaña y, con permiso, como aviso del escritorio (`useAvisos`).
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { BarChart3, Bell, Kanban, ListChecks, MessageSquare, Search, Tag } from 'lucide-react';
 import { Button, EmptyState, HeaderActions, IconButton, InputGroup, Panel, Segmented, Select } from '../../components/standard';
 import { useAuth } from '../../contexts/AuthContext';
 import { inboxApi } from './api';
+import useAltoLibre from './conversaciones/useAltoLibre';
 import { REFRESCO, asignados, filtrar, ordenDe } from './conversaciones/colas';
 import ChipsGuardados from './conversaciones/ChipsGuardados';
 import EtiquetarVarias from './conversaciones/EtiquetarVarias';
@@ -91,9 +92,12 @@ export default function Conversaciones() {
     const { user } = useAuth() || {};
     const yo = user?.id ?? null;
     const [buscar, setBuscar] = useState('');
+    // La bandeja termina arriba del dock, nunca debajo (`useAltoLibre`).
+    const bandeja = useRef(null);
     // El setter arranca en lo suyo sin respuesta; el resto, en todo lo que espera.
     const [filtro, setFiltro] = useState(() => ({ ...VACIO, cola: 'esperan', asignado: ['setter', 'triage'].includes(user?.role) ? yo : null }));
     const [vista, setVista] = useState('chats');
+    const alto = useAltoLibre(bandeja, vista);
     // `?c=<id>` abre esa conversación (el link «Abrir chat» de la lista del reporte del setter).
     const [elegida, setElegida] = useState(() => Number(new URLSearchParams(window.location.search).get('c')) || null);
     const [leidas, setLeidas] = useState({});
@@ -195,7 +199,7 @@ export default function Conversaciones() {
                 </div>
             </HeaderActions>
             {vista === 'embudo' ? <Embudo lista={filtrar(lista, { ...filtro, ahora, conCerradas: true })} ahora={ahora} onAbrir={abrir} onMovida={recargar} /> : (
-                <div className={`cv${elegida ? ' cv--abierta' : ''}`}>
+                <div className={`cv${elegida ? ' cv--abierta' : ''}`} ref={bandeja} style={alto ? { height: alto, minHeight: 0 } : undefined}>
                     <Panel as="section" size="sm" className="cv-lista" aria-label="Conversaciones">
                         <div className="cv-lista-buscar">
                             {buscador}

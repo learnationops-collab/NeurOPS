@@ -21,7 +21,7 @@ export function cortito(min) {
     return `${min} min`;
 }
 
-export function EtapaMini({ fase, etapas }) {
+export function EtapaMini({ fase, etapas, compacta }) {
     const bot = BOT[etapas?.auto];
     if (!fase && !bot) return null;
     const f = fase ? faseDe(fase) : null;
@@ -35,7 +35,7 @@ export function EtapaMini({ fase, etapas }) {
                         : <span className="cv-etapa-mini-barra" aria-hidden="true">
                             {EMBUDO.map((x, i) => <i key={x.id} className={i <= actual ? 'on' : ''} style={{ '--c': colorDe(x), '--i': i }} />)}
                         </span>}
-                    <span>{corto(f)}</span>
+                    {!compacta && <span>{corto(f)}</span>}
                 </span>
             )}
             {bot && <span className="cv-etapa-mini-bot" style={{ '--c': bot.color }} data-tip={`Bot|${bot.texto}`}><Bot size={12} aria-label="Bot" /></span>}
@@ -57,7 +57,7 @@ const R = 7;
 const VUELTA = 2 * Math.PI * R;
 
 // `queda`: minutos para poder responder (null = ya se cerró). `aviso`: desde cuándo se pone en rojo y late.
-export function Ventana({ contacto, queda, aviso }) {
+export function Ventana({ contacto, queda, aviso, mini }) {
     const wa = esWhatsapp(contacto);
     const total = (wa ? 24 : 7 * 24) * 60;
     const cerrada = queda == null;
@@ -67,7 +67,7 @@ export function Ventana({ contacto, queda, aviso }) {
         ? `Ventana cerrada|${wa ? 'WhatsApp solo deja escribirle con una plantilla' : 'Instagram no deja escribirle hasta que vuelva a escribir'}`
         : `Para responder|Quedan ${textoEspera(queda)}. ${wa ? 'WhatsApp deja escribirle hasta 24 h después de su último mensaje' : 'Instagram deja escribirle hasta 7 días después de su último mensaje'}`;
     return (
-        <span className={`cv-ind cv-ventana${urgente ? ' cv-ventana--urgente' : ''}`} style={{ '--c': urgente ? 'var(--error)' : 'var(--success)' }} data-tip={tip}>
+        <span className={`cv-ind cv-ventana${urgente ? ' cv-ventana--urgente' : ''}${mini ? ' cv-ind--mini' : ''}`} style={{ '--c': urgente ? 'var(--error)' : 'var(--success)' }} data-tip={tip}>
             <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
                 <circle cx="9" cy="9" r={R} className="cv-ventana-fondo" />
                 <circle cx="9" cy="9" r={R} className="cv-ventana-resto" transform="rotate(-90 9 9)"

@@ -33,3 +33,27 @@ def de(contacto):
             'resultado': agenda.seguimiento_sub or agenda.closer_result,
         } if agenda else None,
     }
+
+
+def nombres(contactos):
+    """{contacto.id: nombre del Client} de una lista entera (la bandeja), en una consulta por canal."""
+    por_telefono, por_usuario = {}, {}
+    for c in contactos:
+        if es_whatsapp(c.igsid):
+            for n in variantes(telefono_de(c.igsid)):
+                por_telefono[n] = por_telefono[f'+{n}'] = c.id
+        elif c.username:
+            u = c.username.lstrip('@').lower()
+            por_usuario[u] = por_usuario[f'@{u}'] = c.id
+    salida = {}
+    if por_telefono:
+        for phone, nombre in (Client.query.with_entities(Client.phone, Client.full_name)
+                              .filter(Client.phone.in_(list(por_telefono))).order_by(Client.id).all()):
+            if nombre:
+                salida[por_telefono[phone]] = nombre
+    if por_usuario:
+        for usuario, nombre in (Client.query.with_entities(func.lower(func.trim(Client.instagram)), Client.full_name)
+                                .filter(func.lower(func.trim(Client.instagram)).in_(list(por_usuario))).order_by(Client.id).all()):
+            if nombre:
+                salida[por_usuario[usuario]] = nombre
+    return salida

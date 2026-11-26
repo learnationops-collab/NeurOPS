@@ -1,8 +1,9 @@
 // La caja de abajo del chat, en tres modos: Chat, Nota interna (el lead no la ve) y Tarea. En Chat el
 // mensaje (o un audio del equipo) sale por Instagram a nombre de quien lo manda (17/11/2026); los pasos del
 // flujo los manda el bot. Enter envía (Shift+Enter, salto de línea), y lo enviado se ve al instante (`useEnvio`).
-// Lo escrito y no mandado queda como borrador de esa conversación (`borradores.js`). Más baja (ADR-W184): modos,
-// seguimiento programado (un chip que despliega) y «Pausar el bot» en una sola fila; arriba, al pasar a una etapa
+// Lo escrito y no mandado queda como borrador de esa conversación (`borradores.js`). Arriba, en una fila (ADR-W238):
+// los modos, las herramientas (rápidas, audios, seguimiento y Learnito, resaltado) y el seguimiento programado;
+// debajo, la caja a todo el ancho. «Pausar el bot» vive en la tarjeta del lead (`pausar`). Al pasar a una etapa
 // con varios mensajes, el guión para elegir cuál pegar (`selector`). `pegar`: {texto, n} que entra en la caja.
 import { useEffect, useRef, useState } from 'react';
 import { AlarmClock, CalendarCheck, ChevronDown, ChevronUp, MessageSquare, Mic, ScrollText, Send, Sparkles, StickyNote, AlertTriangle, X, Zap } from 'lucide-react';
@@ -97,7 +98,7 @@ function Guion({ fase, contacto, onElegir }) {
 const programados = (items) => (items || []).filter((s) => s.estado === 'programado' || (s.estado === 'error' && !s.cadencia) || s.vigente);
 const cuando = (iso) => new Date(iso).toLocaleString('es-AR', { weekday: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
-export default function Composer({ contacto, fase, ejecucion, seguimientos, yo, onCambio, onEnviar, onEnviarVarios, onLearnito, pegar, selector, onSelector }) {
+export default function Composer({ contacto, pausar = true, fase, ejecucion, seguimientos, yo, onCambio, onEnviar, onEnviarVarios, onLearnito, pegar, selector, onSelector }) {
     const [modo, setModo] = useState('chat');
     const [texto, setTexto] = useState(() => borradorDe(contacto.id));
     const [rayo, setRayo] = useState(false);
@@ -107,7 +108,6 @@ export default function Composer({ contacto, fase, ejecucion, seguimientos, yo, 
     const [programar, setProgramar] = useState(false);
     const [preguntando, setPreguntando] = useState(false);
     const learnito = useLearnito();
-    const [pausar, setPausar] = useState(true);
     const [verSeguimientos, setVerSeguimientos] = useState(false);
     // Lo que se eligió de la Guía entra en la caja (reemplaza lo escrito): se revisa y se manda. `deGuia` recuerda
     // qué paso y opción era (para medir cuál responde más) y si al mandarlo el lead pasa de etapa.
@@ -219,6 +219,20 @@ export default function Composer({ contacto, fase, ejecucion, seguimientos, yo, 
             )}
             <div className="cv-comp-cab">
                 <Segmented size="sm" label="Modo" value={modo} onChange={(m) => { setModo(m); setRayo(false); }} options={MODOS} />
+                {modo === 'chat' && (
+                    <span className="cv-comp-tools">
+                        <IconButton size="sm" label="Respuestas rápidas, variables y pasos del flujo" data-tip="Respuestas rápidas y pasos|O escribí /" pressed={rayo} icon={<Zap size={15} />} onClick={() => setRayo((r) => !r)} />
+                        <IconButton size="sm" label="Audios" data-tip="Audios del equipo" icon={<Mic size={15} />} onClick={() => setAudios(true)} />
+                        <IconButton size="sm" label="Seguimiento si no responde" data-tip="Seguimiento|Sale solo si no responde en el tiempo que elijas" icon={<AlarmClock size={15} />}
+                            disabled={ventana.estado === 'cerrada'} onClick={() => setProgramar(true)} />
+                        {learnito && (
+                            <button type="button" className="cv-learnito-btn" disabled={preguntando || learnito.enviando} onClick={preguntarALearnito}
+                                data-tip="Preguntar a Learnito|Qué info del programa te sirve para este lead. Si escribiste algo, es lo que querés saber">
+                                <Sparkles size={14} aria-hidden="true" />Learnito
+                            </button>
+                        )}
+                    </span>
+                )}
                 {pendientes.length > 0 && (
                     <Chip as="button" type="button" subtle color="#7D63E6" icon={<AlarmClock />} aria-expanded={verSeguimientos}
                         data-tip="Seguimiento programado|Tocalo para verlo o cancelarlo" onClick={() => setVerSeguimientos((v) => !v)}>
@@ -226,29 +240,12 @@ export default function Composer({ contacto, fase, ejecucion, seguimientos, yo, 
                         {verSeguimientos ? <ChevronDown size={11} /> : <ChevronUp size={11} />}
                     </Chip>
                 )}
-                {modo === 'chat' && (
-                    <label className="cv-comp-check" data-tip="Al enviar|El bot deja de hablarle 24 h y corta el flujo abierto">
-                        <input type="checkbox" checked={pausar} onChange={(e) => setPausar(e.target.checked)} />Pausar el bot
-                    </label>
-                )}
             </div>
             {modo === 'tarea' ? <FormTarea contacto={contacto} yo={yo} onHecho={() => { setModo('chat'); onCambio(); }} /> : (
                 <div className="cv-comp-fila">
-                    {modo === 'chat' && (
-                        <>
-                            <IconButton size="sm" label="Respuestas rápidas, variables y pasos del flujo" data-tip="Respuestas rápidas y pasos|O escribí /" pressed={rayo} icon={<Zap size={15} />} onClick={() => setRayo((r) => !r)} />
-                            <IconButton size="sm" label="Audios" data-tip="Audios del equipo" icon={<Mic size={15} />} onClick={() => setAudios(true)} />
-                            {learnito && (
-                                <IconButton size="sm" label="Preguntar a Learnito" data-tip="Preguntar a Learnito|Qué info del programa te sirve para este lead. Si escribiste algo, es lo que querés saber" icon={<Sparkles size={15} />}
-                                    disabled={preguntando || learnito.enviando} onClick={preguntarALearnito} />
-                            )}
-                            <IconButton size="sm" label="Seguimiento si no responde" data-tip="Seguimiento|Sale solo si no responde en el tiempo que elijas" icon={<AlarmClock size={15} />}
-                                disabled={ventana.estado === 'cerrada'} onClick={() => setProgramar(true)} />
-                        </>
-                    )}
                     <TextArea value={texto} onChange={(e) => { setTexto(e.target.value); if (!e.target.value) setDeGuia(null); }} aria-label={modo === 'nota' ? 'Nota interna' : 'Mensaje'}
                         onKeyDown={alTeclear}
-                        placeholder={modo === 'nota' ? 'Nota para el equipo: el lead no la ve · Enter guarda' : 'Escribile al lead · Enter envía, Shift+Enter salta de línea · / respuestas rápidas'} />
+                        placeholder={modo === 'nota' ? 'Nota para el equipo: el lead no la ve · Enter guarda' : 'Escribile al lead · Enter envía · / respuestas rápidas'} />
                     {modo === 'nota'
                         ? <Button variant="primary" disabled={!texto.trim()} onClick={guardarNota}>Guardar</Button>
                         : <Button variant="primary" icon={<Send />} disabled={!texto.trim() || !puedeEnviar} data-tip="Enviar|Enter" onClick={enviarTexto}>Enviar</Button>}

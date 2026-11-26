@@ -52,10 +52,8 @@
   letter-spacing:-.025em;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .setter-espacio .hola h1 .sub{color:var(--text-muted);font-weight:600;letter-spacing:-.015em}
 .setter-espacio .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-.setter-espacio .setter-volver{margin-left:auto}
 /* Sus links de agendamiento, al final de la línea: tocar uno lo copia. */
 .setter-espacio .setter-links{display:flex;flex-wrap:wrap;gap:var(--s2);margin-left:auto;min-width:0}
-.setter-espacio .setter-links + .setter-volver{margin-left:0}
 .setter-espacio .setter-link{max-width:260px;min-width:0}
 .setter-espacio .setter-link-t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
@@ -85,3 +83,12 @@
   .setter-espacio .dc-shell .tab[aria-selected="true"]{animation:none}
   .setter-espacio .aura-pag i{animation:none}
 }
+
+/* Simulando: la salida, chica y en ámbar al lado del saludo. Solo la ve quien simula. */
+.setter-espacio .setter-simulando{flex:none;display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 10px;border-radius:999px;cursor:pointer;
+  border:1px solid color-mix(in srgb,var(--ln-warning, #D9A441) 45%,transparent);background:color-mix(in srgb,var(--ln-warning, #D9A441) 14%,transparent);
+  color:var(--ln-warning, #D9A441);font-size:11px;font-weight:800;letter-spacing:.02em;white-space:nowrap;transition:background .15s}
+.setter-espacio .setter-simulando:hover{background:color-mix(in srgb,var(--ln-warning, #D9A441) 24%,transparent)}
+.setter-espacio .setter-simulando svg{animation:setterFantasma 2.8s ease-in-out infinite}
+@keyframes setterFantasma{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+@media (prefers-reduced-motion:reduce){.setter-espacio .setter-simulando svg{animation:none}}

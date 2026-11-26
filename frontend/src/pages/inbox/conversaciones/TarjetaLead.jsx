@@ -3,11 +3,11 @@
 // asignada (tocarla delega), su canal (lo usa el reporte) y las etiquetas; y la etapa del setting con su avance y
 // «Adelantar» al lado.
 import { useEffect, useRef, useState } from 'react';
-import { Bot, CalendarCheck, Check, ChevronDown, ChevronsRight, Instagram, Radio } from 'lucide-react';
+import { CalendarCheck, Check, ChevronDown, ChevronsRight, Instagram, MinusCircle, Radio, XCircle } from 'lucide-react';
 import useEnPantalla from '../../../components/ui/useEnPantalla';
 import { Avatar, Button, IconButton, Panel, toast } from '../../../components/standard';
 import { inboxApi } from '../api';
-import MenuBot, { EJECUCION } from './AccionesFlujo';
+import { Ahora, BotLead, Telefono } from './Ahora';
 import { esWhatsapp, examenDe, quien, usuarioDe } from './colas';
 import Etiquetas from './Etiquetas';
 import { Califica } from './Fila';
@@ -136,7 +136,7 @@ function Etapa({ fase, onMover }) {
                 </button>
                 {d.abierto && (
                     <div className="cv-tarjeta-pop cv-etapa-pop" role="menu" aria-label="Etapa del setting">
-                        {['auto', 'manual', 'agenda', 'salida'].map((t) => (
+                        {['auto', 'manual', 'agenda'].map((t) => (
                             <div key={t} className="cv-etapa-grupo">
                                 <span className="t-rotulo">{TRAMOS[t].nombre}</span>
                                 {grupo(t).map((x) => {
@@ -167,6 +167,28 @@ function Etapa({ fase, onMover }) {
     );
 }
 
+// No lead e In-abrible a un toque, fuera del desplegable (Mario, 26/11): el chat sale de la bandeja y el aviso
+// trae «Deshacer» (vuelve a la etapa en que estaba).
+function Salidas({ fase, onMover }) {
+    if (faseDe(fase).tramo === 'salida') {
+        return <p className="cv-salidas-fuera t-cap">Fuera del embudo · <button type="button" onClick={() => onMover('conexion')}>Volver a Conexión</button></p>;
+    }
+    const salir = async (id, rotulo) => {
+        if (await onMover(id) === false) return;
+        toast(`Marcado: ${rotulo}`, 'success', { label: 'Deshacer', onClick: () => onMover(fase) });
+    };
+    return (
+        <div className="cv-salidas">
+            <button type="button" className="cv-salida" onClick={() => salir('nolead', 'No lead')} data-tip="No lead|Descalificado: sale de la bandeja">
+                <XCircle size={13} aria-hidden="true" />No lead
+            </button>
+            <button type="button" className="cv-salida" onClick={() => salir('inabrible', 'In-abrible')} data-tip="In-abrible|No se le puede escribir: sale de la bandeja">
+                <MinusCircle size={13} aria-hidden="true" />In-abrible
+            </button>
+        </div>
+    );
+}
+
 // Su última agenda en Work, en una línea: con quién, cuándo y cómo terminó.
 function Agenda({ agenda }) {
     if (!agenda) return null;
@@ -179,48 +201,52 @@ function Agenda({ agenda }) {
     );
 }
 
-export default function TarjetaLead({ datos, fase, canal, yo, onCambio, onMover }) {
+export default function TarjetaLead({ datos, fase, canal, yo, pausar, onPausar, onCambio, onMover }) {
     const { contacto, asignado, cliente } = datos;
     const examen = examenDe({ examen: contacto.variables?.examen });
     const wa = esWhatsapp(contacto);
     // El nombre que dejó al agendar le gana al del perfil (un «👻» en WhatsApp).
     const nombre = cliente?.nombre || contacto.variables?.nombre || quien(contacto);
     const perfil = quien(contacto);
-    const usuario = wa ? `+${contacto.igsid.slice(3)}` : usuarioDe(contacto) || (contacto.username ? `@${contacto.username}` : null);
-    const ejecucion = datos.ejecucion;
-    const bot = ejecucion ? `${ejecucion.flujo} · ${(EJECUCION[ejecucion.estado]?.texto || ejecucion.estado).toLowerCase()}` : 'Sin flujo';
+    const usuario = !wa && (usuarioDe(contacto) || (contacto.username ? `@${contacto.username}` : null));
     return (
         <Panel as="section" size="sm" className="cv-tarjeta" aria-label="El lead">
-            <div className="cv-tarjeta-quien">
-                <span className="cv-tarjeta-avatar">
-                    <Avatar name={nombre} />
-                    <IconoCanal c={contacto} size={10} />
-                </span>
-                <div className="cv-tarjeta-nombre">
-                    <h3 className="t-h3 cv-elipsis" data-tip={nombre !== perfil ? `En ${wa ? 'WhatsApp' : 'Instagram'} se llama|${perfil}` : undefined}>{nombre}</h3>
-                    <span className="cv-tarjeta-sub">
-                        {usuario && <span className="cv-elipsis">{usuario}</span>}
-                        {examen && <span className="cv-tarjeta-examen">{examen}</span>}
-                        <Califica valor={contacto.variables?._califica} />
+            <div className="cv-bloque">
+                <div className="cv-tarjeta-quien">
+                    <span className="cv-tarjeta-avatar">
+                        <Avatar name={nombre} />
+                        <IconoCanal c={contacto} size={10} />
                     </span>
+                    <div className="cv-tarjeta-nombre">
+                        <h3 className="t-h3 cv-elipsis" data-tip={nombre !== perfil ? `En ${wa ? 'WhatsApp' : 'Instagram'} se llama|${perfil}` : undefined}>{nombre}</h3>
+                        <span className="cv-tarjeta-sub">
+                            {wa ? <Telefono contacto={contacto} /> : usuario && <span className="cv-elipsis">{usuario}</span>}
+                            {examen && <span className="cv-tarjeta-examen">{examen}</span>}
+                            <Califica valor={contacto.variables?._califica} />
+                        </span>
+                    </div>
+                    {contacto.username && !wa && (
+                        <IconButton size="sm" label={`Abrir @${contacto.username} en Instagram`} data-tip="Abrir en Instagram" icon={<Instagram size={15} />}
+                            onClick={() => window.open(`https://www.instagram.com/${encodeURIComponent(contacto.username)}/`, '_blank', 'noopener')} />
+                    )}
                 </div>
-                {contacto.username && !wa && (
-                    <IconButton size="sm" label={`Abrir @${contacto.username} en Instagram`} data-tip="Abrir en Instagram" icon={<Instagram size={15} />}
-                        onClick={() => window.open(`https://www.instagram.com/${encodeURIComponent(contacto.username)}/`, '_blank', 'noopener')} />
-                )}
+                <Agenda agenda={cliente?.agenda} />
             </div>
-            <Agenda agenda={cliente?.agenda} />
-            <div className="cv-tarjeta-fila">
-                <Delegar contacto={contacto} asignado={asignado} yo={yo} onCambio={onCambio} />
-                <Canal contacto={contacto} canal={canal} campana={asignado?.campana} onCambio={onCambio} />
-                <MenuBot contacto={contacto} ejecucion={ejecucion} onCambio={onCambio} className="cv-pastilla cv-pastilla--bot">
-                    <span className="cv-pastilla-in" data-tip={`Bot|${bot}`}>
-                        <Bot size={12} aria-hidden="true" /><span className="cv-elipsis">{ejecucion ? ejecucion.flujo : 'Sin bot'}</span>
-                    </span>
-                </MenuBot>
+            <div className="cv-bloque cv-bloque--suave">
+                <Ahora contacto={contacto} mensajes={datos.mensajes || []} onCambio={onCambio} />
+                <BotLead contacto={contacto} ejecucion={datos.ejecucion} pausar={pausar} onPausar={onPausar} onCambio={onCambio} />
             </div>
-            <Etiquetas contactoId={contacto.id} etiquetas={datos.etiquetas || []} onCambio={onCambio} />
-            <Etapa fase={fase} onMover={onMover} />
+            <div className="cv-bloque">
+                <div className="cv-tarjeta-fila">
+                    <Delegar contacto={contacto} asignado={asignado} yo={yo} onCambio={onCambio} />
+                    <Canal contacto={contacto} canal={canal} campana={asignado?.campana} onCambio={onCambio} />
+                </div>
+                <Etiquetas contactoId={contacto.id} etiquetas={datos.etiquetas || []} onCambio={onCambio} />
+            </div>
+            <div className="cv-bloque">
+                <Etapa fase={fase} onMover={onMover} />
+                <Salidas fase={fase} onMover={onMover} />
+            </div>
         </Panel>
     );
 }
