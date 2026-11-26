@@ -120,3 +120,28 @@ def seguir_movida(previa, inicio):
     db.session.commit()
     current_app.logger.info(f'[AGENDAS 2.0] Agenda #{previa.id} movida en Google: #{nueva.id} ({anterior} -> {inicio})')
     return nueva
+
+
+def vigente_tras_movidas(appt):
+    """La agenda que reemplazó a `appt` si Work la pasó a otra hora porque se movió en Google (seguir_movida),
+    siguiendo la cadena; None si no la hay o si la última ya se reportó. Es la que hay que reportar: quien
+    tenía la vieja abierta en pantalla no vio la movida y su reporte dejaba la nueva colgada como duplicada
+    (Fernando Sánchez, 26/11/2026, ADR-W234). Una reagenda hecha en Work no cuenta: reportar la vieja ahí
+    puede ser una corrección."""
+    from app.models import Appointment
+
+    actual, salto = appt, None
+    for _ in range(5):
+        if actual.closer_result != 'Reagendado' or not actual.calendar_evento_id:
+            break
+        candidatas = Appointment.query.filter(
+            Appointment.client_id == actual.client_id,
+            Appointment.calendar_evento_id == actual.calendar_evento_id,
+            Appointment.id > actual.id,
+        ).order_by(Appointment.id).all()
+        siguiente = next((c for c in candidatas if (c.agenda_payload or {}).get('reagenda_de') == actual.id
+                          and (c.agenda_payload or {}).get('movida_en_google')), None)
+        if not siguiente:
+            break
+        actual = salto = siguiente
+    return salto if salto and not salto.closer_processed else None
