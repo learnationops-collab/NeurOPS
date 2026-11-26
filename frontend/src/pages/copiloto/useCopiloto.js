@@ -34,16 +34,17 @@ export function useCopiloto() {
     // Una pregunta o un botón. `muestra` es lo que se ve del lado de la persona. Devuelve null o el error.
     // `nueva`: arranca otra conversación en el mismo pedido (el Inbox, con otro lead; reiniciar() + enviar() en el
     // mismo clic usaría la conversación vieja, porque el estado todavía no cambió).
-    const alCerebro = useCallback(async (pedido, muestra, nueva = false) => {
+    const alCerebro = useCallback(async (pedido, muestra, nueva = false, archivos = []) => {
         const anteriores = nueva ? [] : mensajes;
         if (nueva) { setCalificacion(null); setUso((u) => (u ? { ...u, conversacion: null } : u)); }
-        setMensajes([...anteriores, { role: 'user', content: muestra }]);
+        const propio = { role: 'user', content: muestra, archivos: archivos.length ? archivos : undefined };
+        setMensajes([...anteriores, propio]);
         setEnviando(true);
         try {
             const { data } = await api.post('/copiloto/learnito', { ...pedido, conversacion_id: (!nueva && conversacion) || undefined });
             setConversacion(data.conversacion_id);
             ultima.current = data.mensaje?.text || '';
-            setMensajes([...anteriores, { role: 'user', content: muestra },
+            setMensajes([...anteriores, propio,
                 { role: 'assistant', content: data.mensaje?.text || '', mensaje: data.mensaje, indice: data.mensaje_indice }]);
             if (data.uso) setUso(data.uso);
             return null;
@@ -61,8 +62,10 @@ export function useCopiloto() {
     }, [mensajes, conversacion]);
 
     // `muestra` es lo que se ve: la pregunta viaja con los nombrados como "@[Nombre, id N]" (menciones.js).
-    const enviar = useCallback((texto, muestra = texto, { nueva = false } = {}) => alCerebro({ pregunta: texto }, muestra, nueva),
-        [alCerebro]);
+    // `adjuntos` (ADR-W252): [{nombre, tipo, datos en base64, url}] (useAdjuntos); la url queda solo para verlos acá.
+    const enviar = useCallback((texto, muestra = texto, { nueva = false, adjuntos = [] } = {}) => alCerebro(
+        { pregunta: texto, ...(adjuntos.length ? { adjuntos: adjuntos.map(({ nombre, tipo, datos }) => ({ nombre, tipo, datos })) } : {}) },
+        muestra, nueva, adjuntos), [alCerebro]);
 
     // Un botón (tipo "boton") o una opción (tipo "opcion") de la respuesta `indice` del cerebro.
     const tocar = useCallback((indice, tipo, i, texto) => alCerebro({ boton: { mensaje: indice, tipo, indice: i } }, texto),
@@ -107,7 +110,7 @@ export function useCopiloto() {
             const { data } = await api.get(`/copiloto/learnito/historial/${id}`);
             const c = data.conversacion;
             setMensajes((c.mensajes || []).filter((m) => m.role === 'user' || m.role === 'assistant').map((m) => (m.role === 'user'
-                ? { role: 'user', content: m.text || '' }
+                ? { role: 'user', content: m.text || '', archivos: m.archivos }
                 : { role: 'assistant', content: m.text || '', mensaje: m, indice: m.indice })));
             setConversacion(c.id);
             setCalificacion(c.calificacion || null);
@@ -117,6 +120,19 @@ export function useCopiloto() {
             return err.response?.data?.error || 'No se pudo abrir la conversación.';
         }
     }, []);
+
+    // Borrar (ADR-W252): la Academia la archiva. Si era la abierta, se arranca otra.
+    const borrar = useCallback(async (id) => {
+        try {
+            await api.delete(`/copiloto/learnito/historial/${id}`);
+            setHistorial((h) => h.filter((c) => c.id !== id));
+            setPendientes((l) => l.filter((x) => x.id !== id));
+            if (id === conversacion) { setMensajes([]); setConversacion(null); setCalificacion(null); setUso((u) => (u ? { ...u, conversacion: null } : u)); }
+            return null;
+        } catch (err) {
+            return err.response?.data?.error || err.response?.data?.mensaje || 'No se pudo borrar.';
+        }
+    }, [conversacion]);
 
     // Renombrar ({titulo}) o fijar ({fijada}): se ve al toque y vuelve atrás si falla.
     const ordenar = useCallback(async (id, cambios) => {
@@ -145,10 +161,10 @@ export function useCopiloto() {
     const ultimaRespuesta = useCallback(() => ultima.current, []);
     return useMemo(() => ({
         mensajes, enviando, enviar, tocar, confirmar, reiniciar, uso, calificacion, calificar, ultimaRespuesta,
-        pendientes, cargarPendientes, calificarPendiente, agotada, conversacion, historial, cargarHistorial, abrir, ordenar,
+        pendientes, cargarPendientes, calificarPendiente, agotada, conversacion, historial, cargarHistorial, abrir, ordenar, borrar,
         // Sin conversación abierta, las anteriores sin calificar traban la nueva.
         trabado: !conversacion && pendientes.length > 0,
         agotado: (uso?.porcentaje ?? 0) >= 100 || agotada,
     }), [mensajes, enviando, enviar, tocar, confirmar, reiniciar, uso, calificacion, calificar, ultimaRespuesta,
-        pendientes, cargarPendientes, calificarPendiente, agotada, conversacion, historial, cargarHistorial, abrir, ordenar]);
+        pendientes, cargarPendientes, calificarPendiente, agotada, conversacion, historial, cargarHistorial, abrir, ordenar, borrar]);
 }

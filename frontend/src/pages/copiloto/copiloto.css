@@ -155,3 +155,52 @@
   .thalamus .learnito-cuerpo{grid-template-columns:minmax(0,1fr)}
   .thalamus .lt{display:none}
 }
+
+/* ADR-W252: el redactor es un solo cuadro (archivos, texto y abajo adjuntar · pista · dictar · enviar); debajo, la
+   calificación a la izquierda y el uso a la derecha, en una línea. */
+.thalamus .learnito .cp-redactor{gap:8px}
+.thalamus .learnito .cp-caja{display:grid;gap:6px;padding:10px 10px 8px 14px;border-radius:16px;border:1px solid var(--border-main);
+  background:color-mix(in srgb,var(--text-main) 4%,transparent);transition:border-color .15s,box-shadow .15s}
+.thalamus .learnito .cp-caja:focus-within{border-color:color-mix(in srgb,var(--brand-secondary) 55%,transparent);box-shadow:0 0 0 3px color-mix(in srgb,var(--brand-secondary) 12%,transparent)}
+.thalamus .learnito .cp-caja--suelta{border-style:dashed;border-color:var(--brand-secondary);background:color-mix(in srgb,var(--brand-secondary) 8%,transparent)}
+.thalamus .learnito .cp-entrada{width:100%;min-height:24px;max-height:30dvh;resize:none;border:0;outline:none;background:none;padding:2px 0;
+  color:var(--text-main);font:inherit;font-size:14px;line-height:1.5;overflow-y:auto}
+.thalamus .learnito .cp-entrada::placeholder{color:var(--text-muted);font-weight:400}
+.thalamus .learnito .cp-caja-pie{display:flex;align-items:center;gap:4px;margin-left:-6px}
+.thalamus .learnito .cp-pista{flex:1;min-width:0;font-size:11px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.8}
+.thalamus .learnito .cp-pista kbd{font:inherit;font-weight:600;padding:0 4px;border-radius:4px;border:1px solid var(--border-subtle)}
+.thalamus .learnito .cp-enviar{width:32px;height:32px;flex:none;display:grid;place-items:center;border-radius:50%;border:0;cursor:pointer;
+  background:var(--brand-secondary);color:#fff;transition:transform .15s,opacity .15s,background .15s}
+.thalamus .learnito .cp-enviar:hover:not(:disabled){transform:scale(1.06)}
+.thalamus .learnito .cp-enviar:disabled{opacity:1;background:color-mix(in srgb,var(--text-main) 12%,transparent);color:var(--text-muted);cursor:default}
+.thalamus .learnito .cp-adjuntos{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.thalamus .learnito .cp-adjunto{display:flex;align-items:center;gap:6px;max-width:200px;height:36px;padding:3px 6px 3px 3px;border-radius:10px;
+  border:1px solid var(--border-subtle);background:color-mix(in srgb,var(--text-main) 6%,transparent);font-size:12px}
+.thalamus .learnito .cp-adjunto img{width:30px;height:30px;border-radius:7px;object-fit:cover}
+.thalamus .learnito .cp-adjunto-ico{width:30px;height:30px;display:grid;place-items:center;border-radius:7px;color:var(--brand-secondary);background:color-mix(in srgb,var(--brand-secondary) 14%,transparent)}
+.thalamus .learnito .cp-adjunto-n{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.thalamus .learnito .cp-adjunto button{width:18px;height:18px;flex:none;display:grid;place-items:center;border-radius:50%;border:0;cursor:pointer;background:color-mix(in srgb,var(--text-main) 12%,transparent);color:var(--text-main)}
+.thalamus .learnito .cp-msg--closer .cp-texto{display:grid;gap:6px}
+.thalamus .learnito .cp-msg--closer .cp-texto p{margin:0}
+.thalamus .learnito .cp-msg--closer .cp-adjunto{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.2)}
+.thalamus .learnito .cp-pie{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:30px}
+.thalamus .learnito .cp-pie .cp-uso{width:190px;flex:none;gap:3px}
+.thalamus .learnito .cp-pie .cp-uso__txt,.thalamus .learnito .cp-pie .cp-uso__mes{font-size:10.5px;font-weight:500}
+.thalamus .learnito .cp-pie .cp-calif{flex:1;min-width:0}
+
+/* El menú «⋯» de cada conversación del sidebar: fijar, renombrar, borrar. */
+.thalamus .lt-item .lt-mas{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:24px;height:24px;display:grid;place-items:center;border:0;border-radius:6px;
+  background:none;color:var(--text-muted);cursor:pointer;opacity:0;transition:opacity .15s}
+.thalamus .lt-item:hover .lt-mas,.thalamus .lt-item .lt-mas[aria-expanded="true"],.thalamus .lt-item.is-actual .lt-mas{opacity:1}
+.thalamus .lt-item .lt-mas:hover{background:color-mix(in srgb,var(--text-main) 10%,transparent);color:var(--text-main)}
+.thalamus .lt-item:hover .lt-fecha,.thalamus .lt-item.is-actual .lt-fecha{visibility:hidden}
+.thalamus .lt-menu{position:absolute;right:0;top:calc(100% + 2px);z-index:30;min-width:170px;padding:4px;display:grid;gap:1px;border-radius:10px;
+  border:1px solid var(--border-main);background:var(--bg-surface, #151838);box-shadow:0 12px 32px rgb(0 0 0 / .35)}
+.thalamus .lt-menu button{display:flex;align-items:center;gap:8px;padding:7px 10px;border:0;border-radius:7px;background:none;color:var(--text-main);font:inherit;font-size:12.5px;cursor:pointer;text-align:left}
+.thalamus .lt-menu button:hover{background:color-mix(in srgb,var(--text-main) 8%,transparent)}
+.thalamus .lt-menu .lt-borrar{color:var(--error)}
+.thalamus .lt-menu .lt-borrar.is-seguro{background:color-mix(in srgb,var(--error) 14%,transparent);font-weight:600}
+/* El menú se abre debajo de la conversación, en la lista (un flotante se cortaba con el scroll de la lista). */
+.thalamus .lt-item{flex-wrap:wrap}
+.thalamus .lt-menu{position:static;flex:1 0 100%;min-width:0;margin:2px 4px 6px;box-shadow:none;background:color-mix(in srgb,var(--text-main) 5%,transparent)}
+.thalamus .lt-item .lt-mas{top:16px}

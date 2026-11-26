@@ -1,7 +1,7 @@
 // El sidebar de Learnito (ADR-W251): «Nueva conversación» arriba y todas las conversaciones de quien pregunta, las
-// fijadas primero. Cada una se abre con un toque; al pasar el mouse, fijarla (pin) y renombrarla (lápiz).
-import { useEffect, useState } from 'react';
-import { Check, MessageSquarePlus, Pencil, Pin, PinOff } from 'lucide-react';
+// fijadas primero. Cada una se abre con un toque; su «⋯» la fija, la renombra o la borra (ADR-W252).
+import { useEffect, useRef, useState } from 'react';
+import { Check, MessageSquarePlus, MoreHorizontal, Pencil, Pin, PinOff, Trash2 } from 'lucide-react';
 import { useLearnito } from '../../sesion/LearnitoContext';
 
 const cuando = (iso) => {
@@ -12,9 +12,18 @@ const cuando = (iso) => {
     return d.toLocaleDateString('es', { day: 'numeric', month: 'short' });
 };
 
-function Item({ c, actual, onAbrir, ordenar }) {
+function Item({ c, actual, onAbrir, ordenar, borrar }) {
     const [editando, setEditando] = useState(false);
     const [titulo, setTitulo] = useState(c.titulo || '');
+    const [menu, setMenu] = useState(false);
+    const [seguro, setSeguro] = useState(false);
+    const caja = useRef(null);
+    useEffect(() => {
+        if (!menu) return undefined;
+        const fuera = (e) => { if (!caja.current?.contains(e.target)) { setMenu(false); setSeguro(false); } };
+        document.addEventListener('mousedown', fuera);
+        return () => document.removeEventListener('mousedown', fuera);
+    }, [menu]);
     const guardar = () => {
         setEditando(false);
         if (titulo.trim() !== (c.titulo || '')) ordenar(c.id, { titulo: titulo.trim() });
@@ -23,30 +32,44 @@ function Item({ c, actual, onAbrir, ordenar }) {
         return (
             <li className="lt-item lt-item--edita">
                 <input autoFocus value={titulo} maxLength={120} aria-label="Nombre de la conversación" onChange={(e) => setTitulo(e.target.value)}
+                    onFocus={(e) => e.target.select()}
                     onBlur={guardar} onKeyDown={(e) => { if (e.key === 'Enter') guardar(); if (e.key === 'Escape') setEditando(false); }} />
                 <button type="button" className="lt-ico" aria-label="Guardar" onMouseDown={(e) => e.preventDefault()} onClick={guardar}><Check size={13} /></button>
             </li>
         );
     }
+    const hacer = (fn) => () => { setMenu(false); setSeguro(false); fn(); };
     return (
-        <li className={`lt-item${actual ? ' is-actual' : ''}`}>
-            <button type="button" className="lt-abrir" onClick={() => onAbrir(c.id)} aria-current={actual || undefined}>
+        <li className={`lt-item${actual ? ' is-actual' : ''}`} ref={caja}>
+            <button type="button" className="lt-abrir" onClick={() => onAbrir(c.id)} aria-current={actual || undefined}
+                onDoubleClick={() => { setTitulo(c.titulo || ''); setEditando(true); }}>
                 <span className="lt-titulo">{c.titulo || 'Sin título'}</span>
                 <span className="lt-fecha">{cuando(c.fecha)}</span>
             </button>
-            <span className="lt-acciones">
-                <button type="button" className="lt-ico" data-tip={c.fijada ? 'Desfijar' : 'Fijar arriba'} aria-label={c.fijada ? 'Desfijar' : 'Fijar'}
-                    onClick={() => ordenar(c.id, { fijada: !c.fijada })}>{c.fijada ? <PinOff size={13} /> : <Pin size={13} />}</button>
-                <button type="button" className="lt-ico" data-tip="Renombrar" aria-label="Renombrar"
-                    onClick={() => { setTitulo(c.titulo || ''); setEditando(true); }}><Pencil size={13} /></button>
-            </span>
+            <button type="button" className="lt-mas" aria-label="Opciones de la conversación" aria-expanded={menu} onClick={() => setMenu((m) => !m)}>
+                <MoreHorizontal size={15} />
+            </button>
+            {menu && (
+                <div className="lt-menu" role="menu">
+                    <button type="button" role="menuitem" onClick={hacer(() => ordenar(c.id, { fijada: !c.fijada }))}>
+                        {c.fijada ? <PinOff size={14} /> : <Pin size={14} />}{c.fijada ? 'Desfijar' : 'Fijar arriba'}
+                    </button>
+                    <button type="button" role="menuitem" onClick={hacer(() => { setTitulo(c.titulo || ''); setEditando(true); })}>
+                        <Pencil size={14} />Renombrar
+                    </button>
+                    <button type="button" role="menuitem" className={`lt-borrar${seguro ? ' is-seguro' : ''}`}
+                        onClick={seguro ? hacer(() => borrar(c.id)) : () => setSeguro(true)}>
+                        <Trash2 size={14} />{seguro ? '¿Seguro? Tocá para borrar' : 'Borrar'}
+                    </button>
+                </div>
+            )}
             {c.fijada && <Pin size={11} className="lt-pin" aria-hidden="true" />}
         </li>
     );
 }
 
 export default function LearnitoLateral() {
-    const { historial, cargarHistorial, abrir, ordenar, conversacion, reiniciar, enviando } = useLearnito();
+    const { historial, cargarHistorial, abrir, ordenar, borrar, conversacion, reiniciar, enviando } = useLearnito();
     const [error, setError] = useState(null);
     // Al abrir y cada vez que arranca una conversación nueva (aparece su id), la lista se pone al día.
     useEffect(() => { cargarHistorial(); }, [cargarHistorial, conversacion]);
@@ -56,7 +79,7 @@ export default function LearnitoLateral() {
     };
     const fijadas = historial.filter((c) => c.fijada);
     const resto = historial.filter((c) => !c.fijada);
-    const lista = (items) => items.map((c) => <Item key={c.id} c={c} actual={c.id === conversacion} onAbrir={onAbrir} ordenar={ordenar} />);
+    const lista = (items) => items.map((c) => <Item key={c.id} c={c} actual={c.id === conversacion} onAbrir={onAbrir} ordenar={ordenar} borrar={async (id) => setError(await borrar(id))} />);
     return (
         <nav className="lt" aria-label="Conversaciones con Learnito">
             <button type="button" className="lt-nueva" onClick={reiniciar} disabled={enviando || !conversacion}>

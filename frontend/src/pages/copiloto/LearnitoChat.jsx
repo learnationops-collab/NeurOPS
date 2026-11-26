@@ -8,7 +8,7 @@
 // convierte en nombre con "Nombrar"; "/" al principio abre las acciones simples, que el cerebro arma sin IA
 // (ADR-W012, menciones.js).
 import { useEffect, useRef, useState } from 'react';
-import { AtSign, Bell, Check, Copy, Frown, Meh, MessageSquare, Mic, MicOff, Send, Smile, Sparkles, X } from 'lucide-react';
+import { ArrowUp, AtSign, Bell, Check, Copy, Frown, Meh, MessageSquare, Mic, MicOff, Paperclip, Smile, Sparkles, X } from 'lucide-react';
 import { Button, EmptyState, FieldError, IconButton, TextArea } from '../../components/standard';
 import api from '../../services/api';
 import { useLearnito } from '../../sesion/LearnitoContext';
@@ -19,6 +19,8 @@ import { conMenciones, disparador, filtrarAcciones, insertar, seleccionValida } 
 import { useDictado } from './useDictado';
 import UsoMensual from './UsoMensual';
 import Calificar from './Calificar';
+import Adjuntos from './Adjuntos';
+import { TIPOS, useAdjuntos } from './useAdjuntos';
 import './copiloto.css';
 
 const SUGERENCIAS = [
@@ -130,7 +132,7 @@ function Pendientes({ pendientes, calificar }) {
     );
 }
 
-function Mensaje({ role, content, mensaje, confirmar }) {
+function Mensaje({ role, content, mensaje, archivos, confirmar }) {
     const [copiado, setCopiado] = useState(false);
     const copiar = () => navigator.clipboard?.writeText(content.replace(/\[\[[A-Z]\]\]/g, '').trim()).then(() => {
         setCopiado(true);
@@ -143,7 +145,7 @@ function Mensaje({ role, content, mensaje, confirmar }) {
                     <Respuesta texto={content} adjuntos={mensaje.adjuntos} />
                     {mensaje.accion && <Accion accion={mensaje.accion} confirmar={confirmar} />}
                 </div>
-            ) : <p className="cp-texto">{content}</p>}
+            ) : <div className="cp-texto"><Adjuntos archivos={archivos} />{content && <p>{content}</p>}</div>}
             {role === 'assistant' && (
                 <IconButton size="xs" icon={copiado ? <Check size={13} /> : <Copy size={13} />}
                     label={copiado ? 'Copiado' : 'Copiar respuesta'} onClick={copiar} />
@@ -168,6 +170,9 @@ export default function LearnitoChat() {
         if (fallo) setError(fallo);
     };
     const dictado = useDictado((frase) => setTexto((t) => juntar(t, frase)));
+    const adj = useAdjuntos();
+    const archivo = useRef(null);
+    const [arrastrando, setArrastrando] = useState(false);
     const finRef = useRef(null);
     const caja = useRef(null);
     const listaRef = useRef(null);
@@ -250,20 +255,27 @@ export default function LearnitoChat() {
         setSeleccion(null);
     };
 
-    useEffect(() => { finRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }); }, [mensajes, enviando]);
+    // Baja la lista, no la página: scrollIntoView también corría el modal (overflow oculto) y después no se podía bajar.
+    useEffect(() => {
+        const l = listaRef.current;
+        if (l) l.scrollTo({ top: l.scrollHeight, behavior: 'smooth' });
+    }, [mensajes, enviando]);
     // Al abrir sin conversación: las anteriores sin calificar, que traban la nueva.
     useEffect(() => { if (!mensajes.length) cargarPendientes(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const mandar = async () => {
         const limpio = texto.trim();
-        if (!limpio || enviando || bloqueado) return;
+        const archivos = adj.adjuntos;
+        if ((!limpio && !archivos.length) || enviando || bloqueado) return;
         dictado.detener();
         setTexto('');
+        adj.vaciar();
         setError(null);
         cerrarSugeridos();
-        const fallo = await enviar(conMenciones(limpio, nombrados), limpio);
+        const fallo = await enviar(conMenciones(limpio, nombrados), limpio, { adjuntos: archivos });
         if (fallo) {
             setTexto(limpio);
+            adj.poner(archivos);
             setError(fallo);
         } else {
             setNombrados([]);
@@ -325,7 +337,10 @@ export default function LearnitoChat() {
 
             <div className="cp-redactor">
                 {trabado && <Pendientes pendientes={pendientes} calificar={calificarPendiente} />}
-                <div className="cp-caja">
+                <div className={`cp-caja${arrastrando ? ' cp-caja--suelta' : ''}`}
+                    onDragOver={(e) => { if (e.dataTransfer?.types?.includes('Files')) { e.preventDefault(); setArrastrando(true); } }}
+                    onDragLeave={() => setArrastrando(false)}
+                    onDrop={(e) => { e.preventDefault(); setArrastrando(false); adj.sumar(e.dataTransfer.files); }}>
                     {(sugeridos.length > 0 || nadie) && (
                         <ul className="cp-sugeridos" role="listbox" aria-label="Sugerencias">
                             {sugeridos.map((s, i) => (
@@ -346,28 +361,36 @@ export default function LearnitoChat() {
                             Nombrar «{seleccion.texto}»
                         </Button>
                     )}
+                    <Adjuntos archivos={adj.adjuntos} quitar={adj.quitar} />
                     <TextArea ref={caja} value={mostrado} onChange={(e) => { setTexto(e.target.value); revisar(e.target); }}
-                        onKeyDown={alTeclear} onClick={(e) => revisar(e.target)}
-                        onBlur={() => setTimeout(cerrarSugeridos, 150)}
+                        bare className="cp-entrada" onKeyDown={alTeclear} onClick={(e) => revisar(e.target)} onPaste={adj.alPegar}
+                        onBlur={() => setTimeout(cerrarSugeridos, 150)} rows={1}
                         readOnly={dictado.escuchando} disabled={bloqueado} maxLength={4000} aria-label="Mensaje para Learnito"
-                        placeholder={dictado.escuchando ? 'Te escucho…' : 'Escribí o dictá tu pedido; @ nombra a alguien y / abre las acciones'} />
+                        placeholder={dictado.escuchando ? 'Te escucho…' : 'Preguntale a Learnito…'} />
+                    {/* Abajo, adentro del cuadro (ADR-W252): adjuntar, la pista de @ y /, dictar y enviar. */}
+                    <div className="cp-caja-pie">
+                        <input ref={archivo} type="file" hidden multiple accept={TIPOS.join(',')}
+                            onChange={(e) => { adj.sumar(e.target.files); e.target.value = ''; }} />
+                        <IconButton size="sm" icon={<Paperclip size={15} />} label="Adjuntar imagen, PDF o texto (también pegá una captura)"
+                            data-tip="Adjuntar|Imagen, PDF o texto. También podés pegar una captura con Ctrl+V" onClick={() => archivo.current?.click()} disabled={bloqueado || enviando} />
+                        <span className="cp-pista"><kbd>@</kbd> nombra · <kbd>/</kbd> acciones</span>
+                        <IconButton size="sm"
+                            icon={dictado.escuchando ? <MicOff size={15} /> : <Mic size={15} />}
+                            label={dictado.soportado ? (dictado.escuchando ? 'Dejar de dictar' : 'Dictar') : 'Dictado no disponible: usá Chrome o Edge'}
+                            pressed={dictado.escuchando}
+                            disabled={!dictado.soportado || enviando}
+                            onClick={dictado.escuchando ? dictado.detener : dictado.empezar} />
+                        <button type="button" className="cp-enviar" aria-label="Enviar" data-tip="Enviar|Enter"
+                            onClick={mandar} disabled={(!texto.trim() && !adj.adjuntos.length) || enviando || dictado.escuchando || bloqueado}>
+                            <ArrowUp size={16} strokeWidth={2.5} />
+                        </button>
+                    </div>
                 </div>
-                <div className="cp-botones">
-                    <IconButton
-                        icon={dictado.escuchando ? <MicOff size={16} /> : <Mic size={16} />}
-                        label={dictado.soportado ? (dictado.escuchando ? 'Dejar de dictar' : 'Dictar') : 'Dictado no disponible: usá Chrome o Edge'}
-                        title={dictado.soportado ? undefined : 'Usá Chrome o Edge para dictar.'}
-                        pressed={dictado.escuchando}
-                        disabled={!dictado.soportado || enviando}
-                        onClick={dictado.escuchando ? dictado.detener : dictado.empezar} />
-                    <Button variant="primary" icon={<Send size={14} />} onClick={mandar}
-                        disabled={!texto.trim() || enviando || dictado.escuchando || bloqueado}>
-                        Enviar
-                    </Button>
+                {(dictado.error || error || adj.aviso) && <FieldError>{dictado.error || error || adj.aviso}</FieldError>}
+                <div className="cp-pie">
+                    {respondio ? <Calificar calificacion={calificacion} calificar={calificar} /> : <span />}
+                    <UsoMensual uso={uso} />
                 </div>
-                {(dictado.error || error) && <FieldError>{dictado.error || error}</FieldError>}
-                {respondio && <Calificar calificacion={calificacion} calificar={calificar} />}
-                <UsoMensual uso={uso} />
             </div>
         </div>
     );

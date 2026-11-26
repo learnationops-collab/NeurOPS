@@ -74,7 +74,12 @@ def learnito():
     pedido = {k: cuerpo[k] for k in ('pregunta', 'boton', 'conversacion_id') if cuerpo.get(k) not in (None, '')}
     if isinstance(pedido.get('pregunta'), str):
         pedido['pregunta'] = pedido['pregunta'].strip()[:MAX_CARACTERES]
-    if not pedido.get('pregunta') and not isinstance(pedido.get('boton'), dict):
+    # Archivos para que los lea (imagen, PDF o texto en base64; ADR-W252, su ADR-248): los valida la Academia.
+    adjuntos = [a for a in (cuerpo.get('adjuntos') or [])[:3] if isinstance(a, dict) and a.get('datos')]
+    if adjuntos:
+        pedido['adjuntos'] = [{'nombre': str(a.get('nombre') or 'archivo')[:200], 'tipo': str(a.get('tipo') or ''),
+                               'datos': str(a['datos'])} for a in adjuntos]
+    if not pedido.get('pregunta') and not isinstance(pedido.get('boton'), dict) and not adjuntos:
         return jsonify({'error': 'Escribí una pregunta.'}), 400
     data, estado = _a_la_academia('ask', pedido)
     if estado != 200:
@@ -138,6 +143,17 @@ def learnito_historial():
         lista.append({**c, 'titulo': (p and p.titulo) or c.get('titulo'), 'fijada': bool(p and p.fijada)})
     lista.sort(key=lambda c: not c['fijada'])
     return jsonify({'conversaciones': lista}), 200
+
+
+@bp.route('/learnito/historial/<int:conversacion_id>', methods=['DELETE'])
+@copiloto_required
+def learnito_borrar(conversacion_id):
+    """Borra una conversación de la lista (ADR-W252): la Academia la archiva y deja de pedir que se califique."""
+    data, estado = _a_la_academia('archive', {'conversacion_id': conversacion_id})
+    if estado == 200:
+        LearnitoConversacion.query.filter_by(user_id=current_user.id, conversacion_id=conversacion_id).delete()
+        db.session.commit()
+    return jsonify(data), estado
 
 
 @bp.route('/learnito/historial/<int:conversacion_id>', methods=['PATCH'])
