@@ -60,13 +60,18 @@ def _con_accesos_de_bajas(resultado):
     return resultado
 
 
-def _ejecutar(appt_id, permiso, accion, exito=200, momentum=None, aviso=False):
-    """`momentum`: 'resultado' o 'venta' si la acción reporta la llamada; en una Momentum de la
+def _ejecutar(appt_id, permiso, accion, exito=200, momentum=None, aviso=False, reporte=False):
+    """`reporte`: si la agenda se movió en Google, se reporta la que la reemplazó (reagenda.vigente_tras_movidas).
+    `momentum`: 'resultado' o 'venta' si la acción reporta la llamada; en una Momentum de la
     Academia, se le avisa el resultado (app/services/momentum_academia.py). `aviso`: el resultado de
     la llamada va a Discord (app/services/discord_avisos/resultado.py)."""
     appt, error = _agenda_y_permiso(appt_id, permiso)
     if error:
         return error
+    if reporte:
+        from app.agendas_v2.reagenda import vigente_tras_movidas
+
+        appt = vigente_tras_movidas(appt) or appt
     datos = _datos()
     try:
         resultado = accion(appt, datos, current_user)
@@ -99,7 +104,8 @@ def resultado(appt_id):
     """El arbol de reporte de la llamada. En una Momentum, si sigue con plan, también arma el plan (ADR-W129)."""
     from app.services import momentum_reporte
 
-    return _ejecutar(appt_id, 'reportar', momentum_reporte.resultado, momentum='resultado', aviso=True)
+    return _ejecutar(appt_id, 'reportar', momentum_reporte.resultado, momentum='resultado', aviso=True,
+                     reporte=True)
 
 
 @bp.route('/<int:appt_id>/momentum/nota', methods=['GET'])
@@ -119,7 +125,7 @@ def triage(appt_id):
     """El reporte de la llamada de triage: asistencia, calificación, pase al closer y low ticket."""
     from app.services import triage_service
 
-    return _ejecutar(appt_id, 'triar', triage_service.reportar)
+    return _ejecutar(appt_id, 'triar', triage_service.reportar, reporte=True)
 
 
 @bp.route('/<int:appt_id>/fathom', methods=['PATCH'])
