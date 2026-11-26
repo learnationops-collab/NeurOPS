@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 ZONA = ZoneInfo('America/Argentina/Buenos_Aires')
 POR_VUELTA = 10
-TOPE_DIARIO = 100
+TOPE_DIARIO = 200  # Meta permite 250 personas por día en este nivel; dejamos margen
 
 
 class EnvioInvalido(ValueError):

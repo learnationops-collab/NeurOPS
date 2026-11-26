@@ -1068,3 +1068,6 @@
 
 ### 25/11/2026 · Inbox: «No requiere respuesta» (ADR-W235)
 - Pedido de Paula y Elias (reporte #26): los leads que ya agendaron y mandaron el último mensaje quedaban en «Esperan respuesta». Arriba del chat hay un botón «No requiere respuesta» que lo saca de las colas de espera hasta que el lead vuelva a escribir; el mismo botón lo deshace ([api_trabajo.py](../../app/automatizaciones/api_trabajo.py) `marcar_resuelta`, [colas.js](../../frontend/src/pages/inbox/conversaciones/colas.js) `resuelta`). Migración `a2c4e6f8b0d1`.
+
+### 26/11/2026 · Broadcast de WhatsApp: tope de 200 por día
+- El tope propio del broadcast pasa de 100 a 200 por día ([envios.py](../../app/whatsapp/envios.py) `TOPE_DIARIO`). El número está en calidad verde y Meta permite 250 personas por día en este nivel; queda margen para las respuestas de los setters.
