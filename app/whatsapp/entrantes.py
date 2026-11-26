@@ -15,6 +15,7 @@ from app import db
 from app.automatizaciones.modelos import IgContacto, IgMensaje
 from app.automatizaciones.reparto import setters_activos
 from app.models.whatsapp import WaEnvio, WhatsappWebhookEvento
+from app.whatsapp import plantilla_en_chat
 from app.whatsapp.cliente import PREFIJO, variantes
 
 logger = logging.getLogger(__name__)
@@ -81,6 +82,7 @@ def _marcar_envio(contacto, telefono, texto, ahora):
         envio.estado, envio.actualizado_en = WaEnvio.RESPONDIO, ahora
         envio.respuesta = (texto or '')[:200] or None
     envio.contacto_id = contacto.id
+    plantilla_en_chat.registrar(contacto, envio)
     variables = dict(contacto.variables or {})
     if variables.get('broadcast') != envio.lote:
         variables.update(origen='broadcast', broadcast=envio.lote, plantilla=envio.plantilla)
