@@ -1044,3 +1044,10 @@
 
 ### 25/11/2026 · Agendas: Work sigue la reagenda hecha en Google después de la llamada (ADR-W233)
 - Dari movió en su Google Calendar la llamada de Melanie Rivera al domingo y Work la seguía mostrando atrasada: solo seguía los eventos movidos hasta 2 h después de la hora de la agenda. Ahora también sigue los de agendas sin reportar de los últimos 14 días, cuando el evento quedó en una hora futura ([movidas.py](../../app/agendas_v2/movidas.py)).
+/^>>>>>>> 414a1436/d
+### 25/11/2026 · Plantillas de WhatsApp con botones
+- El alta de plantillas acepta `botones` de respuesta rápida (hasta 10, de 25 caracteres): para las plantillas de la estrategia de referidos. Al enviarlas no llevan parámetros y el toque llega al inbox como texto, para el setter ([api.py](../../app/whatsapp/api.py)).
+
+### 25/11/2026 · Flujo de conversión con su propia apertura (dato, sin código)
+- «Direct Sale (conversión)» mandaba los mismos mensajes que Lead Magnet. Versión 2 con los de Eli: «Vi que comentaste una de mis publicaciones para ayudarte con tu preparación…» y «Genial entonces», con el saludo de cada setter.
+>>>>>>> 414a1436 (feat(whatsapp): plantillas con botones de respuesta rápida)

@@ -7,7 +7,8 @@
   · GET  /envios/<lote>             → los números de ese envío.
   · POST /envios/<lote>/frenar      → saca lo que todavía no salió.
   · GET  /plantillas                → las de la cuenta, con su estado de aprobación.
-  · POST /plantillas                → {nombre, texto, categoria?: MARKETING|UTILITY, idioma?, ejemplo_nombre?}
+  · POST /plantillas                → {nombre, texto, categoria?: MARKETING|UTILITY, idioma?, ejemplo_nombre?,
+                                       botones?: [texto]} (respuesta rápida)
 """
 import csv
 import io
@@ -121,21 +122,50 @@ def plantillas():
         return jsonify({'message': str(error)}), 502
 
 
+BOTONES_MAX, LARGO_BOTON = 10, 25
+
+
+def _botones(pedidos):
+    """(textos, problema) de los botones de respuesta rápida: los límites de Meta (10, de 25 caracteres)."""
+    if not pedidos:
+        return [], None
+    if not isinstance(pedidos, list):
+        return [], 'Los botones van como lista de textos'
+    botones = [(b or '').strip() if isinstance(b, str) else '' for b in pedidos]
+    if '' in botones:
+        return [], 'Hay un botón vacío'
+    if len(botones) > BOTONES_MAX:
+        return [], f'Van hasta {BOTONES_MAX} botones'
+    largo = next((b for b in botones if len(b) > LARGO_BOTON), None)
+    if largo:
+        return [], f'«{largo}» pasa los {LARGO_BOTON} caracteres'
+    if len(set(botones)) != len(botones):
+        return [], 'Hay dos botones iguales'
+    return botones, None
+
+
 @bp.route('/plantillas', methods=['POST'])
 @login_required
 @admin_required
 def crear_plantilla():
-    """Una plantilla de texto. Si el texto lleva {{1}}, `ejemplo_nombre` es el ejemplo que pide Meta."""
+    """Una plantilla de texto. Si el texto lleva {{1}}, `ejemplo_nombre` es el ejemplo que pide Meta.
+    `botones`: textos de respuesta rápida; al enviarla no llevan parámetros y el toque llega como texto."""
     datos = request.get_json(silent=True) or {}
     nombre, texto = (datos.get('nombre') or '').strip().lower(), (datos.get('texto') or '').strip()
     if not nombre or not texto:
         return jsonify({'message': 'Falta el nombre o el texto'}), 400
+    botones, problema = _botones(datos.get('botones'))
+    if problema:
+        return jsonify({'message': problema}), 400
     cuerpo = {'type': 'BODY', 'text': texto}
     if '{{1}}' in texto:
         cuerpo['example'] = {'body_text': [[datos.get('ejemplo_nombre') or 'Laura']]}
+    componentes = [cuerpo]
+    if botones:
+        componentes.append({'type': 'BUTTONS', 'buttons': [{'type': 'QUICK_REPLY', 'text': b} for b in botones]})
     categoria = datos.get('categoria') if datos.get('categoria') in ('MARKETING', 'UTILITY') else 'MARKETING'
     try:
-        respuesta = ClienteWhatsapp().crear_plantilla(nombre, datos.get('idioma') or 'es', categoria, [cuerpo])
+        respuesta = ClienteWhatsapp().crear_plantilla(nombre, datos.get('idioma') or 'es', categoria, componentes)
     except ErrorDeEnvio as error:
         return jsonify({'message': str(error)}), 400
     return jsonify(respuesta), 201
