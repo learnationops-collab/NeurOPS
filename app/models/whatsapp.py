@@ -76,6 +76,19 @@ class WaRespuestaBoton(db.Model):
     botones = db.Column(db.JSON, nullable=True)
     asignar_a = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
     etiqueta = db.Column(db.String(60), nullable=True)
+    # Cuántos segundos espera el mensaje antes de salir (0: al instante). Asignar y etiquetar no esperan.
+    demora_segundos = db.Column(db.Integer, nullable=False, default=0, server_default="0")
     actualizado_en = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     __table_args__ = (db.UniqueConstraint('plantilla', 'boton', name='uq_wa_respuestas_boton'),)
+
+
+class WaRespuestaPendiente(db.Model):
+    """La respuesta a un botón que espera su demora (`WaRespuestaBoton.demora_segundos`). La manda el reloj del
+    motor cuando llega `enviar_en` y se borra. Una por contacto: un toque nuevo reemplaza la que esperaba."""
+    __tablename__ = 'wa_respuestas_pendientes'
+
+    id = db.Column(db.Integer, primary_key=True)
+    contacto_id = db.Column(db.Integer, db.ForeignKey('ig_contactos.id', ondelete='CASCADE'), nullable=False, unique=True)
+    regla_id = db.Column(db.Integer, db.ForeignKey('wa_respuestas_boton.id', ondelete='CASCADE'), nullable=False)
+    enviar_en = db.Column(db.DateTime, nullable=False, index=True)

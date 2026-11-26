@@ -121,10 +121,11 @@ def tick(momento=None, transporte=None):
 
 def _whatsapp(momento):
     """Lo de WhatsApp en la misma vuelta: eventos que no se procesaron en el webhook y la tanda del broadcast."""
-    from app.whatsapp import entrantes, envios
+    from app.whatsapp import entrantes, envios, respuestas
     try:
         motor = _motor(None, momento) if modo() == REAL else None
-        return {'eventos': entrantes.procesar_pendientes(motor), 'broadcast': envios.enviar_tanda(momento)}
+        return {'eventos': entrantes.procesar_pendientes(motor), 'broadcast': envios.enviar_tanda(momento),
+                'respuestas': respuestas.mandar_pendientes(momento)}
     except Exception:  # WhatsApp no puede frenar el reloj de Instagram
         db.session.rollback()
         logger.exception('[MOTOR IG] Falló la vuelta de WhatsApp')

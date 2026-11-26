@@ -69,7 +69,7 @@ def guardar_respuesta(nombre, boton):
         if regla:
             db.session.delete(regla)
         db.session.commit()
-        return jsonify({'boton': boton, 'texto': '', 'botones': [], 'etiqueta': None, 'asignar_a': None})
+        return jsonify({'boton': boton, 'texto': '', 'botones': [], 'etiqueta': None, 'asignar_a': None, 'demora_segundos': 0})
     if regla is None:
         regla = WaRespuestaBoton(plantilla=nombre, boton=boton)
         db.session.add(regla)

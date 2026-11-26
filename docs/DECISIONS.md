@@ -2100,3 +2100,11 @@
 - **Decisión:** arriba del chat, cuando lo último lo escribió el lead, un botón «No requiere respuesta». La conversación deja de esperar (sale de «Esperan respuesta», «Esperan más de 1 h», del contador de espera de la fila y de «Tuyas esperando»), pero sigue en la bandeja y en «Todas». Si el lead escribe de nuevo, vuelve a esperar sola. El mismo botón deshace la marca, y cada cambio deja un evento en el chat.
 - **Qué se pierde:** no se cierra sola por etapa (por ejemplo, Agendó): un agendado que pregunta algo tiene que seguir apareciendo. Hay que marcar cada chat a mano. La marca no cuenta para la mediana de respuesta.
 - **Consecuencias:** migración `a2c4e6f8b0d1` (columna `resuelta_en`, idempotente). El setter puede marcarla (`inbox.marcar_resuelta`).
+
+## ADR-W236: la respuesta a un botón de WhatsApp puede esperar y llevar el nombre del lead
+
+- **Fecha:** 26/11/2026 · **Subsistema:** herramienta «Broadcast de WhatsApp», respuesta por botón (ADR-W234: `app/whatsapp/respuestas.py`, `ventanas/herramientas/broadcastWa/Respuestas.jsx`) · **Estado:** implementada
+- **Contexto:** los textos de Marlon para no cerrados y referidos piden «delay de 1 minuto» y saludan por el nombre («como va, nombre? soy mario no el bot»). Una respuesta que llega en un segundo delata al bot.
+- **Decisión:** cada respuesta elige cuándo sale (al instante, 1, 2 o 5 minutos). Con espera, queda en `wa_respuestas_pendientes` y la manda el reloj del motor; asignar y etiquetar se hacen en el momento del toque. `{nombre}` en el texto pasa a ser el primer nombre: el del CSV del broadcast y, si no hay, el del perfil de WhatsApp; sin ninguno se borra con la coma de antes. Un toque nuevo reemplaza la respuesta que esperaba.
+- **Qué se pierde:** el reloj corre una vez por minuto: «1 minuto» sale entre 1 y 2 minutos después. Mientras espera, el setter no ve en el chat qué va a salir.
+- **Consecuencias:** migración `b3d5f7a9c1e2` (columna `demora_segundos` y tabla `wa_respuestas_pendientes`).

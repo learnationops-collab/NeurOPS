@@ -7,12 +7,18 @@ import { Accordion, Button, IconButton, Input, LinkButton, Select, TextArea, toa
 
 const LARGO_BOTON = 20;
 const MAX_BOTONES = 3;
-const VACIA = { texto: '', botones: [], asignar_a: null, etiqueta: '' };
+const VACIA = { texto: '', botones: [], asignar_a: null, etiqueta: '', demora_segundos: 0 };
+const ESPERAS = [
+    { value: 0, label: 'Al instante' },
+    { value: 60, label: 'A 1 minuto' },
+    { value: 120, label: 'A los 2 minutos' },
+    { value: 300, label: 'A los 5 minutos' },
+];
 
 function resumen(r, asignables) {
     if (!r || (!r.texto && !r.asignar_a && !r.etiqueta)) return 'Queda para el setter';
     const quien = asignables.find((a) => a.id === r.asignar_a)?.nombre;
-    return [r.texto ? 'Contesta solo' : null, quien && `Asigna a ${quien}`, r.etiqueta && `Etiqueta «${r.etiqueta}»`].filter(Boolean).join(' · ');
+    return [r.texto ? (r.demora_segundos ? `Contesta solo a los ${r.demora_segundos / 60} min` : 'Contesta solo') : null, quien && `Asigna a ${quien}`, r.etiqueta && `Etiqueta «${r.etiqueta}»`].filter(Boolean).join(' · ');
 }
 
 function Editor({ nombre, boton, botones, inicial, asignables, datos, onGuardada }) {
@@ -36,8 +42,12 @@ function Editor({ nombre, boton, botones, inicial, asignables, datos, onGuardada
         <div className="bw-cuerpo">
             <label className="bw-campo">
                 <span>Mensaje que sale solo</span>
-                <TextArea value={r.texto} onChange={(e) => cambiar('texto', e.target.value)} placeholder="Vacío: no contesta nada" />
+                <TextArea value={r.texto} onChange={(e) => cambiar('texto', e.target.value)} placeholder="Vacío: no contesta nada. {nombre} pone el primer nombre del lead" />
             </label>
+            <div className="bw-fila">
+                <Select size="sm" label="Sale" value={r.demora_segundos || 0} options={ESPERAS}
+                    onChange={(v) => cambiar('demora_segundos', Number(v))} />
+            </div>
             <div className="bw-campo">
                 <span>Botones del mensaje <small className="bw-s">(hasta {MAX_BOTONES}, de {LARGO_BOTON} caracteres)</small></span>
                 {r.botones.map((b, i) => (

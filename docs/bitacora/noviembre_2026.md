@@ -1076,3 +1076,6 @@
 ### 26/11/2026 · Inbox: el mensaje del broadcast se ve en el chat
 - Cuando un lead responde a un broadcast de WhatsApp, el chat arranca con la plantilla que recibió (con su nombre y los botones al pie), para que el setter sepa a qué responde ([plantilla_en_chat.py](../../app/whatsapp/plantilla_en_chat.py)). Se completó en los que ya habían respondido.
 - Primer envío real (26/11 de madrugada): 54 no cerrados y 33 del taller entregados; a la mañana respondieron 9 y 8.
+
+### 26/11/2026 · Broadcast de WhatsApp: la respuesta a un botón puede esperar y saludar por el nombre (ADR-W236)
+- En «Cuando tocan un botón» cada respuesta elige si sale al instante o a 1, 2 o 5 minutos, y `{nombre}` pone el primer nombre del lead ([respuestas.py](../../app/whatsapp/respuestas.py)). Pedido de Marlon para que «soy mario no el bot» no llegue en un segundo. Migración `b3d5f7a9c1e2`.
