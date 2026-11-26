@@ -5,8 +5,9 @@ su zona), los números del reporte v2 (`setter_reporte_v2`) con la misma forma, 
 precarga. El setter revisa, corrige si hace falta y escribe la reflexión.
 
 De quién es una conversación: del setter asignado (`bandeja.asignaciones`: el reparto de la campaña
-o la asignación a mano). Los mensajes del equipo no traen autor (salen también desde la app de
-Instagram), así que todo lo que pasa en sus conversaciones cuenta para él.
+o la asignación a mano). Lo que manda desde el Inbox lleva autor (`autor_id`); lo que sale de Kommo o
+de la app de Instagram no. En aperturas y follow-ups cuentan los suyos y los sin autor; lo que mandó
+otra persona del equipo desde el Inbox, no.
 
 Cómo se cuenta cada número (por canal, `fases.canal`):
 
@@ -18,15 +19,17 @@ Cómo se cuenta cada número (por canal, `fases.canal`):
   (`ig_fases`, lo que marca el setter o «Adelantar»).
 - Follow-ups: mensajes del equipo que salen tras SEGUIMIENTO_H horas sin respuesta a su mensaje
   anterior, en la etapa en que estaba la conversación; respondidos, los que el lead contestó.
+- Aperturas en entrantes: conversaciones a las que el equipo les escribió a mano por primera vez ese
+  día (no el bot); respondieron, las que el lead contestó después. Comparado con lo cargado a mano
+  del 18 al 23/11: las aperturas en el mismo orden (Elias 22 contra 25, Paula 14 contra 13); las
+  respuestas, por debajo (el setter contaba a todos los que contestaron ese día).
 
 El embudo y los follow-ups dependen de las fases: si ninguna conversación del setter tiene una fase
 marcada hasta ese día, no se cuentan (vienen en None) y los carga él, para no repartir todo en
 «Entrantes».
 
-Lo que todavía no tiene definición acordada no se cuenta (`A_CONFIRMAR`, 20/11/2026): las aperturas
-(en entrantes y en dolor, y cuántas respondieron) y las bienvenidas. Contadas desde el Inbox, las
-aperturas en entrantes coincidían (24 de Elias el 18/11) pero las respondidas no (12 contra 21: el
-setter cuenta a todos los que contestaron ese día). Las sigue cargando el setter.
+Lo que no se cuenta solo (`A_CONFIRMAR`): las aperturas en dolor y las bienvenidas. Nunca tuvieron
+otro valor que 0 y no hay forma de distinguirlas en el Inbox; las sigue cargando el setter.
 
 Cada número trae en `detalle` la lista de conversaciones que suma ({id, quien, fase, en}), para
 verla desde el formulario.
@@ -40,8 +43,8 @@ from app.automatizaciones import bandeja, fases
 from app.automatizaciones.modelos import AutEjecucion, IgContacto, IgFase, IgMensaje
 
 SEGUIMIENTO_H = 12
-# Sin definición acordada (20/11/2026): las aperturas y las bienvenidas.
-A_CONFIRMAR = ('ap_entrantes', 'ap_entrantes_resp', 'ap_dolor', 'ap_dolor_resp', 'bienvenidas')
+# Sin forma de contarlas desde el Inbox: las aperturas en dolor y las bienvenidas.
+A_CONFIRMAR = ('ap_dolor', 'ap_dolor_resp', 'bienvenidas')
 _ETAPA_EMBUDO = {'dolor': 'dolor', 'consecuencia': 'dolor', 'compromiso': 'dolor', 'propuesta': 'oferta', 'link': 'link'}
 
 
@@ -79,7 +82,8 @@ def contar(setter_id, fecha, tz):
     # Una conversación de hoy pudo arrancar días antes: los mensajes se leen desde una semana atrás.
     suyas, contactos = _suyas(setter_id, ini - timedelta(days=7))
     canales = ('anuncios', 'inbound')
-    salida = {c: dict.fromkeys(('entrantes', 'leads', 'no_lead', 'inabribles'), 0) for c in canales}
+    salida = {c: dict.fromkeys(('entrantes', 'leads', 'no_lead', 'inabribles', 'ap_entrantes', 'ap_entrantes_resp'), 0)
+              for c in canales}
     embudo = dict.fromkeys(('dolor', 'oferta', 'link'), 0)
     fu = dict.fromkeys(('entrantes', 'dolor', 'oferta', 'link'), 0)
     fur = dict.fromkeys(fu, 0)
@@ -90,12 +94,15 @@ def contar(setter_id, fecha, tz):
 
     ids = list(suyas)
     mensajes = defaultdict(list)
+    propios = defaultdict(list)  # del equipo, sin contar lo que mandó otro desde el Inbox
     bot = defaultdict(list)
     for m in IgMensaje.query.filter(IgMensaje.contacto_id.in_(ids)).order_by(IgMensaje.enviado_en):
         if m.origen == IgMensaje.MOTOR:
             bot[m.contacto_id].append(m.enviado_en)
         else:
             mensajes[m.contacto_id].append((m.enviado_en, m.direccion == 'entrante'))
+            if m.direccion != 'entrante' and m.autor_id in (None, setter_id):
+                propios[m.contacto_id].append(m.enviado_en)
     cambios = defaultdict(list)
     for f in IgFase.query.filter(IgFase.contacto_id.in_(ids)).order_by(IgFase.en):
         cambios[f.contacto_id].append((f.en, f.fase))
@@ -135,11 +142,22 @@ def contar(setter_id, fecha, tz):
                     embudo[etapa] += 1
                     detalle[f'embudo.{etapa}'].append(quien(en))
 
+        mios = set(propios.get(cid, []))
+        apertura = min(mios, default=None)
+        if c is not None and apertura and ini <= apertura < fin:
+            c['ap_entrantes'] += 1
+            detalle[f'{canal}.ap_entrantes'].append(quien(apertura))
+            if any(lead and en > apertura for en, lead in msgs):
+                c['ap_entrantes_resp'] += 1
+                detalle[f'{canal}.ap_entrantes_resp'].append(quien(apertura))
+
         # Follow-up: mensaje del equipo tras SEGUIMIENTO_H sin que el lead contestara el anterior.
         previo = None
         for i, (en, lead) in enumerate(msgs):
             if lead:
                 previo = None
+                continue
+            if en not in mios:
                 continue
             if previo and en - previo >= timedelta(hours=SEGUIMIENTO_H) and ini <= en < fin:
                 etapa = _etapa_en(cambios.get(cid, []), en)

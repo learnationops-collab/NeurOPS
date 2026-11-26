@@ -1125,3 +1125,8 @@
 ### 26/11/2026 · Dock: lo que tiene pendientes queda fijado hasta resolverse (ADR-W242)
 - Inbox, Avisos, Conflictos, Mis reportes y Playbook con algo pendiente aparecen solos en la isla izquierda del dock, con su cuenta, y en Herramientas su pin es un candado ([fijadas.js](../../frontend/src/sesion/fijadas.js), [DockFijadas.jsx](../../frontend/src/pages/comercial/components/DockFijadas.jsx)). En 0 vuelven a lo que eligió cada uno.
 - El Inbox es una herramienta más para setters y triage, con las conversaciones asignadas que esperan respuesta ([api_pendientes.py](../../app/automatizaciones/api_pendientes.py), [useOpcionesDeInbox.js](../../frontend/src/pages/inbox/useOpcionesDeInbox.js)).
+
+### 26/11/2026 · Reporte del setter: las aperturas en entrantes salen del Inbox (ADR-W243)
+- Desde el 24/11 Elias y Paula escriben desde el Inbox y dejaron de cargar las aperturas (el KPI «Respuesta» quedaba en 0). Ahora «Aperturas en entrantes» y «Respondieron» se cuentan solas por canal: la primera vez que el equipo le escribe a mano a la conversación ese día, y si el lead contestó después. Son corregibles y tienen su lista «Inbox ›» ([reporte_inbox.py](../../app/automatizaciones/reporte_inbox.py), [setter.py](../../app/reporte_dia/setter.py)).
+- Aperturas y follow-ups ya no cuentan lo que mandó otra persona del equipo desde el Inbox en una conversación del setter (usa `autor_id`).
+- Siguen a mano: aperturas en dolor y bienvenidas.
