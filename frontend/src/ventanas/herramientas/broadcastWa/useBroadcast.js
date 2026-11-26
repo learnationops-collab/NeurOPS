@@ -59,7 +59,7 @@ export function useBroadcast() {
         return () => clearInterval(cada);
     }, [mandando, pedirHistorial]);
 
-    const revisar = (csv) => api.post('/whatsapp/envios/revisar', { csv }).then((r) => r.data);
+    const revisar = (csv, sinAlumnos = true) => api.post('/whatsapp/envios/revisar', { csv, sin_alumnos: sinAlumnos }).then((r) => r.data);
     const enviar = (datos) => api.post('/whatsapp/envios', datos).then((r) => { pedirHistorial(); return r.data; });
     const frenar = (lote) => api.post(`/whatsapp/envios/${lote}/frenar`).then(() => pedirHistorial());
     const numeros = (lote) => api.get(`/whatsapp/envios/${lote}`).then((r) => r.data.numeros);

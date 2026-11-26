@@ -1106,3 +1106,6 @@
 ### 26/11/2026 · Espacio del setter: la barra de Conversaciones sube a la fila del saludo
 - En Conversaciones y Embudos, los filtros guardados, Chats | Embudo, Tareas, Avisos y Stats van en la misma fila que «Hola, Paula.» y los botones redondos; ya no hay fila «Conversaciones». El Inbox manda su barra con `HeaderActions` a un lugar del encabezado del setter con las clases de Thalamus ([SetterEspacioPage.jsx](../../frontend/src/pages/setter/SetterEspacioPage.jsx), [InboxEmbebido.jsx](../../frontend/src/pages/inbox/InboxEmbebido.jsx)).
 - Tareas, Avisos y Stats llevan su palabra al lado del ícono ([Conversaciones.jsx](../../frontend/src/pages/inbox/Conversaciones.jsx), [MisTareas.jsx](../../frontend/src/pages/inbox/conversaciones/MisTareas.jsx)).
+
+### 26/11/2026 · Broadcast de WhatsApp: los alumnos activos se saltean
+- Al revisar un CSV, el broadcast cuenta a los que tienen una suscripción vigente (por teléfono) y por defecto los saltea: un mensaje de captación no le llega a quien ya compró ([envios.py](../../app/whatsapp/envios.py) `alumnos_activos`). Se pueden incluir con «Incluirlos» (para referidos). Pedido de Mario: a un alumno le llegó el de reactivación del workshop.

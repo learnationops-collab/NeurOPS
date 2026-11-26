@@ -4,7 +4,7 @@ import { FileSpreadsheet, Send } from 'lucide-react';
 import { Button, Chip, EmptyState, LinkButton, Segmented, Select, Stepper, toast } from '../../../components/standard';
 import { embudo, partesDe } from './useBroadcast';
 
-function Lista({ archivo, revision, onArchivo }) {
+function Lista({ archivo, revision, onArchivo, sinAlumnos, onAlumnos }) {
     const input = useRef(null);
     return (
         <div>
@@ -25,6 +25,12 @@ function Lista({ archivo, revision, onArchivo }) {
                     {revision.ya_recibieron > 0 && <span className="bw-aviso"><b>{revision.ya_recibieron}</b> ya recibieron uno (se saltean)</span>}
                     {revision.repetidos > 0 && <span className="bw-aviso"><b>{revision.repetidos}</b> repetidos</span>}
                     {revision.invalidos > 0 && <span className="bw-aviso"><b>{revision.invalidos}</b> inválidos</span>}
+                    {revision.alumnos > 0 && (
+                        <span className="bw-aviso">
+                            <b>{revision.alumnos}</b> son alumnos activos ({sinAlumnos ? 'se saltean' : 'van'})
+                            <LinkButton onClick={onAlumnos}>{sinAlumnos ? 'Incluirlos' : 'Sacarlos'}</LinkButton>
+                        </span>
+                    )}
                 </div>
             )}
         </div>
@@ -87,6 +93,8 @@ export default function Mandar({ datos }) {
     const [marcadas, setMarcadas] = useState(null);
     const [cantidad, setCantidad] = useState(33);
     const [enviando, setEnviando] = useState(false);
+    // Por defecto los alumnos vigentes se saltean: un broadcast de captación no le llega a quien ya compró.
+    const [sinAlumnos, setSinAlumnos] = useState(true);
 
     const hoy = historial?.hoy || { usados: 0, tope: 100 };
     const libres = Math.max(0, hoy.tope - hoy.usados);
@@ -100,15 +108,20 @@ export default function Mandar({ datos }) {
 
     const leer = (file) => {
         if (!file) return;
-        file.text().then((texto) => datos.revisar(texto).then((r) => { setCsv(texto); setArchivo(file.name); setRevision(r); }))
+        file.text().then((texto) => datos.revisar(texto, sinAlumnos).then((r) => { setCsv(texto); setArchivo(file.name); setRevision(r); }))
             .catch((e) => toast(datos.mensaje(e, 'No se pudo leer el CSV'), 'error'));
+    };
+    const alternarAlumnos = () => {
+        const nuevo = !sinAlumnos;
+        setSinAlumnos(nuevo);
+        datos.revisar(csv, nuevo).then(setRevision).catch((e) => toast(datos.mensaje(e, 'No se pudo revisar la lista'), 'error'));
     };
     const enviar = async () => {
         setEnviando(true);
         try {
-            const r = await datos.enviar({ csv, cantidad: n, plantillas: elegidas.map((p) => ({ nombre: p.name, idioma: p.language })) });
+            const r = await datos.enviar({ csv, sin_alumnos: sinAlumnos, cantidad: n, plantillas: elegidas.map((p) => ({ nombre: p.name, idioma: p.language })) });
             toast(`Saliendo ${r.cantidad} mensajes${elegidas.length > 1 ? `, al azar entre ${elegidas.length} plantillas` : ` con ${elegidas[0].name}`}`);
-            setRevision(await datos.revisar(csv));
+            setRevision(await datos.revisar(csv, sinAlumnos));
         } catch (e) {
             toast(datos.mensaje(e, 'No se pudo mandar'), 'error');
         } finally {
@@ -120,7 +133,7 @@ export default function Mandar({ datos }) {
     const curso = mandando && embudo(mandando.por_estado);
     return (
         <div className="bw-cuerpo">
-            <Lista archivo={archivo} revision={revision} onArchivo={leer} />
+            <Lista archivo={archivo} revision={revision} onArchivo={leer} sinAlumnos={sinAlumnos} onAlumnos={alternarAlumnos} />
             {plantillas && <Plantillas plantillas={todas} elegida={eleccion} onElegir={setElegida} marcadas={marcadasYa} onMarcar={marcar} />}
             <div className="bw-envio">
                 <Stepper label="Cuántos mandar" value={n} min={maximo ? 1 : 0} max={maximo} onChange={setCantidad} disabled={!maximo} />

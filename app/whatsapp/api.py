@@ -1,7 +1,8 @@
 """/api/whatsapp: la herramienta «Broadcast de WhatsApp» (ADR-W229) y las plantillas. Solo admin y operador.
 
-  · POST /envios/revisar            → {csv} → cuántos hay para mandar, ya recibieron, inválidos, repetidos.
-  · POST /envios                    → {csv, plantillas: [{nombre, idioma}], cantidad} → manda a los próximos
+  · POST /envios/revisar            → {csv, sin_alumnos?} → cuántos hay para mandar, ya recibieron, inválidos,
+                                       repetidos y alumnos vigentes (sin_alumnos, por defecto: se saltean).
+  · POST /envios                    → {csv, plantillas: [{nombre, idioma}], cantidad, sin_alumnos?} → manda a los próximos
                                        `cantidad`; con varias plantillas, cada número recibe una al azar.
   · GET  /envios                    → el historial: cada envío (lote) con su conteo, y el tope de hoy.
   · GET  /envios/<lote>             → los números de ese envío.
@@ -73,7 +74,8 @@ def _hoy():
 @login_required
 @admin_required
 def revisar():
-    r = envios.revisar(_filas(request.get_json(silent=True) or {}))
+    datos = request.get_json(silent=True) or {}
+    r = envios.revisar(_filas(datos), datos.get('sin_alumnos', True) is not False)
     return jsonify({**r, 'para_mandar': len(r['para_mandar']), 'hoy': _hoy()})
 
 
@@ -85,7 +87,8 @@ def enviar():
     try:
         cantidad = int(datos.get('cantidad') or 0)
         plantillas = _plantillas([p for p in datos.get('plantillas') or [] if isinstance(p, dict)])
-        lote, n = envios.crear_lote(_filas(datos), plantillas, cantidad, current_user.id, datetime.utcnow())
+        lote, n = envios.crear_lote(_filas(datos), plantillas, cantidad, current_user.id, datetime.utcnow(),
+                                    datos.get('sin_alumnos', True) is not False)
     except (TypeError, ValueError) as error:
         return jsonify({'message': str(error) if isinstance(error, envios.EnvioInvalido) else 'Cantidad inválida'}), 400
     return jsonify({'lote': lote, 'cantidad': n, 'hoy': _hoy()}), 201

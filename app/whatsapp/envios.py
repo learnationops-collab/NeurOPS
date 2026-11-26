@@ -4,7 +4,8 @@ plantilla aprobada y manda a los próximos N. Todo queda en `WaEnvio` (una fila 
   · «Enviar» deja las filas en «pendiente» con un `lote` y el reloj del motor las manda de a POR_VUELTA por
     vuelta (una por minuto). «Frenar» borra las pendientes del lote: no salieron, vuelven con el mismo CSV.
   · TOPE_DIARIO es del número, sumando plantillas (lo enviado hoy en Argentina más lo pendiente).
-  · Un número va una sola vez: si ya tiene una fila que no falló, el CSV lo saltea.
+  · Un número va una sola vez: si ya tiene una fila que no falló, el CSV lo saltea. Los alumnos con suscripción
+    vigente también se saltean, salvo que se pida incluirlos (p. ej. el broadcast de referidos).
   · Con varias plantillas, cada número recibe una al azar, en partes iguales: así se comparan entre sí.
 """
 import logging
@@ -42,28 +43,48 @@ def usados_hoy(ahora):
                                 WaEnvio.estado != WaEnvio.FALLO).count()
 
 
-def revisar(filas):
-    """Qué pasa con el CSV: {total, para_mandar: [{telefono, nombre}], ya_recibieron, invalidos, repetidos}."""
+def alumnos_activos():
+    """Los teléfonos de quienes tienen una suscripción vigente, por sus últimos 8 dígitos (como `PersonIdentity`)."""
+    from app.models.person import Person, PersonIdentity
+    from app.models.subscription import Subscription
+    vigentes = (db.session.query(Subscription.person_uuid)
+                .filter(Subscription.status == 'active', Subscription.expires_at >= datetime.utcnow().date()))
+    principales = db.session.query(Person.phone).filter(Person.uuid.in_(vigentes), Person.phone.isnot(None))
+    otros = db.session.query(PersonIdentity.value).filter(PersonIdentity.person_uuid.in_(vigentes),
+                                                          PersonIdentity.kind == 'phone')
+    digitos = [normalizar(t) for (t,) in principales] + [v for (v,) in otros]
+    return {d[-8:] for d in digitos if d and len(d) >= 8}
+
+
+def revisar(filas, sin_alumnos=True):
+    """Qué pasa con el CSV: {total, para_mandar: [{telefono, nombre}], ya_recibieron, invalidos, repetidos, alumnos}.
+    `alumnos` cuenta a los que tienen una suscripción vigente; con `sin_alumnos` se saltean (un broadcast de
+    captación no le llega a quien ya compró)."""
     # Un envío que falló (p. ej. Meta sin método de pago) no le llegó: ese número puede volver a recibir.
     # 54… y 549… (52… y 521…) son el mismo celular: cuentan como uno.
     ya = {v for (t,) in db.session.query(WaEnvio.telefono).filter(WaEnvio.estado != WaEnvio.FALLO).distinct()
           for v in variantes(t)}
-    vistos, para, resumen = set(), [], {'ya_recibieron': 0, 'invalidos': 0, 'repetidos': 0}
+    alumnos = alumnos_activos()
+    vistos, para, resumen = set(), [], {'ya_recibieron': 0, 'invalidos': 0, 'repetidos': 0, 'alumnos': 0}
     for fila in filas:
         telefono = normalizar(fila.get('telefono'))
+        es_alumno = bool(telefono) and telefono[-8:] in alumnos
         if not telefono:
             resumen['invalidos'] += 1
         elif telefono in vistos:
             resumen['repetidos'] += 1
         elif telefono in ya:
             resumen['ya_recibieron'] += 1
+        elif es_alumno and sin_alumnos:
+            resumen['alumnos'] += 1
         else:
+            resumen['alumnos'] += es_alumno
             vistos.update(variantes(telefono))
             para.append({'telefono': telefono, 'nombre': (fila.get('nombre') or '').strip()[:150] or None})
     return {'total': len(filas), 'para_mandar': para, **resumen}
 
 
-def crear_lote(filas, plantillas, cantidad, usuario_id, ahora):
+def crear_lote(filas, plantillas, cantidad, usuario_id, ahora, sin_alumnos=True):
     """Deja los próximos `cantidad` del CSV en pendiente. `plantillas`: [(nombre, idioma, con_nombre)]; con más
     de una, se reparten al azar en partes iguales. Devuelve el lote y cuántos van."""
     libres = TOPE_DIARIO - usados_hoy(ahora)
@@ -73,7 +94,7 @@ def crear_lote(filas, plantillas, cantidad, usuario_id, ahora):
         raise EnvioInvalido(f'Ya se usó el tope de hoy ({TOPE_DIARIO})')
     if cantidad > libres:
         raise EnvioInvalido(f'Quedan {libres} para hoy')
-    proximos = revisar(filas)['para_mandar'][:cantidad]
+    proximos = revisar(filas, sin_alumnos)['para_mandar'][:cantidad]
     if not proximos:
         raise EnvioInvalido('No queda nadie para mandar en esta lista')
     lote = str(uuid.uuid4())
