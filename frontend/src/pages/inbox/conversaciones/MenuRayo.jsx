@@ -4,9 +4,9 @@
 // bot y el flujo sigue desde ahí (abre «Continuar desde…» con ese paso elegido). Arriba, los pasos de la Guía de la etapa
 // del lead (ADR-W197); escribiendo un atajo, los de todas las etapas (`onGuia` lo pega en la caja).
 import { useEffect, useState } from 'react';
-import { Bot, Link2, Mic, Plus, Trash2 } from 'lucide-react';
+import { Bot, Braces, Compass, Link2, Mic, Plus, Trash2, Zap } from 'lucide-react';
 import useEnPantalla from '../../../components/ui/useEnPantalla';
-import { Button, Input, LinkButton, Modal, ModalHeader, TextArea, toast } from '../../../components/standard';
+import { Button, Input, Modal, ModalHeader, TextArea, toast } from '../../../components/standard';
 import api from '../../../services/api';
 import { rotuloDeLink } from '../../setter/MisLinks';
 import { inboxApi } from '../api';
@@ -93,51 +93,84 @@ export default function MenuRayo({ contacto, fase, filtro, onTexto, onGuia, onPa
         }
     };
 
+    // La vista previa de la opción bajo el mouse, a la derecha (como Notion): el texto entero y qué hace.
+    const [vista, setVista] = useState(null);
+    const ver = (titulo, texto, que) => ({ onMouseEnter: () => setVista({ titulo, texto, que }), onFocus: () => setVista({ titulo, texto, que }) });
+    const variante = (g) => (g.p.porRespuesta ? g.o.si : g.p.op.length > 1 ? LETRAS[g.j] : null);
+
     return (
         <div className="cv-rayo" ref={pop} role="menu">
-            {okG.length > 0 && <span className="t-rotulo">Guía · {f ? 'todas las etapas' : faseDe(fase).label}</span>}
-            {okG.map((g) => (
-                <button key={`${g.id}:${g.p.id}:${g.j}`} type="button" className="cv-rayo-op" onClick={() => guiaElegida(g)}>
-                    <b>/{g.p.atajo} · {g.p.t}{g.p.porRespuesta ? ` · ${g.o.si}` : g.p.op.length > 1 ? ` · ${LETRAS[g.j]}` : ''}{f && g.id !== fase ? ` (${faseDe(g.id).label})` : ''}</b>
-                    <span>{g.o.x}</span>
-                </button>
-            ))}
-            {okV.length > 0 && <span className="t-rotulo">Variables</span>}
-            {okV.map(([k, v]) => (
-                <button key={k} type="button" className="cv-rayo-op" onClick={() => onTexto(String(v))}><b>{`{${k}}`}</b><span>{String(v)}</span></button>
-            ))}
-            {okL.length > 0 && <span className="t-rotulo">Links de agenda · el formulario lo manda a closing o a triage</span>}
-            {okL.map((l) => {
-                const url = window.location.origin + l.ruta;
-                return (
-                    <button key={l.ruta} type="button" className="cv-rayo-op" onClick={() => onTexto(url)}>
-                        <b><Link2 size={13} aria-hidden="true" />{rotuloDeLink(l)}</b><span>{url}</span>
-                    </button>
-                );
-            })}
-            <span className="t-rotulo">Respuestas rápidas</span>
-            {rapidas === null && <span className="t-cap mut">Cargando…</span>}
-            {okR.map((r) => (
-                <div key={r.id} className="cv-rayo-fila">
-                    <button type="button" className="cv-rayo-op" onClick={() => onTexto(completar(r.texto, contacto))}>
-                        <b>/{r.atajo} · {r.titulo}</b><span><Resaltado texto={r.texto} contacto={contacto} /></span>
-                    </button>
-                    {r.puede_borrar && <button type="button" className="cv-rayo-x" aria-label={`Borrar /${r.atajo}`} onClick={() => borrar(r)}><Trash2 size={13} /></button>}
-                </div>
-            ))}
-            <LinkButton icon={<Plus size={13} />} onClick={onNueva}>Nueva respuesta rápida</LinkButton>
-            {okA.length > 0 && <span className="t-rotulo">Audios · tocá uno para mandarlo</span>}
-            {okA.map((a) => (
-                <button key={a.id} type="button" className="cv-rayo-op" onClick={() => onAudio(a)}>
-                    <b><Mic size={13} aria-hidden="true" />{a.nombre}</b><span>{a.autor ? `subido por ${a.autor}` : 'Audio del equipo'}</span>
-                </button>
-            ))}
-            {okP.length > 0 && <span className="t-rotulo">Pasos de {pasos.flujo} · el bot sigue desde ahí</span>}
-            {okP.map((p) => (
-                <button key={p.id} type="button" className="cv-rayo-op" onClick={() => onPaso(p.id)}>
-                    <b><Bot size={13} aria-hidden="true" />Paso {p.numero}{p.nombre ? ` · ${p.nombre}` : ''}</b><span>{p.texto}</span>
-                </button>
-            ))}
+            <div className="cv-rayo-lista">
+                {okG.length > 0 && <Seccion icono={Compass} color="var(--brand-secondary)" titulo="Guía" nota={f ? 'todas las etapas' : faseDe(fase).label} />}
+                {okG.map((g) => (
+                    <Op key={`${g.id}:${g.p.id}:${g.j}`} icono={Compass} color="var(--brand-secondary)" titulo={g.p.t} atajo={g.p.atajo} chip={variante(g)}
+                        extra={f && g.id !== fase ? faseDe(g.id).label : null} texto={g.o.x} onClick={() => guiaElegida(g)}
+                        {...ver(g.p.t, g.o.x, g.p.avanza ? 'Se pega en la caja y, al mandarlo, pasa a la etapa siguiente' : 'Se pega en la caja para que lo revises')} />
+                ))}
+                {okV.length > 0 && <Seccion icono={Braces} color="var(--info)" titulo="Variables" nota="lo que sabemos del lead" />}
+                {okV.map(([k, v]) => (
+                    <Op key={k} icono={Braces} color="var(--info)" titulo={k} texto={String(v)} onClick={() => onTexto(String(v))}
+                        {...ver(`{${k}}`, String(v), 'Pega el valor en la caja')} />
+                ))}
+                {okL.length > 0 && <Seccion icono={Link2} color="var(--success)" titulo="Links de agenda" nota="closing o triage según el formulario" />}
+                {okL.map((l) => {
+                    const url = window.location.origin + l.ruta;
+                    return <Op key={l.ruta} icono={Link2} color="var(--success)" titulo={rotuloDeLink(l)} texto={url} onClick={() => onTexto(url)}
+                        {...ver(rotuloDeLink(l), url, 'Pega tu link de agendamiento')} />;
+                })}
+                <Seccion icono={Zap} color="var(--warning)" titulo="Respuestas rápidas" nota="del equipo" />
+                {rapidas === null && <span className="cv-rayo-cargando">Cargando…</span>}
+                {okR.map((r) => (
+                    <Op key={r.id} icono={Zap} color="var(--warning)" titulo={r.titulo} atajo={r.atajo} texto={<Resaltado texto={r.texto} contacto={contacto} />}
+                        onClick={() => onTexto(completar(r.texto, contacto))} {...ver(r.titulo, completar(r.texto, contacto), 'Se pega con las variables ya completadas')}
+                        quitar={r.puede_borrar ? () => borrar(r) : null} />
+                ))}
+                <button type="button" className="cv-rayo-nueva" onClick={onNueva}><Plus size={13} aria-hidden="true" />Nueva respuesta rápida</button>
+                {okA.length > 0 && <Seccion icono={Mic} color="#8B5CF6" titulo="Audios" nota="tocá uno para mandarlo" />}
+                {okA.map((a) => (
+                    <Op key={a.id} icono={Mic} color="#8B5CF6" titulo={a.nombre} texto={a.autor ? `subido por ${a.autor}` : 'Audio del equipo'} onClick={() => onAudio(a)}
+                        {...ver(a.nombre, a.autor ? `Subido por ${a.autor}` : 'Audio del equipo', 'Sale al toque como audio')} />
+                ))}
+                {okP.length > 0 && <Seccion icono={Bot} color="var(--text-muted)" titulo={`Pasos de ${pasos.flujo}`} nota="el bot sigue desde ahí" />}
+                {okP.map((p) => (
+                    <Op key={p.id} icono={Bot} color="var(--text-muted)" titulo={`Paso ${p.numero}${p.nombre ? ` · ${p.nombre}` : ''}`} texto={p.texto} onClick={() => onPaso(p.id)}
+                        {...ver(`Paso ${p.numero}`, p.texto, 'Lo manda el bot y el flujo sigue desde ahí')} />
+                ))}
+            </div>
+            <aside className="cv-rayo-vista" aria-hidden="true">
+                {vista ? (
+                    <div key={vista.titulo} className="cv-rayo-vista-in">
+                        <b>{vista.titulo}</b>
+                        <p>{vista.texto}</p>
+                        <small>{vista.que}</small>
+                    </div>
+                ) : <p className="cv-rayo-vista-vacia">Pasá el mouse por una opción para verla entera.</p>}
+            </aside>
+        </div>
+    );
+}
+
+function Seccion({ icono: Icono, color, titulo, nota }) {
+    return (
+        <span className="cv-rayo-sec" style={{ '--c': color }}>
+            <Icono size={12} aria-hidden="true" />{titulo}{nota && <small>{nota}</small>}
+        </span>
+    );
+}
+
+// Una opción: el ícono en su color, el título, el atajo como tecla y una línea del texto.
+function Op({ icono: Icono, color, titulo, atajo, chip, extra, texto, onClick, quitar, ...rest }) {
+    return (
+        <div className="cv-rayo-fila">
+            <button type="button" className="cv-rayo-op" role="menuitem" style={{ '--c': color }} onClick={onClick} {...rest}>
+                <span className="cv-rayo-ico"><Icono size={14} aria-hidden="true" /></span>
+                <span className="cv-rayo-txt">
+                    <b>{titulo}{chip && <i className="cv-rayo-chip">{chip}</i>}{extra && <i className="cv-rayo-chip cv-rayo-chip--suave">{extra}</i>}</b>
+                    <span>{texto}</span>
+                </span>
+                {atajo && <kbd className="cv-rayo-kbd">/{atajo}</kbd>}
+            </button>
+            {quitar && <button type="button" className="cv-rayo-x" aria-label={`Borrar /${atajo}`} onClick={quitar}><Trash2 size={13} /></button>}
         </div>
     );
 }

@@ -30,6 +30,7 @@ import './conversaciones/setting.css';
 import './conversaciones/crono.css';
 import './conversaciones/tarjeta.css';
 import './conversaciones/barra.css';
+import './conversaciones/composer.css';
 
 // De a cuántas se cargan (pedido de los setters, 24/11: con 300 se perdían los seguimientos de hace 4 días).
 const LIMITE = 500;

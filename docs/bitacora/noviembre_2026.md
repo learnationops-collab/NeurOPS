@@ -1159,3 +1159,8 @@
 - Bienvenida = conversación de Instagram que empieza el setter (nuevo seguidor). Se cuentan solas: hechas, respondidas, aperturas y respondieron, corregibles y con su lista ([reporte_inbox.py](../../app/automatizaciones/reporte_inbox.py), [setter.py](../../app/reporte_dia/setter.py)).
 - Lo que empieza el equipo ya no cuenta como entrante. Arregla el 26/11: las reactivaciones de WhatsApp de Elias y Paula entraban como entrantes de Inbound.
 - Lo único numérico a mano que queda: aperturas en dolor (sin definición todavía).
+
+### 26/11/2026 · Inbox: Enviar arriba, caja más limpia y menú «/» con íconos y vista previa (ADR-W249)
+- Enviar sube a la fila de herramientas; la caja dice «Escribir…», sin anillo azul ([Composer.jsx](../../frontend/src/pages/inbox/conversaciones/Composer.jsx), [composer.css](../../frontend/src/pages/inbox/conversaciones/composer.css)).
+- El menú «/» con secciones de color, íconos, atajos como teclas y vista previa a la derecha ([MenuRayo.jsx](../../frontend/src/pages/inbox/conversaciones/MenuRayo.jsx)).
+- Después de un deploy, una pestaña vieja se recarga sola si le falta un archivo (Learnito no abría) ([main.jsx](../../frontend/src/main.jsx)).

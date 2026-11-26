@@ -9,6 +9,18 @@ import { iniciarEfectos } from './efectos/efectos'
 // El humo baja solo en las compus que no dan (ver efectos/efectos.js): antes parpadeaba.
 iniciarEfectos();
 
+// Después de un deploy, una pestaña abierta de antes pide pedazos de la versión vieja (Learnito, modales) que ya
+// no existen, y el botón «no hace nada» (Mario, 26/11/2026). Vite avisa con `vite:preloadError`: se recarga una vez
+// para traer la versión nueva. El tope de 30 s evita un bucle si el pedazo falta de verdad.
+window.addEventListener('vite:preloadError', (e) => {
+    const clave = 'recarga-por-deploy';
+    const antes = Number(sessionStorage.getItem(clave) || 0);
+    if (Date.now() - antes < 30000) return;
+    e.preventDefault();
+    sessionStorage.setItem(clave, String(Date.now()));
+    window.location.reload();
+});
+
 console.log('Frontend Version: 2024-02-04 JWT Patch v2');
 
 // Pestaña abierta desde "Simular" con clic derecho (nueva pestaña aislada, ver

@@ -2224,3 +2224,13 @@
   4. La apertura en dolor sigue a mano; es lo único numérico que queda a mano.
 - **Qué se pierde:** el embudo de pasos de las bienvenidas: ahora son dos filas con su respuesta. Las reactivaciones de WhatsApp no aparecen en el reporte. No se puede saber si el seguidor es nuevo: cuenta cualquier conversación de Instagram que empieza el setter.
 - **Consecuencias:** sin migración. Los días ya cerrados no cambian.
+
+## ADR-W249: la caja de escribir con Enviar arriba y el menú «/» con íconos y vista previa
+
+- **Fecha:** 26/11/2026 · **Subsistema:** Inbox (`conversaciones/Composer.jsx`, `MenuRayo.jsx`, `composer.css`) · **Estado:** implementada.
+- **Contexto:** Mario: Enviar al lado de la caja le quitaba ancho para escribir; «Escribile al lead · Enter envía · / respuestas rápidas» era mucho texto; el anillo azul al escribir y la barra de desplazamiento se veían mal; el menú «/» era una lista de texto difícil de leer (pidió algo como el de Notion).
+- **Decisión:**
+  1. Enviar (o Guardar, en Nota) va arriba, a la derecha de Chat · Nota · Tarea y las herramientas. La caja queda a todo el ancho, dice «Escribir…», sin anillo azul y con una barra finita.
+  2. El menú «/»: secciones con ícono y color (Guía, Variables, Links de agenda, Respuestas rápidas, Audios, Pasos), cada opción con su ícono, el título, el atajo como tecla y la variante (A/B) como chip; a la derecha, la vista previa de la opción bajo el mouse con el texto entero y qué hace.
+- **Qué se pierde:** la ayuda «Enter envía» a la vista (queda en el tooltip de Enviar).
+- **Consecuencias:** sin migración. También: si una pestaña vieja pide un archivo de una versión anterior después de un deploy, la página se recarga sola una vez (`main.jsx`, `vite:preloadError`); antes el botón de Learnito «no hacía nada».

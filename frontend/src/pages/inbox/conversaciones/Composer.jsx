@@ -240,15 +240,18 @@ export default function Composer({ contacto, pausar = true, fase, ejecucion, seg
                         {verSeguimientos ? <ChevronDown size={11} /> : <ChevronUp size={11} />}
                     </Chip>
                 )}
+                {/* Enviar sube a esta fila (Mario, 26/11): la caja de abajo queda a todo el ancho para escribir. */}
+                {modo === 'nota' && <Button variant="primary" size="sm" className="cv-comp-enviar" disabled={!texto.trim()} onClick={guardarNota}>Guardar</Button>}
+                {modo === 'chat' && (
+                    <Button variant="primary" size="sm" className="cv-comp-enviar" icon={<Send />} disabled={!texto.trim() || !puedeEnviar}
+                        data-tip="Enviar|Enter envía · Shift+Enter, otra línea" onClick={enviarTexto}>Enviar</Button>
+                )}
             </div>
             {modo === 'tarea' ? <FormTarea contacto={contacto} yo={yo} onHecho={() => { setModo('chat'); onCambio(); }} /> : (
                 <div className="cv-comp-fila">
                     <TextArea value={texto} onChange={(e) => { setTexto(e.target.value); if (!e.target.value) setDeGuia(null); }} aria-label={modo === 'nota' ? 'Nota interna' : 'Mensaje'}
                         onKeyDown={alTeclear}
-                        placeholder={modo === 'nota' ? 'Nota para el equipo: el lead no la ve · Enter guarda' : 'Escribile al lead · Enter envía · / respuestas rápidas'} />
-                    {modo === 'nota'
-                        ? <Button variant="primary" disabled={!texto.trim()} onClick={guardarNota}>Guardar</Button>
-                        : <Button variant="primary" icon={<Send />} disabled={!texto.trim() || !puedeEnviar} data-tip="Enviar|Enter" onClick={enviarTexto}>Enviar</Button>}
+                        placeholder={modo === 'nota' ? 'Nota para el equipo…' : 'Escribir…  / para atajos'} />
                 </div>
             )}
             {modo === 'chat' && ventana.aviso && <p className="t-cap mut40 cv-bloqueado">{ventana.aviso}</p>}
