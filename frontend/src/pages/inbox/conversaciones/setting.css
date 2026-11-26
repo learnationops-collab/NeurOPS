@@ -133,3 +133,18 @@
   .thalamus.inbox .cv-macro-guardar{width:100%}
   .thalamus.inbox .cv-macro-guardar .ui-entry{flex:1;width:auto}
 }
+
+/* WhatsApp: el mensaje al que responde, y el sticker, foto, audio o video que mandó */
+.thalamus.inbox .cv-cita-wa{display:grid;gap:2px;width:100%;margin:0 0 6px;padding:5px 9px;border:0;border-left:3px solid var(--brand-secondary);border-radius:8px;background:color-mix(in srgb,var(--text-main) 7%,transparent);color:inherit;font:inherit;text-align:left;cursor:pointer;white-space:normal}
+.thalamus.inbox .cv-cita-wa:hover{background:color-mix(in srgb,var(--text-main) 12%,transparent)}
+.thalamus.inbox .cv-cita-wa--perdida{display:flex;align-items:center;gap:4px;cursor:default;font-size:11px;opacity:.7}
+.thalamus.inbox .cv-cita-wa-de{display:flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;opacity:.8}
+.thalamus.inbox .cv-cita-wa-texto{font-size:12px;opacity:.85;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.thalamus.inbox .cv-burbuja--sticker{background:transparent;border-color:transparent;padding:0}
+.thalamus.inbox .cv-medio-sticker{display:block;width:120px;height:120px;object-fit:contain}
+.thalamus.inbox .cv-medio-foto{display:block;max-width:100%;max-height:300px;border-radius:10px}
+.thalamus.inbox .cv-medio-audio{display:block;width:240px;max-width:100%;height:36px}
+.thalamus.inbox .cv-medio-doc{color:inherit;text-decoration:underline}
+.thalamus.inbox .cv-burbuja--marcada{animation:cv-marcada 1.4s ease-out}
+@keyframes cv-marcada{0%,30%{box-shadow:0 0 0 3px var(--brand-secondary)}100%{box-shadow:0 0 0 3px transparent}}
+@media (prefers-reduced-motion:reduce){.thalamus.inbox .cv-burbuja--marcada{animation:none;outline:2px solid var(--brand-secondary)}}

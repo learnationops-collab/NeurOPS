@@ -2108,3 +2108,11 @@
 - **Decisión:** cada respuesta elige cuándo sale (al instante, 1, 2 o 5 minutos). Con espera, queda en `wa_respuestas_pendientes` y la manda el reloj del motor; asignar y etiquetar se hacen en el momento del toque. `{nombre}` en el texto pasa a ser el primer nombre: el del CSV del broadcast y, si no hay, el del perfil de WhatsApp; sin ninguno se borra con la coma de antes. Un toque nuevo reemplaza la respuesta que esperaba.
 - **Qué se pierde:** el reloj corre una vez por minuto: «1 minuto» sale entre 1 y 2 minutos después. Mientras espera, el setter no ve en el chat qué va a salir.
 - **Consecuencias:** migración `b3d5f7a9c1e2` (columna `demora_segundos` y tabla `wa_respuestas_pendientes`).
+
+## ADR-W237: el chat de WhatsApp muestra a qué mensaje responde el lead y los stickers, fotos y audios que manda
+
+- **Fecha:** 26/11/2026 · **Subsistema:** Inbox, chat de WhatsApp (`app/whatsapp/medios.py`, `app/automatizaciones/api_medios.py`, `pages/inbox/conversaciones/Whatsapp.jsx`, `Feed.jsx`) · **Estado:** implementada
+- **Contexto:** Mario (26/11) vio respuestas sueltas como «De este» o «Por ahora no» que en el teléfono citan un mensaje del setter; en Work no se sabía a cuál. Los stickers, fotos y audios se veían como «Sticker» o «📷 Imagen». El webhook ya guardaba todo (`contenido.whatsapp`): el `context.id` del mensaje citado y el id de Meta del archivo.
+- **Decisión:** la conversación devuelve, por mensaje, `responde_a` (el mensaje citado por `mid`, también el de una reacción) y `medio` (tipo, leyenda y una ruta del Inbox que baja el archivo de Meta con el token). Arriba de la burbuja va «Respondió a tu mensaje» con dos líneas del citado; tocarlo lleva a ese mensaje y lo resalta. El sticker se ve sin burbuja; la foto, el audio, el video y el documento, en la burbuja. El navegador guarda el archivo una semana y el servidor lo último que bajó (hasta 2 MB por archivo).
+- **Qué se pierde:** Meta guarda los archivos 30 días: después el chat avisa que hay que mirarlo en el teléfono. Si el mensaje citado se mandó desde el teléfono y no está en Work, la cita dice que no está acá. Instagram queda igual: su webhook no guarda el `reply_to`.
+- **Consecuencias:** sin migración. Lo viejo se ve también, porque el dato ya estaba guardado.

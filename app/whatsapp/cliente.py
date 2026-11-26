@@ -84,6 +84,21 @@ class ClienteWhatsapp:
     def borrar_plantilla(self, nombre):
         return self._pedir('delete', f'{self.waba_id}/message_templates', params={'name': nombre})
 
+    def medio(self, media_id):
+        """El archivo de un mensaje entrante: (bytes, mime). La URL de Meta también pide el token."""
+        info = self._pedir('get', media_id)
+        if not info.get('url'):
+            raise ErrorDeEnvio('Meta no devolvió el archivo')
+        try:
+            respuesta = self.sesion.get(info['url'], timeout=30, headers={'Authorization': f'Bearer {self.token}'})
+        except requests.RequestException as error:
+            logger.error(f'[WHATSAPP] medio {media_id}: {error}')
+            raise ErrorDeEnvio(str(error))
+        if respuesta.status_code >= 400:
+            logger.error(f'[WHATSAPP] medio {media_id}: HTTP {respuesta.status_code}')
+            raise ErrorDeEnvio(f'HTTP {respuesta.status_code}')
+        return respuesta.content, info.get('mime_type') or respuesta.headers.get('Content-Type') or 'application/octet-stream'
+
     def mandar(self, telefono, cuerpo):
         datos = self._pedir('post', f'{self.phone_number_id}/messages',
                             json={'messaging_product': 'whatsapp', 'to': telefono, **cuerpo})

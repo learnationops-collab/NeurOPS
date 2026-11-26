@@ -348,6 +348,8 @@ def ver_conversacion(contacto_id):
     recorrido = bandeja.recorrido(contacto.id)
     elegidos = bandeja.elegidos(mensajes)
     comentarios = bandeja.comentarios(mensajes)
+    from app.whatsapp import medios  # WhatsApp: a qué mensaje responde y el sticker/foto/audio que mandó
+    citas = medios.citas(mensajes, contacto.id)
     from app.automatizaciones import api_trabajo  # cuelga de `bp`: importarlo arriba sería circular
     notas, tareas = api_trabajo.historial(contacto.id)
     from app.automatizaciones import api_fases, seguimientos
@@ -381,6 +383,8 @@ def ver_conversacion(contacto_id):
             # Vino de un comentario en una publicación, no de un DM: no siempre se le puede escribir.
             'comentario': comentarios.get(m.id),
             'efecto': (m.contenido or {}).get('efecto') if isinstance(m.contenido, dict) else None,
+            'responde_a': citas.get(m.id),
+            'medio': medios.para_chat(m, contacto.id),
         } for m in mensajes],
     })
 

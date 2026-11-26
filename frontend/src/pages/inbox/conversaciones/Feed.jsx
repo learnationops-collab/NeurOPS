@@ -7,6 +7,7 @@ import { Bot, CalendarCheck, Check, History, MessageCircle, RotateCcw, StickyNot
 import { Button, IconButton } from '../../../components/standard';
 import { rotuloPaso } from '../estadoFlujo';
 import { ADJUNTOS } from './colas';
+import { Cita, Medio } from './Whatsapp';
 
 const ABIERTA = ['en_curso', 'esperando_respuesta', 'esperando_tiempo'];
 
@@ -31,14 +32,17 @@ function textoEfecto(e) {
 
 function Burbuja({ m }) {
     return (
-        <li className={`cv-burbuja cv-burbuja--${m.direccion} cv-burbuja--${m.origen}`} data-mensaje={m.id} data-direccion={m.direccion}>
+        <li className={`cv-burbuja cv-burbuja--${m.direccion} cv-burbuja--${m.origen}${m.medio?.tipo === 'sticker' ? ' cv-burbuja--sticker' : ''}`}
+            data-mensaje={m.id} data-direccion={m.direccion}>
             {m.comentario && (
                 <span className="cv-comentario" data-tip="No es un DM|Comentó una publicación: si no abrió la conversación, puede que no se le pueda escribir">
                     <MessageCircle size={12} aria-hidden="true" />Comentario en una publicación
                     {m.comentario.permalink && <a href={m.comentario.permalink} target="_blank" rel="noreferrer">Ver publicación</a>}
                 </span>
             )}
-            {m.texto && <p>{m.texto}</p>}
+            {m.responde_a && <Cita cita={m.responde_a} />}
+            {m.medio && <Medio medio={m.medio} />}
+            {(m.medio ? m.medio.leyenda : m.texto) && <p>{m.medio ? m.medio.leyenda : m.texto}</p>}
             {m.adjuntos.map((a, i) => <p key={i} className="mut">{ADJUNTOS[a] || `📎 ${a}`}</p>)}
             {m.botones.length > 0 && (
                 <div className={`cv-botones${m.elegido ? ' cv-botones--respondido' : ''}`}>

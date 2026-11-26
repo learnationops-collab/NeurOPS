@@ -1082,3 +1082,7 @@
 
 ### 26/11/2026 · Inbox: el número de WhatsApp arriba del chat
 - En los chats de WhatsApp, el número del lead aparece al lado del nombre en la línea de arriba; tocarlo lo copia ([Detalle.jsx](../../frontend/src/pages/inbox/conversaciones/Detalle.jsx) `Telefono`). Pedido de Mario: con nombres como «👻» no había forma de saber quién era sin abrir la ficha.
+
+### 26/11/2026 · Inbox: en WhatsApp se ve a qué mensaje responde el lead, y sus stickers, fotos y audios (ADR-W237)
+- Cuando el lead responde (o reacciona) a un mensaje en particular, arriba de su burbuja aparece el mensaje citado; tocarlo lleva hasta él ([medios.py](../../app/whatsapp/medios.py) `citas`, [Whatsapp.jsx](../../frontend/src/pages/inbox/conversaciones/Whatsapp.jsx)).
+- Los stickers, fotos, audios, videos y documentos se ven en el chat: se bajan de Meta cuando se abre la conversación ([api_medios.py](../../app/automatizaciones/api_medios.py)). Probado en producción con el chat de Jesus Montes: 4 citas encontradas y el sticker bajado.
