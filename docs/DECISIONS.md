@@ -2201,3 +2201,14 @@
   4. Botones con vidrio y aura de su color (Transferir azul, salidas rojo, Adelantar con degradé).
 - **Qué se pierde:** ver de un vistazo a quién está asignada (queda en el tooltip de Transferir y en la fila de la bandeja).
 - **Consecuencias:** sin migración.
+
+## ADR-W247: un solo «Filtro» arriba, la lista sin filtros a la izquierda y los botones de la derecha en un grupo
+
+- **Fecha:** 26/11/2026 · **Subsistema:** Inbox (`Conversaciones.jsx`, `conversaciones/MacroFiltro.jsx`, `VistasFiltro.jsx`, `ListaCab.jsx`, `barra.css`) y espacio del setter (`SetterEspacioPage.jsx`, `setterEspacio.css`) · **Estado:** implementada. Sigue a ADR-W184.
+- **Contexto:** Mario: había dos lugares para filtrar (el desplegable «Míos sin respuesta» arriba y, a la izquierda, «Asignadas a…», el filtro, ordenar y Elegir); la línea «5 conversaciones · por último mensaje · 1 sin leer» era texto plano; Tálamus sobraba (ya está Turnos) y los botones de la derecha iban sueltos.
+- **Decisión:**
+  1. **Filtro** en la barra de arriba: un botón con el número de conversaciones que deja y un punto por filtro puesto. Adentro, arriba, las vistas en tarjetas (Todos, Míos recientes, Míos sin respuesta, Todos los míos, Sin asignar y las guardadas ★, cada una con su número) y debajo todos los filtros de siempre (cola, canal, etapa, etiqueta, asignado, calificación, fechas) y Guardar. Ordenar y Elegir van pegados al Filtro.
+  2. A la izquierda queda solo el buscador. La cabecera de la lista: el número grande, cómo está ordenada, una barrita de las que esperan (verde < 5 min, ámbar 5-30, rojo > 30) y las sin leer latiendo.
+  3. Tareas · Avisos · Stats y Links · Turnos · Volver forman una sola cápsula de botones. Sale Tálamus.
+- **Qué se pierde:** el desplegable «A quién está asignada» a la vista (queda en el Filtro y en sus vistas) y los chips de filtros guardados arriba de la lista (ahora son vistas del Filtro).
+- **Consecuencias:** sin migración. Se borran `FiltrosGuardados.jsx` y `ChipsGuardados.jsx` del Inbox.

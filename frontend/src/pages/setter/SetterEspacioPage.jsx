@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, useCallback, useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { BarChart3, BookOpen, CalendarClock, CalendarDays, CheckCircle2, ClipboardList, Ghost, Link2, MessagesSquare, Share2 } from 'lucide-react';
@@ -112,7 +112,6 @@ const SetterEspacioPage = () => {
     const { abrir: abrirConfiguracion } = useConfiguracion();
     const { pendingCount, openPlaybook } = usePlaybook();
     const [params, setParams] = useSearchParams();
-    const navegar = useNavigate();
     const reducir = useReducedMotion();
     const [saliendo, setSaliendo] = useState(false);
     // La marca de «Reporte» en el dock: ✓ con hoy completo, ámbar si hoy o ayer quedan incompletos.
@@ -242,12 +241,10 @@ const SetterEspacioPage = () => {
                             <Segmented opciones={seccionActual.tabs} valor={tab} onChange={elegirTab}
                                 ariaLabel={`Vistas de ${seccionActual.label}`} />
                         )}
-                        {/* Todo a la derecha en una fila de botones redondos (Mario, 26/11: menos texto): Links, Turnos,
-                            Tálamus y, simulando, el fantasma para volver a la sesión propia (solo lo ve quien simula; también
+                        {/* A la derecha, un grupo de botones pegados (Mario, 26/11): Links, Turnos y, simulando, el fantasma para volver a la sesión propia (solo lo ve quien simula; también
                             está en el menú del avatar). Al pasar el mouse cada uno se estira y dice qué es. */}
                         <MisLinks>
                             <BotonIcono icono={CalendarClock} rotulo="Los turnos que quedan de triage y de closers, por día" onClick={() => abrirVentana('turnos')}>Turnos</BotonIcono>
-                            <BotonIcono icono={CalendarDays} rotulo="Ver los turnos libres del equipo en Tálamus" onClick={() => navegar('/agendas-v2?ver=available')}>Tálamus</BotonIcono>
                             {user?.is_impersonating && (
                                 <BotonIcono icono={Ghost} tono="simula" rotulo="Estás simulando su sesión: tocá para volver a la tuya" disabled={saliendo} onClick={volverAMiSesion}>
                                     {saliendo ? 'Volviendo…' : 'Volver'}

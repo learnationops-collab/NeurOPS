@@ -1,11 +1,13 @@
-// El filtro de la bandeja, comprimido en un botón de ícono (ADR-W184: dos columnas). A la izquierda, la cola; a la
+// El Filtro de la bandeja (ADR-W184; desde ADR-W247 es el botón «Filtro» de la barra de arriba, con las vistas en
+// tarjetas arriba y el número de conversaciones que deja). Dos columnas. A la izquierda, la cola; a la
 // derecha, la etapa del setting, la etiqueta (un subdesplegable con buscador: pueden ser muchas), a quién está
 // asignada, si califica, cuándo empezó la última conversación y quién mandó el último mensaje. Al pie se guarda
 // con un nombre: queda en los chips de arriba de la lista y en la cabecera. El número sobre el ícono: cuántos hay.
 import { useEffect, useRef, useState } from 'react';
 import { ChevronDown, Search, SlidersHorizontal, Star } from 'lucide-react';
+import VistasFiltro, { vistaActual } from './VistasFiltro';
 import useEnPantalla from '../../../components/ui/useEnPantalla';
-import { Button, Chip, IconButton, Input, InputGroup, Segmented, toast } from '../../../components/standard';
+import { Button, Chip, Input, InputGroup, Segmented, toast } from '../../../components/standard';
 import { COLAS, asignados, claveEtiqueta, cumpleFiltro, esWhatsapp, etiquetasDe, filtrar } from './colas';
 import { FASES, colorDe, corto } from './fasesSetting';
 import { useGuardados } from './guardados';
@@ -108,7 +110,7 @@ function Guardar({ filtro, onGuardado }) {
         e.preventDefault();
         if (!nombre.trim()) return;
         guardados.guardar(nombre.trim(), filtro);
-        toast('Filtro guardado: queda arriba de la lista');
+        toast('Filtro guardado: queda en las vistas del Filtro');
         onGuardado();
     };
     return (
@@ -142,14 +144,22 @@ export default function MacroFiltro({ lista, filtro, onCambiar, ahora, yo }) {
     const setters = asignados(lista);
     const nombre = (s) => (s.id === yo ? 'Vos' : s.username);
     const n = activos(filtro);
+    const guardados = useGuardados();
+    const vista = vistaActual(filtro, yo, guardados.lista);
+    const cuantas = filtrar(lista, { ...filtro, ahora }).length;
 
     return (
         <div className="cv-macro" ref={caja}>
-            <IconButton label="Filtros" data-tip="Filtros" pressed={abierto} onClick={() => setAbierto((a) => !a)}
-                className={n ? 'cv-macro-btn cv-macro-btn--activo' : 'cv-macro-btn'}
-                icon={<><SlidersHorizontal size={16} />{n > 0 && <span className="cv-macro-n">{n}</span>}</>} />
+            <button type="button" className={`cv-barra-btn cv-filtro-btn${n ? ' cv-filtro-btn--activo' : ''}`} aria-expanded={abierto}
+                data-tip={`Filtro · ${vista ? vista.label : 'a medida'}|${n ? `${n} ${n === 1 ? 'filtro puesto' : 'filtros puestos'}` : 'Sin filtros'}: ${cuantas} conversaciones`}
+                onClick={() => setAbierto((a) => !a)}>
+                <SlidersHorizontal size={15} aria-hidden="true" />Filtro
+                <span className="cv-filtro-n" key={cuantas}>{cuantas}</span>
+                {n > 0 && <span className="cv-filtro-puntos" aria-hidden="true">{Array.from({ length: Math.min(n, 4) }, (_, i) => <i key={i} style={{ '--i': i }} />)}</span>}
+            </button>
             {abierto && (
                 <div className="cv-macro-pop" ref={pop} role="dialog" aria-label="Filtros">
+                    <VistasFiltro lista={lista} filtro={filtro} onCambiar={onCambiar} ahora={ahora} yo={yo} />
                     <Resumen lista={lista} filtro={filtro} onCambiar={onCambiar} yo={yo} />
                     <div className="cv-macro-col">
                         <span className="t-rotulo">Cola</span>
@@ -184,7 +194,7 @@ export default function MacroFiltro({ lista, filtro, onCambiar, ahora, yo }) {
                     </div>
                     <div className="cv-macro-pie">
                         <Button variant="ghost" disabled={!n} onClick={() => onCambiar({ ...VACIO, orden: filtro.orden })}>Limpiar</Button>
-                        <span className="t-cap mut">{filtrar(lista, { ...filtro, ahora }).length} conversaciones</span>
+                        <span className="t-cap mut">{cuantas} conversaciones</span>
                         <Guardar filtro={filtro} onGuardado={() => setAbierto(false)} />
                     </div>
                 </div>

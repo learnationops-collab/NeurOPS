@@ -1149,3 +1149,8 @@
 - «Transferir» reemplaza a la pastilla «Vos»: un setter solo transfiere a otro setter ([Transferir.jsx](../../frontend/src/pages/inbox/conversaciones/Transferir.jsx)).
 - Al pie de la ficha, «Tus números»: respuesta activo e inactivo, agendas hoy y promedio diario ([MisStats.jsx](../../frontend/src/pages/inbox/conversaciones/MisStats.jsx), [api_actividad.py](../../app/automatizaciones/api_actividad.py)).
 - Botones de la tarjeta con aura ([tarjeta.css](../../frontend/src/pages/inbox/conversaciones/tarjeta.css)).
+
+### 26/11/2026 · Inbox: un solo «Filtro» arriba y botones agrupados (ADR-W247)
+- El botón «Filtro» de la barra junta las vistas (en tarjetas con su número), a quién está asignada y todos los filtros; Ordenar y Elegir van a su lado ([MacroFiltro.jsx](../../frontend/src/pages/inbox/conversaciones/MacroFiltro.jsx), [VistasFiltro.jsx](../../frontend/src/pages/inbox/conversaciones/VistasFiltro.jsx)).
+- La lista queda con el buscador y una cabecera nueva: número grande, orden, barrita de urgencia y sin leer ([ListaCab.jsx](../../frontend/src/pages/inbox/conversaciones/ListaCab.jsx)).
+- Tareas · Avisos · Stats · Links · Turnos en un solo grupo; sale Tálamus ([SetterEspacioPage.jsx](../../frontend/src/pages/setter/SetterEspacioPage.jsx)).

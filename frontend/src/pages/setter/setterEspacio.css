@@ -115,3 +115,17 @@
 .setter-espacio .setter-slot .ui-header__bar{flex:1;min-width:0}
 .setter-espacio .setter-slot .cv-barra.barra{gap:8px;margin:0;justify-content:flex-start;flex-wrap:nowrap}
 @media (max-width:1100px){.setter-espacio .setter-top:has(.setter-slot:not(:empty)){flex-wrap:wrap}.setter-espacio .setter-slot{order:3;flex-basis:100%}}
+
+/* Links, Turnos y el fantasma en un grupo de botones pegados (Mario, 26/11); en Conversaciones se suelda con el de
+   Tareas · Avisos · Stats del Inbox, que queda justo a su izquierda: una sola cápsula. El saludo ya no se corta. */
+.setter-espacio .setter-links{gap:2px;padding:3px;border-radius:999px;border:1px solid var(--border-subtle, rgba(255,255,255,.12));
+  background:color-mix(in srgb,var(--bg-input, #0b1030) 70%,transparent)}
+.setter-espacio .setter-links .setter-ico{height:30px;padding:0 11px;border-color:transparent;background:none}
+.setter-espacio .setter-links .setter-ico:is(:hover,:focus-visible,[aria-expanded="true"]){background:var(--bg-item, rgba(255,255,255,.06));border-color:transparent}
+.setter-espacio .setter-links .setter-ico--simula{background:color-mix(in srgb,var(--ln-warning, #D9A441) 14%,transparent)}
+.setter-espacio .setter-top:has(.setter-slot .cv-barra-grupo) .setter-slot .cv-barra-grupo{border-top-right-radius:0;border-bottom-right-radius:0;border-right:0;padding-right:0}
+.setter-espacio .setter-top:has(.setter-slot .cv-barra-grupo) .setter-links{margin-left:calc(-1 * var(--s4));border-top-left-radius:0;border-bottom-left-radius:0;border-left:0;
+  position:relative;padding-left:5px}
+.setter-espacio .setter-top:has(.setter-slot .cv-barra-grupo) .setter-links::before{content:"";position:absolute;left:0;top:9px;bottom:9px;width:1px;background:var(--border-subtle, rgba(255,255,255,.12))}
+.setter-espacio .setter-top:has(.setter-slot:not(:empty)) .hola{flex:none}
+.setter-espacio .setter-top .hola h1{white-space:nowrap}
