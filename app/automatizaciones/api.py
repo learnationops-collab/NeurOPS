@@ -33,7 +33,7 @@ ACCIONES_DEL_SETTER = {'inbox.mover_en_flujo', 'inbox.bot_de_conversacion', 'inb
                        'inbox.escribir_al_lead', 'inbox.proponer_cambios',
                        'inbox.programar_seguimiento', 'inbox.cancelar_seguimiento',
                        'inbox.poner_etiqueta', 'inbox.sacar_etiqueta', 'inbox.guardar_mensajes',
-                       'inbox.marcar_leido', 'inbox.asignar_conversacion', 'inbox.mover_etapa', 'inbox.corregir_variable',
+                       'inbox.marcar_leido', 'inbox.marcar_resuelta', 'inbox.asignar_conversacion', 'inbox.mover_etapa', 'inbox.corregir_variable',
                        'inbox.crear_nota', 'inbox.crear_tarea', 'inbox.cambiar_tarea',
                        'inbox.crear_rapida', 'inbox.borrar_rapida', 'inbox.subir_audio', 'inbox.borrar_audio',
                        'inbox.mover_fase', 'inbox.marcar_canal', 'inbox.anotar_cita', 'inbox.etiquetar_varias',
@@ -316,6 +316,7 @@ def listar_conversaciones():
             'ultimo_de': mensaje.origen if mensaje else None,
             # Para la ventana de Instagram (24 h / 7 días) y el próximo seguimiento, a la vista en la fila.
             'ultimo_entrante_en': _iso(contacto.ultimo_entrante_en),
+            'resuelta_en': _iso(contacto.resuelta_en),
             'seguimiento': proximos.get(contacto.id),
             'toca': toca.get(contacto.id),
             'bot_pausado': bool(contacto.bot_pausado_hasta and contacto.bot_pausado_hasta > ahora),
@@ -363,7 +364,7 @@ def ver_conversacion(contacto_id):
         'contacto': {
             'id': contacto.id, 'igsid': contacto.igsid, 'username': contacto.username, 'nombre': contacto.nombre,
             'variables': contacto.variables or {}, 'ultimo_entrante_en': _iso(contacto.ultimo_entrante_en),
-            'bot_pausado_hasta': _iso(contacto.bot_pausado_hasta),
+            'bot_pausado_hasta': _iso(contacto.bot_pausado_hasta), 'resuelta_en': _iso(contacto.resuelta_en),
         },
         'asignado': asignado,
         'etiquetas': tags_service.de(TARGET_IG_CONTACT, [contacto.id]).get(str(contacto.id), []),

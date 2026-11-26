@@ -7,8 +7,11 @@ export const REFRESCO = 20000;
 // Un recorrido que se cortó sin terminar: el setter lo puede retomar.
 const CORTADOS = ['error', 'ventana_vencida'];
 
+// «No requiere respuesta» (ADR-W235): marcada después de lo último del lead, ya no espera hasta que vuelva a escribir.
+export const resuelta = (c) => Boolean(c.resuelta_en && c.ultimo_en && new Date(c.resuelta_en) >= new Date(c.ultimo_en));
+
 export function esperaMin(c, ahora) {
-    if (c.ultimo_de !== 'lead' || !c.ultimo_en) return null;
+    if (c.ultimo_de !== 'lead' || !c.ultimo_en || resuelta(c)) return null;
     return Math.max(0, Math.floor((ahora - new Date(c.ultimo_en)) / 60000));
 }
 

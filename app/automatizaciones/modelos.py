@@ -82,6 +82,8 @@ class IgContacto(db.Model):
     canal = db.Column(db.String(20), nullable=True)
     # En qué embudo está (ADR-W204). Sin embudo: Conversión, el de `fases.py`.
     embudo_id = db.Column(db.Integer, db.ForeignKey('aut_embudos.id', ondelete='SET NULL'), nullable=True, index=True)
+    # «No requiere respuesta» (ADR-W235): sale de «Esperan respuesta» hasta que el lead vuelva a escribir.
+    resuelta_en = db.Column(db.DateTime, nullable=True)
 
 
 class IgFase(db.Model):

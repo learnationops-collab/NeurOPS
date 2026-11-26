@@ -30,6 +30,8 @@ export const inboxApi = {
     sacarEtiqueta: (id, tagId) => api.delete(`/inbox/conversaciones/${id}/etiquetas/${tagId}`).then((r) => r.data.etiquetas),
     // Lo que el setter trabaja sobre la conversación (app/automatizaciones/api_trabajo.py)
     leido: (id) => api.post(`/inbox/conversaciones/${id}/leido`, null, { conservarCache: true }),
+    resuelta: (id, si) => (si ? api.post(`/inbox/conversaciones/${id}/resuelta`)
+        : api.delete(`/inbox/conversaciones/${id}/resuelta`)).then(datos),
     asignar: (id, setterId) => api.post(`/inbox/conversaciones/${id}/asignar`, { setter_id: setterId }).then(datos),
     moverEtapa: (id, etapa) => api.put(`/inbox/conversaciones/${id}/etapa`, { etapa }).then(datos),
     // Fases del setting, canal, citas y etiquetado de varias (app/automatizaciones/api_fases.py, ADR-W184)

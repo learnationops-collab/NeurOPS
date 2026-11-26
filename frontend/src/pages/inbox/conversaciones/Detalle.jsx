@@ -4,8 +4,8 @@
 // del lead lo anota para la venta. Abajo, la caja; al pasar a una etapa con varios mensajes, se elige cuál pegar.
 // Abrirla la marca como leída.
 import { useCallback, useEffect, useState } from 'react';
-import { Clock, Hourglass, MessageSquare } from 'lucide-react';
-import { Chip, EmptyState, Panel, toast } from '../../../components/standard';
+import { CheckCheck, Clock, Hourglass, MessageSquare, Undo2 } from 'lucide-react';
+import { Button, Chip, EmptyState, Panel, toast } from '../../../components/standard';
 import { abrirLearnito } from '../../../sesion/learnito';
 import { inboxApi } from '../api';
 import { recordado, recordar } from '../recuerdo';
@@ -17,14 +17,37 @@ import TarjetaLead from './TarjetaLead';
 import useEnvio from './useEnvio';
 import { ChipFase } from './Fila';
 import { Puntos } from './Progreso';
-import { REFRESCO, avisoCierre, cierreMin, colorEspera, esperaMin, esWhatsapp, quien, textoEspera } from './colas';
+import { REFRESCO, avisoCierre, cierreMin, colorEspera, esperaMin, esWhatsapp, quien, resuelta, textoEspera } from './colas';
 import IconoCanal from './IconoCanal';
 import { completarGuia, pasosDe, siguienteId, useGuia, useLinkAgenda, visibles } from '../guia/useGuia';
 
-function Linea({ contacto, avance, mensajes }) {
+// «No requiere respuesta» (ADR-W235): saca el chat de «Esperan respuesta» hasta que el lead vuelva a escribir.
+function Resolver({ contacto, marcada, onCambio }) {
+    const [enviando, setEnviando] = useState(false);
+    const cambiar = async () => {
+        setEnviando(true);
+        try {
+            await inboxApi.resuelta(contacto.id, !marcada);
+            onCambio();
+        } catch (e) {
+            toast(e.response?.data?.message || 'No se pudo marcar', 'error');
+        } finally {
+            setEnviando(false);
+        }
+    };
+    return marcada
+        ? <Button variant="ghost" icon={<Undo2 />} disabled={enviando} onClick={cambiar}
+            data-tip="No requiere respuesta|Vuelve a «Esperan respuesta»">Marcada: no requiere respuesta</Button>
+        : <Button variant="ghost" icon={<CheckCheck />} disabled={enviando} onClick={cambiar}
+            data-tip="No requiere respuesta|Sale de «Esperan respuesta» hasta que vuelva a escribir">No requiere respuesta</Button>;
+}
+
+function Linea({ contacto, avance, mensajes, onCambio }) {
     const ahora = new Date();
     const ultimo = mensajes[mensajes.length - 1];
-    const espera = ultimo?.direccion === 'entrante' ? esperaMin({ ultimo_de: 'lead', ultimo_en: ultimo.en }, ahora) : null;
+    const delLead = ultimo?.direccion === 'entrante' ? { ultimo_de: 'lead', ultimo_en: ultimo.en } : null;
+    const marcada = Boolean(delLead && resuelta({ ...delLead, resuelta_en: contacto.resuelta_en }));
+    const espera = delLead && !marcada ? esperaMin(delLead, ahora) : null;
     const queda = cierreMin(contacto, ahora);
     return (
         <div className="cv-chat-linea-sup">
@@ -40,6 +63,7 @@ function Linea({ contacto, avance, mensajes }) {
                             ? 'Para responder|WhatsApp deja escribirle hasta 24 h después de su último mensaje'
                             : 'Para responder|Instagram deja escribirle hasta 7 días después de su último mensaje'}>quedan {textoEspera(queda)} para responder</Chip>
                     : <Chip subtle color="var(--error)" icon={<Hourglass />}>ventana cerrada</Chip>}
+                {delLead && <Resolver contacto={contacto} marcada={marcada} onCambio={onCambio} />}
             </span>
         </div>
     );
@@ -56,7 +80,7 @@ function Chat({ datos, yo, onCambio, pegar, selector, onSelector }) {
     const pendientes = envio.pendientes.filter((p) => !salio(p));
     return (
         <Panel as="section" size="sm" className="cv-detalle" aria-label="Conversación">
-            <Linea contacto={contacto} avance={avance} mensajes={datos.mensajes} />
+            <Linea contacto={contacto} avance={avance} mensajes={datos.mensajes} onCambio={onCambio} />
             <Feed mensajes={datos.mensajes} notas={datos.notas || []} tareas={datos.tareas || []}
                 pendientes={pendientes} onReintentar={envio.reintentar} onDescartar={envio.descartar}
                 onSeleccion={() => setSeleccion(seleccionDelLead())} />

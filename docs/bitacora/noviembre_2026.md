@@ -1065,3 +1065,6 @@
 
 ### 25/11/2026 · WhatsApp: los celulares de Argentina y México se reconocen con y sin el 9 (o el 1)
 - En la prueba de referidos, Santi tocó un botón y quedó para el setter: el broadcast salió a 54 387… y WhatsApp respondió desde 549 387…, así que Work no lo reconocía como del broadcast ni sabía de qué plantilla era. Ahora las dos formas son el mismo número, al marcar la respuesta y al saltear a quien ya recibió ([cliente.py](../../app/whatsapp/cliente.py) `variantes`).
+
+### 25/11/2026 · Inbox: «No requiere respuesta» (ADR-W235)
+- Pedido de Paula y Elias (reporte #26): los leads que ya agendaron y mandaron el último mensaje quedaban en «Esperan respuesta». Arriba del chat hay un botón «No requiere respuesta» que lo saca de las colas de espera hasta que el lead vuelva a escribir; el mismo botón lo deshace ([api_trabajo.py](../../app/automatizaciones/api_trabajo.py) `marcar_resuelta`, [colas.js](../../frontend/src/pages/inbox/conversaciones/colas.js) `resuelta`). Migración `a2c4e6f8b0d1`.
