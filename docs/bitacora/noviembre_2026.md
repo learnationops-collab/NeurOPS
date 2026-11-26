@@ -1133,3 +1133,8 @@
 
 ### 26/11/2026 · Espacio del setter: Links, Turnos, Tálamus y Volver con su palabra a la vista
 - Los botones redondos que solo decían qué eran al pasar el mouse ahora muestran ícono y palabra siempre, iguales a Tareas, Avisos y Stats. El de la simulación dice «Volver» ([setterEspacio.css](../../frontend/src/pages/setter/setterEspacio.css), [MisLinks.jsx](../../frontend/src/pages/setter/MisLinks.jsx)).
+
+### 26/11/2026 · Dock: tooltip con nombre y descripción, pendientes con aura, y la bandeja ya no queda debajo (ADR-W244)
+- Al pasar el mouse por un botón del dock aparece arriba su nombre y qué es, igual que Stats del Inbox ([DockTip.jsx](../../frontend/src/pages/comercial/components/DockTip.jsx)).
+- Inbox, Avisos y Playbook con pendientes: sin el borde rosa; un aura suave de su color y el globito del mismo tono ([comercial.css](../../frontend/src/pages/comercial/comercial.css), [DockFijadas.jsx](../../frontend/src/pages/comercial/components/DockFijadas.jsx)).
+- La bandeja de Conversaciones termina arriba del dock: lee su lugar del CSS en vez de verlo mientras entra animado ([useAltoLibre.js](../../frontend/src/pages/inbox/conversaciones/useAltoLibre.js)).

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Humo } from './Shared';
 import { DockContexto } from './dockContexto';
 import DockFijadas from './DockFijadas';
+import DockTip from './DockTip';
 import IslaVentanas from '../../../ventanas/IslaVentanas';
 import BotonHerramientas from '../../../ventanas/BotonHerramientas';
 import useOpcionesDeHerramientas from '../../../ventanas/useOpcionesDeHerramientas';
@@ -261,6 +262,7 @@ const DockSecciones = ({ secciones: todasLasSecciones, activa, onElegir, ariaLab
                                 <button key={s.id} type="button" className="dock-item"
                                     aria-current={activa === s.id ? 'page' : undefined}
                                     aria-label={[s.label, ...marcas.map(m => m.titulo)].join(', ')}
+                                    data-dock-tip={[s.label, marcas.map(m => m.titulo).filter(Boolean).join(' · ')].filter(Boolean).join('|')}
                                     onClick={() => onElegir(s.id)}>
                                     <s.Icono size={20} />
                                     <span className="dock-label">{s.label}</span>
@@ -289,6 +291,7 @@ const DockSecciones = ({ secciones: todasLasSecciones, activa, onElegir, ariaLab
     if (lateral) {
         return (
             <DockContexto.Provider value={contexto}>
+                <DockTip />
                 <DockLateral secciones={secciones} activa={activa} onElegir={onElegir} ariaLabel={ariaLabel} antes={antes}
                     despues={despues} herr={herr} fijadas={fijadas} nav={nav} modo={modo} marcasDe={marcasDe} claseDeMarca={claseDeMarca}
                     usuario={usuario} {...sesion} />
@@ -297,6 +300,7 @@ const DockSecciones = ({ secciones: todasLasSecciones, activa, onElegir, ariaLab
     }
     return (
         <DockContexto.Provider value={contexto}>
+            <DockTip />
             {angosto ? centro : (
                 <div className="dock-barra">
                     <div className="dock-isla dock-isla--izq">{fijadas}</div>

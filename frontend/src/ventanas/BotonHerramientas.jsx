@@ -15,6 +15,7 @@ import { createPortal, flushSync } from 'react-dom';
 import { ArrowLeft, ArrowUpRight, ChevronRight, Lock, Pencil, Pin, PinOff, Search, Wrench, X } from 'lucide-react';
 import { subirACapa } from '../components/standard/capa';
 import { esFijable, tienePendientes, useFijadas } from '../sesion/fijadas';
+import { conFicha } from './catalogoHerramientas';
 import './herramientasModal.css';
 
 const Fila = ({ op, fijada, onAbrir, onFijar }) => {
@@ -222,7 +223,8 @@ export default function BotonHerramientas({ usuario, grupos = [], onEditar = nul
 
     return (
         <>
-            <button ref={boton} type="button" className={`dock-fijada ${clase}`.trim()} aria-label={rotulo} title={rotulo}
+            <button ref={boton} type="button" className={`dock-fijada ${clase}`.trim()} aria-label={rotulo}
+                data-dock-tip={principal ? `${rotulo}|Todo lo que no es una sección: buscar, crear, agendas, avisos · Ctrl+J` : `${rotulo}|${panelInicial ? conFicha(panelInicial).desc : ''}`}
                 aria-haspopup={enVentana ? "dialog" : "menu"} aria-expanded={abierto} onClick={() => (abierto ? cerrar() : abrir())}>
                 <Icono size={19} aria-hidden="true" />
                 <span className="dock-fijada-nombre">{rotulo}</span>

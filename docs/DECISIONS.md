@@ -2167,3 +2167,14 @@
   3. Las aperturas en dolor y las bienvenidas siguen a mano: nunca tuvieron otro valor que 0 y el Inbox no tiene cómo distinguirlas.
 - **Qué se pierde:** la respuesta a las aperturas queda más baja que la que cargaban a mano (la de antes no es comparable). Corregir el número sigue siendo posible y queda «Corregido · era N».
 - **Consecuencias:** sin migración. Los días ya cerrados no cambian; un día cerrado que se edita recalcula con la regla nueva. El formulario viejo (`/public/setter-report/prefill`) no cambia.
+
+## ADR-W244: el dock con tooltip de nombre y descripción, y lo pendiente con aura en vez de borde
+
+- **Fecha:** 26/11/2026 · **Subsistema:** dock (`pages/comercial/components/DockTip.jsx`, `DockFijadas.jsx`, `DockSecciones.jsx`, `comercial.css`, `dock2.css`) e Inbox (`useAltoLibre.js`) · **Estado:** implementada. Sigue a ADR-W242.
+- **Contexto:** Mario: los botones del dock solo tenían el `title` del navegador, que se cortaba («esperan tu…»), mientras que Stats del Inbox muestra nombre y una línea que explica qué es. Las fijadas con pendientes llevaban un borde rosa que se veía feo y las separaba de las otras. Y la bandeja del Inbox seguía terminando debajo del dock: el dock entra animado desde abajo y la medición lo encontraba fuera de lugar o todavía sin montar.
+- **Decisión:**
+  1. Un solo tooltip para todo el dock (`DockTip`): cualquier botón con `data-dock-tip="Nombre|Qué es"` lo muestra arriba de él, en un portal. La descripción sale del catálogo de Herramientas (o de lo que dice la opción: «47 conversaciones esperan tu respuesta»). Lo usan las fijadas, Herramientas y las secciones.
+  2. Las fijadas con pendientes ya no llevan borde: un aura suave de su color (Inbox rosa, Avisos ámbar, Playbook verde) que respira despacio, el ícono y el globito de ese color.
+  3. `useAltoLibre` lee dónde empieza el dock de su CSS (`bottom` + alto sin transformar), vuelve a medir cada 1,5 s y, si no lo encuentra, igual reserva 112 px abajo.
+- **Qué se pierde:** el `title` nativo en esos botones (el lector de pantalla sigue con su `aria-label`).
+- **Consecuencias:** sin migración. Los tonos son los de Herramientas (`--herr-*`).

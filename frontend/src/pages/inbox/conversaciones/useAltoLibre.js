@@ -4,11 +4,26 @@
 // función, así mide apenas aparece la bandeja (antes de cargar no está) y vuelve a medir con cada cambio de tamaño.
 import { useCallback, useLayoutEffect, useState } from 'react';
 
-const AIRE = 14;
+const AIRE = 16;
+const RESERVA = 112; // lo que ocupa el dock de abajo con su margen, si todavía no se lo encuentra
+
+// Dónde empieza el dock: se lee de su CSS (`bottom` + alto sin transformar), no de dónde se lo ve, porque entra
+// animado desde abajo y antes se medía en ese momento (la bandeja terminaba debajo del dock).
+function topeDelDock(alto) {
+    let tope = null;
+    for (const el of document.querySelectorAll('.dock-barra, nav.dock')) {
+        const cs = getComputedStyle(el);
+        if (cs.position !== 'fixed' || cs.display === 'none' || !el.offsetHeight || el.offsetHeight > alto / 2) continue;
+        const top = alto - (parseFloat(cs.bottom) || 0) - el.offsetHeight;
+        tope = tope == null ? top : Math.min(tope, top);
+    }
+    return tope;
+}
 
 function bordeDeAbajo() {
     const alto = window.innerHeight;
-    let tope = alto;
+    let tope = topeDelDock(alto);
+    if (tope == null) tope = document.querySelector('.dock-lado') ? alto : alto - RESERVA; // con la barra lateral no hay dock abajo
     for (const x of [0.5, 0.3, 0.7]) {
         for (const el of document.elementsFromPoint(window.innerWidth * x, alto - 20)) {
             let n = el;
@@ -37,13 +52,13 @@ export default function useAltoLibre(minimo = 380) {
             setAlto(Math.max(minimo, Math.round(bordeDeAbajo() - arriba - AIRE)));
         };
         medir();
-        const tardes = [300, 1000, 2500].map((ms) => setTimeout(medir, ms)); // el dock y las fuentes terminan de acomodarse
+        // El dock puede montarse o cambiar después (fijadas, modo lateral): se vuelve a mirar cada 1,5 s. Es barato y
+        // React no redibuja si el alto no cambió.
+        const cada = setInterval(medir, 1500);
         const obs = new ResizeObserver(medir);
         obs.observe(document.body);
-        const dock = document.querySelector('.dock-barra');
-        if (dock) obs.observe(dock);
         window.addEventListener('resize', medir);
-        return () => { tardes.forEach(clearTimeout); obs.disconnect(); window.removeEventListener('resize', medir); };
+        return () => { clearInterval(cada); obs.disconnect(); window.removeEventListener('resize', medir); };
     }, [nodo, minimo]);
     return [ref, alto];
 }

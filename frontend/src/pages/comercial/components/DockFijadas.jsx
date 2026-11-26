@@ -1,5 +1,9 @@
 import { tienePendientes, useFijadas } from '../../../sesion/fijadas';
 import BotonHerramientas from '../../../ventanas/BotonHerramientas';
+import { conFicha } from '../../../ventanas/catalogoHerramientas';
+
+// «Nombre|Qué es» para el tooltip del dock (`DockTip`), y su color para el aura de lo pendiente.
+const fichaDe = (op) => { const f = conFicha(op); return { tip: f.desc ? `${op.label}|${f.desc}` : op.label, tono: `var(--herr-${f.color || 'rosa'})` }; };
 
 /**
  * Lo fijado en el dock (isla izquierda): las opciones de Herramientas que el usuario fijó (Nuevo,
@@ -28,14 +32,14 @@ const DockFijadas = ({ usuario, opciones, onElegir, sep = 'despues', tope = null
                 ) : (
                     <button key={op.id} type="button" className={`dock-fijada${tienePendientes(op) ? ' dock-fijada--pendiente' : ''}`} onClick={() => onElegir(op.id)}
                         aria-label={op.titulo ? `${op.label}, ${op.titulo}` : op.label}
-                        title={tienePendientes(op) ? `${op.label} · ${op.titulo || op.cuenta} · fijada hasta resolverse` : op.label}>
+                        data-dock-tip={fichaDe(op).tip} style={{ '--tono': fichaDe(op).tono }}>
                         <op.Icono size={19} aria-hidden="true" />
                         {op.cuenta != null && <span className="dock-sesion-aviso" aria-hidden="true">{op.cuenta}</span>}
                     </button>
                 )))}
                 {resto > 0 && (
                     <button type="button" className="dock-fijada dock-mas" onClick={onMas}
-                        aria-label={`${resto} ${resto === 1 ? 'acceso fijado más' : 'accesos fijados más'}, en Herramientas`} title="Más en Herramientas">
+                        aria-label={`${resto} ${resto === 1 ? 'acceso fijado más' : 'accesos fijados más'}, en Herramientas`} data-dock-tip={`+${resto}|Más accesos fijados, en Herramientas`}>
                         +{resto}
                     </button>
                 )}
