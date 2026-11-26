@@ -19,6 +19,11 @@ Cómo se cuenta cada número (por canal, `fases.canal`):
   (`ig_fases`, lo que marca el setter o «Adelantar»).
 - Follow-ups: mensajes del equipo que salen tras SEGUIMIENTO_H horas sin respuesta a su mensaje
   anterior, en la etapa en que estaba la conversación; respondidos, los que el lead contestó.
+- Conversaciones que empezamos nosotros (el primer mensaje es del equipo, a mano) no son entrantes: en
+  Instagram son bienvenidas (nuevos seguidores a los que el setter les escribe; también las marcadas en
+  el canal Bienvenida); en WhatsApp, reactivaciones, que el reporte no cuenta. Bienvenidas: hechas (el
+  primer mensaje del setter cae ese día), respondidas (el lead contestó), aperturas (el setter volvió a
+  escribir después de esa respuesta) y respondieron (el lead contestó a eso).
 - Aperturas en entrantes: conversaciones a las que el equipo les escribió a mano por primera vez ese
   día (no el bot); respondieron, las que el lead contestó después. Comparado con lo cargado a mano
   del 18 al 23/11: las aperturas en el mismo orden (Elias 22 contra 25, Paula 14 contra 13); las
@@ -28,8 +33,8 @@ El embudo y los follow-ups dependen de las fases: si ninguna conversación del s
 marcada hasta ese día, no se cuentan (vienen en None) y los carga él, para no repartir todo en
 «Entrantes».
 
-Lo que no se cuenta solo (`A_CONFIRMAR`): las aperturas en dolor y las bienvenidas. Nunca tuvieron
-otro valor que 0 y no hay forma de distinguirlas en el Inbox; las sigue cargando el setter.
+Lo que no se cuenta solo (`A_CONFIRMAR`): las aperturas en dolor, hasta que se acuerde qué son
+(26/11/2026). Las sigue cargando el setter.
 
 Cada número trae en `detalle` la lista de conversaciones que suma ({id, quien, fase, en}), para
 verla desde el formulario.
@@ -41,10 +46,12 @@ from zoneinfo import ZoneInfo
 from app import db
 from app.automatizaciones import bandeja, fases
 from app.automatizaciones.modelos import AutEjecucion, IgContacto, IgFase, IgMensaje
+from app.whatsapp.cliente import es_whatsapp
 
 SEGUIMIENTO_H = 12
-# Sin forma de contarlas desde el Inbox: las aperturas en dolor y las bienvenidas.
-A_CONFIRMAR = ('ap_dolor', 'ap_dolor_resp', 'bienvenidas')
+# Sin definición acordada: las aperturas en dolor.
+BIENVENIDAS = ('hechas', 'respondidas', 'aperturas', 'aperturas_resp')
+A_CONFIRMAR = ('ap_dolor', 'ap_dolor_resp')
 _ETAPA_EMBUDO = {'dolor': 'dolor', 'consecuencia': 'dolor', 'compromiso': 'dolor', 'propuesta': 'oferta', 'link': 'link'}
 
 
@@ -77,6 +84,25 @@ def _etapa_en(cambios, momento):
     return etapa
 
 
+def _bienvenida(mios, msgs, ini, fin, bnv, detalle, quien):
+    """Suma la bienvenida si el primer mensaje del setter cayó ese día, con lo que siguió después."""
+    hecha = mios[0] if mios else None
+    if not hecha or not (ini <= hecha < fin):
+        return
+    pasos = [('hechas', hecha)]
+    resp = next((en for en, lead in msgs if lead and en > hecha), None)
+    if resp:
+        pasos.append(('respondidas', resp))
+        apertura = next((en for en in mios if en > resp), None)
+        if apertura:
+            pasos.append(('aperturas', apertura))
+            if any(lead and en > apertura for en, lead in msgs):
+                pasos.append(('aperturas_resp', apertura))
+    for paso, _ in pasos:
+        bnv[paso] += 1
+        detalle[f'bienvenidas.{paso}'].append(quien(hecha))
+
+
 def contar(setter_id, fecha, tz):
     ini, fin = _dia_utc(fecha, tz)
     # Una conversación de hoy pudo arrancar días antes: los mensajes se leen desde una semana atrás.
@@ -87,9 +113,10 @@ def contar(setter_id, fecha, tz):
     embudo = dict.fromkeys(('dolor', 'oferta', 'link'), 0)
     fu = dict.fromkeys(('entrantes', 'dolor', 'oferta', 'link'), 0)
     fur = dict.fromkeys(fu, 0)
+    bnv = dict.fromkeys(BIENVENIDAS, 0)
     detalle = defaultdict(list)
     if not suyas:
-        return {'anuncios': salida['anuncios'], 'inbound': salida['inbound'], 'embudo': None,
+        return {'anuncios': salida['anuncios'], 'inbound': salida['inbound'], 'bienvenidas': bnv, 'embudo': None,
                 'followups': None, 'followups_respondidos': None, 'detalle': {}, 'a_confirmar': list(A_CONFIRMAR)}
 
     ids = list(suyas)
@@ -118,6 +145,13 @@ def contar(setter_id, fecha, tz):
         primero_lead = next((en for en, lead in msgs if lead), None)
         primero_equipo = next((en for en, lead in msgs if not lead), None)
         primera_salida = min(filter(None, (primero_equipo, (bot.get(cid) or [None])[0])), default=None)
+        mios = set(propios.get(cid, []))
+        empezamos = bool(primero_equipo) and primera_salida == primero_equipo and not (
+            primero_lead and primero_lead < primero_equipo)
+        if empezamos or canal == 'bienvenida':
+            c = None  # no es un entrante
+            if not es_whatsapp(ct.igsid):
+                _bienvenida(sorted(mios), msgs, ini, fin, bnv, detalle, quien)
 
         if c is not None and primero_lead and ini <= primero_lead < fin:
             c['entrantes'] += 1
@@ -142,7 +176,6 @@ def contar(setter_id, fecha, tz):
                     embudo[etapa] += 1
                     detalle[f'embudo.{etapa}'].append(quien(en))
 
-        mios = set(propios.get(cid, []))
         apertura = min(mios, default=None)
         if c is not None and apertura and ini <= apertura < fin:
             c['ap_entrantes'] += 1
@@ -171,8 +204,8 @@ def contar(setter_id, fecha, tz):
 
     con_fases = any(en < fin for lista in cambios.values() for en, _ in lista)
     if not con_fases:
-        detalle = {k: v for k, v in detalle.items() if k.split('.')[0] in canales}
-    return {'anuncios': salida['anuncios'], 'inbound': salida['inbound'],
+        detalle = {k: v for k, v in detalle.items() if k.split('.')[0] in (*canales, 'bienvenidas')}
+    return {'anuncios': salida['anuncios'], 'inbound': salida['inbound'], 'bienvenidas': bnv,
             'embudo': embudo if con_fases else None,
             'followups': fu if con_fases else None,
             'followups_respondidos': fur if con_fases else None,

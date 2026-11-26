@@ -1154,3 +1154,8 @@
 - El botón «Filtro» de la barra junta las vistas (en tarjetas con su número), a quién está asignada y todos los filtros; Ordenar y Elegir van a su lado ([MacroFiltro.jsx](../../frontend/src/pages/inbox/conversaciones/MacroFiltro.jsx), [VistasFiltro.jsx](../../frontend/src/pages/inbox/conversaciones/VistasFiltro.jsx)).
 - La lista queda con el buscador y una cabecera nueva: número grande, orden, barrita de urgencia y sin leer ([ListaCab.jsx](../../frontend/src/pages/inbox/conversaciones/ListaCab.jsx)).
 - Tareas · Avisos · Stats · Links · Turnos en un solo grupo; sale Tálamus ([SetterEspacioPage.jsx](../../frontend/src/pages/setter/SetterEspacioPage.jsx)).
+
+### 26/11/2026 · Reporte del setter: las bienvenidas salen del Inbox (ADR-W248)
+- Bienvenida = conversación de Instagram que empieza el setter (nuevo seguidor). Se cuentan solas: hechas, respondidas, aperturas y respondieron, corregibles y con su lista ([reporte_inbox.py](../../app/automatizaciones/reporte_inbox.py), [setter.py](../../app/reporte_dia/setter.py)).
+- Lo que empieza el equipo ya no cuenta como entrante. Arregla el 26/11: las reactivaciones de WhatsApp de Elias y Paula entraban como entrantes de Inbound.
+- Lo único numérico a mano que queda: aperturas en dolor (sin definición todavía).

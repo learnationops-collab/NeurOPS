@@ -15,6 +15,10 @@ COMO = {
     'inabribles': 'De los nuevos mensajes, los marcados como in-abribles.',
     'ap_entrantes': 'Conversaciones a las que les escribiste a mano por primera vez hoy (no cuenta el bot).',
     'ap_entrantes_resp': 'De esas aperturas, las que el lead contestó después.',
+    'bnv_hechas': 'Conversaciones de Instagram que empezaste vos hoy (nuevos seguidores), o marcadas en el canal Bienvenida.',
+    'bnv_respondidas': 'De esas bienvenidas, las que el lead contestó.',
+    'bnv_aperturas': 'De las que contestaron, a las que les volviste a escribir.',
+    'bnv_aperturas_resp': 'De esas aperturas, las que el lead contestó.',
     'agendas': 'Agendas que reservaste hoy (por la fecha en que se creó la agenda, no la de la llamada).',
     'embudo': 'Conversaciones que llegaron hoy por primera vez a esta etapa (lo que marcás en el Inbox).',
     'cualificados': 'Entrantes cualificados de tus dos canales.',
@@ -51,6 +55,8 @@ def registros(user, dia, clave, ctx):
         r = _agendas(user, ctx)
         r['como'] = COMO['agendas'] + (' Se muestran las de los dos canales.' if clave != 'agendas' else '')
         return r
+    if clave.startswith('bnv_') and clave in COMO:
+        return {'cols': COLS, 'filas': _filas(user, det, [f'bienvenidas.{clave[4:]}']), 'como': COMO[clave]}
     if clave in EMBUDO:
         return {'cols': COLS, 'filas': _filas(user, det, [f'embudo.{EMBUDO[clave]}']), 'como': COMO['embudo']}
     if clave in ('entrantes', 'cualificados'):

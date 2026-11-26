@@ -2212,3 +2212,15 @@
   3. Tareas · Avisos · Stats y Links · Turnos · Volver forman una sola cápsula de botones. Sale Tálamus.
 - **Qué se pierde:** el desplegable «A quién está asignada» a la vista (queda en el Filtro y en sus vistas) y los chips de filtros guardados arriba de la lista (ahora son vistas del Filtro).
 - **Consecuencias:** sin migración. Se borran `FiltrosGuardados.jsx` y `ChipsGuardados.jsx` del Inbox.
+
+## ADR-W248: las bienvenidas del setter las cuenta el Inbox, y lo que empieza el equipo no es un entrante
+
+- **Fecha:** 26/11/2026 · **Subsistema:** reporte del setter (`app/reporte_dia/setter.py`, `setter_detalle.py`) e Inbox (`app/automatizaciones/reporte_inbox.py`) · **Estado:** implementada. Sigue a ADR-W243.
+- **Contexto:** Santi pasó la definición: una bienvenida es un nuevo seguidor al que el setter le hace una apertura, o sea una conversación que empieza el setter. Se cargaban a mano y siempre en 0. Instagram no avisa de un seguidor nuevo, pero el Inbox sí sabe quién mandó el primer mensaje. Al revisarlo apareció además que las conversaciones de WhatsApp que empieza el setter (el 26/11, 10 de Elias y 11 de Paula, reactivaciones de gente de las clases) entraban como entrantes de Inbound en cuanto el lead contestaba. La apertura en dolor sigue sin definición (Marlon todavía no está seguro).
+- **Decisión:**
+  1. Una conversación cuyo primer mensaje es del equipo, a mano (antes que el lead y que el bot), no es un entrante: no suma a nuevos mensajes, cualificados ni aperturas en entrantes. Tampoco las marcadas en el canal Bienvenida.
+  2. En Instagram, esas conversaciones son **bienvenidas**: hechas (el primer mensaje del setter cae ese día), respondidas (el lead contestó), aperturas (el setter volvió a escribir después de esa respuesta) y respondieron (el lead contestó a eso). Automáticas, corregibles y con su lista. El bloque pasa a la forma de Seguimientos: enviadas, respondieron y el porcentaje de respuesta.
+  3. En WhatsApp no se cuentan en el reporte.
+  4. La apertura en dolor sigue a mano; es lo único numérico que queda a mano.
+- **Qué se pierde:** el embudo de pasos de las bienvenidas: ahora son dos filas con su respuesta. Las reactivaciones de WhatsApp no aparecen en el reporte. No se puede saber si el seguidor es nuevo: cuenta cualquier conversación de Instagram que empieza el setter.
+- **Consecuencias:** sin migración. Los días ya cerrados no cambian.
