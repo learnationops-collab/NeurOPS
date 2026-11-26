@@ -19,6 +19,12 @@ const CATALOGO = {
     avisos: { grupo: 'Pendientes', desc: 'Lo que el sistema te avisó.', color: 'ambar' },
     conflictos: { grupo: 'Pendientes', desc: 'Datos sueltos para revisar.', color: 'rojo' },
     'mis-reportes': { grupo: 'Pendientes', desc: 'Lo que reportaste o pediste, y sus respuestas.', color: 'verde' },
+    // Secciones del Workspace del triage que van ocultas de fábrica (ADR-W256): se abren desde acá.
+    'sec:compartidos': { grupo: 'Pendientes', desc: 'Leads en los que alguien te nombró con @ en el chat.', color: 'azul', va: true },
+    'sec:abandonos': { grupo: 'Pendientes', desc: 'Dejaron sus datos y no agendaron (últimas 48 h).', color: 'ambar', va: true },
+    'sec:metricas': { grupo: 'Secciones ocultas', desc: 'El embudo de tus llamadas de triage.', color: 'violeta', va: true },
+    'sec:dashboard': { grupo: 'Secciones ocultas', desc: 'Tus números de las agendas que llevaste.', color: 'violeta', va: true },
+    'sec:cartera': { grupo: 'Secciones ocultas', desc: 'Tus leads y clientes, en una tabla.', color: 'violeta', va: true },
     'tool:mi-sueldo': { grupo: 'Mi cuenta', desc: 'Tu sueldo del mes: base, comisiones, bonos y los pagos que las suman.', color: 'verde' },
     procrastinar: { grupo: 'Esta pantalla', desc: 'Un seguimiento al azar para arrancar.', color: 'ambar' },
     portal: { grupo: 'Ir a', desc: 'Otra área o rol, Cortex (Playbook) y Simular.', color: 'azul' },

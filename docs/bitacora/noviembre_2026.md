@@ -1206,3 +1206,8 @@
 
 ### 26/11/2026 · Ficha: el menú del segmento va encima de todo
 - El menú para cambiar el segmento del lead (A–D) no usaba la capa superior y podía quedar tapado; ahora usa `useEnPantalla` ([SegmentoLead.jsx](../../frontend/src/components/ficha/piezas/SegmentoLead.jsx)). Lo marcaba el test de flotantes.
+
+### 26/11/2026 · Workspace del triage: secciones de vez en cuando, a Herramientas (ADR-W256)
+- Compartidos, Abandonos, Métricas, Mis datos y Mi cartera vienen ocultas de fábrica para el triage; en el dock quedan Confirmar, Reportar, Seguir y Reporte ([CloserWorkflowPage.jsx](../../frontend/src/pages/closer/CloserWorkflowPage.jsx), [navegacionDock.js](../../frontend/src/ventanas/navegacionDock.js)).
+- Compartidos (leads sin leer) y Abandonos (por contactar) se fijan solos en el dock mientras tengan algo, con su cuenta y candado, como las herramientas con pendientes ([DockSecciones.jsx](../../frontend/src/pages/comercial/components/DockSecciones.jsx), [fijadas.js](../../frontend/src/sesion/fijadas.js), [TriageAbandonos.jsx](../../frontend/src/pages/triage/components/TriageAbandonos.jsx)).
+- En Herramientas, Compartidos y Abandonos van en Pendientes y las otras tres en Secciones ocultas, con descripción ([catalogoHerramientas.js](../../frontend/src/ventanas/catalogoHerramientas.js)). Si alguien vuelve a mostrar una en Editar navegación, queda mostrada.

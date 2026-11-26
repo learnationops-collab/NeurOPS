@@ -120,7 +120,9 @@ const DockSecciones = ({ secciones: todasLasSecciones, activa, onElegir, ariaLab
         setFijables(prev => (prev.firma === firma ? prev : { firma, usuario, opciones }));
     }, []);
     // Lo que se puede fijar: las acciones del menú de sesión, las herramientas en ventana y las secciones ocultas.
-    const ocultas = nav.ocultas.map(s => ({ id: `sec:${s.id}`, label: s.label, titulo: 'Sección oculta', Icono: s.Icono,
+    // Una oculta con `pendientes` (Compartidos, Abandonos) lleva su cuenta y, mientras tenga, queda fijada (ADR-W256).
+    const ocultas = nav.ocultas.map(s => ({ id: `sec:${s.id}`, label: s.label, titulo: s.titulo, Icono: s.Icono,
+        cuenta: s.pendientes > 0 ? s.pendientes : null, conPendientes: s.pendientes !== undefined,
         onClick: () => onElegir(s.id) }));
     // Las del menú corren su acción más reciente (accionesRef): la guardada en `fijables` puede ser vieja.
     const opcionesRef = useRef([]);

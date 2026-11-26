@@ -4,7 +4,8 @@
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { avisarCambio, registrarParte } from '../sesion/dockServidor';
 
-const VACIO = { orden: [], ocultos: [], nombres: {} };
+// `mostrados`: las que vienen ocultas de fábrica (`ocultaDeFabrica`) y la persona volvió a poner en el dock.
+const VACIO = { orden: [], ocultos: [], mostrados: [], nombres: {} };
 const clave = (userId, dock) => `dock-nav:${userId}:${dock}`;
 const cache = new Map();
 const oyentes = new Set();
@@ -26,6 +27,7 @@ function leer(k) {
             v = {
                 orden: Array.isArray(p.orden) ? p.orden : [],
                 ocultos: Array.isArray(p.ocultos) ? p.ocultos : [],
+                mostrados: Array.isArray(p.mostrados) ? p.mostrados : [],
                 nombres: p.nombres && typeof p.nombres === 'object' ? p.nombres : {},
             };
         }
@@ -91,7 +93,8 @@ export function useNavegacionDock(user, dock, secciones) {
             ...secciones.map((s) => s.id).filter((id) => !cfg.orden.includes(id))];
         return ids.map((id) => {
             const s = porId.get(id);
-            return { ...s, label: cfg.nombres[id] || s.label, labelOriginal: s.label, oculta: cfg.ocultos.includes(id) };
+            const oculta = cfg.ocultos.includes(id) || (Boolean(s.ocultaDeFabrica) && !(cfg.mostrados || []).includes(id));
+            return { ...s, label: cfg.nombres[id] || s.label, labelOriginal: s.label, oculta };
         });
     }, [cfg, secciones]);
 
@@ -106,8 +109,13 @@ export function useNavegacionDock(user, dock, secciones) {
         editar: (on) => { editando = on ? k : null; avisar(); },
         ordenar: (ids) => cambiar((c) => ({ ...c, orden: ids })),
         alternarOculta: (id) => cambiar((c) => {
-            if (c.ocultos.includes(id)) return { ...c, ocultos: c.ocultos.filter((x) => x !== id) };
-            return visibles.length <= 1 ? c : { ...c, ocultos: [...c.ocultos, id] };
+            const mostrados = c.mostrados || [];
+            const s = todas.find((x) => x.id === id);
+            if (s?.oculta) {
+                return { ...c, ocultos: c.ocultos.filter((x) => x !== id),
+                    mostrados: s.ocultaDeFabrica ? [...mostrados.filter((x) => x !== id), id] : mostrados };
+            }
+            return visibles.length <= 1 ? c : { ...c, ocultos: [...c.ocultos, id], mostrados: mostrados.filter((x) => x !== id) };
         }),
         renombrar: (id, nombre) => cambiar((c) => {
             const original = secciones.find((s) => s.id === id)?.label;

@@ -76,4 +76,5 @@ export const _olvidarFijadas = () => cache.clear();
 // Lo que tiene pendientes queda fijado hasta resolverse (ADR-W242): estas herramientas, con `cuenta` > 0, van
 // solas a la isla de fijadas, primero, y su pin no se puede sacar. En 0 vuelve a lo que eligió la persona.
 export const CON_PENDIENTES = new Set(['inbox', 'avisos', 'conflictos', 'mis-reportes', 'playbook']);
-export const tienePendientes = (op) => !!op && CON_PENDIENTES.has(op.id) && Number(op.cuenta) > 0;
+// Una sección oculta con pendientes (`conPendientes`, ADR-W256) se comporta igual.
+export const tienePendientes = (op) => !!op && (CON_PENDIENTES.has(op.id) || !!op.conPendientes) && Number(op.cuenta) > 0;

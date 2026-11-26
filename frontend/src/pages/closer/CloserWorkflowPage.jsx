@@ -37,7 +37,7 @@ import RailResumen from './components/RailResumen';
 import { useAltoHeader } from './useAltoHeader';
 import './sidebar-v6.css';
 import ComisionMesCard from './components/ComisionMesCard';
-import TriageAbandonos from '../triage/components/TriageAbandonos';
+import TriageAbandonos, { useAbandonosPorContactar } from '../triage/components/TriageAbandonos';
 import CompartidosConmigo, { useCompartidos } from '../../components/compartidos/CompartidosConmigo';
 import ProcrastinarModal from './components/ProcrastinarModal';
 import YaTieneAgenda from './components/YaTieneAgenda';
@@ -203,6 +203,7 @@ const CloserWorkflowPage = () => {
     const { lista: compartidos, cargar: contarCompartidos } = useCompartidos();
     useEffect(() => { contarCompartidos(); }, [activeView, contarCompartidos]);
     const compartidosSinLeer = (compartidos || []).filter((l) => l.sin_leer).length;
+    const abandonosPorContactar = useAbandonosPorContactar(esTriage, activeView);
     // Configuración es la de todos (sesion/ConfiguracionContext.jsx): una hoja encima del mazo. Al
     // cerrarla se vuelve a mirar si faltan Calendar o WhatsApp.
     const { abierta: configAbierta, abrir: abrirConfiguracion } = useConfiguracion();
@@ -1527,14 +1528,19 @@ const CloserWorkflowPage = () => {
         // Los leads en los que alguien lo nombró con «@» en el chat (ADR-W047): el punto dice cuántos son nuevos.
         { id: 'compartidos', label: 'Compartidos', Icono: Share2,
             marcas: compartidosSinLeer > 0 ? [{ tipo: 'aviso', texto: String(compartidosSinLeer),
-                titulo: `${compartidosSinLeer} ${compartidosSinLeer === 1 ? 'lead compartido nuevo' : 'leads compartidos nuevos'}` }] : [] },
+                titulo: `${compartidosSinLeer} ${compartidosSinLeer === 1 ? 'lead compartido nuevo' : 'leads compartidos nuevos'}` }] : [],
+            // Al triage le va mejor como herramienta (ADR-W256): oculta de fábrica, y fijada mientras haya nuevos.
+            ...(esTriage ? { ocultaDeFabrica: true, pendientes: compartidosSinLeer,
+                titulo: compartidosSinLeer ? `${compartidosSinLeer} ${compartidosSinLeer === 1 ? 'lead compartido nuevo' : 'leads compartidos nuevos'}` : undefined } : {}) },
         // El triage tiene sus métricas (el embudo de la llamada de filtro) y, como el closer, sus datos y
         // su cartera: el dashboard comercial acotado a sus agendas (`alcance_de`, app/api/comercial.py).
+        // Todas ocultas de fábrica, en Herramientas (ADR-W256); Abandonos se fija sola mientras haya por contactar.
         ...(esTriage ? [
-            { id: 'abandonos', label: 'Abandonos', Icono: UserX },
-            { id: 'metricas', label: 'Métricas', Icono: Filter },
-            { id: 'dashboard', label: 'Mis datos', Icono: BarChart3 },
-            { id: 'cartera', label: 'Mi cartera', Icono: Briefcase },
+            { id: 'abandonos', label: 'Abandonos', Icono: UserX, ocultaDeFabrica: true, pendientes: abandonosPorContactar,
+                titulo: abandonosPorContactar ? `${abandonosPorContactar} por contactar` : undefined },
+            { id: 'metricas', label: 'Métricas', Icono: Filter, ocultaDeFabrica: true },
+            { id: 'dashboard', label: 'Mis datos', Icono: BarChart3, ocultaDeFabrica: true },
+            { id: 'cartera', label: 'Mi cartera', Icono: Briefcase, ocultaDeFabrica: true },
         ] : []),
     ];
     // El reporte del día (cierre único de closer y triage, pages/reporte/): se guarda solo y se cierra
