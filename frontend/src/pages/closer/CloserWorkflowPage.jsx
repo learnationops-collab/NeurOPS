@@ -1574,7 +1574,8 @@ const CloserWorkflowPage = () => {
             ]),
             // Las novedades del Workspace (ADR-W218): vuelve a abrir la portada y el recorrido.
             { id: 'novedades', label: 'Novedades', Icono: Sparkles, onClick: abrirNovedades },
-            ...(counts.seguimientos > 0
+            // El triage tiene su propio Seguir: procrastinar agarra un seguimiento de closer (ADR-W257).
+            ...(counts.seguimientos > 0 && !esTriage
                 ? [{ id: 'procrastinar', label: 'Quiero procrastinar', Icono: Hourglass, onClick: () => setShowProcrastinar(true) }]
                 : []),
         ],

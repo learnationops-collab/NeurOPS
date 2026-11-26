@@ -1211,3 +1211,7 @@
 - Compartidos, Abandonos, Métricas, Mis datos y Mi cartera vienen ocultas de fábrica para el triage; en el dock quedan Confirmar, Reportar, Seguir y Reporte ([CloserWorkflowPage.jsx](../../frontend/src/pages/closer/CloserWorkflowPage.jsx), [navegacionDock.js](../../frontend/src/ventanas/navegacionDock.js)).
 - Compartidos (leads sin leer) y Abandonos (por contactar) se fijan solos en el dock mientras tengan algo, con su cuenta y candado, como las herramientas con pendientes ([DockSecciones.jsx](../../frontend/src/pages/comercial/components/DockSecciones.jsx), [fijadas.js](../../frontend/src/sesion/fijadas.js), [TriageAbandonos.jsx](../../frontend/src/pages/triage/components/TriageAbandonos.jsx)).
 - En Herramientas, Compartidos y Abandonos van en Pendientes y las otras tres en Secciones ocultas, con descripción ([catalogoHerramientas.js](../../frontend/src/ventanas/catalogoHerramientas.js)). Si alguien vuelve a mostrar una en Editar navegación, queda mostrada.
+
+### 26/11/2026 · Herramientas del triage, solo con lo suyo (ADR-W257)
+- Para el triage salen Registrar un pago, Declarar una venta, Pedido a los devs y Quiero procrastinar; «Nuevo» no se muestra y «Reportar o pedir algo» va suelto en Crear ([DockSecciones.jsx](../../frontend/src/pages/comercial/components/DockSecciones.jsx), [herramientas.js](../../frontend/src/ventanas/herramientas.js), [CloserWorkflowPage.jsx](../../frontend/src/pages/closer/CloserWorkflowPage.jsx)).
+- Las herramientas aceptan `sinRoles`: para todos menos esos roles.

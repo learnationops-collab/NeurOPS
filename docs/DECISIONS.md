@@ -2304,3 +2304,11 @@
   4. En Herramientas: Compartidos y Abandonos van en Pendientes, y las otras tres en Secciones ocultas, cada una con su descripción.
 - **Qué se pierde:** el triage ya no ve Métricas, Mis datos y Mi cartera en el dock sin abrir Herramientas, salvo que las vuelva a mostrar. Quien ya había ocultado o mostrado secciones a mano conserva lo suyo. El closer no cambia.
 - **Consecuencias:** sin migración ni backend: `/triage/abandonos` ya existía. La configuración del dock suma `mostrados` (viaja a la cuenta con el resto, `dockServidor`).
+
+## ADR-W257: Herramientas del triage, solo con lo suyo
+
+- **Fecha:** 26/11/2026 · **Subsistema:** Herramientas del dock (`DockSecciones.jsx`, `ventanas/herramientas.js`, `ventanas/catalogoHerramientas.js`, `CloserWorkflowPage.jsx`). Sigue a ADR-W256.
+- **Contexto:** Herramientas junta lo de la pantalla, lo de la cuenta y lo de todas las pantallas, y al triage le llegaban opciones de otros roles: registrar un pago y declarar una venta (Dari tiene una venta en toda su historia), Pedido a los devs y «Quiero procrastinar», que agarra un seguimiento de closer cuando el triage tiene su propio Seguir. Con eso no encontraba lo propio.
+- **Decisión:** para el rol triage salen Registrar un pago, Declarar una venta, Pedido a los devs (`sinRoles` en `herramientas.js`: una herramienta para todos menos esos roles) y Quiero procrastinar. Sin pago ni venta, «Nuevo» solo tenía «Reportar o pedir algo»: no se muestra, y Reportar va suelto en Herramientas › Crear. Quedan Buscar lead, Turnos, Learnito, Inbox, Chat, Leadership, Novedades, los pendientes (Avisos, Mis reportes, Conflictos, Playbook, Compartidos, Abandonos), las secciones ocultas y lo de la cuenta.
+- **Qué se pierde:** si un triage alguna vez cierra una venta, la declara desde la ficha del lead o le pide a un closer; no tiene el atajo. Un «Nuevo» que el triage tuviera fijado en el dock deja de dibujarse.
+- **Consecuencias:** sin backend. Los demás roles no cambian.

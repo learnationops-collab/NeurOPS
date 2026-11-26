@@ -70,6 +70,8 @@ export const HERRAMIENTAS = [
         key: 'pedido-devs',
         label: 'Pedido a los devs',
         hint: 'Un cambio, un error o una duda de la plataforma, directo al Inbox de los devs',
+        // Al triage no le sirve (ADR-W257): lo suyo se reporta desde Mis reportes.
+        sinRoles: ['triage'],
         Icono: MessageSquarePlus,
         roles: null,
         ancho: 480,
@@ -89,8 +91,9 @@ export const HERRAMIENTAS = [
     },
 ];
 
-/** Si el rol de la sesión puede abrir la herramienta (`roles: null` = todos). */
-export const permitida = (h, user) => Boolean(h && user && (!h.roles || h.roles.includes(user.role)));
+/** Si el rol de la sesión puede abrir la herramienta (`roles: null` = todos; `sinRoles`, los que no). */
+export const permitida = (h, user) => Boolean(h && user && (!h.roles || h.roles.includes(user.role))
+    && !(h.sinRoles || []).includes(user.role));
 
 export const herramienta = (key) => HERRAMIENTAS.find(h => h.key === key) || null;
 

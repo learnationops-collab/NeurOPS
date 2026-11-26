@@ -134,7 +134,9 @@ const DockSecciones = ({ secciones: todasLasSecciones, activa, onElegir, ariaLab
     // «Nuevo», una herramienta más (se fija como cualquiera): abre la lista de lo que crea algo en esta
     // pantalla (las acciones con `nuevo`) y «Reportar o pedir algo», que va en todas.
     const reportar = { id: 'reportar-bug', label: 'Reportar o pedir algo', Icono: Bug, onClick: abrirReporteDeBug };
-    const venden = ['closer', 'triage', 'admin', 'director_comercial'].includes(usuario?.role);
+    // El triage no cobra ni vende (ADR-W257): sin pago ni venta. Sin eso, «Nuevo» solo tendría Reportar: va suelto.
+    const venden = ['closer', 'admin', 'director_comercial'].includes(usuario?.role);
+    const sinNuevo = usuario?.role === 'triage';
     const nuevos = [...acciones.filter(o => o.nuevo),
         ...(venden ? [
             { id: 'nuevo-pago', label: 'Registrar un pago', Icono: Receipt, onClick: () => abrirBuscarLead('pago') },
@@ -157,7 +159,7 @@ const DockSecciones = ({ secciones: todasLasSecciones, activa, onElegir, ariaLab
             titulo: playbook.pendingCount > 0 ? `${playbook.pendingCount} ${playbook.pendingCount === 1 ? 'video pendiente' : 'videos pendientes'}` : null },
         ...(puedeSimular(usuario) ? [{ id: 'simular', label: 'Simular a alguien', Icono: Eye, onClick: abrirSimulacion }] : []),
     ];
-    const opciones = [nuevo, ...acciones, reportar, ...herramientas, ...globales, ...ocultas];
+    const opciones = [...(sinNuevo ? [] : [nuevo]), ...acciones, reportar, ...herramientas, ...globales, ...ocultas];
     // Atajos, como en la Academia: Ctrl+K busca un lead, Ctrl+L abre Learnito y Ctrl+J, Herramientas.
     useEffect(() => {
         const tecla = (e) => {
@@ -244,7 +246,7 @@ const DockSecciones = ({ secciones: todasLasSecciones, activa, onElegir, ariaLab
     const herr = (
         <BotonHerramientas usuario={usuario} onEditar={todasLasSecciones.length > 1 && usuario ? () => nav.editar(true) : null}
             cuenta={sinLeer > 0 ? (sinLeer > 99 ? '99+' : sinLeer) : null}
-            principal grupos={agrupar([nuevo, ...herramientas, ...globales, ...deAccion, ...ocultas, ...deCuenta])} />
+            principal grupos={agrupar([...(sinNuevo ? [reportar] : [nuevo]), ...herramientas, ...globales, ...deAccion, ...ocultas, ...deCuenta])} />
     );
     const centro = (
         <nav className={clases.filter(Boolean).join(' ')} aria-label={ariaLabel}>
