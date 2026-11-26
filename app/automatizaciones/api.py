@@ -375,6 +375,8 @@ def ver_conversacion(contacto_id):
             'bot_pausado_hasta': _iso(contacto.bot_pausado_hasta), 'resuelta_en': _iso(contacto.resuelta_en),
         },
         'asignado': asignado,
+        # Con qué palabra clave entró (y de qué campaña), para mostrarla arriba de la tarjeta (ADR-W246).
+        'entrada': bandeja.entrada(contacto.id),
         'cliente': cliente_del_contacto.de(contacto),
         'etiquetas': tags_service.de(TARGET_IG_CONTACT, [contacto.id]).get(str(contacto.id), []),
         'ejecucion': recorrido[0] if recorrido else None,

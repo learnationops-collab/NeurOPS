@@ -9,6 +9,7 @@ import { inboxApi } from '../api';
 import { EJECUCION } from './AccionesFlujo';
 import { faseDe } from './fasesSetting';
 import { momento } from './Feed';
+import MisStats from './MisStats';
 
 const ABIERTA = ['en_curso', 'esperando_respuesta', 'esperando_tiempo'];
 const BASICAS = ['nombre', 'examen', 'pais', 'fecha_examen', 'intentos', 'whatsapp'];
@@ -161,6 +162,7 @@ export default function FichaLead({ contacto, tareas, recorrido, fases = [], cit
                     </>
                 )}
             </Fila>
+            <MisStats />
         </Panel>
     );
 }

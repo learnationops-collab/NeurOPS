@@ -1,0 +1,72 @@
+/* La tarjeta del lead (ADR-W246): por dónde entró arriba, los botones con aura y «Tus números» al pie de la ficha. */
+
+/* Origen: el ícono del canal y la palabra clave, arriba del nombre. */
+.thalamus.inbox .cv-origen{display:flex;align-items:center;gap:6px;min-width:0;margin-bottom:2px}
+.thalamus.inbox .cv-origen-canal{--c:var(--brand-secondary);width:26px;height:26px;flex:none;display:grid;place-items:center;border-radius:9px;cursor:pointer;
+  color:var(--c);border:1px solid color-mix(in srgb,var(--c) 40%,transparent);
+  background:radial-gradient(circle at 30% 25%,color-mix(in srgb,var(--c) 30%,transparent),color-mix(in srgb,var(--c) 10%,transparent));
+  box-shadow:0 0 14px color-mix(in srgb,var(--c) 22%,transparent);transition:transform .2s cubic-bezier(.3,1.6,.5,1),box-shadow .2s}
+.thalamus.inbox .cv-origen-canal:hover{transform:rotate(-8deg) scale(1.08);box-shadow:0 0 20px color-mix(in srgb,var(--c) 38%,transparent)}
+.thalamus.inbox .cv-origen-clave{display:inline-flex;align-items:center;gap:5px;min-width:0;max-width:100%;height:24px;padding:0 10px;border-radius:999px;
+  border:1px solid color-mix(in srgb,var(--brand-secondary) 35%,transparent);background:color-mix(in srgb,var(--brand-secondary) 10%,transparent);
+  color:var(--text-main);font:inherit;font-size:11.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;cursor:pointer}
+.thalamus.inbox .cv-origen-clave:disabled{cursor:default;opacity:1}
+.thalamus.inbox .cv-origen-clave::before{content:"#";color:var(--brand-secondary);font-weight:900}
+.thalamus.inbox .cv-origen-clave svg{flex:none;color:var(--text-muted)}
+.thalamus.inbox .cv-origen-config{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 10px;border-radius:999px;cursor:pointer;
+  border:1px dashed color-mix(in srgb,var(--warning) 55%,transparent);background:color-mix(in srgb,var(--warning) 8%,transparent);
+  color:var(--warning);font:inherit;font-size:11.5px;font-weight:700;animation:ib-config 2.4s ease-in-out infinite}
+@keyframes ib-config{0%,100%{box-shadow:0 0 0 0 transparent}50%{box-shadow:0 0 12px color-mix(in srgb,var(--warning) 25%,transparent)}}
+.thalamus.inbox .cv-origen-form{display:flex;align-items:center;gap:4px;min-width:0;flex:1}
+.thalamus.inbox .cv-origen-form input{flex:1;min-width:0;height:26px;padding:0 10px;border-radius:999px;border:1px solid var(--brand-secondary);
+  background:var(--bg-input);color:var(--text-main);font:inherit;font-size:12px;outline:none}
+.thalamus.inbox .cv-origen-form button{width:26px;height:26px;display:grid;place-items:center;border-radius:50%;border:0;cursor:pointer;background:var(--brand-secondary);color:var(--on-brand, #fff)}
+.thalamus.inbox .cv-origen-form button:disabled{opacity:.4;cursor:default}
+.thalamus.inbox .cv-tarjeta-op--actual{color:var(--text-muted);font-size:11.5px;cursor:default}
+
+/* Acciones de la etapa: Transferir, No lead, In-abrible. Vidrio con aura de su color. */
+.thalamus.inbox .cv-salidas{display:flex;gap:6px;align-items:stretch}
+.thalamus.inbox .cv-accion-caja{flex:1;display:flex}
+.thalamus.inbox .cv-accion{--c:var(--error);flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;height:32px;padding:0 8px;border-radius:11px;cursor:pointer;
+  font:inherit;font-size:11.5px;font-weight:800;white-space:nowrap;color:var(--c);
+  border:1px solid color-mix(in srgb,var(--c) 35%,transparent);
+  background:linear-gradient(180deg,color-mix(in srgb,var(--c) 16%,transparent),color-mix(in srgb,var(--c) 6%,transparent));
+  box-shadow:inset 0 1px 0 color-mix(in srgb,#fff 10%,transparent),0 4px 14px -6px color-mix(in srgb,var(--c) 45%,transparent);
+  transition:transform .18s cubic-bezier(.3,1.6,.5,1),box-shadow .2s,background .2s}
+.thalamus.inbox .cv-accion:hover{transform:translateY(-1px);background:linear-gradient(180deg,color-mix(in srgb,var(--c) 24%,transparent),color-mix(in srgb,var(--c) 10%,transparent));
+  box-shadow:inset 0 1px 0 color-mix(in srgb,#fff 14%,transparent),0 8px 20px -6px color-mix(in srgb,var(--c) 60%,transparent)}
+.thalamus.inbox .cv-accion:active{transform:scale(.96)}
+.thalamus.inbox .cv-accion:disabled{opacity:.45;cursor:default;transform:none}
+.thalamus.inbox .cv-accion svg{transition:transform .25s cubic-bezier(.3,1.6,.5,1)}
+.thalamus.inbox .cv-accion:hover svg{transform:scale(1.15) rotate(-8deg)}
+.thalamus.inbox .cv-accion--transferir{--c:var(--info)}
+.thalamus.inbox .cv-accion--transferir:hover svg{transform:translateX(2px) scale(1.1)}
+.thalamus.inbox .cv-salidas .cv-salidas-fuera{flex:2;align-self:center}
+
+/* Adelantar y la etapa, con más aura. */
+.thalamus.inbox .cv-adelantar.ui-btn{box-shadow:0 6px 20px -6px color-mix(in srgb,var(--brand-secondary) 70%,transparent),inset 0 1px 0 rgba(255,255,255,.25);
+  background:linear-gradient(135deg,var(--brand-secondary),color-mix(in srgb,var(--brand-secondary) 70%,#8B5CF6))}
+.thalamus.inbox .cv-adelantar.ui-btn:hover{box-shadow:0 10px 26px -6px color-mix(in srgb,var(--brand-secondary) 85%,transparent),inset 0 1px 0 rgba(255,255,255,.3)}
+.thalamus.inbox .cv-etapa-btn{box-shadow:0 0 18px -4px color-mix(in srgb,var(--c) 40%,transparent)}
+
+/* Tus números, al pie de la ficha. */
+.thalamus.inbox .cv-mis{margin-top:auto;display:grid;gap:8px;padding-top:12px;border-top:1px solid var(--border-subtle)}
+.thalamus.inbox .cv-mis-tit{font-size:10.5px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:var(--text-muted)}
+.thalamus.inbox .cv-mis-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.thalamus.inbox .cv-mis-dato{--c:var(--info);position:relative;overflow:hidden;display:grid;gap:1px;padding:9px 10px;border-radius:12px;
+  border:1px solid color-mix(in srgb,var(--c) 22%,transparent);background:color-mix(in srgb,var(--c) 6%,transparent);
+  animation:ib-mis .5s cubic-bezier(.3,1.4,.5,1) both}
+.thalamus.inbox .cv-mis-dato:nth-child(2){animation-delay:.06s}
+.thalamus.inbox .cv-mis-dato:nth-child(3){animation-delay:.12s}
+.thalamus.inbox .cv-mis-dato:nth-child(4){animation-delay:.18s}
+.thalamus.inbox .cv-mis-dato::after{content:"";position:absolute;right:-18px;top:-18px;width:56px;height:56px;border-radius:50%;
+  background:radial-gradient(closest-side,color-mix(in srgb,var(--c) 35%,transparent),transparent);pointer-events:none}
+.thalamus.inbox .cv-mis-ico{position:absolute;right:8px;top:8px;color:var(--c)}
+.thalamus.inbox .cv-mis-dato b{font-size:20px;font-weight:900;line-height:1.1;font-variant-numeric:tabular-nums;color:var(--text-main)}
+.thalamus.inbox .cv-mis-dato b small{margin-left:3px;font-size:11px;font-weight:700;color:var(--text-muted)}
+.thalamus.inbox .cv-mis-dato > span:last-child{font-size:11px;font-weight:600;color:var(--text-muted)}
+@keyframes ib-mis{from{opacity:0;transform:translateY(6px) scale(.97)}to{opacity:1;transform:none}}
+
+@media (prefers-reduced-motion:reduce){
+  .thalamus.inbox .cv-origen-config,.thalamus.inbox .cv-mis-dato{animation:none}
+}

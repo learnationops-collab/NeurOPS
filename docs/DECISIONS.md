@@ -2189,3 +2189,15 @@
   3. **Activo / Inactivo**: un botón en la barra de arriba. Prenderlo abre un rato en `setter_actividad`, apagarlo lo cierra; un rato abierto más de 12 h se cierra solo en ese tope. Stats muestra la mediana propia respondiendo activo e inactivo y el tiempo activo de las últimas 24 h.
 - **Qué se pierde:** el chip «49 min» de la espera (lo reemplaza el contador). La demora sigue contándose al setter asignado, no a quien escribió.
 - **Consecuencias:** migración `c4e6a8b0d2f4` (tabla `setter_actividad`). Nueva ruta `GET/PUT /api/inbox/actividad`. Lo de antes del 26/11 cuenta como inactivo.
+
+## ADR-W246: la tarjeta del lead con origen arriba, «Transferir» y «Tus números»
+
+- **Fecha:** 26/11/2026 · **Subsistema:** Inbox (`conversaciones/TarjetaLead.jsx`, `Origen.jsx`, `Transferir.jsx`, `MisStats.jsx`, `tarjeta.css`; `bandeja.entrada`, `GET /api/inbox/mis-stats`) · **Estado:** implementada.
+- **Contexto:** Mario: la pastilla «Vos» para delegar no se entendía y dejaba pasar a cualquiera; «Anuncios» no decía la palabra clave con que entró el lead; los botones se veían planos; y quería sus números a mano en la columna del lead.
+- **Decisión:**
+  1. **Origen**, arriba del nombre: el ícono del canal (anuncio, inbound, bienvenida; tocarlo lo cambia) y la palabra clave del recorrido con que entró (`AutEjecucion.clave`). Si no tiene, «Configurar palabra clave» la guarda en la variable `palabra_clave`.
+  2. **Transferir** (antes «Delegar»), al lado de No lead e In-abrible: un setter solo ve a los otros setters (Paula → Eli, no a Dari) y triage a triage; la dirección ve a todos y «Sin asignar». `/asignables` manda el rol.
+  3. **Tus números**, al pie de la ficha: mediana de respuesta activo e inactivo (24 h), agendas cargadas hoy (en la zona del setter) y promedio diario de 30 días (`Appointment.setter_id`, `created_at`).
+  4. Botones con vidrio y aura de su color (Transferir azul, salidas rojo, Adelantar con degradé).
+- **Qué se pierde:** ver de un vistazo a quién está asignada (queda en el tooltip de Transferir y en la fila de la bandeja).
+- **Consecuencias:** sin migración.

@@ -1,12 +1,9 @@
-// La tarjeta del lead, arriba de la columna derecha (ADR-W184, reordenada en ADR-W238): quién es (con el nombre que
-// dejó al agendar si está en Work, y su número o su @), su última agenda; en una línea de pastillas a quién está
-// asignada (tocarla delega), su canal (lo usa el reporte) y las etiquetas; y la etapa del setting con su avance y
-// «Adelantar» al lado.
-import { useEffect, useRef, useState } from 'react';
-import { CalendarCheck, Check, ChevronDown, ChevronsRight, Instagram, MinusCircle, Radio, XCircle } from 'lucide-react';
-import useEnPantalla from '../../../components/ui/useEnPantalla';
+// La tarjeta del lead, arriba de la columna derecha (ADR-W184, reordenada en ADR-W238 y ADR-W246): arriba de todo, por
+// dónde entró (canal y palabra clave, `Origen`); quién es (con el nombre que dejó al agendar si está en Work, y su
+// número o su @), su última agenda; las etiquetas; y la etapa del setting con su avance, «Adelantar» al lado y abajo
+// Transferir, No lead e In-abrible.
+import { CalendarCheck, Check, ChevronDown, ChevronsRight, Instagram, MinusCircle, XCircle } from 'lucide-react';
 import { Avatar, Button, IconButton, Panel, toast } from '../../../components/standard';
-import { inboxApi } from '../api';
 import { Ahora, BotLead, Telefono } from './Ahora';
 import { esWhatsapp, examenDe, quien, usuarioDe } from './colas';
 import Etiquetas from './Etiquetas';
@@ -14,95 +11,10 @@ import { Califica } from './Fila';
 import { FASES, TRAMOS, colorDe, corto, faseDe, ordenDe, siguiente } from './fasesSetting';
 import IconoCanal from './IconoCanal';
 import { momento } from './Feed';
-import useEquipo from './useEquipo';
+import useDesplegable from './useDesplegable';
+import Transferir from './Transferir';
+import Origen from './Origen';
 import { pasosDe, useGuia, visibles } from '../guia/useGuia';
-
-const CANALES = [['anuncios', 'Anuncios'], ['inbound', 'Inbound'], ['bienvenida', 'Bienvenida']];
-
-function useDesplegable() {
-    const [abierto, setAbierto] = useState(false);
-    const caja = useRef(null);
-    useEffect(() => {
-        if (!abierto) return undefined;
-        const fuera = (e) => { if (caja.current && !caja.current.contains(e.target)) setAbierto(false); };
-        const tecla = (e) => { if (e.key === 'Escape') setAbierto(false); };
-        document.addEventListener('mousedown', fuera);
-        document.addEventListener('keydown', tecla);
-        return () => { document.removeEventListener('mousedown', fuera); document.removeEventListener('keydown', tecla); };
-    }, [abierto]);
-    return { abierto, setAbierto, caja };
-}
-
-function Delegar({ contacto, asignado, yo, onCambio }) {
-    const equipo = useEquipo();
-    const d = useDesplegable();
-    const pop = useEnPantalla();
-    const elegir = async (id) => {
-        d.setAbierto(false);
-        try {
-            await inboxApi.asignar(contacto.id, id);
-            const quienEs = equipo.find((s) => s.id === id);
-            toast(id == null ? 'Quedó sin asignar' : id === yo ? 'Volvió a vos' : `Delegada a ${quienEs?.nombre || 'otro setter'}`);
-            onCambio();
-        } catch (e) {
-            toast(e.response?.data?.message || 'No se pudo delegar', 'error');
-        }
-    };
-    const mio = asignado?.id === yo;
-    return (
-        <div className="cv-tarjeta-pop-caja" ref={d.caja}>
-            <button type="button" className={`cv-pastilla cv-asignado${mio ? ' cv-asignado--mio' : ''}${asignado ? '' : ' cv-asignado--sin'}`}
-                aria-expanded={d.abierto} data-tip="Delegar|A quién le toca esta conversación" onClick={() => d.setAbierto((a) => !a)}>
-                {asignado ? <Avatar name={asignado.username} size="xs" /> : null}
-                {asignado ? (mio ? 'Vos' : asignado.username) : 'Sin asignar'}<ChevronDown size={12} aria-hidden="true" />
-            </button>
-            {d.abierto && (
-                <div className="cv-tarjeta-pop" ref={pop} role="menu" aria-label="Delegar a">
-                    <span className="t-rotulo">Delegar a</span>
-                    {equipo.map((s) => (
-                        <button key={s.id} type="button" className="cv-tarjeta-op" aria-checked={s.id === asignado?.id} role="menuitemradio" onClick={() => elegir(s.id)}>
-                            <Avatar name={s.nombre} size="xs" />{s.id === yo ? 'Vos' : s.nombre}{s.id === asignado?.id && <Check size={13} />}
-                        </button>
-                    ))}
-                    <button type="button" className="cv-tarjeta-op" onClick={() => elegir(null)}>Sin asignar</button>
-                </div>
-            )}
-        </div>
-    );
-}
-
-function Canal({ contacto, canal, campana, onCambio }) {
-    const d = useDesplegable();
-    const pop = useEnPantalla();
-    const elegir = async (c) => {
-        d.setAbierto(false);
-        try {
-            await inboxApi.marcarCanal(contacto.id, c);
-            onCambio();
-        } catch (e) {
-            toast(e.response?.data?.message || 'No se pudo cambiar el canal', 'error');
-        }
-    };
-    const rotulo = CANALES.find(([v]) => v === canal)?.[1] || 'Sin canal';
-    return (
-        <div className="cv-tarjeta-pop-caja" ref={d.caja}>
-            <button type="button" className="cv-pastilla cv-pastilla--canal" aria-expanded={d.abierto}
-                data-tip={`Canal|${campana ? `Campaña ${campana}. ` : ''}Lo usa el reporte del día`} onClick={() => d.setAbierto((a) => !a)}>
-                <Radio size={12} aria-hidden="true" /><span className="cv-elipsis">{rotulo}</span><ChevronDown size={11} aria-hidden="true" />
-            </button>
-            {d.abierto && (
-                <div className="cv-tarjeta-pop cv-tarjeta-pop--der" ref={pop} role="menu" aria-label="Canal">
-                    <span className="t-rotulo">Canal (para el reporte)</span>
-                    {CANALES.map(([v, l]) => (
-                        <button key={v} type="button" className="cv-tarjeta-op" role="menuitemradio" aria-checked={v === canal} onClick={() => elegir(v)}>
-                            {l}{v === canal && <Check size={13} />}
-                        </button>
-                    ))}
-                </div>
-            )}
-        </div>
-    );
-}
 
 // El avance en el embudo: un segmento por fase, lleno hasta la actual con el color de su etapa. Entra creciendo.
 function Avance({ fase }) {
@@ -169,9 +81,14 @@ function Etapa({ fase, onMover }) {
 
 // No lead e In-abrible a un toque, fuera del desplegable (Mario, 26/11): el chat sale de la bandeja y el aviso
 // trae «Deshacer» (vuelve a la etapa en que estaba).
-function Salidas({ fase, onMover }) {
+function Salidas({ fase, onMover, transferir }) {
     if (faseDe(fase).tramo === 'salida') {
-        return <p className="cv-salidas-fuera t-cap">Fuera del embudo · <button type="button" onClick={() => onMover('conexion')}>Volver a Conexión</button></p>;
+        return (
+            <div className="cv-salidas">
+                {transferir}
+                <p className="cv-salidas-fuera t-cap">Fuera del embudo · <button type="button" onClick={() => onMover('conexion')}>Volver a Conexión</button></p>
+            </div>
+        );
     }
     const salir = async (id, rotulo) => {
         if (await onMover(id) === false) return;
@@ -179,10 +96,11 @@ function Salidas({ fase, onMover }) {
     };
     return (
         <div className="cv-salidas">
-            <button type="button" className="cv-salida" onClick={() => salir('nolead', 'No lead')} data-tip="No lead|Descalificado: sale de la bandeja">
+            {transferir}
+            <button type="button" className="cv-accion cv-accion--salida" onClick={() => salir('nolead', 'No lead')} data-tip="No lead|Descalificado: sale de la bandeja">
                 <XCircle size={13} aria-hidden="true" />No lead
             </button>
-            <button type="button" className="cv-salida" onClick={() => salir('inabrible', 'In-abrible')} data-tip="In-abrible|No se le puede escribir: sale de la bandeja">
+            <button type="button" className="cv-accion cv-accion--salida" onClick={() => salir('inabrible', 'In-abrible')} data-tip="In-abrible|No se le puede escribir: sale de la bandeja">
                 <MinusCircle size={13} aria-hidden="true" />In-abrible
             </button>
         </div>
@@ -212,6 +130,7 @@ export default function TarjetaLead({ datos, fase, canal, yo, pausar, onPausar, 
     return (
         <Panel as="section" size="sm" className="cv-tarjeta" aria-label="El lead">
             <div className="cv-bloque">
+                <Origen contacto={contacto} entrada={datos.entrada} canal={canal} campana={asignado?.campana} onCambio={onCambio} />
                 <div className="cv-tarjeta-quien">
                     <span className="cv-tarjeta-avatar">
                         <Avatar name={nombre} />
@@ -237,15 +156,11 @@ export default function TarjetaLead({ datos, fase, canal, yo, pausar, onPausar, 
                 <BotLead contacto={contacto} ejecucion={datos.ejecucion} pausar={pausar} onPausar={onPausar} onCambio={onCambio} />
             </div>
             <div className="cv-bloque">
-                <div className="cv-tarjeta-fila">
-                    <Delegar contacto={contacto} asignado={asignado} yo={yo} onCambio={onCambio} />
-                    <Canal contacto={contacto} canal={canal} campana={asignado?.campana} onCambio={onCambio} />
-                </div>
                 <Etiquetas contactoId={contacto.id} etiquetas={datos.etiquetas || []} onCambio={onCambio} />
             </div>
             <div className="cv-bloque">
                 <Etapa fase={fase} onMover={onMover} />
-                <Salidas fase={fase} onMover={onMover} />
+                <Salidas fase={fase} onMover={onMover} transferir={<Transferir contacto={contacto} asignado={asignado} yo={yo} onCambio={onCambio} />} />
             </div>
         </Panel>
     );

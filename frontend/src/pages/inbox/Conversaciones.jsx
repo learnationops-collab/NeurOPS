@@ -31,6 +31,7 @@ import { recordado, recordar } from './recuerdo';
 import './conversaciones/trabajo.css';
 import './conversaciones/setting.css';
 import './conversaciones/crono.css';
+import './conversaciones/tarjeta.css';
 
 // De a cuántas se cargan (pedido de los setters, 24/11: con 300 se perdían los seguimientos de hace 4 días).
 const LIMITE = 500;

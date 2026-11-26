@@ -173,3 +173,12 @@ def comentarios(mensajes):
     if transporte:
         db.session.commit()
     return salida
+
+
+def entrada(contacto_id):
+    """{clave, campana, anuncio} de su recorrido más nuevo que entró por palabra clave, o None."""
+    fila = (db.session.query(AutEjecucion.clave, AutCampana.nombre, AutEjecucion.meta_ad_id)
+            .outerjoin(AutCampana, AutCampana.id == AutEjecucion.campana_id)
+            .filter(AutEjecucion.contacto_id == contacto_id, AutEjecucion.clave.isnot(None))
+            .order_by(AutEjecucion.id.desc()).first())
+    return {'clave': fila[0], 'campana': fila[1], 'anuncio': fila[2]} if fila else None

@@ -145,4 +145,4 @@ def setters_del_reparto():
 @bp.route('/asignables', methods=['GET'])
 def asignables():
     """A quién se le puede pasar una conversación: los setters y triage (no entra al reparto de las campañas)."""
-    return jsonify({'setters': [{'id': u.id, 'nombre': u.username} for u in reparto.asignables()]})
+    return jsonify({'setters': [{'id': u.id, 'nombre': u.username, 'rol': u.role} for u in reparto.asignables()]})

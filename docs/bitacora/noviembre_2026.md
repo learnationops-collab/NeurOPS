@@ -1143,3 +1143,9 @@
 - La espera corre en minutos y segundos, con un anillo y una aguja; verde hasta 5 min, ámbar hasta 30, rojo después ([Cronometro.jsx](../../frontend/src/pages/inbox/conversaciones/Cronometro.jsx)).
 - Al responder en menos de 5 min aparece «¡Respondiste en …!» con papelitos; pasados 30 min, «Tardaste … guarda» ([ReaccionRespuesta.jsx](../../frontend/src/pages/inbox/conversaciones/ReaccionRespuesta.jsx)).
 - Botón «Activo / Inactivo» en la barra de arriba; Stats separa la mediana activo e inactivo y el tiempo activo ([Actividad.jsx](../../frontend/src/pages/inbox/conversaciones/Actividad.jsx), [actividad.py](../../app/automatizaciones/actividad.py), migración `c4e6a8b0d2f4`).
+
+### 26/11/2026 · Inbox: tarjeta del lead con palabra clave arriba, Transferir y «Tus números» (ADR-W246)
+- Arriba del nombre, el ícono del canal y la palabra clave con que entró; sin palabra clave, «Configurar palabra clave» ([Origen.jsx](../../frontend/src/pages/inbox/conversaciones/Origen.jsx)).
+- «Transferir» reemplaza a la pastilla «Vos»: un setter solo transfiere a otro setter ([Transferir.jsx](../../frontend/src/pages/inbox/conversaciones/Transferir.jsx)).
+- Al pie de la ficha, «Tus números»: respuesta activo e inactivo, agendas hoy y promedio diario ([MisStats.jsx](../../frontend/src/pages/inbox/conversaciones/MisStats.jsx), [api_actividad.py](../../app/automatizaciones/api_actividad.py)).
+- Botones de la tarjeta con aura ([tarjeta.css](../../frontend/src/pages/inbox/conversaciones/tarjeta.css)).
