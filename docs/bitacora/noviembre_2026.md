@@ -1059,3 +1059,6 @@
 - «Plantillas» al lado de «Historial»: todas las de Meta con su estado (aprobada, en revisión, rechazada con el motivo), cómo le llegan, crear una con botones, duplicar y borrar.
 - Cada botón de una plantilla puede contestar solo, con sus propios botones, asignar la conversación y ponerle una etiqueta ([respuestas.py](../../app/whatsapp/respuestas.py)). Sin configurar, queda para el setter como antes.
 - Triage (Dari) entra al Inbox como un setter y se le pueden asignar conversaciones; no entra al reparto de las campañas.
+
+### 25/11/2026 · Broadcast de WhatsApp: un envío fallido no saca al número
+- La prueba interna de referidos (Santi, Mario, Dari, Marlon) falló entera con «131042: Business eligibility payment issue»: la cuenta de WhatsApp Business no tiene método de pago. Esos envíos no llegaron, pero el número quedaba como «ya recibió» y no se le podía volver a mandar. Ahora un envío fallido no cuenta ([envios.py](../../app/whatsapp/envios.py)); las 4 filas de la prueba se borraron.

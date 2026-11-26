@@ -4,7 +4,7 @@ plantilla aprobada y manda a los próximos N. Todo queda en `WaEnvio` (una fila 
   · «Enviar» deja las filas en «pendiente» con un `lote` y el reloj del motor las manda de a POR_VUELTA por
     vuelta (una por minuto). «Frenar» borra las pendientes del lote: no salieron, vuelven con el mismo CSV.
   · TOPE_DIARIO es del número, sumando plantillas (lo enviado hoy en Argentina más lo pendiente).
-  · Un número va una sola vez: si ya tiene una fila, el CSV lo saltea.
+  · Un número va una sola vez: si ya tiene una fila que no falló, el CSV lo saltea.
   · Con varias plantillas, cada número recibe una al azar, en partes iguales: así se comparan entre sí.
 """
 import logging
@@ -43,7 +43,8 @@ def usados_hoy(ahora):
 
 def revisar(filas):
     """Qué pasa con el CSV: {total, para_mandar: [{telefono, nombre}], ya_recibieron, invalidos, repetidos}."""
-    ya = {t for (t,) in db.session.query(WaEnvio.telefono).distinct()}
+    # Un envío que falló (p. ej. Meta sin método de pago) no le llegó: ese número puede volver a recibir.
+    ya = {t for (t,) in db.session.query(WaEnvio.telefono).filter(WaEnvio.estado != WaEnvio.FALLO).distinct()}
     vistos, para, resumen = set(), [], {'ya_recibieron': 0, 'invalidos': 0, 'repetidos': 0}
     for fila in filas:
         telefono = normalizar(fila.get('telefono'))
