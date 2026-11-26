@@ -9,7 +9,7 @@ import {
     Save, ArrowLeft, ArrowRight, CheckCircle2, User, PenTool, Pencil,
     DollarSign, UserPlus,
     CalendarCheck, PhoneCall, MessageCircle, ClipboardList, BarChart3, Briefcase, FileSearch,
-    CalendarPlus, Gift, Hourglass, Ghost, Filter, UserX, Share2, Sparkles, Inbox
+    CalendarPlus, Gift, Hourglass, Ghost, Filter, UserX, Share2, Sparkles
 } from 'lucide-react';
 import Novedades, { abrirNovedades } from './novedades/Novedades';
 import api from '../../services/api';
@@ -1530,8 +1530,6 @@ const CloserWorkflowPage = () => {
                 titulo: `${compartidosSinLeer} ${compartidosSinLeer === 1 ? 'lead compartido nuevo' : 'leads compartidos nuevos'}` }] : [] },
         // El triage tiene sus métricas (el embudo de la llamada de filtro) y, como el closer, sus datos y
         // su cartera: el dashboard comercial acotado a sus agendas (`alcance_de`, app/api/comercial.py).
-        // Triage contesta en el Inbox las conversaciones de referidos de WhatsApp (ADR-W234): se abre desde acá.
-        ...(esTriage ? [{ id: 'inbox', label: 'Inbox', Icono: Inbox }] : []),
         ...(esTriage ? [
             { id: 'abandonos', label: 'Abandonos', Icono: UserX },
             { id: 'metricas', label: 'Métricas', Icono: Filter },
@@ -1585,7 +1583,6 @@ const CloserWorkflowPage = () => {
     useAltoHeader(paginaRef);
     const irASeccion = (id) => {
         if (id === seccionDelDock) return;
-        if (id === 'inbox') { window.location.assign('/inbox'); return; }
         if (PASOS_DEL_MAZO.includes(id)) {
             setActiveView('inbox');
             setSearchParams({ step: id, selected_date: selectedDate });
