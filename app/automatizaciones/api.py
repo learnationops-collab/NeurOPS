@@ -309,6 +309,9 @@ def listar_conversaciones():
             'mensajes': cantidad,
             'ultimo_en': _iso(momento),
             'ultimo_texto': (mensaje.texto or '')[:140] if mensaje else '',
+            # Sin texto (un audio mandado desde la app): el tipo del adjunto, para la vista previa.
+            'ultimo_adjunto': next((a.get('type') for a in (mensaje.contenido or {}).get('adjuntos') or [] if isinstance(a, dict)),
+                                   None) if mensaje and not mensaje.texto and isinstance(mensaje.contenido, dict) else None,
             'ultimo_de': mensaje.origen if mensaje else None,
             # Para la ventana de Instagram (24 h / 7 días) y el próximo seguimiento, a la vista en la fila.
             'ultimo_entrante_en': _iso(contacto.ultimo_entrante_en),

@@ -175,3 +175,15 @@ export function quien(c) {
     if (c.username) return `@${c.username}`;
     return c.nombre || (c.ultimo_entrante_en ? 'Sin usuario' : 'Todavía no respondió');
 }
+
+// Lo que manda Instagram, en palabras (`unsupported_type`: historia, reel o algo que la API no entrega).
+export const ADJUNTOS = {
+    image: '📷 Imagen', video: '🎬 Video', audio: '🎤 Audio', file: '📄 Archivo', share: '🔗 Compartió una publicación',
+    story_mention: '📣 Te mencionó en una historia', ig_reel: '🎬 Compartió un reel',
+    unsupported_type: '⚠️ Algo que Instagram no deja ver acá (historia, reel…): miralo en la app',
+};
+
+// La vista previa de la fila: el texto o, si no tiene (un audio mandado desde la app), qué adjunto es.
+export function vistaPrevia(c) {
+    return c.ultimo_texto || (c.ultimo_adjunto && (ADJUNTOS[c.ultimo_adjunto] || `📎 ${c.ultimo_adjunto}`)) || '…';
+}

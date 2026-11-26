@@ -44,6 +44,7 @@ RUN apt-get update && apt-get install -y \
     libasound2 \
     fonts-liberation \
     fonts-dejavu \
+    ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 # pg_dump para el respaldo (app/api/backup.py). Tiene que ser 17 como la base de Railway (un pg_dump más

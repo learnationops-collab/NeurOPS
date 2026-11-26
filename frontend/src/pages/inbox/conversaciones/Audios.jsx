@@ -44,7 +44,7 @@ function Subir({ onSubido }) {
         <form className="cv-audio-subir" onSubmit={subir}>
             <label className="cv-audio-archivo">
                 <Upload size={14} aria-hidden="true" />{archivo ? archivo.name : 'Elegir audio'}
-                <input type="file" accept="audio/*" onChange={(e) => {
+                <input type="file" accept="audio/*,.opus,.ogg,.oga,.webm,.m4a" onChange={(e) => {
                     const f = e.target.files?.[0] || null;
                     setArchivo(f);
                     if (f && !nombre) setNombre(f.name.replace(/\.[^.]+$/, ''));

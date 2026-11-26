@@ -1050,3 +1050,7 @@
 
 ### 25/11/2026 · Flujo de conversión con su propia apertura (dato, sin código)
 - «Direct Sale (conversión)» mandaba los mismos mensajes que Lead Magnet. Versión 2 con los de Eli: «Vi que comentaste una de mis publicaciones para ayudarte con tu preparación…» y «Genial entonces», con el saludo de cada setter.
+
+### 25/11/2026 · Inbox: los audios en ogg, opus o webm se pueden subir
+- Las notas de voz de WhatsApp (ogg/opus) y lo grabado en el navegador (webm) no se podían mandar: Instagram no los reproduce y el inbox los rechazaba (lo reportó Elias; no había ningún audio subido). Ahora el servidor los pasa a mp3 al subirlos ([audio_formato.py](../../app/automatizaciones/audio_formato.py), ffmpeg en el Dockerfile). Si el navegador no sabe el tipo, manda la extensión.
+- La fila de la bandeja muestra «🎤 Audio» (o el adjunto que sea) cuando el último mensaje no tiene texto, como un audio mandado desde la app; antes quedaba «…».

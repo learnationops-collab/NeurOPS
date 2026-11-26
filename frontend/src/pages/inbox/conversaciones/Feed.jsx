@@ -6,14 +6,9 @@ import { useEffect, useRef } from 'react';
 import { Bot, CalendarCheck, Check, History, MessageCircle, RotateCcw, StickyNote, X, Zap } from 'lucide-react';
 import { Button, IconButton } from '../../../components/standard';
 import { rotuloPaso } from '../estadoFlujo';
+import { ADJUNTOS } from './colas';
 
 const ABIERTA = ['en_curso', 'esperando_respuesta', 'esperando_tiempo'];
-// Lo que manda Instagram, en palabras (`unsupported_type`: historia, reel o algo que la API no entrega).
-const ADJUNTOS = {
-    image: '📷 Imagen', video: '🎬 Video', audio: '🎤 Audio', file: '📄 Archivo', share: '🔗 Compartió una publicación',
-    story_mention: '📣 Te mencionó en una historia', ig_reel: '🎬 Compartió un reel',
-    unsupported_type: '⚠️ Algo que Instagram no deja ver acá (historia, reel…): miralo en la app',
-};
 
 export function momento(iso) {
     const d = new Date(iso);

@@ -4,7 +4,7 @@
 // programado y cuánto falta para que Instagram no deje escribirle (últimas 24 h).
 import { AlarmClock, Bot, Check, Clock, Hourglass, PencilLine, User, X } from 'lucide-react';
 import { Avatar, Chip } from '../../../components/standard';
-import { avisoCierre, cierreMin, colorEspera, esperaMin, esWhatsapp, examenDe, quien, textoEspera } from './colas';
+import { avisoCierre, cierreMin, colorEspera, esperaMin, esWhatsapp, examenDe, quien, textoEspera, vistaPrevia } from './colas';
 import IconoCanal from './IconoCanal';
 import { Etiqueta } from './Etiquetas';
 import { colorDe, corto, faseDe } from './fasesSetting';
@@ -69,7 +69,7 @@ export default function Fila({ c, elegida, ahora, yo, conAsignado, borrador, onE
                         {c.ultimo_de === 'motor' ? <Bot size={12} aria-label="Bot" /> : c.ultimo_de === 'otro' ? <User size={12} aria-label="Equipo" /> : null}
                         {borrador && !elegida
                             ? <span className="cv-borrador"><PencilLine size={11} aria-hidden="true" />Borrador: {borrador}</span>
-                            : <span>{c.ultimo_texto || '…'}</span>}
+                            : <span>{vistaPrevia(c)}</span>}
                         {c.sin_leer > 0 && <i className="cv-sin-leer" aria-label={`${c.sin_leer} sin leer`}>{c.sin_leer}</i>}
                     </span>
                     <span className="cv-item-chips">
