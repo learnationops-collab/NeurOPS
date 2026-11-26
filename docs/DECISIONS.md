@@ -2258,3 +2258,11 @@
 - **Decisión:** el redactor es un cuadro: arriba las fichas de los archivos, el texto («Preguntale a Learnito…») y abajo adjuntar (clip), la pista «@ nombra · / acciones», dictar y un botón redondo de enviar. Se adjunta con el clip, pegando (Ctrl+V) o arrastrando: imagen, PDF, texto o CSV, hasta 3 de 5 MB (`useAdjuntos.js`); viajan en base64 a la Academia (su ADR-248), que los lee con el modelo. Debajo, en una línea, la calificación y el uso. Cada conversación del sidebar tiene «⋯» con Fijar, Renombrar (también con doble clic) y Borrar (pide un segundo toque); borrar la archiva en la Academia (`DELETE /learnito/historial/<id>`). La lista de mensajes baja con su propio scroll: `scrollIntoView` corría también el modal y después no se podía bajar.
 - **Qué se pierde (nombrado):** los archivos no se guardan; al reabrir la conversación queda su nombre, no el archivo. Borrar no libera el uso del mes.
 - **Consecuencias:** sin migraciones en Work. Depende del deploy de la Academia con ADR-248.
+
+## 🏛️ ADR-W253: El Learnito del chat lee la conversación y pregunta qué querés
+
+- **Fecha:** 2026-11-26 · **Subsistema:** Inbox (redactor) · Learnito
+- **Contexto:** el botón Learnito del chat mandaba siempre la misma pregunta («qué info del programa me sirve», ADR-W150, que pedía no redactar el mensaje) con los últimos 20 mensajes. Mario pidió que primero lea toda la conversación y pregunte qué hace falta: algo puntual, una respuesta o un seguimiento.
+- **Decisión:** el botón abre un panel (`LearnitoLead.jsx`) con cuatro opciones (sugerir una respuesta, sugerir un seguimiento, resumir la conversación, qué info sirve) y un campo para preguntar algo de esa conversación. Cada opción va con su `intencion` a `/inbox/conversaciones/<id>/learnito` (`learnito_inbox.INTENCIONES`), que arma la pregunta con lo que se sabe del lead, las notas y hasta 80 mensajes, y abre el modal de Learnito. «Sugerir una respuesta» da dos opciones del próximo mensaje: Mario cambia la regla de ADR-W150 (no redactar); el setter elige, copia o edita.
+- **Qué se pierde (nombrado):** un clic más para la pregunta de antes («Qué info me sirve»). La conversación larga cuesta más tokens (Rápido, centavos de centavo).
+- **Consecuencias:** sin migraciones. Sin cambios en la Academia.

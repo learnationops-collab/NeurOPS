@@ -6,9 +6,10 @@
 // debajo, la caja a todo el ancho. «Pausar el bot» vive en la tarjeta del lead (`pausar`). Al pasar a una etapa
 // con varios mensajes, el guión para elegir cuál pegar (`selector`). `pegar`: {texto, n} que entra en la caja.
 import { useEffect, useRef, useState } from 'react';
-import { AlarmClock, CalendarCheck, ChevronDown, ChevronUp, MessageSquare, Mic, ScrollText, Send, Sparkles, StickyNote, AlertTriangle, X, Zap } from 'lucide-react';
+import { AlarmClock, CalendarCheck, ChevronDown, ChevronUp, MessageSquare, Mic, ScrollText, Send, StickyNote, AlertTriangle, X, Zap } from 'lucide-react';
 import { Button, Chip, IconButton, Input, Segmented, Select, TextArea, toast } from '../../../components/standard';
 import { useLearnito } from '../../../sesion/LearnitoContext';
+import LearnitoLead from './LearnitoLead';
 import { inboxApi } from '../api';
 import Audios from './Audios';
 import { borradorDe, guardarBorrador } from './borradores';
@@ -182,10 +183,10 @@ export default function Composer({ contacto, pausar = true, fase, ejecucion, seg
     const puedeEnviar = ventana.estado !== 'cerrada';
     // Abre Learnito (el mismo cerebro de siempre) con el contexto del lead. Lo escrito en la caja va como lo que se
     // quiere saber. Con otro lead, o con la conversación agotada, arranca otra conversación de Learnito.
-    const preguntarALearnito = async () => {
+    const preguntarALearnito = async (intencion, pedido) => {
         setPreguntando(true);
         try {
-            const p = await inboxApi.preguntaLearnito(contacto.id, texto.startsWith('/') ? '' : texto);
+            const p = await inboxApi.preguntaLearnito(contacto.id, pedido, intencion);
             const nueva = conversacionDeLearnito.contacto !== contacto.id || Boolean(learnito.agotada);
             conversacionDeLearnito.contacto = contacto.id;
             onLearnito();
@@ -226,10 +227,7 @@ export default function Composer({ contacto, pausar = true, fase, ejecucion, seg
                         <IconButton size="sm" label="Seguimiento si no responde" data-tip="Seguimiento|Sale solo si no responde en el tiempo que elijas" icon={<AlarmClock size={15} />}
                             disabled={ventana.estado === 'cerrada'} onClick={() => setProgramar(true)} />
                         {learnito && (
-                            <button type="button" className="cv-learnito-btn" disabled={preguntando || learnito.enviando} onClick={preguntarALearnito}
-                                data-tip="Preguntar a Learnito|Qué info del programa te sirve para este lead. Si escribiste algo, es lo que querés saber">
-                                <Sparkles size={14} aria-hidden="true" />Learnito
-                            </button>
+                            <LearnitoLead contacto={contacto} ocupado={preguntando || learnito.enviando} borrador={texto} onElegir={preguntarALearnito} />
                         )}
                     </span>
                 )}
