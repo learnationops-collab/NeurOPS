@@ -1,6 +1,6 @@
 """Inbox: los ratos en que el setter marcó «Activo» (setter_actividad)
 
-Revision ID: c4e6a8b0d2f4
+Revision ID: dc9f7bf7cfe1
 Revises: b3d5f7a9c1e2
 Create Date: 2026-11-26
 
@@ -9,7 +9,7 @@ Idempotente.
 import sqlalchemy as sa
 from alembic import op
 
-revision = 'c4e6a8b0d2f4'
+revision = 'dc9f7bf7cfe1'
 down_revision = 'b3d5f7a9c1e2'
 branch_labels = None
 depends_on = None

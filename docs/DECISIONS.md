@@ -632,7 +632,7 @@
 
 - **Fecha:** 2026-11-03 · **Subsistema:** Hiring (Talent › Forms) e institute-site · **Estado:** implementado.
 - **Contexto:** la página de la vacante tenía una cuenta regresiva fija en el código: 96 h desde la primera visita de cada persona. Mario quiere elegir desde el panel una fecha real (por ejemplo, el jueves) o la ventana por visita, por formulario.
-- **Decisión:** columnas `hiring_forms.cierre_modo` ('fecha' | 'visita' | NULL), `cierre_en` (UTC) y `cierre_horas` (migración `c4e6a8b0d2f4`). El editor las configura en la cabecera (`CierreFormulario`: Fecha fija / Por visita / Sin cuenta) con el autoguardado; `PUT /hiring/forms/<id>` las valida (horas de 1 a 720). `GET /api/public/assistant-form` devuelve `cierre` y la página de la vacante lo aplica a su reloj: fecha igual para todos, horas desde la primera visita (por link) o sin reloj. Si la API no contesta, sigue la ventana de 96 h por visita.
+- **Decisión:** columnas `hiring_forms.cierre_modo` ('fecha' | 'visita' | NULL), `cierre_en` (UTC) y `cierre_horas` (migración `dc9f7bf7cfe1`). El editor las configura en la cabecera (`CierreFormulario`: Fecha fija / Por visita / Sin cuenta) con el autoguardado; `PUT /hiring/forms/<id>` las valida (horas de 1 a 720). `GET /api/public/assistant-form` devuelve `cierre` y la página de la vacante lo aplica a su reloj: fecha igual para todos, horas desde la primera visita (por link) o sin reloj. Si la API no contesta, sigue la ventana de 96 h por visita.
 - **Qué se pierde:** `hiring_config.cierre` (fecha global sin uso en la página) queda sin efecto. Pasada la fecha, la página muestra el reloj en cero, pero el formulario sigue abierto mientras esté activo.
 - **Consecuencias:** se corrige el reloj, que redondeaba los días hacia arriba (2,5 días mostraba «03 días 12 horas»).
 
@@ -2188,7 +2188,7 @@
   2. **Al responder** a un lead que esperaba: menos de 5 min, «¡Respondiste en 3:12!» con papelitos; más de 30 min, «Tardaste 42:10… guarda». Entre medio, nada.
   3. **Activo / Inactivo**: un botón en la barra de arriba. Prenderlo abre un rato en `setter_actividad`, apagarlo lo cierra; un rato abierto más de 12 h se cierra solo en ese tope. Stats muestra la mediana propia respondiendo activo e inactivo y el tiempo activo de las últimas 24 h.
 - **Qué se pierde:** el chip «49 min» de la espera (lo reemplaza el contador). La demora sigue contándose al setter asignado, no a quien escribió.
-- **Consecuencias:** migración `c4e6a8b0d2f4` (tabla `setter_actividad`). Nueva ruta `GET/PUT /api/inbox/actividad`. Lo de antes del 26/11 cuenta como inactivo.
+- **Consecuencias:** migración `dc9f7bf7cfe1` (tabla `setter_actividad`). Nueva ruta `GET/PUT /api/inbox/actividad`. Lo de antes del 26/11 cuenta como inactivo.
 
 ## ADR-W246: la tarjeta del lead con origen arriba, «Transferir» y «Tus números»
 

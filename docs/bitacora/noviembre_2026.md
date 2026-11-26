@@ -152,7 +152,7 @@
   - «Próxima a revisar» muestra las secciones con más puntos en vez de los criterios viejos.
 - **3 de Noviembre de 2026 (Hiring: el cierre de la búsqueda se configura por formulario)** *([CierreFormulario.jsx](../../frontend/src/pages/admin/hiring/components/forms/CierreFormulario.jsx), [hiring_forms.py](../../app/api/hiring_forms.py), [ADR-W078](../DECISIONS.md))*:
   - En la cabecera del formulario: «Cierre» con Fecha fija (la misma para todos), Por visita (N horas desde la primera visita) o Sin cuenta. Se guarda solo.
-  - Migración `c4e6a8b0d2f4`: `hiring_forms.cierre_modo`, `cierre_en`, `cierre_horas`. La API pública manda `cierre` y la página de la vacante lo usa para su reloj (va con institute-site).
+  - Migración `dc9f7bf7cfe1`: `hiring_forms.cierre_modo`, `cierre_en`, `cierre_horas`. La API pública manda `cierre` y la página de la vacante lo usa para su reloj (va con institute-site).
 - **3 de Noviembre de 2026 (Dirección comercial: el motivo de No show, Canceló y Reagendó se lee al pasar el mouse)** *([motivos_agenda.py](../../app/services/motivos_agenda.py), [MotivoDeEstado.jsx](../../frontend/src/pages/comercial/components/MotivoDeEstado.jsx), [Tip.jsx](../../frontend/src/pages/comercial/components/Tip.jsx))*:
   - En Revisar › Agendas, el chip de esos estados muestra en un globito el motivo, quién lo escribió, cuándo y (si se reagendó) la cita nueva; hay además una columna «Motivo» con el texto, que también sale en la exportación.
   - Lo marcado antes del 02/11 muestra «Sin motivo registrado»; las reagendas automáticas muestran la nota del sistema.
@@ -820,7 +820,7 @@
 - «Simular conversación» prueba el embudo entero con el borrador: escribir como el lead, contestar como setter, adelantar el reloj. No manda ni guarda nada (ADR-W204).
 
 ### 24/11/2026 · Webhook de WhatsApp y arreglo del deploy de Embudos
-- El deploy de Embudos falló en producción: su migración repetía el ID `c4e6a8b0d2f4`, que ya usaba una de hiring, y Alembic quedó con dos heads. Pasa a `e8f0a2c4b6d1`. Producción siguió con el deploy anterior; no se aplicó nada a medias.
+- El deploy de Embudos falló en producción: su migración repetía el ID `dc9f7bf7cfe1`, que ya usaba una de hiring, y Alembic quedó con dos heads. Pasa a `e8f0a2c4b6d1`. Producción siguió con el deploy anterior; no se aplicó nada a medias.
 - Nuevo `/api/webhooks/whatsapp` para la app propia «Learnation Contacts» (Neurocogniciones LLC), primer paso del broadcast de WhatsApp al inbox de setters (proyecto #192, Estrategia 23/11). Verifica la suscripción con `WA_WEBHOOK_VERIFY_TOKEN`, comprueba la firma con `WA_APP_SECRET` y guarda cada evento crudo en `whatsapp_webhook_eventos`; el procesamiento al inbox va aparte.
 
 ### 24/11/2026 · Broadcast de WhatsApp: backend
@@ -1142,7 +1142,7 @@
 ### 26/11/2026 · Inbox: contador de espera en vivo, festejo o aviso al responder y botón Activo (ADR-W245)
 - La espera corre en minutos y segundos, con un anillo y una aguja; verde hasta 5 min, ámbar hasta 30, rojo después ([Cronometro.jsx](../../frontend/src/pages/inbox/conversaciones/Cronometro.jsx)).
 - Al responder en menos de 5 min aparece «¡Respondiste en …!» con papelitos; pasados 30 min, «Tardaste … guarda» ([ReaccionRespuesta.jsx](../../frontend/src/pages/inbox/conversaciones/ReaccionRespuesta.jsx)).
-- Botón «Activo / Inactivo» en la barra de arriba; Stats separa la mediana activo e inactivo y el tiempo activo ([Actividad.jsx](../../frontend/src/pages/inbox/conversaciones/Actividad.jsx), [actividad.py](../../app/automatizaciones/actividad.py), migración `c4e6a8b0d2f4`).
+- Botón «Activo / Inactivo» en la barra de arriba; Stats separa la mediana activo e inactivo y el tiempo activo ([Actividad.jsx](../../frontend/src/pages/inbox/conversaciones/Actividad.jsx), [actividad.py](../../app/automatizaciones/actividad.py), migración `dc9f7bf7cfe1`).
 
 ### 26/11/2026 · Inbox: tarjeta del lead con palabra clave arriba, Transferir y «Tus números» (ADR-W246)
 - Arriba del nombre, el ícono del canal y la palabra clave con que entró; sin palabra clave, «Configurar palabra clave» ([Origen.jsx](../../frontend/src/pages/inbox/conversaciones/Origen.jsx)).
