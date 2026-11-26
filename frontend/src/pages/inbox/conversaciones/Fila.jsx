@@ -7,7 +7,8 @@ import { Avatar, Chip } from '../../../components/standard';
 import { avisoCierre, cierreMin, esperaMin, examenDe, quien, vistaPrevia } from './colas';
 import IconoCanal from './IconoCanal';
 import { colorDe, corto, faseDe } from './fasesSetting';
-import { EtapaMini, Espera, Ventana } from './Indicadores';
+import { EtapaMini, Ventana } from './Indicadores';
+import Cronometro from './Cronometro';
 
 export function hora(iso) {
     if (!iso) return '';
@@ -78,7 +79,7 @@ export default function Fila({ c, elegida, ahora, yo, conAsignado, borrador, onE
                         {examen && <span className="cv-item-examen">{examen}</span>}
                         <Califica valor={c.califica} mini />
                         <span className="cv-item-der">
-                            <Espera min={espera} desde={hora(c.ultimo_en)} />
+                            {espera != null && <Cronometro desde={c.ultimo_en} />}
                             <span className="mut cv-item-hora">{hora(c.ultimo_en)}</span>
                         </span>
                     </span>

@@ -23,12 +23,14 @@ import MacroFiltro from './conversaciones/MacroFiltro';
 import MisTareas from './conversaciones/MisTareas';
 import Resumen from './conversaciones/Resumen';
 import Stats from './conversaciones/Stats';
+import Actividad from './conversaciones/Actividad';
 import { VACIO } from './conversaciones/filtros';
 import { useBorradores } from './conversaciones/borradores';
 import useAvisos from './conversaciones/useAvisos';
 import { recordado, recordar } from './recuerdo';
 import './conversaciones/trabajo.css';
 import './conversaciones/setting.css';
+import './conversaciones/crono.css';
 
 // De a cuántas se cargan (pedido de los setters, 24/11: con 300 se perdían los seguimientos de hace 4 días).
 const LIMITE = 500;
@@ -189,6 +191,7 @@ export default function Conversaciones() {
                     <div className="barra-der">
                         {vista === 'embudo' && buscador}
                         {vista === 'embudo' && macro}
+                        <Actividad />
                         <MisTareas onAbrir={abrir} marca={datos} />
                         {avisos.soportado && avisos.permiso === 'default' && (
                             <button type="button" className="cv-barra-btn" data-tip="Activar avisos|Te avisa cuando te escribe un lead, aunque estés en otra pestaña" onClick={avisos.pedirPermiso}>

@@ -2178,3 +2178,14 @@
   3. `useAltoLibre` lee dónde empieza el dock de su CSS (`bottom` + alto sin transformar), vuelve a medir cada 1,5 s y, si no lo encuentra, igual reserva 112 px abajo.
 - **Qué se pierde:** el `title` nativo en esos botones (el lector de pantalla sigue con su `aria-label`).
 - **Consecuencias:** sin migración. Los tonos son los de Herramientas (`--herr-*`).
+
+## ADR-W245: contador de espera en vivo, reacción al responder y «Activo / Inactivo» del setter
+
+- **Fecha:** 26/11/2026 · **Subsistema:** Inbox (`conversaciones/Cronometro.jsx`, `reloj.js`, `ReaccionRespuesta.jsx`, `Actividad.jsx`, `Stats.jsx`; `app/automatizaciones/actividad.py`, `api_actividad.py`, `bandeja.py`) · **Estado:** implementada.
+- **Contexto:** Mario quiere que la espera se vea correr (minutos y segundos) para dar urgencia, que el setter reciba un festejo al responder rápido y un aviso al tardar, y poder separar la demora de cuando el setter está atendiendo de cuando no.
+- **Decisión:**
+  1. **Contador** en la fila de la bandeja y en la tarjeta del lead: m:ss (h:mm:ss desde la hora), un anillo que se llena hacia el próximo corte y una aguja que gira cada minuto. Verde hasta 5 min, ámbar hasta 30, rojo y latiendo después. Un solo reloj por segundo para toda la pantalla.
+  2. **Al responder** a un lead que esperaba: menos de 5 min, «¡Respondiste en 3:12!» con papelitos; más de 30 min, «Tardaste 42:10… guarda». Entre medio, nada.
+  3. **Activo / Inactivo**: un botón en la barra de arriba. Prenderlo abre un rato en `setter_actividad`, apagarlo lo cierra; un rato abierto más de 12 h se cierra solo en ese tope. Stats muestra la mediana propia respondiendo activo e inactivo y el tiempo activo de las últimas 24 h.
+- **Qué se pierde:** el chip «49 min» de la espera (lo reemplaza el contador). La demora sigue contándose al setter asignado, no a quien escribió.
+- **Consecuencias:** migración `c4e6a8b0d2f4` (tabla `setter_actividad`). Nueva ruta `GET/PUT /api/inbox/actividad`. Lo de antes del 26/11 cuenta como inactivo.

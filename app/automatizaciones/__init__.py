@@ -28,6 +28,7 @@ def registrar(app):
     from app.automatizaciones import api_guia  # noqa: F401
     from app.automatizaciones import api_embudos  # noqa: F401
     from app.automatizaciones import api_medios  # noqa: F401
+    from app.automatizaciones import api_actividad  # noqa: F401
     from app.automatizaciones.api_escribir import bp_publico
 
     app.register_blueprint(bp, url_prefix='/api/inbox')

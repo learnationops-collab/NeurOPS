@@ -1138,3 +1138,8 @@
 - Al pasar el mouse por un botón del dock aparece arriba su nombre y qué es, igual que Stats del Inbox ([DockTip.jsx](../../frontend/src/pages/comercial/components/DockTip.jsx)).
 - Inbox, Avisos y Playbook con pendientes: sin el borde rosa; un aura suave de su color y el globito del mismo tono ([comercial.css](../../frontend/src/pages/comercial/comercial.css), [DockFijadas.jsx](../../frontend/src/pages/comercial/components/DockFijadas.jsx)).
 - La bandeja de Conversaciones termina arriba del dock: lee su lugar del CSS en vez de verlo mientras entra animado ([useAltoLibre.js](../../frontend/src/pages/inbox/conversaciones/useAltoLibre.js)).
+
+### 26/11/2026 · Inbox: contador de espera en vivo, festejo o aviso al responder y botón Activo (ADR-W245)
+- La espera corre en minutos y segundos, con un anillo y una aguja; verde hasta 5 min, ámbar hasta 30, rojo después ([Cronometro.jsx](../../frontend/src/pages/inbox/conversaciones/Cronometro.jsx)).
+- Al responder en menos de 5 min aparece «¡Respondiste en …!» con papelitos; pasados 30 min, «Tardaste … guarda» ([ReaccionRespuesta.jsx](../../frontend/src/pages/inbox/conversaciones/ReaccionRespuesta.jsx)).
+- Botón «Activo / Inactivo» en la barra de arriba; Stats separa la mediana activo e inactivo y el tiempo activo ([Actividad.jsx](../../frontend/src/pages/inbox/conversaciones/Actividad.jsx), [actividad.py](../../app/automatizaciones/actividad.py), migración `c4e6a8b0d2f4`).

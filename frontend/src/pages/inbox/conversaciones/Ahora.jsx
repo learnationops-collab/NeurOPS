@@ -7,7 +7,8 @@ import { Switch, toast } from '../../../components/standard';
 import { inboxApi } from '../api';
 import MenuBot, { EJECUCION } from './AccionesFlujo';
 import { avisoCierre, cierreMin, esperaMin, esWhatsapp, resuelta } from './colas';
-import { Espera, Ventana } from './Indicadores';
+import { Ventana } from './Indicadores';
+import Cronometro from './Cronometro';
 
 // El número del lead de WhatsApp: tocarlo lo copia.
 export function Telefono({ contacto }) {
@@ -55,7 +56,7 @@ export function Ahora({ contacto, mensajes, onCambio }) {
     const espera = delLead && !marcada ? esperaMin(delLead, ahora) : null;
     return (
         <div className="cv-ahora">
-            <Espera min={espera} />
+            {espera != null && <Cronometro desde={delLead.ultimo_en} grande />}
             <Ventana contacto={contacto} queda={cierreMin(contacto, ahora)} aviso={avisoCierre(contacto)} />
             {delLead && <Resolver contacto={contacto} marcada={marcada} onCambio={onCambio} />}
         </div>

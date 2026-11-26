@@ -364,3 +364,14 @@ class GuiaPropuesta(db.Model):
 
     autor = db.relationship('User', foreign_keys=[autor_id])
     revisor = db.relationship('User', foreign_keys=[revisor_id])
+
+
+class SetterActividad(db.Model):
+    """Un rato en que el setter marcó «Activo» en el Inbox (ADR-W245): de `desde` a `hasta` (abierto mientras
+    sigue activo). Sirve para separar la demora de respuesta estando activo de la demora estando inactivo."""
+    __tablename__ = 'setter_actividad'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    desde = db.Column(db.DateTime, nullable=False, default=ahora, index=True)
+    hasta = db.Column(db.DateTime, nullable=True)

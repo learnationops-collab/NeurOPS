@@ -29,6 +29,9 @@ export const inboxApi = {
     ponerEtiqueta: (id, etiqueta) => api.post(`/inbox/conversaciones/${id}/etiquetas`, etiqueta).then((r) => r.data.etiquetas),
     sacarEtiqueta: (id, tagId) => api.delete(`/inbox/conversaciones/${id}/etiquetas/${tagId}`).then((r) => r.data.etiquetas),
     // Lo que el setter trabaja sobre la conversación (app/automatizaciones/api_trabajo.py)
+    // «Activo / Inactivo» del setter (ADR-W245).
+    actividad: () => api.get('/inbox/actividad').then(datos),
+    cambiarActividad: (activo) => api.put('/inbox/actividad', { activo }).then(datos),
     leido: (id) => api.post(`/inbox/conversaciones/${id}/leido`, null, { conservarCache: true }),
     resuelta: (id, si) => (si ? api.post(`/inbox/conversaciones/${id}/resuelta`)
         : api.delete(`/inbox/conversaciones/${id}/resuelta`)).then(datos),

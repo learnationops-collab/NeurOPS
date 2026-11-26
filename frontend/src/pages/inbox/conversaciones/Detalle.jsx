@@ -14,7 +14,8 @@ import Feed from './Feed';
 import FichaLead from './FichaLead';
 import TarjetaLead from './TarjetaLead';
 import useEnvio from './useEnvio';
-import { REFRESCO } from './colas';
+import ReaccionRespuesta, { reaccionDe } from './ReaccionRespuesta';
+import { REFRESCO, resuelta } from './colas';
 import { completarGuia, pasosDe, siguienteId, useGuia, useLinkAgenda, visibles } from '../guia/useGuia';
 
 function Chat({ datos, yo, pausar, onCambio, pegar, selector, onSelector }) {
@@ -26,13 +27,28 @@ function Chat({ datos, yo, pausar, onCambio, pegar, selector, onSelector }) {
     const salio = (p) => p.estado === 'error' && datos.mensajes.some((m) => m.direccion === 'saliente'
         && m.texto === p.rotulo?.trim() && new Date(m.en) >= new Date(p.en) - 60000);
     const pendientes = envio.pendientes.filter((p) => !salio(p));
+    // Al responder a un lead que esperaba: felicitación si fue en menos de 5 min, «guarda» si pasó de 30 (`ReaccionRespuesta`).
+    const [reaccion, setReaccion] = useState(null);
+    const cerrarReaccion = useCallback(() => setReaccion(null), []);
+    const espera = () => {
+        const u = datos.mensajes[datos.mensajes.length - 1];
+        if (u?.direccion !== 'entrante' || resuelta({ ultimo_de: 'lead', ultimo_en: u.en, resuelta_en: contacto.resuelta_en })) return null;
+        return (Date.now() - new Date(u.en)) / 1000;
+    };
+    const conReaccion = (fn) => async (...args) => {
+        const seg = espera();
+        const ok = await fn(...args);
+        if (ok) setReaccion(reaccionDe(seg));
+        return ok;
+    };
     return (
         <Panel as="section" size="sm" className="cv-detalle" aria-label="Conversación">
             <Feed mensajes={datos.mensajes} notas={datos.notas || []} tareas={datos.tareas || []}
                 pendientes={pendientes} onReintentar={envio.reintentar} onDescartar={envio.descartar}
                 onSeleccion={() => setSeleccion(seleccionDelLead())} />
             <Composer contacto={contacto} pausar={pausar} fase={avance?.fase} ejecucion={datos.ejecucion} seguimientos={datos.seguimientos} yo={yo} onCambio={onCambio}
-                onEnviar={envio.enviar} onEnviarVarios={envio.enviarVarios} onLearnito={abrirLearnito} pegar={pegar} selector={selector} onSelector={onSelector} />
+                onEnviar={conReaccion(envio.enviar)} onEnviarVarios={conReaccion(envio.enviarVarios)} onLearnito={abrirLearnito} pegar={pegar} selector={selector} onSelector={onSelector} />
+            <ReaccionRespuesta reaccion={reaccion} onCerrar={cerrarReaccion} />
             {seleccion && <GloboCita contactoId={contacto.id} seleccion={seleccion} onCerrar={cerrarSeleccion} onHecho={() => { setSeleccion(null); onCambio(); }} />}
         </Panel>
     );

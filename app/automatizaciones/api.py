@@ -37,7 +37,8 @@ ACCIONES_DEL_SETTER = {'inbox.mover_en_flujo', 'inbox.bot_de_conversacion', 'inb
                        'inbox.crear_nota', 'inbox.crear_tarea', 'inbox.cambiar_tarea',
                        'inbox.crear_rapida', 'inbox.borrar_rapida', 'inbox.subir_audio', 'inbox.borrar_audio',
                        'inbox.mover_fase', 'inbox.marcar_canal', 'inbox.anotar_cita', 'inbox.etiquetar_varias',
-                       'inbox.publicar_guia', 'inbox.proponer_guia', 'inbox.simular_embudo'}
+                       'inbox.publicar_guia', 'inbox.proponer_guia', 'inbox.simular_embudo',
+                       'inbox.cambiar_actividad'}
 MAX_BYTES_GRAFO = 300_000
 MAX_NODOS = 300
 MENSAJES_POR_CONVERSACION = 300
