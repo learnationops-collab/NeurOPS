@@ -126,7 +126,7 @@ def vigente_tras_movidas(appt):
     """La agenda que reemplazó a `appt` si Work la pasó a otra hora porque se movió en Google (seguir_movida),
     siguiendo la cadena; None si no la hay o si la última ya se reportó. Es la que hay que reportar: quien
     tenía la vieja abierta en pantalla no vio la movida y su reporte dejaba la nueva colgada como duplicada
-    (Fernando Sánchez, 26/11/2026, ADR-W234). Una reagenda hecha en Work no cuenta: reportar la vieja ahí
+    (Fernando Sánchez, 26/11/2026, ADR-W240). Una reagenda hecha en Work no cuenta: reportar la vieja ahí
     puede ser una corrección."""
     from app.models import Appointment
 

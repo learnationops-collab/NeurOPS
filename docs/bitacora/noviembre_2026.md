@@ -1109,3 +1109,6 @@
 
 ### 26/11/2026 · Broadcast de WhatsApp: los alumnos activos se saltean
 - Al revisar un CSV, el broadcast cuenta a los que tienen una suscripción vigente (por teléfono) y por defecto los saltea: un mensaje de captación no le llega a quien ya compró ([envios.py](../../app/whatsapp/envios.py) `alumnos_activos`). Se pueden incluir con «Incluirlos» (para referidos). Pedido de Mario: a un alumno le llegó el de reactivación del workshop.
+
+### 26/11/2026 · Agendas: sin duplicados al reportar una agenda movida en Google (ADR-W240)
+- Fernando Sánchez le quedaba duplicado a Dari: movió la llamada en Google y reportó la agenda vieja que tenía abierta, y la nueva quedó pendiente. Ahora el reporte va a la agenda que la reemplazó ([reagenda.py](../../app/agendas_v2/reagenda.py), [escritura.py](../../app/api/ficha/escritura.py)).
