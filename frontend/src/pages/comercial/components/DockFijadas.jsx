@@ -1,4 +1,4 @@
-import { useFijadas } from '../../../sesion/fijadas';
+import { tienePendientes, useFijadas } from '../../../sesion/fijadas';
 import BotonHerramientas from '../../../ventanas/BotonHerramientas';
 
 /**
@@ -12,7 +12,10 @@ import BotonHerramientas from '../../../ventanas/BotonHerramientas';
 const DockFijadas = ({ usuario, opciones, onElegir, sep = 'despues', tope = null, onMas = null }) => {
     const { fijadas } = useFijadas(usuario);
     const porId = new Map(opciones.map((op) => [op.id, op]));
-    const todas = fijadas.map((id) => porId.get(id)).filter(Boolean);
+    // Lo que tiene pendientes va primero aunque no esté fijado, hasta resolverse (ADR-W242).
+    const pendientes = opciones.filter(tienePendientes);
+    const todas = [...pendientes, ...fijadas.filter((id) => !pendientes.some((p) => p.id === id))
+        .map((id) => porId.get(id)).filter(Boolean)];
     if (!todas.length) return null;
     const visibles = tope ? todas.slice(0, tope) : todas;
     const resto = todas.length - visibles.length;
@@ -23,8 +26,9 @@ const DockFijadas = ({ usuario, opciones, onElegir, sep = 'despues', tope = null
                 {visibles.map((op) => (op.panel ? (
                     <BotonHerramientas key={op.id} usuario={usuario} Icono={op.Icono} rotulo={op.label} panelInicial={op} />
                 ) : (
-                    <button key={op.id} type="button" className="dock-fijada" onClick={() => onElegir(op.id)}
-                        aria-label={op.titulo ? `${op.label}, ${op.titulo}` : op.label} title={op.label}>
+                    <button key={op.id} type="button" className={`dock-fijada${tienePendientes(op) ? ' dock-fijada--pendiente' : ''}`} onClick={() => onElegir(op.id)}
+                        aria-label={op.titulo ? `${op.label}, ${op.titulo}` : op.label}
+                        title={tienePendientes(op) ? `${op.label} · ${op.titulo || op.cuenta} · fijada hasta resolverse` : op.label}>
                         <op.Icono size={19} aria-hidden="true" />
                         {op.cuenta != null && <span className="dock-sesion-aviso" aria-hidden="true">{op.cuenta}</span>}
                     </button>

@@ -656,6 +656,9 @@
 .dc-shell .dock-fijada:hover{background:var(--mat-3);color:var(--text-on-surface)}
 .dc-shell .dock-fijada:active{transform:scale(.95)}
 .dc-shell .dock-fijada:focus-visible{outline:2px solid var(--brand-secondary);outline-offset:-2px}
+/* Con pendientes (ADR-W242): fijada sola hasta resolverse, con un borde que la marca. */
+.dc-shell .dock-fijada--pendiente{color:var(--text-on-surface);background:var(--mat-3);box-shadow:inset 0 0 0 1.5px var(--brand-secondary)}
+.dc-shell .menu-fijar--candado{opacity:1;color:var(--error, #c8433a);cursor:default}
 /* Las ventanas abiertas (ventanas/IslaVentanas.jsx): la que está a la vista lleva una rayita abajo. */
 .dc-shell .dock-ventana--abierta{color:var(--text-on-surface)}
 .dc-shell .dock-ventana--abierta::after{content:'';position:absolute;left:30%;right:30%;bottom:4px;height:3px;border-radius:2px;background:var(--brand-secondary)}

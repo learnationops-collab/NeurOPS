@@ -1121,3 +1121,7 @@
 
 ### 26/11/2026 · Triage: los referidos los contesta Dari
 - Las respuestas a los botones de referidos (plantillas de Mario y de Marlon) se asignan a Dari, y las 9 conversaciones de referidos que habían quedado con Paula y Elias pasaron a ella (dato, sin código). Entra al Inbox desde el Portal (tarjeta Inbox del grupo Triage, desde el 25/11).
+
+### 26/11/2026 · Dock: lo que tiene pendientes queda fijado hasta resolverse (ADR-W242)
+- Inbox, Avisos, Conflictos, Mis reportes y Playbook con algo pendiente aparecen solos en la isla izquierda del dock, con su cuenta, y en Herramientas su pin es un candado ([fijadas.js](../../frontend/src/sesion/fijadas.js), [DockFijadas.jsx](../../frontend/src/pages/comercial/components/DockFijadas.jsx)). En 0 vuelven a lo que eligió cada uno.
+- El Inbox es una herramienta más para setters y triage, con las conversaciones asignadas que esperan respuesta ([api_pendientes.py](../../app/automatizaciones/api_pendientes.py), [useOpcionesDeInbox.js](../../frontend/src/pages/inbox/useOpcionesDeInbox.js)).

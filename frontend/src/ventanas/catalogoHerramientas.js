@@ -15,6 +15,7 @@ const CATALOGO = {
     'tool:turnos': { grupo: 'Agendas', desc: 'Los turnos que quedan de triage y de closers, con sus horarios.', color: 'azul' },
     links: { grupo: 'Agendas', desc: 'Tus links de agendamiento: tocá uno para copiarlo.', color: 'azul' },
     learnito: { grupo: 'Asistente', desc: 'Preguntale lo que necesites · Ctrl+L', color: 'violeta' },
+    inbox: { grupo: 'Pendientes', desc: 'Tus conversaciones de Instagram y WhatsApp.', color: 'rosa', va: true },
     avisos: { grupo: 'Pendientes', desc: 'Lo que el sistema te avisó.', color: 'ambar' },
     conflictos: { grupo: 'Pendientes', desc: 'Datos sueltos para revisar.', color: 'rojo' },
     'mis-reportes': { grupo: 'Pendientes', desc: 'Lo que reportaste o pediste, y sus respuestas.', color: 'verde' },
