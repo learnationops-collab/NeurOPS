@@ -34,6 +34,19 @@ def normalizar(telefono):
     return digitos if 8 <= len(digitos) <= 15 else None
 
 
+def variantes(telefono):
+    """El número y su otra forma: un celular de Argentina se escribe 54… o 549… y uno de México 52… o 521…;
+    WhatsApp responde desde la forma con 9 (o 1) aunque se le haya mandado a la otra."""
+    t = telefono or ''
+    salida = {t}
+    for pais, extra, largo in (('54', '9', 12), ('52', '1', 12)):
+        if t.startswith(pais + extra) and len(t) == largo + 1:
+            salida.add(pais + t[len(pais) + 1:])
+        elif t.startswith(pais) and len(t) == largo:
+            salida.add(pais + extra + t[len(pais):])
+    return salida
+
+
 def configurado():
     return bool(os.environ.get('WA_ACCESS_TOKEN') and os.environ.get('WA_PHONE_NUMBER_ID'))
 

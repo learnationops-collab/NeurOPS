@@ -1062,3 +1062,6 @@
 
 ### 25/11/2026 · Broadcast de WhatsApp: un envío fallido no saca al número
 - La prueba interna de referidos (Santi, Mario, Dari, Marlon) falló entera con «131042: Business eligibility payment issue»: la cuenta de WhatsApp Business no tiene método de pago. Esos envíos no llegaron, pero el número quedaba como «ya recibió» y no se le podía volver a mandar. Ahora un envío fallido no cuenta ([envios.py](../../app/whatsapp/envios.py)); las 4 filas de la prueba se borraron.
+
+### 25/11/2026 · WhatsApp: los celulares de Argentina y México se reconocen con y sin el 9 (o el 1)
+- En la prueba de referidos, Santi tocó un botón y quedó para el setter: el broadcast salió a 54 387… y WhatsApp respondió desde 549 387…, así que Work no lo reconocía como del broadcast ni sabía de qué plantilla era. Ahora las dos formas son el mismo número, al marcar la respuesta y al saltear a quien ya recibió ([cliente.py](../../app/whatsapp/cliente.py) `variantes`).

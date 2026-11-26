@@ -16,7 +16,7 @@ from zoneinfo import ZoneInfo
 from app import db
 from app.automatizaciones.transporte import ErrorDeEnvio
 from app.models.whatsapp import WaEnvio
-from app.whatsapp.cliente import ClienteWhatsapp, configurado, normalizar
+from app.whatsapp.cliente import ClienteWhatsapp, configurado, normalizar, variantes
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +44,9 @@ def usados_hoy(ahora):
 def revisar(filas):
     """Qué pasa con el CSV: {total, para_mandar: [{telefono, nombre}], ya_recibieron, invalidos, repetidos}."""
     # Un envío que falló (p. ej. Meta sin método de pago) no le llegó: ese número puede volver a recibir.
-    ya = {t for (t,) in db.session.query(WaEnvio.telefono).filter(WaEnvio.estado != WaEnvio.FALLO).distinct()}
+    # 54… y 549… (52… y 521…) son el mismo celular: cuentan como uno.
+    ya = {v for (t,) in db.session.query(WaEnvio.telefono).filter(WaEnvio.estado != WaEnvio.FALLO).distinct()
+          for v in variantes(t)}
     vistos, para, resumen = set(), [], {'ya_recibieron': 0, 'invalidos': 0, 'repetidos': 0}
     for fila in filas:
         telefono = normalizar(fila.get('telefono'))
@@ -55,7 +57,7 @@ def revisar(filas):
         elif telefono in ya:
             resumen['ya_recibieron'] += 1
         else:
-            vistos.add(telefono)
+            vistos.update(variantes(telefono))
             para.append({'telefono': telefono, 'nombre': (fila.get('nombre') or '').strip()[:150] or None})
     return {'total': len(filas), 'para_mandar': para, **resumen}
 

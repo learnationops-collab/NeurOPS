@@ -15,7 +15,7 @@ from app import db
 from app.automatizaciones.modelos import IgContacto, IgMensaje
 from app.automatizaciones.reparto import setters_activos
 from app.models.whatsapp import WaEnvio, WhatsappWebhookEvento
-from app.whatsapp.cliente import PREFIJO
+from app.whatsapp.cliente import PREFIJO, variantes
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +73,7 @@ def _contacto(telefono, nombre, ahora):
 
 
 def _marcar_envio(contacto, telefono, texto, ahora):
-    envio = (WaEnvio.query.filter(WaEnvio.telefono == telefono, WaEnvio.enviado_en.isnot(None))
+    envio = (WaEnvio.query.filter(WaEnvio.telefono.in_(variantes(telefono)), WaEnvio.enviado_en.isnot(None))
              .order_by(WaEnvio.enviado_en.desc()).first())
     if envio is None:
         return
