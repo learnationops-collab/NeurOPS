@@ -1,14 +1,14 @@
-// Una fila de la bandeja: quién es, en qué va (los tres puntos: automática, manual, agendamiento), si
+// Una fila de la bandeja: quién es, en qué etapa va (la barrita de `Indicadores`, ADR-W238), si
 // califica, cuánto hace que espera, la tarea que vence y a quién está asignada. Se decide a quién atender
 // sin abrir el chat. Lo no leído va en negrita con su cuenta. También: el borrador sin mandar, el seguimiento
 // programado y cuánto falta para que Instagram no deje escribirle (últimas 24 h).
-import { AlarmClock, Bot, Check, Clock, Hourglass, PencilLine, User, X } from 'lucide-react';
+import { AlarmClock, Bot, Check, Clock, PencilLine, User, X } from 'lucide-react';
 import { Avatar, Chip } from '../../../components/standard';
-import { avisoCierre, cierreMin, colorEspera, esperaMin, esWhatsapp, examenDe, quien, textoEspera, vistaPrevia } from './colas';
+import { avisoCierre, cierreMin, esperaMin, examenDe, quien, vistaPrevia } from './colas';
 import IconoCanal from './IconoCanal';
 import { Etiqueta } from './Etiquetas';
 import { colorDe, corto, faseDe } from './fasesSetting';
-import { Puntos } from './Progreso';
+import { EtapaMini, Espera, Ventana } from './Indicadores';
 
 export function hora(iso) {
     if (!iso) return '';
@@ -73,23 +73,11 @@ export default function Fila({ c, elegida, ahora, yo, conAsignado, borrador, onE
                         {c.sin_leer > 0 && <i className="cv-sin-leer" aria-label={`${c.sin_leer} sin leer`}>{c.sin_leer}</i>}
                     </span>
                     <span className="cv-item-chips">
-                        <Puntos etapas={c.etapas} />
-                        <ChipFase fase={c.fase} />
+                        <EtapaMini fase={c.fase} etapas={c.etapas} />
                         <Califica valor={c.califica} />
-                        {espera != null && (
-                            <Chip subtle color={colorEspera(espera)} icon={<Clock />} data-tip={`Espera respuesta|Desde ${hora(c.ultimo_en)}`}>
-                                espera {textoEspera(espera)}
-                            </Chip>
-                        )}
+                        <Espera min={espera} desde={hora(c.ultimo_en)} />
                         <Vence tarea={c.tarea} ahora={ahora} />
-                        {cierre != null && cierre <= avisoCierre(c) && (
-                            <Chip subtle color={cierre <= 3 * 60 ? 'var(--error)' : 'var(--warning)'} icon={<Hourglass />}
-                                data-tip={esWhatsapp(c)
-                                    ? 'Se cierra la ventana|Pasado esto WhatsApp solo deja escribirle con una plantilla'
-                                    : 'Se cierra la ventana|Pasado esto Instagram no deja escribirle hasta que vuelva a escribir'}>
-                                se cierra en {textoEspera(cierre)}
-                            </Chip>
-                        )}
+                        {cierre != null && cierre <= avisoCierre(c) && <Ventana contacto={c} queda={cierre} aviso={avisoCierre(c)} />}
                         {c.toca && (
                             <Chip subtle color="var(--brand-secondary)" icon={<AlarmClock />}
                                 data-tip="Toca seguimiento|Lo pide la cadencia de su fase en Embudos: el lead no contestó">

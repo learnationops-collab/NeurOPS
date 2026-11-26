@@ -7,7 +7,7 @@ import { inboxApi } from '../api';
 import { quien, vistaPrevia } from './colas';
 import { Califica, Vence, hora } from './Fila';
 import { FASES, TRAMOS, colorDe, corto, faseDe } from './fasesSetting';
-import { Puntos } from './Progreso';
+import { EtapaMini } from './Indicadores';
 
 export default function Embudo({ lista, ahora, onAbrir, onMovida }) {
     const [arrastra, setArrastra] = useState(null);
@@ -50,7 +50,7 @@ export default function Embudo({ lista, ahora, onAbrir, onMovida }) {
                                         </span>
                                         <span className="cv-kcard-texto mut">{vistaPrevia(c)}</span>
                                         <span className="cv-kcard-pie">
-                                            <Puntos etapas={c.etapas} />
+                                            <EtapaMini etapas={c.etapas} />
                                             <Califica valor={c.califica} />
                                             <Vence tarea={c.tarea} ahora={ahora} />
                                             {c.asignado ? <Avatar name={c.asignado.username} size="xs" data-tip={c.asignado.username} /> : <span className="cv-asignado--sin t-cap">Sin asignar</span>}

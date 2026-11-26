@@ -350,6 +350,7 @@ def ver_conversacion(contacto_id):
     comentarios = bandeja.comentarios(mensajes)
     from app.whatsapp import medios  # WhatsApp: a qué mensaje responde y el sticker/foto/audio que mandó
     citas = medios.citas(mensajes, contacto.id)
+    from app.automatizaciones import cliente_del_contacto
     from app.automatizaciones import api_trabajo  # cuelga de `bp`: importarlo arriba sería circular
     notas, tareas = api_trabajo.historial(contacto.id)
     from app.automatizaciones import api_fases, seguimientos
@@ -369,6 +370,7 @@ def ver_conversacion(contacto_id):
             'bot_pausado_hasta': _iso(contacto.bot_pausado_hasta), 'resuelta_en': _iso(contacto.resuelta_en),
         },
         'asignado': asignado,
+        'cliente': cliente_del_contacto.de(contacto),
         'etiquetas': tags_service.de(TARGET_IG_CONTACT, [contacto.id]).get(str(contacto.id), []),
         'ejecucion': recorrido[0] if recorrido else None,
         'recorrido': recorrido,

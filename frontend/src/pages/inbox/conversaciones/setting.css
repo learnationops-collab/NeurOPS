@@ -65,17 +65,35 @@
 .thalamus.inbox .cv-chat-tel:hover{background:var(--bg-item);color:var(--text-main)}
 .thalamus.inbox .cv-chat-tiempos{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 
-/* Tarjeta del lead */
+/* Tarjeta del lead (ADR-W238): quién es, su agenda, una línea de pastillas, etiquetas y la etapa con su avance */
 .thalamus.inbox .cv-tarjeta{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;padding:var(--s3);min-width:0}
-.thalamus.inbox .cv-tarjeta-quien{display:flex;align-items:center;gap:10px}
-.thalamus.inbox .cv-tarjeta-nombre{flex:1;min-width:0;display:grid;gap:3px}
-.thalamus.inbox .cv-tarjeta-fila{display:flex;align-items:center;justify-content:space-between;gap:6px}
-.thalamus.inbox .cv-tarjeta-fila > .cv-tarjeta-pop-caja{min-width:0}
-.thalamus.inbox .cv-tarjeta-fila > .cv-tarjeta-pop-caja:last-child .ui-chip{max-width:100%}
-.thalamus.inbox .cv-elipsis{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.thalamus.inbox .cv-tarjeta > *{animation:cv-entra .35s var(--spring, cubic-bezier(.22,.7,.2,1)) both}
+.thalamus.inbox .cv-tarjeta > :nth-child(2){animation-delay:.04s}
+.thalamus.inbox .cv-tarjeta > :nth-child(3){animation-delay:.08s}
+.thalamus.inbox .cv-tarjeta > :nth-child(4){animation-delay:.12s}
+.thalamus.inbox .cv-tarjeta > :nth-child(5){animation-delay:.16s}
+@keyframes cv-entra{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.thalamus.inbox .cv-tarjeta-quien{display:flex;align-items:center;gap:10px;min-width:0}
+.thalamus.inbox .cv-tarjeta-avatar{position:relative;flex:none}
+.thalamus.inbox .cv-tarjeta-avatar .cv-canal{position:absolute;right:-3px;bottom:-3px;width:18px;height:18px;border-radius:50%;display:grid;place-items:center;background:var(--bg-flotante);border:1px solid var(--border-main)}
+.thalamus.inbox .cv-tarjeta-nombre{flex:1;min-width:0;display:grid;gap:2px}
+.thalamus.inbox .cv-tarjeta-nombre h3{margin:0;font-size:15px}
+.thalamus.inbox .cv-tarjeta-sub{display:flex;align-items:center;gap:6px;min-width:0;font-size:11.5px;color:var(--text-muted);font-variant-numeric:tabular-nums}
+.thalamus.inbox .cv-tarjeta-examen{flex:none;padding:1px 6px;border-radius:6px;font-size:10px;font-weight:700;letter-spacing:.04em;background:var(--bg-item)}
+.thalamus.inbox .cv-tarjeta-agenda{display:flex;align-items:center;gap:6px;min-width:0;padding:5px 8px;border-radius:10px;font-size:11.5px;color:var(--text-muted);background:var(--bg-item)}
+.thalamus.inbox .cv-tarjeta-agenda svg{flex:none;color:var(--success)}
+.thalamus.inbox .cv-tarjeta-fila{display:flex;align-items:center;gap:5px;min-width:0}
+.thalamus.inbox .cv-tarjeta-fila > *{min-width:0}
+.thalamus.inbox .cv-pastilla{display:inline-flex;align-items:center;gap:5px;height:26px;max-width:100%;padding:0 9px;border-radius:999px;border:1px solid var(--border-main);background:var(--bg-item);color:var(--text-muted);font:inherit;font-size:11.5px;font-weight:600;cursor:pointer;white-space:nowrap;transition:border-color .15s,color .15s}
+.thalamus.inbox .cv-pastilla:hover,.thalamus.inbox .cv-pastilla[aria-expanded="true"]{border-color:var(--border-strong, var(--text-muted));color:var(--text-main)}
+.thalamus.inbox .cv-pastilla .ui-avatar.ui-avatar{width:16px;height:16px;font-size:8px}
+.thalamus.inbox .cv-pastilla.cv-asignado--mio{color:var(--brand-secondary)}
+.thalamus.inbox .cv-pastilla.cv-asignado--sin{color:var(--warning)}
+.thalamus.inbox .cv-pastilla--canal svg:first-child{color:var(--info)}
+.thalamus.inbox .cv-pastilla-in{display:inline-flex;align-items:center;gap:5px;min-width:0}
+.thalamus.inbox .cv-pastilla--bot{max-width:110px}
+.thalamus.inbox .cv-tarjeta .cv-etiquetas{margin-top:0}
 .thalamus.inbox .cv-tarjeta-pop-caja{position:relative}
-.thalamus.inbox .cv-tarjeta-delegar{border:0;background:none;padding:2px 6px;border-radius:8px;cursor:pointer}
-.thalamus.inbox .cv-tarjeta-delegar:hover,.thalamus.inbox .cv-tarjeta-delegar[aria-expanded="true"]{background:var(--bg-item)}
 .thalamus.inbox .cv-tarjeta-pop{position:absolute;top:calc(100% + 6px);left:0;z-index:40;min-width:210px;display:grid;gap:2px;padding:6px;border-radius:14px;
   background:var(--bg-flotante);border:1px solid var(--border-main);box-shadow:var(--shadow-main)}
 .thalamus.inbox .cv-tarjeta-pop--der{left:auto;right:0}
@@ -83,13 +101,20 @@
 .thalamus.inbox .cv-tarjeta-op{display:flex;align-items:center;gap:8px;width:100%;padding:6px 8px;border:0;border-radius:9px;background:none;cursor:pointer;text-align:left;font-size:12.5px}
 .thalamus.inbox .cv-tarjeta-op:hover,.thalamus.inbox .cv-tarjeta-op[aria-checked="true"]{background:var(--bg-item)}
 .thalamus.inbox .cv-tarjeta-op svg:last-child{margin-left:auto}
-.thalamus.inbox .cv-etapa-btn{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border-radius:14px;cursor:pointer;text-align:left;
+.thalamus.inbox .cv-etapa{display:flex;align-items:stretch;gap:6px;min-width:0}
+.thalamus.inbox .cv-etapa-caja{flex:1;min-width:0;display:grid;gap:5px}
+.thalamus.inbox .cv-etapa-btn{display:flex;align-items:center;gap:8px;width:100%;padding:6px 8px;border-radius:12px;cursor:pointer;text-align:left;color:inherit;font:inherit;
   background:var(--bg-item);border:1px solid color-mix(in srgb,var(--c) 40%,transparent)}
 .thalamus.inbox .cv-etapa-btn:hover,.thalamus.inbox .cv-etapa-btn[aria-expanded="true"]{border-color:var(--c)}
 .thalamus.inbox .cv-etapa-n{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:800;flex:none;
   background:color-mix(in srgb,var(--c) 18%,transparent);color:var(--c);border:2px solid var(--c)}
-.thalamus.inbox .cv-etapa-t{flex:1;min-width:0;display:grid}
-.thalamus.inbox .cv-etapa-t small{font-size:11px;color:var(--text-muted)}
+.thalamus.inbox .cv-etapa-t{flex:1;min-width:0;display:grid;line-height:1.2}
+.thalamus.inbox .cv-etapa-t b{font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.thalamus.inbox .cv-etapa-t small{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--c)}
+.thalamus.inbox .cv-avance{display:flex;gap:3px;padding:0 2px}
+.thalamus.inbox .cv-avance i{flex:1;height:4px;border-radius:99px;background:var(--bg-item);overflow:hidden;position:relative}
+.thalamus.inbox .cv-avance i.cv-avance--on::after{content:"";position:absolute;inset:0;border-radius:inherit;background:var(--c);transform-origin:left;animation:cv-avance .45s calc(var(--i) * 60ms) cubic-bezier(.22,.7,.2,1) both}
+@keyframes cv-avance{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 .thalamus.inbox .cv-etapa-pop{right:0;max-height:380px;overflow:auto}
 .thalamus.inbox .cv-etapa-grupo{display:grid;gap:1px}
 .thalamus.inbox .cv-etapa-grupo + .cv-etapa-grupo{border-top:1px solid var(--border-subtle);padding-top:4px;margin-top:2px}
@@ -99,8 +124,10 @@
 .thalamus.inbox .cv-etapa-op--hecha .cv-etapa-n{background:var(--success);border-color:var(--success);color:var(--on-brand)}
 .thalamus.inbox .cv-etapa-op--actual{color:var(--text-main);font-weight:700;background:color-mix(in srgb,var(--c) 14%,transparent)}
 .thalamus.inbox .cv-etapa-op .t-cap{margin-left:auto}
-.thalamus.inbox .cv-adelantar.ui-btn{width:100%;justify-content:center}
-.thalamus.inbox .cv-tarjeta-bot{display:flex;align-items:center;gap:4px;border:0;background:none;padding:0;cursor:pointer}
+.thalamus.inbox .cv-adelantar.ui-btn{flex:none;align-self:flex-start;height:38px;max-width:118px;padding:0 10px;letter-spacing:.02em;text-transform:none;font-size:12px}
+.thalamus.inbox .cv-adelantar.ui-btn svg{transition:transform .2s}
+.thalamus.inbox .cv-adelantar.ui-btn:hover svg{transform:translateX(2px)}
+@media (prefers-reduced-motion:reduce){.thalamus.inbox .cv-tarjeta > *,.thalamus.inbox .cv-avance i::after{animation:none}}
 
 /* Guión arriba de la caja */
 .thalamus.inbox .cv-guion{display:grid;gap:6px;padding:8px;border-radius:12px;border:1px solid color-mix(in srgb,#7D63E6 35%,transparent);background:color-mix(in srgb,#7D63E6 7%,transparent)}
@@ -119,10 +146,29 @@
   background:var(--bg-flotante);border:1px solid var(--border-main);box-shadow:var(--shadow-main)}
 .thalamus.inbox .cv-globo blockquote{margin:0;padding:4px 8px;border-left:3px solid var(--warning);font-size:12px;color:var(--text-muted)}
 
-/* Ficha: plegables y notas para la venta */
-.thalamus.inbox .cv-plegable{display:flex;align-items:center;gap:6px;width:100%;border:0;background:none;padding:0;cursor:pointer;text-align:left}
-.thalamus.inbox .cv-plegable:disabled{cursor:default}
-.thalamus.inbox .cv-nota-venta-ult{margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Ficha (ADR-W238): filas con ícono, título y cuenta; lo abierto entra deslizando */
+.thalamus.inbox .cv-ficha.cv-ficha{gap:2px}
+.thalamus.inbox .cv-ficha-sec{display:grid;gap:4px;animation:cv-entra .35s cubic-bezier(.22,.7,.2,1) both}
+.thalamus.inbox .cv-ficha-sec:nth-child(2){animation-delay:.05s}
+.thalamus.inbox .cv-ficha-sec:nth-child(3){animation-delay:.1s}
+.thalamus.inbox .cv-ficha-sec:nth-child(4){animation-delay:.15s}
+.thalamus.inbox .cv-ficha-sec + .cv-ficha-sec{border-top:1px solid var(--border-subtle);padding-top:2px}
+.thalamus.inbox .cv-ficha-cab{display:flex;align-items:center;gap:8px;width:100%;min-height:34px;padding:4px 6px;border:0;border-radius:10px;background:none;color:inherit;font:inherit;text-align:left}
+.thalamus.inbox button.cv-ficha-cab{cursor:pointer}
+.thalamus.inbox button.cv-ficha-cab:hover{background:var(--bg-item)}
+.thalamus.inbox .cv-ficha-ico{width:24px;height:24px;flex:none;display:grid;place-items:center;border-radius:8px;color:var(--c);background:color-mix(in srgb,var(--c) 14%,transparent)}
+.thalamus.inbox .cv-ficha-tit{flex:1;min-width:0;font-size:12.5px;font-weight:600}
+.thalamus.inbox .cv-ficha-n{min-width:20px;height:20px;padding:0 6px;border-radius:99px;display:grid;place-items:center;font-size:11px;font-weight:700;background:var(--bg-item);animation:cv-pop .3s cubic-bezier(.3,1.6,.5,1) both}
+.thalamus.inbox .cv-ficha-n--0{opacity:.45}
+@keyframes cv-pop{from{transform:scale(.6);opacity:0}to{transform:none;opacity:1}}
+.thalamus.inbox .cv-ficha-flecha{flex:none;opacity:.6;transition:transform .2s}
+.thalamus.inbox .cv-ficha-cab[aria-expanded="true"] .cv-ficha-flecha{transform:rotate(180deg)}
+.thalamus.inbox .cv-ficha-barra{width:46px;height:4px;flex:none;border-radius:99px;background:var(--bg-item);overflow:hidden}
+.thalamus.inbox .cv-ficha-barra i{display:block;height:100%;width:calc(var(--p) * 100%);border-radius:inherit;background:var(--info);transition:width .5s cubic-bezier(.22,.7,.2,1);animation:cv-llena .6s .2s cubic-bezier(.22,.7,.2,1) both}
+@keyframes cv-llena{from{width:0}}
+.thalamus.inbox .cv-ficha-cuerpo{padding:0 6px 6px;display:grid;gap:6px;animation:cv-entra .25s ease-out both}
+.thalamus.inbox .cv-nota-venta-ult{margin:0;padding:5px 8px;border:0;border-left:2px solid var(--warning);border-radius:6px;background:var(--bg-item);color:var(--text-muted);font:inherit;font-size:11.5px;text-align:left;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (prefers-reduced-motion:reduce){.thalamus.inbox :is(.cv-ficha-sec,.cv-ficha-n,.cv-ficha-cuerpo,.cv-ficha-barra i){animation:none}}
 .thalamus.inbox .cv-notas-venta{width:min(520px,100%);display:grid;gap:var(--s3)}
 .thalamus.inbox .cv-notas-venta-lista{list-style:none;margin:0;padding:0;display:grid;gap:8px;max-height:60vh;overflow:auto}
 .thalamus.inbox .cv-nota-venta{display:grid;gap:4px;justify-items:start;padding:8px 10px;border-radius:12px;background:var(--bg-item);border-left:3px solid var(--warning);font-size:12.5px}
@@ -148,3 +194,21 @@
 .thalamus.inbox .cv-burbuja--marcada{animation:cv-marcada 1.4s ease-out}
 @keyframes cv-marcada{0%,30%{box-shadow:0 0 0 3px var(--brand-secondary)}100%{box-shadow:0 0 0 3px transparent}}
 @media (prefers-reduced-motion:reduce){.thalamus.inbox .cv-burbuja--marcada{animation:none;outline:2px solid var(--brand-secondary)}}
+
+/* Indicadores compactos (ADR-W238): etapa en barrita, espera con reloj, anillo de la ventana */
+.thalamus.inbox .cv-etapa-mini{display:inline-flex;align-items:center;gap:6px;min-width:0}
+.thalamus.inbox .cv-etapa-mini-in{display:inline-flex;align-items:center;gap:6px;min-width:0;font-size:11px;font-weight:600;color:var(--c)}
+.thalamus.inbox .cv-etapa-mini-barra{display:inline-flex;gap:2px}
+.thalamus.inbox .cv-etapa-mini-barra i{width:5px;height:8px;border-radius:2px;background:var(--bg-item);position:relative;overflow:hidden}
+.thalamus.inbox .cv-etapa-mini-barra i.on::after{content:"";position:absolute;inset:0;background:var(--c);transform-origin:bottom;animation:cv-sube .35s calc(var(--i) * 45ms) cubic-bezier(.22,.7,.2,1) both}
+@keyframes cv-sube{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+.thalamus.inbox .cv-etapa-mini-salida{width:16px;height:16px;border-radius:50%;display:grid;place-items:center;font-size:10px;font-weight:800;background:color-mix(in srgb,var(--c) 16%,transparent)}
+.thalamus.inbox .cv-etapa-mini-bot{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;color:var(--c);background:color-mix(in srgb,var(--c) 14%,transparent)}
+.thalamus.inbox .cv-ind{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 9px 0 7px;border-radius:999px;font-size:11.5px;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--c);background:color-mix(in srgb,var(--c) 12%,transparent)}
+.thalamus.inbox .cv-ventana svg{flex:none}
+.thalamus.inbox .cv-ventana-fondo{fill:none;stroke:color-mix(in srgb,var(--c) 22%,transparent);stroke-width:2.5}
+.thalamus.inbox .cv-ventana-resto{fill:none;stroke:var(--c);stroke-width:2.5;stroke-linecap:round;transition:stroke-dashoffset .6s cubic-bezier(.22,.7,.2,1);animation:cv-anillo .8s cubic-bezier(.22,.7,.2,1) both}
+@keyframes cv-anillo{from{stroke-dashoffset:var(--vuelta)}}
+.thalamus.inbox .cv-ventana--urgente svg{animation:cv-late 1.6s ease-in-out infinite}
+@keyframes cv-late{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+@media (prefers-reduced-motion:reduce){.thalamus.inbox :is(.cv-etapa-mini-barra i::after,.cv-ventana-resto,.cv-ventana--urgente svg){animation:none}}

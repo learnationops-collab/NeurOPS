@@ -1086,3 +1086,8 @@
 ### 26/11/2026 · Inbox: en WhatsApp se ve a qué mensaje responde el lead, y sus stickers, fotos y audios (ADR-W237)
 - Cuando el lead responde (o reacciona) a un mensaje en particular, arriba de su burbuja aparece el mensaje citado; tocarlo lleva hasta él ([medios.py](../../app/whatsapp/medios.py) `citas`, [Whatsapp.jsx](../../frontend/src/pages/inbox/conversaciones/Whatsapp.jsx)).
 - Los stickers, fotos, audios, videos y documentos se ven en el chat: se bajan de Meta cuando se abre la conversación ([api_medios.py](../../app/automatizaciones/api_medios.py)). Probado en producción con el chat de Jesus Montes: 4 citas encontradas y el sticker bajado.
+
+### 26/11/2026 · Inbox: panel del lead y línea de arriba del chat rediseñados (ADR-W238)
+- La tarjeta del lead muestra el nombre con que agendó en Work (no «👻»), su número y su última agenda; asignado, canal y bot en pastillas; la etapa con su avance y «Adelantar» al lado ([TarjetaLead.jsx](../../frontend/src/pages/inbox/conversaciones/TarjetaLead.jsx), [cliente_del_contacto.py](../../app/automatizaciones/cliente_del_contacto.py)).
+- La ficha (tareas, notas, variables, recorrido) son filas con ícono y cuenta ([FichaLead.jsx](../../frontend/src/pages/inbox/conversaciones/FichaLead.jsx)).
+- Arriba del chat y en la lista: barrita de etapa, reloj de espera y anillo de la ventana en vez de los tres puntos y los textos largos ([Indicadores.jsx](../../frontend/src/pages/inbox/conversaciones/Indicadores.jsx)).

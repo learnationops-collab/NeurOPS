@@ -1,11 +1,11 @@
 // La conversación abierta (ADR-W184): el chat al centro y, a la derecha, la tarjeta del lead y su ficha. Arriba del
-// chat, una sola línea: quién es, los tres puntos, la etapa del setting, cuánto espera y cuánto queda para poder
-// responderle. En el chat, los mensajes con las notas, tareas y eventos intercalados; seleccionar parte de un mensaje
+// chat, una sola línea: quién es, su número, cuánto espera y el anillo de lo que queda para poder responderle
+// (ADR-W238; la etapa está en la tarjeta). En el chat, los mensajes con las notas, tareas y eventos intercalados; seleccionar parte de un mensaje
 // del lead lo anota para la venta. Abajo, la caja; al pasar a una etapa con varios mensajes, se elige cuál pegar.
 // Abrirla la marca como leída.
 import { useCallback, useEffect, useState } from 'react';
-import { CheckCheck, Clock, Hourglass, MessageSquare, Undo2 } from 'lucide-react';
-import { Button, Chip, EmptyState, Panel, toast } from '../../../components/standard';
+import { CheckCheck, MessageSquare, Undo2 } from 'lucide-react';
+import { Button, EmptyState, Panel, toast } from '../../../components/standard';
 import { abrirLearnito } from '../../../sesion/learnito';
 import { inboxApi } from '../api';
 import { recordado, recordar } from '../recuerdo';
@@ -15,9 +15,8 @@ import Feed from './Feed';
 import FichaLead from './FichaLead';
 import TarjetaLead from './TarjetaLead';
 import useEnvio from './useEnvio';
-import { ChipFase } from './Fila';
-import { Puntos } from './Progreso';
-import { REFRESCO, avisoCierre, cierreMin, colorEspera, esperaMin, esWhatsapp, quien, resuelta, textoEspera } from './colas';
+import { Espera, Ventana } from './Indicadores';
+import { REFRESCO, avisoCierre, cierreMin, esperaMin, esWhatsapp, quien, resuelta } from './colas';
 import IconoCanal from './IconoCanal';
 import { completarGuia, pasosDe, siguienteId, useGuia, useLinkAgenda, visibles } from '../guia/useGuia';
 
@@ -57,28 +56,20 @@ function Telefono({ contacto }) {
     return <button type="button" className="cv-chat-tel" onClick={copiar} data-tip="Copiar número">{numero}</button>;
 }
 
-function Linea({ contacto, avance, mensajes, onCambio }) {
+function Linea({ contacto, mensajes, onCambio }) {
     const ahora = new Date();
     const ultimo = mensajes[mensajes.length - 1];
     const delLead = ultimo?.direccion === 'entrante' ? { ultimo_de: 'lead', ultimo_en: ultimo.en } : null;
     const marcada = Boolean(delLead && resuelta({ ...delLead, resuelta_en: contacto.resuelta_en }));
     const espera = delLead && !marcada ? esperaMin(delLead, ahora) : null;
-    const queda = cierreMin(contacto, ahora);
     return (
         <div className="cv-chat-linea-sup">
             <IconoCanal c={contacto} size={14} />
             <b>{quien(contacto)}</b>
             <Telefono contacto={contacto} />
-            <Puntos etapas={avance?.etapas} />
-            <ChipFase fase={avance?.fase} />
             <span className="cv-chat-tiempos">
-                {espera != null && <Chip subtle color={colorEspera(espera)} icon={<Clock />} data-tip="Desde su último mensaje">espera {textoEspera(espera)}</Chip>}
-                {queda != null
-                    ? <Chip subtle color={queda <= avisoCierre(contacto) ? 'var(--error)' : 'var(--success)'} icon={<Hourglass />}
-                        data-tip={esWhatsapp(contacto)
-                            ? 'Para responder|WhatsApp deja escribirle hasta 24 h después de su último mensaje'
-                            : 'Para responder|Instagram deja escribirle hasta 7 días después de su último mensaje'}>quedan {textoEspera(queda)} para responder</Chip>
-                    : <Chip subtle color="var(--error)" icon={<Hourglass />}>ventana cerrada</Chip>}
+                <Espera min={espera} />
+                <Ventana contacto={contacto} queda={cierreMin(contacto, ahora)} aviso={avisoCierre(contacto)} />
                 {delLead && <Resolver contacto={contacto} marcada={marcada} onCambio={onCambio} />}
             </span>
         </div>
@@ -96,7 +87,7 @@ function Chat({ datos, yo, onCambio, pegar, selector, onSelector }) {
     const pendientes = envio.pendientes.filter((p) => !salio(p));
     return (
         <Panel as="section" size="sm" className="cv-detalle" aria-label="Conversación">
-            <Linea contacto={contacto} avance={avance} mensajes={datos.mensajes} onCambio={onCambio} />
+            <Linea contacto={contacto} mensajes={datos.mensajes} onCambio={onCambio} />
             <Feed mensajes={datos.mensajes} notas={datos.notas || []} tareas={datos.tareas || []}
                 pendientes={pendientes} onReintentar={envio.reintentar} onDescartar={envio.descartar}
                 onSeleccion={() => setSeleccion(seleccionDelLead())} />
