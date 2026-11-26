@@ -147,7 +147,7 @@ const SeguimientoRow = ({ item, tipo, earnings, onClick, orden = 0, escalonar = 
         }
     } else {
         footer = item.fecha_seguimiento
-            ? `Seguimiento ${item.seguimiento_intento} de 4`
+            ? `Seguimiento ${item.seguimiento_intento} de 3`
             : 'Asignar fecha';
     }
 

@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Mockup · Seguimientos de triage: antes y después</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #dcdcf0; --win: #f1f1f4; --panel: #e9e9ee; --line: #d6d6dc; --in: #ffffff;
+    --ink: #1c2033; --mut: #5f6478; --mut2: #8a8ea0;
+    --ok: #1f9d6b; --info: #3b7dd8; --warn: #c98a14; --err: #c8433a; --vio: #7D63E6;
+    --dark: #151827; --dark2: #1f2336; --dline: #2c3149;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; font-family: Inter, system-ui, sans-serif; color: var(--ink);
+         background: radial-gradient(1200px 600px at 20% 0%, #cfd0f5, transparent), var(--bg); padding: 28px 16px 60px; }
+  .nota { max-width: 1280px; margin: 0 auto 22px; font-size: 13.5px; color: var(--mut); line-height: 1.55; }
+  .nota b { color: var(--ink); }
+  .bloque { max-width: 1280px; margin: 0 auto 40px; }
+  .bloque h2 { font-size: 17px; margin: 0 0 4px 4px; }
+  .bloque .sub { font-size: 13px; color: var(--mut); margin: 0 0 12px 4px; }
+  .par { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+  @media (max-width: 1050px) { .par { grid-template-columns: 1fr; } }
+  .rot { font: 700 11px Inter; letter-spacing: .1em; text-transform: uppercase; margin: 0 0 8px 4px; display: flex; gap: 8px; align-items: center; }
+  .rot.antes { color: var(--err); }
+  .rot.despues { color: var(--ok); }
+  .problemas, .mejoras { margin: 10px 4px 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: 12.5px; line-height: 1.45; color: var(--mut); }
+  .problemas li::before { content: '✕'; color: var(--err); font-weight: 700; margin-right: 7px; }
+  .mejoras li::before { content: '✓'; color: var(--ok); font-weight: 700; margin-right: 7px; }
+  .problemas b, .mejoras b { color: var(--ink); }
+
+  .win { background: var(--win); border-radius: 18px; box-shadow: 0 20px 60px rgba(30, 30, 80, .2); overflow: hidden; }
+  .cab { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+  .cab b { font-size: 15px; }
+  .sp { flex: 1; }
+  .seg { display: inline-flex; background: var(--panel); border-radius: 11px; padding: 3px; gap: 2px; }
+  .seg span { padding: 5px 10px; border-radius: 8px; font: 500 12.5px Inter; color: var(--mut); display: inline-flex; gap: 6px; align-items: center; }
+  .seg span.on { background: var(--in); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.08); font-weight: 600; }
+  .seg i { font-style: normal; font-size: 11px; background: #dfe0e8; border-radius: 99px; padding: 1px 7px; color: var(--mut); }
+  .seg span.on i { background: var(--ink); color: #fff; }
+  .btn { border: 0; border-radius: 9px; padding: 6px 11px; font: 600 12px Inter; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .btn-p { background: var(--ink); color: #fff; }
+  .btn-s { background: var(--in); color: var(--ink); border: 1px solid var(--line); }
+  .btn-g { background: transparent; color: var(--mut); }
+  .btn-err { background: #fbe9e7; color: var(--err); }
+
+  /* ANTES: el panel oscuro actual de Seguir */
+  .viejo { background: var(--dark); color: #e6e8f2; padding: 14px; display: grid; gap: 12px; }
+  .viejo .caja { background: var(--dark2); border: 1px solid var(--dline); border-radius: 14px; padding: 12px 14px; }
+  .viejo .meta { display: flex; justify-content: space-between; align-items: flex-end; }
+  .viejo .meta .n { font: 900 32px Inter; color: #fff; }
+  .viejo .meta .n span { font-size: 16px; color: #6b7190; }
+  .viejo small { color: #8d93b0; font-size: 11.5px; }
+  .viejo h5 { margin: 0 0 8px; font-size: 13px; color: #fff; display: flex; justify-content: space-between; }
+  .viejo .tipo { border: 1px solid #2f5b48; background: #172b25; border-radius: 10px; padding: 9px 11px; display: flex; justify-content: space-between; font-size: 12.5px; color: #a8e6c8; }
+  .viejo .vacio { color: #8d93b0; font-size: 12px; padding: 4px 2px; }
+  .viejo .link { font-size: 12px; color: #9aa2ff; text-decoration: underline; }
+  .viejo .pool { display: flex; gap: 6px; flex-wrap: wrap; }
+  .viejo .pool span { background: #262a40; border: 1px solid var(--dline); border-radius: 9px; padding: 6px 10px; font-size: 12px; }
+  .viejo .fila { border: 1px solid var(--dline); border-radius: 10px; padding: 9px 11px; display: flex; justify-content: space-between; font-size: 12.5px; }
+  .viejo .fila em { font-style: normal; color: #ff8f84; font-size: 11.5px; }
+  .tacha { position: relative; }
+  .marca { position: absolute; right: 10px; top: 10px; background: var(--err); color: #fff; font: 700 10.5px Inter; border-radius: 99px; width: 20px; height: 20px; display: grid; place-items: center; }
+
+  /* DESPUÉS: bandeja */
+  .metab { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--in); border-bottom: 1px solid var(--line); }
+  .metab .num { font: 800 24px Inter; }
+  .metab .txt { font-size: 12.5px; color: var(--mut); line-height: 1.35; }
+  .metab .txt b { color: var(--ink); }
+  .barra { flex: 1; height: 8px; border-radius: 99px; background: #e6e7ee; overflow: hidden; max-width: 200px; }
+  .barra i { display: block; height: 100%; width: 42%; background: linear-gradient(90deg, var(--ok), #4cc38f); }
+  .lista { padding: 8px 10px 12px; display: grid; gap: 7px; }
+  .grupo { font: 600 10.5px Inter; letter-spacing: .06em; text-transform: uppercase; color: var(--mut2); padding: 6px 6px 0; }
+  .fila { background: var(--in); border: 1px solid var(--line); border-radius: 13px; padding: 10px 11px; display: grid; grid-template-columns: 1fr auto; gap: 8px 10px; align-items: center; }
+  .fila.sel { border-color: var(--ink); box-shadow: 0 0 0 3px rgba(28,32,51,.08); }
+  .quien { display: grid; gap: 3px; min-width: 0; }
+  .quien b { font-size: 13.5px; }
+  .quien small { color: var(--mut); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .chips { display: flex; gap: 5px; flex-wrap: wrap; }
+  .chip { font: 600 10.5px Inter; border-radius: 99px; padding: 2px 8px; background: var(--panel); color: var(--mut); }
+  .c-pensar { background: #fff3dc; color: #9a6a08; }
+  .c-noshow, .c-tarde { background: #fde8e6; color: var(--err); }
+  .c-sinfecha { background: #ece8fd; color: var(--vio); }
+  .acciones { display: flex; gap: 6px; }
+  .detalle { grid-column: 1 / -1; border-top: 1px dashed var(--line); padding-top: 9px; display: grid; gap: 9px; }
+  .pregunta { font: 600 12px Inter; color: var(--mut); }
+  .opciones { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+  .op { border: 1px solid var(--line); border-radius: 11px; padding: 8px 10px; background: var(--win); display: grid; gap: 2px; }
+  .op b { font-size: 12.5px; }
+  .op small { font-size: 11px; color: var(--mut); line-height: 1.3; }
+  .op.on { border-color: var(--err); background: #fff6f5; }
+  .op.vio { border-color: var(--vio); background: #f6f3ff; }
+  .motivos { display: flex; gap: 6px; flex-wrap: wrap; }
+  .motivos span { border: 1px solid var(--line); background: var(--in); border-radius: 99px; padding: 4px 10px; font-size: 12px; }
+  .motivos span.on { border-color: var(--ink); background: var(--ink); color: #fff; }
+  .pie { display: flex; justify-content: flex-end; gap: 8px; }
+  .campo { border: 1px solid var(--line); border-radius: 9px; padding: 7px 10px; font-size: 12.5px; color: var(--mut2); background: var(--in); }
+  .campo.req { border-color: var(--err); color: var(--err); }
+
+  /* Recorrido de pasos (bloque 2, antes) */
+  .pasos { padding: 14px; display: grid; gap: 7px; }
+  .paso { display: grid; grid-template-columns: 26px 1fr; gap: 10px; align-items: start; background: var(--in); border: 1px solid var(--line); border-radius: 12px; padding: 9px 11px; font-size: 12.5px; line-height: 1.4; }
+  .paso .n { width: 24px; height: 24px; border-radius: 50%; background: var(--panel); display: grid; place-items: center; font: 700 11.5px Inter; color: var(--mut); }
+  .paso b { display: block; font-size: 13px; }
+  .paso small { color: var(--mut); }
+  .paso.mal { border-color: #f1c4bf; background: #fff8f7; }
+  .paso.mal .n { background: var(--err); color: #fff; }
+  .total { font-size: 12.5px; color: var(--mut); padding: 0 14px 14px; }
+  .total b { color: var(--err); }
+  .total.ok b { color: var(--ok); }
+
+  /* Bloque 3: ficha */
+  .ficha { padding: 14px; display: grid; gap: 11px; }
+  .tabs { display: flex; gap: 6px; font-size: 12px; }
+  .tabs span { background: var(--panel); border-radius: 99px; padding: 4px 10px; color: var(--mut); }
+  .tabs span.on { background: var(--ink); color: #fff; }
+  .dosc { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+  .salida { font-size: 12px; color: var(--mut); background: var(--panel); border-radius: 10px; padding: 8px 10px; line-height: 1.4; }
+  .salida b { color: var(--ink); }
+</style>
+</head>
+<body>
+
+<div class="nota">
+  <b>Seguimientos de triage: antes y después.</b> Sale de la reunión del 25/11: Dari no puede marcar una reagenda sin fecha (le queda como atrasada y le traba el reporte) y le cuesta cerrar un seguimiento cuando el lead dice que no. Mario quiere la bandeja de seguimientos en cero cada día. Cada bloque muestra cómo está hoy (izquierda) y la propuesta (derecha). Los nombres de leads son de ejemplo.
+</div>
+
+<!-- ============ BLOQUE 1 ============ -->
+<div class="bloque">
+  <h2>1 · Qué ve Dari al entrar a «Seguir»</h2>
+  <p class="sub">La pantalla del Workspace donde están sus seguimientos del día.</p>
+  <div class="par">
+    <div>
+      <div class="rot antes">Antes · hoy</div>
+      <div class="win">
+        <div class="viejo">
+          <div class="caja tacha">
+            <span class="marca">1</span>
+            <div class="meta">
+              <div><div class="n">3<span>/50</span></div><small>Objetivo de seguimientos del día · Te faltan 47 para la meta.</small></div>
+              <div style="text-align:right"><small>Ganancia potencial hoy</small><div style="font-weight:800">$0</div></div>
+            </div>
+          </div>
+          <div class="caja tacha">
+            <span class="marca">2</span>
+            <h5><span>📅 Asignados para hoy</span><span>0</span></h5>
+            <small>Bloquean el reporte hasta que los resuelvas</small>
+            <div style="margin-top:8px" class="tipo"><span>💰 Cobros (llamadas cerradas)</span><span>$0</span></div>
+            <div class="vacio">✓ Nada pendiente</div>
+            <div class="link">Hay 4 seguimientos de llamadas tomadas y no tomadas · ver</div>
+          </div>
+          <div class="caja tacha">
+            <span class="marca">3</span>
+            <h5><span>📥 Pool sin fecha asignada</span></h5>
+            <div class="pool"><span>💰 Cobros 0</span><span>🎤 Tomadas 2</span><span>📵 No tomadas 9</span></div>
+            <div style="margin-top:8px;display:grid;gap:6px">
+              <div class="fila"><span>Tomás Herrera · No Show</span><em>Asignar fecha</em></div>
+              <div class="fila"><span>Melanie Rivera · sin reportar</span><em>3d de retraso</em></div>
+              <div class="fila"><span>Martín Acosta · Cancelado</span><em>Seguimiento 1 de 4</em></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <ul class="problemas">
+        <li><b>(1) La meta es «50 hechos»</b>, pensada para el volumen de un closer. No dice cuánto le queda pendiente.</li>
+        <li><b>(2) «Asignados para hoy» muestra solo cobros</b>, que Dari no hace. Sus «lo va a pensar» con fecha quedan escondidos detrás de «ver».</li>
+        <li><b>(3) El pool mezcla todo</b>: no shows, cancelados, agendas que nadie reportó (que además siguen en Atrasadas) y los que pidieron tiempo. Nada lo vence, así que crece sin que se note. La fila dice «de 4» aunque la cadencia es de 3.</li>
+      </ul>
+    </div>
+
+    <div>
+      <div class="rot despues">Después · propuesta</div>
+      <div class="win">
+        <div class="cab">
+          <b>Seguir</b>
+          <span class="seg"><span class="on">Hoy <i>7</i></span><span>Esperan fecha <i>5</i></span><span>Hechos hoy <i>5</i></span></span>
+        </div>
+        <div class="metab">
+          <span class="num">7</span>
+          <span class="txt"><b>pendientes para hoy</b><br>5 resueltos · la meta es dejarla en 0</span>
+          <span class="barra"><i></i></span>
+        </div>
+        <div class="lista">
+          <div class="grupo">Atrasados · 2</div>
+          <div class="fila">
+            <div class="quien"><b>Valentina Ríos</b>
+              <div class="chips"><span class="chip c-pensar">Lo va a pensar</span><span class="chip c-tarde">2 días tarde</span><span class="chip">Contacto 2 de 3</span></div>
+              <small>«Lo charla con su pareja y me confirma el lunes»</small></div>
+            <div class="acciones"><span class="btn btn-s">No respondió</span><span class="btn btn-p">Contestó ▾</span></div>
+          </div>
+          <div class="fila">
+            <div class="quien"><b>Tomás Herrera</b>
+              <div class="chips"><span class="chip c-noshow">No asistió</span><span class="chip c-tarde">1 día tarde</span><span class="chip">Contacto 1 de 3</span></div>
+              <small>No se conectó al triage del 24/11</small></div>
+            <div class="acciones"><span class="btn btn-s">No respondió</span><span class="btn btn-p">Contestó ▾</span></div>
+          </div>
+          <div class="grupo">Para hoy · 5</div>
+          <div class="fila">
+            <div class="quien"><b>Lucía Fernández</b>
+              <div class="chips"><span class="chip c-sinfecha">Llegó su fecha</span><span class="chip">Contacto 1 de 3</span></div>
+              <small>Dijo «escribime la semana que viene» · reprogramó sin fecha el 20/11</small></div>
+            <div class="acciones"><span class="btn btn-s">No respondió</span><span class="btn btn-p">Contestó ▾</span></div>
+          </div>
+          <div class="fila">
+            <div class="quien"><b>Martín Acosta</b>
+              <div class="chips"><span class="chip c-noshow">Canceló</span><span class="chip">Contacto 1 de 3</span></div>
+              <small>«Se le cruzó una cirugía»</small></div>
+            <div class="acciones"><span class="btn btn-s">No respondió</span><span class="btn btn-p">Contestó ▾</span></div>
+          </div>
+        </div>
+      </div>
+      <ul class="mejoras">
+        <li><b>La cuenta es «pendientes de hoy → 0»</b>, con lo resuelto al lado.</li>
+        <li><b>Hoy muestra sus seguimientos</b>: atrasados primero, después los del día. Cobros no aparece para triage.</li>
+        <li><b>Esperan fecha</b> es una pestaña aparte para los que dijeron «te aviso». No vencen ni traban el reporte; si dijeron un momento, ese día pasan solos a Hoy («Llegó su fecha»).</li>
+        <li>Una agenda sin reportar está solo en Reportar › Atrasadas, no repetida acá.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ============ BLOQUE 2 ============ -->
+<div class="bloque">
+  <h2>2 · Cerrar un seguimiento porque el lead dijo que no</h2>
+  <p class="sub">Ejemplo: Camila contestó «ahora no puedo, estoy con guardias, no me interesa».</p>
+  <div class="par">
+    <div>
+      <div class="rot antes">Antes · hoy</div>
+      <div class="win">
+        <div class="pasos">
+          <div class="paso mal"><span class="n">1</span><div><b>Toca la fila en Seguir</b><small>La ficha se abre en «Llamada reportada» (el resumen del triage), no en el contacto.</small></div></div>
+          <div class="paso"><span class="n">2</span><div><b>Busca el hito «Seguimiento»</b><small>En la columna de progreso de la ficha, para llegar al contacto.</small></div></div>
+          <div class="paso"><span class="n">3</span><div><b>«Contestó»</b><small>No hay «no le interesa»: las opciones son No respondió, Contestó, Agendó, Cerró la venta.</small></div></div>
+          <div class="paso"><span class="n">4</span><div><b>Modalidad + nota de 10 caracteres o más</b><small>Obligatoria.</small></div></div>
+          <div class="paso"><span class="n">5</span><div><b>«¿Te pasó algún referido?»</b><small>Porque hubo contacto.</small></div></div>
+          <div class="paso"><span class="n">6</span><div><b>«¿Y ahora qué hacemos?» → Cerrar como lead perdido</b></div></div>
+          <div class="paso mal"><span class="n">7</span><div><b>Uno de 4 motivos fijos → Guardar</b><small>Guarda «Lead Perdido» encima de la agenda de triage: se pisan el Show up y la calificación que ya había reportado.</small></div></div>
+        </div>
+        <div class="total"><b>7 pasos</b> y el triage queda mal reportado.</div>
+      </div>
+      <ul class="problemas">
+        <li>Las otras salidas también están lejos: si decide pasar a closing o al low ticket, hay que volver a reportar la llamada desde Resultado, y la pantalla no lo sugiere.</li>
+        <li>En el historial se puede marcar «Realizado» o «Borrar» sin decir qué pasó: no queda resultado.</li>
+      </ul>
+    </div>
+
+    <div>
+      <div class="rot despues">Después · propuesta</div>
+      <div class="win">
+        <div class="lista" style="padding-top:12px">
+          <div class="fila sel">
+            <div class="quien"><b>Camila Duarte</b>
+              <div class="chips"><span class="chip c-pensar">Lo va a pensar</span><span class="chip">Contacto 3 de 3 · último</span></div>
+              <small>«Le interesa pero ahora está con guardias» · triage del 19/11</small></div>
+            <div class="acciones"><span class="btn btn-s">No respondió</span><span class="btn btn-p">Contestó ▴</span></div>
+            <div class="detalle">
+              <div class="pregunta">① ¿Qué pasó?</div>
+              <div class="opciones">
+                <div class="op"><b>📅 Agendó</b><small>Día y hora: vuelve a Confirmar</small></div>
+                <div class="op"><b>🎯 Pasa a closing</b><small>Califica: closer y horario</small></div>
+                <div class="op"><b>💡 Low ticket</b><small>Se le ofrece el low ticket</small></div>
+                <div class="op"><b>⏳ Más adelante</b><small>Otra fecha o «me avisa»</small></div>
+                <div class="op on"><b>✋ No le interesa</b><small>Se cierra el seguimiento</small></div>
+              </div>
+              <div class="pregunta">② ¿Por qué?</div>
+              <div class="motivos"><span>Precio</span><span class="on">No es el momento</span><span>Eligió otra opción</span><span>No era para ella</span><span>Otro</span></div>
+              <div class="campo">Nota (opcional)</div>
+              <div class="pie"><span class="btn btn-g">Cancelar</span><span class="btn btn-err">③ Cerrar seguimiento</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="total ok"><b>3 toques</b> sin salir de Seguir. El triage queda como se reportó.</div>
+      </div>
+      <ul class="mejoras">
+        <li><b>«No le interesa» existe</b> como salida directa, con motivo en un toque y nota opcional.</li>
+        <li><b>Cierra el seguimiento, no la llamada</b>: el show up y la calificación del triage no se tocan.</li>
+        <li>Las cinco salidas del reporte de triage (agendó, closing, low ticket, más adelante, no le interesa) están en el mismo lugar.</li>
+        <li>«No respondió» es un toque: cuenta el intento y programa el siguiente (0, 3 y 7 días); en el último pregunta si se cierra.</li>
+        <li>Tocar el nombre abre la ficha directo en el contacto.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ============ BLOQUE 3 ============ -->
+<div class="bloque">
+  <h2>3 · El lead pidió reprogramar pero no dio fecha</h2>
+  <p class="sub">Ejemplo: Melanie no se conectó el sábado y dice «esta semana estoy de guardia, te escribo cuando pueda».</p>
+  <div class="par">
+    <div>
+      <div class="rot antes">Antes · hoy</div>
+      <div class="win">
+        <div class="ficha">
+          <div class="tabs"><span>Asistió</span><span>No asistió</span><span>Canceló</span><span class="on">Reagenda</span></div>
+          <div class="pregunta">Nueva fecha y hora</div>
+          <div class="campo req">Elegí día y hora (obligatorio, tiene que ser futura)</div>
+          <div class="pregunta">Si no tiene fecha, lo que le queda a Dari:</div>
+          <div class="dosc">
+            <div class="salida"><b>«Canceló»</b><br>Cuenta como cancelación en el show up, aunque no canceló.</div>
+            <div class="salida"><b>«Pasar a seguimiento»</b><br>Pide día igual, motivos de closer, y deja la llamada «Archivada sin reporte».</div>
+            <div class="salida"><b>No hacer nada</b><br>Queda en Atrasadas («1ª llamada hace 3 días») y traba el reporte del día.</div>
+            <div class="salida"><b>Inventar una fecha</b><br>Vuelve a Confirmar con un horario que el lead no eligió.</div>
+          </div>
+        </div>
+      </div>
+      <ul class="problemas">
+        <li>El closer ya tiene «Reagenda → ¿Dejó fecha? → No» (ADR-W143); <b>triage no</b>.</li>
+        <li>Todo pasa por la ficha: la tarjeta de Atrasadas no tiene acciones.</li>
+      </ul>
+    </div>
+
+    <div>
+      <div class="rot despues">Después · propuesta</div>
+      <div class="win">
+        <div class="ficha">
+          <div class="tabs"><span>Asistió</span><span>No asistió</span><span>Canceló</span><span class="on">Reagenda</span></div>
+          <div class="pregunta">¿Dejó una fecha?</div>
+          <div class="dosc">
+            <div class="op"><b>Sí</b><small>Día y hora: vuelve a Confirmar</small></div>
+            <div class="op vio"><b>No, va a avisar</b><small>Pasa a Seguir › Esperan fecha</small></div>
+          </div>
+          <div class="pregunta">¿Dijo cuándo te escribe? <span style="font-weight:400">(opcional)</span></div>
+          <div class="motivos"><span>Sin idea</span><span class="on">La semana que viene</span><span>Fin de mes</span><span>Elegir día</span></div>
+          <div class="campo">«Está de guardia toda la semana, me escribe cuando pueda»</div>
+          <div class="pie"><span class="btn btn-p">Guardar</span></div>
+          <div class="pregunta" style="margin-top:4px">También desde la tarjeta de Atrasadas, sin abrir la ficha:</div>
+          <div class="salida" style="background:var(--in);border:1px solid var(--line)">Melanie Rivera · 1ª llamada hace 3 días &nbsp; <b>⋯</b> → Reportar resultado · <b style="color:var(--vio)">Reprogramó sin fecha</b> · Reprogramó con fecha</div>
+        </div>
+      </div>
+      <ul class="mejoras">
+        <li>Se guarda como <b>Reagendado · Reprogramó sin fecha</b>: sale de Atrasadas, no traba el reporte y no cuenta como cancelación ni no show.</li>
+        <li>Si dijo un momento, ese día aparece en Seguir › Hoy con «Llegó su fecha». Si no, queda en Esperan fecha.</li>
+        <li>Si el lead después elige hora en Google Calendar, Work ya la sigue sola (ADR-W233).</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

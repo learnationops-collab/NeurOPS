@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Mockup · Seguimientos de triage (propuesta)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #dcdcf0; --win: #f1f1f4; --panel: #e9e9ee; --line: #d6d6dc; --in: #ffffff;
+    --ink: #1c2033; --mut: #5f6478; --mut2: #8a8ea0;
+    --ok: #1f9d6b; --err: #c8433a; --warn: #9a6a08; --vio: #7D63E6; --info: #3b7dd8;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; font-family: Inter, system-ui, sans-serif; color: var(--ink);
+         background: radial-gradient(1200px 600px at 20% 0%, #cfd0f5, transparent), var(--bg); padding: 28px 16px 60px; }
+  .i { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .i.sm { width: 13px; height: 13px; }
+  .i.lg { width: 18px; height: 18px; }
+  .nota { max-width: 1180px; margin: 0 auto 18px; font-size: 13.5px; color: var(--mut); line-height: 1.55; }
+  .nota b { color: var(--ink); }
+  .escena { max-width: 1180px; margin: 0 auto 36px; }
+  .titulo-escena { font: 600 11px Inter; letter-spacing: .08em; text-transform: uppercase; color: var(--mut); margin: 0 0 8px 4px; }
+  .pie-escena { font-size: 12.5px; color: var(--mut); margin: 10px 4px 0; line-height: 1.5; max-width: 900px; }
+  .pie-escena b { color: var(--ink); }
+
+  .win { background: var(--win); border-radius: 20px; box-shadow: 0 24px 70px rgba(30, 30, 80, .22); overflow: hidden; }
+  .ws { display: flex; align-items: center; gap: 12px; padding: 12px 18px; border-bottom: 1px solid var(--line); }
+  .ws .hola { font-size: 15px; font-weight: 600; }
+  .sp { flex: 1; }
+  .seg { display: inline-flex; background: var(--panel); border-radius: 12px; padding: 3px; gap: 2px; }
+  .seg span { padding: 6px 12px; border-radius: 9px; font: 500 13px Inter; color: var(--mut); display: inline-flex; gap: 6px; align-items: center; }
+  .seg span.on { background: var(--in); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.08); font-weight: 600; }
+  .seg i { font-style: normal; font-size: 11.5px; background: #dfe0e8; border-radius: 99px; padding: 1px 7px; color: var(--mut); }
+  .seg span.on i { background: var(--ink); color: #fff; }
+  .btn { border: 0; border-radius: 10px; padding: 7px 12px; font: 600 12.5px Inter; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; cursor: pointer; }
+  .btn-p { background: var(--ink); color: #fff; }
+  .btn-s { background: var(--in); color: var(--ink); border: 1px solid var(--line); }
+  .btn-g { background: transparent; color: var(--mut); }
+  .btn-err { background: #fbe9e7; color: var(--err); }
+  .ib { width: 30px; height: 30px; border-radius: 9px; border: 1px solid var(--line); background: var(--in); color: var(--mut); display: grid; place-items: center; }
+
+  .cuerpo { display: grid; grid-template-columns: 1fr 300px; min-height: 520px; }
+  @media (max-width: 980px) { .cuerpo { grid-template-columns: 1fr; } .riel { display: none; } }
+  .main { border-right: 1px solid var(--line); }
+  .sub { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+
+  .meta { display: flex; align-items: center; gap: 14px; padding: 14px 16px; background: var(--in); border-bottom: 1px solid var(--line); }
+  .meta .num { font: 800 28px Inter; line-height: 1; }
+  .meta .txt { font-size: 12.5px; color: var(--mut); line-height: 1.4; }
+  .meta .txt b { color: var(--ink); font-size: 13.5px; }
+  .barra { flex: 1; height: 8px; border-radius: 99px; background: #e6e7ee; overflow: hidden; max-width: 240px; }
+  .barra i { display: block; height: 100%; width: 42%; background: linear-gradient(90deg, var(--ok), #4cc38f); border-radius: 99px; }
+
+  .lista { padding: 8px 12px 14px; display: grid; gap: 8px; }
+  .grupo { font: 600 10.5px Inter; letter-spacing: .07em; text-transform: uppercase; color: var(--mut2); padding: 8px 6px 0; display: flex; gap: 6px; align-items: center; }
+  .grupo.rojo { color: var(--err); }
+  .fila { background: var(--in); border: 1px solid var(--line); border-radius: 14px; padding: 11px 12px; display: grid; grid-template-columns: 34px 1fr auto; gap: 8px 12px; align-items: center; }
+  .fila.sel { border-color: var(--ink); box-shadow: 0 0 0 3px rgba(28,32,51,.08); }
+  .fila.hecha { opacity: .55; }
+  .av { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font: 700 12px Inter; color: #fff; }
+  .quien { display: grid; gap: 4px; min-width: 0; }
+  .quien b { font-size: 14px; display: flex; align-items: center; gap: 6px; }
+  .quien small { color: var(--mut); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .chips { display: flex; gap: 5px; flex-wrap: wrap; }
+  .chip { font: 600 11px Inter; border-radius: 99px; padding: 2px 8px 2px 6px; background: var(--panel); color: var(--mut); display: inline-flex; gap: 4px; align-items: center; }
+  .c-pensar { background: #fff3dc; color: var(--warn); }
+  .c-noshow, .c-tarde { background: #fde8e6; color: var(--err); }
+  .c-sinfecha { background: #ece8fd; color: var(--vio); }
+  .c-ok { background: #e3f5ec; color: var(--ok); }
+  .acciones { display: flex; gap: 6px; }
+  .detalle { grid-column: 1 / -1; border-top: 1px dashed var(--line); padding-top: 11px; display: grid; gap: 10px; }
+  .pregunta { font: 600 12.5px Inter; color: var(--mut); }
+  .opciones { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; }
+  @media (max-width: 900px) { .opciones { grid-template-columns: repeat(2, 1fr); } }
+  .op { border: 1px solid var(--line); border-radius: 12px; padding: 10px; background: var(--win); display: grid; gap: 5px; align-content: start; }
+  .op .ic { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; background: var(--in); color: var(--mut); }
+  .op b { font-size: 12.5px; }
+  .op small { font-size: 11px; color: var(--mut); line-height: 1.3; }
+  .op.on { border-color: var(--err); background: #fff6f5; }
+  .op.on .ic { background: #fbe1de; color: var(--err); }
+  .op.vio { border-color: var(--vio); background: #f6f3ff; }
+  .op.vio .ic { background: #e8e2fd; color: var(--vio); }
+  .motivos { display: flex; gap: 6px; flex-wrap: wrap; }
+  .motivos span { border: 1px solid var(--line); background: var(--in); border-radius: 99px; padding: 5px 11px; font-size: 12.5px; }
+  .motivos span.on { border-color: var(--ink); background: var(--ink); color: #fff; }
+  .campo { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; font-size: 12.5px; color: var(--mut2); background: var(--in); }
+  .pie { display: flex; justify-content: flex-end; gap: 8px; }
+
+  .riel { padding: 14px; display: grid; gap: 12px; align-content: start; background: #ececf1; }
+  .tarjeta { background: var(--in); border: 1px solid var(--line); border-radius: 14px; padding: 12px; display: grid; gap: 8px; font-size: 12.5px; color: var(--mut); }
+  .tarjeta h4 { margin: 0; font-size: 12px; color: var(--ink); display: flex; gap: 6px; align-items: center; }
+  .linea { display: flex; justify-content: space-between; }
+  .linea b { color: var(--ink); }
+
+  .toast { position: relative; margin: 0 12px 12px; background: var(--ink); color: #fff; border-radius: 12px; padding: 10px 12px; font-size: 12.5px; display: flex; align-items: center; gap: 10px; }
+  .toast a { color: #b9b4ff; font-weight: 600; margin-left: auto; }
+
+  /* Escena 3 */
+  .kanban { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; padding: 14px; }
+  .col { background: var(--panel); border-radius: 14px; padding: 10px; display: grid; gap: 8px; align-content: start; }
+  .col h4 { margin: 2px 4px 4px; font-size: 12.5px; color: var(--mut); display: flex; justify-content: space-between; }
+  .tarj { background: var(--in); border-radius: 12px; padding: 10px 11px; border: 1px solid var(--line); display: grid; gap: 5px; position: relative; }
+  .tarj .franja { font: 600 11px Inter; color: var(--err); display: flex; gap: 5px; align-items: center; }
+  .tarj b { font-size: 13.5px; }
+  .tarj small { color: var(--mut); font-size: 12px; }
+  .tarj .mas { position: absolute; right: 8px; top: 8px; }
+  .menu { display: grid; gap: 2px; background: var(--in); border: 1px solid var(--line); border-radius: 12px; padding: 5px; box-shadow: 0 14px 34px rgba(30,30,80,.18); margin-top: 4px; }
+  .menu span { padding: 8px 9px; border-radius: 8px; font-size: 12.5px; display: flex; align-items: center; gap: 8px; }
+  .menu span small { margin-left: auto; color: var(--mut2); font-size: 11px; }
+  .menu span.on { background: #ece8fd; color: var(--vio); font-weight: 600; }
+  .ficha { display: grid; grid-template-columns: 1fr 1.2fr; gap: 0; }
+  @media (max-width: 980px) { .ficha { grid-template-columns: 1fr; } }
+  .ficha .izq { padding: 16px; border-right: 1px solid var(--line); display: grid; gap: 10px; align-content: start; background: #ececf1; }
+  .ficha .der { padding: 16px; display: grid; gap: 12px; align-content: start; }
+  .tabs4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }
+  .tabs4 .op { text-align: left; }
+  .dos { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <symbol id="calendar" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
+    <symbol id="target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></symbol>
+    <symbol id="tag" viewBox="0 0 24 24"><path d="M12.6 2.6A2 2 0 0 0 11.2 2H4a2 2 0 0 0-2 2v7.2a2 2 0 0 0 .6 1.4l8.7 8.7a2.4 2.4 0 0 0 3.4 0l6.6-6.6a2.4 2.4 0 0 0 0-3.4z"/><circle cx="7.5" cy="7.5" r="1"/></symbol>
+    <symbol id="clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+    <symbol id="x-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></symbol>
+    <symbol id="phone-missed" viewBox="0 0 24 24"><path d="m16 2 6 6M22 2l-6 6"/><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></symbol>
+    <symbol id="message" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"/></symbol>
+    <symbol id="chev-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="chev-up" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></symbol>
+    <symbol id="check-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></symbol>
+    <symbol id="hourglass" viewBox="0 0 24 24"><path d="M5 22h14M5 2h14M17 22v-4.2a2 2 0 0 0-.6-1.4L12 12l-4.4 4.4a2 2 0 0 0-.6 1.4V22M7 2v4.2a2 2 0 0 0 .6 1.4L12 12l4.4-4.4a2 2 0 0 0 .6-1.4V2"/></symbol>
+    <symbol id="alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></symbol>
+    <symbol id="more" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></symbol>
+    <symbol id="repeat" viewBox="0 0 24 24"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></symbol>
+    <symbol id="file" viewBox="0 0 24 24"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></symbol>
+    <symbol id="calendar-off" viewBox="0 0 24 24"><path d="M4.2 4.2A2 2 0 0 0 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 1.8-1.2M21 15.5V6a2 2 0 0 0-2-2H9.5M3 10h7M21 10h-5.5M16 2v4M8 2v2M2 2l20 20"/></symbol>
+    <symbol id="user-check" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="m16 11 2 2 4-4"/></symbol>
+    <symbol id="user-x" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="m17 8 5 5M22 8l-5 5"/></symbol>
+    <symbol id="ban" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></symbol>
+    <symbol id="undo" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
+  </defs>
+</svg>
+
+<div class="nota">
+  <b>Seguimientos de triage: la propuesta.</b> Cómo se vería el Workspace de Dari. La comparación con lo de hoy está en <i>antes-despues.html</i>, en la misma carpeta. Los nombres de leads son de ejemplo.
+</div>
+
+<!-- ESCENA 1 -->
+<div class="escena">
+  <div class="titulo-escena">1 · Seguir › Hoy — la bandeja del día, con una fila abierta para cerrarla</div>
+  <div class="win">
+    <div class="ws">
+      <span class="hola">Hola, Dari.</span>
+      <span class="seg"><span>Confirmar <i>12</i></span><span>Reportar <i>3</i></span><span class="on">Seguir <i>7</i></span></span>
+      <span class="sp"></span>
+      <span class="ib"><svg class="i"><use href="#calendar"/></svg></span>
+    </div>
+    <div class="cuerpo">
+      <div class="main">
+        <div class="sub">
+          <span class="seg"><span class="on">Hoy <i>7</i></span><span>Esperan fecha <i>5</i></span><span>Hechos hoy <i>5</i></span></span>
+        </div>
+        <div class="meta">
+          <span class="num">7</span>
+          <span class="txt"><b>pendientes para hoy</b><br>5 resueltos · la meta es dejarla en 0</span>
+          <span class="barra"><i></i></span>
+        </div>
+        <div class="lista">
+          <div class="grupo rojo"><svg class="i sm"><use href="#alert"/></svg>Atrasados · 2</div>
+          <div class="fila">
+            <span class="av" style="background:#d98b3a">VR</span>
+            <div class="quien"><b>Valentina Ríos</b>
+              <div class="chips"><span class="chip c-pensar"><svg class="i sm"><use href="#hourglass"/></svg>Lo va a pensar</span><span class="chip c-tarde">2 días tarde</span><span class="chip">Contacto 2 de 3</span></div>
+              <small>«Lo charla con su pareja y me confirma el lunes» · triage del 21/11</small></div>
+            <div class="acciones"><span class="btn btn-s"><svg class="i sm"><use href="#phone-missed"/></svg>No respondió</span><span class="btn btn-p"><svg class="i sm"><use href="#message"/></svg>Contestó<svg class="i sm"><use href="#chev-down"/></svg></span></div>
+          </div>
+          <div class="fila">
+            <span class="av" style="background:#5b8bd9">TH</span>
+            <div class="quien"><b>Tomás Herrera</b>
+              <div class="chips"><span class="chip c-noshow"><svg class="i sm"><use href="#user-x"/></svg>No asistió</span><span class="chip c-tarde">1 día tarde</span><span class="chip">Contacto 1 de 3</span></div>
+              <small>No se conectó al triage del 24/11</small></div>
+            <div class="acciones"><span class="btn btn-s"><svg class="i sm"><use href="#phone-missed"/></svg>No respondió</span><span class="btn btn-p"><svg class="i sm"><use href="#message"/></svg>Contestó<svg class="i sm"><use href="#chev-down"/></svg></span></div>
+          </div>
+
+          <div class="grupo">Para hoy · 5</div>
+          <div class="fila sel">
+            <span class="av" style="background:#9a6ad9">CD</span>
+            <div class="quien"><b>Camila Duarte</b>
+              <div class="chips"><span class="chip c-pensar"><svg class="i sm"><use href="#hourglass"/></svg>Lo va a pensar</span><span class="chip">Contacto 3 de 3 · último</span></div>
+              <small>«Le interesa pero ahora está con guardias» · triage del 19/11</small></div>
+            <div class="acciones"><span class="btn btn-s"><svg class="i sm"><use href="#phone-missed"/></svg>No respondió</span><span class="btn btn-p"><svg class="i sm"><use href="#message"/></svg>Contestó<svg class="i sm"><use href="#chev-up"/></svg></span></div>
+            <div class="detalle">
+              <div class="pregunta">¿Qué pasó?</div>
+              <div class="opciones">
+                <div class="op"><span class="ic"><svg class="i"><use href="#calendar"/></svg></span><b>Agendó</b><small>Día y hora: vuelve a Confirmar</small></div>
+                <div class="op"><span class="ic"><svg class="i"><use href="#target"/></svg></span><b>Pasa a closing</b><small>Califica: closer y horario</small></div>
+                <div class="op"><span class="ic"><svg class="i"><use href="#tag"/></svg></span><b>Low ticket</b><small>Se le ofrece el low ticket</small></div>
+                <div class="op"><span class="ic"><svg class="i"><use href="#clock"/></svg></span><b>Más adelante</b><small>Otra fecha o «me avisa»</small></div>
+                <div class="op on"><span class="ic"><svg class="i"><use href="#x-circle"/></svg></span><b>No le interesa</b><small>Se cierra el seguimiento</small></div>
+              </div>
+              <div class="pregunta">¿Por qué?</div>
+              <div class="motivos"><span>Precio</span><span class="on">No es el momento</span><span>Eligió otra opción</span><span>No era para ella</span><span>Otro</span></div>
+              <div class="campo">Nota (opcional)</div>
+              <div class="pie"><span class="btn btn-g">Cancelar</span><span class="btn btn-err"><svg class="i sm"><use href="#ban"/></svg>Cerrar seguimiento</span></div>
+            </div>
+          </div>
+          <div class="fila">
+            <span class="av" style="background:#3aa57a">LF</span>
+            <div class="quien"><b>Lucía Fernández</b>
+              <div class="chips"><span class="chip c-sinfecha"><svg class="i sm"><use href="#calendar"/></svg>Llegó su fecha</span><span class="chip">Contacto 1 de 3</span></div>
+              <small>Dijo «escribime la semana que viene» · reprogramó sin fecha el 20/11</small></div>
+            <div class="acciones"><span class="btn btn-s"><svg class="i sm"><use href="#phone-missed"/></svg>No respondió</span><span class="btn btn-p"><svg class="i sm"><use href="#message"/></svg>Contestó<svg class="i sm"><use href="#chev-down"/></svg></span></div>
+          </div>
+          <div class="fila hecha">
+            <span class="av" style="background:#8a8ea0">MA</span>
+            <div class="quien"><b>Martín Acosta</b>
+              <div class="chips"><span class="chip c-ok"><svg class="i sm"><use href="#check-circle"/></svg>No respondió · contacto 2 el lun 30/11</span></div>
+              <small>Canceló el triage del 25/11</small></div>
+            <div class="acciones"><span class="btn btn-g"><svg class="i sm"><use href="#undo"/></svg>Deshacer</span></div>
+          </div>
+        </div>
+        <div class="toast"><svg class="i"><use href="#check-circle"/></svg>Martín Acosta: contacto 2 de 3 programado para el lunes 30/11.<a>Deshacer</a></div>
+      </div>
+      <div class="riel">
+        <div class="tarjeta">
+          <h4><svg class="i sm"><use href="#check-circle"/></svg>Hoy resolviste 5</h4>
+          <div class="linea"><span>Agendaron</span><b>2</b></div>
+          <div class="linea"><span>A closing</span><b>1</b></div>
+          <div class="linea"><span>No respondieron</span><b>2</b></div>
+        </div>
+        <div class="tarjeta">
+          <h4><svg class="i sm"><use href="#hourglass"/></svg>Esperan fecha · 5</h4>
+          <span>Dijeron «te aviso». No vencen ni traban el reporte. 2 tienen fecha aproximada esta semana.</span>
+        </div>
+        <div class="tarjeta">
+          <h4><svg class="i sm"><use href="#alert"/></svg>Reporte del día</h4>
+          <span>Se manda cuando Hoy queda en 0 y no hay agendas atrasadas.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="pie-escena"><b>No respondió</b> es un toque: cuenta el intento, programa el siguiente contacto de la cadencia (0, 3 y 7 días) y se puede deshacer. En el último contacto pregunta si se cierra. <b>Contestó</b> abre las cinco salidas ahí mismo; «No le interesa» cierra el seguimiento con su motivo sin tocar el show up ni la calificación del triage. Tocar el nombre abre la ficha directo en el contacto.</p>
+</div>
+
+<!-- ESCENA 2 -->
+<div class="escena">
+  <div class="titulo-escena">2 · Seguir › Esperan fecha — los que dijeron «te aviso»</div>
+  <div class="win">
+    <div class="sub" style="border-bottom:1px solid var(--line)">
+      <span class="seg"><span>Hoy <i>7</i></span><span class="on">Esperan fecha <i>5</i></span><span>Hechos hoy <i>5</i></span></span>
+      <span class="sp"></span>
+      <span style="font-size:12.5px;color:var(--mut)">Ordenados por cuándo dijeron que escriben</span>
+    </div>
+    <div class="lista">
+      <div class="grupo">Esta semana · 2</div>
+      <div class="fila">
+        <span class="av" style="background:#c95b8a">MR</span>
+        <div class="quien"><b>Melanie Rivera</b>
+          <div class="chips"><span class="chip c-sinfecha"><svg class="i sm"><use href="#calendar-off"/></svg>Reprogramó sin fecha</span><span class="chip">Dijo: la semana que viene</span></div>
+          <small>«Está de guardia toda la semana, me escribe cuando pueda» · desde el 26/11</small></div>
+        <div class="acciones"><span class="btn btn-s"><svg class="i sm"><use href="#calendar"/></svg>Ya dio fecha</span><span class="btn btn-g"><svg class="i sm"><use href="#more"/></svg></span></div>
+      </div>
+      <div class="fila">
+        <span class="av" style="background:#4c9bb5">JP</span>
+        <div class="quien"><b>Joaquín Paz</b>
+          <div class="chips"><span class="chip c-sinfecha"><svg class="i sm"><use href="#calendar-off"/></svg>Reprogramó sin fecha</span><span class="chip">Dijo: viernes 4/12</span></div>
+          <small>«Rinde un parcial, después del viernes coordinamos» · desde el 24/11</small></div>
+        <div class="acciones"><span class="btn btn-s"><svg class="i sm"><use href="#calendar"/></svg>Ya dio fecha</span><span class="btn btn-g"><svg class="i sm"><use href="#more"/></svg></span></div>
+      </div>
+      <div class="grupo">Sin fecha dicha · 3</div>
+      <div class="fila">
+        <span class="av" style="background:#7a7fa0">SG</span>
+        <div class="quien"><b>Sofía Gómez</b>
+          <div class="chips"><span class="chip c-sinfecha"><svg class="i sm"><use href="#calendar-off"/></svg>Reprogramó sin fecha</span><span class="chip c-tarde">Hace 12 días</span></div>
+          <small>«Te escribo cuando sepa mis turnos» · desde el 14/11</small></div>
+        <div class="acciones"><span class="btn btn-s"><svg class="i sm"><use href="#message"/></svg>Escribirle</span><span class="btn btn-g"><svg class="i sm"><use href="#more"/></svg></span></div>
+      </div>
+    </div>
+  </div>
+  <p class="pie-escena">No vencen ni traban el reporte. Si el lead dijo un momento, ese día pasa solo a <b>Hoy</b> con «Llegó su fecha». Si pasaron más de 10 días sin noticias, se marca en rojo para escribirle. Si el lead elige un horario en Google Calendar, Work ya lo sigue solo (ADR-W233) y sale de esta lista. «Ya dio fecha» la agenda y la devuelve a Confirmar.</p>
+</div>
+
+<!-- ESCENA 3 -->
+<div class="escena">
+  <div class="titulo-escena">3 · Reportar — «Reprogramó sin fecha» desde la tarjeta de Atrasadas y en la ficha</div>
+  <div class="win">
+    <div class="ws">
+      <span class="hola">Hola, Dari.</span>
+      <span class="seg"><span>Confirmar <i>12</i></span><span class="on">Reportar <i>3</i></span><span>Seguir <i>7</i></span></span>
+    </div>
+    <div class="kanban">
+      <div class="col">
+        <h4><span>Atrasadas</span><span>3</span></h4>
+        <div class="tarj">
+          <span class="mas ib" style="width:26px;height:26px"><svg class="i sm"><use href="#more"/></svg></span>
+          <span class="franja"><svg class="i sm"><use href="#alert"/></svg>1ª llamada · hace 3 días</span>
+          <b>Melanie Rivera</b>
+          <small>Triage del sáb 21/11 · 10:00</small>
+          <div class="menu">
+            <span><svg class="i sm"><use href="#file"/></svg>Reportar resultado<small>abre la ficha</small></span>
+            <span class="on"><svg class="i sm"><use href="#calendar-off"/></svg>Reprogramó sin fecha</span>
+            <span><svg class="i sm"><use href="#repeat"/></svg>Reprogramó con fecha</span>
+          </div>
+        </div>
+        <div class="tarj"><span class="franja"><svg class="i sm"><use href="#alert"/></svg>1ª llamada · hace 1 día</span><b>Joaquín Paz</b><small>Triage del mié 25/11 · 18:00</small></div>
+      </div>
+      <div class="col"><h4><span>Hoy</span><span>6</span></h4>
+        <div class="tarj"><small>16:00</small><b>Paula Vega</b></div>
+        <div class="tarj"><small>17:30</small><b>Diego Castro</b></div>
+      </div>
+      <div class="col"><h4><span>Reportadas</span><span>4</span></h4>
+        <div class="tarj"><small>10:00 · Califica</small><b>Andrea Molina</b></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="win" style="margin-top:16px">
+    <div class="ficha">
+      <div class="izq">
+        <b style="font-size:15px">Melanie Rivera</b>
+        <span style="font-size:12.5px;color:var(--mut)">Triage del sáb 21/11 · 10:00 · no se conectó</span>
+        <div class="tarjeta" style="margin-top:6px">
+          <h4><svg class="i sm"><use href="#message"/></svg>Último mensaje</h4>
+          <span>«Perdón, esta semana estoy de guardia, te escribo cuando pueda»</span>
+        </div>
+      </div>
+      <div class="der">
+        <div class="pregunta">¿Qué pasó con la llamada?</div>
+        <div class="tabs4">
+          <div class="op"><span class="ic"><svg class="i"><use href="#user-check"/></svg></span><b>Asistió</b></div>
+          <div class="op"><span class="ic"><svg class="i"><use href="#user-x"/></svg></span><b>No asistió</b></div>
+          <div class="op"><span class="ic"><svg class="i"><use href="#x-circle"/></svg></span><b>Canceló</b></div>
+          <div class="op vio"><span class="ic"><svg class="i"><use href="#repeat"/></svg></span><b>Reagenda</b></div>
+        </div>
+        <div class="pregunta">¿Dejó una fecha?</div>
+        <div class="dos">
+          <div class="op"><span class="ic"><svg class="i"><use href="#calendar"/></svg></span><b>Sí</b><small>Día y hora: vuelve a Confirmar</small></div>
+          <div class="op vio"><span class="ic"><svg class="i"><use href="#calendar-off"/></svg></span><b>No, va a avisar</b><small>Pasa a Seguir › Esperan fecha</small></div>
+        </div>
+        <div class="pregunta">¿Dijo cuándo te escribe? <span style="font-weight:400">(opcional)</span></div>
+        <div class="motivos"><span>No dijo</span><span class="on">La semana que viene</span><span>Fin de mes</span><span>Elegir día</span></div>
+        <div class="campo">«Está de guardia toda la semana, me escribe cuando pueda»</div>
+        <div class="pie"><span class="btn btn-p">Guardar</span></div>
+      </div>
+    </div>
+  </div>
+  <p class="pie-escena">Se guarda como <b>Reagendado · Reprogramó sin fecha</b>, igual que el closer (ADR-W143): sale de Atrasadas, no traba el reporte y no cuenta como cancelación ni como no show. Desde el menú de la tarjeta se hace sin abrir la ficha; ahí pregunta solo «¿Dijo cuándo te escribe?».</p>
+</div>
+
+</body>
+</html>

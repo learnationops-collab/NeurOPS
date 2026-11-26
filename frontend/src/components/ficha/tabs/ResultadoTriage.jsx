@@ -8,7 +8,7 @@
 // closer). El recorrido vive en `triage/recorrido.js`; todo se guarda por `onAccion`.
 
 import { Suspense, lazy, useCallback, useMemo, useState } from 'react';
-import { CalendarClock, CalendarX, CheckCircle2, DollarSign, XCircle } from 'lucide-react';
+import { CalendarCheck, CalendarClock, CalendarOff, CalendarX, CheckCircle2, DollarSign, XCircle } from 'lucide-react';
 import { StepperFicha, TarjetaAccion } from '../acciones/piezas';
 import PasarARecuperacion from './PasarARecuperacion';
 import TabConfirmacion from './TabConfirmacion';
@@ -18,8 +18,8 @@ import { Button } from '../../standard';
 import { MINIMO_MOTIVO, preguntaDeMotivo } from '../../../utils/motivoEstado';
 import { localDateFromNow } from '../../../utils/datetime';
 import {
-  CALIFICACION, LOW_TICKET, RAICES, actual, califica, filas, piensa, hastaAntesDe, hitos, inicial, payload,
-  respuestasGuardadas, secuencia, textoGuardar, vende,
+  CALIFICACION, DEJO_FECHA, LOW_TICKET, RAICES, actual, califica, filas, piensa, hastaAntesDe, hitos, inicial, payload,
+  respuestasGuardadas, secuencia, sinFecha, textoGuardar, vende,
 } from '../triage/recorrido';
 import {
   Fecha, Horario, Motivo, Nota, Opciones, Revision, Titulo, Venta,
@@ -31,6 +31,15 @@ import './resultado.css';
 const TabResultado = lazy(() => import('./TabResultado'));
 
 const ICONOS = { asistio: CheckCircle2, no_asistio: XCircle, cancelo: CalendarX, reagenda: CalendarClock };
+// «¿Dijo cuándo te escribe?»: el lunes que viene, fin de mes o no dijo (ADR-W241).
+const atajosDeAviso = () => {
+  const hoy = new Date();
+  const lunes = 7 - ((hoy.getDay() + 6) % 7);
+  const fin = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+  const hastaFin = Math.round((fin - new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate())) / 86400000);
+  return [{ valor: '', label: 'No dijo' }, { valor: localDateFromNow(lunes), label: 'La semana que viene' },
+    ...(hastaFin >= 3 ? [{ valor: localDateFromNow(hastaFin), label: 'Fin de mes' }] : [])];
+};
 const ATAJOS_SEGUIMIENTO = [
   { dias: 1, label: 'Mañana' }, { dias: 3, label: 'En 3 días' }, { dias: 7, label: 'En una semana' },
 ];
@@ -52,7 +61,7 @@ const filasReportadas = (t) => [
   (t.low_ticket === 'seguimiento' || t.calificacion === 'seguimiento') && t.fecha_seguimiento && { label: 'Seguimiento', valor: String(t.fecha_seguimiento).slice(0, 10) },
 ].filter(Boolean);
 
-export default function ResultadoTriage({ ficha, onAccion, irA = null, puedeEditar = true }) {
+export default function ResultadoTriage({ ficha, onAccion, irA = null, puedeEditar = true, seguimientoPedido = null }) {
   const triage = ficha?.triage || {};
   const vocab = ficha?.vocabulario || {};
   const closers = vocab.closers || [];
@@ -69,7 +78,8 @@ export default function ResultadoTriage({ ficha, onAccion, irA = null, puedeEdit
   // Con la llamada ya reportada, tocar «Resultado» o «Seguimiento» (o «Editar») reabre las opciones.
   const [editando, setEditando] = useState(false);
   // El panel abierto desde el progreso: 'conf' (confirmación) o 'seg' (qué pasó en el seguimiento).
-  const [seccion, setSeccion] = useState(null);
+  // Abierta desde «Seguir», arranca en el contacto del seguimiento y no en el resumen del reporte.
+  const [seccion, setSeccion] = useState(seguimientoPedido === 'contacto' ? 'seg' : null);
 
   const paso = actual(r, hechos);
   const closer = useMemo(() => closers.find((c) => String(c.id) === String(r.closerId)), [closers, r.closerId]);
@@ -115,7 +125,7 @@ export default function ResultadoTriage({ ficha, onAccion, irA = null, puedeEdit
       const respuesta = await onAccion('reportar_triage', payload(r));
       // El servidor vuelve a leer la agenda después de guardar y manda `verificado`: se dice en el título.
       const verificada = respuesta?.verificado ? ' · verificada en el servidor' : '';
-      setGuardado({ filas: filas(r, contexto), titulo: (r.res === 'reagenda' ? 'Sesión reagendada'
+      setGuardado({ filas: filas(r, contexto), titulo: (sinFecha(r) ? 'Queda esperando fecha en Seguir' : r.res === 'reagenda' ? 'Sesión reagendada'
         : vende(r) ? 'Venta del low ticket registrada' : 'Llamada reportada') + verificada });
     } catch (err) {
       setError(mensajeDeError(err));
@@ -167,6 +177,12 @@ export default function ResultadoTriage({ ficha, onAccion, irA = null, puedeEdit
         ? <Nota paso={paso} r={r} campo="nota" onCambiar={cambiar} nav={navCampos}
           texto="¿Qué quedó pensando?" ayuda="Qué le falta para decidir y qué quedaron en hablar." />
         : <Motivo paso={paso} r={r} onCambiar={cambiar} nav={navCampos} />;
+      case 'dejo_fecha': return <Opciones texto="¿Dejó una fecha?" ayuda="Si no la dio, la llamada sale de Atrasadas y espera en «Seguir» sin contar como cancelación."
+        opciones={DEJO_FECHA.map((o) => ({ ...o, Icono: o.valor === 'si' ? CalendarCheck : CalendarOff }))}
+        elegida={r.dejo} onElegir={(v) => elegir('dejo_fecha', { dejo: v })} nav={nav} />;
+      case 'cuando_avisa': return <Fecha paso={paso} r={r} campo="fechaAviso" onCambiar={cambiar} nav={navCampos}
+        texto="¿Dijo cuándo te escribe?" ayuda="Opcional. Ese día te aparece en «Seguir › Hoy»; sin fecha, queda en «Esperan fecha»."
+        atajos={atajosDeAviso()} />;
       case 'reagenda': return <Fecha paso={paso} r={r} campo="nueva" conHora onCambiar={cambiar} nav={navCampos}
         texto="¿Para cuándo la pasa?" ayuda="La Sesión diagnóstica se mueve a la nueva fecha y vuelve a Confirmar." />;
       case 'nota': return <Nota paso={paso} r={r} campo="nota" minimo={MINIMO_MOTIVO} onCambiar={cambiar} nav={navCampos}

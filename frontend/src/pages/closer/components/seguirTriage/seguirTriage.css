@@ -1,0 +1,55 @@
+/* «Seguir» de triage (ADR-W241). */
+.st { display: grid; gap: 12px; }
+.st-barra { display: flex; align-items: center; gap: 10px; }
+.st-cargando, .st-ayuda { font-size: 13px; color: var(--ln-text-muted); margin: 0; padding: 4px 6px; }
+
+.st-meta { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: var(--ln-radius, 14px);
+  background: var(--ln-window-bg); border: 1px solid var(--ln-border-subtle); }
+.st-meta-num { font-size: 28px; font-weight: 800; line-height: 1; color: var(--ln-text-out); }
+.st-meta-txt { font-size: 12.5px; line-height: 1.4; color: var(--ln-text-muted); }
+.st-meta-txt b { font-size: 13.5px; color: var(--ln-text-out); }
+.st-meta-barra { flex: 1; max-width: 240px; height: 8px; border-radius: 99px; background: var(--ln-track, var(--ln-border-subtle)); overflow: hidden; }
+.st-meta-barra i { display: block; height: 100%; background: var(--ln-success); border-radius: 99px; transition: width .3s; }
+
+.st-lista { display: grid; gap: 8px; }
+.st-grupo { display: flex; align-items: center; gap: 6px; padding: 6px 6px 0; font-size: 10.5px; font-weight: 600;
+  letter-spacing: .07em; text-transform: uppercase; color: var(--ln-text-faint); }
+.st-grupo--alerta { color: var(--ln-danger); }
+
+.st-fila { display: grid; grid-template-columns: auto 1fr auto; gap: 8px 12px; align-items: center; padding: 11px 12px;
+  border-radius: 14px; background: var(--ln-window-bg); border: 1px solid var(--ln-border-subtle); }
+.st-fila.sel { border-color: var(--ln-border-strong); box-shadow: 0 0 0 3px var(--ln-focus-ring, transparent); }
+.st-fila.hecha { opacity: .7; }
+.st-quien { display: grid; gap: 4px; min-width: 0; }
+.st-nombre { all: unset; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--ln-text-out); justify-self: start; }
+.st-nombre:hover { text-decoration: underline; }
+.st-nombre:focus-visible { outline: 2px solid var(--ln-focus); outline-offset: 2px; border-radius: 4px; }
+.st-nota { font-size: 12.5px; color: var(--ln-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.st-acciones { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+
+.st-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.st-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 99px; font-size: 11px; font-weight: 600;
+  background: var(--ln-ct3-bg); color: var(--ln-text-muted); }
+.st-warn { background: color-mix(in srgb, var(--ln-warning) 16%, transparent); color: var(--ln-warning-text, var(--ln-warning)); }
+.st-err { background: color-mix(in srgb, var(--ln-danger) 14%, transparent); color: var(--ln-danger-text, var(--ln-danger)); }
+.st-vio { background: color-mix(in srgb, var(--ln-brand-2) 16%, transparent); color: var(--ln-brand-2-text, var(--ln-brand-2)); }
+.st-ok { background: color-mix(in srgb, var(--ln-success) 16%, transparent); color: var(--ln-success-text, var(--ln-success)); }
+
+.st-detalle { grid-column: 1 / -1; display: grid; gap: 10px; padding-top: 11px; border-top: 1px dashed var(--ln-border-main); }
+.st-pregunta { font-size: 12.5px; font-weight: 600; color: var(--ln-text-muted); }
+.st-salidas { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 7px; }
+.st-salida { all: unset; cursor: pointer; display: grid; gap: 4px; align-content: start; padding: 10px; border-radius: 12px;
+  border: 1px solid var(--ln-border-subtle); background: var(--ln-inset-bg, var(--ln-ct3-bg)); color: var(--ln-text-out); }
+.st-salida b { font-size: 12.5px; }
+.st-salida small { font-size: 11px; color: var(--ln-text-muted); line-height: 1.3; }
+.st-salida:hover { border-color: var(--ln-border-strong); }
+.st-salida:focus-visible { outline: 2px solid var(--ln-focus); outline-offset: 2px; }
+.st-salida.on { border-color: var(--ln-brand); }
+.st-salida--cierra.on { border-color: var(--ln-danger); }
+.st-fila-campos { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.st-pie { display: flex; justify-content: flex-end; gap: 8px; }
+
+@media (max-width: 720px) {
+  .st-fila { grid-template-columns: auto 1fr; }
+  .st-acciones { grid-column: 1 / -1; justify-content: flex-start; }
+}

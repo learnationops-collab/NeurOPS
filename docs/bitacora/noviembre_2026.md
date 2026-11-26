@@ -1112,3 +1112,9 @@
 
 ### 26/11/2026 · Agendas: sin duplicados al reportar una agenda movida en Google (ADR-W240)
 - Fernando Sánchez le quedaba duplicado a Dari: movió la llamada en Google y reportó la agenda vieja que tenía abierta, y la nueva quedó pendiente. Ahora el reporte va a la agenda que la reemplazó ([reagenda.py](../../app/agendas_v2/reagenda.py), [escritura.py](../../app/api/ficha/escritura.py)).
+
+### 26/11/2026 · Triage: «Seguir» como bandeja en cero y reagenda sin fecha (ADR-W241)
+- Pedido de la reunión del 25/11 (Dari y Mario). Para triage, Seguir tiene Hoy (atrasados y del día), Esperan fecha y Hechos hoy, con la cuenta de pendientes hacia 0 ([SeguirTriage.jsx](../../frontend/src/pages/closer/components/seguirTriage/SeguirTriage.jsx), [triage_seguir_service.py](../../app/services/triage_seguir_service.py)).
+- Cada fila se cierra ahí: «No respondió» programa el siguiente contacto; «Contestó» → agendó, pasa a closing, low ticket, más adelante o no le interesa (con motivo, sin pisar el show up). Todo se puede deshacer desde el aviso.
+- Reportar: «Reagenda → ¿Dejó una fecha? → No, va a avisar» en la ficha y «Reprogramó sin fecha» en la tarjeta de Atrasadas: sale de Atrasadas sin contar como cancelación. La ficha abierta desde Seguir arranca en el contacto.
+- La fila de Seguir del closer decía «Seguimiento N de 4»: la cadencia es de 3.

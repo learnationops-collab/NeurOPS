@@ -20,6 +20,8 @@ import TriageFollowUpModal from '../triage/components/TriageFollowUpModal';
 import { abrirSimulacion } from '../../sesion/simulacion';
 import CloserLeadsAudit from './audit/CloserLeadsAudit';
 import SeguimientosPane from './components/SeguimientosPane';
+import SeguirTriage from './components/seguirTriage/SeguirTriage';
+import SinFechaRapido from './components/seguirTriage/SinFechaRapido';
 import EsqueletoKanban from './components/EsqueletoKanban';
 import { escalonDe, useVentanaDeEntrada } from '../../components/huesos/Huesos';
 import DashboardComercial from '../comercial/DashboardComercial';
@@ -1404,6 +1406,11 @@ const CloserWorkflowPage = () => {
                     return r ? <div key={k} className="cv-kv"><small>{k.slice(2)}</small><span>{r}</span></div> : null;
                 })}
                 
+                {/* Triage: la llamada atrasada que el lead pidió mover sin dar fecha (ADR-W241). */}
+                {esTriage && activeStep === 'calls' && countdown?.kind === 'past' && a.id > 0 && (
+                    <div className="kc-etiquetas"><SinFechaRapido agenda={a} onListo={fetchAgendas} /></div>
+                )}
+
                 {/* El botón no cambia la etapa por sí solo: abre el mismo modal de proceso de
                     confirmación que el resto de la tarjeta (según en qué etapa esté el lead),
                     para no saltarse las notas obligatorias ni el resto del flujo guiado. */}
@@ -1942,7 +1949,9 @@ const CloserWorkflowPage = () => {
                             />
                         )
                     ) : activeStep === 'seguimientos' ? (
-                        <SeguimientosPane selectedDate={selectedDate} onOpenLead={handleSelectLead} refreshKey={seguimientosRefreshKey} onTopPending={setSeguimientoHero} />
+                        esTriage
+                            ? <SeguirTriage onOpenLead={handleSelectLead} refreshKey={seguimientosRefreshKey} />
+                            : <SeguimientosPane selectedDate={selectedDate} onOpenLead={handleSelectLead} refreshKey={seguimientosRefreshKey} onTopPending={setSeguimientoHero} />
                     ) : (
                         /* Renderizado Kanban para Llamadas (v7): mismo lenguaje visual que
                            Confirmaciones (3 columnas, kcard-v6), agrupado por urgencia en vez de por

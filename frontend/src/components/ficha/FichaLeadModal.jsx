@@ -377,7 +377,7 @@ const FichaLeadModal = ({
         switch (pestana) {
             case 'conf': return <TabConfirmacion {...props} />;
             // La llamada de triage tiene su propio reporte (calificación y low ticket), no el árbol del closer.
-            case 'resultado': if (ficha?.triage?.es_triage) return <ResultadoTriage {...props} />;
+            case 'resultado': if (ficha?.triage?.es_triage) return <ResultadoTriage {...props} seguimientoPedido={seguimientoPedido} />;
                 return TabResultado
                 ? <Suspense fallback={<Esqueleto />}><TabResultado {...props} arrancarEnVenta={venderAlAbrir} seguimientoPedido={seguimientoPedido} /></Suspense>
                 : <Faltante label="Resultado" />;
