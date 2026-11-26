@@ -32,6 +32,7 @@ import './conversaciones/tarjeta.css';
 import './conversaciones/barra.css';
 import './conversaciones/composer.css';
 import TourSeguimientos from './tour/TourSeguimientos';
+import TourFiltros from './tour/TourFiltros';
 
 // De a cuántas se cargan (pedido de los setters, 24/11: con 300 se perdían los seguimientos de hace 4 días).
 const LIMITE = 500;
@@ -215,6 +216,7 @@ export default function Conversaciones() {
             )}
             {/* El recorrido de seguimientos (ADR-W255): portada y pasos sobre el Inbox de verdad. */}
             <TourSeguimientos user={user} />
+            <TourFiltros user={user} />
             {stats && (
                 <Stats lista={lista} mediana={datos?.mediana_respuesta} setters={datos?.medianas_setters || []} yo={yo} ahora={ahora}
                     onCerrar={() => setStats(false)} />

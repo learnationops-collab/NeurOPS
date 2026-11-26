@@ -47,7 +47,7 @@ const PASOS = [
     },
 ];
 
-const TANDA = {
+export const TANDA_SEGUIMIENTOS = {
     vista: `${VERSION}-${huella(PASOS.map((p) => p.titulo + p.texto).join('|'))}`,
     clave: (user) => `ln_tour_seguimientos_${user?.id ?? 'anon'}`, evento: EVENTO, param: 'tour',
     fecha: '26 nov', titulo: ['Seguimientos,', 'más simples.'], cuenta: 'cosas para tus seguimientos',
@@ -62,5 +62,5 @@ const TANDA = {
 export const abrirTourSeguimientos = () => abrirNovedades(EVENTO);
 
 export default function TourSeguimientos({ user }) {
-    return <Novedades user={user} tanda={TANDA} />;
+    return <Novedades user={user} tanda={TANDA_SEGUIMIENTOS} />;
 }

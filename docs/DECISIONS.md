@@ -2312,3 +2312,16 @@
 - **Decisión:** para el rol triage salen Registrar un pago, Declarar una venta, Pedido a los devs (`sinRoles` en `herramientas.js`: una herramienta para todos menos esos roles) y Quiero procrastinar. Sin pago ni venta, «Nuevo» solo tenía «Reportar o pedir algo»: no se muestra, y Reportar va suelto en Herramientas › Crear. Quedan Buscar lead, Turnos, Learnito, Inbox, Chat, Leadership, Novedades, los pendientes (Avisos, Mis reportes, Conflictos, Playbook, Compartidos, Abandonos), las secciones ocultas y lo de la cuenta.
 - **Qué se pierde:** si un triage alguna vez cierra una venta, la declara desde la ficha del lead o le pide a un closer; no tiene el atajo. Un «Nuevo» que el triage tuviera fijado en el dock deja de dibujarse.
 - **Consecuencias:** sin backend. Los demás roles no cambian.
+
+## ADR-W258: dos recorridos nuevos, el del triage y el del Filtro de setters, sobre la misma pieza de Novedades
+
+- **Fecha:** 26/11/2026 · **Subsistema:** recorridos (`closer/novedades/Novedades.jsx`, `closer/tourTriage/TourTriage.jsx`, `inbox/tour/TourFiltros.jsx`, `components/recorrido/EscenaGenerica.jsx`). Sigue a ADR-W255.
+- **Contexto:** Santi pidió un recorrido con lo nuevo del triage del 25 y 26/11 (sobre todo Seguir, sin lo que hizo Mario, que ya tiene sus Novedades) y otro del Filtro del Inbox (ADR-W254), que a los setters no se les explicó bien. Los dos con link para mandar.
+- **Decisión:**
+  1. **Triage** (`/triage/deck?tour=triage`, 8 pasos): Seguir como bandeja (Hoy, Esperan fecha, Hechos hoy), Atrasados primero y la cadencia de 3 contactos, un toque por lead, Deshacer, Reprogramó sin fecha, lo pendiente que se fija solo, el dock más corto con Herramientas propias y los referidos en el Inbox. Sale solo al rol triage, después de las Novedades del Workspace; se reabre en Herramientas › Lo nuevo del triage.
+  2. **Filtro** (`/inbox?tour=filtros`, 8 pasos): abre el panel de verdad y va por Rápidos, secciones, Etapa, Seguimientos, Quién y de dónde, Fechas y Guardar. Sale solo a los setters, después del de seguimientos.
+  3. La pieza de Novedades suma `valor` (qué valor del parámetro abre esa tanda), `espera(user)` (otra tanda va primero, así no se abren dos juntas) y no abre sola ninguna tanda si el link pide otra. `tandaVista` y `novedadesVistas` dicen si alguien ya terminó una.
+  4. `EscenaGenerica`: la escena de un paso armada con datos (ícono, chips, filas, un número, una nota), para no dibujar cada escena a mano.
+- **Arreglo de paso:** `abrirNovedades` desde un `onClick` recibía el evento del clic y, desde ADR-W255, lo tomaba como el nombre de la tanda; ahora un argumento que no es texto abre las del Workspace. El texto de ayuda de Seguimientos del Filtro suma «o el que marcaste como seguimiento» (ADR-W255).
+- **Qué se pierde:** nada. Quien entra por un link de recorrido no ve ese día otro recorrido pendiente; le sale en la próxima entrada.
+- **Consecuencias:** sin backend. El triage puede ver tres recorridos seguidos en días distintos (Novedades, el suyo y, si entra al Inbox, el de seguimientos).

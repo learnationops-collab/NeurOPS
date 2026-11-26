@@ -15,6 +15,7 @@ const CATALOGO = {
     simular: { grupo: 'Ir a', desc: 'Ver Work como lo ve otra persona.', color: 'violeta' },
     'tool:turnos': { grupo: 'Agendas', desc: 'Los turnos que quedan de triage y de closers, con sus horarios.', color: 'azul' },
     links: { grupo: 'Agendas', desc: 'Tus links de agendamiento: tocá uno para copiarlo.', color: 'azul' },
+    'tour-triage': { grupo: 'Asistente', desc: 'El recorrido de lo nuevo en Seguir y en el dock.', color: 'violeta' },
     learnito: { grupo: 'Asistente', desc: 'Preguntale lo que necesites · Ctrl+L', color: 'violeta' },
     inbox: { grupo: 'Pendientes', desc: 'Tus conversaciones de Instagram y WhatsApp.', color: 'rosa', va: true },
     avisos: { grupo: 'Pendientes', desc: 'Lo que el sistema te avisó.', color: 'ambar' },

@@ -44,7 +44,8 @@ const aplazar = (t, user) => {
     localStorage.setItem(`${t.clave(user)}_aplazo`, JSON.stringify(a));
 };
 
-export const abrirNovedades = (evento = EVENTO) => window.dispatchEvent(new Event(evento));
+// Sin nombre (o desde un onClick, que pasa el evento del clic): las del Workspace.
+export const abrirNovedades = (evento) => window.dispatchEvent(new Event(typeof evento === 'string' ? evento : EVENTO));
 
 const ICONOS = { riel: PanelRight, calendario: CalendarDays, tarjeta: UserSquare2, confirmacion: CheckCircle2, reprogramar: CalendarClock, horario: Clock };
 
@@ -56,6 +57,13 @@ const CLOSER = {
     fecha: FECHA, portada: PORTADA, pasos: PASOS, iconos: ICONOS,
     titulo: ['Hay novedades', 'en Work.'], cuenta: 'cambios para tu día', etiqueta: 'Novedades de Work',
 };
+
+// Si la persona ya terminó esa tanda (la del Workspace sin `tanda`).
+export const tandaVista = (t, user) => {
+    const guardada = localStorage.getItem(t.clave(user));
+    return guardada === t.vista || Boolean(t.anterior && guardada === t.anterior);
+};
+export const novedadesVistas = (user) => tandaVista(CLOSER, user);
 
 const Portada = ({ tanda: t, obligatorio, quedan, onEmpezar, onDespues }) => {
     const PORTADA = t.portada;
@@ -112,10 +120,7 @@ const Novedades = ({ user, ctx, tanda = CLOSER }) => {
     const t = tanda;
     const [fase, setFase] = useState(null);
     const telefono = useTelefono();
-    const vista = () => {
-        const guardada = localStorage.getItem(t.clave(user));
-        return guardada === t.vista || Boolean(t.anterior && guardada === t.anterior);
-    };
+    const vista = () => tandaVista(t, user);
     // Sin terminar, se puede aplazar mientras queden días del plazo (`quedan`); después, obligatorio.
     const [quedan, setQuedan] = useState(0);
     const [obligatorio, setObligatorio] = useState(true);
@@ -129,9 +134,13 @@ const Novedades = ({ user, ctx, tanda = CLOSER }) => {
 
     useEffect(() => {
         if (!user) return;
-        const forzada = new URLSearchParams(window.location.search).get(t.param || 'novedades') === '1';
+        const params = new URLSearchParams(window.location.search);
+        const forzada = params.get(t.param || 'novedades') === (t.valor || '1');
         if (forzada) { abrir(); return; }
-        if (vista()) return;
+        // Un link que pide otro recorrido: este no se abre solo encima.
+        if (params.has('tour') || params.has('novedades')) return;
+        // `espera(user)`: otra tanda va primero (no se abren dos juntas); esta sale en la próxima entrada.
+        if (vista() || t.espera?.(user)) return;
         const a = leerAplazo(t, user);
         if (Date.now() >= a.hasta || diasQueQuedan(a) === 0) abrir();
     }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps

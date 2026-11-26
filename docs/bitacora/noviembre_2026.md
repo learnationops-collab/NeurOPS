@@ -1215,3 +1215,9 @@
 ### 26/11/2026 · Herramientas del triage, solo con lo suyo (ADR-W257)
 - Para el triage salen Registrar un pago, Declarar una venta, Pedido a los devs y Quiero procrastinar; «Nuevo» no se muestra y «Reportar o pedir algo» va suelto en Crear ([DockSecciones.jsx](../../frontend/src/pages/comercial/components/DockSecciones.jsx), [herramientas.js](../../frontend/src/ventanas/herramientas.js), [CloserWorkflowPage.jsx](../../frontend/src/pages/closer/CloserWorkflowPage.jsx)).
 - Las herramientas aceptan `sinRoles`: para todos menos esos roles.
+
+### 26/11/2026 · Recorridos del triage y del Filtro de setters (ADR-W258)
+- Lo nuevo del triage, en 8 pasos sobre el Workspace (Seguir, Deshacer, sin fecha, fijadas, Herramientas, referidos): `https://work.thelearnation.com/triage/deck?tour=triage`; se reabre en Herramientas › Lo nuevo del triage ([TourTriage.jsx](../../frontend/src/pages/closer/tourTriage/TourTriage.jsx)).
+- El Filtro del Inbox, sección por sección con el panel abierto: `https://work.thelearnation.com/inbox?tour=filtros`; sale solo a los setters después del de seguimientos ([TourFiltros.jsx](../../frontend/src/pages/inbox/tour/TourFiltros.jsx)).
+- Las tandas no se abren dos juntas y un link de recorrido no deja abrir otro encima ([Novedades.jsx](../../frontend/src/pages/closer/novedades/Novedades.jsx)); escena de paso armada con datos ([EscenaGenerica.jsx](../../frontend/src/components/recorrido/EscenaGenerica.jsx)).
+- Arreglo: «Novedades» desde un botón volvía a abrir las del Workspace sin depender del evento del clic. La ayuda de Seguimientos del Filtro dice que también cuenta lo marcado a mano.

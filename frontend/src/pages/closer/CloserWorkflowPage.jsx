@@ -12,6 +12,7 @@ import {
     CalendarPlus, Gift, Hourglass, Ghost, Filter, UserX, Share2, Sparkles
 } from 'lucide-react';
 import Novedades, { abrirNovedades } from './novedades/Novedades';
+import TourTriage, { abrirTourTriage } from './tourTriage/TourTriage';
 import api from '../../services/api';
 import { guardarCache, leerCache } from '../../services/cacheDeVistas';
 import { useAuth } from '../../contexts/AuthContext';
@@ -1574,6 +1575,7 @@ const CloserWorkflowPage = () => {
             ]),
             // Las novedades del Workspace (ADR-W218): vuelve a abrir la portada y el recorrido.
             { id: 'novedades', label: 'Novedades', Icono: Sparkles, onClick: abrirNovedades },
+            ...(esTriage ? [{ id: 'tour-triage', label: 'Lo nuevo del triage', Icono: Sparkles, onClick: abrirTourTriage }] : []),
             // El triage tiene su propio Seguir: procrastinar agarra un seguimiento de closer (ADR-W257).
             ...(counts.seguimientos > 0 && !esTriage
                 ? [{ id: 'procrastinar', label: 'Quiero procrastinar', Icono: Hourglass, onClick: () => setShowProcrastinar(true) }]
@@ -2132,6 +2134,8 @@ const CloserWorkflowPage = () => {
 
             {/* Novedades del Workspace (ADR-W218): portada a pantalla completa y recorrido por Work. */}
             <Novedades user={user} ctx={{ ir: irASeccion, abrirConfiguracion }} />
+            {/* Lo nuevo del triage (ADR-W258): sale después de las Novedades; link /triage/deck?tour=triage. */}
+            {esTriage && <TourTriage user={user} ctx={{ ir: irASeccion, abrirConfiguracion }} />}
 
             {/* Modal de Detalle de Lead v7 (ovLead) */}
             {/* Sin AnimatePresence a propósito: con esta versión de framer-motion el overlay nunca

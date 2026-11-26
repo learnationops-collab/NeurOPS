@@ -37,7 +37,7 @@ function Seguimientos({ filtro, cambiar, cuenta }) {
                 {etapas ? <>Cuenta los seguimientos que le hicieron mientras estaba en <b>{etapas}</b> (lo elegido en Etapa del setting).</>
                     : <>Sin etapa elegida, cuenta todos los seguimientos. Para una etapa, elegila en <b>Etapa del setting</b>.</>}
             </p>
-            <Grupo titulo="Seguimientos" ayuda="Un seguimiento es un mensaje del equipo después de 12 h sin respuesta.">
+            <Grupo titulo="Seguimientos" ayuda="Un seguimiento es un mensaje del equipo después de 12 h sin respuesta, o el que marcaste como seguimiento.">
                 <Opciones valor={conAlguno ? 'alguno' : filtro.fuCant} onElegir={(v) => cambiar({ fuCant: v, fuCuando: null })}
                     opciones={[[0, 'Ninguno', cuenta({ fuCant: 0, fuCuando: null })], ['alguno', 'Al menos uno', cuenta({ fuCant: 'alguno' })]]} />
             </Grupo>
