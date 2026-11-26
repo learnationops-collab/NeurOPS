@@ -851,3 +851,6 @@
 
 ### 25/11/2026 · Agendas: Work sigue la reagenda hecha en Google después de la llamada (ADR-W233)
 - Dari movió en su Google Calendar la llamada de Melanie Rivera al domingo y Work la seguía mostrando atrasada: solo seguía los eventos movidos hasta 2 h después de la hora de la agenda. Ahora también sigue los de agendas sin reportar de los últimos 14 días, cuando el evento quedó en una hora futura ([movidas.py](../../app/agendas_v2/movidas.py)).
+
+### 26/11/2026 · Agendas: sin duplicados al reportar una agenda movida en Google (ADR-W240)
+- Fernando Sánchez le quedaba duplicado a Dari: movió la llamada en Google y reportó la agenda vieja que tenía abierta, y la nueva quedó pendiente. Ahora el reporte va a la agenda que la reemplazó ([reagenda.py](../../app/agendas_v2/reagenda.py), [escritura.py](../../app/api/ficha/escritura.py)).

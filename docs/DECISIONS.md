@@ -1893,3 +1893,11 @@
 - **Decisión:** se revisan también las agendas sin reportar de los últimos 14 días. En las que ya pasaron hace más de 2 h, Work sigue la movida solo si el evento quedó en una hora futura: es una reagenda. Las cancelaciones no cambian: un evento borrado o cancelado después de la llamada no cancela nada en Work.
 - **Qué se pierde:** una agenda vieja cuyo evento se corrió a otra hora también pasada (por ejemplo, para dejar anotada la hora real) no se toca: eso lo sigue reportando el closer. Más allá de 14 días, una movida no se sigue.
 - **Consecuencias:** sin migración. La lectura del Calendar de cada closer cubre 14 días más hacia atrás. El 25/11 el ensayo sobre producción (solo lectura) encontró una sola agenda en ese caso, la de Melanie.
+
+## ADR-W240: el reporte de una agenda movida en Google va a la que la reemplazó
+
+- **Fecha:** 26/11/2026 · **Subsistema:** Ficha › Resultado y reporte de triage (`app/api/ficha/escritura.py`, `app/agendas_v2/reagenda.py` `vigente_tras_movidas`) · **Estado:** implementada
+- **Contexto:** Dari movió en su Google Calendar la llamada de Fernando Sánchez de las 12:00 a las 10:15. Work la siguió (ADR-W233): cerró la de las 12:00 como «Reagendado» y creó una a las 10:15. Dari tenía abierta la de las 12:00 y la reportó (Show up y pase a Marlon): el reporte pisó la cerrada y la de las 10:15 quedó pendiente, como un duplicado en su tablero.
+- **Decisión:** si se reporta (Resultado o triage) una agenda que Work reemplazó por una movida en Google, el reporte se aplica a la que la reemplazó, siguiendo la cadena, mientras esa siga sin reportar. Una reagenda hecha en Work no se redirige: reportar la vieja ahí puede ser una corrección. No hay botón para marcar duplicadas (Kerwin, 26/11: «mejor sin ese botón, arreglemos lo que salga mal»).
+- **Qué se pierde:** un reporte que de verdad era para la agenda vieja después de una movida en Google ya no puede caer ahí.
+- **Consecuencias:** sin migración. La cadena se lee de `agenda_payload` (`reagenda_de`, `movida_en_google`): solo cubre agendas de Agendas 2.0.
