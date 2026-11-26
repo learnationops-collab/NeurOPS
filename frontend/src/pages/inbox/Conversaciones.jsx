@@ -149,7 +149,7 @@ export default function Conversaciones() {
             <>
                 <ListaCab visibles={visibles} orden={orden} ahora={ahora} />
                 <ul>{visibles.map((c) => <Fila key={c.id} c={c} ahora={ahora} yo={yo} conAsignado={conAsignado} elegida={elegida === c.id} borrador={borradores[c.id]} onElegir={setElegida}
-                    eligiendo={eligiendo} marcada={marcadas.includes(c.id)} onMarcar={marcar} />)}</ul>
+                    eligiendo={eligiendo} marcada={marcadas.includes(c.id)} onMarcar={marcar} fases={filtro.fases} />)}</ul>
                 {lista.length >= limite && (
                     <button type="button" className="cv-mas" data-tip="Cargar más|Los filtros miran solo las conversaciones cargadas"
                         onClick={() => setLimite((n) => n + LIMITE)}>Cargar {LIMITE} más</button>

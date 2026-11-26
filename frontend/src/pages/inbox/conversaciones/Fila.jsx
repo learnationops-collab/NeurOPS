@@ -2,9 +2,9 @@
 // califica, cuánto hace que espera, la tarea que vence y a quién está asignada. Se decide a quién atender
 // sin abrir el chat. Lo no leído va en negrita con su cuenta. También: el borrador sin mandar, el seguimiento
 // programado y cuánto falta para que Instagram no deje escribirle (últimas 24 h).
-import { AlarmClock, Bot, Check, Clock, PencilLine, User, X } from 'lucide-react';
+import { AlarmClock, Bot, Check, Clock, PencilLine, Repeat2, User, X } from 'lucide-react';
 import { Avatar, Chip } from '../../../components/standard';
-import { avisoCierre, cierreMin, esperaMin, examenDe, quien, vistaPrevia } from './colas';
+import { avisoCierre, cierreMin, esperaMin, examenDe, quien, seguimientosDe, vistaPrevia } from './colas';
 import IconoCanal from './IconoCanal';
 import { colorDe, corto, faseDe } from './fasesSetting';
 import { EtapaMini, Ventana } from './Indicadores';
@@ -59,11 +59,13 @@ export function ChipFase({ fase }) {
 // `eligiendo`: con «Elegir» puesto, tocar la fila la marca para etiquetarla (1426) en lugar de abrirla.
 // Dos líneas (ADR-W238): quién es, su examen, cuánto espera y la hora; debajo, lo último que se dijo y, a la derecha,
 // en íconos, la etapa, la ventana si se cierra, tareas y seguimientos, las etiquetas como puntos y a quién está asignada.
-export default function Fila({ c, elegida, ahora, yo, conAsignado, borrador, onElegir, eligiendo, marcada, onMarcar }) {
+// `fases`: las del filtro; los seguimientos hechos se cuentan en esas (todas si no hay, ADR-W254).
+export default function Fila({ c, elegida, ahora, yo, conAsignado, borrador, onElegir, eligiendo, marcada, onMarcar, fases }) {
     const espera = esperaMin(c, ahora);
     const cierre = cierreMin(c, ahora);
     const examen = examenDe(c);
     const nombre = quien(c);
+    const hechos = seguimientosDe(c, fases);
     return (
         <li>
             <button type="button" className={`cv-item${c.sin_leer ? ' cv-item--nuevo' : ''}${marcada ? ' cv-item--marcada' : ''}`}
@@ -94,6 +96,11 @@ export default function Fila({ c, elegida, ahora, yo, conAsignado, borrador, onE
                             <Vence tarea={c.tarea} ahora={ahora} />
                             {c.toca && (
                                 <span className="cv-item-ico cv-item-ico--toca" data-tip={`Toca seguimiento|${c.toca}: lo pide la cadencia de su fase`}><AlarmClock size={12} aria-hidden="true" /></span>
+                            )}
+                            {hechos.n > 0 && (
+                                <span className="cv-item-fu" data-tip={`Seguimientos hechos|${hechos.n}${fases?.length ? ' en esa etapa' : ''} · el último ${hora(hechos.en)}${hechos.resp ? ', contestó' : ', sin respuesta'}`}>
+                                    <Repeat2 size={11} aria-hidden="true" />{hechos.n}
+                                </span>
                             )}
                             {c.seguimiento && (
                                 <span className="cv-item-ico" data-tip={`Seguimiento programado|Sale ${hora(c.seguimiento)} si no responde`}><AlarmClock size={12} aria-hidden="true" /></span>

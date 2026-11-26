@@ -1191,3 +1191,8 @@
 - Inbox (ADR-W253): el botón Learnito del chat abre un panel: lee toda la conversación (hasta 80 mensajes) y ofrece sugerir una respuesta, un seguimiento, resumirla, qué info sirve o una pregunta libre.
 - Arreglo: la build de Railway falló por un ícono inexistente en lucide 0.290 (`MessageSquareReply` → `Reply`).
 - Learnito: la conversación abierta desde el Inbox se titula con lo que vio el setter («Sugerime una respuesta para @…»), no con el contexto entero.
+
+### 26/11/2026 · Inbox: el Filtro por secciones y los seguimientos hechos por etapa (ADR-W254)
+- El Filtro va por secciones a la izquierda, con lo elegido debajo de cada nombre. Primera sección, Rápidos y guardados: Míos sin respuesta, Esperan más de 1 h, Se cierra la ventana, Toca seguimiento, Nuevos de hoy, Dolor sin seguimiento, Link sin respuesta, y los guardados ([MacroFiltro.jsx](../../frontend/src/pages/inbox/conversaciones/MacroFiltro.jsx), [seccionesFiltro.jsx](../../frontend/src/pages/inbox/conversaciones/seccionesFiltro.jsx)).
+- Seguimientos: Ninguno o Al menos uno, cuántos y cuándo fue el último, en la etapa elegida en Etapa del setting. La fila muestra cuántos lleva. La regla es la del reporte y la comparten ([seguimientos_hechos.py](../../app/automatizaciones/seguimientos_hechos.py)).
+- Fechas: «Desde ayer» y «Esta semana». Nuevo filtro de origen (Anuncios, Inbound, Bienvenida).

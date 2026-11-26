@@ -290,6 +290,8 @@ def listar_conversaciones():
     from app.automatizaciones import seguimientos  # importa el motor (por `escribir`): solo cuando se usa
     proximos = seguimientos.proximos(ids)
     toca = seguimientos.avisos([c for c, _, _, _ in filas])
+    from app.automatizaciones import seguimientos_hechos
+    hechos = seguimientos_hechos.por_fase(ids)
     avance = progreso.de_contactos([c for c, _, _, _ in filas], ejecuciones, ahora, current_user.id,
                                    {c.id: primero for c, _, _, primero in filas})
     # El último mensaje de cada una, en una sola consulta (antes, una por conversación). En empate, el de id mayor.
@@ -324,6 +326,8 @@ def listar_conversaciones():
             'resuelta_en': _iso(contacto.resuelta_en),
             'seguimiento': proximos.get(contacto.id),
             'toca': toca.get(contacto.id),
+            # Los seguimientos que ya le hizo el equipo, por fase ({fase: {n, en, resp}}): el filtro del Inbox (ADR-W254).
+            'seguimientos_hechos': hechos.get(contacto.id) or {},
             'bot_pausado': bool(contacto.bot_pausado_hasta and contacto.bot_pausado_hasta > ahora),
             'examen': variables.get('examen'),
             'califica': variables.get('_califica'),

@@ -44,11 +44,11 @@ from datetime import datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
 from app import db
-from app.automatizaciones import bandeja, fases
+from app.automatizaciones import bandeja, fases, seguimientos_hechos
 from app.automatizaciones.modelos import AutEjecucion, IgContacto, IgFase, IgMensaje
 from app.whatsapp.cliente import es_whatsapp
 
-SEGUIMIENTO_H = 12
+SEGUIMIENTO_H = seguimientos_hechos.SEGUIMIENTO_H
 # Sin definición acordada: las aperturas en dolor.
 BIENVENIDAS = ('hechas', 'respondidas', 'aperturas', 'aperturas_resp')
 A_CONFIRMAR = ('ap_dolor', 'ap_dolor_resp')
@@ -72,16 +72,6 @@ def _suyas(setter_id, desde):
     contactos = {c.id: c for c in IgContacto.query.filter(IgContacto.id.in_(ids))} if ids else {}
     return {cid: fases.canal(contactos[cid], a) for cid, a in asignados.items()
             if a['id'] == setter_id and cid in contactos}, contactos
-
-
-def _etapa_en(cambios, momento):
-    """La etapa del reporte en la que estaba la conversación en `momento` (sin cambios: entrantes)."""
-    etapa = 'entrantes'
-    for en, fase in cambios:
-        if en > momento:
-            break
-        etapa = fases.DEL_REPORTE.get(fase, etapa)
-    return etapa
 
 
 def _bienvenida(mios, msgs, ini, fin, bnv, detalle, quien):
@@ -184,23 +174,17 @@ def contar(setter_id, fecha, tz):
                 c['ap_entrantes_resp'] += 1
                 detalle[f'{canal}.ap_entrantes_resp'].append(quien(apertura))
 
-        # Follow-up: mensaje del equipo tras SEGUIMIENTO_H sin que el lead contestara el anterior.
-        previo = None
-        for i, (en, lead) in enumerate(msgs):
-            if lead:
-                previo = None
+        # Follow-up: la regla de `seguimientos_hechos`, con los mensajes que cuentan para este setter.
+        for en, fase, respondido in seguimientos_hechos.de_conversacion(msgs, cambios.get(cid, []), mios.__contains__):
+            if not ini <= en < fin:
                 continue
-            if en not in mios:
-                continue
-            if previo and en - previo >= timedelta(hours=SEGUIMIENTO_H) and ini <= en < fin:
-                etapa = _etapa_en(cambios.get(cid, []), en)
-                if etapa in fu:
-                    fu[etapa] += 1
-                    detalle[f'followups.{etapa}'].append(quien(en))
-                    if any(l for _, l in msgs[i + 1:]):
-                        fur[etapa] += 1
-                        detalle[f'followups_respondidos.{etapa}'].append(quien(en))
-            previo = en
+            etapa = fases.DEL_REPORTE.get(fase or seguimientos_hechos.SIN_MARCA)
+            if etapa in fu:
+                fu[etapa] += 1
+                detalle[f'followups.{etapa}'].append(quien(en))
+                if respondido:
+                    fur[etapa] += 1
+                    detalle[f'followups_respondidos.{etapa}'].append(quien(en))
 
     con_fases = any(en < fin for lista in cambios.values() for en, _ in lista)
     if not con_fases:

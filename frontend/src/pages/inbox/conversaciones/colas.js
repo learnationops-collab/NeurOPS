@@ -73,14 +73,16 @@ export const ETAPAS = [
 const DIA = 86400000;
 const cero = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x.getTime(); };
 
-// hoy · ayer · rango (desde y hasta, días enteros en la hora de quien mira).
+// hoy · ayer (desde ayer: ayer y hoy) · semana (los últimos 7 días) · rango (desde y hasta, días enteros en la
+// hora de quien mira).
 export function enRango(iso, rango, desde, hasta, ahora) {
     if (!rango) return true;
     if (!iso) return false;
     const t = new Date(iso).getTime();
     const hoy = cero(ahora);
     if (rango === 'hoy') return t >= hoy;
-    if (rango === 'ayer') return t >= hoy - DIA && t < hoy;
+    if (rango === 'ayer') return t >= hoy - DIA;
+    if (rango === 'semana') return t >= hoy - 6 * DIA;
     const d = desde ? new Date(`${desde}T00:00`).getTime() : -Infinity;
     const h = hasta ? new Date(`${hasta}T00:00`).getTime() + DIA : Infinity;
     return t >= d && t < h;
@@ -118,6 +120,32 @@ export function etiquetasDe(lista) {
 // El último mensaje enviado: 'bot' o el setter asignado (Meta no dice quién del equipo lo mandó).
 const enviadoPor = (c) => (c.ultimo_envio?.de === 'bot' ? 'bot' : c.ultimo_envio ? c.asignado?.id ?? null : null);
 
+// Los seguimientos que ya le hizo el equipo en esas fases (todas si no hay ninguna): {n, en, resp}, con la fecha
+// y la respuesta del último (ADR-W254). La lista los trae por fase en `seguimientos_hechos`.
+export function seguimientosDe(c, fases) {
+    const porFase = c.seguimientos_hechos || {};
+    const elegidas = fases?.length ? fases : Object.keys(porFase);
+    let salida = { n: 0, en: null, resp: null };
+    elegidas.forEach((f) => {
+        const x = porFase[f];
+        if (!x) return;
+        const masNuevo = !salida.en || x.en > salida.en;
+        salida = { n: salida.n + x.n, en: masNuevo ? x.en : salida.en, resp: masNuevo ? x.resp : salida.resp };
+    });
+    return salida;
+}
+
+const cumpleCantidad = (n, cant) => (cant == null ? true : cant === 'alguno' ? n >= 1 : cant === '4+' ? n >= 4 : n === cant);
+
+function cumpleSeguimientos(c, f, ahora) {
+    if (f.toca && !c.toca) return false;
+    if (f.fuCant == null && !f.fuCuando && !f.fuResp) return true;
+    const s = seguimientosDe(c, f.fases);
+    if (!cumpleCantidad(s.n, f.fuCant)) return false;
+    if (f.fuCuando && !enRango(s.en, f.fuCuando, '', '', ahora)) return false;
+    return !f.fuResp || (s.n > 0 && s.resp === (f.fuResp === 'si'));
+}
+
 // `asignado`: null (todos) · 'ninguno' · el id de un setter. `califica`: 'si' · 'no'. `fases` y `etiquetas`:
 // listas (alcanza con una). `envioPor`: 'lead' (lo último lo escribió el lead), 'bot' o el id del setter.
 export function cumpleFiltro(c, f, ahora) {
@@ -127,6 +155,8 @@ export function cumpleFiltro(c, f, ahora) {
     if (f.etiqueta && !(c.etiquetas || []).some((e) => claveEtiqueta(e) === f.etiqueta)) return false;
     if (f.etiquetas?.length && !(c.etiquetas || []).some((e) => f.etiquetas.includes(claveEtiqueta(e)))) return false;
     if (f.fases?.length && !f.fases.includes(c.fase)) return false;
+    if (f.origen && c.canal !== f.origen) return false;
+    if (!cumpleSeguimientos(c, f, ahora)) return false;
     if (f.envioPor === 'lead') return c.ultimo_de === 'lead' && enRango(c.ultimo_en, f.envio, f.envioDesde, f.envioHasta, ahora)
         && cumpleFiltro(c, { ...f, envioPor: null, envio: null }, ahora);
     if (f.asignado === 'ninguno' && c.asignado) return false;
@@ -158,6 +188,12 @@ export function ordenDe(f) {
     if (f.orden) return ORDENES.find((o) => o.value === f.orden) || ORDENES[0];
     const def = COLAS.find((x) => x.value === f.cola) || COLAS[0];
     return ORDENES.find((o) => o.value === (def.porEspera ? 'espera' : def.porCierre ? 'cierre' : 'ultimo'));
+}
+
+// Cuántas cumplen el filtro, sin ordenarlas (las cuentas de cada opción del Filtro).
+export function contar(lista, { ahora, ...f }) {
+    const def = COLAS.find((x) => x.value === f.cola) || COLAS[0];
+    return lista.reduce((n, c) => n + (def.cumple(c, ahora) && cumpleFiltro(c, f, ahora) ? 1 : 0), 0);
 }
 
 export function filtrar(lista, { ahora, ...f }) {

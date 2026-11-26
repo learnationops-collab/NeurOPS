@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Mockup · Inbox: un sistema de filtros para todo lo que usan los setters</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #dcdcf0; --win: #f1f1f4; --panel: #e9e9ee; --line: #d6d6dc; --in: #ffffff;
+    --ink: #1c2033; --mut: #5f6478; --mut2: #8a8ea0;
+    --ok: #1f9d6b; --err: #c8433a; --warn: #c98a14; --vio: #7D63E6; --info: #2f7fd6; --rosa: #d6456f;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; font-family: Inter, system-ui, sans-serif; color: var(--ink); font-size: 13px;
+         background: radial-gradient(1200px 600px at 20% 0%, #cfd0f5, transparent), var(--bg); padding: 28px 16px 60px; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  .nota { max-width: 1180px; margin: 0 auto 18px; font-size: 13.5px; color: var(--mut); line-height: 1.55; }
+  .nota b { color: var(--ink); }
+  .nota ol { margin: 6px 0 0 18px; padding: 0; }
+  .titulo-escena { max-width: 1180px; margin: 0 auto 8px; font: 600 11px Inter; letter-spacing: .08em; text-transform: uppercase; color: var(--mut); padding-left: 4px; }
+
+  .pantalla { max-width: 1180px; margin: 0 auto 30px; background: var(--win); border-radius: 20px; box-shadow: 0 24px 70px rgba(30,30,80,.2);
+              display: grid; grid-template-columns: 330px 1fr; min-height: 720px; overflow: hidden; }
+  /* Lista */
+  .lista { border-right: 1px solid var(--line); display: flex; flex-direction: column; min-width: 0; }
+  .barra { display: flex; gap: 8px; align-items: center; padding: 12px; border-bottom: 1px solid var(--line); position: relative; }
+  .btn-f { display: flex; gap: 7px; align-items: center; background: var(--in); border: 1px solid var(--line); border-radius: 11px; padding: 7px 11px; font-weight: 600; }
+  .btn-f.on { border-color: var(--vio); box-shadow: 0 0 0 3px rgba(125,99,230,.15); }
+  .btn-f .n { background: var(--ink); color: #fff; border-radius: 99px; padding: 1px 7px; font-size: 11px; }
+  .buscar { flex: 1; background: var(--in); border: 1px solid var(--line); border-radius: 11px; padding: 7px 10px; color: var(--mut2); }
+  .chips-act { display: flex; flex-wrap: wrap; gap: 5px; padding: 8px 12px; border-bottom: 1px solid var(--line); min-height: 38px; }
+  .chip-a { display: inline-flex; gap: 5px; align-items: center; background: #ece8fb; color: #4b3aa8; border-radius: 99px; padding: 3px 4px 3px 9px; font-size: 11.5px; font-weight: 600; border: 0; }
+  .chip-a i { font-style: normal; width: 16px; height: 16px; display: grid; place-items: center; border-radius: 99px; background: rgba(75,58,168,.12); }
+  .vacio-chips { color: var(--mut2); font-size: 11.5px; align-self: center; }
+  .filas { overflow: auto; flex: 1; }
+  .fila { display: grid; grid-template-columns: 30px 1fr auto; gap: 9px; padding: 9px 12px; border-bottom: 1px solid #e4e4ea; align-items: center; }
+  .av { width: 30px; height: 30px; border-radius: 99px; background: #cfd2e4; display: grid; place-items: center; font-weight: 700; font-size: 11px; color: #4a4f6a; }
+  .fila b { font-size: 12.5px; display: block; }
+  .fila small { color: var(--mut); font-size: 11px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .fase { display: inline-flex; gap: 4px; align-items: center; font-weight: 600; }
+  .fase::before { content: ''; width: 7px; height: 7px; border-radius: 99px; background: var(--c); }
+  .fu { font-size: 10.5px; background: #fff1e0; color: #8a5a00; border-radius: 6px; padding: 1px 5px; font-weight: 600; }
+  .espera { font-size: 11px; color: var(--rosa); font-weight: 700; }
+  .nada { padding: 30px 16px; color: var(--mut); text-align: center; }
+
+  /* Chat de fondo */
+  .chat { position: relative; padding: 18px; display: grid; align-content: start; gap: 10px; }
+  .chat .lin { height: 34px; border-radius: 12px; background: #e2e3ea; width: 55%; }
+  .chat .lin.r { justify-self: end; background: #dcd6f6; width: 45%; }
+
+  /* Panel del filtro */
+  .pop { position: absolute; top: 58px; left: 12px; width: 840px; background: var(--in); border: 1px solid var(--line); border-radius: 18px;
+         box-shadow: 0 30px 80px rgba(30,30,80,.28); z-index: 5; display: none; }
+  .pop.abierto { display: block; }
+  .vistas { display: flex; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--line); overflow-x: auto; }
+  .vista { min-width: 118px; text-align: left; background: var(--win); border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px; display: grid; gap: 1px; }
+  .tarjetas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .vista { position: relative; cursor: pointer; }
+  .vista .vt { font-size: 12px; color: var(--ink); font-weight: 600; }
+  .vista .vx { position: absolute; top: 6px; right: 8px; font-style: normal; color: var(--mut2); font-size: 14px; }
+  .vista b { font-size: 16px; color: var(--c); }
+  .vista span { font-size: 11px; color: var(--mut); }
+  .vista.on { border-color: var(--c, var(--vio)); background: #fff; box-shadow: inset 0 0 0 1px var(--c, var(--vio)); }
+  .vista .st { color: var(--warn); }
+  .cuerpo { display: grid; grid-template-columns: 240px 1fr; min-height: 430px; }
+  .secs { border-right: 1px solid var(--line); padding: 8px; display: grid; align-content: start; gap: 2px; }
+  .sec { display: flex; justify-content: space-between; align-items: center; text-align: left; border: 0; background: none; padding: 9px 10px; border-radius: 10px; font-weight: 600; color: var(--mut); }
+  .sec:hover { background: var(--win); }
+  .sec.on { background: #ece8fb; color: #4b3aa8; }
+  .sec .pt { min-width: 18px; height: 18px; border-radius: 99px; background: var(--vio); color: #fff; font-size: 10.5px; display: grid; place-items: center; }
+  .sec { gap: 6px; }
+  .sec-t { display: grid; gap: 2px; min-width: 0; }
+  .sec-t small { font-weight: 500; font-size: 11px; color: var(--vio); line-height: 1.35; }
+  .sec .nuevo { font-size: 9.5px; background: #fff1e0; color: #8a5a00; border-radius: 6px; padding: 1px 5px; }
+  .panel { padding: 14px 18px; display: grid; align-content: start; gap: 14px; }
+  .rot { font: 600 10.5px Inter; letter-spacing: .07em; text-transform: uppercase; color: var(--mut); margin-bottom: 6px; }
+  .ayuda { font-size: 11.5px; color: var(--mut); margin: -2px 0 8px; line-height: 1.45; }
+  .ops { display: flex; flex-wrap: wrap; gap: 6px; }
+  .op { border: 1px solid var(--line); background: #fff; border-radius: 99px; padding: 5px 10px; font-size: 12px; font-weight: 500; display: inline-flex; gap: 6px; align-items: center; }
+  .op .c { color: var(--mut2); font-size: 11px; }
+  .op[aria-pressed="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .op[aria-pressed="true"] .c { color: #c9cde6; }
+  .op.dot::before { content: ''; width: 7px; height: 7px; border-radius: 99px; background: var(--c); }
+  .op:disabled { opacity: .45; cursor: default; }
+
+  /* Seguimientos */
+  .fu-tabla { display: grid; grid-template-columns: 100px 1fr 90px; gap: 8px 12px; align-items: center; }
+  .fu-tabla .h { font-size: 10.5px; color: var(--mut2); text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
+  .fu-et { font-weight: 600; display: flex; gap: 6px; align-items: center; }
+  .fu-et::before { content: ''; width: 8px; height: 8px; border-radius: 99px; background: var(--c); }
+  .seg { display: inline-flex; background: var(--win); border: 1px solid var(--line); border-radius: 10px; padding: 2px; }
+  .seg button { border: 0; background: none; padding: 4px 9px; border-radius: 8px; font-size: 11.5px; font-weight: 600; color: var(--mut); }
+  .seg button[aria-pressed="true"] { background: #fff; color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  .paso { display: inline-flex; align-items: center; gap: 4px; margin-left: 8px; }
+  .paso button { width: 22px; height: 22px; border-radius: 7px; border: 1px solid var(--line); background: #fff; font-weight: 700; line-height: 1; }
+  .paso b { min-width: 16px; text-align: center; }
+  .fu-n { font-size: 11.5px; color: var(--mut); text-align: right; }
+  .fu-n b { color: var(--ink); }
+  .regla { background: var(--win); border-radius: 12px; padding: 10px 12px; font-size: 11.5px; color: var(--mut); line-height: 1.5; }
+  .regla b { color: var(--ink); }
+
+  .pie { display: flex; gap: 10px; align-items: center; padding: 10px 14px; border-top: 1px solid var(--line); }
+  .pie .resumen { flex: 1; color: var(--mut); font-size: 12px; }
+  .pie .resumen b { color: var(--ink); font-size: 14px; }
+  .bt { border: 1px solid var(--line); background: #fff; border-radius: 10px; padding: 7px 12px; font-weight: 600; }
+  .bt.pri { background: var(--vio); border-color: var(--vio); color: #fff; }
+  .bt:disabled { opacity: .45; cursor: default; }
+  .guardar { display: flex; gap: 6px; }
+  .guardar input { border: 1px solid var(--line); border-radius: 10px; padding: 7px 10px; width: 230px; font: inherit; }
+  .fechas { display: flex; gap: 6px; align-items: center; margin-top: 6px; }
+  .fechas input { border: 1px solid var(--line); border-radius: 8px; padding: 4px 6px; font: inherit; font-size: 12px; }
+  .buscar-tag { border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; width: 100%; font: inherit; margin-bottom: 8px; }
+</style>
+</head>
+<body>
+
+<div class="nota">
+  <b>Qué resuelve.</b> Los setters quieren encontrar, por ejemplo, «los que en Dolor ya tienen 2 seguimientos y no contestaron». Hoy el Filtro es una sola columna larga con todo junto y no conoce los seguimientos. La propuesta mantiene el mismo botón «Filtro» y ordena el panel en <b>secciones a la izquierda</b>: cada sección muestra cuántos filtros tiene puestos.
+  <ol>
+    <li><b>Seguimientos (nuevo):</b> «Ninguno» o «Al menos uno»; con «Al menos uno» aparecen cuántos (1, 2, 3, 4 o más) y cuándo fue el último (Hoy, Desde ayer, Esta semana). «Desde ayer» es ayer y hoy. La etapa no se elige acá: sale de <b>Etapa del setting</b>. Con «Dolor» puesto, cuenta los seguimientos que le hiciste mientras estaba en Dolor; sin etapa, todos. Seguimiento = la regla del reporte: un mensaje del setter después de 12 h sin respuesta.</li>
+    <li><b>Rápidos y guardados</b> es la primera sección: un toque aplica un filtro entero (Míos sin respuesta, Se cierra la ventana, Dolor sin seguimiento…) y abajo están los que guardó cada uno, con su × para borrarlos.</li>
+    <li><b>Cada sección dice lo que tiene elegido</b> debajo de su nombre, así se ve todo lo puesto sin entrar a cada una.</li>
+    <li><b>Reglas de combinación, siempre iguales:</b> dentro de una sección, las opciones se suman (Dolor <i>o</i> Oferta); entre secciones, se cumplen todas (Dolor <i>y</i> asignadas a mí <i>y</i> 2 seguimientos).</li>
+    <li>Cada opción muestra cuántas conversaciones quedarían si la elegís, contando los otros filtros puestos.</li>
+    <li>Lo puesto aparece como chips arriba de la lista, cada uno con su ×; «Guardar como vista» lo deja en las tarjetas de arriba.</li>
+  </ol>
+  Probalo: en <b>Etapa del setting</b> elegí «3 Dolor» y en <b>Seguimientos</b> «Al menos uno», «2» y «Esta semana». Los datos son de ejemplo.
+</div>
+
+<div class="titulo-escena">Inbox · Conversaciones</div>
+<div class="pantalla">
+  <div class="lista">
+    <div class="barra">
+      <button class="btn-f" id="btnF">⚙ Filtro <span class="n" id="nTotal">0</span></button>
+      <div class="buscar">Buscar…</div>
+      <div class="pop" id="pop" role="dialog" aria-label="Filtros">
+        <div class="cuerpo">
+          <nav class="secs" id="secs"></nav>
+          <div class="panel" id="panel"></div>
+        </div>
+        <div class="pie">
+          <button class="bt" id="limpiar">Limpiar</button>
+          <div class="resumen" id="resumen"></div>
+          <form class="guardar" id="formG"><input id="nomG" placeholder="Nombre, ej.: Dolor con 2 seguimientos"><button class="bt pri" id="btG" disabled>Guardar como vista</button></form>
+        </div>
+      </div>
+    </div>
+    <div class="chips-act" id="chips"></div>
+    <div class="filas" id="filas"></div>
+  </div>
+  <div class="chat"><div class="lin"></div><div class="lin r"></div><div class="lin"></div><div class="lin r"></div><div class="lin"></div></div>
+</div>
+
+<script>
+// ---------- Datos de ejemplo ----------
+const FASES = [
+  ['apertura', '1 Apertura', '#2f7fd6', 'entrantes'], ['conexion', '2 Conexión', '#2f7fd6', 'entrantes'],
+  ['dolor', '3 Dolor', '#7D63E6', 'dolor'], ['consecuencia', '4 Consecuencia', '#7D63E6', 'dolor'], ['compromiso', '5 Compromiso', '#7D63E6', 'dolor'],
+  ['propuesta', '6 Propuesta', '#c98a14', 'oferta'], ['link', '7 Link', '#d6456f', 'link'], ['confirmacion', '8 Confirmación', '#1f9d6b', 'link'],
+  ['nolead', 'No lead', '#8a8ea0', null], ['inabrible', 'In-abrible', '#8a8ea0', null],
+];
+const COLAS = [['esperan', 'Esperan respuesta'], ['esperan_hora', 'Esperan más de 1 h'], ['sin_leer', 'Sin leer'], ['por_cerrarse', 'Se cierra la ventana'],
+  ['cortadas', 'Flujo cortado'], ['bot_pausado', 'Bot pausado'], ['tarea_vencida', 'Con tarea vencida']];
+const TAGS = ['Médico', 'Estudiante', 'Docente', 'Volver a escribir', 'Pidió precio', 'Workshop'];
+const NOMBRES = ['lucia.mtz', 'dr.ramiro', 'sofi_estudia', 'caro.p', 'juanma88', 'vale.neuro', 'agus_r', 'meli.g', 'nico.vet', 'pau.lic', 'rocio_b', 'tomi.f',
+  'flor.ana', 'gabi_m', 'mica.s', 'santi.l', 'eli_d', 'manu.c', 'jose_p', 'ines.r', 'lu.ortiz', 'fede.k', 'cami.z', 'marti.v', 'bruno_q', 'dani.h', 'vicky.t',
+  'ale.n', 'sol_m', 'leo.b', 'emi.c', 'ana.paz', 'guille_r', 'mora.l', 'pedro.s', 'clara_v', 'teo.m', 'abril.d', 'nahu.g', 'lara.f'];
+let semilla = 13;
+const azar = () => (semilla = (semilla * 9301 + 49297) % 233280) / 233280;
+const de = (l) => l[Math.floor(azar() * l.length)];
+const CONVS = NOMBRES.map((nombre, i) => {
+  const fase = de(['apertura', 'conexion', 'conexion', 'dolor', 'dolor', 'dolor', 'consecuencia', 'compromiso', 'propuesta', 'propuesta', 'link', 'confirmacion', 'nolead', 'inabrible']);
+  const orden = FASES.findIndex((f) => f[0] === fase);
+  const fu = {};  // seguimientos hechos en cada fase por la que pasó
+  FASES.slice(0, 8).forEach(([f], k) => { fu[f] = k <= Math.min(orden, 7) && azar() > .35 ? Math.floor(azar() * 4) : 0; });
+  const total = Object.values(fu).reduce((a, b) => a + b, 0);
+  return {
+    id: i, nombre, fase, fu, fuDias: total ? Math.floor(azar() * 6) : null, fuResp: total ? azar() > .55 : null, toca: total && azar() > .7,
+    colas: COLAS.map((c) => c[0]).filter(() => azar() > .78),
+    asignado: de(['Elias', 'Paula', 'Elias', 'Paula', null]), canal: azar() > .85 ? 'wa' : 'ig',
+    origen: de(['anuncios', 'anuncios', 'inbound', 'bienvenida']), califica: de(['si', 'si', 'no', null]),
+    tags: TAGS.filter(() => azar() > .8), empezo: Math.floor(azar() * 9), ultimo: Math.floor(azar() * 4), ultimoPor: de(['lead', 'lead', 'Elias', 'Paula', 'bot']),
+    espera: azar() > .5 ? Math.floor(azar() * 300) : null,
+  };
+});
+
+// ---------- Filtro ----------
+const YO = 'Elias';
+const vacio = () => ({ cola: null, fases: [], fuCant: null, fuCuando: null, fuResp: null, toca: false,
+  asignado: [], canal: [], origen: [], califica: null, ultimoPor: [], empezo: null, ultimo: null, tags: [] });
+let F = vacio();
+let sec = 'rapidos';
+let buscarTag = '';
+const vistasPropias = [];
+// Los rápidos: un toque aplica el filtro entero. Todos sobre lo mío salvo «Todos» y «Sin asignar».
+const PREDEF = [
+  ['todos', 'Todos', '#2f7fd6', () => vacio(), 'Sin filtros'],
+  ['mios_esp', 'Míos sin respuesta', '#d6456f', () => ({ ...vacio(), cola: 'esperan', asignado: [YO] }), 'Esperan que les contestes'],
+  ['mios_hora', 'Esperan más de 1 h', '#d6456f', () => ({ ...vacio(), cola: 'esperan_hora', asignado: [YO] }), 'Los más urgentes'],
+  ['cierre', 'Se cierra la ventana', '#c8433a', () => ({ ...vacio(), cola: 'por_cerrarse', asignado: [YO] }), 'Quedan menos de 24 h para escribirles'],
+  ['toca', 'Toca seguimiento', '#c98a14', () => ({ ...vacio(), asignado: [YO], toca: true }), 'Lo pide la cadencia de su fase'],
+  ['mios_hoy', 'Nuevos de hoy', '#7D63E6', () => ({ ...vacio(), asignado: [YO], empezo: 'hoy' }), 'Empezaron hoy'],
+  ['dolor_sin', 'Dolor sin seguimiento', '#7D63E6', () => ({ ...vacio(), asignado: [YO], fases: ['dolor', 'consecuencia', 'compromiso'], fuCant: 0 }), 'En dolor y nunca les volviste a escribir'],
+  ['link_sin', 'Link sin respuesta', '#d6456f', () => ({ ...vacio(), asignado: [YO], fases: ['link'], ultimoPor: [YO] }), 'Les mandaste el link y no contestaron'],
+  ['sin_asig', 'Sin asignar', '#c98a14', () => ({ ...vacio(), asignado: ['ninguno'] }), 'Nadie las tiene'],
+];
+
+// Los seguimientos en las fases elegidas en «Etapa del setting» (sin fase elegida: en todas).
+const fuDe = (c, f) => (f.fases.length ? f.fases : Object.keys(c.fu)).reduce((a, x) => a + (c.fu[x] || 0), 0);
+// fuCant: null (cualquiera), 0 (ninguno), 'alguno' (al menos uno), o el número exacto (1, 2, 3, '4+').
+const cumpleCant = (n, cant) => (cant == null ? true : cant === 'alguno' ? n >= 1 : cant === '4+' ? n >= 4 : n === cant);
+// «Desde ayer» = ayer y hoy; «Esta semana» = los últimos 7 días.
+const DIAS = { hoy: 0, ayer: 1, semana: 6 };
+const enRango = (dias, r) => (r == null ? true : dias <= DIAS[r]);
+// Cada sección se evalúa sola: así las cuentas de una opción respetan las otras secciones.
+const SECCIONES = {
+  estado: (c, f) => !f.cola || c.colas.includes(f.cola),
+  etapa: (c, f) => !f.fases.length || f.fases.includes(c.fase),
+  seguimientos: (c, f) => cumpleCant(fuDe(c, f), f.fuCant) && (f.fuCuando == null || (c.fuDias != null && enRango(c.fuDias, f.fuCuando))) && (f.fuResp == null || c.fuResp === f.fuResp) && (!f.toca || c.toca),
+  personas: (c, f) => (!f.asignado.length || f.asignado.includes(c.asignado ?? 'ninguno')) && (!f.canal.length || f.canal.includes(c.canal))
+    && (!f.origen.length || f.origen.includes(c.origen)) && (!f.califica || c.califica === f.califica) && (!f.ultimoPor.length || f.ultimoPor.includes(c.ultimoPor)),
+  fechas: (c, f) => enRango(c.empezo, f.empezo) && enRango(c.ultimo, f.ultimo),
+  etiquetas: (c, f) => !f.tags.length || f.tags.some((t) => c.tags.includes(t)),
+};
+const pasa = (c, f, salvo) => Object.entries(SECCIONES).every(([k, fn]) => k === salvo || fn(c, f));
+const filtrar = (f) => CONVS.filter((c) => pasa(c, f));
+// Cuántas quedan si se aplica `parte` sobre el filtro puesto.
+const conteo = (parte) => filtrar({ ...F, ...parte }).length;
+
+const puestos = (f = F) => ({
+  estado: f.cola ? 1 : 0, etapa: f.fases.length ? 1 : 0,
+  seguimientos: (f.fuCant != null) + (f.fuCuando != null) + (f.fuResp != null) + f.toca,
+  personas: [f.asignado.length, f.canal.length, f.origen.length, f.califica, f.ultimoPor.length].filter(Boolean).length,
+  fechas: [f.empezo, f.ultimo].filter(Boolean).length, etiquetas: f.tags.length ? 1 : 0,
+});
+const NOMSEC = [['rapidos', 'Rápidos y guardados'], ['estado', 'Estado'], ['etapa', 'Etapa del setting'], ['seguimientos', 'Seguimientos'], ['personas', 'Quién y de dónde'], ['fechas', 'Fechas'], ['etiquetas', 'Etiquetas']];
+const RANGOS = [['hoy', 'Hoy'], ['ayer', 'Desde ayer'], ['semana', 'Esta semana']];
+const CANTS = [[1, '1'], [2, '2'], [3, '3'], ['4+', '4 o más']];
+const txtCant = (v) => (v === 0 ? 'Sin seguimientos' : v === 'alguno' ? 'Con seguimientos' : v === '4+' ? '4 o más seguimientos' : `${v} seguimiento${v > 1 ? 's' : ''}`);
+const txtRango = (v) => RANGOS.find((x) => x[0] === v)[1].toLowerCase();
+
+function chipsActivos(f0 = F) {
+  const F = f0;
+  const p = [];
+  if (F.cola) p.push([COLAS.find((c) => c[0] === F.cola)[1], { cola: null }, 'estado']);
+  if (F.fases.length) p.push(['En ' + F.fases.map((x) => FASES.find((f) => f[0] === x)[1].replace(/^\d /, '')).join(', '), { fases: [] }, 'etapa']);
+  if (F.fuCant != null) p.push([txtCant(F.fuCant) + (F.fases.length ? ' en esa etapa' : ''), { fuCant: null }, 'seguimientos']);
+  if (F.fuCuando) p.push(['Último seguimiento: ' + txtRango(F.fuCuando), { fuCuando: null }, 'seguimientos']);
+  if (F.fuResp != null) p.push([F.fuResp ? 'Contestó el último seguimiento' : 'No contestó el último seguimiento', { fuResp: null }, 'seguimientos']);
+  if (F.toca) p.push(['Toca seguimiento', { toca: false }, 'seguimientos']);
+  if (F.asignado.length) p.push(['Asignadas a ' + F.asignado.map((a) => (a === 'ninguno' ? 'nadie' : a === YO ? 'vos' : a)).join(' o '), { asignado: [] }, 'personas']);
+  if (F.canal.length) p.push([F.canal.map((c) => (c === 'wa' ? 'WhatsApp' : 'Instagram')).join(' o '), { canal: [] }, 'personas']);
+  if (F.origen.length) p.push(['Origen: ' + F.origen.join(', '), { origen: [] }, 'personas']);
+  if (F.califica) p.push([F.califica === 'si' ? 'Califican' : 'No califican', { califica: null }, 'personas']);
+  if (F.ultimoPor.length) p.push(['Último mensaje de ' + F.ultimoPor.map((x) => (x === 'lead' ? 'el lead' : x === 'bot' ? 'el bot' : x)).join(' o '), { ultimoPor: [] }, 'personas']);
+  if (F.empezo) p.push(['Empezó: ' + RANGOS.find((r) => r[0] === F.empezo)[1].toLowerCase(), { empezo: null }, 'fechas']);
+  if (F.ultimo) p.push(['Último mensaje: ' + RANGOS.find((r) => r[0] === F.ultimo)[1].toLowerCase(), { ultimo: null }, 'fechas']);
+  if (F.tags.length) p.push(['Con ' + F.tags.join(' o '), { tags: [] }, 'etiquetas']);
+  return p;
+}
+
+const chipsDe = (f) => chipsActivos(f).map((c) => c[0]);
+const elegidoEn = () => {
+  const m = {};
+  const v = vistaPuesta();
+  if (v && v.l !== 'Todos') m.rapidos = [v.l];
+  chipsActivos().forEach(([t, , k]) => { (m[k] = m[k] || []).push(t); });
+  return m;
+};
+
+// ---------- Render ----------
+const $ = (id) => document.getElementById(id);
+const alternar = (l, x) => (l.includes(x) ? l.filter((y) => y !== x) : [...l, x]);
+const igual = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+function op({ label, pressed, parte, color, onClick }) {
+  const n = parte ? conteo(parte) : null;
+  const b = document.createElement('button');
+  b.className = 'op' + (color ? ' dot' : '');
+  if (color) b.style.setProperty('--c', color);
+  b.setAttribute('aria-pressed', pressed);
+  b.innerHTML = `${label}${n != null ? `<span class="c">${n}</span>` : ''}`;
+  b.onclick = onClick;
+  return b;
+}
+function bloque(titulo, ayuda, hijos, cls = 'ops') {
+  const d = document.createElement('div');
+  d.innerHTML = `<div class="rot">${titulo}</div>${ayuda ? `<div class="ayuda">${ayuda}</div>` : ''}`;
+  const c = document.createElement('div'); c.className = cls; hijos.forEach((h) => c.appendChild(h)); d.appendChild(c);
+  return d;
+}
+const multi = (clave, lista) => lista.map(([v, l, color]) => op({ label: l, color, pressed: F[clave].includes(v),
+  parte: { [clave]: F[clave].includes(v) ? F[clave] : [...F[clave], v] }, onClick: () => set({ [clave]: alternar(F[clave], v) }) }));
+const uno = (clave, lista) => lista.map(([v, l, color]) => op({ label: l, color, pressed: F[clave] === v,
+  parte: { [clave]: v }, onClick: () => set({ [clave]: F[clave] === v ? null : v }) }));
+
+const conAlguno = () => F.fuCant != null && F.fuCant !== 0;
+const aplicar = (f) => { F = JSON.parse(JSON.stringify(f)); render(); };
+function tarjeta({ l, c, f, d, propia, borrar }) {
+  const b = document.createElement('button'); b.className = 'vista' + (igual(f, F) ? ' on' : ''); b.style.setProperty('--c', c);
+  b.innerHTML = `<b>${filtrar(f).length}</b><span class="vt">${propia ? '<span class="st">★</span> ' : ''}${l}</span><span>${d}</span>${propia ? '<i class="vx" title="Borrar">×</i>' : ''}`;
+  b.onclick = (e) => { if (e.target.classList?.contains('vx')) { borrar(); return; } aplicar(f); };
+  return b;
+}
+const vistaPuesta = () => [...PREDEF.map(([, l, , f]) => ({ l, f: f() })), ...vistasPropias].find((x) => igual(x.f, F));
+
+const PANELES = {
+  rapidos: () => [
+    bloque('Rápidos', 'Un toque y queda puesto. Después podés ajustarlo en las otras secciones.',
+      PREDEF.map(([, l, c, f, d]) => tarjeta({ l, c, f: f(), d })), 'tarjetas'),
+    vistasPropias.length
+      ? bloque('Guardados', null, vistasPropias.map((x, i) => tarjeta({ ...x, d: chipsDe(x.f).join(' · ') || 'Sin filtros', propia: true,
+        borrar: () => { vistasPropias.splice(i, 1); render(); } })), 'tarjetas')
+      : bloque('Guardados', 'Todavía no guardaste ninguno: armá un filtro y guardalo con un nombre abajo.', []),
+  ],
+  estado: () => [bloque('Cola', 'Una a la vez. Sin elegir: todas.', uno('cola', COLAS))],
+  etapa: () => [bloque('Fase', 'Podés elegir varias: muestra las que estén en cualquiera de ellas.', multi('fases', FASES.map(([v, l, c]) => [v, l, c])))],
+  seguimientos: () => {
+    const etapa = F.fases.length ? F.fases.map((x) => FASES.find((f) => f[0] === x)[1].replace(/^\d /, '')).join(', ') : null;
+    return [
+      Object.assign(document.createElement('div'), { className: 'regla', innerHTML: etapa
+        ? `Cuenta los seguimientos que le hiciste mientras estaba en <b>${etapa}</b> (lo elegido en Etapa del setting).`
+        : 'Sin etapa elegida, cuenta todos los seguimientos. Para una etapa, elegila en <b>Etapa del setting</b>.' }),
+      bloque('Seguimientos', 'Un seguimiento es un mensaje tuyo después de 12 h sin respuesta.', [
+        op({ label: 'Ninguno', pressed: F.fuCant === 0, parte: { fuCant: 0, fuCuando: null }, onClick: () => set({ fuCant: F.fuCant === 0 ? null : 0, fuCuando: null }) }),
+        op({ label: 'Al menos uno', pressed: conAlguno(), parte: { fuCant: 'alguno' }, onClick: () => set({ fuCant: conAlguno() ? null : 'alguno', fuCuando: null }) }),
+      ]),
+      ...(conAlguno() ? [
+        bloque('¿Cuántos?', 'Sin elegir: cualquier cantidad.', CANTS.map(([v, l]) => op({ label: l, pressed: F.fuCant === v, parte: { fuCant: v },
+          onClick: () => set({ fuCant: F.fuCant === v ? 'alguno' : v }) }))),
+        bloque('El último fue', null, uno('fuCuando', RANGOS)),
+      ] : []),
+      bloque('¿Contestó el último?', null, uno('fuResp', [[true, 'Contestó', '#1f9d6b'], [false, 'No contestó', '#c8433a']])),
+      bloque('Cadencia', null, [op({ label: 'Toca seguimiento ahora', pressed: F.toca, parte: { toca: true }, color: '#c98a14', onClick: () => set({ toca: !F.toca }) })]),
+    ];
+  },
+  personas: () => [
+    bloque('Asignado a', null, multi('asignado', [['Elias', 'Vos'], ['Paula', 'Paula'], ['ninguno', 'Sin asignar', '#c98a14']])),
+    bloque('Último mensaje de', null, multi('ultimoPor', [['lead', 'El lead', '#d6456f'], ['Elias', 'Vos'], ['Paula', 'Paula'], ['bot', 'El bot']])),
+    bloque('Origen', null, multi('origen', [['anuncios', 'Anuncios'], ['inbound', 'Inbound'], ['bienvenida', 'Bienvenida']])),
+    bloque('Canal', null, multi('canal', [['ig', 'Instagram'], ['wa', 'WhatsApp', '#1f9d6b']])),
+    bloque('Calificación', null, uno('califica', [['si', 'Califica', '#1f9d6b'], ['no', 'No califica', '#c8433a']])),
+  ],
+  fechas: () => {
+    const r = (clave, tit) => {
+      const d = bloque(tit, null, uno(clave, RANGOS));
+      const x = document.createElement('div'); x.className = 'fechas';
+      x.innerHTML = '<span class="ayuda" style="margin:0">o entre</span><input type="date"><span class="ayuda" style="margin:0">y</span><input type="date">';
+      d.appendChild(x); return d;
+    };
+    return [r('empezo', 'Empezó la conversación'), r('ultimo', 'Último mensaje')];
+  },
+  etiquetas: () => {
+    const d = document.createElement('div');
+    const inp = document.createElement('input'); inp.className = 'buscar-tag'; inp.placeholder = 'Buscar etiqueta'; inp.value = buscarTag;
+    inp.oninput = () => { buscarTag = inp.value; const pos = inp.selectionStart; render(); const n = document.querySelector('.buscar-tag'); n.focus(); n.setSelectionRange(pos, pos); };
+    d.appendChild(inp);
+    d.appendChild(bloque('Con cualquiera de estas', null, multi('tags', TAGS.filter((t) => t.toLowerCase().includes(buscarTag.toLowerCase())).map((t) => [t, t]))));
+    return [d];
+  },
+};
+
+function set(parte) { F = { ...F, ...parte }; render(); }
+
+function render() {
+  const lista = filtrar(F);
+  $('nTotal').textContent = lista.length;
+  $('btnF').classList.toggle('on', Object.values(puestos()).some(Boolean));
+  // Secciones
+  const p = puestos(); const el = elegidoEn(); const s = $('secs'); s.innerHTML = '';
+  NOMSEC.forEach(([k, l]) => {
+    const b = document.createElement('button'); b.className = 'sec' + (sec === k ? ' on' : '');
+    const eleg = (el[k] || []).join(' · ');
+    b.innerHTML = `<span class="sec-t"><span>${l}${k === 'seguimientos' ? ' <span class="nuevo">nuevo</span>' : ''}</span>${eleg ? `<small>${eleg}</small>` : ''}</span>${p[k] ? `<span class="pt">${p[k]}</span>` : ''}`;
+    b.onclick = () => { sec = k; render(); }; s.appendChild(b);
+  });
+  const pan = $('panel'); pan.innerHTML = ''; PANELES[sec]().forEach((h) => pan.appendChild(h));
+  // Pie
+  const n = Object.values(p).reduce((a, b) => a + b, 0);
+  $('resumen').innerHTML = `<b>${lista.length}</b> conversaciones · ${n ? `${n} filtro${n > 1 ? 's' : ''} puesto${n > 1 ? 's' : ''}` : 'sin filtros'}`;
+  $('limpiar').disabled = !n;
+  $('btG').disabled = !n || !$('nomG').value.trim();
+  // Chips
+  const ch = $('chips'); ch.innerHTML = '';
+  const act = chipsActivos();
+  if (!act.length) ch.innerHTML = '<span class="vacio-chips">Sin filtros: todas las conversaciones</span>';
+  act.forEach(([t, quitar]) => { const b = document.createElement('button'); b.className = 'chip-a'; b.innerHTML = `${t}<i>×</i>`; b.onclick = () => set(quitar); ch.appendChild(b); });
+  // Filas
+  const fl = $('filas'); fl.innerHTML = '';
+  if (!lista.length) fl.innerHTML = '<div class="nada">Ninguna conversación cumple todo lo puesto.<br>Sacá un filtro de arriba.</div>';
+  lista.forEach((c) => {
+    const f = FASES.find((x) => x[0] === c.fase);
+    const nf = fuDe(c, F);
+    const cuando = c.fuDias == null ? '' : c.fuDias === 0 ? ' · hoy' : c.fuDias === 1 ? ' · ayer' : ` · hace ${c.fuDias} d`;
+    const fus = nf ? `<span class="fu">${nf} seg.${cuando}</span>` : '';
+    const d = document.createElement('div'); d.className = 'fila';
+    d.innerHTML = `<span class="av">${c.nombre.slice(0, 2).toUpperCase()}</span><div><b>@${c.nombre}</b><small><span class="fase" style="--c:${f[2]}">${f[1]}</span>${fus}${c.toca ? '<span class="fu" style="background:#fdeacc">⏰ toca</span>' : ''}</small></div>${c.espera != null ? `<span class="espera">${c.espera >= 60 ? Math.floor(c.espera / 60) + ' h' : c.espera + ' min'}</span>` : '<span></span>'}`;
+    fl.appendChild(d);
+  });
+}
+
+$('btnF').onclick = () => $('pop').classList.toggle('abierto');
+$('limpiar').onclick = () => set(vacio());
+$('nomG').oninput = () => { $('btG').disabled = !Object.values(puestos()).some(Boolean) || !$('nomG').value.trim(); };
+$('formG').onsubmit = (e) => { e.preventDefault(); sec = 'rapidos'; vistasPropias.push({ id: 'p' + vistasPropias.length, l: $('nomG').value.trim(), c: '#c98a14', f: JSON.parse(JSON.stringify(F)), propia: true }); $('nomG').value = ''; render(); };
+$('pop').classList.add('abierto');
+sec = 'rapidos';
+render();
+</script>
+</body>
+</html>
