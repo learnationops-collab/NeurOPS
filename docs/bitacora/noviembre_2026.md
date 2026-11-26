@@ -1190,3 +1190,4 @@
 - Learnito (ADR-W252): adjuntar imagen, PDF o texto (clip, Ctrl+V o arrastrar); «⋯» en cada conversación con Fijar, Renombrar y Borrar; redactor en un solo cuadro con enviar redondo; calificación y uso en una línea; arreglado el scroll que se trababa al abrir una conversación.
 - Inbox (ADR-W253): el botón Learnito del chat abre un panel: lee toda la conversación (hasta 80 mensajes) y ofrece sugerir una respuesta, un seguimiento, resumirla, qué info sirve o una pregunta libre.
 - Arreglo: la build de Railway falló por un ícono inexistente en lucide 0.290 (`MessageSquareReply` → `Reply`).
+- Learnito: la conversación abierta desde el Inbox se titula con lo que vio el setter («Sugerime una respuesta para @…»), no con el contexto entero.

@@ -42,6 +42,10 @@ export function useCopiloto() {
         setEnviando(true);
         try {
             const { data } = await api.post('/copiloto/learnito', { ...pedido, conversacion_id: (!nueva && conversacion) || undefined });
+            // Abierta desde el Inbox, la pregunta lleva todo el contexto: el título es lo que vio el setter (ADR-W253).
+            if ((nueva || !conversacion) && pedido.pregunta && muestra && muestra !== pedido.pregunta) {
+                api.patch(`/copiloto/learnito/historial/${data.conversacion_id}`, { titulo: muestra.slice(0, 120) }).catch(() => {});
+            }
             setConversacion(data.conversacion_id);
             ultima.current = data.mensaje?.text || '';
             setMensajes([...anteriores, propio,
