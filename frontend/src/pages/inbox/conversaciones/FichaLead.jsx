@@ -95,6 +95,7 @@ export default function FichaLead({ contacto, tareas, recorrido, fases = [], cit
 
     return (
         <Panel as="aside" size="sm" className="cv-ficha" aria-label="Ficha del lead">
+            <MisStats />
             <Fila icono={CalendarCheck} titulo="Tareas" color="var(--brand-secondary)" cuenta={abiertas.length}
                 tip={abiertas.length ? undefined : 'Tareas|Se crean desde la pestaña Tarea, abajo del chat'}>
                 {abiertas.length > 0 && (
@@ -162,7 +163,6 @@ export default function FichaLead({ contacto, tareas, recorrido, fases = [], cit
                     </>
                 )}
             </Fila>
-            <MisStats />
         </Panel>
     );
 }

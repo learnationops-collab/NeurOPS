@@ -1,5 +1,5 @@
 // Tus números, al pie de la columna del lead (Mario, 26/11/2026, ADR-W246): cuánto tardás en responder estando activo
-// e inactivo (mediana de las últimas 24 h), las agendas que cargaste hoy y tu promedio diario de los últimos 30 días.
+// e inactivo (mediana de las últimas 24 h; desde ADR-W250 arriba de Tareas, en una fila), las agendas que cargaste hoy y tu promedio diario de los últimos 30 días.
 // Se piden al abrir y cada minuto. Los números entran contando.
 import { useEffect, useState } from 'react';
 import { CalendarPlus, Moon, TrendingUp, Zap } from 'lucide-react';
@@ -48,10 +48,10 @@ export default function MisStats() {
         <section className="cv-mis" aria-label="Tus números">
             <span className="cv-mis-tit">Tus números</span>
             <div className="cv-mis-grid">
-                <Dato icono={Zap} color="var(--success)" valor={s.activo?.mediana} unidad="min" rotulo="Respuesta activo" tip={`Respondiendo activo|${resp(s.activo)}`} />
-                <Dato icono={Moon} color="var(--warning)" valor={s.inactivo?.mediana} unidad="min" rotulo="Respuesta inactivo" tip={`Respondiendo inactivo|${resp(s.inactivo)}`} />
+                <Dato icono={Zap} color="var(--success)" valor={s.activo?.mediana} unidad="min" rotulo="Resp. activo" tip={`Respondiendo activo|${resp(s.activo)}`} />
+                <Dato icono={Moon} color="var(--warning)" valor={s.inactivo?.mediana} unidad="min" rotulo="Resp. inactivo" tip={`Respondiendo inactivo|${resp(s.inactivo)}`} />
                 <Dato icono={CalendarPlus} color="var(--brand-secondary)" valor={s.agendas_hoy} rotulo="Agendas hoy" tip="Agendas hoy|Las que cargaste hoy como setter" />
-                <Dato icono={TrendingUp} color="var(--info)" valor={s.agendas_promedio} decimales={1} rotulo="Promedio diario"
+                <Dato icono={TrendingUp} color="var(--info)" valor={s.agendas_promedio} decimales={1} rotulo="Prom. diario"
                     tip={`Promedio diario|Agendas por día en los últimos ${s.dias} días`} />
             </div>
         </section>

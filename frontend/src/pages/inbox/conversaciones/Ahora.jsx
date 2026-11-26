@@ -26,7 +26,7 @@ export function Telefono({ contacto }) {
 }
 
 // «No requiere respuesta» (ADR-W235): saca el chat de «Esperan respuesta» hasta que el lead vuelva a escribir.
-function Resolver({ contacto, marcada, onCambio }) {
+function Resolver({ contacto, marcada, onCambio, compacto }) {
     const [enviando, setEnviando] = useState(false);
     const cambiar = async () => {
         setEnviando(true);
@@ -40,15 +40,17 @@ function Resolver({ contacto, marcada, onCambio }) {
         }
     };
     return (
-        <button type="button" className={`cv-resolver${marcada ? ' cv-resolver--on' : ''}`} disabled={enviando} onClick={cambiar}
+        <button type="button" className={`cv-resolver${marcada ? ' cv-resolver--on' : ''}${compacto ? ' cv-resolver--ico' : ''}`} disabled={enviando} onClick={cambiar}
+            aria-label={marcada ? 'Resuelta: volver a «Esperan respuesta»' : 'No requiere respuesta'}
             data-tip={marcada ? 'Marcada: no requiere respuesta|Tocala para que vuelva a «Esperan respuesta»' : 'No requiere respuesta|Sale de «Esperan respuesta» hasta que vuelva a escribir'}>
             {marcada ? <Undo2 size={12} aria-hidden="true" /> : <CheckCheck size={12} aria-hidden="true" />}
-            {marcada ? 'Resuelta' : 'No requiere'}
+            {!compacto && (marcada ? 'Resuelta' : 'No requiere')}
         </button>
     );
 }
 
-export function Ahora({ contacto, mensajes, onCambio }) {
+// `compacto` (ADR-W250): en la fila de arriba de la tarjeta, al lado de la palabra clave; «No requiere» solo con ícono.
+export function Ahora({ contacto, mensajes, onCambio, compacto }) {
     const ahora = new Date();
     const ultimo = mensajes[mensajes.length - 1];
     const delLead = ultimo?.direccion === 'entrante' ? { ultimo_de: 'lead', ultimo_en: ultimo.en } : null;
@@ -56,9 +58,9 @@ export function Ahora({ contacto, mensajes, onCambio }) {
     const espera = delLead && !marcada ? esperaMin(delLead, ahora) : null;
     return (
         <div className="cv-ahora">
-            {espera != null && <Cronometro desde={delLead.ultimo_en} grande />}
-            <Ventana contacto={contacto} queda={cierreMin(contacto, ahora)} aviso={avisoCierre(contacto)} />
-            {delLead && <Resolver contacto={contacto} marcada={marcada} onCambio={onCambio} />}
+            {espera != null && <Cronometro desde={delLead.ultimo_en} grande={!compacto} />}
+            <Ventana contacto={contacto} queda={cierreMin(contacto, ahora)} aviso={avisoCierre(contacto)} mini={compacto} />
+            {delLead && <Resolver contacto={contacto} marcada={marcada} onCambio={onCambio} compacto={compacto} />}
         </div>
     );
 }

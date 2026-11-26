@@ -130,7 +130,9 @@ export default function TarjetaLead({ datos, fase, canal, yo, pausar, onPausar, 
     return (
         <Panel as="section" size="sm" className="cv-tarjeta" aria-label="El lead">
             <div className="cv-bloque">
-                <Origen contacto={contacto} entrada={datos.entrada} canal={canal} campana={asignado?.campana} onCambio={onCambio} />
+                <Origen contacto={contacto} entrada={datos.entrada} canal={canal} campana={asignado?.campana} onCambio={onCambio}>
+                    <Ahora contacto={contacto} mensajes={datos.mensajes || []} onCambio={onCambio} compacto />
+                </Origen>
                 <div className="cv-tarjeta-quien">
                     <span className="cv-tarjeta-avatar">
                         <Avatar name={nombre} />
@@ -152,7 +154,6 @@ export default function TarjetaLead({ datos, fase, canal, yo, pausar, onPausar, 
                 <Agenda agenda={cliente?.agenda} />
             </div>
             <div className="cv-bloque cv-bloque--suave">
-                <Ahora contacto={contacto} mensajes={datos.mensajes || []} onCambio={onCambio} />
                 <BotLead contacto={contacto} ejecucion={datos.ejecucion} pausar={pausar} onPausar={onPausar} onCambio={onCambio} />
             </div>
             <div className="cv-bloque">

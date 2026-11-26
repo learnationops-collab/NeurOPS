@@ -1164,3 +1164,8 @@
 - Enviar sube a la fila de herramientas; la caja dice «Escribir…», sin anillo azul ([Composer.jsx](../../frontend/src/pages/inbox/conversaciones/Composer.jsx), [composer.css](../../frontend/src/pages/inbox/conversaciones/composer.css)).
 - El menú «/» con secciones de color, íconos, atajos como teclas y vista previa a la derecha ([MenuRayo.jsx](../../frontend/src/pages/inbox/conversaciones/MenuRayo.jsx)).
 - Después de un deploy, una pestaña vieja se recarga sola si le falta un archivo (Learnito no abría) ([main.jsx](../../frontend/src/main.jsx)).
+
+### 26/11/2026 · Inbox: la columna del lead entra entera, botones sobrios (ADR-W250)
+- Espera, ventana y «No requiere» al lado de la palabra clave; «Tus números» arriba de Tareas en una fila ([TarjetaLead.jsx](../../frontend/src/pages/inbox/conversaciones/TarjetaLead.jsx), [FichaLead.jsx](../../frontend/src/pages/inbox/conversaciones/FichaLead.jsx)).
+- Botones rectangulares con poco redondeo y sin brillos ([tarjeta.css](../../frontend/src/pages/inbox/conversaciones/tarjeta.css)).
+- Learnito respondía «no respondió»: la Academia contaba el chat del equipo y las consultas de Work en un mismo límite por minuto y devolvía 429; ahora cada grupo tiene su contador (Academia, ADR-246).

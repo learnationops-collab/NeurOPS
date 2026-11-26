@@ -2234,3 +2234,11 @@
   2. El menú «/»: secciones con ícono y color (Guía, Variables, Links de agenda, Respuestas rápidas, Audios, Pasos), cada opción con su ícono, el título, el atajo como tecla y la variante (A/B) como chip; a la derecha, la vista previa de la opción bajo el mouse con el texto entero y qué hace.
 - **Qué se pierde:** la ayuda «Enter envía» a la vista (queda en el tooltip de Enviar).
 - **Consecuencias:** sin migración. También: si una pestaña vieja pide un archivo de una versión anterior después de un deploy, la página se recarga sola una vez (`main.jsx`, `vite:preloadError`); antes el botón de Learnito «no hacía nada».
+
+## ADR-W250: la tarjeta del lead entra entera y con botones sobrios
+
+- **Fecha:** 26/11/2026 · **Subsistema:** Inbox (`conversaciones/TarjetaLead.jsx`, `Origen.jsx`, `Ahora.jsx`, `FichaLead.jsx`, `MisStats.jsx`, `tarjeta.css`) · **Estado:** implementada. Sigue a ADR-W246.
+- **Contexto:** Mario: la columna derecha no entraba sin desplazarse y los botones (degradés, brillos, muy redondeados) se veían «de IA», no profesionales.
+- **Decisión:** el contador de espera, la ventana y «No requiere» (solo ícono) suben a la fila de la palabra clave; «Tus números» va arriba de Tareas en una fila de cuatro; Transferir, No lead, In-abrible, Adelantar, la etapa y las pastillas pasan a rectángulos de 6-8 px de radio, fondo neutro y el color solo en el ícono.
+- **Qué se pierde:** el texto «No requiere» a la vista (queda en el tooltip).
+- **Consecuencias:** sin migración.

@@ -92,11 +92,13 @@ function Clave({ contacto, entrada, onCambio }) {
     );
 }
 
-export default function Origen({ contacto, entrada, canal, campana, onCambio }) {
+// `children`: lo que va a la derecha de la fila (la espera, la ventana y «No requiere», ADR-W250).
+export default function Origen({ contacto, entrada, canal, campana, onCambio, children }) {
     return (
         <div className="cv-origen">
             <Canal contacto={contacto} canal={canal} campana={entrada?.campana || campana} onCambio={onCambio} />
             <Clave contacto={contacto} entrada={entrada} onCambio={onCambio} />
+            {children && <span className="cv-origen-der">{children}</span>}
         </div>
     );
 }

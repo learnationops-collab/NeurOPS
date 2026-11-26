@@ -24,47 +24,48 @@
 .thalamus.inbox .cv-origen-form button:disabled{opacity:.4;cursor:default}
 .thalamus.inbox .cv-tarjeta-op--actual{color:var(--text-muted);font-size:11.5px;cursor:default}
 
-/* Acciones de la etapa: Transferir, No lead, In-abrible. Vidrio con aura de su color. */
+/* Botones sobrios (Mario, 26/11: «más Apple»): rectángulos con 8 px de radio, fondo neutro, el color solo en el ícono
+   y en el texto, sin degradés ni brillos. */
 .thalamus.inbox .cv-salidas{display:flex;gap:6px;align-items:stretch}
 .thalamus.inbox .cv-accion-caja{flex:1;display:flex}
-.thalamus.inbox .cv-accion{--c:var(--error);flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;height:32px;padding:0 8px;border-radius:11px;cursor:pointer;
-  font:inherit;font-size:11.5px;font-weight:800;white-space:nowrap;color:var(--c);
-  border:1px solid color-mix(in srgb,var(--c) 35%,transparent);
-  background:linear-gradient(180deg,color-mix(in srgb,var(--c) 16%,transparent),color-mix(in srgb,var(--c) 6%,transparent));
-  box-shadow:inset 0 1px 0 color-mix(in srgb,#fff 10%,transparent),0 4px 14px -6px color-mix(in srgb,var(--c) 45%,transparent);
-  transition:transform .18s cubic-bezier(.3,1.6,.5,1),box-shadow .2s,background .2s}
-.thalamus.inbox .cv-accion:hover{transform:translateY(-1px);background:linear-gradient(180deg,color-mix(in srgb,var(--c) 24%,transparent),color-mix(in srgb,var(--c) 10%,transparent));
-  box-shadow:inset 0 1px 0 color-mix(in srgb,#fff 14%,transparent),0 8px 20px -6px color-mix(in srgb,var(--c) 60%,transparent)}
-.thalamus.inbox .cv-accion:active{transform:scale(.96)}
+.thalamus.inbox .cv-accion{--c:var(--error);flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;height:30px;padding:0 8px;border-radius:8px;cursor:pointer;
+  font:inherit;font-size:12px;font-weight:600;white-space:nowrap;color:var(--text-main);
+  border:1px solid var(--border-subtle);background:color-mix(in srgb,var(--text-main) 4%,transparent);transition:background .15s,border-color .15s,transform .1s}
+.thalamus.inbox .cv-accion svg{color:var(--c)}
+.thalamus.inbox .cv-accion:hover{background:color-mix(in srgb,var(--text-main) 8%,transparent);border-color:var(--border-main)}
+.thalamus.inbox .cv-accion:active{transform:scale(.98)}
 .thalamus.inbox .cv-accion:disabled{opacity:.45;cursor:default;transform:none}
-.thalamus.inbox .cv-accion svg{transition:transform .25s cubic-bezier(.3,1.6,.5,1)}
-.thalamus.inbox .cv-accion:hover svg{transform:scale(1.15) rotate(-8deg)}
 .thalamus.inbox .cv-accion--transferir{--c:var(--info)}
-.thalamus.inbox .cv-accion--transferir:hover svg{transform:translateX(2px) scale(1.1)}
 .thalamus.inbox .cv-salidas .cv-salidas-fuera{flex:2;align-self:center}
 
-/* Adelantar y la etapa, con más aura. */
-.thalamus.inbox .cv-adelantar.ui-btn{box-shadow:0 6px 20px -6px color-mix(in srgb,var(--brand-secondary) 70%,transparent),inset 0 1px 0 rgba(255,255,255,.25);
-  background:linear-gradient(135deg,var(--brand-secondary),color-mix(in srgb,var(--brand-secondary) 70%,#8B5CF6))}
-.thalamus.inbox .cv-adelantar.ui-btn:hover{box-shadow:0 10px 26px -6px color-mix(in srgb,var(--brand-secondary) 85%,transparent),inset 0 1px 0 rgba(255,255,255,.3)}
-.thalamus.inbox .cv-etapa-btn{box-shadow:0 0 18px -4px color-mix(in srgb,var(--c) 40%,transparent)}
+.thalamus.inbox .cv-adelantar.ui-btn{height:36px;border-radius:8px;background:var(--brand-secondary);border-color:transparent;box-shadow:none;
+  font-weight:700;letter-spacing:0;text-transform:none}
+.thalamus.inbox .cv-adelantar.ui-btn:hover{filter:brightness(1.08);box-shadow:none}
+.thalamus.inbox .cv-etapa-btn{border-radius:8px;box-shadow:none}
+.thalamus.inbox .cv-origen-canal{border-radius:7px;background:color-mix(in srgb,var(--c) 12%,transparent);box-shadow:none}
+.thalamus.inbox .cv-origen-canal:hover{transform:none;box-shadow:none;background:color-mix(in srgb,var(--c) 20%,transparent)}
+.thalamus.inbox .cv-origen-clave,.thalamus.inbox .cv-origen-config{border-radius:6px}
+.thalamus.inbox .cv-origen-config{animation:none}
+.thalamus.inbox .cv-origen-der{margin-left:auto;display:inline-flex;align-items:center;gap:4px;flex:none}
+.thalamus.inbox .cv-origen-der .cv-ahora{flex-wrap:nowrap;gap:4px}
+.thalamus.inbox .cv-origen-der .cv-crono{border-radius:6px}
+.thalamus.inbox .cv-resolver--ico{width:24px;height:24px;padding:0;justify-content:center;border-radius:6px}
+.thalamus.inbox .cv-tarjeta .cv-pastilla,.thalamus.inbox .cv-tarjeta .ui-chip.ui-chip{border-radius:6px}
 
-/* Tus números, al pie de la ficha. */
-.thalamus.inbox .cv-mis{margin-top:auto;display:grid;gap:8px;padding-top:12px;border-top:1px solid var(--border-subtle)}
-.thalamus.inbox .cv-mis-tit{font-size:10.5px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:var(--text-muted)}
-.thalamus.inbox .cv-mis-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.thalamus.inbox .cv-mis-dato{--c:var(--info);position:relative;overflow:hidden;display:grid;gap:1px;padding:9px 10px;border-radius:12px;
-  border:1px solid color-mix(in srgb,var(--c) 22%,transparent);background:color-mix(in srgb,var(--c) 6%,transparent);
-  animation:ib-mis .5s cubic-bezier(.3,1.4,.5,1) both}
-.thalamus.inbox .cv-mis-dato:nth-child(2){animation-delay:.06s}
-.thalamus.inbox .cv-mis-dato:nth-child(3){animation-delay:.12s}
-.thalamus.inbox .cv-mis-dato:nth-child(4){animation-delay:.18s}
-.thalamus.inbox .cv-mis-dato::after{content:"";position:absolute;right:-18px;top:-18px;width:56px;height:56px;border-radius:50%;
-  background:radial-gradient(closest-side,color-mix(in srgb,var(--c) 35%,transparent),transparent);pointer-events:none}
-.thalamus.inbox .cv-mis-ico{position:absolute;right:8px;top:8px;color:var(--c)}
-.thalamus.inbox .cv-mis-dato b{font-size:20px;font-weight:900;line-height:1.1;font-variant-numeric:tabular-nums;color:var(--text-main)}
-.thalamus.inbox .cv-mis-dato b small{margin-left:3px;font-size:11px;font-weight:700;color:var(--text-muted)}
-.thalamus.inbox .cv-mis-dato > span:last-child{font-size:11px;font-weight:600;color:var(--text-muted)}
+/* Tus números: arriba de Tareas, en una sola fila de cuatro. */
+.thalamus.inbox .cv-mis{display:grid;gap:6px;padding-bottom:10px;border-bottom:1px solid var(--border-subtle)}
+.thalamus.inbox .cv-mis-tit{font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted)}
+.thalamus.inbox .cv-mis-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
+.thalamus.inbox .cv-mis-dato{--c:var(--info);position:relative;display:grid;gap:0;padding:7px 7px 6px;border-radius:8px;
+  border:1px solid var(--border-subtle);background:color-mix(in srgb,var(--text-main) 3%,transparent);animation:ib-mis .4s cubic-bezier(.3,1.4,.5,1) both}
+.thalamus.inbox .cv-mis-dato:nth-child(2){animation-delay:.05s}
+.thalamus.inbox .cv-mis-dato:nth-child(3){animation-delay:.1s}
+.thalamus.inbox .cv-mis-dato:nth-child(4){animation-delay:.15s}
+.thalamus.inbox .cv-mis-ico{display:block;color:var(--c);margin-bottom:2px}
+.thalamus.inbox .cv-mis-ico svg{width:12px;height:12px}
+.thalamus.inbox .cv-mis-dato b{font-size:15px;font-weight:800;line-height:1.15;font-variant-numeric:tabular-nums;color:var(--text-main);white-space:nowrap}
+.thalamus.inbox .cv-mis-dato b small{margin-left:2px;font-size:9.5px;font-weight:600;color:var(--text-muted)}
+.thalamus.inbox .cv-mis-dato > span:last-child{font-size:9.5px;font-weight:600;line-height:1.2;color:var(--text-muted)}
 @keyframes ib-mis{from{opacity:0;transform:translateY(6px) scale(.97)}to{opacity:1;transform:none}}
 
 @media (prefers-reduced-motion:reduce){
