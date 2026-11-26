@@ -1118,3 +1118,7 @@
 - Cada fila se cierra ahí: «No respondió» programa el siguiente contacto; «Contestó» → agendó, pasa a closing, low ticket, más adelante o no le interesa (con motivo, sin pisar el show up). Todo se puede deshacer desde el aviso.
 - Reportar: «Reagenda → ¿Dejó una fecha? → No, va a avisar» en la ficha y «Reprogramó sin fecha» en la tarjeta de Atrasadas: sale de Atrasadas sin contar como cancelación. La ficha abierta desde Seguir arranca en el contacto.
 - La fila de Seguir del closer decía «Seguimiento N de 4»: la cadencia es de 3.
+
+### 26/11/2026 · Triage: los referidos los contesta Dari, con Inbox en su Workspace
+- Las respuestas a los botones de referidos (plantillas de Mario y de Marlon) se asignan a Dari, y las 9 conversaciones de referidos que habían quedado con Paula y Elias pasaron a ella (dato, sin código).
+- El dock del Triage Workspace tiene «Inbox», que abre la bandeja de WhatsApp e Instagram ([CloserWorkflowPage.jsx](../../frontend/src/pages/closer/CloserWorkflowPage.jsx)).
