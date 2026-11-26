@@ -1172,3 +1172,6 @@
 
 ### 26/11/2026 · Learnito: la zona de Buenos Aires con su nombre actual
 - Con la zona `America/Buenos_Aires` (4 personas del equipo, entre ellas Paula) la Academia rechazaba cada pregunta a Learnito (422: valida con la lista actual de PHP). Work la manda como `America/Argentina/Buenos_Aires` ([copiloto.py](../../app/api/copiloto.py)).
+
+### 26/11/2026 · Tarjeta del lead: la fila de arriba en una línea
+- «Configurar palabra clave» se partía en tres renglones: ahora es «+ Clave» (el tooltip lo explica); la espera, la ventana y el check de «No requiere» van a la misma altura, con el mismo borde ([Origen.jsx](../../frontend/src/pages/inbox/conversaciones/Origen.jsx), [tarjeta.css](../../frontend/src/pages/inbox/conversaciones/tarjeta.css)).

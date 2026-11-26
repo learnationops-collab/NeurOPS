@@ -75,8 +75,8 @@ function Clave({ contacto, entrada, onCambio }) {
     if (!clave) {
         return (
             <button type="button" className="cv-origen-config" onClick={() => { setValor(''); setEditando(true); }}
-                data-tip="Sin palabra clave|No entró por una palabra clave: cargá con cuál escribió">
-                <Plus size={12} aria-hidden="true" />Configurar palabra clave
+                data-tip="Configurar palabra clave|No entró por una palabra clave: cargá con cuál escribió">
+                <Plus size={12} aria-hidden="true" />Clave
             </button>
         );
     }
