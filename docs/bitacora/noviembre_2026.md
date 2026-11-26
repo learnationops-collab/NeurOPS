@@ -1130,3 +1130,6 @@
 - Desde el 24/11 Elias y Paula escriben desde el Inbox y dejaron de cargar las aperturas (el KPI «Respuesta» quedaba en 0). Ahora «Aperturas en entrantes» y «Respondieron» se cuentan solas por canal: la primera vez que el equipo le escribe a mano a la conversación ese día, y si el lead contestó después. Son corregibles y tienen su lista «Inbox ›» ([reporte_inbox.py](../../app/automatizaciones/reporte_inbox.py), [setter.py](../../app/reporte_dia/setter.py)).
 - Aperturas y follow-ups ya no cuentan lo que mandó otra persona del equipo desde el Inbox en una conversación del setter (usa `autor_id`).
 - Siguen a mano: aperturas en dolor y bienvenidas.
+
+### 26/11/2026 · Espacio del setter: Links, Turnos, Tálamus y Volver con su palabra a la vista
+- Los botones redondos que solo decían qué eran al pasar el mouse ahora muestran ícono y palabra siempre, iguales a Tareas, Avisos y Stats. El de la simulación dice «Volver» ([setterEspacio.css](../../frontend/src/pages/setter/setterEspacio.css), [MisLinks.jsx](../../frontend/src/pages/setter/MisLinks.jsx)).

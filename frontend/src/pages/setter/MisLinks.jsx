@@ -13,8 +13,8 @@ export const rotuloDeLink = (l) => `${l.setter || l.funnel} · ${l.evento}`;
 
 /**
  * Los links de agendamiento del setter (Agendas 2.0, uno por evento de cada funnel de setting) en el encabezado de
- * su espacio, en cualquier sección (14/10/2026). Desde el 26/11/2026 (Mario: menos texto) es un botón redondo
- * «Links»: al pasar el mouse dice qué es y al tocarlo abre la lista; tocar uno lo copia. Con un solo link, lo copia
+ * su espacio, en cualquier sección (14/10/2026). Desde el 26/11/2026 es un botón con ícono y palabra
+ * «Links» (igual que Tareas, Avisos y Stats): al tocarlo abre la lista; tocar uno lo copia. Con un solo link, lo copia
  * directo. Sin links, o si el pedido falla, no ocupa nada: el menú del avatar los sigue teniendo.
  *
  * `children` va al final del grupo y se ve aunque no haya links: Turnos y Tálamus (Sales Team, 07/11/2026).

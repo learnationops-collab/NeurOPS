@@ -86,14 +86,12 @@
 .setter-espacio .setter-top{flex-wrap:nowrap}
 .setter-espacio .setter-links{flex-wrap:nowrap;align-items:center;gap:6px}
 .setter-espacio .setter-links-caja{position:relative}
-.setter-espacio .setter-ico{display:inline-flex;align-items:center;height:38px;min-width:38px;padding:0 11px;border-radius:999px;cursor:pointer;
+.setter-espacio .setter-ico{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 12px;border-radius:999px;cursor:pointer;white-space:nowrap;
   border:1px solid var(--border-subtle, rgba(255,255,255,.12));background:color-mix(in srgb,var(--bg-input, #0b1030) 70%,transparent);color:var(--text-muted, #aab);
-  transition:background .2s,color .2s,border-color .2s,transform .15s}
-.setter-espacio .setter-ico svg{flex:none}
-.setter-espacio .setter-ico-t{max-width:0;overflow:hidden;white-space:nowrap;opacity:0;font-size:12.5px;font-weight:700;
-  transition:max-width .32s cubic-bezier(.22,.7,.2,1),opacity .2s,margin .32s}
+  font:inherit;font-size:12.5px;font-weight:700;transition:background .2s,color .2s,border-color .2s,transform .15s}
+.setter-espacio .setter-ico svg{flex:none;transition:transform .25s cubic-bezier(.3,1.6,.5,1)}
 .setter-espacio .setter-ico:is(:hover,:focus-visible,[aria-expanded="true"]){color:var(--text-main, #fff);border-color:var(--border-main, rgba(255,255,255,.24))}
-.setter-espacio .setter-ico:is(:hover,:focus-visible,[aria-expanded="true"]) .setter-ico-t{max-width:180px;opacity:1;margin-left:7px}
+.setter-espacio .setter-ico:hover svg{transform:rotate(-8deg) scale(1.12)}
 .setter-espacio .setter-ico:active{transform:scale(.95)}
 .setter-espacio .setter-ico--simula{position:relative;color:var(--ln-warning, #D9A441);border-color:color-mix(in srgb,var(--ln-warning, #D9A441) 50%,transparent);
   background:color-mix(in srgb,var(--ln-warning, #D9A441) 14%,transparent)}

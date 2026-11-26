@@ -250,7 +250,7 @@ const SetterEspacioPage = () => {
                             <BotonIcono icono={CalendarDays} rotulo="Ver los turnos libres del equipo en Tálamus" onClick={() => navegar('/agendas-v2?ver=available')}>Tálamus</BotonIcono>
                             {user?.is_impersonating && (
                                 <BotonIcono icono={Ghost} tono="simula" rotulo="Estás simulando su sesión: tocá para volver a la tuya" disabled={saliendo} onClick={volverAMiSesion}>
-                                    {saliendo ? 'Volviendo…' : 'Volver a mi sesión'}
+                                    {saliendo ? 'Volviendo…' : 'Volver'}
                                 </BotonIcono>
                             )}
                         </MisLinks>
