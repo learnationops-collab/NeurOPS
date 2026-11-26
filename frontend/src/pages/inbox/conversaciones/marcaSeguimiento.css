@@ -1,0 +1,16 @@
+/* La marca de seguimiento a mano (ADR-W255): la casilla al lado de Enviar y la marca en el pie del mensaje. */
+.thalamus.inbox .cv-comp-cab .cv-seg-grupo{margin-left:auto;display:inline-flex;align-items:center;gap:4px}
+.thalamus.inbox .cv-comp-cab .cv-seg-casilla{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:999px;
+  border:1px solid var(--border-subtle);background:transparent;color:var(--text-muted);font-size:11.5px;font-weight:700;cursor:pointer;
+  transition:border-color .2s,color .2s,background .2s}
+.thalamus.inbox .cv-comp-cab .cv-seg-casilla:hover{border-color:var(--border-main);color:var(--text-main)}
+.thalamus.inbox .cv-comp-cab .cv-seg-grupo + .cv-comp-enviar.ui-btn{margin-left:6px}
+.thalamus.inbox .cv-seg-casilla-box{width:14px;height:14px;border-radius:4px;border:1.5px solid currentColor;display:grid;place-items:center;transition:background .2s}
+.thalamus.inbox .cv-seg-casilla--on{color:#7D63E6;border-color:color-mix(in srgb,#7D63E6 55%,transparent);background:color-mix(in srgb,#7D63E6 12%,transparent)}
+.thalamus.inbox .cv-seg-casilla--on .cv-seg-casilla-box{background:#7D63E6;border-color:#7D63E6;color:#fff}
+
+.thalamus.inbox .cv-seg-tag,.thalamus.inbox .cv-seg-marcar{display:inline-flex;align-items:center;gap:3px;border:0;background:none;padding:0 2px;margin-left:4px;
+  font:inherit;font-weight:800;color:#9d88ff;cursor:pointer}
+.thalamus.inbox .cv-seg-marcar{opacity:0;color:inherit;transition:opacity .15s}
+.thalamus.inbox .cv-burbuja:hover .cv-seg-marcar,.thalamus.inbox .cv-seg-marcar:focus-visible{opacity:1}
+.thalamus.inbox .cv-seg-tag:disabled,.thalamus.inbox .cv-seg-marcar:disabled{cursor:wait;opacity:.5}

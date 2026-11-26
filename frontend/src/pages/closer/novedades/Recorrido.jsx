@@ -42,7 +42,8 @@ const mismo = (a, b) => a && b && ['top', 'left', 'width', 'height'].every(k => 
 // `obligatorio`: sin cruz ni Esc; solo se sale terminando (Listo en el último paso).
 // Probar (ADR-W221): «Probalo» o tocar el lugar iluminado sacan el velo y dejan usar Work de verdad (abrir la
 // llamada, Reprogramar, el calendario, tu horario); el recorrido queda como un botón para seguir.
-const Recorrido = ({ pasos, ctx, obligatorio, onCompletar, onCerrar }) => {
+// `Escena`: las escenas de cada paso (por defecto, las de `Mocks.jsx`); el Inbox pasa las suyas (ADR-W255).
+const Recorrido = ({ pasos, ctx, obligatorio, onCompletar, onCerrar, Escena = Mock, etiqueta = 'Novedades de Work' }) => {
     const [i, setI] = useState(0);
     const [el, setEl] = useState(null);
     const [rect, setRect] = useState(null);
@@ -142,7 +143,7 @@ const Recorrido = ({ pasos, ctx, obligatorio, onCompletar, onCerrar }) => {
     }
 
     return (
-        <div className="nv-rec" role="dialog" aria-modal="true" aria-label="Recorrido por las novedades de Work">
+        <div className="nv-rec" role="dialog" aria-modal="true" aria-label={`Recorrido: ${etiqueta}`}>
             <svg className="nv-rec__velo" aria-hidden="true">
                 <path d={velo} fillRule="evenodd" />
             </svg>
@@ -164,7 +165,7 @@ const Recorrido = ({ pasos, ctx, obligatorio, onCompletar, onCerrar }) => {
                         {pasos.map((p, k) => <i key={p.id} className={k < i ? 'is-ya' : k === i ? 'is-ahora' : ''} />)}
                     </div>
                     {!obligatorio && <button type="button" className="nv-card__x" onClick={onCerrar} aria-label="Cerrar el recorrido"><X /></button>}
-                    <div className="nv-card__escena"><Mock tipo={paso.mock} /></div>
+                    <div className="nv-card__escena"><Escena tipo={paso.mock} /></div>
                     <h3 className="nv-card__titulo">{paso.titulo}</h3>
                     {paso.texto && <p className="nv-card__texto">{paso.texto}</p>}
                     <div className="nv-card__pie">

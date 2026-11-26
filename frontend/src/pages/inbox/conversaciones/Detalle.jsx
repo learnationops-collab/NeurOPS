@@ -46,8 +46,8 @@ function Chat({ datos, yo, pausar, onCambio, pegar, selector, onSelector }) {
         <Panel as="section" size="sm" className="cv-detalle" aria-label="Conversación">
             <Feed mensajes={datos.mensajes} notas={datos.notas || []} tareas={datos.tareas || []}
                 pendientes={pendientes} onReintentar={envio.reintentar} onDescartar={envio.descartar}
-                onSeleccion={() => setSeleccion(seleccionDelLead())} />
-            <Composer contacto={contacto} pausar={pausar} fase={avance?.fase} ejecucion={datos.ejecucion} seguimientos={datos.seguimientos} yo={yo} onCambio={onCambio}
+                onSeleccion={() => setSeleccion(seleccionDelLead())} onCambio={onCambio} />
+            <Composer contacto={contacto} mensajes={datos.mensajes} pausar={pausar} fase={avance?.fase} ejecucion={datos.ejecucion} seguimientos={datos.seguimientos} yo={yo} onCambio={onCambio}
                 onEnviar={conReaccion(envio.enviar)} onEnviarVarios={conReaccion(envio.enviarVarios)} onLearnito={abrirLearnito} pegar={pegar} selector={selector} onSelector={onSelector} />
             <ReaccionRespuesta reaccion={reaccion} onCerrar={cerrarReaccion} />
             {seleccion && <GloboCita contactoId={contacto.id} seleccion={seleccion} onCerrar={cerrarSeleccion} onHecho={() => { setSeleccion(null); onCambio(); }} />}

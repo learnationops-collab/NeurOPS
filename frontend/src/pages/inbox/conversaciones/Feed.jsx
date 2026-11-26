@@ -8,6 +8,7 @@ import { Button, IconButton } from '../../../components/standard';
 import { rotuloPaso } from '../estadoFlujo';
 import { ADJUNTOS } from './colas';
 import { Cita, Medio } from './Whatsapp';
+import { MarcaEnMensaje } from './MarcaSeguimiento';
 
 const ABIERTA = ['en_curso', 'esperando_respuesta', 'esperando_tiempo'];
 
@@ -30,7 +31,7 @@ function textoEfecto(e) {
     return null;
 }
 
-function Burbuja({ m }) {
+function Burbuja({ m, onCambio }) {
     return (
         <li className={`cv-burbuja cv-burbuja--${m.direccion} cv-burbuja--${m.origen}${m.medio?.tipo === 'sticker' ? ' cv-burbuja--sticker' : ''}`}
             data-mensaje={m.id} data-direccion={m.direccion}>
@@ -55,17 +56,18 @@ function Burbuja({ m }) {
                 {m.origen === 'motor' && <><Bot size={12} aria-hidden="true" />Automático · </>}
                 {m.origen === 'otro' && (m.autor ? `${m.autor} · ` : 'Equipo · ')}
                 {momento(m.en)}
+                <MarcaEnMensaje m={m} onCambio={onCambio} />
             </span>
         </li>
     );
 }
 
-function Item({ x }) {
+function Item({ x, onCambio }) {
     if (x.tipo === 'mensaje') {
         const efecto = x.m.efecto && textoEfecto(x.m.efecto);
         return (
             <>
-                <Burbuja m={x.m} />
+                <Burbuja m={x.m} onCambio={onCambio} />
                 {efecto && <li className="cv-efecto"><Zap size={11} aria-hidden="true" /><span>{efecto}</span></li>}
             </>
         );
@@ -107,7 +109,7 @@ function Pendiente({ p, onReintentar, onDescartar }) {
 }
 
 // `onSeleccion`: al soltar el mouse con texto seleccionado (Anotar resaltando, `Cita.jsx`).
-export default function Feed({ mensajes, notas, tareas, pendientes = [], onReintentar, onDescartar, onSeleccion }) {
+export default function Feed({ mensajes, notas, tareas, pendientes = [], onReintentar, onDescartar, onSeleccion, onCambio }) {
     const lista = useRef(null);
     const items = [
         ...mensajes.map((m) => ({ tipo: 'mensaje', en: m.en, key: `m${m.id}`, m })),
@@ -119,7 +121,7 @@ export default function Feed({ mensajes, notas, tareas, pendientes = [], onReint
     useEffect(() => { if (lista.current) lista.current.scrollTop = lista.current.scrollHeight; }, [cantidad]);
     return (
         <ol className="cv-mensajes" ref={lista} onMouseUp={onSeleccion}>
-            {items.map((x) => <Item key={x.key} x={x} />)}
+            {items.map((x) => <Item key={x.key} x={x} onCambio={onCambio} />)}
             {pendientes.map((p) => <Pendiente key={p.id} p={p} onReintentar={onReintentar} onDescartar={onDescartar} />)}
         </ol>
     );

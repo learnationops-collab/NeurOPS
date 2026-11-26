@@ -16,6 +16,7 @@ import { borradorDe, guardarBorrador } from './borradores';
 import MenuRayo, { NuevaRapida } from './MenuRayo';
 import ModalFlujo from './ModalFlujo';
 import { ListaSeguimientos, ProgramarSeguimiento } from './Seguimientos';
+import { CasillaSeguimiento, useMarca, valorDeMarca } from './MarcaSeguimiento';
 import useEquipo from './useEquipo';
 import { faseDe } from './fasesSetting';
 import { LETRAS, completarGuia, faltaCompletar, notaDe, partes, pasosDe, siguienteId, useGuia, useLinkAgenda, visibles } from '../guia/useGuia';
@@ -99,7 +100,7 @@ function Guion({ fase, contacto, onElegir }) {
 const programados = (items) => (items || []).filter((s) => s.estado === 'programado' || (s.estado === 'error' && !s.cadencia) || s.vigente);
 const cuando = (iso) => new Date(iso).toLocaleString('es-AR', { weekday: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
-export default function Composer({ contacto, pausar = true, fase, ejecucion, seguimientos, yo, onCambio, onEnviar, onEnviarVarios, onLearnito, pegar, selector, onSelector }) {
+export default function Composer({ contacto, mensajes, pausar = true, fase, ejecucion, seguimientos, yo, onCambio, onEnviar, onEnviarVarios, onLearnito, pegar, selector, onSelector }) {
     const [modo, setModo] = useState('chat');
     const [texto, setTexto] = useState(() => borradorDe(contacto.id));
     const [rayo, setRayo] = useState(false);
@@ -110,6 +111,7 @@ export default function Composer({ contacto, pausar = true, fase, ejecucion, seg
     const [preguntando, setPreguntando] = useState(false);
     const learnito = useLearnito();
     const [verSeguimientos, setVerSeguimientos] = useState(false);
+    const marca = useMarca(contacto.id);
     // Lo que se eligió de la Guía entra en la caja (reemplaza lo escrito): se revisa y se manda. `deGuia` recuerda
     // qué paso y opción era (para medir cuál responde más) y si al mandarlo el lead pasa de etapa.
     const [deGuia, setDeGuia] = useState(null);
@@ -150,12 +152,18 @@ export default function Composer({ contacto, pausar = true, fase, ejecucion, seg
     };
     const ventana = ventanaDe(contacto.ultimo_entrante_en, undefined, esWhatsapp(contacto));
     // Sale al instante en el chat; si Instagram no lo acepta, queda ahí con Reintentar.
+    // La casilla Seguimiento va con lo que sale ahora (ADR-W255); en varios mensajes, solo con el primero.
+    const conMarca = (cuerpo) => {
+        const seguimiento = valorDeMarca(mensajes, marca);
+        marca.reiniciar();
+        return seguimiento === undefined ? cuerpo : { ...cuerpo, seguimiento };
+    };
     const enviar = (cuerpo, rotulo) => {
         if (cuerpo.texto) {
             setTexto('');
             guardarBorrador(contacto.id, '');
         }
-        return onEnviar({ ...cuerpo, pausar }, rotulo || cuerpo.texto);
+        return onEnviar(conMarca({ ...cuerpo, pausar }), rotulo || cuerpo.texto);
     };
     // Lo pegado de la Guía: sin [corchetes] sin completar, una línea en blanco separa los mensajes, el primero lleva
     // la marca de la opción y, si el paso «pasa a la siguiente», el lead cambia de etapa al salir.
@@ -168,7 +176,7 @@ export default function Composer({ contacto, pausar = true, fase, ejecucion, seg
         setTexto('');
         guardarBorrador(contacto.id, '');
         // Salen de a uno, con unos segundos entre cada uno (`useEnvio`); el primero lleva la marca de la Guía.
-        const ok = await onEnviarVarios(lista.map((t, i) => [{ texto: t, pausar, ...(i === 0 ? { guia: elegido.clave } : {}) }, t]));
+        const ok = await onEnviarVarios(lista.map((t, i) => [i === 0 ? conMarca({ texto: t, pausar, guia: elegido.clave }) : { texto: t, pausar }, t]));
         if (!ok) return;
         if (elegido.pasaA) {
             try {
@@ -240,6 +248,7 @@ export default function Composer({ contacto, pausar = true, fase, ejecucion, seg
                 )}
                 {/* Enviar sube a esta fila (Mario, 26/11): la caja de abajo queda a todo el ancho para escribir. */}
                 {modo === 'nota' && <Button variant="primary" size="sm" className="cv-comp-enviar" disabled={!texto.trim()} onClick={guardarNota}>Guardar</Button>}
+                {modo === 'chat' && <CasillaSeguimiento mensajes={mensajes} marca={marca} />}
                 {modo === 'chat' && (
                     <Button variant="primary" size="sm" className="cv-comp-enviar" icon={<Send />} disabled={!texto.trim() || !puedeEnviar}
                         data-tip="Enviar|Enter envía · Shift+Enter, otra línea" onClick={enviarTexto}>Enviar</Button>

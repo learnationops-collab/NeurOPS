@@ -38,7 +38,7 @@ ACCIONES_DEL_SETTER = {'inbox.mover_en_flujo', 'inbox.bot_de_conversacion', 'inb
                        'inbox.crear_rapida', 'inbox.borrar_rapida', 'inbox.subir_audio', 'inbox.borrar_audio',
                        'inbox.mover_fase', 'inbox.marcar_canal', 'inbox.anotar_cita', 'inbox.etiquetar_varias',
                        'inbox.publicar_guia', 'inbox.proponer_guia', 'inbox.simular_embudo',
-                       'inbox.cambiar_actividad'}
+                       'inbox.cambiar_actividad', 'inbox.marcar_seguimiento'}
 MAX_BYTES_GRAFO = 300_000
 MAX_NODOS = 300
 MENSAJES_POR_CONVERSACION = 300
@@ -357,6 +357,8 @@ def ver_conversacion(contacto_id):
     recorrido = bandeja.recorrido(contacto.id)
     elegidos = bandeja.elegidos(mensajes)
     comentarios = bandeja.comentarios(mensajes)
+    from app.automatizaciones import seguimientos_hechos
+    numeros = seguimientos_hechos.numerados(mensajes)
     from app.whatsapp import medios  # WhatsApp: a qué mensaje responde y el sticker/foto/audio que mandó
     citas = medios.citas(mensajes, contacto.id)
     from app.automatizaciones import cliente_del_contacto
@@ -398,6 +400,8 @@ def ver_conversacion(contacto_id):
             'efecto': (m.contenido or {}).get('efecto') if isinstance(m.contenido, dict) else None,
             'responde_a': citas.get(m.id),
             'medio': medios.para_chat(m, contacto.id),
+            # Del equipo: «Seguimiento N» si cuenta como tal, y la marca a mano (ADR-W255).
+            'seguimiento': numeros.get(m.id), 'marca': m.seguimiento,
         } for m in mensajes],
     })
 

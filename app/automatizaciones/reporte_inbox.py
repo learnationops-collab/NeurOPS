@@ -112,12 +112,15 @@ def contar(setter_id, fecha, tz):
     ids = list(suyas)
     mensajes = defaultdict(list)
     propios = defaultdict(list)  # del equipo, sin contar lo que mandó otro desde el Inbox
+    marcas = defaultdict(dict)
     bot = defaultdict(list)
     for m in IgMensaje.query.filter(IgMensaje.contacto_id.in_(ids)).order_by(IgMensaje.enviado_en):
         if m.origen == IgMensaje.MOTOR:
             bot[m.contacto_id].append(m.enviado_en)
         else:
             mensajes[m.contacto_id].append((m.enviado_en, m.direccion == 'entrante'))
+            if m.seguimiento is not None:  # marcado o desmarcado a mano (ADR-W255)
+                marcas[m.contacto_id][m.enviado_en] = m.seguimiento
             if m.direccion != 'entrante' and m.autor_id in (None, setter_id):
                 propios[m.contacto_id].append(m.enviado_en)
     cambios = defaultdict(list)
@@ -175,7 +178,8 @@ def contar(setter_id, fecha, tz):
                 detalle[f'{canal}.ap_entrantes_resp'].append(quien(apertura))
 
         # Follow-up: la regla de `seguimientos_hechos`, con los mensajes que cuentan para este setter.
-        for en, fase, respondido in seguimientos_hechos.de_conversacion(msgs, cambios.get(cid, []), mios.__contains__):
+        for en, fase, respondido in seguimientos_hechos.de_conversacion(msgs, cambios.get(cid, []), mios.__contains__,
+                                                                            marcas.get(cid)):
             if not ini <= en < fin:
                 continue
             etapa = fases.DEL_REPORTE.get(fase or seguimientos_hechos.SIN_MARCA)

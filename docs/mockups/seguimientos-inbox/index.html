@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Mockup · Inbox: marcar un mensaje como seguimiento</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #dcdcf0; --win: #f1f1f4; --panel: #e9e9ee; --line: #d6d6dc; --in: #ffffff;
+    --ink: #1c2033; --mut: #5f6478; --mut2: #8a8ea0;
+    --ok: #1f9d6b; --err: #c8433a; --warn: #c98a14; --vio: #7D63E6; --info: #2f7fd6; --rosa: #d6456f;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; font-family: Inter, system-ui, sans-serif; color: var(--ink); font-size: 13px;
+         background: radial-gradient(1200px 600px at 20% 0%, #cfd0f5, transparent), var(--bg); padding: 28px 16px 60px; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  svg.i { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  svg.i.s { width: 12px; height: 12px; }
+  .nota { max-width: 1100px; margin: 0 auto 18px; font-size: 13.5px; color: var(--mut); line-height: 1.55; }
+  .nota b { color: var(--ink); }
+  .nota ul { margin: 6px 0 0 18px; padding: 0; }
+  .titulo-escena { max-width: 1100px; margin: 26px auto 8px; font: 600 11px Inter; letter-spacing: .08em; text-transform: uppercase; color: var(--mut); padding-left: 4px; }
+  .explica { max-width: 1100px; margin: -2px auto 10px; color: var(--mut); font-size: 12.5px; padding-left: 4px; line-height: 1.5; }
+
+  .pantalla { max-width: 1100px; margin: 0 auto; background: var(--win); border-radius: 20px; box-shadow: 0 24px 70px rgba(30,30,80,.2); overflow: hidden; }
+  .feed { padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; }
+  .b { max-width: 58%; padding: 8px 11px; border-radius: 14px; line-height: 1.45; position: relative; }
+  .b.lead { background: #fff; border: 1px solid var(--line); align-self: flex-start; border-bottom-left-radius: 4px; }
+  .b.yo { background: #dcd6f6; align-self: flex-end; border-bottom-right-radius: 4px; }
+  .b .meta { display: flex; gap: 6px; align-items: center; justify-content: flex-end; font-size: 10.5px; color: var(--mut); margin-top: 3px; }
+  .tag { display: inline-flex; gap: 3px; align-items: center; font-weight: 700; color: #4b3aa8; }
+  .acc { position: absolute; left: -38px; top: 50%; transform: translateY(-50%); display: flex; gap: 3px; }
+  .acc span { width: 28px; height: 28px; border-radius: 8px; background: #fff; border: 1px solid var(--line); display: grid; place-items: center; color: var(--mut); box-shadow: 0 4px 12px rgba(30,30,80,.12); }
+  .acc span.on { color: var(--vio); border-color: var(--vio); }
+  .tip { position: absolute; right: calc(100% + 44px); top: 50%; transform: translateY(-50%); background: var(--ink); color: #fff; font-size: 11.5px; border-radius: 8px; padding: 6px 9px; white-space: nowrap; }
+  .tip b { display: block; }
+  .tip span { color: #c9cbe0; }
+  .silencio { align-self: center; font-size: 11px; color: var(--mut2); display: flex; gap: 6px; align-items: center; }
+  .silencio::before, .silencio::after { content: ''; width: 60px; height: 1px; background: var(--line); }
+
+  /* Composer: el de hoy */
+  .comp { border-top: 1px solid var(--line); background: var(--panel); padding: 10px 14px 12px; display: grid; gap: 8px; }
+  .cab { display: flex; gap: 6px; align-items: center; }
+  .seg-mod { display: inline-flex; border: 1px solid var(--line); background: var(--in); border-radius: 10px; padding: 2px; }
+  .seg-mod span { padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 600; color: var(--mut); }
+  .seg-mod span.on { background: var(--ink); color: #fff; }
+  .ib { width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--line); background: var(--in); display: grid; place-items: center; color: var(--mut); }
+  .learnito { display: inline-flex; gap: 5px; align-items: center; border: 1px solid var(--line); background: var(--in); border-radius: 8px; padding: 4px 9px; font-size: 12px; font-weight: 600; color: var(--mut); }
+  .chip { margin-left: auto; display: inline-flex; gap: 5px; align-items: center; background: #ece8fb; color: #4b3aa8; border-radius: 99px; padding: 3px 9px; font-size: 11.5px; font-weight: 600; }
+  .caja { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+  .ta { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 9px 11px; min-height: 54px; color: var(--ink); line-height: 1.45; }
+  .ta.vacio { color: var(--mut2); }
+  .enviar-g { display: grid; gap: 5px; align-self: end; justify-items: end; }
+  .enviar { background: var(--vio); color: #fff; border: 0; border-radius: 11px; padding: 9px 14px; font-weight: 700; display: inline-flex; gap: 6px; align-items: center; }
+  .casilla { display: inline-flex; gap: 6px; align-items: center; font-size: 12px; color: var(--mut); font-weight: 600; user-select: none; }
+  .casilla .box { width: 15px; height: 15px; border-radius: 4px; border: 1.5px solid var(--mut2); background: #fff; display: grid; place-items: center; }
+  .casilla.on { color: #4b3aa8; }
+  .casilla.on .box { background: var(--vio); border-color: var(--vio); color: #fff; }
+  .casilla small { font-weight: 500; color: var(--mut2); }
+  .nuevo { outline: 2px dashed var(--warn); outline-offset: 3px; border-radius: 8px; }
+
+  /* Fila de la lista, la de hoy */
+  .filas { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; max-width: 1100px; margin: 0 auto; }
+  .fila-box { background: var(--win); border-radius: 16px; box-shadow: 0 12px 40px rgba(30,30,80,.12); padding: 6px 0; }
+  .fila-box h4 { margin: 6px 14px 4px; font: 600 10.5px Inter; letter-spacing: .07em; text-transform: uppercase; color: var(--mut); }
+  .fila { display: grid; grid-template-columns: 30px 1fr auto; gap: 9px; padding: 9px 14px; align-items: center; }
+  .av { width: 30px; height: 30px; border-radius: 99px; background: #cfd2e4; display: grid; place-items: center; font-weight: 700; font-size: 11px; color: #4a4f6a; }
+  .fila b { font-size: 12.5px; display: block; }
+  .fila small { color: var(--mut); font-size: 11px; display: flex; gap: 6px; align-items: center; }
+  .ico-f { color: var(--warn); display: inline-flex; }
+  .fu { font-size: 10.5px; background: #ece8fb; color: #4b3aa8; border-radius: 6px; padding: 1px 6px; font-weight: 700; }
+
+  /* Guía */
+  .guia { max-width: 1100px; margin: 0 auto; background: var(--in); border-radius: 20px; box-shadow: 0 24px 70px rgba(30,30,80,.14); padding: 20px 24px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .guia h3 { grid-column: 1 / -1; margin: 0; font-size: 16px; }
+  .regla { border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; display: grid; gap: 6px; align-content: start; }
+  .regla .t { display: flex; gap: 7px; align-items: center; font-weight: 700; color: #4b3aa8; }
+  .regla p { margin: 0; color: var(--mut); font-size: 12px; line-height: 1.5; }
+  .regla p b { color: var(--ink); }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <symbol id="alarma" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M5 3 2 6M22 6l-3-3"/></symbol>
+  <symbol id="repetir" viewBox="0 0 24 24"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></symbol>
+  <symbol id="check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="enviar" viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></symbol>
+  <symbol id="rayo" viewBox="0 0 24 24"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></symbol>
+  <symbol id="mic" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M19 10a7 7 0 0 1-14 0M12 19v3"/></symbol>
+  <symbol id="chispa" viewBox="0 0 24 24"><path d="M12 3l1.9 5.8L20 11l-6.1 2.2L12 19l-1.9-5.8L4 11l6.1-2.2z"/></symbol>
+  <symbol id="cita" viewBox="0 0 24 24"><path d="M9 17H5l-2 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-6"/></symbol>
+</svg>
+
+<div class="nota">
+  <b>Lo que pide el equipo:</b> poder decir «esto que escribí a mano es un seguimiento». <b>Todo lo de hoy sigue igual:</b> el reloj para programar un seguimiento que sale solo, el chip de lo programado, el «Toca seguimiento N» de la cadencia de la fase y los íconos de la fila.
+  Se suma una sola cosa: <b>una marca en el mensaje</b>, que se pone en dos lugares.
+  <ul>
+    <li><b>Antes de mandar:</b> una casilla «Seguimiento» debajo de Enviar. Viene tildada sola cuando lo último de la conversación es tuyo y el lead no contestó. Con un clic se destilda.</li>
+    <li><b>Después de mandar:</b> en el menú del mensaje (el mismo de citar), «Marcar como seguimiento», por si te olvidaste de tildarla.</li>
+  </ul>
+  El mensaje marcado lleva la etiqueta «Seguimiento N» al pie, y el reporte del setter lo cuenta. Lo que ya contaba la regla de las 12 h se sigue contando.
+</div>
+
+<div class="titulo-escena">1 · Antes de mandar: la casilla debajo de Enviar</div>
+<div class="explica">El composer es el de hoy. Lo único nuevo es lo que tiene el borde punteado. La casilla aparece solo en modo Chat.</div>
+<div class="pantalla">
+  <div class="feed">
+    <div class="b lead">Dale, me interesa. ¿Cuánto sale el programa?<span class="meta">ayer 09:12</span></div>
+    <div class="b yo">Te paso el detalle: son 4 meses con acompañamiento 1 a 1. ¿Lo querés ver en una llamada de 20 min?<span class="meta">Paula · ayer 09:30</span></div>
+    <div class="silencio">14 h sin respuesta</div>
+  </div>
+  <div class="comp">
+    <div class="cab">
+      <div class="seg-mod"><span class="on">Chat</span><span>Nota</span><span>Tarea</span></div>
+      <span class="ib"><svg class="i"><use href="#rayo"/></svg></span>
+      <span class="ib"><svg class="i"><use href="#mic"/></svg></span>
+      <span class="ib" title="Seguimiento si no responde (el de hoy)"><svg class="i"><use href="#alarma"/></svg></span>
+      <span class="learnito"><svg class="i s"><use href="#chispa"/></svg>Learnito</span>
+      <span class="chip"><svg class="i s"><use href="#alarma"/></svg>Toca seguimiento 2</span>
+    </div>
+    <div class="caja">
+      <div class="ta">Christian, te guardé un lugar para la llamada de hoy. ¿Te queda 18 h o 20 h?</div>
+      <div class="enviar-g">
+        <button class="enviar"><svg class="i"><use href="#enviar"/></svg>Enviar</button>
+        <span class="casilla on nuevo" title="Seguimiento 2|Lleva 14 h sin responder. Destildala si no es un seguimiento"><span class="box"><svg class="i s"><use href="#check"/></svg></span>Seguimiento 2</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="titulo-escena">1b · Si el lead fue el último en escribir</div>
+<div class="explica">Es una respuesta, no un seguimiento: la casilla viene destildada y se puede tildar a mano.</div>
+<div class="pantalla">
+  <div class="comp" style="border-top:0">
+    <div class="caja">
+      <div class="ta">Perfecto, te mando el link para agendar.</div>
+      <div class="enviar-g">
+        <button class="enviar"><svg class="i"><use href="#enviar"/></svg>Enviar</button>
+        <span class="casilla nuevo"><span class="box"></span>Seguimiento</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="titulo-escena">2 · Después de mandar: en el chat, y el menú si te olvidaste</div>
+<div class="pantalla">
+  <div class="feed" style="padding-left:90px">
+    <div class="b yo">Christian, ¿pudiste verlo? Si querés lo vemos juntos hoy.<span class="meta"><span class="tag"><svg class="i s"><use href="#repetir"/></svg>Seguimiento 1</span>· Paula · ayer 12:40</span></div>
+    <div class="silencio">14 h sin respuesta</div>
+    <div class="b yo">Christian, te guardé un lugar para la llamada de hoy. ¿Te queda 18 h o 20 h?
+      <span class="meta">Paula · recién</span>
+      <span class="acc nuevo"><span title="Citar"><svg class="i s"><use href="#cita"/></svg></span></span>
+      <span class="acc nuevo" style="left:-70px"><span class="on"><svg class="i s"><use href="#repetir"/></svg></span></span>
+      <span class="tip" style="right:calc(100% + 78px)"><b>Marcar como seguimiento</b><span>Quedaría como el seguimiento 2</span></span>
+    </div>
+  </div>
+</div>
+
+<div class="titulo-escena">3 · La lista no cambia</div>
+<div class="filas">
+  <div class="fila-box">
+    <h4>Hoy</h4>
+    <div class="fila"><span class="av">CR</span><div><b>Christian Rodas</b><small>Propuesta · <span class="ico-f"><svg class="i s"><use href="#alarma"/></svg></span>Toca seguimiento 2</small></div><span style="font-size:11px;color:var(--mut2)">14 h</span></div>
+  </div>
+  <div class="fila-box">
+    <h4>Después de mandar el marcado</h4>
+    <div class="fila"><span class="av">CR</span><div><b>Christian Rodas</b><small>Propuesta · <span class="fu">Seg. 2</span> Vos: Christian, te guardé un lugar…</small></div><span style="font-size:11px;color:var(--mut2)">ahora</span></div>
+  </div>
+</div>
+
+<div class="titulo-escena">4 · La guía que pidió el equipo: el «?» del reloj y Embudos</div>
+<div class="guia">
+  <h3>Cómo hacer seguimientos en el Inbox</h3>
+  <div class="regla"><span class="t"><svg class="i"><use href="#repetir"/></svg>A mano</span><p>Escribí como siempre. Si el lead no contestó tu último mensaje, la casilla <b>Seguimiento</b> ya viene tildada y el mensaje cuenta como el que sigue. Si te olvidaste, marcalo desde el menú del mensaje.</p></div>
+  <div class="regla"><span class="t"><svg class="i"><use href="#alarma"/></svg>Programado</span><p>Con el <b>reloj</b> dejás un texto o un audio que sale solo si no responde en 1 h, 3 h, 24 h, 2 o 3 días. Si escribe antes, se cancela. Lo ves y lo cancelás en el chip de arriba de la caja.</p></div>
+  <div class="regla"><span class="t"><svg class="i"><use href="#alarma"/></svg>Lo que pide la fase</span><p>Si el embudo tiene los seguimientos prendidos, la fila y el chip dicen <b>«Toca seguimiento N»</b>. El texto de cada uno está en Embudos › la fase › «Si no contesta».</p></div>
+</div>
+</body>
+</html>

@@ -167,6 +167,8 @@ class IgMensaje(db.Model):
     autor = db.relationship('User', foreign_keys=[autor_id])
     # El paso de la Guía del setting que se mandó (`etapa:paso:opción`, ADR-W197): de acá sale qué opción responde más.
     guia = db.Column(db.String(120), nullable=True, index=True)
+    # Marca del equipo (ADR-W255): True lo marcó como seguimiento, False lo desmarcó; None, la regla de las 12 h.
+    seguimiento = db.Column(db.Boolean, nullable=True)
 
 
 class AutCampana(db.Model):

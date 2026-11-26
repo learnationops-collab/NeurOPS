@@ -31,6 +31,7 @@ import './conversaciones/crono.css';
 import './conversaciones/tarjeta.css';
 import './conversaciones/barra.css';
 import './conversaciones/composer.css';
+import TourSeguimientos from './tour/TourSeguimientos';
 
 // De a cuántas se cargan (pedido de los setters, 24/11: con 300 se perdían los seguimientos de hace 4 días).
 const LIMITE = 500;
@@ -212,6 +213,8 @@ export default function Conversaciones() {
                 <EtiquetarVarias conversaciones={lista.filter((c) => marcadas.includes(c.id))} onCerrar={() => setEtiquetando(false)}
                     onHecho={() => { setEtiquetando(false); dejarDeElegir(); recargar(); }} />
             )}
+            {/* El recorrido de seguimientos (ADR-W255): portada y pasos sobre el Inbox de verdad. */}
+            <TourSeguimientos user={user} />
             {stats && (
                 <Stats lista={lista} mediana={datos?.mediana_respuesta} setters={datos?.medianas_setters || []} yo={yo} ahora={ahora}
                     onCerrar={() => setStats(false)} />
