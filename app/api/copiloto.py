@@ -29,9 +29,21 @@ bp = Blueprint('copiloto_api', __name__)
 MAX_CARACTERES = 4000
 
 
+# Nombres viejos de zona que la Academia no acepta (valida con la lista actual de PHP): con
+# «America/Buenos_Aires» respondía 422 y Learnito no contestaba (26/11/2026).
+ZONAS_ACTUALES = {
+    'America/Buenos_Aires': 'America/Argentina/Buenos_Aires',
+    'America/Cordoba': 'America/Argentina/Cordoba',
+    'America/Catamarca': 'America/Argentina/Catamarca',
+    'America/Jujuy': 'America/Argentina/Jujuy',
+    'America/Mendoza': 'America/Argentina/Mendoza',
+}
+
+
 def _quien(user):
+    zona = ZONAS_ACTUALES.get(user.timezone, user.timezone)
     datos = {'id': user.id, 'nombre': user.username or user.email, 'email': user.email, 'rol': user.role,
-             'zona': user.timezone}
+             'zona': zona}
     return {k: v for k, v in datos.items() if v}
 
 

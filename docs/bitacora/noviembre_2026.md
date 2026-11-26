@@ -1169,3 +1169,6 @@
 - Espera, ventana y «No requiere» al lado de la palabra clave; «Tus números» arriba de Tareas en una fila ([TarjetaLead.jsx](../../frontend/src/pages/inbox/conversaciones/TarjetaLead.jsx), [FichaLead.jsx](../../frontend/src/pages/inbox/conversaciones/FichaLead.jsx)).
 - Botones rectangulares con poco redondeo y sin brillos ([tarjeta.css](../../frontend/src/pages/inbox/conversaciones/tarjeta.css)).
 - Learnito respondía «no respondió»: la Academia contaba el chat del equipo y las consultas de Work en un mismo límite por minuto y devolvía 429; ahora cada grupo tiene su contador (Academia, ADR-246).
+
+### 26/11/2026 · Learnito: la zona de Buenos Aires con su nombre actual
+- Con la zona `America/Buenos_Aires` (4 personas del equipo, entre ellas Paula) la Academia rechazaba cada pregunta a Learnito (422: valida con la lista actual de PHP). Work la manda como `America/Argentina/Buenos_Aires` ([copiloto.py](../../app/api/copiloto.py)).
