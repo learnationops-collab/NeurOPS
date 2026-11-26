@@ -1202,6 +1202,7 @@
 - Al pie de cada mensaje del equipo: «Seguimiento N» (tocarlo lo desmarca) o el ícono para marcarlo después ([Feed.jsx](../../frontend/src/pages/inbox/conversaciones/Feed.jsx), [api_seguimientos.py](../../app/automatizaciones/api_seguimientos.py)).
 - Lo marcado cuenta en el filtro y en el reporte del setter aunque no hayan pasado 12 h; lo desmarcado no cuenta ([seguimientos_hechos.py](../../app/automatizaciones/seguimientos_hechos.py), [reporte_inbox.py](../../app/automatizaciones/reporte_inbox.py)). Migración `f4b6d8a0c2e5`: `ig_mensajes.seguimiento`.
 - Recorrido de seguimientos en el Inbox, con la portada y el recorrido de las Novedades: 6 pasos sobre la pantalla real; se reabre con el «?» de la casilla ([tour/](../../frontend/src/pages/inbox/tour/), [Novedades.jsx](../../frontend/src/pages/closer/novedades/Novedades.jsx)). La huella del changelog de closers deja de incluir `Recorrido.jsx`, sin volver a mostrárselo a quien ya lo vio.
+- Link para compartir el recorrido: `https://work.thelearnation.com/inbox?tour=1`. Abre Conversaciones aunque la última sección usada fuera otra ([InboxApp.jsx](../../frontend/src/pages/inbox/InboxApp.jsx)).
 
 ### 26/11/2026 · Ficha: el menú del segmento va encima de todo
 - El menú para cambiar el segmento del lead (A–D) no usaba la capa superior y podía quedar tapado; ahora usa `useEnPantalla` ([SegmentoLead.jsx](../../frontend/src/components/ficha/piezas/SegmentoLead.jsx)). Lo marcaba el test de flotantes.
