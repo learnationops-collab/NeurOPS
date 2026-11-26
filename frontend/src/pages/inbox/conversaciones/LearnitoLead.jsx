@@ -2,11 +2,11 @@
 // entera y el setter elige qué quiere: resumen, una respuesta, un seguimiento, la info del programa que le sirve o
 // una pregunta suya. Lo elegido abre el modal de Learnito con la conversación como contexto.
 import { useEffect, useRef, useState } from 'react';
-import { ArrowUp, BookOpen, CalendarClock, FileText, MessageSquareReply, Sparkles } from 'lucide-react';
+import { ArrowUp, BookOpen, CalendarClock, FileText, Reply, Sparkles } from 'lucide-react';
 import useDesplegable from './useDesplegable';
 
 const OPCIONES = [
-    { id: 'respuesta', texto: 'Sugerime una respuesta', detalle: 'Dos opciones del próximo mensaje', icono: MessageSquareReply, color: 'var(--brand-secondary)' },
+    { id: 'respuesta', texto: 'Sugerime una respuesta', detalle: 'Dos opciones del próximo mensaje', icono: Reply, color: 'var(--brand-secondary)' },
     { id: 'seguimiento', texto: 'Sugerime un seguimiento', detalle: 'Para retomarla y cuándo', icono: CalendarClock, color: '#7D63E6' },
     { id: 'resumen', texto: 'Resumime la conversación', detalle: 'Qué quiere, dudas, en qué quedó', icono: FileText, color: 'var(--info)' },
     { id: 'info', texto: 'Qué info me sirve', detalle: 'Del programa y el material', icono: BookOpen, color: 'var(--success)' },
