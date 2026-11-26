@@ -119,3 +119,6 @@
 .thalamus.inbox .cv-salidas .cv-accion{min-width:0;width:100%;gap:5px;padding:0 6px;white-space:nowrap;overflow:hidden;font-size:12px}
 .thalamus.inbox .cv-salidas .cv-accion svg{flex:none}
 .thalamus.inbox .cv-salidas .cv-salidas-fuera{grid-column:span 2}
+/* «Adelantar» del alto del botón de la etapa (Mario, 26/11/2026). */
+.thalamus.inbox .cv-etapa{align-items:stretch}
+.thalamus.inbox .cv-etapa .cv-adelantar.ui-btn{align-self:stretch;height:auto;min-height:0;border-radius:10px;padding:0 14px}

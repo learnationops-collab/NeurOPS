@@ -1186,3 +1186,4 @@
 - Etapa: las rayitas del avance van adentro del botón de la etapa, que queda del alto de «Adelantar»; Transferir, No lead e In-abrible en tres columnas iguales, sin tocar el borde derecho ([TarjetaLead.jsx](../../frontend/src/pages/inbox/conversaciones/TarjetaLead.jsx)).
 - Learnito (ADR-W251): modal más ancho con sidebar de conversaciones (nueva, abrir, fijar, renombrar); la calificación se manda con «Enviar» y avisa «Calificación enviada».
 - La lista del Inbox muestra solo el ícono de la red (Instagram o WhatsApp, en su color), sin las iniciales.
+- «Adelantar» (ej. «Dolor») queda del mismo alto que el botón de la etapa.
