@@ -31,7 +31,7 @@ function Lista({ archivo, revision, onArchivo }) {
     );
 }
 
-function Vista({ plantilla }) {
+export function Vista({ plantilla }) {
     const { cuerpo, botones } = partesDe(plantilla);
     const [antes, despues] = cuerpo.split('{{1}}');
     return (

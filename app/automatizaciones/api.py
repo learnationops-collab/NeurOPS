@@ -15,13 +15,14 @@ from app.automatizaciones.nucleo import grafo as g
 from app.models.instagram import InstagramWebhookEvento
 from app.models.tag import TARGET_IG_CONTACT
 from app.services import tags_service
-from app.models.user import ROLE_ADMIN, ROLE_DIRECTOR_COMERCIAL, ROLE_OPERATOR, ROLE_SETTER
+from app.models.user import ROLE_ADMIN, ROLE_DIRECTOR_COMERCIAL, ROLE_OPERATOR, ROLE_SETTER, ROLE_TRIAGE
 
 bp = Blueprint('inbox', __name__)
 
 # El operador es el super admin técnico (17/11/2026): también arma, publica y aprueba propuestas.
 ROLES_CON_ACCESO = (ROLE_ADMIN, ROLE_OPERATOR, ROLE_DIRECTOR_COMERCIAL)
-ROLES_DE_LECTURA = (ROLE_SETTER,)
+# Triage (Dari) atiende lo que le asignan, como un setter: la estrategia de referidos (25/11/2026).
+ROLES_DE_LECTURA = (ROLE_SETTER, ROLE_TRIAGE)
 # Lo único que el setter puede cambiar: el recorrido y el bot de una conversación (`api_acciones.py`)
 # sus etiquetas, incluido crear un grupo (`api_etiquetas.py`), los textos de los flujos (`api_mensajes.py`),
 # lo que trabaja sobre la conversación (`api_trabajo.py`), la biblioteca del equipo (`api_biblioteca.py`)

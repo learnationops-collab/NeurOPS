@@ -59,14 +59,17 @@ class ClienteWhatsapp:
         return self.mandar(telefono, {'type': 'template', 'template': plantilla})
 
     def plantillas(self):
-        """Las plantillas de la cuenta: [{name, status, category, language, components}]."""
+        """Las plantillas de la cuenta: [{name, status, category, language, components, rejected_reason}]."""
         datos = self._pedir('get', f'{self.waba_id}/message_templates',
-                            params={'fields': 'name,status,category,language,components', 'limit': 100})
+                            params={'fields': 'name,status,category,language,components,rejected_reason', 'limit': 200})
         return datos.get('data') or []
 
     def crear_plantilla(self, nombre, idioma, categoria, componentes):
         return self._pedir('post', f'{self.waba_id}/message_templates', json={
             'name': nombre, 'language': idioma, 'category': categoria, 'components': componentes})
+
+    def borrar_plantilla(self, nombre):
+        return self._pedir('delete', f'{self.waba_id}/message_templates', params={'name': nombre})
 
     def mandar(self, telefono, cuerpo):
         datos = self._pedir('post', f'{self.phone_number_id}/messages',

@@ -20,13 +20,18 @@ from fractions import Fraction
 from app import db
 from app.automatizaciones.modelos import AutEjecucion, IgContacto
 from app.models import Conversation, User
-from app.models.user import ROLE_SETTER
+from app.models.user import ROLE_SETTER, ROLE_TRIAGE
 
 VENTANA = timedelta(hours=24)
 
 
 def setters_activos():
     return User.query.filter(User.role == ROLE_SETTER, User.is_active.is_(True)).order_by(User.id).all()
+
+
+def asignables():
+    """A quién se le puede pasar una conversación a mano: los setters y triage (Dari), que no entra al reparto."""
+    return User.query.filter(User.role.in_((ROLE_SETTER, ROLE_TRIAGE)), User.is_active.is_(True)).order_by(User.id).all()
 
 
 def conectados():

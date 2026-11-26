@@ -85,4 +85,5 @@ export const inboxApi = {
     simularEmbudo: (slug, acciones, borrador) => api.post(`/inbox/embudos/${slug}/simular`, { acciones, borrador }).then(datos),
     catalogo: () => api.get('/inbox/catalogo').then((r) => r.data.mensajes),
     setters: () => api.get('/inbox/setters').then((r) => r.data.setters),
+    asignables: () => api.get('/inbox/asignables').then((r) => r.data.setters),
 };

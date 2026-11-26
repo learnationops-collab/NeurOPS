@@ -89,7 +89,7 @@ def asignar_conversacion(contacto_id):
     setter_id = _cuerpo().get('setter_id')
     setter = None
     if setter_id is not None:
-        setter = next((u for u in reparto.setters_activos() if u.id == setter_id), None)
+        setter = next((u for u in reparto.asignables() if u.id == setter_id), None)
         if setter is None:
             return jsonify({'message': 'Elegí un setter activo'}), 400
     contacto.setter_id = setter.id if setter else None

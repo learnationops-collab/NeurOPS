@@ -169,3 +169,6 @@ def crear_plantilla():
     except ErrorDeEnvio as error:
         return jsonify({'message': str(error)}), 400
     return jsonify(respuesta), 201
+
+
+from app.whatsapp import api_plantillas  # noqa: E402,F401  (registra sus rutas en este blueprint)

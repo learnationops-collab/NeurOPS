@@ -1,6 +1,6 @@
 // Los datos de «Broadcast de WhatsApp» (ADR-W229, /api/whatsapp): plantillas aprobadas, el historial con el tope
 // del día y el envío. Mientras un envío tiene pendientes, el historial se vuelve a pedir cada pocos segundos.
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import api from '../../../services/api';
 
 const REFRESCO = 5000;
@@ -34,7 +34,7 @@ export function partesDe(p) {
 const mensaje = (e, fallback) => e?.response?.data?.message || fallback;
 
 export function useBroadcast() {
-    const [plantillas, setPlantillas] = useState(null);
+    const [todas, setTodas] = useState(null);
     const [historial, setHistorial] = useState(null);
     const [error, setError] = useState(null);
 
@@ -42,12 +42,15 @@ export function useBroadcast() {
         .then((r) => setHistorial(r.data))
         .catch((e) => setError(mensaje(e, 'No se pudo cargar el historial'))), []);
 
+    const pedirPlantillas = useCallback(() => api.get('/whatsapp/plantillas')
+        .then((r) => setTodas(r.data.plantillas || []))
+        .catch((e) => { setTodas((t) => t || []); setError(mensaje(e, 'No se pudieron traer las plantillas de Meta')); }), []);
+
     useEffect(() => {
-        api.get('/whatsapp/plantillas')
-            .then((r) => setPlantillas((r.data.plantillas || []).filter((p) => p.status === 'APPROVED')))
-            .catch((e) => { setPlantillas([]); setError(mensaje(e, 'No se pudieron traer las plantillas de Meta')); });
+        pedirPlantillas();
         pedirHistorial();
-    }, [pedirHistorial]);
+    }, [pedirPlantillas, pedirHistorial]);
+    const plantillas = useMemo(() => todas && todas.filter((p) => p.status === 'APPROVED'), [todas]);
 
     const mandando = (historial?.lotes || []).find((l) => l.por_estado?.pendiente > 0) || null;
     useEffect(() => {
@@ -61,5 +64,14 @@ export function useBroadcast() {
     const frenar = (lote) => api.post(`/whatsapp/envios/${lote}/frenar`).then(() => pedirHistorial());
     const numeros = (lote) => api.get(`/whatsapp/envios/${lote}`).then((r) => r.data.numeros);
 
-    return { plantillas, historial, error, mandando, revisar, enviar, frenar, numeros, recargar: pedirHistorial, mensaje };
+    const crearPlantilla = (datos) => api.post('/whatsapp/plantillas', datos).then((r) => { pedirPlantillas(); return r.data; });
+    const borrarPlantilla = (nombre) => api.delete(`/whatsapp/plantillas/${encodeURIComponent(nombre)}`).then(() => pedirPlantillas());
+    const respuestas = (nombre) => api.get(`/whatsapp/plantillas/${encodeURIComponent(nombre)}/respuestas`).then((r) => r.data);
+    const guardarRespuesta = (nombre, boton, datos) => api
+        .put(`/whatsapp/plantillas/${encodeURIComponent(nombre)}/respuestas/${encodeURIComponent(boton)}`, datos).then((r) => r.data);
+
+    return {
+        plantillas, todas, historial, error, mandando, revisar, enviar, frenar, numeros, recargar: pedirHistorial, mensaje,
+        recargarPlantillas: pedirPlantillas, crearPlantilla, borrarPlantilla, respuestas, guardarRespuesta,
+    };
 }

@@ -153,7 +153,7 @@ function App() {
             <Route
               path="/inbox/*"
               element={
-                <ProtectedRoute roles={['admin', 'operator', 'director_comercial', 'setter']}>
+                <ProtectedRoute roles={['admin', 'operator', 'director_comercial', 'setter', 'triage']}>
                   <InboxRoutes />
                 </ProtectedRoute>
               }

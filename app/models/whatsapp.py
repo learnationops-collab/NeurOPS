@@ -60,3 +60,22 @@ class WaEnvio(db.Model):
     respuesta = db.Column(db.String(200), nullable=True)
     enviado_por_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
     contacto_id = db.Column(db.Integer, db.ForeignKey('ig_contactos.id', ondelete='SET NULL'), nullable=True)
+
+
+class WaRespuestaBoton(db.Model):
+    """Qué pasa cuando tocan un botón de una plantilla (herramienta «Broadcast de WhatsApp», pestaña Plantillas).
+    Vive en Work y no en Meta: se cambia sin pasar por revisión. `texto` sale solo; `botones` [{titulo, va_a}]
+    son los del mensaje que sale (hasta 3, de 20 caracteres), y `va_a` es el botón de la plantilla cuya respuesta
+    sigue (None: queda para el setter). `asignar_a` y `etiqueta` se aplican a la conversación."""
+    __tablename__ = 'wa_respuestas_boton'
+
+    id = db.Column(db.Integer, primary_key=True)
+    plantilla = db.Column(db.String(120), nullable=False, index=True)
+    boton = db.Column(db.String(25), nullable=False)
+    texto = db.Column(db.Text, nullable=True)
+    botones = db.Column(db.JSON, nullable=True)
+    asignar_a = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    etiqueta = db.Column(db.String(60), nullable=True)
+    actualizado_en = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (db.UniqueConstraint('plantilla', 'boton', name='uq_wa_respuestas_boton'),)

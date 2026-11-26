@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Mockup · Broadcast de WhatsApp: Plantillas</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #dcdcf0; --win: #f1f1f4; --panel: #e9e9ee; --line: #d6d6dc; --in: #ffffff;
+    --ink: #1c2033; --mut: #5f6478; --mut2: #8a8ea0;
+    --ok: #1f9d6b; --info: #3b7dd8; --warn: #c98a14; --err: #c8433a; --wa: #25D366; --vio: #7D63E6;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; font-family: Inter, system-ui, sans-serif; color: var(--ink);
+         background: radial-gradient(1200px 600px at 20% 0%, #cfd0f5, transparent), var(--bg); padding: 28px 16px 40px; }
+  .nota { max-width: 1240px; margin: 0 auto 16px; font-size: 13px; color: var(--mut); line-height: 1.5; }
+  .nota b { color: var(--ink); }
+  .escena { max-width: 1240px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 22px; align-items: start; }
+  @media (max-width: 1000px) { .escena { grid-template-columns: 1fr; } }
+  .titulo-escena { font: 600 11px Inter; letter-spacing: .08em; text-transform: uppercase; color: var(--mut); margin: 0 0 8px 4px; }
+
+  .modal { background: var(--win); border-radius: 20px; box-shadow: 0 24px 70px rgba(30, 30, 80, .25); overflow: hidden; }
+  .m-cab { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+  .m-cab .ic { width: 30px; height: 30px; border-radius: 9px; background: #e3f8ea; display: grid; place-items: center; }
+  .m-cab b { font-size: 15.5px; font-weight: 600; }
+  .m-cab .sp { flex: 1; }
+  .x { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--line); background: var(--in); color: var(--mut); display: grid; place-items: center; font-size: 14px; }
+  .btn { border: 0; border-radius: 11px; padding: 9px 14px; font: 600 13.5px Inter; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+  .btn-p { background: var(--ink); color: #fff; }
+  .btn-s { background: var(--in); color: var(--ink); border: 1px solid var(--line); }
+  .btn-g { background: transparent; color: var(--ink); }
+  .btn-sm { padding: 6px 11px; font-size: 12.5px; }
+  .m-cuerpo { padding: 16px; display: grid; gap: 14px; }
+  .barra { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .barra .der { display: flex; gap: 6px; }
+  .rot { font: 600 11px Inter; letter-spacing: .08em; text-transform: uppercase; color: var(--mut2); display: block; margin-bottom: 8px; }
+  .chip { display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 3px 9px; font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+  .c-ok { background: #e3f5ec; color: var(--ok); }
+  .c-info { background: #e3edfb; color: var(--info); }
+  .c-warn { background: #fbf0da; color: #9a6a0c; }
+  .c-err { background: #fae4e2; color: var(--err); }
+  .c-mut { background: #e2e2e7; color: var(--mut); }
+  .s { font-size: 12px; color: var(--mut); }
+
+  .filtros { display: flex; gap: 6px; flex-wrap: wrap; }
+  .seg { display: inline-flex; background: var(--panel); border-radius: 10px; padding: 3px; gap: 2px; }
+  .seg span { padding: 5px 10px; border-radius: 8px; font-size: 12.5px; font-weight: 600; color: var(--mut); }
+  .seg span.on { background: var(--in); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+
+  .pl { display: grid; gap: 6px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--in); }
+  .pl.on { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
+  .pl-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .pl-top b { font-size: 13.5px; }
+  .pl-top .sp { flex: 1; }
+  .pl-txt { font-size: 12.5px; color: var(--mut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pl-motivo { font-size: 12px; color: var(--err); }
+  .lista { display: grid; gap: 8px; }
+
+  .chat { background: #efe7dd; border-radius: 14px; padding: 12px; }
+  .burbuja { background: #fff; border-radius: 4px 12px 12px 12px; padding: 9px 11px; font-size: 13px; line-height: 1.45; white-space: pre-line; max-width: 92%; }
+  .botones { display: grid; gap: 4px; margin-top: 4px; max-width: 92%; }
+  .botones span { text-align: center; background: #fff; border-radius: 8px; padding: 7px; font-size: 12.5px; color: #0a7cc1; font-weight: 600; }
+  .det-pie { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .det-pie .sp { flex: 1; }
+
+  .campo { display: grid; gap: 5px; }
+  .campo label { font-size: 12.5px; font-weight: 600; }
+  .inp { border: 1px solid var(--line); background: var(--in); border-radius: 11px; padding: 8px 12px; font: 13.5px Inter; color: var(--ink); width: 100%; }
+  textarea.inp { min-height: 150px; resize: vertical; line-height: 1.45; }
+  .dos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .boton-ed { display: flex; gap: 6px; align-items: center; }
+  .boton-ed .inp { flex: 1; }
+  .boton-ed small { font-size: 11.5px; color: var(--mut2); width: 38px; text-align: right; font-variant-numeric: tabular-nums; }
+  .quitar { width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--line); background: var(--in); color: var(--mut); display: grid; place-items: center; }
+  .pie { display: flex; align-items: center; gap: 10px; padding-top: 12px; border-top: 1px solid var(--line); }
+  .pie .sp { flex: 1; }
+  .var { background: #fbf0da; border-radius: 4px; padding: 0 3px; font-weight: 600; }
+  .decisiones { max-width: 1240px; margin: 22px auto 0; background: var(--in); border-radius: 16px; padding: 16px 18px; font-size: 13px; line-height: 1.55; color: var(--mut); }
+  .decisiones b { color: var(--ink); }
+  .decisiones ul { margin: 6px 0 0; padding-left: 18px; }
+</style>
+</head>
+<body>
+<p class="nota"><b>Broadcast de WhatsApp · Plantillas.</b> Un tercer botón en la barra, al lado de «Historial»: lista todas las plantillas de la cuenta de Meta con su estado, muestra cómo le llega cada una y permite crear una nueva (con botones de respuesta rápida) o borrar las que no se usan. «Mandar» sigue mostrando solo las aprobadas.</p>
+
+<div class="escena">
+  <div>
+    <p class="titulo-escena">1 · Las plantillas de Meta</p>
+    <div class="modal">
+      <div class="m-cab"><span class="ic">💬</span><b>Broadcast de WhatsApp</b><span class="sp"></span><span class="x">✕</span></div>
+      <div class="m-cuerpo">
+        <div class="barra">
+          <button class="btn btn-g btn-sm">‹ Mandar</button>
+          <div class="der"><button class="btn btn-p btn-sm">＋ Nueva plantilla</button></div>
+        </div>
+        <div class="filtros">
+          <div class="seg"><span class="on">Todas 6</span><span>Aprobadas 4</span><span>En revisión 2</span><span>Rechazadas 0</span></div>
+        </div>
+        <div class="lista">
+          <div class="pl on">
+            <div class="pl-top"><b>referidos_mario</b><span class="chip c-warn">En revisión</span><span class="sp"></span><span class="s">Marketing · es</span></div>
+            <div class="pl-txt">Hola, ¿cómo estás? Soy Mario jeje — El sábado voy a dar una clase gratuita…</div>
+          </div>
+          <div class="pl">
+            <div class="pl-top"><b>referidos_mario_lunes</b><span class="chip c-warn">En revisión</span><span class="sp"></span><span class="s">Marketing · es</span></div>
+            <div class="pl-txt">Hola {{1}}, soy Mario jeje — Un estudiante de Learnation te recomendó…</div>
+          </div>
+          <div class="pl">
+            <div class="pl-top"><b>reactivacion_a</b><span class="chip c-ok">Aprobada</span><span class="sp"></span><span class="s">Marketing · es</span></div>
+            <div class="pl-txt">…</div>
+          </div>
+          <div class="pl">
+            <div class="pl-top"><b>reactivacion_x</b><span class="chip c-err">Rechazada</span><span class="sp"></span><span class="s">Marketing · es</span></div>
+            <div class="pl-motivo">Meta: contenido promocional engañoso (ejemplo de cómo se ve un rechazo)</div>
+          </div>
+        </div>
+        <div>
+          <span class="rot">Así le llega · referidos_mario</span>
+          <div class="chat">
+            <div class="burbuja">Hola, ¿cómo estás? Soy Mario jeje
+
+El sábado voy a dar una clase gratuita en vivo de estrategias de estudio, pensada para médicos a los que les cuesta estudiar y que todavía no nos conocen.
+
+Capaz conocés a algún compañero que esté teniendo dificultades con el estudio y al que esto le pueda servir. Tenemos un programa de referidos, Learnation Fellows, que te da beneficios si tu referido entra al programa.
+
+¿Se te ocurre alguien?</div>
+            <div class="botones"><span>Sí, conozco a alguien</span><span>¿Qué beneficios tengo?</span></div>
+          </div>
+        </div>
+        <div>
+          <span class="rot">Cuando tocan un botón</span>
+          <div class="lista">
+            <div class="pl">
+              <div class="pl-top"><span class="chip c-info">¿Qué beneficios tengo?</span><span class="sp"></span><span class="s">Asignar a <b>Dari</b> · etiqueta <b>Estrategia Mario</b></span></div>
+              <div class="chat" style="padding:8px"><div class="burbuja">Te cuento rápido jeje
+
+Se llama Learnation Fellows:
+- Sumás el 25% de lo que paga tu compañero como crédito…</div><div class="botones"><span>Sí, conozco a alguien</span><span>Ahora no</span></div></div>
+            </div>
+            <div class="pl">
+              <div class="pl-top"><span class="chip c-info">Sí, conozco a alguien</span><span class="sp"></span><span class="s">Asignar a <b>Dari</b> · etiqueta <b>Estrategia Mario</b></span></div>
+              <div class="chat" style="padding:8px"><div class="burbuja">Buenísimo, graciass!!
+
+Armamos un grupo de WhatsApp para la clase del sábado… https://chat.whatsapp.com/…</div></div>
+            </div>
+            <div class="pl">
+              <div class="pl-top"><span class="chip c-mut">Ahora no</span><span class="sp"></span><span class="s">Sin respuesta · queda para el setter</span></div>
+            </div>
+          </div>
+          <p class="s" style="margin:8px 0 0">Cada botón: el mensaje que sale solo (puede llevar sus propios botones), a quién se asigna y qué etiqueta lleva. Se puede cambiar aunque la plantilla ya esté aprobada: no pasa por Meta. Sin configurar, el toque queda para el setter, como hoy.</p>
+        </div>
+        <div class="det-pie">
+          <span class="s">Meta suele revisar en minutos; a veces tarda hasta 24 h. El estado se actualiza al abrir.</span>
+          <span class="sp"></span>
+          <button class="btn btn-s btn-sm">Duplicar</button>
+          <button class="btn btn-s btn-sm" style="color:var(--err)">Borrar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <p class="titulo-escena">2 · Nueva plantilla</p>
+    <div class="modal">
+      <div class="m-cab"><span class="ic">💬</span><b>Broadcast de WhatsApp</b><span class="sp"></span><span class="x">✕</span></div>
+      <div class="m-cuerpo">
+        <div class="barra"><button class="btn btn-g btn-sm">‹ Plantillas</button><span class="rot" style="margin:0">Nueva plantilla</span></div>
+        <div class="dos">
+          <div class="campo"><label>Nombre</label><input class="inp" value="referidos_marlon"><span class="s">Minúsculas y guiones bajos</span></div>
+          <div class="campo"><label>Categoría</label><div class="seg"><span class="on">Marketing</span><span>Utilidad</span></div></div>
+        </div>
+        <div class="campo">
+          <label>Texto</label>
+          <textarea class="inp">Hola {{1}}, ¿cómo estás? Soy Marlon de Learnation
+
+…</textarea>
+          <span class="s">Escribí <span class="var">{{1}}</span> donde va el primer nombre: se llena solo al mandar.</span>
+        </div>
+        <div class="campo">
+          <label>Botones de respuesta rápida <span class="s">(opcional, hasta 10)</span></label>
+          <div class="boton-ed"><input class="inp" value="Sí, conozco a alguien"><small>21/25</small><span class="quitar">✕</span></div>
+          <div class="boton-ed"><input class="inp" value="¿Qué beneficios tengo?"><small>22/25</small><span class="quitar">✕</span></div>
+          <div><button class="btn btn-s btn-sm">＋ Botón</button></div>
+        </div>
+        <div>
+          <span class="rot">Así le llega</span>
+          <div class="chat">
+            <div class="burbuja">Hola <b>Laura</b>, ¿cómo estás? Soy Marlon de Learnation
+
+…</div>
+            <div class="botones"><span>Sí, conozco a alguien</span><span>¿Qué beneficios tengo?</span></div>
+          </div>
+        </div>
+        <div class="pie">
+          <span class="s">Va a revisión de Meta. Cuando la aprueben aparece en «Mandar».</span>
+          <span class="sp"></span>
+          <button class="btn btn-p">Mandar a aprobar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="decisiones">
+  <b>Qué decidir sobre este mockup</b>
+  <ul>
+    <li><b>Dónde vive:</b> un botón «Plantillas» al lado de «Historial» en la barra de «Mandar», con la misma navegación (‹ Mandar para volver).</li>
+    <li><b>Editar:</b> Meta no deja cambiar el texto de una plantilla aprobada sin volver a revisión; propongo «Duplicar» (abre el formulario con el texto, con otro nombre) en lugar de editar.</li>
+    <li><b>Borrar:</b> con confirmación. Meta no deja reusar el nombre de una plantilla borrada por 30 días.</li>
+    <li><b>Respuesta por botón:</b> vive en Work, no en Meta (se cambia sin revisión). Los botones de la respuesta («Sí, conozco a alguien» / «Ahora no») encadenan con las respuestas de la misma plantilla: así sale el recorrido de referidos sin pasar por el motor de flujos (que tiene el límite de 20 caracteres de Instagram).</li>
+    <li><b>Idioma:</b> siempre español (es); no lo muestro en el formulario.</li>
+  </ul>
+</div>
+</body>
+</html>

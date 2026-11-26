@@ -6,8 +6,8 @@ broadcast no arranca la bienvenida. Al motor le llegan dos cosas:
   · Un botón de un mensaje del flujo (el `id` es el payload del motor): sigue ese recorrido.
   · La respuesta escrita a un paso que espera texto (o el título de un botón escrito a mano).
 
-Lo demás queda para el setter, también tocar un botón de la plantilla del broadcast (ADR-W229: el setting
-sigue a mano): es lo que aparece en «Esperan respuesta».
+Un botón de una plantilla del broadcast con respuesta configurada sale solo (`respuestas.py`). Lo demás queda
+para el setter (ADR-W229: el setting sigue a mano): es lo que aparece en «Esperan respuesta».
 """
 from app.automatizaciones.modelos import AutEjecucion
 from app.automatizaciones.nucleo import mensajes
@@ -35,7 +35,8 @@ def procesar(motor, contacto, entrante, mensaje):
     abierta = motor._abierta(contacto)
     if abierta and abierta.estado == AutEjecucion.ESPERANDO_RESPUESTA and entrante.texto:
         return motor._respuesta(abierta, _Escrito(entrante.texto))
-    return 'para_el_setter'
+    from app.whatsapp import respuestas
+    return respuestas.responder(contacto, mensaje, motor.ahora) or 'para_el_setter'
 
 
 class _Escrito:

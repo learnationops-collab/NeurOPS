@@ -92,7 +92,7 @@ export default function Conversaciones() {
     const yo = user?.id ?? null;
     const [buscar, setBuscar] = useState('');
     // El setter arranca en lo suyo sin respuesta; el resto, en todo lo que espera.
-    const [filtro, setFiltro] = useState(() => ({ ...VACIO, cola: 'esperan', asignado: user?.role === 'setter' ? yo : null }));
+    const [filtro, setFiltro] = useState(() => ({ ...VACIO, cola: 'esperan', asignado: ['setter', 'triage'].includes(user?.role) ? yo : null }));
     const [vista, setVista] = useState('chats');
     // `?c=<id>` abre esa conversación (el link «Abrir chat» de la lista del reporte del setter).
     const [elegida, setElegida] = useState(() => Number(new URLSearchParams(window.location.search).get('c')) || null);
@@ -117,7 +117,7 @@ export default function Conversaciones() {
     const dejarDeElegir = () => { setEligiendo(false); setMarcadas([]); };
     const abrir = useCallback((id) => { setVista('chats'); setElegida(id); }, []);
     useTeclado(vista === 'chats' && !eligiendo ? visibles : [], elegida, setElegida);
-    const avisos = useAvisos(lista, { yo, soloMias: user?.role === 'setter', elegida, onAbrir: abrir });
+    const avisos = useAvisos(lista, { yo, soloMias: ['setter', 'triage'].includes(user?.role), elegida, onAbrir: abrir });
     // En lo propio no hace falta decir de quién es; en el resto, sí.
     const conAsignado = filtro.asignado !== yo;
 

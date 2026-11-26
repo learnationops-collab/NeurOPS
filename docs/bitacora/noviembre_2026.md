@@ -1054,3 +1054,8 @@
 ### 25/11/2026 · Inbox: los audios en ogg, opus o webm se pueden subir
 - Las notas de voz de WhatsApp (ogg/opus) y lo grabado en el navegador (webm) no se podían mandar: Instagram no los reproduce y el inbox los rechazaba (lo reportó Elias; no había ningún audio subido). Ahora el servidor los pasa a mp3 al subirlos ([audio_formato.py](../../app/automatizaciones/audio_formato.py), ffmpeg en el Dockerfile). Si el navegador no sabe el tipo, manda la extensión.
 - La fila de la bandeja muestra «🎤 Audio» (o el adjunto que sea) cuando el último mensaje no tiene texto, como un audio mandado desde la app; antes quedaba «…».
+
+### 25/11/2026 · Broadcast de WhatsApp: pestaña Plantillas y respuesta por botón (ADR-W234)
+- «Plantillas» al lado de «Historial»: todas las de Meta con su estado (aprobada, en revisión, rechazada con el motivo), cómo le llegan, crear una con botones, duplicar y borrar.
+- Cada botón de una plantilla puede contestar solo, con sus propios botones, asignar la conversación y ponerle una etiqueta ([respuestas.py](../../app/whatsapp/respuestas.py)). Sin configurar, queda para el setter como antes.
+- Triage (Dari) entra al Inbox como un setter y se le pueden asignar conversaciones; no entra al reparto de las campañas.
