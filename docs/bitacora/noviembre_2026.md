@@ -1098,3 +1098,7 @@
 - La caja de escribir: herramientas y Learnito en la fila de Chat/Nota/Tarea; el texto a todo el ancho ([Composer.jsx](../../frontend/src/pages/inbox/conversaciones/Composer.jsx)).
 - La fila de la bandeja en dos líneas, con el nombre con que agendó en Work ([Fila.jsx](../../frontend/src/pages/inbox/conversaciones/Fila.jsx)).
 - La bandeja termina arriba del dock ([useAltoLibre.js](../../frontend/src/pages/inbox/conversaciones/useAltoLibre.js)). «Volver a mi sesión» es una pastilla chica al lado del saludo.
+
+### 26/11/2026 · Espacio del setter: encabezado en una fila y el dock ya no tapa el chat (sigue ADR-W239)
+- El encabezado es «Hola, Paula.» y, a la derecha, botones redondos con ícono: Links (con un link lo copia; con varios abre la lista), Turnos, Tálamus y, simulando, el fantasma para volver a la sesión propia. Al pasar el mouse cada uno se estira y dice qué es. El subtítulo de la sección queda solo para el lector de pantalla ([SetterEspacioPage.jsx](../../frontend/src/pages/setter/SetterEspacioPage.jsx), [MisLinks.jsx](../../frontend/src/pages/setter/MisLinks.jsx)).
+- La bandeja seguía metida bajo el dock: el alto se medía una sola vez al montar, cuando la bandeja todavía estaba cargando. Ahora mide apenas aparece y con cada cambio de tamaño ([useAltoLibre.js](../../frontend/src/pages/inbox/conversaciones/useAltoLibre.js)).

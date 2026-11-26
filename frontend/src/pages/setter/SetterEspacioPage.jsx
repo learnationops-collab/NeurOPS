@@ -18,7 +18,7 @@ import { REVISAR_DEL_SETTER } from '../comercial/components/tablasSetter';
 import '../comercial/comercial.css';
 import './setterEspacio.css';
 import MisAgendas from './agendas/MisAgendas';
-import MisLinks, { copiar } from './MisLinks';
+import MisLinks, { BotonIcono, copiar } from './MisLinks';
 import { abrirVentana } from '../../ventanas/ventanasStore';
 import { marcaDelDock } from './agendas/meses';
 import ReporteSeccion from '../reporte/ReporteSeccion';
@@ -218,50 +218,33 @@ const SetterEspacioPage = () => {
                 de vidrio flotan encima. Quieto con movimiento reducido. */}
             <div className="aura-pag" aria-hidden="true"><i /><i /><i /><i /></div>
             <div className="setter-espacio-wrap">
-                {/* El encabezado en una línea, como el artifact: el número de la sección en el
-                    dock, el saludo con lo que se hace ahí y, si la sección tiene, sus pestañas.
-                    El nombre de la sección lo dice el dock; acá se lee igual con un lector. */}
+                {/* El encabezado en una línea: el número de la sección en el dock, el saludo, las pestañas si la
+                    sección tiene y los botones redondos. Lo que se hace en la sección y su nombre se leen con un
+                    lector (Mario, 26/11: sin el subtítulo a la vista). */}
                 <div className="dc-shell dc-shell--embebido">
                     <header className="tope setter-top">
                         <div className="hola">
                             <span className="head-num num" aria-hidden="true">{numeroDe(seccion)}</span>
                             <h1>
-                                <span className="sr">{seccionActual.label}. </span>
-                                Hola, {nombreDePila(nombre)}.{' '}
-                                {seccionActual.sub && <span className="sub">{seccionActual.sub}</span>}
+                                <span className="sr">{seccionActual.label}. {seccionActual.sub} </span>
+                                Hola, {nombreDePila(nombre)}.
                             </h1>
-                            {/* Simulando, la salida es terminar la simulación: una pastilla chica al lado del saludo, en
-                                ámbar, que solo ve quien simula (Mario, 26/11: el botón grande abajo del saludo se veía feo).
-                                También está en el menú del avatar. */}
-                            {user?.is_impersonating && (
-                                <button type="button" className="setter-simulando" disabled={saliendo}
-                                    title="Estás viendo su sesión. Tocá para volver a la tuya" onClick={volverAMiSesion}>
-                                    <Ghost size={12} />
-                                    {saliendo ? 'Volviendo…' : 'Simulando · volver'}
-                                </button>
-                            )}
                         </div>
                         {seccionActual.tabs && (
                             <Segmented opciones={seccionActual.tabs} valor={tab} onChange={elegirTab}
                                 ariaLabel={`Vistas de ${seccionActual.label}`} />
                         )}
-                        {/* Su link de agendamiento, a la vista en todas las secciones (14/10/2026). */}
-                        {/* Tálamus (Agendas 2.0) en solo lectura, junto a sus links: los eventos y horarios
-                            de triage y de closing a un clic (Sales Team, 07/11/2026; antes estaba en el
-                            menú del avatar). Desde su menú, «Volver a mi espacio» trae de vuelta acá. */}
+                        {/* Todo a la derecha en una fila de botones redondos (Mario, 26/11: menos texto): Links, Turnos,
+                            Tálamus y, simulando, el fantasma para volver a la sesión propia (solo lo ve quien simula; también
+                            está en el menú del avatar). Al pasar el mouse cada uno se estira y dice qué es. */}
                         <MisLinks>
-                            {/* Los turnos que quedan, en una ventana encima de su espacio (ventanas/, 17/11/2026);
-                                Tálamus entero sigue a un clic al lado. */}
-                            <button type="button" className="pastilla pastilla--sm setter-link"
-                                title="Los turnos que quedan de triage y de closers, por día" onClick={() => abrirVentana('turnos')}>
-                                <CalendarClock size={14} />
-                                <span className="setter-link-t">Turnos</span>
-                            </button>
-                            <button type="button" className="pastilla pastilla--sm setter-link"
-                                title="Ver los turnos libres del equipo en Tálamus" onClick={() => navegar('/agendas-v2?ver=available')}>
-                                <CalendarDays size={14} />
-                                <span className="setter-link-t">Tálamus</span>
-                            </button>
+                            <BotonIcono icono={CalendarClock} rotulo="Los turnos que quedan de triage y de closers, por día" onClick={() => abrirVentana('turnos')}>Turnos</BotonIcono>
+                            <BotonIcono icono={CalendarDays} rotulo="Ver los turnos libres del equipo en Tálamus" onClick={() => navegar('/agendas-v2?ver=available')}>Tálamus</BotonIcono>
+                            {user?.is_impersonating && (
+                                <BotonIcono icono={Ghost} tono="simula" rotulo="Estás simulando su sesión: tocá para volver a la tuya" disabled={saliendo} onClick={volverAMiSesion}>
+                                    {saliendo ? 'Volviendo…' : 'Volver a mi sesión'}
+                                </BotonIcono>
+                            )}
                         </MisLinks>
                     </header>
                 </div>
