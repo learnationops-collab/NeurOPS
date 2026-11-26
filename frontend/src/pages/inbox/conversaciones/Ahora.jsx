@@ -49,24 +49,41 @@ function Resolver({ contacto, marcada, onCambio, compacto }) {
     );
 }
 
-// `compacto` (ADR-W250): en la fila de arriba de la tarjeta, al lado de la palabra clave; «No requiere» solo con ícono.
-export function Ahora({ contacto, mensajes, onCambio, compacto }) {
-    const ahora = new Date();
+// Lo que vale «No requiere» en este chat: si lo último es del lead y si ya está marcada.
+function estadoDe(contacto, mensajes) {
     const ultimo = mensajes[mensajes.length - 1];
     const delLead = ultimo?.direccion === 'entrante' ? { ultimo_de: 'lead', ultimo_en: ultimo.en } : null;
-    const marcada = Boolean(delLead && resuelta({ ...delLead, resuelta_en: contacto.resuelta_en }));
+    return { delLead, marcada: Boolean(delLead && resuelta({ ...delLead, resuelta_en: contacto.resuelta_en })) };
+}
+
+// `compacto` (ADR-W250): en la fila de arriba de la tarjeta, al lado de la palabra clave. «No requiere» ya no va acá:
+// va al lado del interruptor del bot (`ResolverLead`, Mario 26/11/2026).
+export function Ahora({ contacto, mensajes, compacto }) {
+    const ahora = new Date();
+    const { delLead, marcada } = estadoDe(contacto, mensajes);
     const espera = delLead && !marcada ? esperaMin(delLead, ahora) : null;
     return (
         <div className="cv-ahora">
             {espera != null && <Cronometro desde={delLead.ultimo_en} grande={!compacto} />}
             <Ventana contacto={contacto} queda={cierreMin(contacto, ahora)} aviso={avisoCierre(contacto)} mini={compacto} />
-            {delLead && <Resolver contacto={contacto} marcada={marcada} onCambio={onCambio} compacto={compacto} />}
         </div>
     );
 }
 
+// «No requiere» con su rótulo abajo, igual que el interruptor «Pausar» del bot. Sin mensaje del lead pendiente, no ocupa nada.
+export function ResolverLead({ contacto, mensajes, onCambio }) {
+    const { delLead, marcada } = estadoDe(contacto, mensajes);
+    if (!delLead) return null;
+    return (
+        <span className="cv-bot-switch cv-bot-resolver">
+            <Resolver contacto={contacto} marcada={marcada} onCambio={onCambio} compacto />
+            <small>{marcada ? 'Listo' : 'No req.'}</small>
+        </span>
+    );
+}
+
 // El bot: su flujo (tocarlo abre el menú de siempre) y el interruptor «Pausar al responder», a la vista.
-export function BotLead({ contacto, ejecucion, pausar, onPausar, onCambio }) {
+export function BotLead({ contacto, ejecucion, pausar, onPausar, onCambio, children }) {
     const pausado = contacto.bot_pausado_hasta && new Date(contacto.bot_pausado_hasta) > new Date();
     const estado = ejecucion ? (EJECUCION[ejecucion.estado]?.texto || ejecucion.estado).toLowerCase() : null;
     const hasta = pausado ? new Date(contacto.bot_pausado_hasta).toLocaleString('es', { hour: '2-digit', minute: '2-digit' }) : null;
@@ -83,6 +100,7 @@ export function BotLead({ contacto, ejecucion, pausar, onPausar, onCambio }) {
                 <Switch checked={pausar} onChange={onPausar} label="Pausar el bot al responder" />
                 <small>Pausar</small>
             </span>
+            {children}
         </div>
     );
 }

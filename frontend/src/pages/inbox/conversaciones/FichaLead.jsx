@@ -9,7 +9,6 @@ import { inboxApi } from '../api';
 import { EJECUCION } from './AccionesFlujo';
 import { faseDe } from './fasesSetting';
 import { momento } from './Feed';
-import MisStats from './MisStats';
 
 const ABIERTA = ['en_curso', 'esperando_respuesta', 'esperando_tiempo'];
 const BASICAS = ['nombre', 'examen', 'pais', 'fecha_examen', 'intentos', 'whatsapp'];
@@ -94,8 +93,8 @@ export default function FichaLead({ contacto, tareas, recorrido, fases = [], cit
     const hacer = (pedido, error) => pedido.then(onCambio).catch((e) => toast(e.response?.data?.message || error, 'error'));
 
     return (
-        <Panel as="aside" size="sm" className="cv-ficha" aria-label="Ficha del lead">
-            <MisStats />
+        <Panel as="aside" size="sm" className="cv-ficha" aria-label="Seguimiento">
+            <span className="cv-mis-tit">Seguimiento</span>
             <Fila icono={CalendarCheck} titulo="Tareas" color="var(--brand-secondary)" cuenta={abiertas.length}
                 tip={abiertas.length ? undefined : 'Tareas|Se crean desde la pestaña Tarea, abajo del chat'}>
                 {abiertas.length > 0 && (

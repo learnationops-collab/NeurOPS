@@ -1175,3 +1175,7 @@
 
 ### 26/11/2026 · Tarjeta del lead: la fila de arriba en una línea
 - «Configurar palabra clave» se partía en tres renglones: ahora es «+ Clave» (el tooltip lo explica); la espera, la ventana y el check de «No requiere» van a la misma altura, con el mismo borde ([Origen.jsx](../../frontend/src/pages/inbox/conversaciones/Origen.jsx), [tarjeta.css](../../frontend/src/pages/inbox/conversaciones/tarjeta.css)).
+
+### 26/11/2026 · Tarjeta del lead: clave en una línea, «No requiere» junto al bot y panel de Estadísticas
+- La palabra clave va en minúscula y en una línea («DOCUMENTO 25» se partía); «No requiere» bajó al lado del interruptor «Pausar» del bot, con su rótulo abajo ([Ahora.jsx](../../frontend/src/pages/inbox/conversaciones/Ahora.jsx)).
+- «Tus números» pasa a ser el panel «Estadísticas», propio, entre la tarjeta y la ficha, con números grandes en 2×2; la ficha (Tareas, Notas, Variables, Recorrido) se titula «Seguimiento» ([MisStats.jsx](../../frontend/src/pages/inbox/conversaciones/MisStats.jsx), [Detalle.jsx](../../frontend/src/pages/inbox/conversaciones/Detalle.jsx)).

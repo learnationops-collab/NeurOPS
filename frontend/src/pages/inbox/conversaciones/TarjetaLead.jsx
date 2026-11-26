@@ -4,7 +4,7 @@
 // Transferir, No lead e In-abrible.
 import { CalendarCheck, Check, ChevronDown, ChevronsRight, Instagram, MinusCircle, XCircle } from 'lucide-react';
 import { Avatar, Button, IconButton, Panel, toast } from '../../../components/standard';
-import { Ahora, BotLead, Telefono } from './Ahora';
+import { Ahora, BotLead, ResolverLead, Telefono } from './Ahora';
 import { esWhatsapp, examenDe, quien, usuarioDe } from './colas';
 import Etiquetas from './Etiquetas';
 import { Califica } from './Fila';
@@ -131,7 +131,7 @@ export default function TarjetaLead({ datos, fase, canal, yo, pausar, onPausar, 
         <Panel as="section" size="sm" className="cv-tarjeta" aria-label="El lead">
             <div className="cv-bloque">
                 <Origen contacto={contacto} entrada={datos.entrada} canal={canal} campana={asignado?.campana} onCambio={onCambio}>
-                    <Ahora contacto={contacto} mensajes={datos.mensajes || []} onCambio={onCambio} compacto />
+                    <Ahora contacto={contacto} mensajes={datos.mensajes || []} compacto />
                 </Origen>
                 <div className="cv-tarjeta-quien">
                     <span className="cv-tarjeta-avatar">
@@ -154,7 +154,9 @@ export default function TarjetaLead({ datos, fase, canal, yo, pausar, onPausar, 
                 <Agenda agenda={cliente?.agenda} />
             </div>
             <div className="cv-bloque cv-bloque--suave">
-                <BotLead contacto={contacto} ejecucion={datos.ejecucion} pausar={pausar} onPausar={onPausar} onCambio={onCambio} />
+                <BotLead contacto={contacto} ejecucion={datos.ejecucion} pausar={pausar} onPausar={onPausar} onCambio={onCambio}>
+                    <ResolverLead contacto={contacto} mensajes={datos.mensajes || []} onCambio={onCambio} />
+                </BotLead>
             </div>
             <div className="cv-bloque">
                 <Etiquetas contactoId={contacto.id} etiquetas={datos.etiquetas || []} onCambio={onCambio} />
