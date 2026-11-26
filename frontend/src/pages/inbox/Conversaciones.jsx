@@ -7,7 +7,7 @@
 // van al título de la pestaña y, con permiso, como aviso del escritorio (`useAvisos`).
 import { useCallback, useEffect, useState } from 'react';
 import { BarChart3, Bell, Kanban, ListChecks, MessageSquare, Search, Tag } from 'lucide-react';
-import { Button, EmptyState, HeaderActions, IconButton, InputGroup, Panel, Segmented, Select } from '../../components/standard';
+import { Button, EmptyState, HeaderActions, InputGroup, Panel, Segmented, Select } from '../../components/standard';
 import { useAuth } from '../../contexts/AuthContext';
 import { inboxApi } from './api';
 import useAltoLibre from './conversaciones/useAltoLibre';
@@ -191,9 +191,13 @@ export default function Conversaciones() {
                         {vista === 'embudo' && macro}
                         <MisTareas onAbrir={abrir} marca={datos} />
                         {avisos.soportado && avisos.permiso === 'default' && (
-                            <IconButton label="Activar avisos" data-tip="Activar avisos|Te avisa cuando te escribe un lead, aunque estés en otra pestaña" icon={<Bell size={16} />} onClick={avisos.pedirPermiso} />
+                            <button type="button" className="cv-barra-btn" data-tip="Activar avisos|Te avisa cuando te escribe un lead, aunque estés en otra pestaña" onClick={avisos.pedirPermiso}>
+                                <Bell size={15} aria-hidden="true" />Avisos
+                            </button>
                         )}
-                        <IconButton label="Stats" data-tip="Stats" icon={<BarChart3 size={16} />} onClick={() => setStats(true)} />
+                        <button type="button" className="cv-barra-btn" data-tip="Stats|Cómo vienen tus conversaciones" onClick={() => setStats(true)}>
+                            <BarChart3 size={15} aria-hidden="true" />Stats
+                        </button>
                     </div>
                 </div>
             </HeaderActions>

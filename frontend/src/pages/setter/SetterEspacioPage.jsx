@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { BarChart3, BookOpen, CalendarClock, CalendarDays, CheckCircle2, ClipboardList, Ghost, Link2, MessagesSquare, Share2 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
+import { dataThemeDe, useApariencia } from '../../context/AparienciaContext';
 import { usePlaybook } from '../../contexts/PlaybookContext';
 import { revertImpersonation } from '../../utils/impersonation';
 import { armarMenuSesion, rotuloDeSesion } from '../../sesion/menuSesion';
@@ -107,6 +108,7 @@ const CLAVES_DEL_DRILL_DOWN = ['t', 'f', 'ft'];
 
 const SetterEspacioPage = () => {
     const { user, logout } = useAuth();
+    const apariencia = useApariencia();
     const { abrir: abrirConfiguracion } = useConfiguracion();
     const { pendingCount, openPlaybook } = usePlaybook();
     const [params, setParams] = useSearchParams();
@@ -230,6 +232,12 @@ const SetterEspacioPage = () => {
                                 Hola, {nombreDePila(nombre)}.
                             </h1>
                         </div>
+                        {/* En Conversaciones y Embudos, la barra del Inbox (filtros, Chats | Embudo, tareas, avisos, stats)
+                            sube a esta fila: `HeaderActions` la manda acá (Mario, 26/11: una sola fila arriba). Lleva las
+                            clases de Thalamus para que la barra se vea igual que dentro del Inbox. */}
+                        {['conversaciones', 'guia'].includes(seccion) && (
+                            <div id="ui-header-actions" className="thalamus inbox setter-slot" data-theme={dataThemeDe(apariencia, undefined)} />
+                        )}
                         {seccionActual.tabs && (
                             <Segmented opciones={seccionActual.tabs} valor={tab} onChange={elegirTab}
                                 ariaLabel={`Vistas de ${seccionActual.label}`} />

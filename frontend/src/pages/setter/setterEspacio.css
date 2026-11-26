@@ -109,3 +109,11 @@
 .setter-espacio .setter-links-op svg:last-child{margin-left:auto;opacity:.6}
 @media (max-width:700px){.setter-espacio .setter-top{flex-wrap:wrap}}
 @media (prefers-reduced-motion:reduce){.setter-espacio .setter-ico--simula svg,.setter-espacio .setter-ico--simula::after{animation:none}}
+
+/* Conversaciones y Embudos: la barra del Inbox entra en la fila del saludo (`#ui-header-actions`) */
+.setter-espacio .setter-slot{flex:1 1 auto;min-width:0;display:flex}
+.setter-espacio .setter-slot:empty{display:none}
+.setter-espacio .setter-top:has(.setter-slot:not(:empty)) .hola{flex:0 1 auto}
+.setter-espacio .setter-slot .ui-header__bar{flex:1;min-width:0}
+.setter-espacio .setter-slot .cv-barra.barra{gap:8px;margin:0;justify-content:flex-start;flex-wrap:nowrap}
+@media (max-width:1100px){.setter-espacio .setter-top:has(.setter-slot:not(:empty)){flex-wrap:wrap}.setter-espacio .setter-slot{order:3;flex-basis:100%}}
