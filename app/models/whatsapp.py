@@ -65,6 +65,10 @@ class WaEnvio(db.Model):
     paso_id = db.Column(db.Integer, db.ForeignKey('wa_pasos_taller.id', ondelete='SET NULL'), nullable=True, index=True)
     parametros = db.Column(db.JSON, nullable=True)
     vence_en = db.Column(db.DateTime, nullable=True)
+    # Un paso de mensaje común (ADR-W266): {texto, titulo?, url?} con las variables del taller ya puestas (salvo el
+    # nombre). Va con `plantilla = MENSAJE` y sale como texto, dentro de la ventana de 24 h.
+    mensaje = db.Column(db.JSON, nullable=True)
+    MENSAJE = '(mensaje)'
 
 
 class WaRespuestaBoton(db.Model):

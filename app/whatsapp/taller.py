@@ -9,6 +9,8 @@
     a las 24 h). Lo que no entró en el tope del día vence sin salir.
   · Las ramas son las respuestas por botón de la plantilla (`respuestas.py`): siguen igual, sin tocarlas acá.
 """
+import logging
+import re
 import uuid
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
@@ -26,7 +28,13 @@ MODOS = ('ahora', 'relativo', 'hora')
 A_QUIEN = ('todos', 'no_respondieron', 'tocaron', 'etiqueta')
 VARIABLES = ('nombre', 'hora', 'fecha', 'meet', 'grupo')
 MAX_PASOS = 15
+TIPOS = ('plantilla', 'mensaje')
+LARGO_MENSAJE = 1024
+VENTANA = timedelta(hours=24)
 DIAS = ('lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo')
+
+
+logger = logging.getLogger(__name__)
 
 
 class PasoInvalido(ValueError):
@@ -63,7 +71,7 @@ def estandar(crear=False):
 def _copiar_pasos(origen, destino):
     for p in origen.pasos:
         destino.pasos.append(WaPasoTaller(
-            orden=p.orden, nombre=p.nombre, modo=p.modo, minutos=p.minutos, dias=p.dias, hora=p.hora,
+            orden=p.orden, nombre=p.nombre, tipo=p.tipo, mensaje=p.mensaje, modo=p.modo, minutos=p.minutos, dias=p.dias, hora=p.hora,
             plantilla=p.plantilla, idioma=p.idioma, parametros=p.parametros, a_quien=p.a_quien, valor=p.valor,
             excluir=p.excluir))
 
@@ -160,6 +168,11 @@ def destinatarios(plan, paso, grupos=None):
     return contactos
 
 
+def en_ventana(contactos, ahora):
+    """Los que escribieron o tocaron un botón en las últimas 24 h: a ellos les llega un mensaje común."""
+    return [c for c in contactos if c.ultimo_entrante_en and c.ultimo_entrante_en >= ahora - VENTANA]
+
+
 def lanzar(paso, evento, ahora, grupos=None):
     """Deja en pendiente una fila por destinatario. Devuelve cuántas."""
     cuando = momento(paso, evento, ahora) or ahora
@@ -169,12 +182,22 @@ def lanzar(paso, evento, ahora, grupos=None):
         db.session.commit()
         return 0
     contactos = destinatarios(paso.plan, paso, grupos)
-    parametros = parametros_de(paso, evento)
     paso.lote = str(uuid.uuid4())
-    for c in contactos:
-        db.session.add(WaEnvio(lote=paso.lote, plantilla=paso.plantilla, idioma=paso.idioma or 'es',
-                               con_nombre='{nombre}' in parametros, telefono=telefono_de(c.igsid), nombre=c.nombre,
-                               contacto_id=c.id, creado_en=ahora, paso_id=paso.id, parametros=parametros, vence_en=hasta))
+    if paso.tipo == 'mensaje':
+        # Un mensaje común solo llega dentro de la ventana de 24 h (ADR-W266): al resto no se le intenta.
+        contactos = en_ventana(contactos, ahora)
+        m = dict(paso.mensaje or {})
+        m['texto'] = con_variables(m.get('texto') or '', evento)
+        for c in contactos:
+            db.session.add(WaEnvio(lote=paso.lote, plantilla=WaEnvio.MENSAJE, idioma=paso.idioma or 'es', con_nombre=False,
+                                   telefono=telefono_de(c.igsid), nombre=c.nombre, contacto_id=c.id, creado_en=ahora,
+                                   paso_id=paso.id, mensaje=m, vence_en=hasta))
+    else:
+        parametros = parametros_de(paso, evento)
+        for c in contactos:
+            db.session.add(WaEnvio(lote=paso.lote, plantilla=paso.plantilla, idioma=paso.idioma or 'es',
+                                   con_nombre='{nombre}' in parametros, telefono=telefono_de(c.igsid), nombre=c.nombre,
+                                   contacto_id=c.id, creado_en=ahora, paso_id=paso.id, parametros=parametros, vence_en=hasta))
     paso.estado, paso.lanzado_en = WaPasoTaller.LANZADO, ahora
     db.session.commit()
     return len(contactos)
@@ -198,6 +221,32 @@ def lanzar_vencidos(ahora=None):
 
 # --- Edición ----------------------------------------------------------------------------------------
 
+def _validar_mensaje(m):
+    """{texto, titulo?, url?} de un paso de mensaje común. El texto puede quedar vacío en borrador."""
+    m = m if isinstance(m, dict) else {}
+    texto = str(m.get('texto') or '').strip()
+    if len(texto) > LARGO_MENSAJE:
+        raise PasoInvalido(f'El mensaje pasa los {LARGO_MENSAJE} caracteres')
+    titulo, url = str(m.get('titulo') or '').strip(), str(m.get('url') or '').strip()
+    if url and not re.match(r'^https?://\S+$', url):
+        raise PasoInvalido('El link del mensaje tiene que empezar con https://')
+    if url and not titulo:
+        raise PasoInvalido('El botón del link necesita un texto')
+    if len(titulo) > 20:
+        raise PasoInvalido(f'«{titulo}» pasa los 20 caracteres de WhatsApp')
+    salida = {'texto': texto}
+    if url:
+        salida.update(titulo=titulo, url=url)
+    return salida
+
+
+def con_variables(texto, evento):
+    """Pone {hora}, {fecha}, {meet} y {grupo} del taller; {nombre} (o {{1}}) queda para cada persona."""
+    for clave, valor in valores(evento).items():
+        texto = texto.replace('{' + clave + '}', valor or '')
+    return texto
+
+
 def _validar_paso(datos):
     modo = datos.get('modo') if datos.get('modo') in MODOS else 'relativo'
     a_quien = datos.get('a_quien') if datos.get('a_quien') in A_QUIEN else 'todos'
@@ -220,11 +269,17 @@ def _validar_paso(datos):
     valor = (datos.get('valor') or '').strip()[:60] or None
     if a_quien in ('tocaron', 'etiqueta') and not valor:
         raise PasoInvalido('Elegí el botón o la etiqueta del paso')
+    tipo = datos.get('tipo') if datos.get('tipo') in TIPOS else 'plantilla'
+    mensaje = _validar_mensaje(datos.get('mensaje')) if tipo == 'mensaje' else None
+    if tipo == 'mensaje':
+        parametros = []
     return {
+        'tipo': tipo, 'mensaje': mensaje,
         'nombre': (datos.get('nombre') or '').strip()[:60] or None, 'modo': modo,
         'minutos': int(datos.get('minutos') or 0) if modo == 'relativo' else None,
         'dias': int(datos.get('dias') or 0) if modo == 'hora' else None, 'hora': hora if modo == 'hora' else None,
-        'plantilla': (datos.get('plantilla') or '').strip() or None, 'idioma': (datos.get('idioma') or 'es').strip(),
+        'plantilla': ((datos.get('plantilla') or '').strip() or None) if tipo == 'plantilla' else None,
+        'idioma': (datos.get('idioma') or 'es').strip(),
         'parametros': parametros, 'a_quien': a_quien, 'valor': valor if a_quien in ('tocaron', 'etiqueta') else None,
         'excluir': [str(e).strip()[:60] for e in datos.get('excluir') or [] if str(e).strip()],
     }
@@ -262,6 +317,32 @@ def guardar(plan, datos):
     db.session.commit()
 
 
+def _cuerpos_de_plantillas():
+    """{nombre: texto} de las plantillas de Meta. Sin Meta, vacío: no se completa nada (se valida al mandar)."""
+    from app.automatizaciones.transporte import ErrorDeEnvio
+    from app.whatsapp.cliente import ClienteWhatsapp
+    try:
+        return {p['name']: next((c.get('text') or '' for c in p.get('components') or [] if c.get('type') == 'BODY'), '')
+                for p in ClienteWhatsapp().plantillas()}
+    except ErrorDeEnvio as error:
+        logger.error(f'[WHATSAPP] Plantillas al programar: {error}')
+        return {}
+
+
+def _completar_parametros(paso, cuerpo, nombre):
+    """Una plantilla con {{1}}, {{2}}… necesita un valor por variable. {{1}} sin elegir es el nombre (lo que
+    muestra el editor); otra que falte frena el programar (ADR-W266: si no, Meta rechaza cada envío)."""
+    if not cuerpo:  # Meta no respondió o la plantilla no está: no se toca nada
+        return
+    n = max([int(x) for x in re.findall(r'\{\{(\d+)\}\}', cuerpo)] or [0])
+    parametros = list(paso.parametros or [])
+    if n >= 1 and not parametros:
+        parametros = ['nombre']
+    if len(parametros) < n:
+        raise PasoInvalido(f'Al paso «{nombre}» le falta qué va en {{{{{len(parametros) + 1}}}}} de la plantilla')
+    paso.parametros = parametros[:n] if n else []
+
+
 def programar(plan, evento):
     """Pasa los borradores a programado. Lanza ValueError si a alguno le falta algo."""
     borradores = [p for p in plan.pasos if p.estado == WaPasoTaller.BORRADOR]
@@ -269,9 +350,17 @@ def programar(plan, evento):
         raise PasoInvalido('No hay pasos para programar')
     if not plan.etiqueta:
         raise PasoInvalido('La audiencia necesita una etiqueta')
+    cuerpos = None
     for p in borradores:
-        if not p.plantilla:
-            raise PasoInvalido(f'Al paso «{p.nombre or p.orden + 1}» le falta la plantilla')
+        nombre = p.nombre or p.orden + 1
+        if p.tipo == 'mensaje':
+            if not (p.mensaje or {}).get('texto'):
+                raise PasoInvalido(f'Al paso «{nombre}» le falta el mensaje')
+        elif not p.plantilla:
+            raise PasoInvalido(f'Al paso «{nombre}» le falta la plantilla')
+        else:
+            cuerpos = cuerpos if cuerpos is not None else _cuerpos_de_plantillas()
+            _completar_parametros(p, cuerpos.get(p.plantilla, ''), nombre)
         if p.modo == 'relativo' and not evento.inicio_at:
             raise PasoInvalido('El taller no tiene hora: cargala en Próximos talleres')
     for p in borradores:
@@ -303,7 +392,8 @@ def _conteos(lotes):
 
 def paso_json(paso, evento, conteos, estimado=None):
     return {
-        'id': paso.id, 'orden': paso.orden, 'nombre': paso.nombre, 'modo': paso.modo, 'minutos': paso.minutos,
+        'id': paso.id, 'orden': paso.orden, 'nombre': paso.nombre, 'tipo': paso.tipo or 'plantilla',
+        'mensaje': paso.mensaje or {'texto': ''}, 'modo': paso.modo, 'minutos': paso.minutos,
         'dias': paso.dias, 'hora': paso.hora, 'plantilla': paso.plantilla, 'idioma': paso.idioma,
         'parametros': paso.parametros or [], 'a_quien': paso.a_quien, 'valor': paso.valor, 'excluir': paso.excluir or [],
         'estado': paso.estado, 'lote': paso.lote, 'lanzado_en': _iso(paso.lanzado_en),

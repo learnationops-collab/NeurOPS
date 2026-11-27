@@ -27,7 +27,7 @@ export const A_QUIEN = [
 ];
 
 export const pasoNuevo = () => ({
-    id: null, nombre: '', modo: 'relativo', minutos: -120, dias: 0, hora: '10:00', plantilla: '', idioma: 'es',
+    id: null, nombre: '', tipo: 'plantilla', mensaje: { texto: '' }, modo: 'relativo', minutos: -120, dias: 0, hora: '10:00', plantilla: '', idioma: 'es',
     parametros: [], a_quien: 'todos', valor: '', excluir: [], estado: 'borrador', por_estado: {},
 });
 

@@ -35,16 +35,21 @@ export function NodoPaso({ i, paso, plantilla, config, elegido, onElegir, onBoto
     const estado = ESTADOS[paso.estado] || ESTADOS.borrador;
     const { cuerpo, botones } = partesDe(plantilla);
     const salio = paso.lote ? embudo(paso.por_estado) : null;
+    const mensaje = paso.tipo === 'mensaje' ? paso.mensaje || {} : null;
     return (
         <button type="button" className={`lz-nodo lz-nodo--paso${elegido ? ' lz-nodo--on' : ''}`} data-nodo={`p${i}`} onClick={onElegir}>
-            <span className="lz-tipo lz-tipo--paso">Paso · plantilla <Chip subtle color={estado.color}>{estado.label}</Chip></span>
+            <span className="lz-tipo lz-tipo--paso">{mensaje ? 'Paso · mensaje (24 h)' : 'Paso · plantilla'} <Chip subtle color={estado.color}>{estado.label}</Chip></span>
             <b>{paso.nombre || paso.plantilla || 'Paso nuevo'}</b>
-            {paso.plantilla ? <span className="lz-burbuja">{corto(cuerpo || paso.plantilla)}</span> : <span className="lz-s">Sin plantilla</span>}
+            {mensaje
+                ? (mensaje.texto ? <span className="lz-burbuja">{corto(mensaje.texto)}</span> : <span className="lz-s">Sin mensaje</span>)
+                : paso.plantilla ? <span className="lz-burbuja">{corto(cuerpo || paso.plantilla)}</span> : <span className="lz-s">Sin plantilla</span>}
+            {mensaje?.url && <span className="lz-bts"><Boton link>{mensaje.titulo || 'Abrir'}</Boton></span>}
             {botones.length > 0 && <span className="lz-bts">{botones.map((b) => <Boton key={b} ancla={`p${i}:b:${b}`} onTocar={() => onBoton(b)}>{b}</Boton>)}</span>}
             <span className="lz-s">
                 {A_QUIEN[paso.a_quien]}{paso.valor ? ` «${paso.valor}»` : ''}
                 {salio ? ` · ${salio.enviados} enviados · ${salio.respondieron} respondieron` : paso.estimado != null ? ` · ~${paso.estimado}` : ''}
-                {config?.opcion_unica ? ' · Opción única' : ''}
+                {config?.opcion_unica && !mensaje ? ' · Opción única' : ''}
+                {mensaje ? ' · solo con la ventana abierta' : ''}
             </span>
         </button>
     );

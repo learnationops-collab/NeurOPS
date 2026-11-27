@@ -2418,3 +2418,14 @@
   - En el lienzo, la respuesta muestra «+ etiquetas» y «− etiquetas», y de los botones de «Al abrir el link» salen cables a la respuesta que siguen.
 - **Qué se pierde:** con link y botones de respuesta, a la persona le llegan dos mensajes y los botones quedan en el segundo, con «👇» como texto. Si el primero falla, el segundo no sale.
 - **Consecuencias:** migración `c1e3a5b7d9f2` (idempotente). La API de respuestas acepta `etiquetas` y `quitar` (listas); `etiqueta` sola se sigue aceptando.
+## ADR-W266: un paso del flujo del taller puede ser un mensaje común dentro de la ventana de 24 h
+
+- **Fecha:** 27/11/2026 · **Subsistema:** flujo del taller (`app/whatsapp/taller.py`, `envios.py`, `entrantes.py`, `respuestas.con_nombre`; `WaPasoTaller.tipo`/`.mensaje`, `WaEnvio.mensaje`; `broadcastTaller/PasoEditor.jsx`, `Nodos.jsx`) · **Estado:** implementada
+- **Contexto:** los recordatorios del taller (5 h antes, 4 h antes, al empezar, después) en ManyChat son mensajes comunes a quien ya interactuó, no plantillas. En Work cada paso exigía una plantilla aprobada. Revisando el flujo del 28/11 aparecieron dos errores: el paso de la plantilla con {{1}} se había guardado sin parámetros (el editor mostraba «Primer nombre» pero no lo guardaba, y Meta habría rechazado cada envío) y el mensaje de «al abrir el link» decía «Listo {{1}}», que en un mensaje común salía literal.
+- **Decisión:**
+  - Cada paso elige **qué sale**: «Plantilla · fuera de las 24 h» (como hasta ahora) o «Mensaje · dentro de las 24 h»: un texto con {nombre}/{{1}}, {hora}, {fecha}, {meet} y {grupo}, y opcionalmente un botón con link. Al lanzarse, el mensaje solo se manda a quien escribió o tocó un botón en las últimas 24 h; al resto no se le intenta. El cuándo, el a quién y el excluir son los mismos.
+  - El mensaje sale como texto (o `cta_url`) y queda en el chat del Inbox. Una respuesta a ese mensaje no cambia cuál es la última plantilla de la persona: los botones de la plantilla que toque después siguen funcionando.
+  - Elegir una plantilla con {{1}} guarda «nombre» en esa variable. Al programar, Work lee las plantillas de Meta y completa {{1}} con el nombre si no se eligió, o frena si falta otra variable.
+  - En los mensajes que no son plantilla, `{{1}}` vale lo mismo que `{nombre}`.
+- **Qué se pierde:** un mensaje común no llega a quien no interactuó en las últimas 24 h, y el número que se ve al armarlo es el de la audiencia, no el de quienes tendrán la ventana abierta en ese momento. Un paso de mensaje no tiene botones de respuesta (para eso, una plantilla).
+- **Consecuencias:** migración `e3a5c7d9f1b4` (idempotente). `WaEnvio.plantilla` vale `(mensaje)` para estas filas.
