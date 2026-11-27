@@ -2479,3 +2479,10 @@
 - **Decisión:** «Desactivar todo» aparece siempre que haya algo programado y devuelve los programados a desactivado. Cada paso tiene su interruptor «Activo / Desactivado» en su panel: activarlo hace las mismas revisiones que «Programar» (plantilla o mensaje, variables, hora del taller). En el lienzo, un paso sin programar se ve «Desactivado» en lugar de «Borrador».
 - **Qué se pierde:** un paso con cambios sin guardar no se puede activar hasta guardar el flujo.
 - **Consecuencias:** sin migración.
+## ADR-W271: a cada uno se le escribe con su nombre de WhatsApp, y sin nombre el texto se acomoda
+
+- **Fecha:** 27/11/2026 · **Subsistema:** WhatsApp (`audiencia.nombre_de`, `entrantes._contacto`, `respuestas.con_nombre`, `envios._primer_nombre`, `taller.lanzar`) · **Estado:** implementada
+- **Contexto:** en la prueba del flujo del 28/11 los mensajes decían «Prueba», el nombre con que se había cargado el número. Los CSV de los talleres traen solo teléfonos (y quizá una etiqueta), no nombres. Mario quiere que se use el nombre del perfil de WhatsApp y, si no hay, que el mensaje vaya sin nombre. Sin nombre, «{nombre}, en 5 horas…» salía «, en 5 horas…» y una plantilla con {{1}} decía «Hola hola,».
+- **Decisión:** el nombre de un contacto es el de su perfil de WhatsApp (`variables.nombre_whatsapp`, se guarda y se actualiza con cada mensaje que manda) y, si todavía no escribió, el de la carga. Sin ninguno, en los mensajes comunes y las respuestas el nombre se saca y el texto se acomoda («En 5 horas…», «Hola, …»). Una plantilla no acepta una variable vacía: su {{1}} sin nombre va «👋» («Hola 👋, cómo va?»).
+- **Qué se pierde:** el primer mensaje (la plantilla) nunca tiene el nombre de WhatsApp, porque la persona todavía no escribió: para que no lleve «👋», la plantilla tiene que estar escrita sin {{1}}. Un nombre de perfil raro (emojis, un negocio) sale tal cual.
+- **Consecuencias:** sin migración.

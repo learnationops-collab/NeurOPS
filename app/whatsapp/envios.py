@@ -126,8 +126,11 @@ def frenar(lote):
     return borrados
 
 
+SIN_NOMBRE = '👋'  # una plantilla no acepta una variable vacía: «Hola {{1}},» sale «Hola 👋,» (ADR-W271)
+
+
 def _primer_nombre(nombre):
-    return (nombre or '').strip().split(' ')[0].title() or 'hola'
+    return (nombre or '').strip().split(' ')[0].title() or SIN_NOMBRE
 
 
 def _parametros(envio):

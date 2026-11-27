@@ -1319,3 +1319,7 @@
 
 ### 27/11/2026 · Flujo del taller: desactivar todo o un paso (ADR-W270)
 - «Desactivar todo» siempre que haya pasos programados, y un interruptor «Activo / Desactivado» en cada paso ([PasoEditor.jsx](../../frontend/src/ventanas/herramientas/broadcastTaller/PasoEditor.jsx), [taller.py](../../app/whatsapp/taller.py)).
+
+### 27/11/2026 · WhatsApp: nombre del perfil primero y, sin nombre, texto acomodado (ADR-W271)
+- Se le escribe a cada uno con su nombre de WhatsApp; sin nombre, «{nombre}, en 5 horas…» sale «En 5 horas…» y la plantilla con {{1}} lleva «👋» ([respuestas.py](../../app/whatsapp/respuestas.py), [audiencia.py](../../app/whatsapp/audiencia.py)).
+- Prueba acelerada del flujo del 28/11 con el número del equipo en el plan de prueba del 26/11: Opening, botones y mensaje de Calendar funcionaron.

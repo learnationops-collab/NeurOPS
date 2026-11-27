@@ -105,13 +105,17 @@ def con_nombre(texto, nombre):
     mismo: en una plantilla es el nombre y se escribe igual en los mensajes que no lo son (ADR-W266)."""
     texto = texto.replace('{{1}}', '{nombre}')
     primero = (nombre or '').strip().split(' ')[0].title()
-    return texto.replace('{nombre}', primero) if primero else re.sub(r',?\s*\{nombre\}', '', texto)
+    if primero:
+        return texto.replace('{nombre}', primero)
+    # Sin nombre: «{nombre}, en 5 horas…» arranca en «En 5 horas…» y «Hola {nombre}, …» queda «Hola, …».
+    texto = re.sub(r'(^|\n)[ \t]*\{nombre\}[ \t]*[,!.]?[ \t]*(\S)', lambda m: m.group(1) + m.group(2).upper(), texto)
+    return re.sub(r'[ \t]*\{nombre\}', '', texto)
 
 
 def _nombre_de(contacto):
-    """El nombre del CSV del broadcast (el real) y, si no hay, el de su perfil de WhatsApp."""
-    envio = WaEnvio.query.filter_by(contacto_id=contacto.id).order_by(WaEnvio.id.desc()).first()
-    return (envio.nombre if envio else None) or contacto.nombre
+    """El de su perfil de WhatsApp y, si no hay, el de la carga (ADR-W271). Sin ninguno, el texto va sin nombre."""
+    from app.whatsapp.audiencia import nombre_de
+    return nombre_de(contacto)
 
 
 def _con_link(texto, titulo, url):
