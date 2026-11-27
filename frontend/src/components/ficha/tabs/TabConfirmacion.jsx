@@ -5,6 +5,7 @@ import { Aviso, StepperFicha, TarjetaAccion, useMovimiento } from '../piezas';
 import SubReprogramar from './confirmacion/SubReprogramar';
 import SubCancelo from './confirmacion/SubCancelo';
 import SubNoShow from './confirmacion/SubNoShow';
+import PedidosActualizacion from '../pedidos/PedidosActualizacion';
 import SubEliminar from './confirmacion/SubEliminar';
 import './confirmacion/reprogramar.css';
 
@@ -108,6 +109,9 @@ const TabConfirmacion = ({ ficha, onAccion, irA, puedeEditar = true, onEnfoque }
 
     return (
         <motion.div key="menu" style={{ display: 'grid', gap: 'var(--s5)' }} {...mov.subvista}>
+            {/* Pedir actualización a quien confirma, y su respuesta (ADR-W275). */}
+            <PedidosActualizacion appointmentId={ficha?.identidad?.appointment_id} />
+
             {cerrada && (
                 <Aviso tono="success" titulo="Lead 100% confirmado">
                     Queda listo para el día de la llamada.

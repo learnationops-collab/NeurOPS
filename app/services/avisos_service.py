@@ -31,6 +31,9 @@ TIPOS = {
     'closer_sin_resolver': {'rotulo': 'Agenda con un closer que no existe', 'canales': ['centro'],
                             'obligatorio': False},
     'chat_mencion': {'rotulo': 'Te etiquetaron en el chat del equipo', 'canales': ['centro'], 'obligatorio': False},
+    'pedido_actualizacion': {'rotulo': 'Te piden una actualización', 'canales': ['centro'], 'obligatorio': True},
+    'respuesta_actualizacion': {'rotulo': 'Respondieron tu pedido de actualización', 'canales': ['centro'],
+                                'obligatorio': True},
 }
 TARGETS = ('user', 'rol', 'grupo')
 # Lo que la campanita mira hacia atrás: un aviso de hace más de tres meses ya no se va a leer.

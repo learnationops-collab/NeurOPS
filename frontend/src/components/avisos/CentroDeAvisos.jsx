@@ -1,6 +1,7 @@
-import { Suspense, lazy, useCallback, useEffect, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Bell } from 'lucide-react';
+import { Bell, BellRing } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { Button, EmptyState, Modal, ModalHeader } from '../standard';
 import { useAuth } from '../../contexts/AuthContext';
 import { AVISOS_EVENT, publicarSinLeer } from '../../utils/avisosBus';
@@ -11,6 +12,11 @@ import './avisos.css';
 // La ficha se baja recién al tocar un aviso: App la monta en todas las pantallas.
 const FichaLeadModal = lazy(() => import('../ficha/FichaLeadModal'));
 const CADA = 60000;
+// Pedir actualización (ADR-W275): estos avisos se miran cada 15 s y salen en un toast apenas llegan.
+const PEDIDOS = ['pedido_actualizacion', 'respuesta_actualizacion'];
+const CADA_URGENTE = 15000;
+const MOSTRADOS = 'avisos_urgentes_mostrados';
+const yaMostrados = () => new Set(JSON.parse(sessionStorage.getItem(MOSTRADOS) || '[]'));
 
 const cuando = (iso) => new Date(iso).toLocaleString('es-AR', {
     day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
@@ -48,6 +54,30 @@ const CentroDeAvisos = () => {
     }, [user, contar]);
 
     useEffect(() => {
+        if (!user) return undefined;
+        const mirar = () => {
+            if (document.visibilityState !== 'visible') return;
+            api.get('/avisos/urgentes').then(({ data }) => {
+                const vistos = yaMostrados();
+                const nuevos = data.avisos.filter((a) => !vistos.has(a.id));
+                if (!nuevos.length) return;
+                nuevos.forEach((a) => vistos.add(a.id));
+                sessionStorage.setItem(MOSTRADOS, JSON.stringify([...vistos].slice(-200)));
+                contar();
+                nuevos.slice(0, 3).forEach((a) => toast((t) => (
+                    <button type="button" className="aviso-toast" onClick={() => { toast.dismiss(t.id); leerRef.current(a); }}>
+                        <BellRing size={16} aria-hidden="true" />
+                        <span><strong>{a.asunto}</strong>{a.descripcion && <small>{a.descripcion}</small>}</span>
+                    </button>
+                ), { duration: 12000, id: `aviso-${a.id}` }));
+            }).catch(() => {});
+        };
+        mirar();
+        const id = setInterval(mirar, CADA_URGENTE);
+        return () => clearInterval(id);
+    }, [user, contar]);
+
+    useEffect(() => {
         const abrir = () => { setAbierto(true); cargar(); };
         window.addEventListener(AVISOS_EVENT, abrir);
         return () => window.removeEventListener(AVISOS_EVENT, abrir);
@@ -55,7 +85,7 @@ const CentroDeAvisos = () => {
 
     const leer = (aviso) => {
         if (!aviso.leido) {
-            setAvisos((lista) => lista.map((a) => (a.id === aviso.id ? { ...a, leido: true } : a)));
+            setAvisos((lista) => lista && lista.map((a) => (a.id === aviso.id ? { ...a, leido: true } : a)));
             api.post(`/avisos/${aviso.id}/leido`).then(contar).catch(() => {});
         }
         // Una etiqueta del chat del equipo (ADR-W174): abre la ventana Chat.
@@ -64,15 +94,18 @@ const CentroDeAvisos = () => {
             abrirVentana('chat');
             return;
         }
-        if (aviso.person_uuid) {
+        if (aviso.person_uuid || (PEDIDOS.includes(aviso.tipo) && aviso.origen_id)) {
             setAbierto(false);
             setFicha({
                 personUuid: aviso.person_uuid,
                 appointmentId: aviso.origen === 'appointment' ? aviso.origen_id : null,
-                pestana: aviso.tipo === 'nota' ? 'com' : null,
+                pestana: aviso.tipo === 'nota' ? 'com' : PEDIDOS.includes(aviso.tipo) ? 'conf' : null,
             });
         }
     };
+
+    const leerRef = useRef(leer);
+    useEffect(() => { leerRef.current = leer; });
 
     const leerTodos = () => {
         setAvisos((lista) => lista.map((a) => ({ ...a, leido: true })));

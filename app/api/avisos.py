@@ -47,3 +47,12 @@ def leido(aviso_id):
 def todos_leidos():
     avisos_service.marcar(avisos_service.sin_leer(current_user), current_user)
     return jsonify({'ok': True})
+
+
+@bp.route('/urgentes', methods=['GET'])
+@login_required
+def urgentes():
+    """Pedidos de actualización y sus respuestas sin leer: el toast los muestra apenas llegan (ADR-W275)."""
+    from app.services import pedido_actualizacion_service
+
+    return jsonify({'avisos': pedido_actualizacion_service.urgentes(current_user)})
