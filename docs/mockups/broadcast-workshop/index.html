@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Mockup · Broadcast del taller (Planificar)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b0d1f; --card: #151830; --card2: #1b1f3b; --line: #2a2f52; --in: #10132a;
+    --ink: #eef0ff; --mut: #9aa0c3; --mut2: #6d7299;
+    --ok: #2fc58a; --info: #5b9bff; --warn: #f0b440; --err: #ff6b6b; --wa: #25D366; --mag: #ff3d9a; --vio: #8f78ff;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: Inter, system-ui, sans-serif; color: var(--ink); background: var(--bg); padding: 24px 16px 60px; }
+  .wrap { max-width: 1240px; margin: 0 auto; display: grid; gap: 18px; }
+  .nota { font-size: 13px; color: var(--mut); line-height: 1.55; background: var(--card); border: 1px dashed var(--line); border-radius: 14px; padding: 12px 16px; }
+  .nota b { color: var(--ink); }
+  .rot { font: 700 10.5px Inter; letter-spacing: .09em; text-transform: uppercase; color: var(--mut2); }
+  .panel { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 18px; }
+  .panel h2 { margin: 0 0 12px; font-size: 18px; font-weight: 800; }
+  .fila { display: flex; align-items: center; gap: 10px; background: var(--card2); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; margin-top: 8px; }
+  .fila.on { border-color: var(--mag); background: #2a1532; }
+  .fila b { font-size: 14px; } .fila .h { color: var(--mut); font-weight: 700; }
+  .sp { flex: 1; }
+  .chip { display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 3px 9px; font-size: 11px; font-weight: 700; white-space: nowrap; border: 1px solid transparent; }
+  .c-ok { background: #123b2c; color: var(--ok); } .c-info { background: #15274a; color: var(--info); }
+  .c-warn { background: #3b2e12; color: var(--warn); } .c-err { background: #3d1820; color: var(--err); }
+  .c-mut { background: #22264a; color: var(--mut); } .c-mag { background: #3a1430; color: var(--mag); }
+  .c-wa { background: #0f3522; color: var(--wa); }
+  .btn { border: 1px solid var(--line); background: transparent; color: var(--ink); border-radius: 999px; padding: 7px 13px; font: 700 11.5px Inter; letter-spacing: .05em; text-transform: uppercase; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+  .btn-p { background: var(--mag); border-color: var(--mag); color: #fff; }
+  .btn-wa { border-color: #1d6b43; color: var(--wa); }
+  .s { font-size: 12px; color: var(--mut); }
+
+  /* Ventana */
+  .ventana { background: #12152b; border: 1px solid var(--line); border-radius: 22px; box-shadow: 0 30px 80px rgba(0,0,0,.5); overflow: hidden; }
+  .v-cab { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+  .v-cab .ic { width: 34px; height: 34px; border-radius: 10px; background: #0f3522; display: grid; place-items: center; color: var(--wa); font-weight: 800; }
+  .tabs { display: flex; gap: 4px; padding: 10px 18px 0; border-bottom: 1px solid var(--line); }
+  .tab { padding: 9px 14px; font-size: 13px; font-weight: 700; color: var(--mut); border-bottom: 2px solid transparent; cursor: pointer; }
+  .tab.on { color: var(--ink); border-color: var(--mag); }
+  .vista { display: none; padding: 18px; } .vista.on { display: block; }
+  .dos { display: grid; grid-template-columns: 1.15fr .85fr; gap: 16px; } @media (max-width: 980px) { .dos { grid-template-columns: 1fr; } }
+  .caja { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 14px; }
+  .caja + .caja { margin-top: 12px; }
+
+  /* Audiencia */
+  .fuente { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--in); margin-top: 8px; }
+  .fuente .n { font-weight: 800; font-size: 15px; }
+  .tg { width: 34px; height: 20px; border-radius: 99px; background: #2f3460; position: relative; flex: none; cursor: pointer; }
+  .tg::after { content: ''; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: #aab; transition: .15s; }
+  .tg.on { background: var(--mag); } .tg.on::after { left: 17px; background: #fff; }
+  .embudo { display: grid; gap: 6px; }
+  .eb { display: grid; grid-template-columns: 170px 1fr 48px; align-items: center; gap: 10px; font-size: 12.5px; }
+  .eb .barra { height: 10px; border-radius: 99px; background: #23284a; overflow: hidden; }
+  .eb .barra i { display: block; height: 100%; background: var(--err); border-radius: 99px; }
+  .eb.total .barra i { background: var(--info); } .eb.fin .barra i { background: var(--wa); }
+  .eb .v { text-align: right; font-weight: 800; }
+  .grande { font-size: 40px; font-weight: 800; line-height: 1; }
+  .tope { height: 12px; border-radius: 99px; background: #23284a; overflow: hidden; display: flex; margin: 10px 0 6px; }
+  .tope i { display: block; height: 100%; }
+  .alerta { border: 1px solid #5a4316; background: #2a2010; color: #f6d08a; border-radius: 12px; padding: 10px 12px; font-size: 12.5px; line-height: 1.5; margin-top: 10px; }
+
+  /* Flujo */
+  .lienzo { position: relative; overflow-x: auto; background: radial-gradient(circle, #23284a 1px, transparent 1px) 0 0 / 18px 18px, #0e1126; border: 1px solid var(--line); border-radius: 16px; padding: 22px; }
+  .eje { display: flex; gap: 0; min-width: 1150px; align-items: flex-start; }
+  .paso { width: 200px; flex: none; position: relative; }
+  .paso + .paso { margin-left: 34px; }
+  .paso + .paso::before { content: ''; position: absolute; left: -34px; top: 36px; width: 34px; height: 2px; background: var(--vio); }
+  .cuando { font: 800 11px Inter; color: var(--vio); letter-spacing: .05em; text-transform: uppercase; margin-bottom: 6px; }
+  .nodo { background: var(--card2); border: 1px solid var(--line); border-radius: 14px; padding: 10px; font-size: 12px; cursor: pointer; }
+  .nodo.sel { border-color: var(--mag); box-shadow: 0 0 0 1px var(--mag); }
+  .nodo .t { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+  .nodo .t b { font-size: 12.5px; }
+  .burb { background: #0b3b2a; color: #d9ffe9; border-radius: 10px 10px 10px 2px; padding: 7px 9px; font-size: 11.5px; line-height: 1.4; }
+  .bts { display: grid; gap: 4px; margin-top: 6px; }
+  .bt { text-align: center; background: #10132a; border: 1px solid var(--line); border-radius: 8px; padding: 4px; color: var(--info); font-size: 11px; font-weight: 700; }
+  .aquien { margin-top: 6px; font-size: 11px; color: var(--mut); }
+  .rama { margin-top: 14px; margin-left: 18px; border-left: 2px dashed #3d4377; padding-left: 12px; display: grid; gap: 8px; }
+  .rama .nodo { background: #161a35; }
+  .rama .cond { font-size: 10.5px; font-weight: 800; color: var(--info); text-transform: uppercase; letter-spacing: .05em; }
+  .mas { border: 1px dashed #3d4377; border-radius: 14px; padding: 18px 10px; text-align: center; color: var(--mut); font-size: 12px; margin-top: 22px; }
+  .lado label { display: block; font-size: 11.5px; color: var(--mut); margin: 10px 0 4px; font-weight: 600; }
+  .campo { background: var(--in); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; font-size: 13px; }
+  .seg { display: inline-flex; background: var(--in); border: 1px solid var(--line); border-radius: 10px; padding: 3px; gap: 2px; flex-wrap: wrap; }
+  .seg span { padding: 5px 9px; border-radius: 7px; font-size: 12px; font-weight: 700; color: var(--mut); }
+  .seg span.on { background: var(--card2); color: var(--ink); }
+
+  /* Plantillas */
+  .pl { display: grid; gap: 4px; padding: 11px 13px; border: 1px solid var(--line); border-radius: 13px; background: var(--in); margin-top: 8px; }
+  .pl .top { display: flex; align-items: center; gap: 8px; }
+  .pl .tx { font-size: 12px; color: var(--mut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tel { background: #0b141a; border-radius: 18px; padding: 14px; }
+  .tel .burb { max-width: 92%; font-size: 12.5px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th { text-align: left; color: var(--mut2); font: 700 10.5px Inter; letter-spacing: .07em; text-transform: uppercase; padding: 7px 8px; border-bottom: 1px solid var(--line); }
+  td { padding: 9px 8px; border-bottom: 1px solid #20244a; }
+  td.n { text-align: right; font-weight: 700; }
+
+  /* Inbox */
+  .ib { display: grid; grid-template-columns: 230px 1fr; gap: 12px; }
+  .ib .col { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 10px; font-size: 12.5px; }
+  .ib .it { padding: 7px 9px; border-radius: 9px; display: flex; justify-content: space-between; }
+  .ib .it.on { background: var(--card2); font-weight: 700; }
+  .ib .sub { padding-left: 18px; color: var(--mut); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="nota">
+  <b>Maqueta para aprobar · Broadcast del taller.</b> Se construye sobre lo que ya existe en <code>origin/main</code>: el WhatsApp propio (número de Neurocogniciones, Cloud API), la herramienta «Broadcast de WhatsApp», las plantillas con su estado de Meta y las respuestas por botón. Lo nuevo es lo de cada taller: <b>audiencia con etiqueta</b>, <b>flujo programado</b> y el Inbox separado. Los números de la audiencia salen del CSV real del 26/11 (250 teléfonos, 0 repetidos). Las exclusiones son de ejemplo. Tocá las pestañas y los nodos.
+</div>
+
+<!-- 1 · Planificar -->
+<div class="panel">
+  <div class="rot">1 · Planificar › Próximos talleres (cada taller suma «Broadcast»)</div>
+  <h2 style="margin-top:8px">Próximos talleres</h2>
+  <div class="fila on">
+    <div><b>Jue, 26 Nov</b> <span class="h">19:00</span> <span class="chip c-mag">● En la landing ahora</span><br>
+      <span class="s">Webinar 26 de noviembre 2026</span><br>
+      <span class="chip c-info">Frío</span> <span class="chip c-ok">Meet</span> <span class="chip c-ok">Grupo</span>
+      <span class="chip c-wa">WA · 236 contactos · 3 de 6 envíos programados</span></div>
+    <div class="sp"></div>
+    <button class="btn btn-wa" onclick="document.getElementById('v').scrollIntoView({behavior:'smooth'})">✆ Broadcast</button>
+    <button class="btn">Grupos</button>
+  </div>
+  <div class="fila">
+    <div><b>Sáb, 28 Nov</b> <span class="h">14:30</span><br><span class="s">Webinar 28 de noviembre 2026</span><br>
+      <span class="chip c-info">Frío</span> <span class="chip c-ok">Meet</span> <span class="chip c-ok">Grupo</span>
+      <span class="chip c-mut">WA · sin audiencia · flujo estándar listo</span></div>
+    <div class="sp"></div>
+    <button class="btn btn-wa">✆ Broadcast</button><button class="btn">Grupos</button>
+  </div>
+</div>
+
+<!-- 2 · Ventana -->
+<div class="ventana" id="v">
+  <div class="v-cab">
+    <div class="ic">✆</div>
+    <div><b style="font-size:16px">Broadcast · Taller jue 26/11 19:00</b><br><span class="s">Etiqueta <span class="chip c-wa">WS 26/11</span> · hora del taller en Argentina</span></div>
+    <div class="sp"></div>
+    <span class="chip c-ok">Número conectado · +54 9 387 547-2662</span>
+  </div>
+  <div class="tabs">
+    <div class="tab on" data-t="aud">Audiencia</div>
+    <div class="tab" data-t="flu">Flujo</div>
+    <div class="tab" data-t="pla">Plantillas</div>
+    <div class="tab" data-t="his">Historial</div>
+  </div>
+
+  <!-- Audiencia -->
+  <div class="vista on" id="aud">
+    <div class="dos">
+      <div>
+        <div class="caja">
+          <div class="rot">De dónde salen</div>
+          <div class="fuente"><span>📄</span><div><b>integrantes_next_ws.csv</b><br><span class="s">250 teléfonos · grupo 261126 · se etiquetan «WS 26/11» y quedan unidos al taller</span></div><div class="sp"></div><span class="n">250</span><div class="tg on"></div></div>
+          <div class="fuente"><span>📅</span><div><b>Agendaron y no cerraron</b><br><span class="s">Agendas de este taller con resultado «No cerró» o «No show»</span></div><div class="sp"></div><span class="n">+14</span><div class="tg"></div></div>
+          <div class="fuente"><span>🏷</span><div><b>Por etiqueta</b><br><span class="s">Ej.: «WS 19/11 · tocó Quiero ir» para volver a invitar</span></div><div class="sp"></div><button class="btn">Elegir</button></div>
+          <div style="margin-top:10px"><button class="btn">+ Subir otro CSV</button> <span class="s">teléfono y, opcional, nombre</span></div>
+        </div>
+        <div class="caja">
+          <div class="rot">Descartar</div>
+          <div class="fuente"><div><b>Ya agendaron llamada</b><br><span class="s">Tienen una agenda abierta o pasada</span></div><div class="sp"></div><span class="n">−9</span><div class="tg on"></div></div>
+          <div class="fuente"><div><b>Ya cerraron (clientes)</b></div><div class="sp"></div><span class="n">−3</span><div class="tg on"></div></div>
+          <div class="fuente"><div><b>Alumnos activos</b></div><div class="sp"></div><span class="n">−2</span><div class="tg on"></div></div>
+          <div class="fuente"><div><b>Se dieron de baja</b><br><span class="s">Respondieron «baja» / bloquearon</span></div><div class="sp"></div><span class="n">0</span><div class="tg on"></div></div>
+          <div class="fuente"><div><b>Repetidos e inválidos</b><br><span class="s">Siempre fuera</span></div><div class="sp"></div><span class="n">0</span></div>
+          <div class="s" style="margin-top:8px">«Ya recibieron este envío» se descuenta en cada paso del flujo, no acá.</div>
+        </div>
+      </div>
+      <div>
+        <div class="caja">
+          <div class="rot">A cuántos se les puede mandar</div>
+          <div class="grande" style="margin:8px 0 4px">236</div>
+          <div class="s">personas distintas, de 250</div>
+          <div class="embudo" style="margin-top:14px">
+            <div class="eb total"><span>Cargados</span><span class="barra"><i style="width:100%"></i></span><span class="v">250</span></div>
+            <div class="eb"><span>Ya agendaron</span><span class="barra"><i style="width:3.6%"></i></span><span class="v">−9</span></div>
+            <div class="eb"><span>Ya cerraron</span><span class="barra"><i style="width:1.2%"></i></span><span class="v">−3</span></div>
+            <div class="eb"><span>Alumnos activos</span><span class="barra"><i style="width:.8%"></i></span><span class="v">−2</span></div>
+            <div class="eb fin"><span><b>Se puede enviar</b></span><span class="barra"><i style="width:94.4%"></i></span><span class="v">236</span></div>
+          </div>
+        </div>
+        <div class="caja">
+          <div class="rot">Límite del número por día</div>
+          <div class="tope"><i style="width:28%;background:#5b6290"></i><i style="width:66%;background:var(--wa)"></i></div>
+          <div class="s"><b style="color:var(--ink)">70</b> ya usados hoy (otros broadcasts) · <b style="color:var(--wa)">236</b> este taller · tope <b style="color:var(--ink)">250 personas</b></div>
+          <div class="alerta">⚠ Hoy no entran todos: <b>180</b> salen hoy y <b>56</b> mañana a las 9:00. Meta cuenta <b>personas distintas</b> en 24 h: el 2.º y 3.º mensaje del día a la misma persona no suman.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Flujo -->
+  <div class="vista" id="flu">
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+      <span class="chip c-mag">Flujo estándar de taller</span><span class="s">Las horas son relativas al inicio. Cambiar la fecha del taller mueve todo.</span>
+      <div class="sp"></div><button class="btn">Guardar como estándar</button><button class="btn btn-p">Programar 6 envíos</button>
+    </div>
+    <div class="dos" style="grid-template-columns:1fr 300px">
+      <div class="lienzo"><div class="eje">
+        <div class="paso"><div class="cuando">Al cargar · 26/11 10:00</div>
+          <div class="nodo" data-n="0"><div class="t"><span class="chip c-ok">Enviado</span><b>ws_bienvenida</b></div>
+            <div class="burb">Hola {nombre} 👋 Hoy a las 19 h es el taller. ¿Te guardo el lugar?</div>
+            <div class="bts"><div class="bt">Sí, voy</div><div class="bt">No puedo</div></div>
+            <div class="aquien">A todos · 236</div></div>
+          <div class="rama"><div class="cond">Si toca «Sí, voy»</div>
+            <div class="nodo"><b>Respuesta</b> · espera 1 min<div class="aquien">«Genial {nombre}, a las 18:50 te paso el link» · etiqueta «WS 26/11 · va»</div></div>
+            <div class="cond">Si toca «No puedo»</div>
+            <div class="nodo"><b>Respuesta</b><div class="aquien">«Te mando la grabación» · etiqueta «WS 26/11 · no va» · sale de los recordatorios</div></div>
+          </div></div>
+        <div class="paso"><div class="cuando">−5 h · 14:00</div>
+          <div class="nodo" data-n="1"><div class="t"><span class="chip c-ok">Enviado</span><b>ws_hoy_5h</b></div>
+            <div class="burb">{nombre}, hoy 19 h te espero. Traé papel y lápiz ✍️</div>
+            <div class="aquien">Todos menos «no va» · 231</div></div></div>
+        <div class="paso"><div class="cuando">−2 h · 17:00</div>
+          <div class="nodo sel" data-n="2"><div class="t"><span class="chip c-info">Programado</span><b>ws_2h</b></div>
+            <div class="burb">En 2 horas arrancamos. ¿Lo tenés agendado?</div>
+            <div class="bts"><div class="bt">Ya estoy</div></div>
+            <div class="aquien">Solo los que no respondieron · ~190</div></div></div>
+        <div class="paso"><div class="cuando">−10 min · 18:50</div>
+          <div class="nodo" data-n="3"><div class="t"><span class="chip c-info">Programado</span><b>ws_link</b></div>
+            <div class="burb">Estamos entrando 🔴 Link: {meet}</div>
+            <div class="aquien">Todos menos «no va» · 231</div></div></div>
+        <div class="paso"><div class="cuando">+2 h · 21:00</div>
+          <div class="nodo" data-n="4"><div class="t"><span class="chip c-info">Programado</span><b>ws_gracias</b></div>
+            <div class="burb">¡Gracias por venir! ¿Querés que veamos tu caso en una llamada?</div>
+            <div class="bts"><div class="bt">Quiero agendar</div></div>
+            <div class="aquien">Todos · asigna al setter al tocar</div></div></div>
+        <div class="paso"><div class="cuando">+1 día · 27/11 10:00</div>
+          <div class="nodo" data-n="5"><div class="t"><span class="chip c-warn">Plantilla en revisión</span><b>ws_replay</b></div>
+            <div class="burb">Te dejo la grabación por 48 h: {replay}</div>
+            <div class="aquien">«No va» + no tocaron nada</div></div>
+          <div class="mas">+ Agregar paso</div></div>
+      </div></div>
+      <div class="caja lado">
+        <div class="rot">Paso · −2 h</div>
+        <label>Cuándo</label>
+        <div class="seg"><span>Días antes</span><span class="on">Horas antes</span><span>Hora fija</span><span>Después</span></div>
+        <div class="campo" style="margin-top:6px">2 h antes del inicio → 26/11 17:00 (AR)</div>
+        <label>Plantilla</label><div class="campo">ws_2h · <span class="chip c-ok">Aprobada</span></div>
+        <label>A quién</label>
+        <div class="seg"><span>Todos</span><span class="on">No respondieron</span><span>Tocaron…</span><span>Etiqueta…</span></div>
+        <label>Excluir</label>
+        <div class="campo">«WS 26/11 · no va» · ya recibieron este paso</div>
+        <label>Cada botón</label>
+        <div class="campo">«Ya estoy» → respuesta «🙌 nos vemos» · etiqueta «WS 26/11 · va»</div>
+        <div class="s" style="margin-top:10px">Después de que la persona responde, por 24 h se puede mandar texto libre (sin plantilla).</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Plantillas -->
+  <div class="vista" id="pla">
+    <div class="dos">
+      <div class="caja">
+        <div style="display:flex;align-items:center"><div class="rot">Plantillas de Meta</div><div class="sp"></div><button class="btn btn-p">+ Nueva</button></div>
+        <div class="pl"><div class="top"><b>ws_bienvenida</b><span class="chip c-mut">Marketing</span><div class="sp"></div><span class="chip c-ok">Aprobada</span></div><div class="tx">Hola {{1}} 👋 Hoy a las {{2}} es el taller. ¿Te guardo el lugar?</div></div>
+        <div class="pl"><div class="top"><b>ws_2h</b><span class="chip c-mut">Utilidad</span><div class="sp"></div><span class="chip c-ok">Aprobada</span></div><div class="tx">En 2 horas arrancamos. ¿Lo tenés agendado?</div></div>
+        <div class="pl"><div class="top"><b>ws_replay</b><span class="chip c-mut">Marketing</span><div class="sp"></div><span class="chip c-warn">En revisión</span></div><div class="tx">Te dejo la grabación por 48 h: {{1}}</div></div>
+        <div class="pl"><div class="top"><b>ws_link_v1</b><span class="chip c-mut">Utilidad</span><div class="sp"></div><span class="chip c-err">Rechazada</span></div><div class="tx" style="color:var(--err)">Motivo de Meta: variable al inicio del mensaje</div></div>
+        <div class="pl"><div class="top"><b>reactivacion_a</b><span class="chip c-mut">Marketing</span><div class="sp"></div><span class="chip c-ok">Aprobada</span></div><div class="tx">Las de la reactivación siguen acá, compartidas con la herramienta</div></div>
+      </div>
+      <div class="caja">
+        <div class="rot">Nueva plantilla · cómo le llega</div>
+        <label class="s" style="display:block;margin:10px 0 4px">Nombre</label><div class="campo">ws_hoy_5h</div>
+        <label class="s" style="display:block;margin:10px 0 4px">Variables del taller</label>
+        <div><span class="chip c-info">{nombre}</span> <span class="chip c-info">{hora}</span> <span class="chip c-info">{meet}</span> <span class="chip c-info">{grupo}</span> <span class="chip c-info">{replay}</span></div>
+        <div class="tel" style="margin-top:12px"><div class="burb">Caro, hoy 19 h te espero. Traé papel y lápiz ✍️</div><div class="bts" style="max-width:92%"><div class="bt">Ahí estaré</div></div></div>
+        <div style="margin-top:12px;display:flex;gap:8px"><button class="btn btn-p">Mandar a aprobar</button><button class="btn">Duplicar</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Historial -->
+  <div class="vista" id="his">
+    <table>
+      <tr><th>Paso</th><th>Plantilla</th><th>Cuándo</th><th class="n">Enviados</th><th class="n">Entregados</th><th class="n">Leídos</th><th class="n">Respondieron</th><th class="n">Fallaron</th></tr>
+      <tr><td>Al cargar</td><td>ws_bienvenida</td><td>26/11 10:00</td><td class="n">180</td><td class="n">172</td><td class="n">131</td><td class="n">48</td><td class="n">8</td></tr>
+      <tr><td></td><td class="s">↳ los 56 que no entraron hoy</td><td>27/11 09:00</td><td class="n" colspan="5" style="text-align:left;color:var(--mut)">programado</td></tr>
+      <tr><td>−5 h</td><td>ws_hoy_5h</td><td>26/11 14:00</td><td class="n">175</td><td class="n">170</td><td class="n">122</td><td class="n">21</td><td class="n">5</td></tr>
+      <tr><td>−2 h</td><td>ws_2h</td><td>26/11 17:00</td><td class="n" colspan="5" style="text-align:left;color:var(--info)">programado · ~190</td></tr>
+    </table>
+    <div class="s" style="margin-top:10px">Tocar una fila abre los números con el botón que tocaron, su chat y su setter (como hoy en la herramienta). Desde ahí: «Mandar otra cosa a este grupo».</div>
+  </div>
+</div>
+
+<!-- 3 · Inbox -->
+<div class="panel">
+  <div class="rot">3 · Inbox: Instagram y WhatsApp separados, y WhatsApp por broadcast</div>
+  <div class="ib" style="margin-top:12px">
+    <div class="col">
+      <div class="it"><span>Instagram</span><span class="s">84</span></div>
+      <div class="it on"><span>WhatsApp</span><span>61</span></div>
+      <div class="it sub"><span>Todos</span><span>61</span></div>
+      <div class="it sub on"><span>WS 26/11</span><span>48</span></div>
+      <div class="it sub"><span>Reactivación</span><span>9</span></div>
+      <div class="it sub"><span>Referidos</span><span>4</span></div>
+    </div>
+    <div class="col"><span class="s">Lista de conversaciones del broadcast «WS 26/11», con el paso al que respondió cada uno (ej. «respondió a −2 h · Ya estoy») y la ventana de 24 h.</span></div>
+  </div>
+</div>
+
+</div>
+<script>
+  document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === t));
+    document.querySelectorAll('.vista').forEach(v => v.classList.toggle('on', v.id === t.dataset.t));
+  });
+  document.querySelectorAll('.nodo[data-n]').forEach(n => n.onclick = () => {
+    document.querySelectorAll('.nodo').forEach(x => x.classList.remove('sel')); n.classList.add('sel');
+  });
+  document.querySelectorAll('.tg').forEach(t => t.onclick = () => t.classList.toggle('on'));
+</script>
+</body>
+</html>
