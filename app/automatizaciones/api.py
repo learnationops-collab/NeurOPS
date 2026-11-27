@@ -291,7 +291,7 @@ def listar_conversaciones():
     proximos = seguimientos.proximos(ids)
     toca = seguimientos.avisos([c for c, _, _, _ in filas])
     from app.automatizaciones import seguimientos_hechos
-    hechos = seguimientos_hechos.por_fase(ids)
+    hechos, rachas = seguimientos_hechos.resumen(ids)
     avance = progreso.de_contactos([c for c, _, _, _ in filas], ejecuciones, ahora, current_user.id,
                                    {c.id: primero for c, _, _, primero in filas})
     # El último mensaje de cada una, en una sola consulta (antes, una por conversación). En empate, el de id mayor.
@@ -328,6 +328,9 @@ def listar_conversaciones():
             'toca': toca.get(contacto.id),
             # Los seguimientos que ya le hizo el equipo, por fase ({fase: {n, en, resp}}): el filtro del Inbox (ADR-W254).
             'seguimientos_hechos': hechos.get(contacto.id) or {},
+            # Lo que le escribió el equipo desde su última respuesta ({n, desde, ultimo}; None si lo último es del lead):
+            # «Les escribiste y no contestan» y cuántos seguimientos van (Mario, 27/11/2026).
+            'racha': rachas.get(contacto.id),
             'bot_pausado': bool(contacto.bot_pausado_hasta and contacto.bot_pausado_hasta > ahora),
             # El broadcast de WhatsApp al que respondió (ADR-W259): la etiqueta del taller o «Broadcast».
             'broadcast': variables.get('broadcast_nombre') or ('Broadcast' if variables.get('broadcast') else None),

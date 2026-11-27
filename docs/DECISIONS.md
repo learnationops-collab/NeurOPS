@@ -2418,3 +2418,17 @@
   - En los mensajes que no son plantilla, `{{1}}` vale lo mismo que `{nombre}`.
 - **Qué se pierde:** un mensaje común no llega a quien no interactuó en las últimas 24 h, y el número que se ve al armarlo es el de la audiencia, no el de quienes tendrán la ventana abierta en ese momento. Un paso de mensaje no tiene botones de respuesta (para eso, una plantilla).
 - **Consecuencias:** migración `e3a5c7d9f1b4` (idempotente). `WaEnvio.plantilla` vale `(mensaje)` para estas filas.
+## ADR-W267: «Les escribiste y no contestaron», con los seguimientos contados desde su última respuesta
+
+- **Fecha:** 27/11/2026 · **Subsistema:** Inbox, filtro y seguimientos (`seguimientos_hechos.resumen` y `racha`, `api.listar_conversaciones`, `filtros.js`, `colas.js`, `seccionesFiltro.jsx`, `VistasFiltro.jsx`, `Fila.jsx`, `RachaLead.jsx`, `Stats.jsx`) · **Estado:** implementada
+- **Contexto:** Mario quiere encontrar a quienes les escribió y no contestaron, ordenarlos por etapa y ver cuántos seguimientos van. Los seguimientos del filtro (ADR-W254) cuentan toda la historia por fase. Así, un lead que contestó un seguimiento viejo pero no el último aparecía «con un seguimiento» aunque al último mensaje no se le hubiera hecho ninguno. También quiere ver en el lead cuándo fue el último mensaje (hoy, ayer, hace N días) y el promedio de seguimientos por lead.
+- **Decisión:**
+  - **Racha:** por conversación, lo que le escribió el equipo (sin el bot) desde la última respuesta del lead: `{n, desde, ultimo}`. `n` son los seguimientos desde esa respuesta, con la misma regla de siempre (marcado, o más de 12 h sin respuesta). El primer mensaje no cuenta: es el que espera respuesta. Si lo último es del lead, no hay racha. La lista la trae en `racha` y se calcula en la misma lectura de mensajes que `seguimientos_hechos`.
+  - **Filtro:** `sinResp` puede valer todos, sin seguimiento, 1, 2 o 3 o más. Va en la sección Seguimientos y en dos Rápidos: «Les escribiste» y «Sin seguimiento», los dos tuyos y ordenados por etapa.
+  - **Órdenes nuevos:** «Sin respuesta» (tu último mensaje más viejo primero) y «Seguimientos» (menos primero).
+  - **Fila:** muestra los seguimientos de la racha y hace cuánto fue tu último mensaje (rojo si no hay ninguno). Sin racha sigue la marca de antes.
+  - **Tarjeta del lead:** hace cuánto le escribiste, en qué seguimiento vas («Segundo seguimiento», con puntitos) y el total de seguimientos de la conversación. Sale de los mensajes del chat.
+  - **Stats:** muestra de tus conversaciones cuántas no contestaron, cuántas no tienen seguimiento, el promedio de seguimientos por lead (desde su última respuesta y en toda la conversación) y una barra por cantidad.
+  - **Caja de escribir:** Enviar es un botón redondo con la flecha, así todo entra en una línea. Si el chat es angosto, Learnito y Seguimiento quedan solo con su ícono.
+- **Qué se pierde:** la racha cuenta los mensajes del equipo sin mirar qué setter los mandó. Las Stats miran solo las conversaciones cargadas en la lista (hasta 500 por vez).
+- **Consecuencias:** sin migración. `por_fase` sigue igual por encima, ahora sobre `resumen`.

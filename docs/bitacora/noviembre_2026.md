@@ -1271,3 +1271,9 @@
 - Arreglo: un paso con plantilla que lleva {{1}} quedaba sin el nombre si no se tocaba la variable (Meta lo habría rechazado); al programar se completa.
 - Arreglo: «{{1}}» en el mensaje de una respuesta o de «al abrir el link» salía literal; ahora es el primer nombre.
 - Migración `e3a5c7d9f1b4`.
+### 27/11/2026 · Inbox: «Les escribiste y no contestaron» y los seguimientos desde su última respuesta (ADR-W267)
+- Filtro › Seguimientos: «Les escribiste y no contestaron», con todos, sin seguimiento, 1, 2 o 3 o más, contados desde su última respuesta. Dos Rápidos nuevos, ordenados por etapa: «Les escribiste» y «Sin seguimiento» ([filtros.js](../../frontend/src/pages/inbox/conversaciones/filtros.js), [seguimientos_hechos.py](../../app/automatizaciones/seguimientos_hechos.py)).
+- Órdenes nuevos: por días sin respuesta y por cantidad de seguimientos.
+- La fila y la tarjeta del lead dicen hace cuánto le escribiste (hoy, ayer, hace N días), en qué seguimiento vas y el total ([RachaLead.jsx](../../frontend/src/pages/inbox/conversaciones/RachaLead.jsx)).
+- Stats › Seguimientos: cuántas no contestaron, cuántas sin seguimiento y el promedio de seguimientos por lead.
+- Caja de escribir: Enviar es redondo y todo entra en una línea.

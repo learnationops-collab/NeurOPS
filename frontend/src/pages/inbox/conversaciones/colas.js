@@ -137,8 +137,24 @@ export function seguimientosDe(c, fases) {
 
 const cumpleCantidad = (n, cant) => (cant == null ? true : cant === 'alguno' ? n >= 1 : cant === '4+' ? n >= 4 : n === cant);
 
+// Hace cuántos días calendario fue (Mario, 27/11/2026: «hoy, ayer, antes de ayer, hace 2 días»). `corto`: «hoy»,
+// «ayer», «3 d».
+export function haceDias(iso, ahora = new Date(), corto = false) {
+    if (!iso) return null;
+    const dia = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    const n = Math.round((dia(ahora) - dia(new Date(iso))) / 86400000);
+    if (n <= 0) return 'hoy';
+    if (n === 1) return 'ayer';
+    if (corto) return `${n} d`;
+    return n === 2 ? 'antes de ayer' : `hace ${n} días`;
+}
+
+// Les escribió el equipo y no contestaron (`racha`), con cuántos seguimientos desde su última respuesta.
+const cumpleSinResp = (c, v) => v == null || (Boolean(c.racha) && (v === 'todos' || (v === '3+' ? c.racha.n >= 3 : c.racha.n === v)));
+
 function cumpleSeguimientos(c, f, ahora) {
     if (f.toca && !c.toca) return false;
+    if (!cumpleSinResp(c, f.sinResp)) return false;
     if (f.fuCant == null && !f.fuCuando && !f.fuResp) return true;
     const s = seguimientosDe(c, f.fases);
     if (!cumpleCantidad(s.n, f.fuCant)) return false;
@@ -183,6 +199,10 @@ export const ORDENES = [
     { value: 'ultimo', label: 'Último mensaje', detalle: 'el más reciente primero', corto: 'por último mensaje', por: (a, b) => ultimo(b) - ultimo(a) },
     { value: 'sin_leer', label: 'Sin leer', detalle: 'primero las que tienen', corto: 'sin leer primero', por: (a, b) => (b.sin_leer || 0) - (a.sin_leer || 0) },
     { value: 'tarea', label: 'Tarea', detalle: 'la que vence antes', corto: 'por tarea', por: (a, b) => vence(a) - vence(b) },
+    { value: 'sin_resp', label: 'Sin respuesta', detalle: 'tu último mensaje más viejo primero', corto: 'por días sin respuesta',
+        por: (a, b) => (a.racha ? Date.parse(a.racha.ultimo) : Infinity) - (b.racha ? Date.parse(b.racha.ultimo) : Infinity) },
+    { value: 'seguimientos', label: 'Seguimientos', detalle: 'los que tienen menos primero', corto: 'por seguimientos',
+        por: (a, b) => (a.racha ? a.racha.n : Infinity) - (b.racha ? b.racha.n : Infinity) },
 ];
 
 /** El orden en uso: el elegido o, sin elegir, el de la cola. */

@@ -6,14 +6,16 @@
 // y `etiquetas`: listas (ADR-W184); `orden`: el de `ORDENES` (null: el de la cola). `origen`: anuncios · inbound ·
 // bienvenida. Seguimientos hechos (ADR-W254), en las fases elegidas: `fuCant` null · 0 (ninguno) · 'alguno' · 1 · 2 ·
 // 3 · '4+'; `fuCuando`, como `inicio` sin rango; `fuResp` 'si' · 'no' (el último). `toca`: lo pide la cadencia.
+// `sinResp` (Mario, 27/11/2026): lo último es del equipo y el lead no contestó; con cuántos seguimientos desde su
+// última respuesta: 'todos' · 0 · 1 · 2 · '3+' (la `racha` de cada conversación).
 export const VACIO = {
     cola: 'todas', canal: null, broadcast: null, asignado: null, etiqueta: null, etapa: null, califica: null, fases: [], etiquetas: [], orden: null,
     inicio: null, inicioDesde: '', inicioHasta: '', envioPor: null, envio: null, envioDesde: '', envioHasta: '',
-    origen: null, fuCant: null, fuCuando: null, fuResp: null, toca: false,
+    origen: null, fuCant: null, fuCuando: null, fuResp: null, toca: false, sinResp: null,
 };
 // Las que cuentan como «un filtro puesto» (las fechas de un rango van con su filtro; el orden no filtra).
 const CLAVES = ['cola', 'canal', 'broadcast', 'asignado', 'etiqueta', 'etapa', 'califica', 'fases', 'etiquetas', 'inicio', 'envioPor', 'envio',
-    'origen', 'fuCant', 'fuCuando', 'fuResp', 'toca'];
+    'origen', 'fuCant', 'fuCuando', 'fuResp', 'toca', 'sinResp'];
 const DOLOR = ['dolor', 'consecuencia', 'compromiso'];
 const CLAVE = 'inbox-filtros';
 
@@ -23,6 +25,8 @@ export const predefinidos = (yo) => [
     { id: 'mios_esperan', label: 'Míos sin respuesta', detalle: 'Esperan que les contestes', filtro: { ...VACIO, cola: 'esperan', asignado: yo } },
     { id: 'mios_hora', label: 'Esperan más de 1 h', detalle: 'Los más urgentes', filtro: { ...VACIO, cola: 'esperan_hora', asignado: yo } },
     { id: 'mios_cierre', label: 'Se cierra la ventana', detalle: 'Poco tiempo para escribirles', filtro: { ...VACIO, cola: 'por_cerrarse', asignado: yo } },
+    { id: 'mios_sin_resp', label: 'Les escribiste', detalle: 'No contestaron · por etapa', filtro: { ...VACIO, asignado: yo, sinResp: 'todos', orden: 'fase' } },
+    { id: 'mios_sin_fu', label: 'Sin seguimiento', detalle: 'No contestaron y no les volviste a escribir', filtro: { ...VACIO, asignado: yo, sinResp: 0, orden: 'fase' } },
     { id: 'mios_toca', label: 'Toca seguimiento', detalle: 'Lo pide la cadencia de su fase', filtro: { ...VACIO, asignado: yo, toca: true } },
     { id: 'mios_recientes', label: 'Nuevos de hoy', detalle: 'Empezaron hoy', filtro: { ...VACIO, asignado: yo, inicio: 'hoy' } },
     { id: 'mios_dolor', label: 'Dolor sin seguimiento', detalle: 'Nunca les volviste a escribir', filtro: { ...VACIO, asignado: yo, fases: DOLOR, fuCant: 0 } },
@@ -80,6 +84,8 @@ export function resumen(f, { colas, etapas, nombre, etiqueta, fase = (x) => x })
     if (f.fuCuando) poner('seguimientos', `Último seguimiento ${cuando(f, 'fuCuando')}`, { fuCuando: null });
     if (f.fuResp) poner('seguimientos', f.fuResp === 'si' ? 'Contestó el último seguimiento' : 'No contestó el último seguimiento', { fuResp: null });
     if (f.toca) poner('seguimientos', 'Toca seguimiento', { toca: false });
+    if (f.sinResp != null) poner('seguimientos', f.sinResp === 'todos' ? 'Les escribiste y no contestaron'
+        : `No contestaron · ${f.sinResp === 0 ? 'sin seguimiento' : f.sinResp === '3+' ? '3 o más seguimientos' : `${f.sinResp} ${f.sinResp === 1 ? 'seguimiento' : 'seguimientos'}`}`, { sinResp: null });
     if (f.asignado === 'ninguno') poner('personas', 'Sin asignar', { asignado: null });
     else if (f.asignado != null) poner('personas', `Asignadas a ${nombre(f.asignado)}`, { asignado: null });
     if (f.envioPor != null) {

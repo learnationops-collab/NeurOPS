@@ -73,10 +73,34 @@ def numerados(mensajes):
     return salida
 
 
+def racha(msgs, marcas=None):
+    """Lo que le escribió el equipo desde la última respuesta del lead (Mario, 27/11/2026), o None si lo último
+    (sin el bot) es del lead o el equipo no le escribió: {n, desde, ultimo}. `n`: seguimientos desde esa respuesta (el
+    primer mensaje no lo es: es el que espera respuesta); `desde`: el primero de esos mensajes; `ultimo`: el último."""
+    marcas = marcas or {}
+    del_equipo, previo, n = [], None, 0
+    for en, lead in msgs:
+        if lead:
+            del_equipo, previo, n = [], None, 0
+            continue
+        if es_seguimiento(en, previo, marcas.get(en)):
+            n += 1
+        del_equipo.append(en)
+        previo = en
+    if not del_equipo:
+        return None
+    return {'n': n, 'desde': del_equipo[0].isoformat() + 'Z', 'ultimo': del_equipo[-1].isoformat() + 'Z'}
+
+
 def por_fase(contacto_ids):
     """{contacto_id: {fase: {n, en, resp}}}: cuántos por fase, cuándo fue el último y si lo contestó."""
+    return resumen(contacto_ids)[0]
+
+
+def resumen(contacto_ids):
+    """({contacto_id: {fase: {n, en, resp}}}, {contacto_id: racha}) con una sola lectura de los mensajes."""
     if not contacto_ids:
-        return {}
+        return {}, {}
     msgs = defaultdict(list)
     marcas = defaultdict(dict)
     for cid, en, direccion, origen, marca in (IgMensaje.query.with_entities(
@@ -90,8 +114,11 @@ def por_fase(contacto_ids):
     for cid, en, fase in (IgFase.query.with_entities(IgFase.contacto_id, IgFase.en, IgFase.fase)
                           .filter(IgFase.contacto_id.in_(contacto_ids)).order_by(IgFase.en)):
         cambios[cid].append((en, fase))
-    salida = {}
+    salida, rachas = {}, {}
     for cid, lista in msgs.items():
+        r = racha(lista, marcas.get(cid))
+        if r:
+            rachas[cid] = r
         hechos = de_conversacion(lista, cambios.get(cid, []), marcas=marcas.get(cid))
         if not hechos:
             continue
@@ -100,4 +127,4 @@ def por_fase(contacto_ids):
             previo = del_contacto.get(fase or SIN_MARCA, {'n': 0})
             del_contacto[fase or SIN_MARCA] = {'n': previo['n'] + 1, 'en': en.isoformat() + 'Z', 'resp': resp}
         salida[cid] = del_contacto
-    return salida
+    return salida, rachas
