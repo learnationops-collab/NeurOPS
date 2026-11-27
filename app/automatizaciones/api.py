@@ -9,7 +9,7 @@ from flask import Blueprint, jsonify, request
 from flask_login import current_user, login_required
 
 from app import db
-from app.automatizaciones import bandeja, campanas, fases, metricas, progreso, servicio
+from app.automatizaciones import bandeja, campanas, escribir, fases, metricas, progreso, servicio
 from app.automatizaciones.modelos import AutEjecucion, AutEmbudo, AutFlujo, IgContacto, IgMensaje
 from app.automatizaciones.nucleo import grafo as g
 from app.models.instagram import InstagramWebhookEvento
@@ -349,7 +349,8 @@ def listar_conversaciones():
             **avance.get(contacto.id, {}),
         })
     return jsonify({'conversaciones': salida, 'mediana_respuesta': bandeja.mediana_respuesta(ahora),
-                    'medianas_setters': bandeja.medianas_por_setter(ahora)})
+                    'medianas_setters': bandeja.medianas_por_setter(ahora),
+                    'human_agent': escribir.human_agent_aprobado()})
 
 
 @bp.route('/conversaciones/<int:contacto_id>', methods=['GET'])

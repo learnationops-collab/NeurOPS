@@ -1381,3 +1381,10 @@
 - El formulario de Closer aparece en Talent › Forms como uno más: se editan sus preguntas, opciones, ayuda y condiciones, se prende o apaga cada una, se suman nuevas, se cambia el cierre y se prueba en la vista previa. Su link es fijo (/vacante/) y no se duplica ni se borra ([hiring_forms_closer.py](../../app/services/hiring_forms_closer.py), [HiringForms.jsx](../../frontend/src/pages/admin/hiring/components/forms/HiringForms.jsx)).
 - `GET /api/public/closer-form` da sus preguntas y su cierre a institute.thelearnation.com/formulario/; el alta guarda con qué formulario contestó y las respuestas a preguntas nuevas, que la ficha del closer muestra al final ([job_applications.py](../../app/api/public/job_applications.py), [FichaCloser.jsx](../../frontend/src/pages/admin/hiring/components/closers/FichaCloser.jsx)). Migración `d4f6a8c0e2b1`.
 - La vacante de Closer se reabrió hasta el lun 30/11 23:59 ART (institute-site).
+
+
+
+### 27/11/2026 · Inbox: ventana de Instagram de 24 h hasta que Meta apruebe Human Agent (ADR-W281)
+- Pasadas las 24 h desde el último mensaje del lead, Work ya no intenta mandar (Meta rechazaba `HUMAN_AGENT` porque la app no pasó la App Review): la caja avisa «Mandalo desde Instagram y marcalo como seguimiento» con el link al chat ([escribir.py](../../app/automatizaciones/escribir.py), [ventana.js](../../frontend/src/pages/inbox/conversaciones/ventana.js)).
+- El anillo, «Se cierra la ventana» (aviso a las 3 h) y el orden por cierre cuentan 24 h; no se programa un seguimiento para después del cierre ([seguimientos.py](../../app/automatizaciones/seguimientos.py)).
+- Cuando Meta apruebe Human Agent: `IG_HUMAN_AGENT=1` en Railway y vuelven los 7 días.

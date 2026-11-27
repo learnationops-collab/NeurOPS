@@ -1,5 +1,6 @@
 // Llamadas del área Inbox a /api/inbox (app/automatizaciones/api.py).
 import api from '../../services/api';
+import { setHumanAgent } from './conversaciones/ventana';
 
 const datos = (r) => r.data;
 
@@ -16,8 +17,9 @@ export const inboxApi = {
     // Solo los textos de la versión publicada (app/automatizaciones/api_mensajes.py)
     mensajesFlujo: (id) => api.get(`/inbox/flujos/${id}/mensajes`).then(datos),
     guardarMensajes: (id, cambios) => api.put(`/inbox/flujos/${id}/mensajes`, { cambios }).then(datos),
-    // { conversaciones, mediana_respuesta, medianas_setters }
-    conversaciones: (buscar, limite) => api.get('/inbox/conversaciones', { params: { ...(buscar ? { buscar } : {}), ...(limite ? { limite } : {}) } }).then(datos),
+    // { conversaciones, mediana_respuesta, medianas_setters, human_agent }. `human_agent` fija la ventana de Instagram.
+    conversaciones: (buscar, limite) => api.get('/inbox/conversaciones', { params: { ...(buscar ? { buscar } : {}), ...(limite ? { limite } : {}) } })
+        .then((r) => { setHumanAgent(r.data.human_agent); return r.data; }),
     conversacion: (id) => api.get(`/inbox/conversaciones/${id}`).then(datos),
     // Acciones del setter (app/automatizaciones/api_acciones.py)
     pasos: (id) => api.get(`/inbox/conversaciones/${id}/pasos`).then(datos),

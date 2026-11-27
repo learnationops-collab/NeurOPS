@@ -29,10 +29,14 @@ def programar(contacto, autor_id, horas, ahora, texto=None, audio=None, url_audi
         raise AccionInvalida(f'Elegí entre unos minutos y {HORAS_MAXIMAS // 24} días')
     if audio is None:
         escribir.cuerpo_de(texto)  # valida el texto ahora, no cuando ya no está quien lo escribió
+    enviar_en = ahora + timedelta(hours=horas)
+    if escribir.ventana(contacto, enviar_en) == 'instagram':
+        raise AccionInvalida('Para esa hora ya pasaron 24 h desde su último mensaje y desde Work no sale: '
+                             'elegí antes o mandalo desde Instagram')
     s = AutSeguimiento(contacto_id=contacto.id, autor_id=autor_id, texto=None if audio else texto.strip(),
                        audio_id=audio.id if audio else None, url_audio=url_audio,
                        nombre_audio=audio.name if audio else None, pausar=pausar,
-                       enviar_en=ahora + timedelta(hours=horas))
+                       enviar_en=enviar_en)
     db.session.add(s)
     db.session.flush()
     return s

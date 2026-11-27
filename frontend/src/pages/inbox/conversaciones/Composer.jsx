@@ -20,7 +20,7 @@ import { CasillaSeguimiento, useMarca, valorDeMarca } from './MarcaSeguimiento';
 import useEquipo from './useEquipo';
 import { faseDe } from './fasesSetting';
 import { LETRAS, completarGuia, faltaCompletar, notaDe, partes, pasosDe, siguienteId, useGuia, useLinkAgenda, visibles } from '../guia/useGuia';
-import { ventanaDe } from './ventana';
+import { linkInstagram, ventanaDe } from './ventana';
 import { esWhatsapp } from './colas';
 
 const MODOS = [
@@ -264,7 +264,14 @@ export default function Composer({ contacto, mensajes, pausar = true, fase, ejec
                         placeholder={modo === 'nota' ? 'Nota para el equipo…' : 'Escribir…  / para atajos'} />
                 </div>
             )}
-            {modo === 'chat' && ventana.aviso && <p className="t-cap mut40 cv-bloqueado">{ventana.aviso}</p>}
+            {modo === 'chat' && ventana.aviso && (
+                <p className="t-cap mut40 cv-bloqueado">
+                    {ventana.aviso}
+                    {ventana.enInstagram && linkInstagram(contacto) && (
+                        <> <a href={linkInstagram(contacto)} target="_blank" rel="noopener noreferrer">Abrir el chat en Instagram</a></>
+                    )}
+                </p>
+            )}
             {audios && <Audios onCerrar={() => setAudios(false)} onMandar={puedeEnviar ? (a) => { enviarAudio(a); setAudios(false); } : null} />}
             {programar && (
                 <ProgramarSeguimiento contacto={contacto} textoInicial={texto.startsWith('/') ? '' : texto} pausar={pausar}

@@ -1,5 +1,6 @@
 // Las colas de la bandeja y cómo se ordena cada una. Una conversación «espera» cuando lo último lo
 // escribió el lead: la espera corre desde ese mensaje.
+import { horasDeVentana } from './ventana';
 
 const HORA = 60;
 // Cada cuánto se vuelven a pedir la lista y el chat abierto (ms).
@@ -33,15 +34,12 @@ export function colorEspera(min) {
 // Un contacto de WhatsApp (el backend los guarda como `wa:<número>`).
 export const esWhatsapp = (c) => Boolean(c?.igsid?.startsWith('wa:'));
 
-// Minutos hasta que ya no se le puede escribir (`ventana.js`): Instagram 7 días desde su último mensaje,
-// WhatsApp 24 h. null si ya se cerró o nunca escribió. Se avisa desde las últimas 24 h (WhatsApp: 3 h).
-const CIERRE = 7 * 24 * HORA;
-const CIERRE_WA = 24 * HORA;
-export const AVISO_CIERRE = 24 * HORA;
-export const avisoCierre = (c) => (esWhatsapp(c) ? 3 * HORA : AVISO_CIERRE);
+// Minutos hasta que Work ya no le puede escribir (`ventana.js`): 7 días con HUMAN_AGENT aprobado, si no 24 h.
+// null si ya se cerró o nunca escribió. Se avisa desde las últimas 24 h (ventana de 24 h: 3 h).
+export const avisoCierre = (c) => (horasDeVentana(esWhatsapp(c)) > 24 ? 24 * HORA : 3 * HORA);
 export function cierreMin(c, ahora) {
     if (!c.ultimo_entrante_en) return null;
-    const falta = (esWhatsapp(c) ? CIERRE_WA : CIERRE) - Math.floor((ahora - new Date(c.ultimo_entrante_en)) / 60000);
+    const falta = horasDeVentana(esWhatsapp(c)) * HORA - Math.floor((ahora - new Date(c.ultimo_entrante_en)) / 60000);
     return falta > 0 ? falta : null;
 }
 const porCerrarse = (c, ahora) => { const m = cierreMin(c, ahora); return m != null && m <= avisoCierre(c); };
