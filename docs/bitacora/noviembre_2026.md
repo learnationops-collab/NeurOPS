@@ -1266,3 +1266,8 @@
 - Cada respuesta a un botón pone unas etiquetas y saca otras, como en ManyChat (por ejemplo, «Darme acceso» pone «confirmado» y saca «baja») ([Respuestas.jsx](../../frontend/src/ventanas/herramientas/broadcastWa/Respuestas.jsx), [respuestas.py](../../app/whatsapp/respuestas.py)).
 - Un botón con link puede ir con hasta 3 botones de respuesta, también en el mensaje al abrir el link: salen en dos mensajes seguidos ([Despues.jsx](../../frontend/src/ventanas/herramientas/broadcastWa/Despues.jsx)). El lienzo muestra las etiquetas y los cables de esos botones.
 - Migración `c1e3a5b7d9f2`.
+### 27/11/2026 · Flujo del taller: pasos de mensaje común dentro de las 24 h (ADR-W266)
+- Cada paso elige «Plantilla · fuera de las 24 h» o «Mensaje · dentro de las 24 h»: los recordatorios de 5 h, 4 h, al empezar y después van como mensaje a quien interactuó en las últimas 24 h ([PasoEditor.jsx](../../frontend/src/ventanas/herramientas/broadcastTaller/PasoEditor.jsx), [taller.py](../../app/whatsapp/taller.py)).
+- Arreglo: un paso con plantilla que lleva {{1}} quedaba sin el nombre si no se tocaba la variable (Meta lo habría rechazado); al programar se completa.
+- Arreglo: «{{1}}» en el mensaje de una respuesta o de «al abrir el link» salía literal; ahora es el primer nombre.
+- Migración `e3a5c7d9f1b4`.
