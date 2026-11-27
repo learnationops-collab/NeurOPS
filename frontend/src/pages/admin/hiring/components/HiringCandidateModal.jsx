@@ -68,11 +68,14 @@ const BASE_ANCHO = 1404;
 const BASE_ALTO = 864;
 const ESCALA_MAX = 1.35;
 
+// Abajo queda libre el alto del dock de Talent (fijo, por encima de todo): la ficha nunca va debajo.
+export const RESERVA_DOCK = 100;
+
 export const dimensionesPanel = (ancho, alto) => {
     if (ancho < 640 || alto < 681) return null;
     const margen = Math.round(alto * 0.02);
     const w = Math.min(ancho - margen * 2, 1600);
-    const h = alto - margen * 2;
+    const h = alto - margen - RESERVA_DOCK;
     const zoom = Math.max(1, Math.min(w / BASE_ANCHO, h / BASE_ALTO, ESCALA_MAX));
     return { zoom, width: Math.floor(w / zoom), height: Math.floor(h / zoom) };
 };
@@ -87,7 +90,7 @@ export const useDimensionesPanel = () => {
     const leer = () => {
         if (typeof window === 'undefined') return null;
         const { innerWidth: a, innerHeight: h } = window;
-        return dimensionesPanel(a, h) || (a >= 760 ? { zoom: 1, width: a, height: h, completa: true } : null);
+        return dimensionesPanel(a, h) || (a >= 760 ? { zoom: 1, width: a, height: h - RESERVA_DOCK, completa: true } : null);
     };
     const [dim, setDim] = useState(leer);
     useEffect(() => {
@@ -256,7 +259,7 @@ const HiringCandidateModal = ({ applicationId, ids, onClose, onNavigate, onDecid
 
     return (
         <motion.div
-            className="fixed inset-0 z-[60] flex items-center justify-center bg-[#020617]/80 p-0 backdrop-blur-sm [@media(min-width:640px)_and_(min-height:681px)]:p-[2vh]"
+            className="fixed inset-0 z-[60] flex items-start justify-center bg-[#020617]/80 p-0 backdrop-blur-sm [@media(min-width:640px)_and_(min-height:681px)]:p-[2vh]"
             onClick={onClose}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
