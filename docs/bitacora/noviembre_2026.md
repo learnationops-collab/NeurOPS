@@ -1338,3 +1338,6 @@
 ### 27/11/2026 · Ficha de Closer para leer y decidir (ADR-W273)
 - Respuestas abiertas en acordeón (una línea de adelanto cerrada, el texto entero abierta, «Desplegar todas»); a la derecha el score con su desglose, conocimiento, cierre, inglés, reporte, herramientas y perfil; abajo, fijas, Preseleccionar / Reserva / Descartar en baldosas de color. Sin la sección Archivos ([FichaCloser.jsx](../../frontend/src/pages/admin/hiring/components/closers/FichaCloser.jsx), [fichaCloser.css](../../frontend/src/pages/admin/hiring/components/closers/fichaCloser.css)).
 - Las fichas de Talent (Closer y Asistente) dejan libre el alto del dock: ya no quedan debajo ([HiringCandidateModal.jsx](../../frontend/src/pages/admin/hiring/components/HiringCandidateModal.jsx)).
+
+### 27/11/2026 · Arreglo: «Al abrir el link» en pasos de mensaje guardados antes del cambio
+- Un paso de mensaje con link guardado antes de ADR-W272 decía «Este botón no tiene link» al abrir «Al abrir el link»: ahora se arma con el link del paso y queda al guardar ([PanelNodo.jsx](../../frontend/src/ventanas/herramientas/broadcastTaller/PanelNodo.jsx)).

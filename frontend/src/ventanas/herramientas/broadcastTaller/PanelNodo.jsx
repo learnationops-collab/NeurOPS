@@ -37,7 +37,12 @@ export default function PanelNodo({ sel, pasos, plantillas, reglas, wa, botonesD
     if (!fuente.clave) return <div className="bt-caja bt-editor"><span className="bt-s">Guardá el flujo para armar lo que pasa al tocar este botón.</span></div>;
     if (!datos) return <div className="bt-caja bt-editor"><span className="bt-s">Trayendo las respuestas…</span></div>;
     const botones = fuente.link ? [...fuente.botones, LINK_BOTON] : fuente.botones;
-    const regla = datos.respuestas.find((r) => r.boton === sel.boton);
+    // El link de un paso de mensaje guardado antes de ADR-W272 todavía no tiene su regla: se arma con el del paso y
+    // se crea al guardar «al abrir el link».
+    const m = paso.mensaje || {};
+    const regla = datos.respuestas.find((r) => r.boton === sel.boton)
+        || (sel.boton === LINK_BOTON && m.url
+            ? { boton: LINK_BOTON, texto: m.texto || '', botones: [{ titulo: m.titulo || 'Abrir', url: m.url }] } : undefined);
     const volver = () => onSel({ tipo: 'paso', i: sel.i });
     const despues = sel.tipo === 'despues';
     const nombreBoton = sel.boton === LINK_BOTON ? fuente.link?.titulo || 'el link' : sel.boton;
