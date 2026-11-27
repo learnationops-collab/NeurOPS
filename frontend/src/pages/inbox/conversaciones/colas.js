@@ -149,8 +149,12 @@ export function haceDias(iso, ahora = new Date(), corto = false) {
     return n === 2 ? 'antes de ayer' : `hace ${n} días`;
 }
 
+// Le escribiste y no contestó, y todavía puede agendar (Mario, 27/11/2026): sin los que ya agendaron (Confirmación) ni
+// las salidas (No lead, In-abrible). Es la base de «Les escribiste», la marca de la fila y las Stats de seguimientos.
+export const esperaSeguimiento = (c) => Boolean(c.racha) && !c.cerrada && c.fase !== 'confirmacion' && c.fase !== 'nolead' && c.fase !== 'inabrible';
+
 // Les escribió el equipo y no contestaron (`racha`), con cuántos seguimientos desde su última respuesta.
-const cumpleSinResp = (c, v) => v == null || (Boolean(c.racha) && (v === 'todos' || (v === '3+' ? c.racha.n >= 3 : c.racha.n === v)));
+const cumpleSinResp = (c, v) => v == null || (esperaSeguimiento(c) && (v === 'todos' || (v === '3+' ? c.racha.n >= 3 : c.racha.n === v)));
 
 function cumpleSeguimientos(c, f, ahora) {
     if (f.toca && !c.toca) return false;

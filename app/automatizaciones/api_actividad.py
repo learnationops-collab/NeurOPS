@@ -1,5 +1,5 @@
 """El botón «Activo / Inactivo» del Inbox (ADR-W245). Es de cada uno: el setter lo cambia para sí."""
-from flask import jsonify, request
+from flask import current_app, jsonify, request
 from flask_login import current_user
 
 from app.automatizaciones import actividad
@@ -42,7 +42,15 @@ def mis_stats():
     dias = 30
     mes_n = base.filter(Appointment.created_at >= inicio - timedelta(days=dias),
                         Appointment.created_at < inicio).count()
+    # Sus seguimientos (Mario, 27/11/2026): hoy, promedio diario y por lead de los últimos 30 días.
+    from app.automatizaciones import seguimientos_hechos
+    try:
+        seguimientos = seguimientos_hechos.del_setter(current_user.id, inicio, dias)
+    except Exception as e:  # las demás cifras salen igual
+        current_app.logger.error(f'mis-stats seguimientos: {e}')
+        seguimientos = None
     return jsonify({
+        'seguimientos': seguimientos,
         'activo': propia and propia['activo'], 'inactivo': propia and propia['inactivo'],
         'segundos_activo': actividad.estado(current_user.id)['segundos_24h'],
         'agendas_hoy': hoy_n, 'agendas_promedio': round(mes_n / dias, 1), 'dias': dias,

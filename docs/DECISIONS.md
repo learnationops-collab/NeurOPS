@@ -2446,3 +2446,17 @@
   - Un mensaje sin autor cuenta para cualquier setter que mire esa conversación.
   - Las etiquetas «Seguimiento N» de los mensajes del chat siguen numerando a todo el equipo.
 - **Consecuencias:** sin migración.
+
+## ADR-W269: seguimientos solo para quien todavía puede agendar, con su tiempo y sus cifras
+
+- **Fecha:** 27/11/2026 · **Subsistema:** Inbox, seguimientos (`colas.esperaSeguimiento`, `RachaLead.jsx`, `MisStats.jsx`, `seguimientos_hechos.del_setter`, `/inbox/mis-stats`) · **Estado:** implementada
+- **Contexto:** Mario, sobre «Les escribiste y no contestaron» (ADR-W267/W268):
+  - Los que ya agendaron no hacen falta; solo cuentan los que todavía pueden agendar.
+  - En el lead quiere ver cuánto lleva sin contestar y cuánto tiempo queda para el seguimiento.
+  - En Estadísticas quiere los seguimientos de hoy y el promedio.
+- **Decisión:**
+  - **Quiénes entran:** el filtro, la marca de la fila y las Stats de seguimientos dejan afuera Confirmación (ya agendó) y las salidas (No lead, In-abrible). Link queda: todavía puede agendar. En esas etapas, la tarjeta muestra solo el total.
+  - **Tarjeta del lead:** «hace» cuánto no contesta, en minutos, horas o días, y cuánto queda para escribirle antes de que se cierre la ventana de Instagram o WhatsApp. Si la ventana ya se cerró, lo dice en rojo.
+  - **Estadísticas:** «Seguim. hoy» y «Seguim. por día» (promedio de los 30 días anteriores; al pasar el mouse, cuántos por lead). Salen de las conversaciones asignadas al setter, con sus mensajes y los sin autor, la base del reporte. Se guardan 5 minutos por setter.
+- **Qué se pierde:** el promedio por día mira las conversaciones asignadas hoy: si un lead cambió de setter, sus seguimientos viejos cuentan para quien lo tiene ahora (solo los sin autor o los propios). La cifra de hoy puede tardar hasta 5 minutos en moverse.
+- **Consecuencias:** sin migración.

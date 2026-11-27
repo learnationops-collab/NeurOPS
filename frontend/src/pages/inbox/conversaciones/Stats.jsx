@@ -3,7 +3,7 @@
 // La respuesta se le cuenta al setter asignado a la conversación: Meta no dice quién contestó.
 import { BarChart3 } from 'lucide-react';
 import { Bars, Grid, Kpi, Modal, ModalHeader } from '../../../components/standard';
-import { esperaMin, flujoCortado, seguimientosDe } from './colas';
+import { esperaMin, esperaSeguimiento, flujoCortado, seguimientosDe } from './colas';
 
 // «2 h 15 min», «40 min».
 const horas = (seg) => {
@@ -14,7 +14,7 @@ const horas = (seg) => {
 // Seguimientos de tus conversaciones (Mario, 27/11/2026): las que no contestaron, cuántas sin seguimiento, el promedio
 // desde su última respuesta y en toda la conversación, y cuántas van en 0, 1, 2 o 3 o más.
 function Seguimientos({ mias }) {
-    const esperando = mias.filter((c) => c.racha);
+    const esperando = mias.filter(esperaSeguimiento);
     const totales = mias.map((c) => seguimientosDe(c).n).filter((n) => n > 0);
     const promedio = (xs) => (xs.length ? (xs.reduce((a, b) => a + b, 0) / xs.length).toFixed(1).replace('.', ',') : '—');
     const tramos = [[0, 'Sin seguimiento', 'var(--error)'], [1, '1', '#7D63E6'], [2, '2', '#7D63E6'], [3, '3 o más', 'var(--brand-secondary)']]

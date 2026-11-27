@@ -3,9 +3,12 @@
 // seguimientos le hiciste en toda la conversación. Cada setter ve solo lo suyo: sus mensajes y los sin autor (Kommo, la
 // app de Instagram), como el reporte y la lista (`seguimientos_hechos.resumen`); quien no es setter ve todo el equipo.
 // Misma regla de seguimiento que el servidor: la marca a mano manda; sin marca, más de 12 h después del anterior.
-import { Repeat2, Send, Sigma } from 'lucide-react';
+import { Hourglass, Repeat2, Send, Sigma } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
-import { haceDias } from './colas';
+import { cierreMin, esWhatsapp, haceDias } from './colas';
+
+// «45 min», «3 h», «2 d».
+const duracion = (min) => (min < 60 ? `${Math.max(1, Math.round(min))} min` : min < 1440 ? `${Math.floor(min / 60)} h` : `${Math.floor(min / 1440)} d`);
 
 const ORDINAL = ['', 'Primer', 'Segundo', 'Tercer', 'Cuarto', 'Quinto'];
 const DOCE_H = 12 * 3600000;
@@ -28,9 +31,12 @@ export function rachaDe(mensajes, setterId = null) {
     return { total, racha: del.length ? { n, ultimo: del[del.length - 1].en } : null };
 }
 
-export default function RachaLead({ mensajes }) {
+// `fase`: si ya agendó (Confirmación) o salió del embudo, no hay seguimiento que hacer: queda solo el total.
+export default function RachaLead({ mensajes, fase, contacto }) {
     const { user } = useAuth() || {};
-    const { total, racha } = rachaDe(mensajes, user?.role === 'setter' ? user.id : null);
+    const calculo = rachaDe(mensajes, user?.role === 'setter' ? user.id : null);
+    const { total } = calculo;
+    const racha = ['confirmacion', 'nolead', 'inabrible'].includes(fase) ? null : calculo.racha;
     if (!racha && !total) return null;
     const n = racha?.n ?? 0;
     const puntos = Math.max(3, n);
@@ -38,9 +44,20 @@ export default function RachaLead({ mensajes }) {
         <div className="cv-racha">
             {racha && (
                 <>
-                    <span className="cv-racha-cuando" data-tip="Tu último mensaje|Todavía no contestó">
-                        <Send size={12} aria-hidden="true" />{haceDias(racha.ultimo)}
+                    {/* Cuánto lleva sin contestar y cuánto queda para escribirle (Mario, 27/11/2026). */}
+                    <span className="cv-racha-cuando" data-tip={`Sin contestar|Tu último mensaje fue ${haceDias(racha.ultimo)}`}>
+                        <Send size={12} aria-hidden="true" />{duracion((Date.now() - Date.parse(racha.ultimo)) / 60000)}
                     </span>
+                    {contacto && (() => {
+                        const queda = cierreMin(contacto, new Date());
+                        const red = esWhatsapp(contacto) ? 'WhatsApp' : 'Instagram';
+                        return (
+                            <span className={`cv-racha-queda${queda == null ? ' cv-racha-queda--cerrada' : ''}`}
+                                data-tip={queda == null ? `Ventana cerrada|${red} ya no deja escribirle hasta que vuelva a escribir` : `Tiempo para escribirle|Después se cierra la ventana de ${red}`}>
+                                <Hourglass size={12} aria-hidden="true" />{queda == null ? 'cerrada' : `quedan ${duracion(queda)}`}
+                            </span>
+                        );
+                    })()}
                     <span className={`cv-racha-n${n ? '' : ' cv-racha-n--cero'}`}
                         data-tip={n ? 'Seguimientos desde su última respuesta|Cuentan los que marcaste y los de más de 12 h' : 'Sin seguimiento|Le escribiste y todavía no le volviste a escribir'}>
                         <Repeat2 size={12} aria-hidden="true" />

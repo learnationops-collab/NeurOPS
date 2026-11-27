@@ -153,7 +153,7 @@ export default function TarjetaLead({ datos, fase, canal, yo, pausar, onPausar, 
                     )}
                 </div>
                 <Agenda agenda={cliente?.agenda} />
-                <RachaLead mensajes={datos.mensajes || []} />
+                <RachaLead mensajes={datos.mensajes || []} fase={fase} contacto={contacto} />
             </div>
             <div className="cv-bloque cv-bloque--suave">
                 <BotLead contacto={contacto} ejecucion={datos.ejecucion} pausar={pausar} onPausar={onPausar} onCambio={onCambio}>

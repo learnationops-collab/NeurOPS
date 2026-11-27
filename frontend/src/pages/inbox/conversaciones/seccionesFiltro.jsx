@@ -37,7 +37,7 @@ function Seguimientos({ filtro, cambiar, cuenta }) {
                 {etapas ? <>Cuenta los seguimientos que le hicieron mientras estaba en <b>{etapas}</b> (lo elegido en Etapa del setting).</>
                     : <>Sin etapa elegida, cuenta todos los seguimientos. Para una etapa, elegila en <b>Etapa del setting</b>.</>}
             </p>
-            <Grupo titulo="Les escribiste y no contestaron" ayuda="Lo último es tuyo. Cuenta los seguimientos desde su última respuesta.">
+            <Grupo titulo="Les escribiste y no contestaron" ayuda="Lo último es tuyo y todavía pueden agendar (sin Confirmación). Cuenta los seguimientos desde su última respuesta.">
                 <Opciones valor={filtro.sinResp} onElegir={(sinResp) => cambiar({ sinResp })}
                     opciones={[['todos', 'Todos', cuenta({ sinResp: 'todos' })], [0, 'Sin seguimiento', cuenta({ sinResp: 0 }), 'var(--error)'],
                         [1, '1', cuenta({ sinResp: 1 })], [2, '2', cuenta({ sinResp: 2 })], ['3+', '3 o más', cuenta({ sinResp: '3+' })]]} />

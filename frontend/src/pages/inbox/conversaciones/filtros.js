@@ -25,7 +25,7 @@ export const predefinidos = (yo) => [
     { id: 'mios_esperan', label: 'Míos sin respuesta', detalle: 'Esperan que les contestes', filtro: { ...VACIO, cola: 'esperan', asignado: yo } },
     { id: 'mios_hora', label: 'Esperan más de 1 h', detalle: 'Los más urgentes', filtro: { ...VACIO, cola: 'esperan_hora', asignado: yo } },
     { id: 'mios_cierre', label: 'Se cierra la ventana', detalle: 'Poco tiempo para escribirles', filtro: { ...VACIO, cola: 'por_cerrarse', asignado: yo } },
-    { id: 'mios_sin_resp', label: 'Les escribiste', detalle: 'No contestaron · por etapa', filtro: { ...VACIO, asignado: yo, sinResp: 'todos', orden: 'fase' } },
+    { id: 'mios_sin_resp', label: 'Les escribiste', detalle: 'No contestaron y pueden agendar', filtro: { ...VACIO, asignado: yo, sinResp: 'todos', orden: 'fase' } },
     { id: 'mios_sin_fu', label: 'Sin seguimiento', detalle: 'No contestaron y no les volviste a escribir', filtro: { ...VACIO, asignado: yo, sinResp: 0, orden: 'fase' } },
     { id: 'mios_toca', label: 'Toca seguimiento', detalle: 'Lo pide la cadencia de su fase', filtro: { ...VACIO, asignado: yo, toca: true } },
     { id: 'mios_recientes', label: 'Nuevos de hoy', detalle: 'Empezaron hoy', filtro: { ...VACIO, asignado: yo, inicio: 'hoy' } },

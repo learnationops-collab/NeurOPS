@@ -1280,3 +1280,10 @@
 
 ### 27/11/2026 · Cada setter ve solo sus seguimientos
 - «Les escribiste y no contestaron», los seguimientos del filtro, la fila, Stats y la franja de la tarjeta del lead cuentan, para un setter, solo sus mensajes y los sin autor (la regla del reporte). Un admin sigue viendo los de todo el equipo ([seguimientos_hechos.py](../../app/automatizaciones/seguimientos_hechos.py), [RachaLead.jsx](../../frontend/src/pages/inbox/conversaciones/RachaLead.jsx)).
+
+### 27/11/2026 · Seguimientos: solo quien puede agendar, tiempo sin contestar y cifras en Estadísticas (ADR-W269)
+- «Les escribiste», la marca de la fila y las Stats de seguimientos dejan afuera a los que ya agendaron (Confirmación) y las salidas.
+- Tarjeta del lead: hace cuánto no contesta y cuánto queda para escribirle antes de que se cierre la ventana ([RachaLead.jsx](../../frontend/src/pages/inbox/conversaciones/RachaLead.jsx)).
+- Estadísticas: seguimientos de hoy y por día, con el promedio por lead al pasar el mouse ([seguimientos_hechos.py](../../app/automatizaciones/seguimientos_hechos.py)).
+- Arreglo: el menú de la etapa quedaba tapado por Estadísticas. La tarjeta del lead ahora va por encima de los paneles de abajo ([sidebar.css](../../frontend/src/pages/inbox/conversaciones/sidebar.css)).
+- El recordatorio del recorrido dice «Novedades sin revisar» y qué se aprende.

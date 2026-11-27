@@ -73,3 +73,6 @@
   .thalamus.inbox .cv-learnito-btn{font-size:0;gap:0;padding:0 10px}
   .thalamus.inbox .cv-comp-cab .cv-seg-grupo .cv-seg-casilla{font-size:0;gap:0}
 }
+
+.thalamus.inbox .cv-racha-queda{color:var(--info)}
+.thalamus.inbox .cv-racha .cv-racha-queda--cerrada{color:var(--error);border-color:color-mix(in srgb,var(--error) 35%,transparent)}

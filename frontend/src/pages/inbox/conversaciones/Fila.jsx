@@ -4,7 +4,7 @@
 // programado y cuánto falta para que Instagram no deje escribirle (últimas 24 h).
 import { AlarmClock, Bot, Check, Clock, PencilLine, Repeat2, User, X } from 'lucide-react';
 import { Avatar, Chip } from '../../../components/standard';
-import { avisoCierre, cierreMin, esperaMin, examenDe, haceDias, quien, seguimientosDe, vistaPrevia } from './colas';
+import { avisoCierre, cierreMin, esperaMin, esperaSeguimiento, examenDe, haceDias, quien, seguimientosDe, vistaPrevia } from './colas';
 import IconoCanal from './IconoCanal';
 import { colorDe, corto, faseDe } from './fasesSetting';
 import { EtapaMini, Ventana } from './Indicadores';
@@ -99,7 +99,7 @@ export default function Fila({ c, elegida, ahora, yo, conAsignado, borrador, onE
                             )}
                             {/* Le escribiste y no contestó (Mario, 27/11/2026): cuántos seguimientos van desde su última respuesta y
                                 hace cuánto fue tu último mensaje. Sin seguimiento, en rojo. */}
-                            {c.racha ? (
+                            {esperaSeguimiento(c) ? (
                                 <span className={`cv-item-racha${c.racha.n ? '' : ' cv-item-racha--cero'}`}
                                     data-tip={`Sin respuesta|Tu último mensaje: ${haceDias(c.racha.ultimo, ahora)} · ${c.racha.n ? `${c.racha.n} ${c.racha.n === 1 ? 'seguimiento' : 'seguimientos'} desde su última respuesta` : 'todavía sin seguimiento'}`}>
                                     <Repeat2 size={11} aria-hidden="true" />{c.racha.n}<em>{haceDias(c.racha.ultimo, ahora, true)}</em>
