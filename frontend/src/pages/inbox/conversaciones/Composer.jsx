@@ -218,7 +218,7 @@ export default function Composer({ contacto, mensajes, pausar = true, fase, ejec
 
     return (
         <div className={`cv-composer cv-composer--${modo}`} ref={caja}>
-            {verSeguimientos && <ListaSeguimientos items={seguimientos} onCambio={onCambio} />}
+            {verSeguimientos && <ListaSeguimientos items={seguimientos} contacto={contacto} onCambio={onCambio} />}
             {selector && modo === 'chat' && <Guion fase={selector} contacto={contacto} onElegir={onSelector} />}
             {menu && (
                 <MenuRayo contacto={contacto} fase={fase} filtro={barra ? texto.slice(1) : ''} onTexto={insertar}
@@ -244,7 +244,7 @@ export default function Composer({ contacto, mensajes, pausar = true, fase, ejec
                 {pendientes.length > 0 && (
                     <Chip as="button" type="button" subtle color="#7D63E6" icon={<AlarmClock />} aria-expanded={verSeguimientos}
                         data-tip="Seguimiento programado|Tocalo para verlo o cancelarlo" onClick={() => setVerSeguimientos((v) => !v)}>
-                        {pendientes.length > 1 ? `${pendientes.length} seguimientos` : pendientes[0].vigente ? pendientes[0].texto : pendientes[0].estado === 'error' ? 'No salió' : cuando(pendientes[0].enviar_en)}
+                        {pendientes.length > 1 ? `${pendientes.length} seguimientos` : pendientes[0].vigente ? (pendientes[0].cadencia ? pendientes[0].texto : 'Toca seguimiento · mandalo') :pendientes[0].estado === 'error' ? 'No salió' : cuando(pendientes[0].enviar_en)}
                         {verSeguimientos ? <ChevronDown size={11} /> : <ChevronUp size={11} />}
                     </Chip>
                 )}

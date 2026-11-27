@@ -57,7 +57,7 @@ Lo que más rechaza Meta en Human Agent: videos donde parece que manda un bot. Q
 
 1. **El token de Instagram vence a los 60 días y Work no lo renueva.** `IG_ACCESS_TOKEN` está cargado a mano y no hay código que llame a `refresh_access_token`. Si se cargó a mediados de octubre, vence a mediados de diciembre: se corta todo el Inbox, el motor y los flujos, no solo Human Agent. Se renueva si tiene más de 24 h y no venció.
 2. **Usar la etiqueta para vender.** Las reglas de las etiquetas prohíben contenido promocional (ofertas, descuentos, cupones). Un seguimiento de conversación («¿pudiste ver el link?») entra; un mensaje con oferta o descuento pasadas las 24 h, no. Si Meta lo detecta, puede limitar lo que manda la cuenta.
-3. **Que parezca automatizado.** Un mensaje que sale solo nunca lleva la etiqueta: los seguimientos programados salen solo dentro de las 24 h (ADR-W282) y las cadencias del motor no la usan.
+3. **Que parezca automatizado.** Un mensaje que sale solo nunca lleva la etiqueta: un seguimiento programado sale solo dentro de las 24 h; después avisa y lo manda la persona con un clic (ADR-W282, ADR-W283) y las cadencias del motor no la usan.
 4. **Durante la revisión:** que no se rompa el usuario del revisor ni cambie la pantalla del Inbox mientras Meta mira (es motivo de rechazo). Si se hacen cambios grandes, que no toquen la caja de escribir.
 5. **Lo que se rechaza seguido:** el video no muestra el ida y vuelta completo, la descripción es vaga, o no queda claro que es atención uno a uno y no envío masivo.
 

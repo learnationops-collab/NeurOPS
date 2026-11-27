@@ -1394,3 +1394,6 @@
 ### 27/11/2026 · Inbox: los seguimientos programados, solo dentro de las 24 h (ADR-W282)
 - Un seguimiento programado sale solo, y Meta permite responder fuera de las 24 h únicamente a una persona en el momento: ya no se programan para después del cierre ni salen con la etiqueta de agente humano ([seguimientos.py](../../app/automatizaciones/seguimientos.py), [Seguimientos.jsx](../../frontend/src/pages/inbox/conversaciones/Seguimientos.jsx)).### 27/11/2026 · Portal: tarjeta «Learnation Marketing» (ADR-W278)
 - Para quien tiene Learnation Marketing, el Portal suma su tarjeta (aparte del «Marketing» de Dirección de Marketing) y entra a /ops/dashboard › Marketing sin cambiar de rol ([portal.js](../../frontend/src/utils/portal.js), [Portal.jsx](../../frontend/src/pages/auth/Portal.jsx)).
+
+### 27/11/2026 · Inbox: seguimiento programado a 2 o 3 días, mandado con un clic (ADR-W283)
+- Se puede volver a programar a 24 h, 2 o 3 días. Dentro de las 24 h del último mensaje del lead sale solo; después queda en «Toca seguimiento» con su texto y se manda con «Mandar» (Meta solo deja escribir fuera de las 24 h a una persona en el momento). Sin la aprobación de Human Agent, el aviso lleva al chat de Instagram ([seguimientos.py](../../app/automatizaciones/seguimientos.py), [Seguimientos.jsx](../../frontend/src/pages/inbox/conversaciones/Seguimientos.jsx)).

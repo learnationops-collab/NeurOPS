@@ -68,6 +68,8 @@ export const inboxApi = {
     // Seguimiento condicional: `{ horas, texto | audio_id, pausar }`; sale si el lead no respondió.
     programarSeguimiento: (cid, cuerpo) => api.post(`/inbox/conversaciones/${cid}/seguimientos`, cuerpo).then(datos),
     cancelarSeguimiento: (sid) => api.delete(`/inbox/seguimientos/${sid}`).then(datos),
+    // El programado que pasó las 24 h: lo manda la persona, en el momento (ADR-W283).
+    mandarSeguimiento: (sid) => api.post(`/inbox/seguimientos/${sid}/mandar`).then(datos),
     // Marcar o desmarcar un mensaje del equipo como seguimiento (ADR-W255).
     marcarSeguimiento: (mid, marca) => api.post(`/inbox/mensajes/${mid}/seguimiento`, { marca }).then(datos),
     // Escribirle al lead: `{ texto }` o `{ audio_id }`, y `pausar` (el bot, por defecto sí).

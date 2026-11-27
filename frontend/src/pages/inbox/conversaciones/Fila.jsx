@@ -95,7 +95,7 @@ export default function Fila({ c, elegida, ahora, yo, conAsignado, borrador, onE
                             {cierre != null && cierre <= avisoCierre(c) && <Ventana contacto={c} queda={cierre} aviso={avisoCierre(c)} mini />}
                             <Vence tarea={c.tarea} ahora={ahora} />
                             {c.toca && (
-                                <span className="cv-item-ico cv-item-ico--toca" data-tip={`Toca seguimiento|${c.toca}: lo pide la cadencia de su fase`}><AlarmClock size={12} aria-hidden="true" /></span>
+                                <span className="cv-item-ico cv-item-ico--toca" data-tip={`Toca seguimiento|${c.toca}`}><AlarmClock size={12} aria-hidden="true" /></span>
                             )}
                             {/* Le escribiste y no contestó (Mario, 27/11/2026): cuántos seguimientos van desde su última respuesta y
                                 hace cuánto fue tu último mensaje. Sin seguimiento, en rojo. */}
