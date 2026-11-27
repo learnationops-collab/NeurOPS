@@ -1277,3 +1277,6 @@
 - La fila y la tarjeta del lead dicen hace cuánto le escribiste (hoy, ayer, hace N días), en qué seguimiento vas y el total ([RachaLead.jsx](../../frontend/src/pages/inbox/conversaciones/RachaLead.jsx)).
 - Stats › Seguimientos: cuántas no contestaron, cuántas sin seguimiento y el promedio de seguimientos por lead.
 - Caja de escribir: Enviar es redondo y todo entra en una línea.
+
+### 27/11/2026 · Cada setter ve solo sus seguimientos
+- «Les escribiste y no contestaron», los seguimientos del filtro, la fila, Stats y la franja de la tarjeta del lead cuentan, para un setter, solo sus mensajes y los sin autor (la regla del reporte). Un admin sigue viendo los de todo el equipo ([seguimientos_hechos.py](../../app/automatizaciones/seguimientos_hechos.py), [RachaLead.jsx](../../frontend/src/pages/inbox/conversaciones/RachaLead.jsx)).

@@ -2432,3 +2432,17 @@
   - **Caja de escribir:** Enviar es un botón redondo con la flecha, así todo entra en una línea. Si el chat es angosto, Learnito y Seguimiento quedan solo con su ícono.
 - **Qué se pierde:** la racha cuenta los mensajes del equipo sin mirar qué setter los mandó. Las Stats miran solo las conversaciones cargadas en la lista (hasta 500 por vez).
 - **Consecuencias:** sin migración. `por_fase` sigue igual por encima, ahora sobre `resumen`.
+
+## ADR-W268: cada setter ve solo sus seguimientos
+
+- **Fecha:** 27/11/2026 · **Subsistema:** Inbox, seguimientos (`seguimientos_hechos.resumen`, `api.listar_conversaciones`, `RachaLead.jsx`) · **Estado:** implementada
+- **Contexto:** con ADR-W267, la racha y los seguimientos de la lista contaban los mensajes de cualquiera del equipo. Mario: «en el perfil de Eli tiene que aparecer solamente lo de Eli; en el de Paula, lo de Paula. Cada quien gestiona sus propios seguimientos».
+- **Decisión:**
+  - Si quien mira es setter, la racha, los seguimientos por fase (filtro, fila y Stats) y la franja de la tarjeta del lead cuentan solo sus mensajes y los sin autor (Kommo, la app de Instagram). Es la regla del reporte del setter.
+  - Los mensajes de otro setter no existen para ese cálculo: no abren racha ni cortan la cuenta de 12 h.
+  - Quien no es setter (admin, manager) sigue viendo los de todo el equipo.
+  - El chat trae `autor_id` en cada mensaje para que la tarjeta haga la misma cuenta que el servidor.
+- **Qué se pierde:**
+  - Un mensaje sin autor cuenta para cualquier setter que mire esa conversación.
+  - Las etiquetas «Seguimiento N» de los mensajes del chat siguen numerando a todo el equipo.
+- **Consecuencias:** sin migración.

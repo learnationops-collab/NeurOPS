@@ -291,7 +291,8 @@ def listar_conversaciones():
     proximos = seguimientos.proximos(ids)
     toca = seguimientos.avisos([c for c, _, _, _ in filas])
     from app.automatizaciones import seguimientos_hechos
-    hechos, rachas = seguimientos_hechos.resumen(ids)
+    # Un setter ve solo sus seguimientos (los suyos y los sin autor); quien no es setter, los de todo el equipo.
+    hechos, rachas = seguimientos_hechos.resumen(ids, current_user.id if getattr(current_user, 'role', None) == 'setter' else None)
     avance = progreso.de_contactos([c for c, _, _, _ in filas], ejecuciones, ahora, current_user.id,
                                    {c.id: primero for c, _, _, primero in filas})
     # El último mensaje de cada una, en una sola consulta (antes, una por conversación). En empate, el de id mayor.
@@ -398,6 +399,7 @@ def ver_conversacion(contacto_id):
             if isinstance(m.contenido, dict) else [],
             'botones': _botones(m.contenido), 'en': _iso(m.enviado_en), 'nodo_id': m.nodo_id,
             'autor': m.autor.username if m.autor_id and m.autor else None,
+            'autor_id': m.autor_id,
             # Del bot: el botón que tocó el lead. Del lead: qué activó en el flujo (`efectos.py`).
             'elegido': elegidos.get(m.id),
             # Vino de un comentario en una publicación, no de un DM: no siempre se le puede escribir.
