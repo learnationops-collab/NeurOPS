@@ -187,6 +187,8 @@ export default function Conversaciones() {
                     <div className="barra-der">
                         <Actividad />
                         <div className="cv-barra-grupo">
+                        {/* El recordatorio del recorrido sin terminar (ADR-W263) se dibuja acá. */}
+                        <span data-nv-recuerda="" style={{ display: 'contents' }} />
                         <MisTareas onAbrir={abrir} marca={datos} />
                         {avisos.soportado && avisos.permiso === 'default' && (
                             <button type="button" className="cv-barra-btn" data-tip="Activar avisos|Te avisa cuando te escribe un lead, aunque estés en otra pestaña" onClick={avisos.pedirPermiso}>

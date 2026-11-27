@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ArrowRight, X, Sparkles, PanelRight, CalendarDays, UserSquare2, CheckCircle2, CalendarClock, Clock } from 'lucide-react';
 import { VERSION, FECHA, PORTADA, PASOS } from './contenido';
 import Recorrido from './Recorrido';
+import Recuerda from './Recuerda';
 import { useCuenta } from './Mocks';
 import { useTelefono } from '../confirmar/useTelefono';
 // La huella del recorrido (ADR-W222): cambia sola con cualquier cambio de contenido, escenas o recorrido, así
@@ -43,6 +44,17 @@ const aplazar = (t, user) => {
     a.hasta = Math.min(manana.getTime(), a.desde + PLAZO_DIAS * DIA);
     localStorage.setItem(`${t.clave(user)}_aplazo`, JSON.stringify(a));
 };
+
+// El paso donde quedó (ADR-W263): «Ver después» a mitad del recorrido y el recordatorio retoma desde ahí.
+const leerPaso = (t, user) => {
+    try {
+        const p = JSON.parse(localStorage.getItem(`${t.clave(user)}_paso`));
+        return p?.vista === t.vista ? p.i : 0;
+    } catch { return 0; }
+};
+const guardarPaso = (t, user, i) => localStorage.setItem(`${t.clave(user)}_paso`, JSON.stringify({ vista: t.vista, i }));
+// Avisa a las otras tandas de la pantalla que una se terminó (la que esperaba puede mostrar su recordatorio).
+const CAMBIO = 'ln:novedades-cambio';
 
 // Sin nombre (o desde un onClick, que pasa el evento del clic): las del Workspace.
 export const abrirNovedades = (evento) => window.dispatchEvent(new Event(typeof evento === 'string' ? evento : EVENTO));
@@ -103,7 +115,7 @@ const Portada = ({ tanda: t, obligatorio, quedan, onEmpezar, onDespues }) => {
                     </button>
                     {!obligatorio && (
                         <button type="button" className="nv-despues" onClick={onDespues}>
-                            {quedan ? <>Después<small>{quedan === 1 ? 'último día' : `quedan ${quedan} días`}</small></> : 'Cerrar'}
+                            {quedan ? <>Ver después<small>{quedan === 1 ? 'último día' : `quedan ${quedan} días`}</small></> : 'Cerrar'}
                         </button>
                     )}
                 </div>
@@ -119,18 +131,29 @@ const paraTelefono = (pasos) => pasos.map(p => (p.id === 'riel' ? { ...p, titulo
 const Novedades = ({ user, ctx, tanda = CLOSER }) => {
     const t = tanda;
     const [fase, setFase] = useState(null);
+    const [inicio, setInicio] = useState(0);
+    const [, setRevision] = useState(0);
     const telefono = useTelefono();
     const vista = () => tandaVista(t, user);
     // Sin terminar, se puede aplazar mientras queden días del plazo (`quedan`); después, obligatorio.
     const [quedan, setQuedan] = useState(0);
     const [obligatorio, setObligatorio] = useState(true);
-    const abrir = () => {
+    // `retomar` (el recordatorio): si ya había avanzado, va directo al paso donde quedó, sin la portada.
+    const abrir = (retomar) => {
         const dias = vista() ? 0 : diasQueQuedan(leerAplazo(t, user));
+        const paso = retomar === true ? leerPaso(t, user) : 0;
         setQuedan(dias);
         setObligatorio(!vista() && dias === 0);
-        setFase('portada');
+        setInicio(paso);
+        setFase(paso ? 'recorrido' : 'portada');
     };
     const despues = () => { if (quedan) aplazar(t, user); setFase(null); };
+    const completar = () => {
+        localStorage.setItem(t.clave(user), t.vista);
+        localStorage.removeItem(`${t.clave(user)}_paso`);
+        setFase(null);
+        window.dispatchEvent(new Event(CAMBIO));
+    };
 
     useEffect(() => {
         if (!user) return;
@@ -146,11 +169,18 @@ const Novedades = ({ user, ctx, tanda = CLOSER }) => {
     }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => {
-        window.addEventListener(t.evento, abrir);
-        return () => window.removeEventListener(t.evento, abrir);
+        const desdeAfuera = () => abrir();
+        const otra = () => setRevision((n) => n + 1);
+        window.addEventListener(t.evento, desdeAfuera);
+        window.addEventListener(CAMBIO, otra);
+        return () => { window.removeEventListener(t.evento, desdeAfuera); window.removeEventListener(CAMBIO, otra); };
     }); // eslint-disable-line react-hooks/exhaustive-deps
 
-    if (!fase) return null;
+    // Sin terminar y cerrado: el recordatorio queda a la vista hasta que lo termine (no si otra tanda va primero).
+    if (!fase) {
+        if (!user || vista() || t.espera?.(user)) return null;
+        return <Recuerda tanda={t} paso={leerPaso(t, user)} onAbrir={() => abrir(true)} />;
+    }
     if (fase === 'portada') {
         return (
             <Portada tanda={t} obligatorio={obligatorio} quedan={quedan} onEmpezar={() => setFase('recorrido')} onDespues={despues} />
@@ -158,8 +188,8 @@ const Novedades = ({ user, ctx, tanda = CLOSER }) => {
     }
     return (
         <Recorrido pasos={telefono && t === CLOSER ? paraTelefono(t.pasos) : t.pasos} ctx={ctx} obligatorio={obligatorio} onCerrar={despues}
-            Escena={t.Escena} etiqueta={t.etiqueta}
-            onCompletar={() => { localStorage.setItem(t.clave(user), t.vista); setFase(null); }} />
+            aplazable={quedan > 0} inicio={inicio} onPaso={(i) => { if (!vista()) guardarPaso(t, user, i); }}
+            Escena={t.Escena} etiqueta={t.etiqueta} onCompletar={completar} />
     );
 };
 

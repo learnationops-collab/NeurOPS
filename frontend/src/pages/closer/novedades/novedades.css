@@ -31,9 +31,9 @@
 .nv-humo i:nth-child(3) { left: 22%; bottom: -30%; background: #6D3BFF; opacity: .38; animation: nvAura3 23s ease-in-out infinite; }
 .nv-humo i:nth-child(4) { right: 8%; bottom: -26%; background: var(--nv-mag); opacity: .25; animation: nvAura2 29s ease-in-out infinite reverse; }
 .nv-portada::after { content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none; background: radial-gradient(ellipse at center, transparent 30%, rgba(2, 3, 14, .75) 100%); }
-.nv-portada__x { position: absolute; top: 22px; right: 22px; display: grid; place-items: center; width: 42px; height: 42px; border: 1px solid rgba(255, 255, 255, .14); border-radius: 50%; background: rgba(255, 255, 255, .06); color: #fff; cursor: pointer; transition: background .2s; }
-.nv-portada__x:hover { background: rgba(255, 255, 255, .14); }
-.nv-portada__x svg { width: 18px; height: 18px; }
+:is(.nv-portada, .nv-rec, .nv-probando) .nv-portada__x { position: absolute; top: 22px; right: 22px; display: grid; place-items: center; width: 42px; height: 42px; border: 1px solid rgba(255, 255, 255, .14); border-radius: 50%; background: rgba(255, 255, 255, .06); color: #fff; cursor: pointer; transition: background .2s; }
+:is(.nv-portada, .nv-rec, .nv-probando) .nv-portada__x:hover { background: rgba(255, 255, 255, .14); }
+:is(.nv-portada, .nv-rec, .nv-probando) .nv-portada__x svg { width: 18px; height: 18px; }
 .nv-portada__centro { display: flex; flex-direction: column; align-items: center; gap: 30px; padding: 24px; text-align: center; }
 
 .nv-chip { display: inline-flex; align-items: center; gap: 10px; padding: 8px 16px; border: 1px solid rgba(255, 255, 255, .16); border-radius: 99px; background: rgba(255, 255, 255, .06);
@@ -57,19 +57,19 @@
 .nv-portada__iconos svg { width: 26px; height: 26px; }
 .nv-portada__iconos em { font-style: normal; font-size: 13px; font-weight: 600; color: var(--nv-mut); }
 .nv-portada__acciones { display: flex; flex-direction: column; align-items: center; gap: 12px; animation: nvSube .6s 1.6s both; }
-.nv-cta { position: relative; isolation: isolate; overflow: hidden; display: inline-flex; align-items: center; gap: 12px; height: 62px; padding: 0 36px; border: 0; border-radius: 99px;
+:is(.nv-portada, .nv-rec, .nv-probando) .nv-cta { position: relative; isolation: isolate; overflow: hidden; display: inline-flex; align-items: center; gap: 12px; height: 62px; padding: 0 36px; border: 0; border-radius: 99px;
   background: var(--nv-mag); color: #fff; font-size: 17px; font-weight: 700; cursor: pointer; box-shadow: 0 18px 50px rgba(255, 63, 164, .5); transition: transform .2s; }
-.nv-cta:hover { transform: translateY(-2px) scale(1.02); }
-.nv-cta:focus-visible { outline: 3px solid #fff; outline-offset: 4px; }
-.nv-cta svg { width: 20px; height: 20px; }
+:is(.nv-portada, .nv-rec, .nv-probando) .nv-cta:hover { transform: translateY(-2px) scale(1.02); }
+:is(.nv-portada, .nv-rec, .nv-probando) .nv-cta:focus-visible { outline: 3px solid #fff; outline-offset: 4px; }
+:is(.nv-portada, .nv-rec, .nv-probando) .nv-cta svg { width: 20px; height: 20px; }
 .nv-cta__aura { position: absolute; inset: 0; z-index: -1; }
 .nv-cta__aura i { position: absolute; width: 60%; aspect-ratio: 1; border-radius: 50%; filter: blur(18px); mix-blend-mode: screen; opacity: .7; }
 .nv-cta__aura i:nth-child(1) { left: -10%; top: -60%; background: var(--nv-vio); animation: nvAura1 5s ease-in-out infinite; }
 .nv-cta__aura i:nth-child(2) { left: 50%; top: -20%; background: #5B9BFF; animation: nvAura2 7s ease-in-out infinite; }
 .nv-cta__aura i:nth-child(3) { left: 20%; top: 30%; background: #FF8AD0; animation: nvAura3 6s ease-in-out infinite; }
-.nv-despues { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 12px; border: 0; background: none; color: var(--nv-mut); font-size: 14px; font-weight: 600; cursor: pointer; }
-.nv-despues small { font-size: 11px; font-weight: 500; opacity: .7; }
-.nv-despues:hover { color: #fff; }
+:is(.nv-portada, .nv-rec, .nv-probando) .nv-despues { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 12px; border: 0; background: none; color: var(--nv-mut); font-size: 14px; font-weight: 600; cursor: pointer; }
+:is(.nv-portada, .nv-rec, .nv-probando) .nv-despues small { font-size: 11px; font-weight: 500; opacity: .7; }
+:is(.nv-portada, .nv-rec, .nv-probando) .nv-despues:hover { color: #fff; }
 
 /* ---------- Recorrido ---------- */
 .nv-rec { position: fixed; inset: 0; z-index: 2000; pointer-events: none; }
@@ -91,25 +91,26 @@
 .nv-card__aura i:nth-child(1) { left: -20%; top: -30%; background: var(--nv-mag); animation: nvAura1 12s ease-in-out infinite; }
 .nv-card__aura i:nth-child(2) { right: -25%; top: 10%; background: var(--nv-azul); animation: nvAura2 14s ease-in-out infinite; }
 .nv-card__aura i:nth-child(3) { left: 20%; bottom: -40%; background: #6D3BFF; animation: nvAura3 16s ease-in-out infinite; }
-.nv-card__barras { display: flex; gap: 4px; margin-right: 44px; }
+.nv-card__cab { display: flex; align-items: center; gap: 12px; min-height: 32px; margin: -4px -6px 0 0; }
+.nv-card__barras { flex: 1; display: flex; gap: 4px; }
 .nv-card__barras i { position: relative; flex: 1; height: 3px; border-radius: 99px; background: rgba(255, 255, 255, .14); overflow: hidden; }
 .nv-card__barras i.is-ya { background: rgba(255, 255, 255, .75); }
 .nv-card__barras i.is-ahora::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(90deg, var(--nv-mag), var(--nv-vio)); animation: nvCrece .9s var(--nv-spring) both; }
-.nv-card__x { position: absolute; top: 8px; right: 10px; display: grid; place-items: center; width: 32px; height: 32px; border: 0; border-radius: 50%; background: rgba(255, 255, 255, .06); color: var(--nv-mut); cursor: pointer; }
-.nv-card__x:hover { background: rgba(255, 255, 255, .14); color: #fff; }
-.nv-card__x svg { width: 16px; height: 16px; }
+:is(.nv-portada, .nv-rec, .nv-probando) .nv-card__x { flex: none; display: grid; place-items: center; width: 32px; height: 32px; border: 0; border-radius: 50%; background: rgba(255, 255, 255, .06); color: var(--nv-mut); cursor: pointer; }
+:is(.nv-portada, .nv-rec, .nv-probando) .nv-card__x:hover { background: rgba(255, 255, 255, .14); color: #fff; }
+:is(.nv-portada, .nv-rec, .nv-probando) .nv-card__x svg { width: 16px; height: 16px; }
 .nv-card__escena { display: grid; place-items: center; height: 186px; margin: 16px 0 14px; border-radius: 18px; overflow: hidden;
   border: 1px solid rgba(255, 255, 255, .08); background: radial-gradient(120% 90% at 50% 0%, rgba(255, 255, 255, .07), rgba(255, 255, 255, .02)); }
 .nv-card__titulo { margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -.02em; line-height: 1.15; animation: nvSube .5s .1s both; }
 .nv-card__texto { margin: 6px 0 0; font-size: 13.5px; font-weight: 500; line-height: 1.45; color: var(--nv-mut); animation: nvSube .5s .18s both; }
 .nv-card__pie { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 16px; }
-.nv-card__atras { display: grid; place-items: center; width: 42px; height: 42px; margin-right: auto; border: 1px solid rgba(255, 255, 255, .14); border-radius: 50%; background: rgba(255, 255, 255, .05); color: #fff; cursor: pointer; }
-.nv-card__atras:hover { background: rgba(255, 255, 255, .12); }
-.nv-card__atras svg { width: 18px; height: 18px; }
-.nv-card__sec { height: 42px; padding: 0 16px; border: 1px solid rgba(255, 255, 255, .18); border-radius: 99px; background: rgba(255, 255, 255, .05); color: #fff; font-size: 13.5px; font-weight: 600; cursor: pointer; }
-.nv-card__sec:hover { background: rgba(255, 255, 255, .12); }
-.nv-card__sec { display: inline-flex; align-items: center; gap: 7px; }
-.nv-card__sec svg { width: 14px; height: 14px; color: var(--nv-mag); fill: var(--nv-mag); }
+:is(.nv-portada, .nv-rec, .nv-probando) .nv-card__atras { display: grid; place-items: center; width: 42px; height: 42px; margin-right: auto; border: 1px solid rgba(255, 255, 255, .14); border-radius: 50%; background: rgba(255, 255, 255, .05); color: #fff; cursor: pointer; }
+:is(.nv-portada, .nv-rec, .nv-probando) .nv-card__atras:hover { background: rgba(255, 255, 255, .12); }
+:is(.nv-portada, .nv-rec, .nv-probando) .nv-card__atras svg { width: 18px; height: 18px; }
+:is(.nv-portada, .nv-rec, .nv-probando) .nv-card__sec { height: 42px; padding: 0 16px; border: 1px solid rgba(255, 255, 255, .18); border-radius: 99px; background: rgba(255, 255, 255, .05); color: #fff; font-size: 13.5px; font-weight: 600; cursor: pointer; }
+:is(.nv-portada, .nv-rec, .nv-probando) .nv-card__sec:hover { background: rgba(255, 255, 255, .12); }
+:is(.nv-portada, .nv-rec, .nv-probando) .nv-card__sec { display: inline-flex; align-items: center; gap: 7px; }
+:is(.nv-portada, .nv-rec, .nv-probando) .nv-card__sec svg { width: 14px; height: 14px; color: var(--nv-mag); fill: var(--nv-mag); }
 
 /* Probando: el recorrido achicado a un botón, abajo a la izquierda, sin tapar Work */
 @keyframes nvBrota { from { opacity: 0; transform: translateY(16px) scale(.96); } to { opacity: 1; transform: none; } }
@@ -121,11 +122,11 @@
 .nv-probando__ico svg { width: 17px; height: 17px; animation: nvLatido 1.6s ease-in-out infinite; }
 .nv-probando__t { display: flex; flex-direction: column; font-size: 13.5px; font-weight: 700; line-height: 1.2; white-space: nowrap; }
 .nv-probando__t small { font-size: 10.5px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: rgba(244, 245, 255, .55); }
-.nv-card__cta { display: inline-flex; align-items: center; gap: 8px; height: 42px; padding: 0 20px; border: 0; border-radius: 99px; background: var(--nv-mag); color: #fff;
+:is(.nv-portada, .nv-rec, .nv-probando) .nv-card__cta { display: inline-flex; align-items: center; gap: 8px; height: 42px; padding: 0 20px; border: 0; border-radius: 99px; background: var(--nv-mag); color: #fff;
   font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: 0 10px 30px rgba(255, 63, 164, .4); transition: transform .2s; }
-.nv-card__cta:hover { transform: translateY(-1px); }
-.nv-card__cta:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
-.nv-card__cta svg { width: 16px; height: 16px; }
+:is(.nv-portada, .nv-rec, .nv-probando) .nv-card__cta:hover { transform: translateY(-1px); }
+:is(.nv-portada, .nv-rec, .nv-probando) .nv-card__cta:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+:is(.nv-portada, .nv-rec, .nv-probando) .nv-card__cta svg { width: 16px; height: 16px; }
 
 /* ---------- Escenas ---------- */
 .nv-m { width: 100%; height: 100%; padding: 16px 20px; display: flex; flex-direction: column; justify-content: center; gap: 8px; font-size: 12px; font-weight: 600; }
@@ -279,3 +280,31 @@
 @media (prefers-reduced-motion: reduce) {
   .nv-portada *, .nv-rec *, .nv-probando *, .nv-humo i { animation-duration: .01ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; }
 }
+
+/* «Ver después» (ADR-W263): arriba a la derecha, en vez de la cruz, mientras queden días para verlo. */
+:is(.nv-portada, .nv-rec, .nv-probando) .nv-card__luego { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, .12); border-radius: 99px; background: rgba(255, 255, 255, .05); color: var(--nv-mut);
+  font-size: 12.5px; font-weight: 600; cursor: pointer; transition: background .2s, color .2s; }
+:is(.nv-portada, .nv-rec, .nv-probando) .nv-card__luego:hover { background: rgba(255, 255, 255, .12); color: #fff; }
+:is(.nv-portada, .nv-rec, .nv-probando) .nv-card__luego svg { width: 13px; height: 13px; }
+:is(.nv-portada, .nv-rec, .nv-probando) .nv-card__pie { flex-wrap: nowrap; }
+:is(.nv-portada, .nv-rec, .nv-probando) .nv-card__sec,
+:is(.nv-portada, .nv-rec, .nv-probando) .nv-card__cta { flex: none; white-space: nowrap; }
+
+/* El recordatorio de un recorrido sin terminar (ADR-W263): chiquito, un aro que gira lento con lo que ya vio y un
+   punto que respira. Doble clase: le gana al `button{background:none;border:0;padding:0}` de cada pantalla. */
+@keyframes nvGira { to { transform: rotate(360deg); } }
+@keyframes nvRespira { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(.6); opacity: .55; } }
+.nv-recuerda.nv-recuerda { position: relative; flex: none; display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 50%;
+  background: color-mix(in srgb, #FF3FA4 12%, transparent); color: #FF3FA4; cursor: pointer; transition: transform .2s, background .2s;
+  animation: nvPop .5s cubic-bezier(.3, 1.4, .5, 1) both; }
+.nv-recuerda.nv-recuerda:hover { transform: scale(1.08); background: color-mix(in srgb, #FF3FA4 22%, transparent); }
+.nv-recuerda.nv-recuerda svg { width: 15px; height: 15px; }
+.nv-recuerda__aro { position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
+  background: conic-gradient(from 0deg, #FF3FA4, #A78BFF calc(var(--hecho, 0) * 100% + 18%), transparent calc(var(--hecho, 0) * 100% + 40%));
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
+  animation: nvGira 6s linear infinite; opacity: .85; }
+.nv-recuerda__punto { position: absolute; top: 0; right: 0; width: 8px; height: 8px; border-radius: 50%; background: #FF3FA4;
+  box-shadow: 0 0 0 2px var(--bg-app, #0b1030), 0 0 10px #FF3FA4; animation: nvRespira 2.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .nv-recuerda__aro, .nv-recuerda__punto { animation: none; } }

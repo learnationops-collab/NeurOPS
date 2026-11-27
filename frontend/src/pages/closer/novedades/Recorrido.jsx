@@ -1,5 +1,5 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { ChevronLeft, X, ArrowRight, MousePointerClick, Check, Play, Sparkles } from 'lucide-react';
+import { ChevronLeft, X, ArrowRight, MousePointerClick, Check, Play, Sparkles, Clock } from 'lucide-react';
 import Mock from './Mocks';
 
 // El recorrido por Work (ADR-W218): oscurece la pantalla menos el lugar del paso (un agujero con un
@@ -43,8 +43,10 @@ const mismo = (a, b) => a && b && ['top', 'left', 'width', 'height'].every(k => 
 // Probar (ADR-W221): «Probalo» o tocar el lugar iluminado sacan el velo y dejan usar Work de verdad (abrir la
 // llamada, Reprogramar, el calendario, tu horario); el recorrido queda como un botón para seguir.
 // `Escena`: las escenas de cada paso (por defecto, las de `Mocks.jsx`); el Inbox pasa las suyas (ADR-W255).
-const Recorrido = ({ pasos, ctx, obligatorio, onCompletar, onCerrar, Escena = Mock, etiqueta = 'Novedades de Work' }) => {
-    const [i, setI] = useState(0);
+// `aplazable` (ADR-W263): sin terminar y con días de plazo, arriba dice «Ver después» en vez de la cruz; `inicio` y
+// `onPaso` dejan retomar desde el paso donde quedó.
+const Recorrido = ({ pasos, ctx, obligatorio, aplazable, inicio = 0, onPaso, onCompletar, onCerrar, Escena = Mock, etiqueta = 'Novedades de Work' }) => {
+    const [i, setI] = useState(Math.min(inicio, pasos.length - 1));
     const [el, setEl] = useState(null);
     const [rect, setRect] = useState(null);
     const [listo, setListo] = useState(false);
@@ -63,6 +65,8 @@ const Recorrido = ({ pasos, ctx, obligatorio, onCompletar, onCerrar, Escena = Mo
     };
     // Volver del modo probar: el mismo paso, buscando el lugar de nuevo (la pantalla pudo cambiar).
     const volver = () => { setProbando(false); setVuelta(v => v + 1); };
+
+    useEffect(() => { onPaso?.(i); }, [i]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Al entrar a un paso: lo que Work hace antes, buscar el lugar y traerlo a la vista.
     useEffect(() => {
@@ -161,10 +165,14 @@ const Recorrido = ({ pasos, ctx, obligatorio, onCompletar, onCerrar, Escena = Mo
             {listo && (
                 <div ref={tarjeta} key={paso.id} className={`nv-card nv-card--${pos.lado}`} style={{ left: pos.x, top: pos.y, width: ANCHO }}>
                     <span className="nv-card__aura" aria-hidden="true"><i /><i /><i /></span>
-                    <div className="nv-card__barras" aria-hidden="true">
-                        {pasos.map((p, k) => <i key={p.id} className={k < i ? 'is-ya' : k === i ? 'is-ahora' : ''} />)}
+                    <div className="nv-card__cab">
+                        <div className="nv-card__barras" aria-hidden="true">
+                            {pasos.map((p, k) => <i key={p.id} className={k < i ? 'is-ya' : k === i ? 'is-ahora' : ''} />)}
+                        </div>
+                        {!obligatorio && (aplazable
+                            ? <button type="button" className="nv-card__luego" onClick={onCerrar}><Clock aria-hidden="true" />Ver después</button>
+                            : <button type="button" className="nv-card__x" onClick={onCerrar} aria-label="Cerrar el recorrido"><X /></button>)}
                     </div>
-                    {!obligatorio && <button type="button" className="nv-card__x" onClick={onCerrar} aria-label="Cerrar el recorrido"><X /></button>}
                     <div className="nv-card__escena"><Escena tipo={paso.mock} /></div>
                     <h3 className="nv-card__titulo">{paso.titulo}</h3>
                     {paso.texto && <p className="nv-card__texto">{paso.texto}</p>}

@@ -227,7 +227,9 @@ export default function Composer({ contacto, mensajes, pausar = true, fase, ejec
                     onAudio={puedeEnviar ? audioDelMenu : null} />
             )}
             <div className="cv-comp-cab">
-                <Segmented size="sm" label="Modo" value={modo} onChange={(m) => { setModo(m); setRayo(false); }} options={MODOS} />
+                {/* Solo el modo elegido lleva su nombre; los otros, el ícono (Mario, 27/11/2026: así entra todo en una línea). */}
+                <Segmented size="sm" label="Modo" className="cv-modos" value={modo} onChange={(m) => { setModo(m); setRayo(false); }}
+                    options={MODOS.map((o) => (o.value === modo ? o : { ...o, label: null, props: { 'aria-label': o.label, 'data-tip': o.label } }))} />
                 {modo === 'chat' && (
                     <span className="cv-comp-tools">
                         <IconButton size="sm" label="Respuestas rápidas, variables y pasos del flujo" data-tip="Respuestas rápidas y pasos|O escribí /" pressed={rayo} icon={<Zap size={15} />} onClick={() => setRayo((r) => !r)} />
