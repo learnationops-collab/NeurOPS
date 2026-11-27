@@ -1,4 +1,5 @@
-"""Conectar una cuenta de Google para un solo permiso (app/services/google_aparte.py): el correo (ADR-W123) y
+"""Conectar una cuenta de Google para un solo permiso (app/services/google_aparte.py): el correo (ADR-W123), el Drive
+de Learnation Marketing (ADR-W278) y
 la configuración de las reuniones de Meet (ADR-W128).
 
 GET /google/<clave>/conectar/<firma>: el link firmado lleva a Google pidiendo solo ese permiso; la vuelta entra

@@ -1,0 +1,15 @@
+/* Learnation Marketing a pantalla completa, sin pisar el dock de Operaciones (ADR-W278). */
+.panel-marketing{
+  position:fixed;z-index:40;
+  background:linear-gradient(170deg,#04071C 0%,#0A0E3D 52%,#060A2A 100%);
+  transition:top .3s cubic-bezier(.32,.72,0,1),left .3s cubic-bezier(.32,.72,0,1),
+    right .3s cubic-bezier(.32,.72,0,1),bottom .3s cubic-bezier(.32,.72,0,1);
+}
+.panel-marketing iframe{display:block;width:100%;height:100%;border:0;background:transparent}
+.panel-marketing-error{margin:48px auto;max-width:420px;text-align:center;color:rgba(255,255,255,.7);font-size:14px}
+.panel-marketing-cargando{
+  position:absolute;left:50%;top:50%;width:28px;height:28px;margin:-14px 0 0 -14px;border-radius:999px;
+  border:3px solid rgba(255,255,255,.12);border-top-color:#FF3FA4;animation:panelMarketingGiro .8s linear infinite;
+}
+@keyframes panelMarketingGiro{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.panel-marketing{transition:none}.panel-marketing-cargando{animation-duration:2s}}

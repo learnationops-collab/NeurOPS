@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { ClipboardCheck, Database, Ghost, GraduationCap, LifeBuoy, Mic, Plug, Table2, Users } from 'lucide-react';
+import { ClipboardCheck, Database, Ghost, GraduationCap, LifeBuoy, Megaphone, Mic, Plug, Table2, Users } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePlaybook } from '../../contexts/PlaybookContext';
 import { revertImpersonation } from '../../utils/impersonation';
@@ -20,6 +20,7 @@ import FormsManagementPage from '../shared/FormsManagementPage';
 import CourseEditorPage from './course-editor/CourseEditorPage';
 import PanelIntegraciones from './PanelIntegraciones';
 import PanelReuniones from './reuniones/PanelReuniones';
+import PanelMarketing from './marketing/PanelMarketing';
 
 /**
  * El espacio del operador: todo su trabajo en una sola pantalla, con un solo dock.
@@ -62,8 +63,26 @@ const SECCIONES = [
     { id: 'reuniones', label: 'Reuniones', Icono: Mic },
 ];
 
+// Learnation Marketing (el artifact de claude.ai, ADR-W278): solo para las cuentas de `app/marketing_app/acceso.py`.
+// Quien entra solo por Marketing (no es operador ni admin) ve únicamente esa sección.
+const MARKETING = { id: 'marketing', label: 'Marketing', Icono: Megaphone };
+const ROLES_DE_OPERACIONES = ['operator', 'admin'];
+const seccionesDe = (user) => {
+    const operaciones = ROLES_DE_OPERACIONES.includes(user?.role);
+    if (!user?.marketing_app) return SECCIONES;
+    return operaciones ? [...SECCIONES, MARKETING] : [MARKETING];
+};
+
 /** Las secciones que se juntaron en Registros: un link viejo cae en su tabla. */
 const TABLA_DE_SECCION_VIEJA = { agendas: 'agendas', ventas: 'ventas' };
+
+/** Marketing queda montado (escondido) después de abrirlo la primera vez, como los demás paneles. */
+const MarketingConservado = ({ visible }) => {
+    const [abierto, setAbierto] = useState(visible);
+    useEffect(() => { if (visible) setAbierto(true); }, [visible]);
+    if (!abierto) return null;
+    return <div hidden={!visible}><PanelMarketing /></div>;
+};
 
 const OperadorEspacioPage = () => {
     const { user, logout } = useAuth();
@@ -83,7 +102,8 @@ const OperadorEspacioPage = () => {
         setParams(siguiente, { replace: true });
     }, [tablaVieja, params, setParams]);
 
-    const seccionActual = SECCIONES.find(s => s.id === (tablaVieja ? 'registros' : params.get('step'))) || SECCIONES[0];
+    const secciones = seccionesDe(user);
+    const seccionActual = secciones.find(s => s.id === (tablaVieja ? 'registros' : params.get('step'))) || secciones[0];
     const seccion = seccionActual.id;
     const tab = seccionActual.tabs?.some(t => t.key === params.get('tab'))
         ? params.get('tab')
@@ -135,7 +155,7 @@ const OperadorEspacioPage = () => {
     return (
         <div className="operador-espacio">
             <div className="operador-espacio-wrap">
-                <div className="dc-shell dc-shell--embebido">
+                {seccion !== 'marketing' && <div className="dc-shell dc-shell--embebido">
                     <header className="tope">
                         <div className="tope-id">
                             <Isotipo idGrad="lnGradOperador" />
@@ -158,12 +178,12 @@ const OperadorEspacioPage = () => {
                                 ariaLabel={`Vistas de ${seccionActual.label}`} />
                         </div>
                     )}
-                </div>
+                </div>}
 
                 {/* Los paneles que ya se abrieron quedan montados y escondidos (PanelesConservados): volver a
                     uno lo muestra como estaba, sin pedir de nuevo lo que ya cargó (pedido de Kerwin, 02/11/2026).
                     Registros no entra: es el dashboard comercial, que lee la URL y ya recuerda lo suyo. */}
-                <PanelesConservados activa={seccion === 'registros' ? null : (seccion === 'soporte' || seccion === 'datos' ? `${seccion}:${tab}` : seccion)}
+                <PanelesConservados activa={seccion === 'registros' || seccion === 'marketing' ? null : (seccion === 'soporte' || seccion === 'datos' ? `${seccion}:${tab}` : seccion)}
                     paneles={{
                         equipo: () => <div className="operador-panel dash-v6 bg-main text-base"><SeccionTecnica id="team" embebido /></div>,
                         ...Object.fromEntries(['soporte', 'datos'].flatMap(id => SECCIONES.find(s => s.id === id).tabs.map(t => [
@@ -179,9 +199,11 @@ const OperadorEspacioPage = () => {
                     }} />
                 {/* El mismo Revisar de la dirección, con su período y sus tablas; trae su propia isla `.dc-shell`. */}
                 {seccion === 'registros' && <DashboardComercial embebido seccionFija="revisar" />}
+                {/* Montado una vez, queda: volver a Marketing la muestra como estaba (no recarga el artifact). */}
+                {user?.marketing_app && <MarketingConservado visible={seccion === 'marketing'} />}
 
                 <div className="dc-shell dc-shell--embebido">
-                    <DockSecciones secciones={SECCIONES} activa={seccion}
+                    <DockSecciones secciones={secciones} activa={seccion}
                         onElegir={(id) => { if (id !== seccion) irA(id); }}
                         ariaLabel="Secciones del espacio del operador"
                         despues={(

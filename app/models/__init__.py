@@ -49,6 +49,7 @@ from .tag import Tag, TagGroup, TARGET_IG_CONTACT
 from .inbox_work import Note, Task, QuickReply, AudioClip, InboxRead
 from .conflicto import Conflicto, CONFLICTO_TIPOS, CONFLICTO_ESTADOS
 from .meeting_note import MeetingNote
+from .marketing_app import MarketingAppDoc, MarketingAppAsset
 
 # Export all for easy access via from app.models import ...
 __all__ = [
@@ -77,5 +78,6 @@ __all__ = [
     'PlaybookRoadmap', 'PlaybookModule', 'PlaybookLesson', 'PlaybookQuestion', 'PlaybookOption',
     'PlaybookLessonProgress', 'PlaybookCompletion', 'QUESTION_TYPES',
     'InstagramWebhookEvento', 'AiUsage', 'IntentoLimitado', 'LearnitoConversacion', 'UpdateRequest',
+    'MarketingAppDoc', 'MarketingAppAsset',
 ]
 

@@ -1367,3 +1367,6 @@
 - «CSV» baja lo que se ve (filtro y búsqueda): nombre, estado, cierre, WhatsApp y su link, email, país, video, fecha y si terminó el formulario.
 ### 27/11/2026 · Antiguos de Closers: «Que tengan»
 - El filtro suma requisitos que tienen que cumplir todos a la vez: midieron su % de cierre, experiencia como closer, video, llamada grabada, inglés intermedio o más. Sirve para rescatar, de los descartados o sin calificar, a los que valen un mensaje. «Sin video» pasa de «Sacar» a «Que tengan». El menú va en dos columnas y el CSV suma conocimiento, inglés y llamada ([antiguos.js](../../frontend/src/pages/admin/hiring/lib/antiguos.js), [MenuAntiguos.jsx](../../frontend/src/pages/admin/hiring/components/closers/MenuAntiguos.jsx)).
+### 27/11/2026 · Learnation Marketing dentro de Work (ADR-W278)
+- Nueva sección «Marketing» en el dock de /ops/dashboard: el artifact de claude.ai completo, con su diseño, su base (copiada el 27/11), Learnito, archivos y los conectores Meta Ads, Google Drive y Learnation Work atendidos por Work ([PanelMarketing.jsx](../../frontend/src/pages/operations/marketing/PanelMarketing.jsx), [app/marketing_app/](../../app/marketing_app/)).
+- Acceso para Mario, Marlon, Santi y Kerwin por su mail ([acceso.py](../../app/marketing_app/acceso.py)). Publicar en Meta crea en pausa y activa al publicar.
