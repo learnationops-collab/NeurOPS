@@ -14,8 +14,11 @@ from datetime import datetime, timedelta
 from app import db
 from app.automatizaciones.modelos import IgContacto, IgMensaje
 from app.automatizaciones.reparto import setters_activos
+from app.models.tag import TARGET_IG_CONTACT
 from app.models.whatsapp import WaEnvio, WhatsappWebhookEvento
-from app.whatsapp import plantilla_en_chat
+from app.models.whatsapp_taller import WaPasoTaller
+from app.services import tags_service
+from app.whatsapp import audiencia, plantilla_en_chat
 from app.whatsapp.cliente import PREFIJO, variantes
 
 logger = logging.getLogger(__name__)
@@ -58,14 +61,9 @@ def _setter_con_menos_carga(ahora):
 
 
 def _contacto(telefono, nombre, ahora):
-    contacto = IgContacto.query.filter_by(igsid=f'{PREFIJO}{telefono}').first()
-    if contacto is None:
-        contacto = IgContacto(igsid=f'{PREFIJO}{telefono}', nombre=nombre, username=f'+{telefono}',
-                              variables={'telefono': telefono, 'canal_mensajeria': 'whatsapp'}, creado_en=ahora)
-        db.session.add(contacto)
-        db.session.flush()
-    elif nombre and not contacto.nombre:
-        contacto.nombre = nombre
+    # El broadcast de un taller crea el contacto con el número del CSV (54…, 52…), que puede ser la otra forma
+    # del que responde (549…, 521…): se busca por las dos (ADR-W259).
+    contacto = audiencia.contacto_wa(telefono, nombre, ahora)
     if contacto.setter_id is None:
         setter = _setter_con_menos_carga(ahora)
         if setter:
@@ -85,7 +83,10 @@ def _marcar_envio(contacto, telefono, texto, ahora):
     plantilla_en_chat.registrar(contacto, envio)
     variables = dict(contacto.variables or {})
     if variables.get('broadcast') != envio.lote:
-        variables.update(origen='broadcast', broadcast=envio.lote, plantilla=envio.plantilla)
+        # El nombre con que el Inbox agrupa: la etiqueta del taller o «Broadcast» si salió a mano.
+        paso = db.session.get(WaPasoTaller, envio.paso_id) if envio.paso_id else None
+        variables.update(origen='broadcast', broadcast=envio.lote, plantilla=envio.plantilla,
+                         broadcast_nombre=(paso.plan.etiqueta if paso else None) or 'Broadcast')
         contacto.variables = variables
 
 
@@ -103,6 +104,8 @@ def _entrante(mensaje, nombres, ahora, motor=None):
     db.session.add(entrante)
     db.session.flush()
     _marcar_envio(contacto, telefono, entrante.texto, ahora)
+    if audiencia.es_baja(entrante.texto):
+        tags_service.poner(TARGET_IG_CONTACT, contacto.id, None, audiencia.ETIQUETA_BAJA, None)
     if motor is None:
         return 'mensaje'
     from app.whatsapp import flujos

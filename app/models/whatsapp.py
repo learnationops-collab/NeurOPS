@@ -60,6 +60,11 @@ class WaEnvio(db.Model):
     respuesta = db.Column(db.String(200), nullable=True)
     enviado_por_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
     contacto_id = db.Column(db.Integer, db.ForeignKey('ig_contactos.id', ondelete='SET NULL'), nullable=True)
+    # Del broadcast de un taller (ADR-W259): el paso que lo mandó, lo que va en {{1}}, {{2}}… («{nombre}» se
+    # completa al mandar) y hasta cuándo puede salir (pasado eso, un recordatorio ya no sirve).
+    paso_id = db.Column(db.Integer, db.ForeignKey('wa_pasos_taller.id', ondelete='SET NULL'), nullable=True, index=True)
+    parametros = db.Column(db.JSON, nullable=True)
+    vence_en = db.Column(db.DateTime, nullable=True)
 
 
 class WaRespuestaBoton(db.Model):

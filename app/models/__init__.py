@@ -41,6 +41,7 @@ from .playbook import (
 )
 from .instagram import InstagramWebhookEvento
 from .whatsapp import WhatsappWebhookEvento, WaEnvio, WaRespuestaBoton, WaRespuestaPendiente
+from .whatsapp_taller import WaPlanTaller, WaPasoTaller
 from .ai_usage import AiUsage
 from .intento_limitado import IntentoLimitado
 from .tag import Tag, TagGroup, TARGET_IG_CONTACT

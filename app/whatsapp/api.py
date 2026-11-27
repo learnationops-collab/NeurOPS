@@ -13,6 +13,7 @@
 """
 import csv
 import io
+import re
 from datetime import datetime
 
 from flask import Blueprint, jsonify, request
@@ -20,7 +21,7 @@ from flask_login import current_user, login_required
 
 from app import db
 from app.automatizaciones.transporte import ErrorDeEnvio
-from app.decorators import admin_required
+from app.decorators import admin_required, workshop_required
 from app.whatsapp import envios, historial
 from app.whatsapp.cliente import ClienteWhatsapp
 
@@ -117,7 +118,7 @@ def frenar(lote):
 
 @bp.route('/plantillas', methods=['GET'])
 @login_required
-@admin_required
+@workshop_required
 def plantillas():
     try:
         return jsonify({'plantillas': ClienteWhatsapp().plantillas()})
@@ -149,7 +150,7 @@ def _botones(pedidos):
 
 @bp.route('/plantillas', methods=['POST'])
 @login_required
-@admin_required
+@workshop_required
 def crear_plantilla():
     """Una plantilla de texto. Si el texto lleva {{1}}, `ejemplo_nombre` es el ejemplo que pide Meta.
     `botones`: textos de respuesta rápida; al enviarla no llevan parámetros y el toque llega como texto."""
@@ -161,8 +162,15 @@ def crear_plantilla():
     if problema:
         return jsonify({'message': problema}), 400
     cuerpo = {'type': 'BODY', 'text': texto}
-    if '{{1}}' in texto:
-        cuerpo['example'] = {'body_text': [[datos.get('ejemplo_nombre') or 'Laura']]}
+    variables = sorted({int(n) for n in re.findall(r'\{\{(\d+)\}\}', texto)})
+    if variables != list(range(1, len(variables) + 1)):
+        return jsonify({'message': 'Las variables van en orden: {{1}}, {{2}}, {{3}}…'}), 400
+    if variables:
+        # `ejemplos`: uno por variable (lo pide Meta); el primero cae en `ejemplo_nombre` si no llega.
+        ejemplos = [str(e).strip() for e in datos.get('ejemplos') or [] if str(e).strip()]
+        ejemplos = (ejemplos or [datos.get('ejemplo_nombre') or 'Laura'])
+        ejemplos += ['ejemplo'] * (len(variables) - len(ejemplos))
+        cuerpo['example'] = {'body_text': [ejemplos[:len(variables)]]}
     componentes = [cuerpo]
     if botones:
         componentes.append({'type': 'BUTTONS', 'buttons': [{'type': 'QUICK_REPLY', 'text': b} for b in botones]})
@@ -175,3 +183,4 @@ def crear_plantilla():
 
 
 from app.whatsapp import api_plantillas  # noqa: E402,F401  (registra sus rutas en este blueprint)
+from app.whatsapp import api_taller  # noqa: E402,F401

@@ -3,7 +3,9 @@ plantilla aprobada y manda a los próximos N. Todo queda en `WaEnvio` (una fila 
 
   · «Enviar» deja las filas en «pendiente» con un `lote` y el reloj del motor las manda de a POR_VUELTA por
     vuelta (una por minuto). «Frenar» borra las pendientes del lote: no salieron, vuelven con el mismo CSV.
-  · TOPE_DIARIO es del número, sumando plantillas (lo enviado hoy en Argentina más lo pendiente).
+  · TOPE_DIARIO es del número y cuenta PERSONAS distintas en las últimas 24 h, como Meta (ADR-W259): el segundo
+    recordatorio del día a la misma persona no suma. Una fila pendiente de una persona nueva espera si el tope
+    está lleno; si tiene `vence_en` (los pasos de un taller) y vence, no sale.
   · Un número va una sola vez: si ya tiene una fila que no falló, el CSV lo saltea. Los alumnos con suscripción
     vigente también se saltean, salvo que se pida incluirlos (p. ej. el broadcast de referidos).
   · Con varias plantillas, cada número recibe una al azar, en partes iguales: así se comparan entre sí.
@@ -11,7 +13,7 @@ plantilla aprobada y manda a los próximos N. Todo queda en `WaEnvio` (una fila 
 import logging
 import random
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 from app import db
@@ -22,8 +24,9 @@ from app.whatsapp.cliente import ClienteWhatsapp, configurado, normalizar, varia
 logger = logging.getLogger(__name__)
 
 ZONA = ZoneInfo('America/Argentina/Buenos_Aires')
-POR_VUELTA = 10
-TOPE_DIARIO = 200  # Meta permite 250 personas por día en este nivel; dejamos margen
+POR_VUELTA = 40  # un recordatorio de 10 minutos antes no puede tardar media hora en salir
+TOPE_DIARIO = 200  # Meta permite 250 personas en 24 h en este nivel; dejamos margen
+VENTANA = timedelta(hours=24)
 
 
 class EnvioInvalido(ValueError):
@@ -36,11 +39,19 @@ def inicio_del_dia(ahora):
     return local.replace(hour=0, minute=0, second=0, microsecond=0).astimezone(ZoneInfo('UTC')).replace(tzinfo=None)
 
 
+def personas_24h(ahora):
+    """Los teléfonos que ya recibieron algo en las últimas 24 h (lo que falló no llegó: no cuenta)."""
+    filas = (db.session.query(WaEnvio.telefono).filter(WaEnvio.enviado_en >= ahora - VENTANA,
+                                                       WaEnvio.estado != WaEnvio.FALLO).distinct())
+    return {t for (t,) in filas}
+
+
 def usados_hoy(ahora):
-    """Lo que ya ocupa el tope de hoy: lo enviado desde la medianoche y lo pendiente. Lo que falló no llegó: no cuenta."""
-    return WaEnvio.query.filter(db.or_(WaEnvio.enviado_en >= inicio_del_dia(ahora),
-                                       WaEnvio.estado == WaEnvio.PENDIENTE),
-                                WaEnvio.estado != WaEnvio.FALLO).count()
+    """Lo que ocupa el tope: las personas de las últimas 24 h más las pendientes nuevas (sin vencer)."""
+    ya = personas_24h(ahora)
+    pendientes = (db.session.query(WaEnvio.telefono).filter(
+        WaEnvio.estado == WaEnvio.PENDIENTE, db.or_(WaEnvio.vence_en.is_(None), WaEnvio.vence_en >= ahora)).distinct())
+    return len(ya | {t for (t,) in pendientes})
 
 
 def alumnos_activos():
@@ -62,7 +73,9 @@ def revisar(filas, sin_alumnos=True):
     captación no le llega a quien ya compró)."""
     # Un envío que falló (p. ej. Meta sin método de pago) no le llegó: ese número puede volver a recibir.
     # 54… y 549… (52… y 521…) son el mismo celular: cuentan como uno.
-    ya = {v for (t,) in db.session.query(WaEnvio.telefono).filter(WaEnvio.estado != WaEnvio.FALLO).distinct()
+    # Los recordatorios de un taller (paso_id) no cuentan: esa persona puede recibir otro broadcast a mano.
+    ya = {v for (t,) in db.session.query(WaEnvio.telefono).filter(WaEnvio.estado != WaEnvio.FALLO,
+                                                                  WaEnvio.paso_id.is_(None)).distinct()
           for v in variantes(t)}
     alumnos = alumnos_activos()
     vistos, para, resumen = set(), [], {'ya_recibieron': 0, 'invalidos': 0, 'repetidos': 0, 'alumnos': 0}
@@ -117,8 +130,14 @@ def _primer_nombre(nombre):
     return (nombre or '').strip().split(' ')[0].title() or 'hola'
 
 
+def _parametros(envio):
+    if envio.parametros:
+        return [_primer_nombre(envio.nombre) if p == '{nombre}' else p for p in envio.parametros]
+    return [_primer_nombre(envio.nombre)] if envio.con_nombre else None
+
+
 def _mandar_uno(cliente, envio, ahora):
-    parametros = [_primer_nombre(envio.nombre)] if envio.con_nombre else None
+    parametros = _parametros(envio)
     try:
         envio.wamid = cliente.plantilla(envio.telefono, envio.plantilla, envio.idioma, parametros)
         envio.estado = WaEnvio.ENVIADO
@@ -129,14 +148,32 @@ def _mandar_uno(cliente, envio, ahora):
 
 
 def enviar_tanda(ahora=None, cliente=None):
-    """Una vuelta del reloj: hasta POR_VUELTA pendientes, los más viejos primero. Devuelve cuántos salieron."""
+    """Una vuelta del reloj: hasta POR_VUELTA pendientes, los que vencen antes primero y después los más viejos.
+    Lo vencido no sale; una persona nueva espera si el tope de 24 h está lleno. Devuelve cuántos salieron."""
     ahora = ahora or datetime.utcnow()
     if not (cliente or configurado()):
         return 0
-    pendientes = (WaEnvio.query.filter_by(estado=WaEnvio.PENDIENTE).order_by(WaEnvio.id).limit(POR_VUELTA).all())
+    vencidos = WaEnvio.query.filter(WaEnvio.estado == WaEnvio.PENDIENTE, WaEnvio.vence_en < ahora).all()
+    for e in vencidos:
+        e.estado, e.error, e.actualizado_en = WaEnvio.FALLO, 'No salió a tiempo (tope del día o reloj parado)', ahora
+    pendientes = (WaEnvio.query.filter_by(estado=WaEnvio.PENDIENTE)
+                  .order_by(WaEnvio.vence_en.is_(None), WaEnvio.vence_en, WaEnvio.id).limit(POR_VUELTA * 10).all())
     if not pendientes:
+        db.session.commit()
         return 0
     cliente = cliente or ClienteWhatsapp()
-    salieron = sum(_mandar_uno(cliente, e, ahora) for e in pendientes)
+    ya = {v for t in personas_24h(ahora) for v in variantes(t)}
+    personas = len(personas_24h(ahora))
+    salieron = 0
+    for e in pendientes:
+        if salieron >= POR_VUELTA:
+            break
+        nueva = e.telefono not in ya
+        if nueva and personas >= TOPE_DIARIO:
+            continue
+        if _mandar_uno(cliente, e, ahora) and nueva:
+            ya.update(variantes(e.telefono))
+            personas += 1
+        salieron += 1
     db.session.commit()
     return salieron

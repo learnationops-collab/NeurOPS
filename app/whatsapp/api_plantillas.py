@@ -1,4 +1,4 @@
-"""/api/whatsapp/plantillas: gestionar las plantillas de Meta y qué pasa al tocar cada botón. Solo admin y operador.
+"""/api/whatsapp/plantillas: gestionar las plantillas de Meta y qué pasa al tocar cada botón. Borrar, solo admin y operador; las respuestas, también quien usa Workshop (ADR-W259).
 
   · DELETE /plantillas/<nombre>                     → la borra en Meta (y sus respuestas acá).
   · GET    /plantillas/<nombre>/respuestas          → {respuestas: [...], asignables: [{id, nombre}]}
@@ -11,7 +11,7 @@ from flask_login import login_required
 from app import db
 from app.automatizaciones import reparto
 from app.automatizaciones.transporte import ErrorDeEnvio
-from app.decorators import admin_required
+from app.decorators import admin_required, workshop_required
 from app.models.whatsapp import WaRespuestaBoton
 from app.whatsapp import respuestas
 from app.whatsapp.api import bp
@@ -41,7 +41,7 @@ def borrar_plantilla(nombre):
 
 @bp.route('/plantillas/<nombre>/respuestas', methods=['GET'])
 @login_required
-@admin_required
+@workshop_required
 def respuestas_de(nombre):
     reglas = WaRespuestaBoton.query.filter_by(plantilla=nombre).all()
     return jsonify({'respuestas': [respuestas.a_json(r) for r in reglas],
@@ -50,7 +50,7 @@ def respuestas_de(nombre):
 
 @bp.route('/plantillas/<nombre>/respuestas/<path:boton>', methods=['PUT'])
 @login_required
-@admin_required
+@workshop_required
 def guardar_respuesta(nombre, boton):
     try:
         botones = _botones_de(nombre)
