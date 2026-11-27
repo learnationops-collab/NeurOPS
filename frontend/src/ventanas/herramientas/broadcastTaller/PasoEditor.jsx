@@ -1,7 +1,7 @@
 // Un paso del flujo: cuándo sale, qué plantilla, qué va en cada variable, a quién y a quién no. Lo que pasa al tocar
 // cada botón son nodos propios del lienzo (ADR-W262): acá solo se listan para abrirlos y va la opción única.
 import { Trash2 } from 'lucide-react';
-import { Button, Input, Segmented, Select, Stepper } from '../../../components/standard';
+import { Button, Input, Segmented, Select, Stepper, TextArea } from '../../../components/standard';
 import { partesDe } from '../broadcastWa/useBroadcast';
 import { OpcionUnica } from '../broadcastWa/Respuestas';
 import { A_QUIEN, VARIABLES, variablesDe } from './useBroadcastTaller';
@@ -72,6 +72,32 @@ function Variables({ paso, plantilla, cambiar }) {
     );
 }
 
+const TIPOS = [
+    { value: 'plantilla', label: 'Plantilla · fuera de las 24 h' },
+    { value: 'mensaje', label: 'Mensaje · dentro de las 24 h' },
+];
+
+/** El texto de un paso de mensaje común y, si se quiere, un botón con link. */
+function MensajeComun({ paso, cambiar }) {
+    const m = paso.mensaje || { texto: '' };
+    const poner = (cambios) => cambiar({ mensaje: { ...m, ...cambios } });
+    const linkMal = Boolean(m.url) && !/^https?:\/\/\S+$/.test(m.url.trim());
+    return (
+        <div className="bt-campo">
+            <span>Mensaje</span>
+            <TextArea value={m.texto || ''} onChange={(e) => poner({ texto: e.target.value })}
+                placeholder="{nombre}, en 5 horas arrancamos 🔥 Te paso el link: {meet}" />
+            <small className="bt-s">{'{nombre}'} (o {'{{1}}'}) es su primer nombre; {'{hora}'}, {'{fecha}'}, {'{meet}'} y {'{grupo}'}, los del taller.</small>
+            <div className="bt-fila">
+                <Input value={m.titulo || ''} maxLength={20} placeholder="Botón con link (opcional)" aria-label="Texto del botón"
+                    onChange={(e) => poner({ titulo: e.target.value })} />
+                <Input value={m.url || ''} placeholder="https://…" aria-label="Link del botón" invalid={linkMal}
+                    onChange={(e) => poner({ url: e.target.value })} />
+            </div>
+        </div>
+    );
+}
+
 export default function PasoEditor({ paso, plantillas, botonesDelFlujo, wa, config, cambiar, quitar, onBoton, onConfig }) {
     const bloqueado = paso.estado === 'lanzado' || paso.estado === 'vencido';
     const plantilla = plantillas.find((p) => p.name === paso.plantilla);
@@ -94,18 +120,31 @@ export default function PasoEditor({ paso, plantillas, botonesDelFlujo, wa, conf
                 <span>Nombre</span>
                 <Input value={paso.nombre || ''} maxLength={60} placeholder="Recordatorio 2 h" onChange={(e) => cambiar({ nombre: e.target.value })} />
             </label>
-            <Cuando paso={paso} cambiar={cambiar} />
             <div className="bt-campo">
-                <span>Plantilla aprobada</span>
-                <Select size="sm" label="Plantilla" value={paso.plantilla || ''}
-                    options={[{ value: '', label: 'Elegí una plantilla…' }, ...plantillas.map((p) => ({ value: p.name, label: p.name }))]}
-                    onChange={(v) => {
-                        const p = plantillas.find((x) => x.name === v);
-                        cambiar({ plantilla: v, idioma: p?.language || 'es', parametros: [] });
-                    }} />
-                <small className="bt-s">Un paso es un envío programado y va con plantilla. Lo que sale justo al tocar un botón o al abrir un link se arma en los nodos que salen de sus botones, en el lienzo.</small>
+                <span>Qué sale</span>
+                <Segmented size="sm" label="Tipo de paso" value={paso.tipo || 'plantilla'} options={TIPOS}
+                    onChange={(tipo) => cambiar({ tipo, mensaje: paso.mensaje || { texto: '' } })} />
+                <small className="bt-s">{paso.tipo === 'mensaje'
+                    ? 'Un mensaje común solo le llega a quien escribió o tocó un botón en las últimas 24 h. Al resto no se le manda.'
+                    : 'Una plantilla aprobada por Meta le llega a cualquiera, aunque no haya escrito.'}</small>
             </div>
-            {plantilla && <Variables paso={paso} plantilla={plantilla} cambiar={cambiar} />}
+            {paso.tipo === 'mensaje' ? <MensajeComun paso={paso} cambiar={cambiar} /> : (
+                <>
+                    <div className="bt-campo">
+                        <span>Plantilla aprobada</span>
+                        <Select size="sm" label="Plantilla" value={paso.plantilla || ''}
+                            options={[{ value: '', label: 'Elegí una plantilla…' }, ...plantillas.map((p) => ({ value: p.name, label: p.name }))]}
+                            onChange={(v) => {
+                                const p = plantillas.find((x) => x.name === v);
+                                // {{1}} arranca en el nombre (lo que muestra el editor), así se guarda aunque no se toque.
+                                cambiar({ plantilla: v, idioma: p?.language || 'es', parametros: variablesDe(partesDe(p).cuerpo) ? ['nombre'] : [] });
+                            }} />
+                    </div>
+                    {plantilla && <Variables paso={paso} plantilla={plantilla} cambiar={cambiar} />}
+                </>
+            )}
+            <Cuando paso={paso} cambiar={cambiar} />
+            <small className="bt-s">Lo que sale justo al tocar un botón o al abrir un link se arma en los nodos que salen de sus botones, en el lienzo.</small>
             <div className="bt-campo">
                 <span>A quién</span>
                 <Segmented size="sm" label="A quién" value={paso.a_quien} options={A_QUIEN}

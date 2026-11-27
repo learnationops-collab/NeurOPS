@@ -39,6 +39,10 @@ class WaPasoTaller(db.Model):
     minutos = db.Column(db.Integer, nullable=True)
     dias = db.Column(db.Integer, nullable=True)
     hora = db.Column(db.String(5), nullable=True)
+    # 'plantilla' (sale a cualquiera, aprobada por Meta) o 'mensaje' (texto común: solo a quien escribió o tocó un
+    # botón en las últimas 24 h; ADR-W266). `mensaje`: {texto, titulo?, url?}.
+    tipo = db.Column(db.String(10), nullable=False, default='plantilla', server_default='plantilla')
+    mensaje = db.Column(db.JSON, nullable=True)
     plantilla = db.Column(db.String(120), nullable=True)
     idioma = db.Column(db.String(10), nullable=False, default='es')
     parametros = db.Column(db.JSON, nullable=True)

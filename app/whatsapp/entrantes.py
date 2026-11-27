@@ -80,6 +80,10 @@ def _marcar_envio(contacto, telefono, texto, ahora):
         envio.estado, envio.actualizado_en = WaEnvio.RESPONDIO, ahora
         envio.respuesta = (texto or '')[:200] or None
     envio.contacto_id = contacto.id
+    # Un mensaje común de un paso (ADR-W266) ya quedó en el chat al salir, y no es una plantilla: los botones que
+    # toque después siguen siendo los de la última plantilla que recibió.
+    if envio.plantilla == WaEnvio.MENSAJE:
+        return
     plantilla_en_chat.registrar(contacto, envio)
     variables = dict(contacto.variables or {})
     if variables.get('broadcast') != envio.lote:
