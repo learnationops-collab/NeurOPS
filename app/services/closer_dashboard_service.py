@@ -4,6 +4,7 @@ from app import db
 from app.models import User, Appointment, InstallmentPlan, Client, CloserDailyReport
 from app.services.closer_service import CloserService
 from app.services.closer_pending_service import CloserPendingService
+from app.services.momentum_metricas import not_momentum
 
 PROGRAM_NAMES = {'AL': 'Ace Learner', 'RR': 'Residency Roadmap', 'SI': 'Specialist Initiative', 'LT': 'Low Ticket'}
 
@@ -379,6 +380,7 @@ class CloserDashboardService:
         )
         if closer_id:
             q = q.filter(Appointment.closer_id == closer_id)
+        q = q.filter(not_momentum())  # ADR-W276
 
         buckets = {'Setter': {'agendas': 0, 'asistencias': 0}, 'Workshop': {'agendas': 0, 'asistencias': 0},
                    'VSL': {'agendas': 0, 'asistencias': 0}, 'Referido': {'agendas': 0, 'asistencias': 0}}

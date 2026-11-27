@@ -17,6 +17,7 @@ import MenuOrdenar from './MenuOrdenar';
 import AcademiaBarra, { SelectorColumnas } from './AcademiaBarra';
 import ConciliacionAgendas from './ConciliacionAgendas';
 import { itemTotalAcademia } from './academia';
+import { isMomentum } from '../../../utils/momentum';
 import { useModoVista } from '../../../components/listas/useModoVista';
 import { useGruposElegidos } from '../../../components/listas/useGruposElegidos';
 import { MODOS_CUMPLE, aplicarFiltros, hayCondiciones, modoCumple, rotuloDe, rotuloModo } from './filtroFacetas';
@@ -548,16 +549,17 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
         }
 
         const realizadas = lista.filter(f => f.realizada).length;
-        // La base del show up de esta tira son TODAS las agendas de la lista (pedido de Mario, 09/11/2026: «de las
-        // 17 agendas, cuántas»): el número tiene que cerrar con el total que se ve al lado.
-        const base = lista.length;
+        // La base del show up de esta tira son las agendas de la lista (pedido de Mario, 09/11/2026: «de las
+        // 17 agendas, cuántas»), menos las Momentum: suman como agenda, no en show up, close rate ni no show (ADR-W276).
+        const deCierre = lista.filter(f => !isMomentum(f));
+        const base = deCierre.length;
         // Las llamadas de triage de la lista: cuántas de las que asistieron pasaron a closing.
         const triage = lista.filter(f => f.es_triage);
         const triageAsistieron = triage.filter(f => f.asistio).length;
         const pasaron = triage.filter(f => f.closing).length;
-        const asistieron = lista.filter(f => f.asistio).length;
-        const ventas = lista.filter(f => f.post_call.key === 'venta').length;
-        const noShow = lista.filter(f => f.post_call.key === 'no_show').length;
+        const asistieron = deCierre.filter(f => f.asistio).length;
+        const ventas = deCierre.filter(f => f.post_call.key === 'venta').length;
+        const noShow = deCierre.filter(f => f.post_call.key === 'no_show').length;
         const pendientes = lista.filter(f => f.post_call.key === 'pendiente');
         const conRetraso = pendientes.filter(f => f.retraso_dias > 0).length;
         const seguimiento = lista.filter(f => f.post_call.key === 'seguimiento').length;
@@ -570,7 +572,7 @@ const Revisar = ({ tabla, setTabla, datos, cargando, rol, basis, setBasis, alcan
                 ayuda: 'Las agendas de la lista, con los filtros puestos.' },
             { key: 'show_up', label: 'show up', valor: fmt.pct(pct(asistieron, base)),
                 color: 'var(--success)', hint: de(asistieron, base),
-                ayuda: 'Se presentaron, sobre todas las agendas de la lista.' },
+                ayuda: 'Se presentaron, sobre las agendas de la lista sin las Momentum.' },
             ...(triage.length ? [{ key: 'pasaron', label: 'pasó a closing', valor: fmt.pct(pct(pasaron, triageAsistieron)),
                 color: 'var(--info)', hint: `${pasaron} de ${triageAsistieron} que asistieron`,
                 ayuda: 'De las llamadas de triage que asistieron, cuántas pasaron a una llamada de closing.' }] : []),
