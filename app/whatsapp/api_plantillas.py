@@ -1,9 +1,10 @@
 """/api/whatsapp/plantillas: gestionar las plantillas de Meta y qué pasa al tocar cada botón. Borrar, solo admin y operador; las respuestas, también quien usa Workshop (ADR-W259).
 
   · DELETE /plantillas/<nombre>                     → la borra en Meta (y sus respuestas acá).
-  · GET    /plantillas/<nombre>/respuestas          → {respuestas: [...], asignables: [{id, nombre}]}
-  · PUT    /plantillas/<nombre>/respuestas/<boton>  → {texto, botones: [{titulo, va_a}], asignar_a, etiqueta};
-                                                      todo vacío borra la regla (el toque vuelve al setter).
+  · GET    /plantillas/<nombre>/respuestas          → {respuestas: [...], config, asignables: [{id, nombre}]}
+  · PUT    /plantillas/<nombre>/respuestas/<boton>  → {texto, botones: [{titulo, va_a} | {titulo, url}], asignar_a,
+                                                      etiqueta, demora_segundos}; todo vacío borra la regla.
+  · PUT    /plantillas/<nombre>/config              → {opcion_unica, texto_repetida} (ADR-W260).
 """
 from flask import jsonify, request
 from flask_login import login_required
@@ -12,7 +13,7 @@ from app import db
 from app.automatizaciones import reparto
 from app.automatizaciones.transporte import ErrorDeEnvio
 from app.decorators import admin_required, workshop_required
-from app.models.whatsapp import WaRespuestaBoton
+from app.models.whatsapp import WaPlantillaConfig, WaRespuestaBoton
 from app.whatsapp import respuestas
 from app.whatsapp.api import bp
 from app.whatsapp.cliente import ClienteWhatsapp
@@ -35,6 +36,7 @@ def borrar_plantilla(nombre):
     except ErrorDeEnvio as error:
         return jsonify({'message': str(error)}), 400
     WaRespuestaBoton.query.filter_by(plantilla=nombre).delete()
+    WaPlantillaConfig.query.filter_by(plantilla=nombre).delete()
     db.session.commit()
     return '', 204
 
@@ -44,8 +46,19 @@ def borrar_plantilla(nombre):
 @workshop_required
 def respuestas_de(nombre):
     reglas = WaRespuestaBoton.query.filter_by(plantilla=nombre).all()
-    return jsonify({'respuestas': [respuestas.a_json(r) for r in reglas],
+    return jsonify({'respuestas': [respuestas.a_json(r) for r in reglas], 'config': respuestas.config_json(nombre),
                     'asignables': [{'id': u.id, 'nombre': u.username} for u in reparto.asignables()]})
+
+
+@bp.route('/plantillas/<nombre>/config', methods=['PUT'])
+@login_required
+@workshop_required
+def guardar_config(nombre):
+    """{opcion_unica, texto_repetida}: opción única para los botones de esa plantilla (ADR-W260)."""
+    try:
+        return jsonify(respuestas.guardar_config(nombre, request.get_json(silent=True) or {}))
+    except ValueError as error:
+        return jsonify({'message': str(error)}), 400
 
 
 @bp.route('/plantillas/<nombre>/respuestas/<path:boton>', methods=['PUT'])
