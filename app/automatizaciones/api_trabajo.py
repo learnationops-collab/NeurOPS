@@ -94,6 +94,34 @@ def marcar_resuelta(contacto_id):
     return jsonify({'resuelta_en': _iso(contacto.resuelta_en)})
 
 
+TOPE_MASIVO = 500
+
+
+@bp.route('/conversaciones/masivo', methods=['POST'])
+def cerrar_varias():
+    """Varias de una vez (ADR-W274): `leido` las marca leídas para quien pregunta; `resuelta`, además, las saca de
+    «Esperan respuesta» hasta que el lead vuelva a escribir (como `marcar_resuelta`)."""
+    datos = _cuerpo()
+    accion = datos.get('accion')
+    ids = [i for i in (datos.get('contactos') or []) if isinstance(i, int)][:TOPE_MASIVO]
+    if accion not in ('leido', 'resuelta') or not ids:
+        return jsonify({'message': 'Faltan las conversaciones o la acción'}), 400
+    ahora = servicio.ahora()
+    contactos = IgContacto.query.filter(IgContacto.id.in_(ids)).all()
+    lecturas = {r.contact_id: r for r in InboxRead.query.filter(InboxRead.user_id == current_user.id,
+                                                                 InboxRead.contact_id.in_(ids))}
+    for c in contactos:
+        if c.id in lecturas:
+            lecturas[c.id].read_at = ahora
+        else:
+            db.session.add(InboxRead(user_id=current_user.id, contact_id=c.id, read_at=ahora))
+        if accion == 'resuelta':
+            c.resuelta_en = ahora
+            evento(c.id, 'Marcada como «no requiere respuesta» (junto con otras)')
+    db.session.commit()
+    return jsonify({'hechas': len(contactos)})
+
+
 @bp.route('/conversaciones/<int:contacto_id>/asignar', methods=['POST'])
 def asignar_conversacion(contacto_id):
     """`setter_id`: a quién pasa (null: sin asignar). Manda sobre el reparto hasta una entrada nueva."""

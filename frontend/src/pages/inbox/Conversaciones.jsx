@@ -5,14 +5,15 @@
 // se vuelven a pedir solos cada 20 s. Con el teclado: ↑↓ cambian de conversación y Esc la cierra. Las sin leer
 // van al título de la pestaña y, con permiso, como aviso del escritorio (`useAvisos`).
 import { useCallback, useEffect, useState } from 'react';
-import { BarChart3, Bell, Kanban, Keyboard, ListChecks, MessageSquare, Search, Tag } from 'lucide-react';
-import { Button, EmptyState, HeaderActions, InputGroup, Panel, Segmented } from '../../components/standard';
+import { BarChart3, Bell, Kanban, Keyboard, ListChecks, MessageSquare, Search } from 'lucide-react';
+import { EmptyState, HeaderActions, InputGroup, Panel, Segmented } from '../../components/standard';
 import { useAuth } from '../../contexts/AuthContext';
 import { inboxApi } from './api';
 import useAltoLibre from './conversaciones/useAltoLibre';
 import { REFRESCO, filtrar, ordenDe } from './conversaciones/colas';
 import Canales from './conversaciones/Canales';
 import EtiquetarVarias from './conversaciones/EtiquetarVarias';
+import AccionesVarias from './conversaciones/AccionesVarias';
 import Ordenar from './conversaciones/Ordenar';
 import Detalle from './conversaciones/Detalle';
 import Embudo from './conversaciones/Embudo';
@@ -162,10 +163,8 @@ export default function Conversaciones() {
                         onClick={() => setLimite((n) => n + LIMITE)}>Cargar {LIMITE} más</button>
                 )}
                 {eligiendo ? (
-                    <div className="cv-masiva">
-                        <b>{marcadas.length ? `${marcadas.length} ${marcadas.length === 1 ? 'elegida' : 'elegidas'}` : 'Tocá las que querés etiquetar'}</b>
-                        <Button size="sm" variant="primary" icon={<Tag />} disabled={!marcadas.length} onClick={() => setEtiquetando(true)}>Etiquetar</Button>
-                    </div>
+                    <AccionesVarias visibles={visibles} marcadas={marcadas} onMarcarTodas={setMarcadas} onEtiquetar={() => setEtiquetando(true)}
+                        onHecho={() => { marcadas.forEach(marcarLeida); dejarDeElegir(); recargar(); }} />
                 ) : (
                     <p className="cv-lista-pie">
                         <span className="cv-atajos" tabIndex={0} aria-label="Atajos: flechas para cambiar de chat, Esc cierra, Enter envía"
@@ -185,7 +184,7 @@ export default function Conversaciones() {
                         <Ordenar filtro={filtro} onCambiar={setFiltro} />
                         {vista === 'chats' && (
                             <button type="button" className={`cv-barra-btn cv-elegir${eligiendo ? ' cv-barra-btn--on' : ''}`} aria-pressed={eligiendo}
-                                data-tip={eligiendo ? 'Listo|Terminar de elegir' : 'Elegir|Marcar varias para etiquetarlas juntas'}
+                                data-tip={eligiendo ? 'Listo|Terminar de elegir' : 'Elegir|Marcar varias para cerrarlas o etiquetarlas juntas'}
                                 onClick={() => (eligiendo ? dejarDeElegir() : setEligiendo(true))}>
                                 <ListChecks size={15} aria-hidden="true" />{eligiendo ? 'Listo' : ''}
                             </button>

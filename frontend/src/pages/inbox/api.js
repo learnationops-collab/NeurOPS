@@ -43,6 +43,8 @@ export const inboxApi = {
     marcarCanal: (id, canal) => api.put(`/inbox/conversaciones/${id}/canal`, { canal }).then(datos),
     anotarCita: (id, cita) => api.post(`/inbox/conversaciones/${id}/citas`, cita).then(datos),
     etiquetarVarias: (contactos, etiquetas) => api.post('/inbox/etiquetas/masivo', { contactos, etiquetas }).then(datos),
+    // `leido` o `resuelta` (no requiere respuesta) a varias de una vez (ADR-W274).
+    cerrarVarias: (contactos, accion) => api.post('/inbox/conversaciones/masivo', { contactos, accion }).then(datos),
     corregirVariable: (id, campo, valor) => api.put(`/inbox/conversaciones/${id}/variables`, { campo, valor }).then(datos),
     crearNota: (id, texto) => api.post(`/inbox/conversaciones/${id}/notas`, { texto }).then(datos),
     crearTarea: (id, tarea) => api.post(`/inbox/conversaciones/${id}/tareas`, tarea).then(datos),

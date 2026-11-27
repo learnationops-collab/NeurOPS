@@ -33,7 +33,7 @@ ACCIONES_DEL_SETTER = {'inbox.mover_en_flujo', 'inbox.bot_de_conversacion', 'inb
                        'inbox.escribir_al_lead', 'inbox.proponer_cambios',
                        'inbox.programar_seguimiento', 'inbox.cancelar_seguimiento',
                        'inbox.poner_etiqueta', 'inbox.sacar_etiqueta', 'inbox.guardar_mensajes',
-                       'inbox.marcar_leido', 'inbox.marcar_resuelta', 'inbox.asignar_conversacion', 'inbox.mover_etapa', 'inbox.corregir_variable',
+                       'inbox.marcar_leido', 'inbox.marcar_resuelta', 'inbox.cerrar_varias','inbox.asignar_conversacion', 'inbox.mover_etapa', 'inbox.corregir_variable',
                        'inbox.crear_nota', 'inbox.crear_tarea', 'inbox.cambiar_tarea',
                        'inbox.crear_rapida', 'inbox.borrar_rapida', 'inbox.subir_audio', 'inbox.borrar_audio',
                        'inbox.mover_fase', 'inbox.marcar_canal', 'inbox.anotar_cita', 'inbox.etiquetar_varias',

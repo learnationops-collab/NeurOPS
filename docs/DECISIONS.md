@@ -2490,3 +2490,10 @@
 - **Decisión:** el desplegable Asistentes / Closers va al lado del título en Inbox, Analyze, Winners y Stats y manda en las cuatro. Con Closers: Analyze por veredicto (Seleccionadas, Reserva, A decidir, Descartadas; Antiguas suma las archivadas), Winners (En prueba, Baja) y Stats de Postulaciones. La ficha de Closer pasa a dos zonas: las respuestas abiertas en acordeón a la izquierda y, a la derecha, el score con su desglose, los datos medibles y las decisiones fijas abajo en baldosas de color. Ninguna ficha de Talent va debajo del dock (`RESERVA_DOCK`).
 - **Qué se pierde:** la ficha de Closer deja de verse igual que la de Asistente; la sección Archivos desaparece (video y llamada siguen en la cabecera).
 - **Consecuencias:** la sección Closers del dock sigue como estaba. Los pesos de la ficha de Closer se fuerzan con `:is(#id, …)` para ganarle al reset global.
+
+## ADR-W274 · Inbox: cerrar varias conversaciones juntas (leídas o «No requieren respuesta»)
+- **Estado:** aceptada · 27/11/2026
+- **Contexto:** en la reunión el equipo pidió cerrar o marcar del todo los chats inactivos o sin leer. «No requiere respuesta» (ADR-W235) y «leído» se hacían de a una conversación, y a los setters les quedaban decenas esperando que no pedían nada.
+- **Decisión:** la barra de «Elegir» (la de etiquetar varias) suma «Todas» (las que deja el filtro), «Leídas» y «No requieren». `POST /api/inbox/conversaciones/masivo {contactos, accion: leido|resuelta}`, hasta 500, también para el setter. «No requieren» además las deja leídas y anota el evento en cada chat. Vale hasta que el lead vuelva a escribir, como la de a una.
+- **Qué se pierde:** nada; no hay un «cerrar» definitivo: si el lead escribe, vuelve a la espera.
+- **Consecuencias:** se elige con el Filtro (por ejemplo, «Esperan respuesta» de hace más de 7 días) y se cierran de un toque. Lo del audio mandado desde la app de Instagram no necesitó cambio: los ecos de audio se guardan desde el 16/10 y no queda ninguna conversación esperando por eso.
