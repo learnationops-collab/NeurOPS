@@ -54,7 +54,7 @@ export default function PlantillaNueva({ base, datos, onLista }) {
             <label className="bw-campo">
                 <span>Texto</span>
                 <TextArea value={texto} onChange={(e) => setTexto(e.target.value)} placeholder="Hola {{1}}, ¿cómo estás?…" />
-                <small className="bw-s">Escribí {'{{1}}'} donde va el primer nombre: se llena solo al mandar.</small>
+                <small className="bw-s">{'{{1}}'} es el primer nombre. En el broadcast de un taller podés sumar {'{{2}}'}, {'{{3}}'}… y elegir en cada paso qué va (hora, Meet, grupo).</small>
             </label>
             <div className="bw-campo">
                 <span>Botones de respuesta rápida <small className="bw-s">(opcional, hasta {MAX_BOTONES})</small></span>

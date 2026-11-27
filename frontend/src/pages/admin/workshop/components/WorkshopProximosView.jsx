@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { AlertTriangle, CalendarPlus, Check, Edit2, Loader2, MessageCircle, Radio, Trash2, Users, Video } from 'lucide-react';
+import { AlertTriangle, CalendarPlus, Check, Edit2, Loader2, Megaphone, MessageCircle, Radio, Trash2, Users, Video } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../../../../services/api';
 import { Button, Chip } from '../../../../components/standard';
 import { PanelCab } from '../../../comercial/components/Shared';
 import ChipTipo from '../planificar/ChipTipo';
+import ChipBroadcast, { useResumenBroadcast } from '../planificar/ChipBroadcast';
+import { abrirVentana } from '../../../../ventanas/ventanasStore';
 import ModalGruposTaller from '../planificar/ModalGruposTaller';
 import ModalPlan from '../planificar/ModalPlan';
 import { talleresPorDelante } from '../planificar/plan';
@@ -162,6 +164,7 @@ const WorkshopProximosView = ({ events, onEdit, onDelete, onProgramado }) => {
     const ahora = new Date();
     const vigente = enLaLanding(events, ahora);
     const talleres = talleresPorDelante(events, ahora);
+    const broadcast = useResumenBroadcast(talleres.map((e) => e.id));
     const hayProximoConHora = talleres.some((e) => e.inicio_at && esProximo(e, ahora));
 
     return (
@@ -211,10 +214,15 @@ const WorkshopProximosView = ({ events, onEdit, onDelete, onProgramado }) => {
                                                 {e.grupos} por conjunto
                                             </Chip>
                                         )}
+                                        <ChipBroadcast resumen={broadcast?.talleres?.[e.id]} estandar={broadcast?.estandar} />
                                     </div>
                                 </div>
 
                                 <div className="wp-taller-btns">
+                                    <Button icon={<Megaphone aria-hidden="true" />} onClick={() => abrirVentana('broadcast-taller', { tallerId: e.id })}
+                                        aria-label={`Broadcast de ${e.name}`}>
+                                        Broadcast
+                                    </Button>
                                     <Button icon={<Users aria-hidden="true" />} onClick={() => setConGrupos(e)}
                                         aria-label={`Grupos de ${e.name}`}>
                                         Grupos

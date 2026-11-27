@@ -44,6 +44,17 @@ export const HERRAMIENTAS = [
         ancho: 620,
         Componente: lazy(() => import('./herramientas/broadcastWa/BroadcastVentana.jsx')),
     },
+    // El broadcast de un taller (ADR-W259): audiencia, flujo de recordatorios y plantillas. No va en el menú: se abre
+    // desde Planificar › Próximos talleres con `{ tallerId }`.
+    {
+        key: 'broadcast-taller',
+        label: 'Broadcast del taller',
+        Icono: Megaphone,
+        roles: ['admin', 'operator', 'director_marketing'],
+        enMenu: false,
+        ancho: 1180,
+        Componente: lazy(() => import('./herramientas/broadcastTaller/BroadcastTallerVentana.jsx')),
+    },
     // El chat del equipo, que vive en la Academia (ADR-W171): General · Equipo, quién está conectado y Learnito.
     {
         key: 'chat',
