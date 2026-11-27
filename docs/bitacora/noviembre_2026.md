@@ -1238,10 +1238,14 @@
 - Las tandas no se abren dos juntas y un link de recorrido no deja abrir otro encima ([Novedades.jsx](../../frontend/src/pages/closer/novedades/Novedades.jsx)); escena de paso armada con datos ([EscenaGenerica.jsx](../../frontend/src/components/recorrido/EscenaGenerica.jsx)).
 - Arreglo: «Novedades» desde un botón volvía a abrir las del Workspace sin depender del evento del clic. La ayuda de Seguimientos del Filtro dice que también cuenta lo marcado a mano.
 
-### 26/11/2026 · Broadcast de WhatsApp de cada taller desde Planificar (ADR-W259) · en develop
+### 26/11/2026 · Broadcast de WhatsApp de cada taller desde Planificar (ADR-W259) · en producción
 - Cada taller de Próximos talleres tiene «Broadcast» y un chip con contactos y pasos: abre la ventana con Audiencia, Flujo, Plantillas e Historial ([broadcastTaller/](../../frontend/src/ventanas/herramientas/broadcastTaller/), [ChipBroadcast.jsx](../../frontend/src/pages/admin/workshop/planificar/ChipBroadcast.jsx)).
 - Audiencia: CSV, agendaron y no cerraron, o los de otra etiqueta; cada número lleva la etiqueta del taller («WS 26/11»). Descarta agendados, clientes y alumnos (interruptores) y las bajas siempre ([audiencia.py](../../app/whatsapp/audiencia.py)).
 - Flujo: pasos relativos a la hora del taller con plantilla, variables, a quién y exclusiones; el reloj del motor los lanza y cada fila vence si no sale a tiempo ([taller.py](../../app/whatsapp/taller.py), [api_taller.py](../../app/whatsapp/api_taller.py)).
 - El tope del número cuenta personas distintas en 24 h; salen 40 por vuelta ([envios.py](../../app/whatsapp/envios.py)). Plantillas con {{1}}, {{2}}… y abiertas al director de marketing.
 - Inbox: Todos · Instagram · WhatsApp a la vista y WhatsApp por broadcast ([Canales.jsx](../../frontend/src/pages/inbox/conversaciones/Canales.jsx)).
 - Migración `c4e6a8b0d2f3` (`wa_planes_taller`, `wa_pasos_taller`, tres columnas en `wa_envios`).
+
+### 27/11/2026 · El reloj del motor arranca solo después de un deploy
+- Arrancaba recién con el primer webhook de Instagram o WhatsApp: el paso de prueba del broadcast del 26/11 quedó esperando a las 03:00. Ahora el scheduler lo arranca (y lo despierta) cada 5 minutos desde el proceso líder ([reminder_scheduler.py](../../app/services/reminder_scheduler.py)).
+- Primer broadcast de prueba de un taller desde producción: `hello_world` a un número del equipo, entregado.
