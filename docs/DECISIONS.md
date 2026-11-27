@@ -2396,3 +2396,14 @@
   - **Menos texto:** el orden de la lista («por último mensaje») y los atajos de teclado pasan a íconos que lo dicen al pasar el mouse.
 - **Qué se pierde:** el orden ya no se lee sin pasar el mouse. El ancho no viaja con la cuenta: en otra compu arranca en el de base.
 - **Consecuencias:** sin cambios de API. Con movimiento reducido no hay aura animada ni entradas.
+
+## ADR-W265: la respuesta a un botón pone y saca etiquetas, y el link va junto a otros botones
+
+- **Fecha:** 27/11/2026 · **Subsistema:** respuestas por botón (`app/whatsapp/respuestas.py`, `tags_service.sacar_por_nombre`, `WaRespuestaBoton.etiquetas`/`.quitar`), editor (`broadcastWa/Respuestas.jsx`, `Despues.jsx`) y lienzo del flujo (`broadcastTaller/Nodos.jsx`, `Lienzo.jsx`) · **Estado:** implementada
+- **Contexto:** a la misma persona le pueden llegar varios envíos y elegir «Darme acceso» en uno y «Darme de baja» en otro, o al revés. Con una sola etiqueta que se pone, quedaban las dos. En ManyChat cada botón pone una etiqueta y saca la contraria. Además, un botón con link (ADR-W260) iba solo, y en el mensaje con el link de Google Calendar Mario quiere sumar botones que lleven a otros caminos.
+- **Decisión:**
+  - Cada respuesta tiene **etiquetas que pone y etiquetas que saca** (varias, separadas por coma). Primero saca y después pone; sacar una que no tiene no hace nada. `etiqueta` queda con la primera de las que pone, para lo que ya la leía.
+  - Un mensaje puede llevar **un botón con link y hasta 3 de respuesta**, también el que sale al abrir el link. WhatsApp no los mezcla en un mensaje: sale el texto con el link y, justo debajo, un segundo mensaje («👇») con los botones de respuesta. Los botones del mensaje de «al abrir el link» siguen la respuesta de un botón de la plantilla y cuentan como un mensaje aparte para la opción única (origen «<botón>>link»).
+  - En el lienzo, la respuesta muestra «+ etiquetas» y «− etiquetas», y de los botones de «Al abrir el link» salen cables a la respuesta que siguen.
+- **Qué se pierde:** con link y botones de respuesta, a la persona le llegan dos mensajes y los botones quedan en el segundo, con «👇» como texto. Si el primero falla, el segundo no sale.
+- **Consecuencias:** migración `c1e3a5b7d9f2` (idempotente). La API de respuestas acepta `etiquetas` y `quitar` (listas); `etiqueta` sola se sigue aceptando.

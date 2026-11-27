@@ -1261,3 +1261,8 @@
 - La lista y la columna del lead se mueven con una manija en el borde que da al chat. Doble clic vuelve al ancho de siempre ([Tirador.jsx](../../frontend/src/pages/inbox/conversaciones/Tirador.jsx)).
 - Aura magenta y violeta en los paneles. El chat elegido tiene una barrita con brillo, los paneles del lead entran de a uno y las cifras de Estadísticas se levantan al pasar el mouse ([sidebar.css](../../frontend/src/pages/inbox/conversaciones/sidebar.css)).
 - El orden de la lista y los atajos de teclado pasan a íconos con su explicación al pasar el mouse.
+
+### 27/11/2026 · Respuestas de WhatsApp: poner y sacar etiquetas, y link junto a otros botones (ADR-W265)
+- Cada respuesta a un botón pone unas etiquetas y saca otras, como en ManyChat (por ejemplo, «Darme acceso» pone «confirmado» y saca «baja») ([Respuestas.jsx](../../frontend/src/ventanas/herramientas/broadcastWa/Respuestas.jsx), [respuestas.py](../../app/whatsapp/respuestas.py)).
+- Un botón con link puede ir con hasta 3 botones de respuesta, también en el mensaje al abrir el link: salen en dos mensajes seguidos ([Despues.jsx](../../frontend/src/ventanas/herramientas/broadcastWa/Despues.jsx)). El lienzo muestra las etiquetas y los cables de esos botones.
+- Migración `c1e3a5b7d9f2`.
