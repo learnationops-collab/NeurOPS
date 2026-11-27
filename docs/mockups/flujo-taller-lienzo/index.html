@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Mockup · Flujo del taller en lienzo</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#0b0d1f; --card:#151830; --card2:#1b1f3b; --line:#2a2f52; --in:#10132a; --ink:#eef0ff; --mut:#9aa0c3; --mut2:#6d7299;
+          --ok:#2fc58a; --info:#5b9bff; --warn:#f0b440; --mag:#ff3d9a; --vio:#8f78ff; --wa:#25D366; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:Inter,system-ui,sans-serif; color:var(--ink); background:var(--bg); padding:20px; }
+  .nota { max-width:1400px; margin:0 auto 14px; font-size:13px; color:var(--mut); line-height:1.55; background:var(--card); border:1px dashed var(--line); border-radius:14px; padding:12px 16px; }
+  .nota b { color:var(--ink); }
+  .app { max-width:1400px; margin:0 auto; display:grid; grid-template-columns:minmax(0,1fr) 340px; gap:14px; height:640px; }
+  .barra { max-width:1400px; margin:0 auto 10px; display:flex; gap:8px; align-items:center; }
+  .barra .sp { flex:1; }
+  .btn { border:1px solid var(--line); background:transparent; color:var(--ink); border-radius:999px; padding:7px 13px; font:700 11px Inter; letter-spacing:.05em; text-transform:uppercase; cursor:pointer; }
+  .btn-p { background:var(--mag); border-color:var(--mag); }
+  .s { font-size:12px; color:var(--mut); }
+  .lienzo { position:relative; overflow:auto; border:1px solid var(--line); border-radius:16px;
+            background:radial-gradient(circle,#23284a 1px,transparent 1px) 0 0/18px 18px,#0e1126; }
+  .mundo { position:relative; width:1500px; height:900px; }
+  svg.cables { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+  .zoom { position:sticky; left:12px; top:12px; z-index:3; display:inline-flex; gap:4px; background:var(--card); border:1px solid var(--line); border-radius:10px; padding:3px; margin:12px; }
+  .zoom span { padding:4px 9px; font-size:12px; color:var(--mut); }
+
+  .nodo { position:absolute; width:230px; background:var(--card2); border:1px solid var(--line); border-radius:14px; padding:10px; font-size:12px; cursor:pointer; }
+  .nodo.sel { border-color:var(--mag); box-shadow:0 0 0 1px var(--mag); }
+  .nodo .tipo { font:800 10px Inter; letter-spacing:.06em; text-transform:uppercase; margin-bottom:6px; display:flex; gap:6px; align-items:center; }
+  .t-paso { color:var(--vio); } .t-resp { color:var(--info); } .t-link { color:var(--wa); } .t-set { color:var(--warn); }
+  .nodo b { display:block; font-size:12.5px; margin-bottom:6px; }
+  .burb { background:#dcf8c6; color:#1c2033; border-radius:4px 10px 10px 10px; padding:7px 9px; font-size:11.5px; line-height:1.4; }
+  .bts { display:grid; gap:4px; margin-top:6px; }
+  .bt { position:relative; background:#fff; color:#0a7cc1; border-radius:8px; padding:5px 8px; font-size:11px; font-weight:700; text-align:center; }
+  .bt.link { color:#1f9d6b; }
+  .bt::after { content:''; position:absolute; right:-16px; top:50%; width:10px; height:10px; margin-top:-5px; border-radius:50%; background:var(--info); border:2px solid #0e1126; }
+  .bt.link::after { background:var(--wa); }
+  .meta { margin-top:6px; font-size:11px; color:var(--mut); }
+  .chip { display:inline-block; border-radius:999px; padding:2px 8px; font-size:10.5px; font-weight:700; background:#22264a; color:var(--mut); }
+  .c-ok { background:#123b2c; color:var(--ok); } .c-info { background:#15274a; color:var(--info); }
+  .set { width:150px; text-align:center; }
+  .mas { position:absolute; width:150px; border:1px dashed #3d4377; border-radius:12px; padding:12px; text-align:center; color:var(--mut); font-size:12px; }
+  .riel { position:absolute; left:0; width:100%; border-top:1px dashed #262b52; }
+  .riel span { position:absolute; left:12px; top:6px; font:800 10px Inter; color:var(--mut2); letter-spacing:.06em; text-transform:uppercase; }
+
+  .panel { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:14px; overflow:auto; }
+  .panel h3 { margin:0 0 4px; font-size:14px; }
+  .rot { font:800 10.5px Inter; letter-spacing:.07em; text-transform:uppercase; color:var(--mut2); margin:14px 0 6px; }
+  .campo { background:var(--in); border:1px solid var(--line); border-radius:10px; padding:8px 10px; font-size:12.5px; }
+  .seg { display:inline-flex; background:var(--in); border:1px solid var(--line); border-radius:10px; padding:3px; gap:2px; }
+  .seg span { padding:4px 8px; border-radius:7px; font-size:11.5px; font-weight:700; color:var(--mut); }
+  .seg span.on { background:var(--card2); color:var(--ink); }
+  .fila { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+  .vista { display:none; } .vista.on { display:block; }
+  .ir { color:var(--info); font-weight:700; font-size:12px; cursor:pointer; }
+</style>
+</head>
+<body>
+<div class="nota">
+  <b>Maqueta para aprobar · Flujo del taller en lienzo, como ManyChat.</b> El flujo crece <b>hacia la derecha</b> en el lienzo, no hacia abajo en el panel. Cada <b>paso</b> (envío programado con plantilla) es una fila; de cada botón sale un cable a lo que pasa al tocarlo (<b>respuesta</b>), y del botón con link a lo que sale <b>al abrirlo</b>. El panel de la derecha muestra <b>solo el nodo que tocaste</b>, corto. Tocá los nodos para ver su panel. Los textos son los de tu flujo del 28/11.
+</div>
+<div class="barra">
+  <span class="s">Las horas se cuentan desde el inicio del taller. Arrastrá el lienzo para moverte.</span><div class="sp"></div>
+  <button class="btn">Guardar como estándar</button><button class="btn btn-p">Programar 1</button>
+</div>
+<div class="app">
+  <div class="lienzo">
+    <div class="zoom"><span>−</span><span>100%</span><span>+</span><span>Centrar</span></div>
+    <div class="mundo" id="mundo">
+      <svg class="cables" id="cables"></svg>
+      <div class="riel" style="top:40px"><span>2 h antes · sáb 28/11 12:30</span></div>
+      <div class="riel" style="top:520px"><span>Al empezar · sáb 28/11 14:30</span></div>
+
+      <!-- Paso 1 -->
+      <div class="nodo sel" id="p1" data-v="v-paso" style="left:30px; top:70px">
+        <div class="tipo t-paso">Paso · plantilla <span class="chip">Borrador</span></div>
+        <b>Opening</b>
+        <div class="burb">Hola {{1}}, cómo va? Mañana es la conferencia sobre cómo estudiar… Te escribo para pasarte el recurso.</div>
+        <div class="bts"><div class="bt" id="p1b1">Darme acceso</div><div class="bt" id="p1b2">Darme de baja</div></div>
+        <div class="meta">A todos · ~236 · Opción única</div>
+      </div>
+
+      <!-- Respuesta a Darme acceso -->
+      <div class="nodo" id="r1" data-v="v-resp" style="left:330px; top:70px">
+        <div class="tipo t-resp">Si toca «Darme acceso» · 5 s</div>
+        <div class="burb">Te dejo la guía del EARN System, la técnica que usamos para que lo que estudiás se quede…</div>
+        <div class="bts"><div class="bt link" id="r1b1">🔗 ACCEDER A LA GUÍA</div></div>
+        <div class="meta">Etiqueta «confirmado»</div>
+      </div>
+
+      <!-- Al abrir el link -->
+      <div class="nodo" id="l1" data-v="v-link" style="left:630px; top:70px">
+        <div class="tipo t-link">Al abrir el link · 10 s</div>
+        <div class="burb">Agendá la clase en tu calendario así no te la perdés 👇</div>
+        <div class="bts"><div class="bt link" id="l1b1">🔗 Agregar a Calendar</div></div>
+        <div class="meta">Sale una sola vez</div>
+      </div>
+      <div class="mas" id="m1" style="left:930px; top:120px">Fin · el link abre Google Calendar</div>
+
+      <!-- Respuesta a Darme de baja -->
+      <div class="nodo" id="r2" data-v="v-resp2" style="left:330px; top:300px">
+        <div class="tipo t-resp">Si toca «Darme de baja»</div>
+        <div class="burb">Listo {nombre}, no te escribo más por acá 🙏</div>
+        <div class="meta">Etiqueta «Baja WhatsApp» · sale de los próximos pasos</div>
+      </div>
+
+      <!-- Paso 2 -->
+      <div class="nodo" id="p2" data-v="v-paso2" style="left:30px; top:550px">
+        <div class="tipo t-paso">Paso · plantilla <span class="chip">Borrador</span></div>
+        <b>Link de la clase</b>
+        <div class="burb">Estamos entrando 🔴 Link: {{2}}</div>
+        <div class="meta">Etiqueta «confirmado» · ~90</div>
+      </div>
+      <div class="mas" style="left:30px; top:760px">+ Paso</div>
+      <div class="mas" style="left:330px; top:580px">+ Respuesta a un botón</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="vista on" id="v-paso">
+      <h3>Paso · Opening</h3><span class="s">Envío programado: va con plantilla aprobada</span>
+      <div class="rot">Cuándo</div><div class="seg"><span class="on">Antes o después</span><span>Día y hora</span><span>Al programar</span></div>
+      <div class="fila" style="margin-top:6px"><div class="campo">2</div><div class="campo">horas</div><div class="seg"><span class="on">antes</span><span>después</span></div></div>
+      <div class="rot">Plantilla</div><div class="campo">workshop_1d · Aprobada</div>
+      <div class="rot">A quién</div><div class="campo">Todos ▾</div>
+      <div class="rot">Excluir etiquetas</div><div class="campo" style="color:var(--mut2)">Ninguna</div>
+      <div class="rot">Botones de la plantilla</div>
+      <div class="fila"><span class="chip c-info">Opción única ●</span></div>
+      <p class="s">Tocá un botón en el lienzo (o <span class="ir">«Darme acceso» →</span>) para armar qué pasa al tocarlo.</p>
+    </div>
+    <div class="vista" id="v-resp">
+      <h3>Si toca «Darme acceso»</h3><span class="s">Sale solo · vale para todos los envíos de workshop_1d</span>
+      <div class="rot">Mensaje</div><div class="campo">Te dejo la guía del EARN System… Lo profundizamos en la clase, esto es solo para «calentar motores» jajaja</div>
+      <div class="rot">Espera</div><div class="fila"><div class="campo">5</div><div class="campo">segundos ▾</div></div>
+      <div class="rot">Botón</div><div class="fila"><div class="campo">ACCEDER A LA GUÍA</div><div class="campo">Abre un link ▾</div></div>
+      <div class="campo" style="margin-top:6px">https://drive.google.com/…</div>
+      <p class="s"><span class="ir">Al abrir el link: «Agendá la clase…» →</span></p>
+      <div class="rot">Además</div><div class="fila"><div class="campo">Sin cambiar asignación ▾</div><div class="campo">confirmado</div></div>
+    </div>
+    <div class="vista" id="v-link">
+      <h3>Al abrir «ACCEDER A LA GUÍA»</h3><span class="s">Sale una sola vez por persona</span>
+      <div class="rot">Mensaje</div><div class="campo">Agendá la clase en tu calendario así no te la perdés 👇</div>
+      <div class="rot">Espera</div><div class="fila"><div class="campo">10</div><div class="campo">segundos ▾</div></div>
+      <div class="rot">Botón (opcional)</div><div class="fila"><div class="campo">Agregar a Calendar</div></div>
+      <div class="campo" style="margin-top:6px">https://calendar.google.com/…</div>
+    </div>
+    <div class="vista" id="v-resp2">
+      <h3>Si toca «Darme de baja»</h3><span class="s">Sale solo</span>
+      <div class="rot">Mensaje</div><div class="campo">Listo {nombre}, no te escribo más por acá 🙏</div>
+      <div class="rot">Botones</div><p class="s">Ninguno · <span class="ir">+ Botón</span></p>
+      <div class="rot">Además</div><div class="fila"><div class="campo">Sin cambiar asignación ▾</div><div class="campo">Baja WhatsApp</div></div>
+    </div>
+    <div class="vista" id="v-paso2">
+      <h3>Paso · Link de la clase</h3><span class="s">Envío programado</span>
+      <div class="rot">Cuándo</div><div class="campo">Al empezar el taller</div>
+      <div class="rot">A quién</div><div class="campo">Etiqueta «confirmado»</div>
+    </div>
+  </div>
+</div>
+<script>
+  const cables = [['p1b1','r1'],['p1b2','r2'],['r1b1','l1'],['l1b1','m1']];
+  function dibujar() {
+    const m = document.getElementById('mundo').getBoundingClientRect();
+    const svg = document.getElementById('cables');
+    svg.innerHTML = cables.map(([a, b]) => {
+      const A = document.getElementById(a).getBoundingClientRect(), B = document.getElementById(b).getBoundingClientRect();
+      const x1 = A.right - m.left + 12, y1 = A.top + A.height / 2 - m.top, x2 = B.left - m.left, y2 = B.top + 24 - m.top;
+      const c = document.getElementById(a).classList.contains('link') ? '#25D366' : '#5b9bff';
+      return `<path d="M${x1},${y1} C${x1 + 60},${y1} ${x2 - 60},${y2} ${x2},${y2}" stroke="${c}" stroke-width="2" fill="none"/>`;
+    }).join('') + (() => { const A = document.getElementById('p1').getBoundingClientRect(), B = document.getElementById('p2').getBoundingClientRect();
+      return `<path d="M${A.left - m.left + 20},${A.bottom - m.top} L${B.left - m.left + 20},${B.top - m.top}" stroke="#8f78ff" stroke-width="2" stroke-dasharray="5 5" fill="none"/>`; })();
+  }
+  document.querySelectorAll('.nodo').forEach(n => n.onclick = () => {
+    document.querySelectorAll('.nodo').forEach(x => x.classList.toggle('sel', x === n));
+    document.querySelectorAll('.vista').forEach(v => v.classList.toggle('on', v.id === n.dataset.v));
+  });
+  document.querySelectorAll('.ir').forEach(i => i.onclick = () => {
+    const destino = i.textContent.includes('Agendá') ? 'l1' : 'r1'; document.getElementById(destino).click();
+  });
+  window.addEventListener('load', dibujar); window.addEventListener('resize', dibujar);
+  document.querySelector('.lienzo').addEventListener('scroll', dibujar);
+</script>
+</body>
+</html>

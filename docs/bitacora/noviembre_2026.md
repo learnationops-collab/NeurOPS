@@ -1240,3 +1240,6 @@
 - «Cuando abre el link»: el botón con link de una respuesta puede mandar otro mensaje al abrirse (por ejemplo, agregar el evento a Google Calendar), con espera y botón propio. El link pasa por Work, que anota y redirige ([links.py](../../app/whatsapp/links.py), [Despues.jsx](../../frontend/src/ventanas/herramientas/broadcastWa/Despues.jsx)).
 - Arreglo: las ramas del flujo de un taller decían «Queda para el setter» aunque el botón ya tuviera respuesta ([Flujo.jsx](../../frontend/src/ventanas/herramientas/broadcastTaller/Flujo.jsx)).
 - Migración `a8c0e2f4b6d7`.
+### 27/11/2026 · El flujo del taller en un lienzo de nodos y cables (ADR-W262)
+- Pestaña Flujo del broadcast: cada paso es una fila y de cada botón sale un cable a su respuesta, y del link a lo que sale al abrirlo; el panel muestra solo el nodo tocado, sin estirarse hacia abajo ([Lienzo.jsx](../../frontend/src/ventanas/herramientas/broadcastTaller/Lienzo.jsx), [PanelNodo.jsx](../../frontend/src/ventanas/herramientas/broadcastTaller/PanelNodo.jsx)).
+- El lienzo se arrastra con el mouse y tiene zoom. Mockup en `docs/mockups/flujo-taller-lienzo/`.
