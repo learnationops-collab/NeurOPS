@@ -48,7 +48,6 @@ def _minuto(fila):
 
 def _asistidas(filas, desde, hasta):
     """({persona: {minuto}}, {cliente: {minuto}}) de las llamadas de closing con show up de esos leads."""
-    from app.agendas_v2.manual import ORIGEN_MOMENTUM
     from app.models import User
 
     triage = {u.id for u in User.query.all() if u.tiene_rol('triage')}
@@ -63,7 +62,7 @@ def _asistidas(filas, desde, hasta):
                 if a.id in vistas:
                     continue
                 vistas.add(a.id)
-                if a.closer_id in triage or a.origin == ORIGEN_MOMENTUM or derivar_estado(a, ahora) not in CON_SHOW_UP:
+                if a.closer_id in triage or 'momentum' in (a.origin or '').lower() or derivar_estado(a, ahora) not in CON_SHOW_UP:
                     continue
                 minuto = a.start_time.replace(second=0, microsecond=0)
                 if a.person_uuid:

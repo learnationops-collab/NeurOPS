@@ -336,7 +336,11 @@ class ComercialAgendasMixin:
     def totales_agendas(filas):
         """Las 6 tarjetas de "Totales de lo filtrado". Se calcula sobre las filas que el usuario
         está viendo, no sobre todo el período: es el requisito de que los números cierren con el
-        filtro aplicado."""
+        filtro aplicado.
+
+        Las Momentum (alumnos, otro funnel) cuentan como agenda pero no en show up ni en closing (ADR-W276)."""
+        momentum = sum(1 for f in filas if f.get('tipo_llamada') == 'momentum')
+        todas, filas = filas, [f for f in filas if f.get('tipo_llamada') != 'momentum']
         realizadas = [f for f in filas if f['realizada']]
         base = [f for f in filas if f['base_show_up']]
         asistieron = [f for f in filas if f['asistio']]
@@ -350,7 +354,8 @@ class ComercialAgendasMixin:
         con_retraso = [f for f in pendientes if f['retraso_dias'] > 0]
 
         return {
-            'agendas': len(filas),
+            'agendas': len(todas),
+            'momentum': momentum,
             'realizadas': len(realizadas),
             'asistieron': len(asistieron),
             'base_show_up': len(base),

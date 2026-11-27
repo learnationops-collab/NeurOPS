@@ -107,11 +107,12 @@ const enSub = (texto) => {
 };
 
 // Tipo y subestado del seguimiento, tal como los arma hoy cada rama antes de llegar a `follow`.
-function seguimientoDeRama(r) {
+function seguimientoDeRama(r, contexto = {}) {
   if (r.nocierre_next === 'seguimiento') {
     return {
       tipo: 'tomada',
-      sub: r.with_decision_maker ? 'Decisión pendiente · con decisor' : 'Sin decisor · oferta presentada',
+      sub: contexto.esMomentum || contexto.momentum ? 'Momentum · oferta presentada'
+        : r.with_decision_maker ? 'Decisión pendiente · con decisor' : 'Sin decisor · oferta presentada',
     };
   }
   if (r.nopres_next === 'seguimiento') return { tipo: 'tomada', sub: 'Falta agendar 2ª llamada' };
@@ -172,7 +173,7 @@ function bloqueDeck(r, contexto) {
     offer_presented: r.offer_presented ?? null,
   };
   // Segunda llamada o reagenda con fecha: vuelve a confirmaciones.
-  if (r.nopres_next === 'segunda' || r.reag_dejo_fecha === true) {
+  if (r.nopres_next === 'segunda' || r.reag_dejo_fecha === true || r.noshow_next === 'reagendar') {
     return { ...base, confirm_status: 'por_confirmar', result: 'Pendiente' };
   }
   // Cadencia de seguimiento: el lead contestó y dejó fecha nueva.
@@ -219,7 +220,7 @@ function bloqueDeck(r, contexto) {
     };
   }
   // Primer seguimiento programado desde el reporte de la llamada.
-  const seg = seguimientoDeRama(r);
+  const seg = seguimientoDeRama(r, contexto);
   if (seg) {
     return {
       ...base,
@@ -384,6 +385,9 @@ export function construirPayload(respuestas = {}, contexto = {}) {
       reagenda: bloqueReagenda(r),
       referidos: bloqueReferidos(r),
       momentum: bloqueMomentum(r, contexto),
+      // Momentum · Cortar acceso (ADR-W276): el backend lo hace vencer hoy después de guardar el reporte.
+      cortar_acceso: [r.nocierre_next, r.noshow_next, r.cancel_next].includes('cortar')
+        ? { motivo: String(r.motivo_corte || '').trim() } : null,
       respuestas: r,
     },
   };

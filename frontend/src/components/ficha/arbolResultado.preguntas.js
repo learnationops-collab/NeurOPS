@@ -106,6 +106,10 @@ const opts = (lista, tono) => lista.map((l) => ({ valor: l, label: l, tono }));
 // Destinos comunes: varias ramas terminan en el mismo formulario.
 const vaASeguimiento = (r) => [r.nocierre_next, r.nopres_next, r.noshow_next, r.cancel_next]
   .includes('seguimiento') || r.reag_dejo_fecha === false || r.sig_action === 'next';
+// «Cortar acceso» en una Momentum (ADR-W276): desde No pagó, No asistió o Canceló.
+export const vaACortar = (r) => [r.nocierre_next, r.noshow_next, r.cancel_next].includes('cortar');
+const esMomentum = (c) => !!(c.momentum || c.esMomentum);
+const CORTAR = { valor: 'cortar', label: 'Cortar acceso', sub: 'Le vence hoy', tono: 'error' };
 const vaADescartar = (r) => ['perdido', 'descartar', 'no_lead']
   .some((v) => [r.nocierre_next, r.nopres_next, r.noshow_next, r.cancel_next].includes(v));
 // Hubo contacto humano real → corresponde preguntar por referidos (misma regla que hoy:
@@ -212,19 +216,19 @@ export const PREGUNTAS = [
     clave: 'decisor', hito: 'resultado', campo: 'with_decision_maker', tipo: 'opciones',
     enunciado: '¿Estuvo el decisor?',
     opciones: [{ ...si, label: 'Sí, con decisor' }, { ...no, label: 'No, sin decisor' }],
-    cuando: (r, c) => enLlamada(r, c) && r.res === 'asistio' && !c.momentum,
+    cuando: (r, c) => enLlamada(r, c) && r.res === 'asistio' && !esMomentum(c),
   },
   { // ← pres (2600): offer_presented
     clave: 'oferta', hito: 'cierre', campo: 'offer_presented', tipo: 'opciones',
     enunciado: '¿Se presentó la oferta?', opciones: [{ ...si, label: 'Sí, se presentó' }, { ...no, label: 'No se presentó' }],
-    cuando: (r, c) => enLlamada(r, c) && r.res === 'asistio' && !c.momentum,
+    cuando: (r, c) => enLlamada(r, c) && r.res === 'asistio' && !esMomentum(c),
   },
-  { // La Momentum de la Academia (ADR-W129): en vez de decisor, oferta y cierre, si el alumno sigue. Cada
-    // opción completa esas tres (TabResultado `valoresDeOpcion`) y el resto del árbol sigue igual.
+  { // Toda Momentum (ADR-W129, ADR-W276): en vez de decisor, oferta y cierre, cómo quedó el alumno. Cada
+    // opción completa oferta y cierre (TabResultado `valoresDeOpcion`) y el resto del árbol sigue igual.
     clave: 'momentum', hito: 'cierre', campo: 'sigue', tipo: 'opciones',
-    enunciado: (r, c) => (c.momentum === 'sena' ? '¿Sigue en el programa?' : '¿Hace el upsell?'),
+    enunciado: '¿Cómo quedó?',
     opciones: (r, c) => opcionesDeMomentum(c),
-    cuando: (r, c) => enLlamada(r, c) && r.res === 'asistio' && !!c.momentum,
+    cuando: (r, c) => enLlamada(r, c) && r.res === 'asistio' && esMomentum(c),
   },
   { // ← venta (2621)
     clave: 'cierre', hito: 'cierre', campo: 'cierre', tipo: 'opciones',
@@ -406,11 +410,14 @@ export const PREGUNTAS = [
   // ---------- ramas sin venta ----------
   { // ← nocierre (2663)
     clave: 'nocierre_next', hito: 'cierre', campo: 'nocierre_next', tipo: 'opciones',
-    enunciado: 'Se presentó la oferta pero no se cerró. ¿Siguiente acción?',
-    opciones: [
+    enunciado: (r, c) => (esMomentum(c) ? 'No pagó. ¿Siguiente paso?' : 'Se presentó la oferta pero no se cerró. ¿Siguiente acción?'),
+    opciones: (r, c) => (esMomentum(c) ? [
+      { valor: 'seguimiento', label: 'Programar seguimiento', sub: 'Sigue con acceso', tono: 'success' },
+      CORTAR,
+    ] : [
       { valor: 'seguimiento', label: 'Programar seguimiento', tono: 'success' },
       { valor: 'perdido', label: 'Lead perdido / descartado', sub: 'Descartar prospecto', tono: 'error' },
-    ],
+    ]),
     cuando: (r) => r.cierre === false,
   },
   { // ← nopres (2694)
@@ -445,10 +452,14 @@ export const PREGUNTAS = [
   {
     clave: 'noshow_next', hito: 'resultado', campo: 'noshow_next', tipo: 'opciones',
     enunciado: '¿Siguiente paso operativo?',
-    opciones: [
+    opciones: (r, c) => (esMomentum(c) ? [
+      { valor: 'seguimiento', label: 'Programar seguimiento', sub: 'Continuar contacto', tono: 'success' },
+      { valor: 'reagendar', label: 'Reagendar', sub: 'Nueva fecha y hora', tono: 'info' },
+      CORTAR,
+    ] : [
       { valor: 'seguimiento', label: 'Programar seguimiento', sub: 'Continuar contacto', tono: 'success' },
       { valor: 'descartar', label: 'Descartar lead', sub: 'Dar por perdido', tono: 'error' },
-    ],
+    ]),
     cuando: (r, c) => enLlamada(r, c) && r.res === 'no_asistio',
   },
 
@@ -464,11 +475,14 @@ export const PREGUNTAS = [
   {
     clave: 'cancel_next', hito: 'resultado', campo: 'cancel_next', tipo: 'opciones',
     enunciado: '¿Siguiente paso operativo?',
-    opciones: [
+    opciones: (r, c) => (esMomentum(c) ? [
+      { valor: 'seguimiento', label: 'Programar seguimiento', sub: 'Continuar contacto', tono: 'success' },
+      CORTAR,
+    ] : [
       { valor: 'reagendar', label: 'Reagendar ahora', sub: 'Cambiar la cita', tono: 'info' },
       { valor: 'seguimiento', label: 'Seguimiento', sub: 'Programar contacto', tono: 'success' },
       { valor: 'no_lead', label: 'Marcar No Lead', sub: 'No califica', tono: 'error' },
-    ],
+    ]),
     cuando: (r, c) => enLlamada(r, c) && r.res === 'cancelo',
   },
 
@@ -490,6 +504,14 @@ export const PREGUNTAS = [
       { ...no, label: 'No dejó fecha', sub: 'Mandar a seguimiento' },
     ],
     cuando: (r, c) => (enLlamada(r, c) && r.res === 'reagenda') || r.cancel_next === 'reagendar',
+  },
+  { // Momentum · No asistió → Reagendar (ADR-W276): directo a la fecha nueva.
+    clave: 'reag_fecha_noshow', hito: 'resultado', tipo: 'formulario', enunciado: '¿Para cuándo queda?',
+    campos: [
+      { campo: 'nueva_fecha_agenda', label: 'Nueva fecha', tipo: 'fecha', requerido: true },
+      { campo: 'nueva_hora_agenda', label: 'Nueva hora', tipo: 'hora', requerido: true },
+    ],
+    cuando: (r) => r.noshow_next === 'reagendar',
   },
   { // ← reagSi (2951): fecha Y hora obligatorias
     clave: 'reag_fecha', hito: 'resultado', tipo: 'formulario', enunciado: '¿Para cuándo queda?',
@@ -562,6 +584,12 @@ export const PREGUNTAS = [
       { campo: 'notes', label: 'Ángulo del seguimiento / Notas (opcional)', tipo: 'parrafo' },
     ],
     cuando: vaASeguimiento,
+  },
+  { // Momentum · Cortar acceso (ADR-W276): el motivo es obligatorio y queda en su historial.
+    clave: 'cortar_motivo', hito: 'resultado', tipo: 'formulario', enunciado: '¿Por qué le cortás el acceso?',
+    ayuda: 'Su acceso a la Academia vence hoy. El motivo queda en su historial.',
+    campos: [{ campo: 'motivo_corte', label: 'Motivo', tipo: 'parrafo', requerido: true, minimoTexto: MINIMO_MOTIVO }],
+    cuando: vaACortar,
   },
   { // ← reasonModal de lost_after_pres / lost_no_pres / lost_no_show / no_lead: motivo OBLIGATORIO
     clave: 'descarte', hito: 'resultado', tipo: 'formulario', enunciado: '¿Por qué se descarta?',

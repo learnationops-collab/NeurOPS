@@ -122,6 +122,18 @@ def _datos_de_persona(client):
     return datos, identidades
 
 
+def _acceso_momentum(client, programa_code, ingreso):
+    from app.services.momentum_acceso import acceso
+
+    return acceso(client, programa_code, ingreso)
+
+
+def _es_sesion_momentum(appt):
+    from app.services.momentum_academia import es_sesion_momentum
+
+    return es_sesion_momentum(appt)
+
+
 def _tipo_momentum(appt):
     from app.services.momentum_academia import es_momentum
 
@@ -150,6 +162,8 @@ def _identidad(appt, client, programa_nombre, ingreso, baja=None):
         'fuente': (appt.origin or None) if appt else None,
         # Una Momentum de la Academia: 'sena' o 'cierre'. Su reporte pregunta si sigue (TabResultado).
         'momentum': _tipo_momentum(appt),
+        # Cualquier Momentum (también la del link `momentum-sessions`): sin decisor (ADR-W276).
+        'es_momentum': _es_sesion_momentum(appt),
         # El segmento de la agenda (nucleo/segmento.py) y sus puntos: con qué prioridad llega el lead.
         # Sin el de la agenda (manual, setter, anterior a Thalamus), el de su cliente, como en `segmentos_lectura`.
         'segmento': ((appt.segmento or (client.segmento if client else None)) or None) if appt else None,
@@ -495,7 +509,10 @@ def ficha(appointment_id=None, client_id=None, usuario=None, ahora=None, anclar=
                              tiene_venta=bool(ventas), deuda=deuda, baja=bool(baja),
                              solo_sena=_que_compro(tipos_vendidos)[1])
     return {
-        'identidad': _identidad(appt, client, programa_nombre, _iso(enrollment_dt), baja),
+        'identidad': {**_identidad(appt, client, programa_nombre, _iso(enrollment_dt), baja),
+                      # El acceso del alumno, solo en una Momentum (ADR-W276).
+                      'acceso': (_acceso_momentum(client, programa_code, enrollment_dt)
+                                 if _es_sesion_momentum(appt) else None)},
         'estado': estado,
         'confirmacion': confirmacion,
         'resultado': _resultado(appt, ventas, estado_libro, confirmacion['cerrada'], deuda,

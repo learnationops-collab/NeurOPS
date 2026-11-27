@@ -90,7 +90,13 @@ const MENSAJES = {
     recordatorio_previo: 'Recordatorio guardado.',
     cerrar_confirmacion: 'Confirmación cerrada: el lead está 100% confirmado.',
     // «No va a pagar» da de baja, y la baja se le avisa a la Academia: se dice qué pasó.
-    reportar_resultado: (r) => conAccesoDeLaBaja('Resultado reportado.', r),
+    // Momentum · Cortar acceso (ADR-W276): si la Academia no lo dejó, el reporte quedó igual y se dice por qué.
+    reportar_resultado: (r) => {
+        if (r?.acceso_cortado === false) {
+            return { tono: 'warning', texto: `Resultado reportado, pero el acceso no se cortó: ${r.acceso_error}` };
+        }
+        return conAccesoDeLaBaja(r?.acceso_cortado ? 'Resultado reportado. Acceso cortado: vence hoy.' : 'Resultado reportado.', r);
+    },
     // La venta del árbol de «Resultado» también da el acceso a la Academia si se pidió: se dice
     // qué pasó con él, porque «se creó la cuenta» significa que al cliente le llegó un email.
     registrar_venta: (r) => {

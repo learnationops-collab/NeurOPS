@@ -3,15 +3,14 @@
 
 import { cantidadCuotas, cronogramaEnTexto, MAXIMO_CUOTAS } from './arbolResultado.venta';
 
-// Las respuestas de la Momentum (ADR-W129). «Con plan» solo si todavía no tiene cuotas por cobrar.
+// Cómo quedó el alumno en la Momentum (ADR-W129, ADR-W276). «Plan de cuotas» solo si no tiene cuotas por cobrar.
 export function opcionesMomentum(c = {}) {
-  const sena = c.momentum === 'sena';
   const sinPlan = !(c.cuotas || []).some((q) => q.estado !== 'pagado');
   return [
-    { valor: 'pago', label: sena ? 'Sí, pagó' : 'Sí, hace el upsell', sub: 'Registrar el pago', tono: 'success' },
-    ...(sena && sinPlan ? [{ valor: 'plan', label: 'Sí, con plan de pago', sub: 'Hoy no paga: armá cómo paga lo que debe', tono: 'success' }] : []),
+    { valor: 'pago', label: 'Pagó', sub: 'Registrar el pago', tono: 'success' },
+    ...(sinPlan ? [{ valor: 'plan', label: 'Plan de cuotas', sub: 'Hoy no paga: armá cómo paga lo que debe', tono: 'success' }] : []),
     { valor: 'pensando', label: 'Lo está pensando', sub: 'Objeción y seguimiento', tono: 'warning' },
-    { valor: 'no', label: sena ? 'No sigue' : 'No por ahora', sub: sena ? 'Se da de baja en la Academia' : 'Queda registrado', tono: 'error' },
+    { valor: 'no', label: 'No pagó', sub: 'Objeción, y seguimiento o cortar acceso', tono: 'error' },
   ];
 }
 
@@ -35,11 +34,11 @@ export function camposDelPlan(r) {
 }
 
 /**
- * Lo que completa cada respuesta de la Momentum: decisor y oferta van en sí, y el cierre lleva al camino de
+ * Lo que completa cada respuesta de la Momentum: la oferta va en sí y el decisor queda vacío (es un alumno, ADR-W276), y el cierre lleva al camino de
  * siempre (pagó → la venta; pensando o no → «No cerró» con su objeción). Con plan no hay venta hoy.
  */
 export function valoresMomentum(valor, c = {}) {
-  const base = { sigue: valor, with_decision_maker: true, offer_presented: true, nocierre_next: undefined };
+  const base = { sigue: valor, with_decision_maker: null, offer_presented: true, nocierre_next: undefined };
   if (valor === 'pago') return { ...base, cierre: true };
   if (valor === 'plan') return { ...base, cierre: undefined, ...(c.programaCliente ? { programa: c.programaCliente } : {}) };
   if (valor === 'pensando') return { ...base, cierre: false, nocierre_next: 'seguimiento' };
