@@ -174,3 +174,19 @@
 @media (max-width: 1300px){
   .thalamus.inbox .cv-learnito{min-height:420px}
 }
+
+/* El día en el chat («Hoy», «Ayer», «Miércoles 25 nov») y, al pie, hace cuánto no responde (Mario, 27/11/2026). */
+.thalamus.inbox .cv-dia{position:sticky;top:0;z-index:2;align-self:center;margin:6px 0 2px;pointer-events:none}
+.thalamus.inbox .cv-dia span{display:inline-block;padding:3px 12px;border-radius:999px;font-size:11px;font-weight:700;color:var(--text-muted);
+  background:color-mix(in srgb,var(--bg-panel, #10142e) 85%,transparent);border:1px solid var(--border-subtle);backdrop-filter:blur(8px)}
+@keyframes cvSinResp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.thalamus.inbox .cv-sin-resp{align-self:flex-end;display:inline-flex;align-items:center;gap:7px;margin-top:2px;padding:5px 12px;border-radius:999px;font-size:11.5px;
+  color:var(--text-muted);border:1px dashed var(--border-main);cursor:help;animation:cvSinResp .4s cubic-bezier(.22,.7,.2,1) both}
+.thalamus.inbox .cv-sin-resp b{font-weight:700;color:var(--text-main)}
+.thalamus.inbox .cv-sin-resp span{opacity:.8}
+.thalamus.inbox .cv-sin-resp--toca{color:var(--warning);border-color:color-mix(in srgb,var(--warning) 55%,transparent);background:color-mix(in srgb,var(--warning) 8%,transparent)}
+.thalamus.inbox .cv-sin-resp--rojo{color:var(--error);border-color:color-mix(in srgb,var(--error) 55%,transparent);background:color-mix(in srgb,var(--error) 8%,transparent)}
+.thalamus.inbox .cv-sin-resp--toca b,.thalamus.inbox .cv-sin-resp--rojo b{color:inherit}
+.thalamus.inbox .cv-sin-resp--toca svg,.thalamus.inbox .cv-sin-resp--rojo svg{animation:nvLatidoSuave 1.8s ease-in-out infinite}
+@keyframes nvLatidoSuave{0%,100%{transform:scale(1)}50%{transform:scale(1.2)}}
+@media (prefers-reduced-motion:reduce){.thalamus.inbox .cv-sin-resp,.thalamus.inbox .cv-sin-resp svg{animation:none}}

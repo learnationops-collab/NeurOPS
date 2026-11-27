@@ -2,8 +2,8 @@
 // (amarillas, el lead no las ve), las tareas y los eventos (reasignada, cambió la sub-etapa, corrigió una
 // variable). Debajo de cada respuesta del lead, qué activó en el flujo. Al final, lo que el setter acaba de
 // mandar y todavía no confirmó Instagram (`useEnvio`): «enviando…» o «no salió» con Reintentar.
-import { useEffect, useRef } from 'react';
-import { Bot, CalendarCheck, Check, History, MessageCircle, RotateCcw, StickyNote, X, Zap } from 'lucide-react';
+import { Fragment, useEffect, useRef, useState } from 'react';
+import { Bot, CalendarCheck, Check, History, Hourglass, MessageCircle, RotateCcw, StickyNote, X, Zap } from 'lucide-react';
 import { Button, IconButton } from '../../../components/standard';
 import { rotuloPaso } from '../estadoFlujo';
 import { ADJUNTOS } from './colas';
@@ -12,10 +12,59 @@ import { MarcaEnMensaje } from './MarcaSeguimiento';
 
 const ABIERTA = ['en_curso', 'esperando_respuesta', 'esperando_tiempo'];
 
+// «hoy 10:34», «ayer 10:34», «25 nov 10:34» (Mario, 27/11/2026: que se sepa de qué día es sin pensar).
 export function momento(iso) {
     const d = new Date(iso);
-    const hoy = new Date().toDateString() === d.toDateString();
-    return d.toLocaleString('es', hoy ? { hour: '2-digit', minute: '2-digit' } : { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    const hora = d.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
+    const dias = diasAtras(d);
+    if (dias === 0) return `hoy ${hora}`;
+    if (dias === 1) return `ayer ${hora}`;
+    return `${d.toLocaleDateString('es', { day: 'numeric', month: 'short' })} ${hora}`;
+}
+
+// Cuántos días calendario atrás (0 = hoy).
+function diasAtras(d) {
+    const ahora = new Date();
+    return Math.round((new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate()) - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 86400000);
+}
+
+// El separador de día del chat: «Hoy», «Ayer», «Miércoles 25 nov».
+function rotuloDia(iso) {
+    const d = new Date(iso);
+    const dias = diasAtras(d);
+    if (dias === 0) return 'Hoy';
+    if (dias === 1) return 'Ayer';
+    const t = d.toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'short' });
+    return t.charAt(0).toUpperCase() + t.slice(1);
+}
+
+// «45 min», «3 h», «2 d».
+const duracion = (min) => (min < 60 ? `${Math.max(1, Math.round(min))} min` : min < 1440 ? `${Math.floor(min / 60)} h` : `${Math.floor(min / 1440)} d`);
+
+// Al pie del chat, si lo último (sin el bot) es del equipo: hace cuánto no responde (desde el primer mensaje que quedó
+// sin respuesta) y hace cuánto fue tu último mensaje. Con 12 h desde el último, ya toca seguimiento (ámbar); con 3 días
+// sin responder, rojo (Mario, 27/11/2026: «saber si amerita seguimiento»). Se mueve solo cada minuto.
+function SinRespuesta({ mensajes }) {
+    const [, setTic] = useState(0);
+    useEffect(() => { const id = setInterval(() => setTic((n) => n + 1), 60000); return () => clearInterval(id); }, []);
+    const propios = mensajes.filter((m) => m.origen !== 'motor');
+    let i = propios.length - 1;
+    while (i >= 0 && propios[i].direccion !== 'entrante') i -= 1;
+    const nuestros = propios.slice(i + 1);
+    if (!nuestros.length) return null;
+    const ahora = Date.now();
+    const desde = (ahora - Date.parse(nuestros[0].en)) / 60000;
+    const ultimo = (ahora - Date.parse(nuestros[nuestros.length - 1].en)) / 60000;
+    const toca = ultimo >= 12 * 60;
+    const tono = desde >= 3 * 1440 ? 'rojo' : toca ? 'toca' : '';
+    return (
+        <li className={`cv-sin-resp${tono ? ` cv-sin-resp--${tono}` : ''}`}
+            data-tip={`${toca ? 'Ya toca seguimiento' : 'Todavía no toca seguimiento'}|${i >= 0 ? `Su última respuesta: ${momento(propios[i].en)}` : 'Nunca respondió'} · tu último mensaje: ${momento(nuestros[nuestros.length - 1].en)}`}>
+            <Hourglass size={12} aria-hidden="true" />
+            <b>No responde hace {duracion(desde)}</b>
+            <span>tu último hace {duracion(ultimo)}{toca ? ' · toca seguimiento' : ''}</span>
+        </li>
+    );
 }
 
 // Qué activó la respuesta del lead: «Palabra clave #enarm → arrancó X», «Guardó examen = ENARM → Paso 2».
@@ -119,10 +168,23 @@ export default function Feed({ mensajes, notas, tareas, pendientes = [], onReint
     const cantidad = items.length + pendientes.length;
     // Abre en lo último, como cualquier chat, y baja cuando llega algo nuevo.
     useEffect(() => { if (lista.current) lista.current.scrollTop = lista.current.scrollHeight; }, [cantidad]);
+    // Un separador cada vez que cambia el día, como en WhatsApp.
+    let diaAnterior = null;
     return (
         <ol className="cv-mensajes" ref={lista} onMouseUp={onSeleccion}>
-            {items.map((x) => <Item key={x.key} x={x} onCambio={onCambio} />)}
+            {items.map((x) => {
+                const dia = new Date(x.en).toDateString();
+                const nuevo = dia !== diaAnterior;
+                diaAnterior = dia;
+                return (
+                    <Fragment key={x.key}>
+                        {nuevo && <li className="cv-dia" aria-label={rotuloDia(x.en)}><span>{rotuloDia(x.en)}</span></li>}
+                        <Item x={x} onCambio={onCambio} />
+                    </Fragment>
+                );
+            })}
             {pendientes.map((p) => <Pendiente key={p.id} p={p} onReintentar={onReintentar} onDescartar={onDescartar} />)}
+            {!pendientes.length && <SinRespuesta mensajes={mensajes} />}
         </ol>
     );
 }

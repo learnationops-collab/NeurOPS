@@ -1297,3 +1297,6 @@
 ### 27/11/2026 · WhatsApp: nombre del perfil primero y, sin nombre, texto acomodado (ADR-W271)
 - Se le escribe a cada uno con su nombre de WhatsApp; sin nombre, «{nombre}, en 5 horas…» sale «En 5 horas…» y la plantilla con {{1}} lleva «👋» ([respuestas.py](../../app/whatsapp/respuestas.py), [audiencia.py](../../app/whatsapp/audiencia.py)).
 - Prueba acelerada del flujo del 28/11 con el número del equipo en el plan de prueba del 26/11: Opening, botones y mensaje de Calendar funcionaron.
+### 27/11/2026 · El chat dice de qué día es cada mensaje y hace cuánto no responde
+- Cada mensaje dice «hoy 10:34», «ayer 10:34» o «25 nov 10:34», y el chat tiene separadores de día («Hoy», «Ayer», «Miércoles 25 nov») que quedan fijos arriba al deslizar ([Feed.jsx](../../frontend/src/pages/inbox/conversaciones/Feed.jsx)).
+- Al pie del chat, si lo último es del equipo: «No responde hace 2 d · tu último hace 3 h». Pasa a ámbar con «toca seguimiento» cuando el último tuyo tiene más de 12 h, y a rojo con 3 días sin responder. Al pasar el mouse, su última respuesta y tu último mensaje con fecha.
