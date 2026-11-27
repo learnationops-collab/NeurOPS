@@ -1229,3 +1229,6 @@
 - El tope del número cuenta personas distintas en 24 h; salen 40 por vuelta ([envios.py](../../app/whatsapp/envios.py)). Plantillas con {{1}}, {{2}}… y abiertas al director de marketing.
 - Inbox: Todos · Instagram · WhatsApp a la vista y WhatsApp por broadcast ([Canales.jsx](../../frontend/src/pages/inbox/conversaciones/Canales.jsx)).
 - Migración `c4e6a8b0d2f3` (`wa_planes_taller`, `wa_pasos_taller`, tres columnas en `wa_envios`).
+### 27/11/2026 · El reloj del motor arranca solo después de un deploy
+- Arrancaba recién con el primer webhook de Instagram o WhatsApp: el paso de prueba del broadcast del 26/11 quedó esperando a las 03:00. Ahora el scheduler lo arranca (y lo despierta) cada 5 minutos desde el proceso líder ([reminder_scheduler.py](../../app/services/reminder_scheduler.py)).
+- Primer broadcast de prueba de un taller desde producción: `hello_world` a un número del equipo, entregado.

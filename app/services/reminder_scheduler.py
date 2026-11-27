@@ -225,6 +225,19 @@ def start_scheduler(app):
             except Exception as e:
                 logger.error(f"[ReminderScheduler] Error cerrando los días del reporte: {e}")
 
+    def _reloj_del_motor():
+        # El reloj del motor (Instagram, WhatsApp y los pasos programados del broadcast de un taller) arrancaba
+        # recién con el primer webhook después de un deploy: de noche, un recordatorio podía quedar esperando
+        # hasta vencer. `avisar` lo arranca si no corre y lo despierta; la vuelta usa su propio candado.
+        with app.app_context():
+            from app.automatizaciones import servicio
+            try:
+                if not soy_lider(CLAVE_DEL_SCHEDULER):
+                    return
+                servicio.avisar(app)
+            except Exception as e:
+                logger.error(f"[ReminderScheduler] Error arrancando el reloj del motor: {e}")
+
     from datetime import datetime, timedelta
 
     _scheduler = BackgroundScheduler(daemon=True)
@@ -254,6 +267,8 @@ def start_scheduler(app):
                        id='meta_gasto', next_run_time=datetime.now() + timedelta(minutes=9))
     _scheduler.add_job(_pagos_a_la_academia, 'interval', hours=3,
                        id='pagos_a_la_academia', next_run_time=datetime.now() + timedelta(minutes=11))
+    _scheduler.add_job(_reloj_del_motor, 'interval', minutes=5,
+                       id='reloj_del_motor', next_run_time=datetime.now() + timedelta(minutes=1))
     _scheduler.add_job(_senas, 'interval', minutes=AVANCE_INTERVAL_MINUTES,
                        id='senas_sin_seguir', next_run_time=datetime.now() + timedelta(minutes=3))
     # Una vez por día; si el proceso arranca hasta 30 min tarde (un deploy), sale igual.
