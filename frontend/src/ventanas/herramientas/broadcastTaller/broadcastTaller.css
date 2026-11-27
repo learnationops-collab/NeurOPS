@@ -80,3 +80,4 @@
 .bt-clic:hover td{background:color-mix(in srgb,var(--ln-text-faint,#8a8ea0) 8%,transparent)}
 .bt-tel{font-size:12px;font-variant-numeric:tabular-nums}
 .bt-link{font-weight:600;color:var(--ln-info,#3b7dd8)}
+.bt-rama .bt-s{font-size:11px}

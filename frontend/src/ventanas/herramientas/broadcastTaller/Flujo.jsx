@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { CalendarClock, Pause, Plus, Save, Star } from 'lucide-react';
 import { Button, Chip, EmptyState, toast } from '../../../components/standard';
 import { embudo, partesDe } from '../broadcastWa/useBroadcast';
+import { resumen } from '../broadcastWa/Respuestas';
 import PasoEditor from './PasoEditor';
 import { cuandoEnPalabras, fechaCorta, mensajeDe, pasoNuevo } from './useBroadcastTaller';
 
@@ -28,8 +29,8 @@ function Ramas({ plantilla, reglas }) {
                 return (
                     <div key={b} className="bt-rama">
                         <small>Si toca «{b}»</small>
-                        <span>{r ? [r.texto && `«${r.texto.slice(0, 60)}${r.texto.length > 60 ? '…' : ''}»`, r.etiqueta && `etiqueta ${r.etiqueta}`]
-                            .filter(Boolean).join(' · ') || 'Asigna' : 'Queda para el setter'}</span>
+                        <span>{resumen(r)}</span>
+                        {r?.texto && <span className="bt-s">«{r.texto.slice(0, 60)}{r.texto.length > 60 ? '…' : ''}»</span>}
                     </div>
                 );
             })}
@@ -132,7 +133,8 @@ export default function Flujo({ datos, wa }) {
                     </div>
                     {actual && (
                         <PasoEditor key={actual.id || `n${elegido}`} paso={actual} plantillas={plantillas} botonesDelFlujo={botonesDelFlujo}
-                            wa={wa} cambiar={(c) => cambiar(elegido, c)} quitar={() => quitar(elegido)} />
+                            wa={wa} cambiar={(c) => cambiar(elegido, c)} quitar={() => quitar(elegido)}
+                            onReglas={(n, lista) => setReglas((x) => ({ ...x, [n]: lista }))} />
                     )}
                 </div>
             )}
