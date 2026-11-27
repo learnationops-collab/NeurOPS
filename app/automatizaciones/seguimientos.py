@@ -2,7 +2,8 @@
 
   · Los programa una persona del equipo desde el chat: un texto o un audio de la biblioteca, y en cuántas horas.
   · Los manda el reloj del motor en cada vuelta (`servicio.tick`), con las mismas reglas que escribir a mano
-    (`escribir.enviar`): ventana de 24 h o HUMAN_AGENT hasta 7 días, control del hilo y pausa del bot.
+    (`escribir.enviar`): control del hilo y pausa del bot. Solo dentro de las 24 h: salen solos, y Meta permite
+    HUMAN_AGENT únicamente a una persona que escribe y manda en el momento (ADR-W282).
   · La condición se mira al momento de mandar: si el lead escribió después de que se programó, se cancela.
   · Lo que Instagram rechaza (ventana cerrada, error de Meta) queda en `error` con el motivo, a la vista.
 """
@@ -30,9 +31,8 @@ def programar(contacto, autor_id, horas, ahora, texto=None, audio=None, url_audi
     if audio is None:
         escribir.cuerpo_de(texto)  # valida el texto ahora, no cuando ya no está quien lo escribió
     enviar_en = ahora + timedelta(hours=horas)
-    if escribir.ventana(contacto, enviar_en) == 'instagram':
-        raise AccionInvalida('Para esa hora ya pasaron 24 h desde su último mensaje y desde Work no sale: '
-                             'elegí antes o mandalo desde Instagram')
+    if escribir.ventana(contacto, enviar_en) != 'abierta':
+        raise AccionInvalida(escribir.PROGRAMADO_FUERA)
     s = AutSeguimiento(contacto_id=contacto.id, autor_id=autor_id, texto=None if audio else texto.strip(),
                        audio_id=audio.id if audio else None, url_audio=url_audio,
                        nombre_audio=audio.name if audio else None, pausar=pausar,
@@ -121,7 +121,7 @@ def mandar_vencidos(motor):
         else:
             try:
                 escribir.enviar(motor, contacto, s.autor_id, texto=s.texto, url_audio=s.url_audio,
-                                nombre_audio=s.nombre_audio, pausar=s.pausar)
+                                nombre_audio=s.nombre_audio, pausar=s.pausar, a_mano=False)
                 _cerrar(s, AutSeguimiento.ENVIADO, ahora)
                 enviados += 1
             except AccionInvalida as error:

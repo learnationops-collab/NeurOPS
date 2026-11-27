@@ -6,10 +6,13 @@ import { AlarmClock, X } from 'lucide-react';
 import { Button, IconButton, Modal, ModalHeader, Segmented, Select, TextArea, toast } from '../../../components/standard';
 import { inboxApi } from '../api';
 
+// Sale solo, así que tiene que caer dentro de las 24 h del último mensaje del lead (ADR-W282).
 const CUANDO = [
-    { value: '1', label: '1 h' }, { value: '3', label: '3 h' }, { value: '24', label: '24 h' },
-    { value: '48', label: '2 días' }, { value: '72', label: '3 días' },
+    { value: '1', label: '1 h' }, { value: '3', label: '3 h' }, { value: '6', label: '6 h' },
+    { value: '12', label: '12 h' }, { value: '18', label: '18 h' },
 ];
+const MARGEN_H = 0.25; // que no salga justo al cierre
+const horasQuedan = (c) => (c.ultimo_entrante_en ? 24 - (Date.now() - new Date(c.ultimo_entrante_en)) / 3600000 - MARGEN_H : 0);
 const ESTADO = { enviado: 'Salió', cancelado: 'Cancelado', error: 'No salió', aviso: 'Toca' };
 const hora = (iso) => new Date(iso).toLocaleString('es-AR', { weekday: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
@@ -18,11 +21,13 @@ export function ProgramarSeguimiento({ contacto, textoInicial, pausar, onCerrar,
     const [texto, setTexto] = useState(textoInicial || '');
     const [audio, setAudio] = useState('');
     const [audios, setAudios] = useState([]);
-    const [horas, setHoras] = useState('24');
+    const [quedan] = useState(() => horasQuedan(contacto));
+    const opciones = CUANDO.filter((o) => Number(o.value) <= quedan);
+    const [horas, setHoras] = useState(opciones.at(-1)?.value || '');
     const [enviando, setEnviando] = useState(false);
     useEffect(() => { inboxApi.audios().then(setAudios).catch(() => setAudios([])); }, []);
 
-    const listo = que === 'texto' ? texto.trim() : audio;
+    const listo = (que === 'texto' ? texto.trim() : audio) && horas;
     const programar = async () => {
         setEnviando(true);
         try {
@@ -46,7 +51,9 @@ export function ProgramarSeguimiento({ contacto, textoInicial, pausar, onCerrar,
                     ? <TextArea value={texto} onChange={(e) => setTexto(e.target.value)} aria-label="Mensaje del seguimiento" placeholder="Ej.: ¿Pudiste ver el link? Si querés lo vemos juntos" maxLength={1000} />
                     : <Select label="Audio" value={audio} onChange={setAudio}
                         options={[{ value: '', label: audios.length ? 'Elegí un audio' : 'No hay audios: subí uno desde Audios' }, ...audios.map((a) => ({ value: String(a.id), label: a.nombre }))]} />}
-                <Segmented size="sm" label="Si no responde en" value={horas} onChange={setHoras} options={CUANDO} />
+                {opciones.length
+                    ? <Segmented size="sm" label="Si no responde en" value={horas} onChange={setHoras} options={opciones} />
+                    : <p className="t-cap mut40">Le queda menos de 1 h de ventana: escribile vos ahora.</p>}
             </div>
             <div className="barra">
                 <Button onClick={onCerrar}>Cancelar</Button>

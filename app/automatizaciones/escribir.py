@@ -26,6 +26,9 @@ YA_ENTREGADO = timedelta(minutes=2)
 
 SOLO_INSTAGRAM = ('Pasaron más de 24 h desde el último mensaje del lead: desde Work ya no sale. Mandalo desde '
                   'Instagram y marcalo como seguimiento')
+# Un seguimiento programado sale solo: HUMAN_AGENT es para una persona que manda en el momento (ADR-W282).
+PROGRAMADO_FUERA = ('Un seguimiento programado sale solo y pasadas las 24 h desde su último mensaje solo puede '
+                    'escribirle una persona en el momento: elegí antes o escribile vos cuando toque')
 
 
 def human_agent_aprobado():
@@ -89,9 +92,11 @@ def _por_whatsapp(contacto, cuerpo, ahora):
         raise AccionInvalida(f'WhatsApp no lo aceptó: {error}')
 
 
-def enviar(motor, contacto, autor_id, texto=None, url_audio=None, nombre_audio=None, pausar=True, guia=None):
+def enviar(motor, contacto, autor_id, texto=None, url_audio=None, nombre_audio=None, pausar=True, guia=None,
+           a_mano=True):
     """Manda el mensaje del equipo y lo deja en la conversación. Devuelve el `IgMensaje`. `pausar=False`
-    deja al bot seguir (la casilla del chat). `guia`: el paso de la Guía que se mandó (ADR-W197)."""
+    deja al bot seguir (la casilla del chat). `guia`: el paso de la Guía que se mandó (ADR-W197).
+    `a_mano=False` (un seguimiento programado): nunca con HUMAN_AGENT."""
     from app.whatsapp.cliente import es_whatsapp
     if es_whatsapp(contacto.igsid):
         cuerpo = cuerpo_de(texto, url_audio)
@@ -103,6 +108,8 @@ def enviar(motor, contacto, autor_id, texto=None, url_audio=None, nombre_audio=N
     if estado == 'cerrada':
         raise AccionInvalida('Pasaron más de 7 días desde el último mensaje del lead: Instagram no deja escribirle '
                              'hasta que vuelva a escribir')
+    if estado != 'abierta' and not a_mano:
+        raise AccionInvalida(PROGRAMADO_FUERA)
     if estado == 'instagram':
         raise AccionInvalida(SOLO_INSTAGRAM)
     cuerpo = cuerpo_de(texto, url_audio)
