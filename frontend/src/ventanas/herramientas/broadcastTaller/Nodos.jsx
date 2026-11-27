@@ -8,7 +8,7 @@ import { espera } from '../broadcastWa/Espera';
 import { ponen } from '../broadcastWa/Respuestas';
 
 export const ESTADOS = {
-    borrador: { label: 'Borrador', color: 'var(--ln-text-faint, #8a8ea0)' },
+    borrador: { label: 'Desactivado', color: 'var(--ln-text-faint, #8a8ea0)' },
     programado: { label: 'Programado', color: 'var(--ln-info, #3b7dd8)' },
     lanzado: { label: 'Salió', color: 'var(--ln-success, #1f9d6b)' },
     vencido: { label: 'Venció sin salir', color: 'var(--ln-error, #c8433a)' },

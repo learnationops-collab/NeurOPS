@@ -2429,3 +2429,53 @@
   - En los mensajes que no son plantilla, `{{1}}` vale lo mismo que `{nombre}`.
 - **Qué se pierde:** un mensaje común no llega a quien no interactuó en las últimas 24 h, y el número que se ve al armarlo es el de la audiencia, no el de quienes tendrán la ventana abierta en ese momento. Un paso de mensaje no tiene botones de respuesta (para eso, una plantilla).
 - **Consecuencias:** migración `e3a5c7d9f1b4` (idempotente). `WaEnvio.plantilla` vale `(mensaje)` para estas filas.
+## ADR-W267: «Les escribiste y no contestaron», con los seguimientos contados desde su última respuesta
+
+- **Fecha:** 27/11/2026 · **Subsistema:** Inbox, filtro y seguimientos (`seguimientos_hechos.resumen` y `racha`, `api.listar_conversaciones`, `filtros.js`, `colas.js`, `seccionesFiltro.jsx`, `VistasFiltro.jsx`, `Fila.jsx`, `RachaLead.jsx`, `Stats.jsx`) · **Estado:** implementada
+- **Contexto:** Mario quiere encontrar a quienes les escribió y no contestaron, ordenarlos por etapa y ver cuántos seguimientos van. Los seguimientos del filtro (ADR-W254) cuentan toda la historia por fase. Así, un lead que contestó un seguimiento viejo pero no el último aparecía «con un seguimiento» aunque al último mensaje no se le hubiera hecho ninguno. También quiere ver en el lead cuándo fue el último mensaje (hoy, ayer, hace N días) y el promedio de seguimientos por lead.
+- **Decisión:**
+  - **Racha:** por conversación, lo que le escribió el equipo (sin el bot) desde la última respuesta del lead: `{n, desde, ultimo}`. `n` son los seguimientos desde esa respuesta, con la misma regla de siempre (marcado, o más de 12 h sin respuesta). El primer mensaje no cuenta: es el que espera respuesta. Si lo último es del lead, no hay racha. La lista la trae en `racha` y se calcula en la misma lectura de mensajes que `seguimientos_hechos`.
+  - **Filtro:** `sinResp` puede valer todos, sin seguimiento, 1, 2 o 3 o más. Va en la sección Seguimientos y en dos Rápidos: «Les escribiste» y «Sin seguimiento», los dos tuyos y ordenados por etapa.
+  - **Órdenes nuevos:** «Sin respuesta» (tu último mensaje más viejo primero) y «Seguimientos» (menos primero).
+  - **Fila:** muestra los seguimientos de la racha y hace cuánto fue tu último mensaje (rojo si no hay ninguno). Sin racha sigue la marca de antes.
+  - **Tarjeta del lead:** hace cuánto le escribiste, en qué seguimiento vas («Segundo seguimiento», con puntitos) y el total de seguimientos de la conversación. Sale de los mensajes del chat.
+  - **Stats:** muestra de tus conversaciones cuántas no contestaron, cuántas no tienen seguimiento, el promedio de seguimientos por lead (desde su última respuesta y en toda la conversación) y una barra por cantidad.
+  - **Caja de escribir:** Enviar es un botón redondo con la flecha, así todo entra en una línea. Si el chat es angosto, Learnito y Seguimiento quedan solo con su ícono.
+- **Qué se pierde:** la racha cuenta los mensajes del equipo sin mirar qué setter los mandó. Las Stats miran solo las conversaciones cargadas en la lista (hasta 500 por vez).
+- **Consecuencias:** sin migración. `por_fase` sigue igual por encima, ahora sobre `resumen`.
+
+## ADR-W268: cada setter ve solo sus seguimientos
+
+- **Fecha:** 27/11/2026 · **Subsistema:** Inbox, seguimientos (`seguimientos_hechos.resumen`, `api.listar_conversaciones`, `RachaLead.jsx`) · **Estado:** implementada
+- **Contexto:** con ADR-W267, la racha y los seguimientos de la lista contaban los mensajes de cualquiera del equipo. Mario: «en el perfil de Eli tiene que aparecer solamente lo de Eli; en el de Paula, lo de Paula. Cada quien gestiona sus propios seguimientos».
+- **Decisión:**
+  - Si quien mira es setter, la racha, los seguimientos por fase (filtro, fila y Stats) y la franja de la tarjeta del lead cuentan solo sus mensajes y los sin autor (Kommo, la app de Instagram). Es la regla del reporte del setter.
+  - Los mensajes de otro setter no existen para ese cálculo: no abren racha ni cortan la cuenta de 12 h.
+  - Quien no es setter (admin, manager) sigue viendo los de todo el equipo.
+  - El chat trae `autor_id` en cada mensaje para que la tarjeta haga la misma cuenta que el servidor.
+- **Qué se pierde:**
+  - Un mensaje sin autor cuenta para cualquier setter que mire esa conversación.
+  - Las etiquetas «Seguimiento N» de los mensajes del chat siguen numerando a todo el equipo.
+- **Consecuencias:** sin migración.
+
+## ADR-W269: seguimientos solo para quien todavía puede agendar, con su tiempo y sus cifras
+
+- **Fecha:** 27/11/2026 · **Subsistema:** Inbox, seguimientos (`colas.esperaSeguimiento`, `RachaLead.jsx`, `MisStats.jsx`, `seguimientos_hechos.del_setter`, `/inbox/mis-stats`) · **Estado:** implementada
+- **Contexto:** Mario, sobre «Les escribiste y no contestaron» (ADR-W267/W268):
+  - Los que ya agendaron no hacen falta; solo cuentan los que todavía pueden agendar.
+  - En el lead quiere ver cuánto lleva sin contestar y cuánto tiempo queda para el seguimiento.
+  - En Estadísticas quiere los seguimientos de hoy y el promedio.
+- **Decisión:**
+  - **Quiénes entran:** el filtro, la marca de la fila y las Stats de seguimientos dejan afuera Confirmación (ya agendó) y las salidas (No lead, In-abrible). Link queda: todavía puede agendar. En esas etapas, la tarjeta muestra solo el total.
+  - **Tarjeta del lead:** «hace» cuánto no contesta, en minutos, horas o días, y cuánto queda para escribirle antes de que se cierre la ventana de Instagram o WhatsApp. Si la ventana ya se cerró, lo dice en rojo.
+  - **Estadísticas:** «Seguim. hoy» y «Seguim. por día» (promedio de los 30 días anteriores; al pasar el mouse, cuántos por lead). Salen de las conversaciones asignadas al setter, con sus mensajes y los sin autor, la base del reporte. Se guardan 5 minutos por setter.
+- **Qué se pierde:** el promedio por día mira las conversaciones asignadas hoy: si un lead cambió de setter, sus seguimientos viejos cuentan para quien lo tiene ahora (solo los sin autor o los propios). La cifra de hoy puede tardar hasta 5 minutos en moverse.
+- **Consecuencias:** sin migración.
+
+## ADR-W270: el flujo del taller se desactiva entero o paso por paso
+
+- **Fecha:** 27/11/2026 · **Subsistema:** flujo del taller (`app/whatsapp/taller.py` `activar_paso`, `POST /api/whatsapp/talleres/<id>/pasos/<p>/estado`; `broadcastTaller/Flujo.jsx`, `PasoEditor.jsx`, `Nodos.jsx`) · **Estado:** implementada
+- **Contexto:** Mario quiere poder frenar el broadcast de un taller si decide no mandarlo. «Pausar» existía pero solo aparecía cuando todos los pasos estaban programados, y no había forma de frenar uno solo.
+- **Decisión:** «Desactivar todo» aparece siempre que haya algo programado y devuelve los programados a desactivado. Cada paso tiene su interruptor «Activo / Desactivado» en su panel: activarlo hace las mismas revisiones que «Programar» (plantilla o mensaje, variables, hora del taller). En el lienzo, un paso sin programar se ve «Desactivado» en lugar de «Borrador».
+- **Qué se pierde:** un paso con cambios sin guardar no se puede activar hasta guardar el flujo.
+- **Consecuencias:** sin migración.

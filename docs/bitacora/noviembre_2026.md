@@ -1295,3 +1295,27 @@
 - Arreglo: un paso con plantilla que lleva {{1}} quedaba sin el nombre si no se tocaba la variable (Meta lo habría rechazado); al programar se completa.
 - Arreglo: «{{1}}» en el mensaje de una respuesta o de «al abrir el link» salía literal; ahora es el primer nombre.
 - Migración `e3a5c7d9f1b4`.
+
+### 27/11/2026 · Inbox: «Les escribiste y no contestaron» y los seguimientos desde su última respuesta (ADR-W267)
+- Filtro › Seguimientos: «Les escribiste y no contestaron», con todos, sin seguimiento, 1, 2 o 3 o más, contados desde su última respuesta. Dos Rápidos nuevos, ordenados por etapa: «Les escribiste» y «Sin seguimiento» ([filtros.js](../../frontend/src/pages/inbox/conversaciones/filtros.js), [seguimientos_hechos.py](../../app/automatizaciones/seguimientos_hechos.py)).
+- Órdenes nuevos: por días sin respuesta y por cantidad de seguimientos.
+- La fila y la tarjeta del lead dicen hace cuánto le escribiste (hoy, ayer, hace N días), en qué seguimiento vas y el total ([RachaLead.jsx](../../frontend/src/pages/inbox/conversaciones/RachaLead.jsx)).
+- Stats › Seguimientos: cuántas no contestaron, cuántas sin seguimiento y el promedio de seguimientos por lead.
+- Caja de escribir: Enviar es redondo y todo entra en una línea.
+
+### 27/11/2026 · Cada setter ve solo sus seguimientos
+- «Les escribiste y no contestaron», los seguimientos del filtro, la fila, Stats y la franja de la tarjeta del lead cuentan, para un setter, solo sus mensajes y los sin autor (la regla del reporte). Un admin sigue viendo los de todo el equipo ([seguimientos_hechos.py](../../app/automatizaciones/seguimientos_hechos.py), [RachaLead.jsx](../../frontend/src/pages/inbox/conversaciones/RachaLead.jsx)).
+
+### 27/11/2026 · Seguimientos: solo quien puede agendar, tiempo sin contestar y cifras en Estadísticas (ADR-W269)
+- «Les escribiste», la marca de la fila y las Stats de seguimientos dejan afuera a los que ya agendaron (Confirmación) y las salidas.
+- Tarjeta del lead: hace cuánto no contesta y cuánto queda para escribirle antes de que se cierre la ventana ([RachaLead.jsx](../../frontend/src/pages/inbox/conversaciones/RachaLead.jsx)).
+- Estadísticas: seguimientos de hoy y por día, con el promedio por lead al pasar el mouse ([seguimientos_hechos.py](../../app/automatizaciones/seguimientos_hechos.py)).
+- Arreglo: el menú de la etapa quedaba tapado por Estadísticas. La tarjeta del lead ahora va por encima de los paneles de abajo ([sidebar.css](../../frontend/src/pages/inbox/conversaciones/sidebar.css)).
+- El recordatorio del recorrido dice «Novedades sin revisar» y qué se aprende.
+
+### 27/11/2026 · Seguimientos del lead en un solo bloque
+- La tarjeta repetía el dato: «Σ», «Seguimiento N» y los puntitos sueltos. Ahora es un solo bloque. Un anillo tiene un segmento por seguimiento (violeta los viejos, magenta los que van desde su última respuesta) que se dibuja al entrar, con el total en el centro. Al lado van cuánto lleva sin contestar y cuánto queda para escribirle, y «Falta el primero» si no hay seguimiento ([RachaLead.jsx](../../frontend/src/pages/inbox/conversaciones/RachaLead.jsx)).
+- Estadísticas en pares: «Agendas hoy» con «Agendas por día» y «Seguim. hoy» con «Seguim. por día».
+
+### 27/11/2026 · Flujo del taller: desactivar todo o un paso (ADR-W270)
+- «Desactivar todo» siempre que haya pasos programados, y un interruptor «Activo / Desactivado» en cada paso ([PasoEditor.jsx](../../frontend/src/ventanas/herramientas/broadcastTaller/PasoEditor.jsx), [taller.py](../../app/whatsapp/taller.py)).

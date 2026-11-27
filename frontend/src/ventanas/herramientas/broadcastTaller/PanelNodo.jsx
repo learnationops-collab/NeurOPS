@@ -17,7 +17,8 @@ function Cabecera({ titulo, sub, onVolver }) {
     );
 }
 
-export default function PanelNodo({ sel, pasos, plantillas, reglas, wa, botonesDelFlujo, cambiar, quitar, onSel, onGuardada, onConfig }) {
+export default function PanelNodo({ sel, pasos, plantillas, reglas, wa, botonesDelFlujo, cambiar, quitar, onSel, onGuardada, onConfig,
+    sucio, ocupado, onEstado }) {
     const paso = sel ? pasos[sel.i] : null;
     if (!paso) return <div className="bt-caja bt-editor"><span className="bt-s">Tocá un nodo del flujo para editarlo.</span></div>;
     const plantilla = plantillas.find((p) => p.name === paso.plantilla);
@@ -26,6 +27,7 @@ export default function PanelNodo({ sel, pasos, plantillas, reglas, wa, botonesD
         return (
             <PasoEditor key={paso.id || `n${sel.i}`} paso={paso} plantillas={plantillas} botonesDelFlujo={botonesDelFlujo} wa={wa}
                 config={datos?.config} cambiar={(c) => cambiar(sel.i, c)} quitar={() => quitar(sel.i)}
+                sucio={sucio} ocupado={ocupado} onEstado={(activo) => onEstado(paso.id, activo)}
                 onBoton={(b) => onSel({ tipo: 'resp', i: sel.i, boton: b })} onConfig={(c) => onConfig(paso.plantilla, c)} />
         );
     }

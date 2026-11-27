@@ -291,7 +291,8 @@ def listar_conversaciones():
     proximos = seguimientos.proximos(ids)
     toca = seguimientos.avisos([c for c, _, _, _ in filas])
     from app.automatizaciones import seguimientos_hechos
-    hechos = seguimientos_hechos.por_fase(ids)
+    # Un setter ve solo sus seguimientos (los suyos y los sin autor); quien no es setter, los de todo el equipo.
+    hechos, rachas = seguimientos_hechos.resumen(ids, current_user.id if getattr(current_user, 'role', None) == 'setter' else None)
     avance = progreso.de_contactos([c for c, _, _, _ in filas], ejecuciones, ahora, current_user.id,
                                    {c.id: primero for c, _, _, primero in filas})
     # El último mensaje de cada una, en una sola consulta (antes, una por conversación). En empate, el de id mayor.
@@ -328,6 +329,9 @@ def listar_conversaciones():
             'toca': toca.get(contacto.id),
             # Los seguimientos que ya le hizo el equipo, por fase ({fase: {n, en, resp}}): el filtro del Inbox (ADR-W254).
             'seguimientos_hechos': hechos.get(contacto.id) or {},
+            # Lo que le escribió el equipo desde su última respuesta ({n, desde, ultimo}; None si lo último es del lead):
+            # «Les escribiste y no contestan» y cuántos seguimientos van (Mario, 27/11/2026).
+            'racha': rachas.get(contacto.id),
             'bot_pausado': bool(contacto.bot_pausado_hasta and contacto.bot_pausado_hasta > ahora),
             # El broadcast de WhatsApp al que respondió (ADR-W259): la etiqueta del taller o «Broadcast».
             'broadcast': variables.get('broadcast_nombre') or ('Broadcast' if variables.get('broadcast') else None),
@@ -395,6 +399,7 @@ def ver_conversacion(contacto_id):
             if isinstance(m.contenido, dict) else [],
             'botones': _botones(m.contenido), 'en': _iso(m.enviado_en), 'nodo_id': m.nodo_id,
             'autor': m.autor.username if m.autor_id and m.autor else None,
+            'autor_id': m.autor_id,
             # Del bot: el botón que tocó el lead. Del lead: qué activó en el flujo (`efectos.py`).
             'elegido': elegidos.get(m.id),
             # Vino de un comentario en una publicación, no de un DM: no siempre se le puede escribir.

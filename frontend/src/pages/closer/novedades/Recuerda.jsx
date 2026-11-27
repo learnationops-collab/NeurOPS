@@ -22,10 +22,13 @@ export default function Recuerda({ tanda: t, paso, onAbrir }) {
     const total = t.pasos.length;
     const faltan = Math.max(1, total - paso);
     const hecho = Math.min(paso / total, 1);
-    const detalle = paso ? `Te ${faltan === 1 ? 'falta 1 paso' : `faltan ${faltan} pasos`}. Tocá para seguir` : 'Sin ver todavía. Tocá para empezar';
+    // Mario, 27/11/2026: que diga qué es («novedades sin revisar») y qué se aprende, no solo el nombre de la tanda.
+    const detalle = paso
+        ? `${t.etiqueta}: te ${faltan === 1 ? 'falta 1 paso' : `faltan ${faltan} pasos`}. Tocá para seguir`
+        : `Aprendé lo nuevo de Work en 1 minuto: ${t.etiqueta}`;
     return createPortal(
         <button type="button" className="nv-recuerda" onClick={onAbrir} style={{ '--hecho': hecho }}
-            data-tip={`${t.etiqueta}|${detalle}`} aria-label={`${t.etiqueta}: ${detalle}`}>
+            data-tip={`Novedades sin revisar|${detalle}`} aria-label={`Novedades sin revisar. ${detalle}`}>
             <span className="nv-recuerda__aro" aria-hidden="true" />
             <Sparkles aria-hidden="true" />
             <i className="nv-recuerda__punto" aria-hidden="true" />

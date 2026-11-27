@@ -19,6 +19,11 @@ body.cv-arrastrando,body.cv-arrastrando *{cursor:col-resize !important;user-sele
 /* ---------- Aura: humo magenta y violeta que se mueve lento adentro de cada panel ---------- */
 @keyframes cvAura{0%{background-position:0% 0%,100% 100%}50%{background-position:40% 25%,65% 70%}100%{background-position:15% 60%,90% 30%}}
 .thalamus.inbox :is(.cv-lista,.cv-derecha > .ui-panel){position:relative;isolation:isolate}
+/* Cada panel es su propia capa (por el aura y la entrada): la tarjeta del lead va por encima de Estadísticas y
+   Seguimiento para que sus menús (la etapa, Transferir) no queden tapados (Mario, 27/11/2026). */
+.thalamus.inbox .cv-derecha > .ui-panel{z-index:1}
+.thalamus.inbox .cv-derecha > .cv-tarjeta{z-index:3}
+.thalamus.inbox .cv-derecha > .cv-tarjeta:has([aria-expanded="true"],.cv-tarjeta-pop){z-index:6}
 .thalamus.inbox :is(.cv-lista,.cv-derecha > .ui-panel)::after{content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;pointer-events:none;
   background:radial-gradient(45% 35% at 50% 50%,color-mix(in srgb,var(--brand-secondary) 20%,transparent),transparent 70%),
     radial-gradient(45% 35% at 50% 50%,color-mix(in srgb,#7D63E6 22%,transparent),transparent 70%);

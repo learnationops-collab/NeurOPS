@@ -1,18 +1,19 @@
 // Las vistas del Filtro (ADR-W247; desde ADR-W254, la sección «Rápidos y guardados»): una tarjeta por vista, con su
 // ícono, cuántas hay y qué es. `cuales`: 'rapidos' (las predefinidas) o 'guardados' (las de cada uno, ★, con × para
 // borrarlas).
-import { AlarmClock, Clock, Flame, Hourglass, Inbox, Link2, Sparkles, Star, TimerOff, User, UserX, X } from 'lucide-react';
+import { AlarmClock, CircleDashed, Clock, Flame, Hourglass, Inbox, Link2, Send, Sparkles, Star, TimerOff, User, UserX, X } from 'lucide-react';
 import { contar } from './colas';
 import { igual, predefinidos } from './filtros';
 import { useGuardados } from './guardados';
 
 const ICONOS = {
     todos: Inbox, mios_esperan: Clock, mios_hora: Flame, mios_cierre: TimerOff, mios_toca: AlarmClock, mios_recientes: Sparkles,
-    mios_dolor: Hourglass, mios_link: Link2, mios: User, sin_asignar: UserX,
+    mios_dolor: Hourglass, mios_link: Link2, mios: User, sin_asignar: UserX, mios_sin_resp: Send, mios_sin_fu: CircleDashed,
 };
 const COLORES = {
     todos: 'var(--info)', mios_esperan: 'var(--brand-secondary)', mios_hora: 'var(--error)', mios_cierre: 'var(--error)', mios_toca: 'var(--warning)',
     mios_recientes: '#8B5CF6', mios_dolor: '#7D63E6', mios_link: 'var(--brand-secondary)', mios: 'var(--success)', sin_asignar: 'var(--warning)',
+    mios_sin_resp: 'var(--info)', mios_sin_fu: 'var(--error)',
 };
 
 // La vista que coincide con el filtro puesto, o null (filtro a medida).

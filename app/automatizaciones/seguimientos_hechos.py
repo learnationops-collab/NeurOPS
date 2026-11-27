@@ -73,26 +73,65 @@ def numerados(mensajes):
     return salida
 
 
-def por_fase(contacto_ids):
+def racha(msgs, marcas=None, cuenta=None):
+    """Lo que le escribió el equipo desde la última respuesta del lead (Mario, 27/11/2026), o None si lo último
+    (sin el bot) es del lead o el equipo no le escribió: {n, desde, ultimo}. `n`: seguimientos desde esa respuesta (el
+    primer mensaje no lo es: es el que espera respuesta); `desde`: el primero de esos mensajes; `ultimo`: el último.
+    `cuenta(en)`: si ese mensaje del equipo es de quien mira (cada setter, los suyos y los sin autor)."""
+    marcas = marcas or {}
+    del_equipo, previo, n = [], None, 0
+    for en, lead in msgs:
+        if lead:
+            del_equipo, previo, n = [], None, 0
+            continue
+        if cuenta and not cuenta(en):
+            continue
+        if es_seguimiento(en, previo, marcas.get(en)):
+            n += 1
+        del_equipo.append(en)
+        previo = en
+    if not del_equipo:
+        return None
+    return {'n': n, 'desde': del_equipo[0].isoformat() + 'Z', 'ultimo': del_equipo[-1].isoformat() + 'Z'}
+
+
+def por_fase(contacto_ids, setter_id=None):
     """{contacto_id: {fase: {n, en, resp}}}: cuántos por fase, cuándo fue el último y si lo contestó."""
+    return resumen(contacto_ids, setter_id)[0]
+
+
+def resumen(contacto_ids, setter_id=None):
+    """({contacto_id: {fase: {n, en, resp}}}, {contacto_id: racha}) con una sola lectura de los mensajes.
+
+    Con `setter_id` (Mario, 27/11/2026: «cada quien gestiona sus propios seguimientos») cuentan solo sus mensajes y los
+    sin autor (Kommo, la app de Instagram), la misma regla del reporte del setter; los de otro setter no existen acá.
+    """
     if not contacto_ids:
-        return {}
+        return {}, {}
     msgs = defaultdict(list)
     marcas = defaultdict(dict)
-    for cid, en, direccion, origen, marca in (IgMensaje.query.with_entities(
-            IgMensaje.contacto_id, IgMensaje.enviado_en, IgMensaje.direccion, IgMensaje.origen, IgMensaje.seguimiento)
-            .filter(IgMensaje.contacto_id.in_(contacto_ids)).order_by(IgMensaje.enviado_en)):
+    ajenos = defaultdict(set)
+    for cid, en, direccion, origen, marca, autor in (IgMensaje.query.with_entities(
+            IgMensaje.contacto_id, IgMensaje.enviado_en, IgMensaje.direccion, IgMensaje.origen, IgMensaje.seguimiento,
+            IgMensaje.autor_id).filter(IgMensaje.contacto_id.in_(contacto_ids)).order_by(IgMensaje.enviado_en)):
         if origen != IgMensaje.MOTOR:
             msgs[cid].append((en, direccion == IgMensaje.ENTRANTE))
             if marca is not None:
                 marcas[cid][en] = marca
+            if setter_id is not None and direccion != IgMensaje.ENTRANTE and autor not in (None, setter_id):
+                ajenos[cid].add(en)
     cambios = defaultdict(list)
     for cid, en, fase in (IgFase.query.with_entities(IgFase.contacto_id, IgFase.en, IgFase.fase)
                           .filter(IgFase.contacto_id.in_(contacto_ids)).order_by(IgFase.en)):
         cambios[cid].append((en, fase))
-    salida = {}
+    salida, rachas = {}, {}
     for cid, lista in msgs.items():
-        hechos = de_conversacion(lista, cambios.get(cid, []), marcas=marcas.get(cid))
+        otros = ajenos.get(cid)
+        cuenta = (lambda en, otros=otros: en not in otros) if otros else None
+        r = racha(lista, marcas.get(cid), cuenta)
+        if r:
+            rachas[cid] = r
+        hechos = de_conversacion(lista, cambios.get(cid, []), cuenta, marcas.get(cid))
         if not hechos:
             continue
         del_contacto = {}
@@ -100,4 +139,53 @@ def por_fase(contacto_ids):
             previo = del_contacto.get(fase or SIN_MARCA, {'n': 0})
             del_contacto[fase or SIN_MARCA] = {'n': previo['n'] + 1, 'en': en.isoformat() + 'Z', 'resp': resp}
         salida[cid] = del_contacto
+    return salida, rachas
+
+
+_CACHE = {}
+
+
+def del_setter(setter_id, inicio_hoy, dias=30):
+    """Los seguimientos de un setter (Mario, 27/11/2026, Estadísticas del Inbox): {hoy, por_dia, por_lead}.
+
+    Sus conversaciones son las asignadas a él con movimiento en el período (la misma base que el reporte,
+    `reporte_inbox._suyas`), y cuentan sus mensajes y los sin autor. `hoy`: desde `inicio_hoy` (UTC, el día en su zona).
+    `por_dia`: promedio de los `dias` anteriores a hoy. `por_lead`: seguimientos de esos días sobre las conversaciones con
+    al menos uno. Se guarda 5 minutos por setter (la columna lo pide cada minuto).
+    """
+    from datetime import datetime, timedelta
+
+    from app.automatizaciones.reporte_inbox import _suyas
+
+    clave = (setter_id, inicio_hoy)
+    guardado = _CACHE.get(clave)
+    if guardado and datetime.utcnow() - guardado[0] < timedelta(minutes=5):
+        return guardado[1]
+    desde = inicio_hoy - timedelta(days=dias)
+    suyas, _ = _suyas(setter_id, desde - timedelta(days=7))
+    ids = list(suyas)
+    msgs, marcas, propios = defaultdict(list), defaultdict(dict), defaultdict(set)
+    if ids:
+        for cid, en, direccion, marca, autor in (IgMensaje.query.with_entities(
+                IgMensaje.contacto_id, IgMensaje.enviado_en, IgMensaje.direccion, IgMensaje.seguimiento, IgMensaje.autor_id)
+                .filter(IgMensaje.contacto_id.in_(ids), IgMensaje.origen != IgMensaje.MOTOR,
+                        IgMensaje.enviado_en >= desde - timedelta(days=7)).order_by(IgMensaje.enviado_en)):
+            msgs[cid].append((en, direccion == IgMensaje.ENTRANTE))
+            if marca is not None:
+                marcas[cid][en] = marca
+            if direccion != IgMensaje.ENTRANTE and autor in (None, setter_id):
+                propios[cid].add(en)
+    hoy, antes, leads = 0, 0, set()
+    for cid, lista in msgs.items():
+        mios = propios.get(cid, set())
+        for en, _fase, _resp in de_conversacion(lista, [], mios.__contains__, marcas.get(cid)):
+            if en >= inicio_hoy:
+                hoy += 1
+            elif en >= desde:
+                antes += 1
+                leads.add(cid)
+    salida = {'hoy': hoy, 'por_dia': round(antes / dias, 1), 'por_lead': round(antes / len(leads), 1) if leads else None,
+              'leads': len(leads), 'dias': dias}
+    _CACHE.clear() if len(_CACHE) > 200 else None
+    _CACHE[clave] = (datetime.utcnow(), salida)
     return salida

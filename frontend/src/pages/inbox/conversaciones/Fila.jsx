@@ -4,7 +4,7 @@
 // programado y cuánto falta para que Instagram no deje escribirle (últimas 24 h).
 import { AlarmClock, Bot, Check, Clock, PencilLine, Repeat2, User, X } from 'lucide-react';
 import { Avatar, Chip } from '../../../components/standard';
-import { avisoCierre, cierreMin, esperaMin, examenDe, quien, seguimientosDe, vistaPrevia } from './colas';
+import { avisoCierre, cierreMin, esperaMin, esperaSeguimiento, examenDe, haceDias, quien, seguimientosDe, vistaPrevia } from './colas';
 import IconoCanal from './IconoCanal';
 import { colorDe, corto, faseDe } from './fasesSetting';
 import { EtapaMini, Ventana } from './Indicadores';
@@ -97,7 +97,14 @@ export default function Fila({ c, elegida, ahora, yo, conAsignado, borrador, onE
                             {c.toca && (
                                 <span className="cv-item-ico cv-item-ico--toca" data-tip={`Toca seguimiento|${c.toca}: lo pide la cadencia de su fase`}><AlarmClock size={12} aria-hidden="true" /></span>
                             )}
-                            {hechos.n > 0 && (
+                            {/* Le escribiste y no contestó (Mario, 27/11/2026): cuántos seguimientos van desde su última respuesta y
+                                hace cuánto fue tu último mensaje. Sin seguimiento, en rojo. */}
+                            {esperaSeguimiento(c) ? (
+                                <span className={`cv-item-racha${c.racha.n ? '' : ' cv-item-racha--cero'}`}
+                                    data-tip={`Sin respuesta|Tu último mensaje: ${haceDias(c.racha.ultimo, ahora)} · ${c.racha.n ? `${c.racha.n} ${c.racha.n === 1 ? 'seguimiento' : 'seguimientos'} desde su última respuesta` : 'todavía sin seguimiento'}`}>
+                                    <Repeat2 size={11} aria-hidden="true" />{c.racha.n}<em>{haceDias(c.racha.ultimo, ahora, true)}</em>
+                                </span>
+                            ) : hechos.n > 0 && (
                                 <span className="cv-item-fu" data-tip={`Seguimientos hechos|${hechos.n}${fases?.length ? ' en esa etapa' : ''} · el último ${hora(hechos.en)}${hechos.resp ? ', contestó' : ', sin respuesta'}`}>
                                     <Repeat2 size={11} aria-hidden="true" />{hechos.n}
                                 </span>

@@ -75,6 +75,7 @@ export function useBroadcastTaller(tallerId) {
         sumar: (datos) => con(api.post(`${ruta}/audiencia`, datos)),
         programar: () => con(api.post(`${ruta}/programar`)),
         pausar: () => con(api.post(`${ruta}/pausar`)),
+        estadoPaso: (pasoId, activo) => con(api.post(`${ruta}/pasos/${pasoId}/estado`, { activo })),
         estandar: () => api.post(`${ruta}/estandar`).then((r) => r.data),
         numeros: (pasoId) => api.get(`${ruta}/pasos/${pasoId}`).then((r) => r.data.numeros),
     };

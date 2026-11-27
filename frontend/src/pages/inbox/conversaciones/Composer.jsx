@@ -252,8 +252,9 @@ export default function Composer({ contacto, mensajes, pausar = true, fase, ejec
                 {modo === 'nota' && <Button variant="primary" size="sm" className="cv-comp-enviar" disabled={!texto.trim()} onClick={guardarNota}>Guardar</Button>}
                 {modo === 'chat' && <CasillaSeguimiento mensajes={mensajes} marca={marca} />}
                 {modo === 'chat' && (
-                    <Button variant="primary" size="sm" className="cv-comp-enviar" icon={<Send />} disabled={!texto.trim() || !puedeEnviar}
-                        data-tip="Enviar|Enter envía · Shift+Enter, otra línea" onClick={enviarTexto}>Enviar</Button>
+                    // Redondo, solo la flecha (Mario, 27/11/2026: que todo entre en una línea).
+                    <Button variant="primary" size="sm" className="cv-comp-enviar cv-comp-enviar--ico" icon={<Send />} disabled={!texto.trim() || !puedeEnviar}
+                        aria-label="Enviar" data-tip="Enviar|Enter envía · Shift+Enter, otra línea" onClick={enviarTexto} />
                 )}
             </div>
             {modo === 'tarea' ? <FormTarea contacto={contacto} yo={yo} onHecho={() => { setModo('chat'); onCambio(); }} /> : (
