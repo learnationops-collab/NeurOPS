@@ -101,6 +101,25 @@ export const pasa = (p, f, ctx, salvo) => {
 
 export const cuantosQuita = (lista, id, ctx) => lista.filter((p) => quita[id](p, ctx)).length;
 
+// --- Volver a invitar ---
+
+export const LINK_POSTULACION = 'https://institute.thelearnation.com/vacante/';
+export const MENSAJE_REINVITAR = `Hola, como estás? Te escribe Dari Gonzalez del equipo de Mario Buhler de Learnation
+
+Hace no mucho te postulaste como closer de ventas con nosotros, y ahora tenemos una vacante disponible para trabajar con +6 leads cualificados por día
+
+Si te interesa postularte, aquí te dejo el link nuevo de postulación así participas del proceso!
+
+Si quedás, nos estaremos contactando pronto!
+
+${LINK_POSTULACION}`;
+
+/** El chat de WhatsApp con el mensaje de reinvitación ya escrito; null sin número. */
+export const waReinvitar = (whatsapp) => {
+    const d = soloDigitos(whatsapp);
+    return d.length >= 7 ? `https://wa.me/${d}?text=${encodeURIComponent(MENSAJE_REINVITAR)}` : null;
+};
+
 // --- CSV ---
 
 const celda = (v) => {
@@ -111,13 +130,12 @@ const celda = (v) => {
 export const descargarCsv = (lista, etiquetaEstado) => {
     const cab = ['Nombre', 'Estado', 'Cierre %', 'WhatsApp', 'Link WhatsApp', 'Email', 'País', 'Conocimiento', 'Inglés', 'Video', 'Llamada', 'Postuló', 'Formulario'];
     const filas = lista.map((p) => {
-        const d = soloDigitos(p.whatsapp);
         return [
             p.nombre,
             etiquetaEstado(p.veredicto),
             cierreNum(p.cierre) ?? (p.cierre === 'nada' ? 'No mide' : ''),
             p.whatsapp || '',
-            d.length >= 7 ? `https://wa.me/${d}` : '',
+            waReinvitar(p.whatsapp) || '',
             p.email || '',
             p.pais || '',
             p.conocimiento || '',

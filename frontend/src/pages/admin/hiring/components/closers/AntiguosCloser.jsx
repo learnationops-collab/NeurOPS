@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronRight, PlayCircle, X } from 'lucide-react';
-import { soloDigitos, href } from '../../lib/escalas';
+import { href } from '../../lib/escalas';
 import { fechaCorta, minAncho, plantillaCols } from '../../lib/vista';
 import { cierreNum } from '../../lib/closers';
+import { waReinvitar } from '../../lib/antiguos';
 import { Bandera, Chip, Inicial, Riel } from '../Piezas';
 import { VEREDICTO } from '../comun';
 import { Encabezado } from '../TablaPostulaciones';
@@ -30,7 +31,7 @@ const leerAnchos = () => {
 const Fila = ({ p, onAbrir }) => {
     const v = VEREDICTO[p.veredicto] || VEREDICTO.sin_calificar;
     const cierre = cierreNum(p.cierre);
-    const digitos = soloDigitos(p.whatsapp);
+    const wa = waReinvitar(p.whatsapp);
     const video = href(p.video);
     return (
         <div className="tl-fila" role="row" tabIndex={0} onClick={() => onAbrir(p.id)}
@@ -58,8 +59,8 @@ const Fila = ({ p, onAbrir }) => {
                 ) : <span className="tl-no" title="Sin video"><PlayCircle size={18} style={{ opacity: 0.45 }} /></span>}
             </div>
             <div role="cell">
-                {digitos ? (
-                    <a className="tl-wa" href={`https://wa.me/${digitos}`} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} title="Escribirle por WhatsApp">
+                {wa ? (
+                    <a className="tl-wa" href={wa} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} title="Abrir WhatsApp con la invitación a la vacante ya escrita">
                         <img src={logoWhatsapp} alt="" />
                         <span className="trunc">{String(p.whatsapp).replace(/^\+\d{1,3}\s*/, '')}</span>
                     </a>

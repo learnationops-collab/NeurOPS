@@ -1370,3 +1370,6 @@
 ### 27/11/2026 · Learnation Marketing dentro de Work (ADR-W278)
 - Nueva sección «Marketing» en el dock de /ops/dashboard: el artifact de claude.ai completo, con su diseño, su base (copiada el 27/11), Learnito, archivos y los conectores Meta Ads, Google Drive y Learnation Work atendidos por Work ([PanelMarketing.jsx](../../frontend/src/pages/operations/marketing/PanelMarketing.jsx), [app/marketing_app/](../../app/marketing_app/)).
 - Acceso para Mario, Marlon, Santi y Kerwin por su mail ([acceso.py](../../app/marketing_app/acceso.py)). Publicar en Meta crea en pausa y activa al publicar.
+### 27/11/2026 · Antiguos de Closers: WhatsApp con la invitación escrita
+- Tocar el WhatsApp de un antiguo abre el chat con el mensaje de Dari ya escrito (vacante con +6 leads cualificados por día y el link de postulación, institute.thelearnation.com/vacante/). El link del CSV es el mismo ([antiguos.js](../../frontend/src/pages/admin/hiring/lib/antiguos.js) `waReinvitar`).
+- Dari González suma el rol extra `hiring_closers` (Talent con Closers), como Marlon.
