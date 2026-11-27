@@ -139,22 +139,17 @@ def _parametros(envio):
     return [_primer_nombre(envio.nombre)] if envio.con_nombre else None
 
 
-def _cuerpo_mensaje(envio):
-    """(texto, cuerpo) de un mensaje común de un paso (ADR-W266): texto con el nombre y, si tiene, su botón con link."""
-    from app.whatsapp.respuestas import _con_link, con_nombre
-    m = envio.mensaje or {}
-    texto = con_nombre(m.get('texto') or '', envio.nombre)
-    if m.get('url'):
-        return texto, _con_link(texto, m.get('titulo') or 'Abrir', m['url'])
-    return texto, {'type': 'text', 'text': {'body': texto, 'preview_url': True}}
-
-
 def _mandar_uno(cliente, envio, ahora):
     try:
         if envio.mensaje:
-            texto, cuerpo = _cuerpo_mensaje(envio)
-            envio.wamid = cliente.mandar(envio.telefono, cuerpo)
-            _al_chat(envio, texto, cuerpo, ahora)
+            # Un paso de mensaje común (ADR-W266): texto, link y botones (ADR-W272). Link y botones de respuesta
+            # salen en dos mensajes seguidos; el wamid que queda es el del primero.
+            from app.whatsapp.respuestas import partes_de_paso
+            for k, (texto, cuerpo) in enumerate(partes_de_paso(envio.mensaje, envio.nombre, envio.contacto_id)):
+                mid = cliente.mandar(envio.telefono, cuerpo)
+                if k == 0:
+                    envio.wamid = mid
+                _al_chat(envio, texto, cuerpo, ahora, mid)
         else:
             envio.wamid = cliente.plantilla(envio.telefono, envio.plantilla, envio.idioma, _parametros(envio))
         envio.estado = WaEnvio.ENVIADO
@@ -165,11 +160,11 @@ def _mandar_uno(cliente, envio, ahora):
     return envio.estado == WaEnvio.ENVIADO
 
 
-def _al_chat(envio, texto, cuerpo, ahora):
+def _al_chat(envio, texto, cuerpo, ahora, mid=None):
     """El mensaje común queda en la conversación del Inbox, como lo que manda el motor."""
     from app.automatizaciones.modelos import IgMensaje
     if envio.contacto_id:
-        db.session.add(IgMensaje(contacto_id=envio.contacto_id, mid=envio.wamid, direccion=IgMensaje.SALIENTE,
+        db.session.add(IgMensaje(contacto_id=envio.contacto_id, mid=mid or envio.wamid, direccion=IgMensaje.SALIENTE,
                                  origen=IgMensaje.MOTOR, texto=texto, contenido={'whatsapp': cuerpo}, enviado_en=ahora))
 
 

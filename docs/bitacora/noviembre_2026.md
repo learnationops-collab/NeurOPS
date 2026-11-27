@@ -770,14 +770,17 @@
 - Filtros guardados en Analizar y Revisar: el botón «Filtros guardados», al lado de Filtro completo, guarda las condiciones y Cumple / No cumple con un nombre y los vuelve a poner con un clic; se renombran y se borran con deshacer. Son de cada persona y de cada tabla; los de Agendas sirven en las dos pantallas.
 - Analizar con filtro muestra solo lo del filtro: Segmentos, Por país, Por qué compran y las listas detrás de cada cifra (Destino de las agendas, No cerradas, Segmentos) cuentan solo las agendas filtradas. Se ocultan las personas sin datos en Segmentos, los segmentos en cero y las fuentes sin cobros. Con Jean Carlo + Elias, Paula, workshop + México, Perú: 39 agendas y $2.043 en todos los paneles.
 - Analizar: «Seguimientos en curso» y «Motivos» bajan al final del tablero, después de Por país (pedido de Kerwin, 21/11).
+
 ### 21/11/2026 · El motivo de las agendas canceladas en Google
 - Cuando el closer cancela o borra el evento en su Google Calendar, Work le pide el motivo: aviso en #📋-reportes que lo etiqueta, línea en el aviso diario de reportes pendientes y tarjeta «Canceladas en tu Google Calendar» arriba de su mazo, con opciones rápidas y un detalle. «La pasé a otro closer», «La reagendé por fuera» y «Error mío» vuelven la agenda a pendiente (ADR-W191, Leadership «Pedir al closer el motivo…»).
 - Revisar muestra «Falta el motivo · canceló en Google» en esas agendas; «Copiar motivos para IA» ya no copia la nota automática. Entran las de noviembre (en la copia de producción del 20/11, 5 de Jean Carlo; la de Mario es del 29/10 y queda afuera).
+
 ### 21/11/2026 · Closers en el Inbox de Talent
 - El Inbox de Talent tiene un desplegable al lado del título: 1 · Asistentes y 2 · Closers, con lo que espera en cada uno; se recuerda por navegador (ADR-W192).
 - Con Closers: próximo a revisar (mejor score sin votos), % de preselección y reserva, y tabla con conocimiento, cierre, inglés, video y llamada, WhatsApp y score. Pestañas «Por revisar» e «Incompletas». La búsqueda de la cabecera busca closers.
 - Ficha del closer con el diseño de la de Asistente: Cualitativo, Experiencia, Motivación y Archivos, desglose del score por criterio de Clarity (`GET /api/job-applications/<id>` suma `criterios`) y Preseleccionar / Reserva / Descartar como votos, más «Pasar a prueba» con la preselección.
 - Dock: la gema de Talent y el avatar ya no se apilan en la isla derecha (la envoltura del avatar va en fila en todas las pantallas) y la gema mide lo que la llave.
+
 ### 21/11/2026 · Búsqueda nueva de closers: Antiguos y Hiring · Closers
 - Las postulaciones de Closer se archivan (`job_applications.archivada_at`, migración `f7b9d1e3a5c7`): salen del Inbox, las pestañas, Analizados, Revisores y Estadísticas, pero quedan en la base con sus votos (ADR-W193). Se archivan las 682 de septiembre a noviembre para arrancar la búsqueda nueva con el Inbox en cero.
 - «Antiguos»: botón discreto al lado de las pestañas del Inbox de Closers con las postulaciones archivadas y el estado que tenían. Se abren con la misma ficha y, una vez abierto, la búsqueda también las encuentra.
@@ -1229,26 +1232,33 @@
 - El tope del número cuenta personas distintas en 24 h; salen 40 por vuelta ([envios.py](../../app/whatsapp/envios.py)). Plantillas con {{1}}, {{2}}… y abiertas al director de marketing.
 - Inbox: Todos · Instagram · WhatsApp a la vista y WhatsApp por broadcast ([Canales.jsx](../../frontend/src/pages/inbox/conversaciones/Canales.jsx)).
 - Migración `c4e6a8b0d2f3` (`wa_planes_taller`, `wa_pasos_taller`, tres columnas en `wa_envios`).
+
 ### 27/11/2026 · El reloj del motor arranca solo después de un deploy
 - Arrancaba recién con el primer webhook de Instagram o WhatsApp: el paso de prueba del broadcast del 26/11 quedó esperando a las 03:00. Ahora el scheduler lo arranca (y lo despierta) cada 5 minutos desde el proceso líder ([reminder_scheduler.py](../../app/services/reminder_scheduler.py)).
 - Primer broadcast de prueba de un taller desde producción: `hello_world` a un número del equipo, entregado.
+
 ### 27/11/2026 · Respuestas por botón de WhatsApp: botón con link, opción única y espera en segundos (ADR-W260)
 - Un botón de la respuesta puede abrir un link (por ejemplo, el Drive de un recurso): «Al tocarlo › Abre un link» ([Respuestas.jsx](../../frontend/src/ventanas/herramientas/broadcastWa/Respuestas.jsx), [respuestas.py](../../app/whatsapp/respuestas.py)).
 - «Opción única» por plantilla: si ya eligió un botón de un mensaje, los otros contestan «Ya elegiste…» (texto editable).
 - La espera de la respuesta va en segundos o minutos; las cortas salen a su hora sin esperar el reloj. Migración `e6a8c0d2f4b5`.
+
 ### 27/11/2026 · WhatsApp: mensaje al abrir el link de una respuesta y ramas al día en el flujo (ADR-W261)
 - «Cuando abre el link»: el botón con link de una respuesta puede mandar otro mensaje al abrirse (por ejemplo, agregar el evento a Google Calendar), con espera y botón propio. El link pasa por Work, que anota y redirige ([links.py](../../app/whatsapp/links.py), [Despues.jsx](../../frontend/src/ventanas/herramientas/broadcastWa/Despues.jsx)).
 - Arreglo: las ramas del flujo de un taller decían «Queda para el setter» aunque el botón ya tuviera respuesta ([Flujo.jsx](../../frontend/src/ventanas/herramientas/broadcastTaller/Flujo.jsx)).
 - Migración `a8c0e2f4b6d7`.
+
 ### 27/11/2026 · El flujo del taller en un lienzo de nodos y cables (ADR-W262)
 - Pestaña Flujo del broadcast: cada paso es una fila y de cada botón sale un cable a su respuesta, y del link a lo que sale al abrirlo; el panel muestra solo el nodo tocado, sin estirarse hacia abajo ([Lienzo.jsx](../../frontend/src/ventanas/herramientas/broadcastTaller/Lienzo.jsx), [PanelNodo.jsx](../../frontend/src/ventanas/herramientas/broadcastTaller/PanelNodo.jsx)).
 - El lienzo se arrastra con el mouse y tiene zoom. Mockup en `docs/mockups/flujo-taller-lienzo/`.
+
 ### 27/11/2026 · Login: ojo de la contraseña, «Iniciar sesión» y el logo correcto
 - El ojo para ver la contraseña queda visible aunque el navegador autocomplete el campo (antes lo pintaba celeste y lo tapaba). La flecha pasa a un botón «Iniciar sesión» a todo el ancho ([LoginPage.jsx](../../frontend/src/pages/auth/LoginPage.jsx), [login.css](../../frontend/src/pages/auth/login.css)).
 - Isotipo de Learnation redibujado: la L con la curva cóncava, en todas sus copias (login y headers, reservas, favicon y reportes).
+
 ### 27/11/2026 · Login: «Recordarme» y la pestaña nueva entra directo
 - «Recordarme» (prendido por defecto): la sesión dura 30 días en vez de 24 h, en el token y en la cookie, y el usuario queda escrito para la próxima vez. Entrar con Google también dura 30 días ([LoginPage.jsx](../../frontend/src/pages/auth/LoginPage.jsx), [auth.py](../../app/api/auth.py)).
 - Con sesión abierta, una pestaña nueva de Work (o la raíz, que cae en /login) entra directo al área en vez de mostrar el login.
+
 ### 27/11/2026 · Recorridos: «Ver después», retomar y recordatorio; Inbox responsive; caja de escribir más compacta (ADR-W263)
 - La tarjeta del recorrido de seguimientos se veía rota en el Inbox: «Probalo» sin borde y pegado a «Siguiente», que perdía su color. El estilo general de la pantalla les ganaba a sus botones ([novedades.css](../../frontend/src/pages/closer/novedades/novedades.css)).
 - «Ver después» arriba de la tarjeta y en la portada. El recorrido se retoma desde el paso donde quedó.
@@ -1266,11 +1276,13 @@
 - Cada respuesta a un botón pone unas etiquetas y saca otras, como en ManyChat (por ejemplo, «Darme acceso» pone «confirmado» y saca «baja») ([Respuestas.jsx](../../frontend/src/ventanas/herramientas/broadcastWa/Respuestas.jsx), [respuestas.py](../../app/whatsapp/respuestas.py)).
 - Un botón con link puede ir con hasta 3 botones de respuesta, también en el mensaje al abrir el link: salen en dos mensajes seguidos ([Despues.jsx](../../frontend/src/ventanas/herramientas/broadcastWa/Despues.jsx)). El lienzo muestra las etiquetas y los cables de esos botones.
 - Migración `c1e3a5b7d9f2`.
+
 ### 27/11/2026 · Flujo del taller: pasos de mensaje común dentro de las 24 h (ADR-W266)
 - Cada paso elige «Plantilla · fuera de las 24 h» o «Mensaje · dentro de las 24 h»: los recordatorios de 5 h, 4 h, al empezar y después van como mensaje a quien interactuó en las últimas 24 h ([PasoEditor.jsx](../../frontend/src/ventanas/herramientas/broadcastTaller/PasoEditor.jsx), [taller.py](../../app/whatsapp/taller.py)).
 - Arreglo: un paso con plantilla que lleva {{1}} quedaba sin el nombre si no se tocaba la variable (Meta lo habría rechazado); al programar se completa.
 - Arreglo: «{{1}}» en el mensaje de una respuesta o de «al abrir el link» salía literal; ahora es el primer nombre.
 - Migración `e3a5c7d9f1b4`.
+
 ### 27/11/2026 · Inbox: «Les escribiste y no contestaron» y los seguimientos desde su última respuesta (ADR-W267)
 - Filtro › Seguimientos: «Les escribiste y no contestaron», con todos, sin seguimiento, 1, 2 o 3 o más, contados desde su última respuesta. Dos Rápidos nuevos, ordenados por etapa: «Les escribiste» y «Sin seguimiento» ([filtros.js](../../frontend/src/pages/inbox/conversaciones/filtros.js), [seguimientos_hechos.py](../../app/automatizaciones/seguimientos_hechos.py)).
 - Órdenes nuevos: por días sin respuesta y por cantidad de seguimientos.
@@ -1294,22 +1306,32 @@
 
 ### 27/11/2026 · Flujo del taller: desactivar todo o un paso (ADR-W270)
 - «Desactivar todo» siempre que haya pasos programados, y un interruptor «Activo / Desactivado» en cada paso ([PasoEditor.jsx](../../frontend/src/ventanas/herramientas/broadcastTaller/PasoEditor.jsx), [taller.py](../../app/whatsapp/taller.py)).
+
 ### 27/11/2026 · WhatsApp: nombre del perfil primero y, sin nombre, texto acomodado (ADR-W271)
 - Se le escribe a cada uno con su nombre de WhatsApp; sin nombre, «{nombre}, en 5 horas…» sale «En 5 horas…» y la plantilla con {{1}} lleva «👋» ([respuestas.py](../../app/whatsapp/respuestas.py), [audiencia.py](../../app/whatsapp/audiencia.py)).
 - Prueba acelerada del flujo del 28/11 con el número del equipo en el plan de prueba del 26/11: Opening, botones y mensaje de Calendar funcionaron.
+
 ### 27/11/2026 · El chat dice de qué día es cada mensaje y hace cuánto no responde
 - Cada mensaje dice «hoy 10:34», «ayer 10:34» o «25 nov 10:34», y el chat tiene separadores de día («Hoy», «Ayer», «Miércoles 25 nov») que quedan fijos arriba al deslizar ([Feed.jsx](../../frontend/src/pages/inbox/conversaciones/Feed.jsx)).
 - Al pie del chat, si lo último es del equipo: «No responde hace 2 d · tu último hace 3 h». Pasa a ámbar con «toca seguimiento» cuando el último tuyo tiene más de 12 h, y a rojo con 3 días sin responder. Al pasar el mouse, su última respuesta y tu último mensaje con fecha.
+
 ### 27/11/2026 · Talent: la fecha de postulación siempre a la vista
 - La columna «Postuló» («Hace 3 días» · «24 nov») pasa a fija en la tabla de postulaciones: ya no se puede ocultar desde Columnas, así que aparece también en las vistas guardadas que la tenían apagada ([vista.js](../../frontend/src/pages/admin/hiring/lib/vista.js)).
+
 ### 27/11/2026 · Analyze: Actuales o Antiguas
 - A la izquierda de las pestañas de Analyze, un selector «Actuales · N / Antiguas · N»: Actuales son las que postularon en el mes en curso; Antiguas, las de antes. La tabla y las cuentas de Seleccionadas, Reserva y Descartadas siguen el período elegido. Arranca siempre en Actuales ([HiringDashboardPage.jsx](../../frontend/src/pages/admin/hiring/HiringDashboardPage.jsx), [vista.js](../../frontend/src/pages/admin/hiring/lib/vista.js)).
+
 ### 27/11/2026 · Revisión de closers: solo revisores activos
 - El estado de la revisión por revisor deja afuera las cuentas dadas de baja (la de admin vieja de Marlon), así figuran solo Mario y Marlon con sus cuentas actuales ([job_applications.py](../../app/api/job_applications.py)).
+
 ### 27/11/2026 · Marlon revisa Talent como Mario (ADR-W193, ampliación)
 - Con el rol «Hiring · Closers», Marlon ve Inbox (Asistentes y Closers), Analyze, Winners y Stats, y decide en cada postulación. No ve Forms, la sección Closers ni los ajustes, y no puede eliminar ([HiringDashboardPage.jsx](../../frontend/src/pages/admin/hiring/HiringDashboardPage.jsx), [assistant_applications.py](../../app/api/assistant_applications.py), [hiring_forms.py](../../app/api/hiring_forms.py)).
+
 ### 27/11/2026 · Talent: Closers en todas las secciones, cabecera compacta y banderas de todos los países
 - El desplegable Asistentes / Closers va al lado del título en Inbox, Analyze, Winners y Stats. Con Closers, Analyze muestra closers en Seleccionadas, Reserva, A decidir y Descartadas (con Actuales / Antiguas: Antiguas suma las búsquedas archivadas), Winners en En prueba y Baja, y Stats las estadísticas de closers. Las tablas usan las columnas de closer (conocimiento, cierre, inglés, material). La sección Closers sigue igual ([HiringDashboardPage.jsx](../../frontend/src/pages/admin/hiring/HiringDashboardPage.jsx), [InboxCloser.jsx](../../frontend/src/pages/admin/hiring/components/closers/InboxCloser.jsx), [closers.js](../../frontend/src/pages/admin/hiring/lib/closers.js)).
 - Cabecera en una fila: Actuales / Antiguas junto al título, pestañas más chicas, filtro redondo y buscador en barrita (lupa y Ctrl K) que se abre al tocarlo ([talent.css](../../frontend/src/pages/admin/hiring/talent.css)).
 - El ancho de las columnas se ajusta también en la tabla de closers. El tirador ya no muestra rayas fijas: aparece una línea fina al pasar y se estira en rosa al arrastrar.
 - Banderas para todos los países de las postulaciones (Colombia, Costa Rica, España, México, Ecuador, Chile, Uruguay y el resto); «Otro» lleva una neutra ([Piezas.jsx](../../frontend/src/pages/admin/hiring/components/Piezas.jsx)).
+
+### 27/11/2026 · Flujo del taller: botones de respuesta en los pasos de mensaje (ADR-W272)
+- Un paso de mensaje común lleva hasta 3 botones de respuesta además del link; cada botón, y el link con «al abrir el link», tiene su nodo en el lienzo como los de una plantilla ([PasoEditor.jsx](../../frontend/src/ventanas/herramientas/broadcastTaller/PasoEditor.jsx), [respuestas.py](../../app/whatsapp/respuestas.py)).

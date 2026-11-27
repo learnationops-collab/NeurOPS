@@ -39,6 +39,7 @@ MAX_DEMORA = 3600
 DEMORA_CORTA = 90  # hasta acá la manda un hilo a su hora; más larga, el reloj del motor
 URL = re.compile(r'^https?://\S+$')
 REPETIDA = 'Ya elegiste «{opcion}» 🙌'
+LINK_BOTON = '__link__'  # la regla del link de un paso de mensaje (`paso:<id>`), para su «al abrir el link» (ADR-W272)
 SIGUE_DEBAJO = '👇'  # el texto del segundo mensaje cuando un link va con botones de respuesta (ADR-W265)
 MAX_ETIQUETAS = 10
 
@@ -153,6 +154,25 @@ def mensajes_de(regla, texto, contacto_id=None):
             url = links.url_de(contacto_id, regla.id)
         link = (con_link['titulo'], url)
     return _armar(texto, link, _opciones(regla, [b for b in botones if not b.get('url')], regla.boton))
+
+
+def partes_de_paso(mensaje, nombre, contacto_id=None):
+    """[(texto, cuerpo)] de un paso de mensaje común (ADR-W272): su texto, su link (por la ruta de Work si tiene
+    «al abrir el link») y sus botones de respuesta, que siguen las reglas `paso:<id>` como los de una plantilla."""
+    texto = con_nombre(mensaje.get('texto') or '', nombre)
+    clave = f"paso:{mensaje['paso_id']}" if mensaje.get('paso_id') else None
+    link = None
+    if mensaje.get('url'):
+        url = mensaje['url']
+        regla = WaRespuestaBoton.query.filter_by(plantilla=clave, boton=LINK_BOTON).first() if clave else None
+        if regla and _despues_de(regla) and contacto_id:
+            from app.whatsapp import links
+            url = links.url_de(contacto_id, regla.id)
+        link = (mensaje.get('titulo') or 'Abrir', url)
+    # El origen es el paso (no vacío): la opción única de sus botones no se mezcla con la de la plantilla.
+    opciones = ([(b['titulo'], f"{PREFIJO_ID}{clave}|{b['titulo']}|{i}|{clave}")
+                 for i, b in enumerate(mensaje.get('botones') or [])] if clave else [])
+    return _armar(texto, link, opciones)
 
 
 def _guardar_saliente(contacto, mid, texto, cuerpo, ahora):
