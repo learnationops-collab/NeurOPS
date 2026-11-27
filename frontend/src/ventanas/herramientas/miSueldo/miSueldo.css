@@ -1,0 +1,97 @@
+/* Mi sueldo (herramientas/miSueldo): dos columnas, a la izquierda el mes y a la derecha sus pagos. */
+.ms{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);height:min(640px,calc(100vh - 210px));margin:-14px;
+  color:var(--ln-text-out);transition:opacity .15s}
+.ms--cargando{opacity:.6}
+/* max-content: la caja de conceptos tiene overflow:hidden y, sin esto, la grilla la aplasta */
+.ms-izq{overflow:auto;padding:16px 18px 18px;display:grid;grid-auto-rows:max-content;gap:16px;align-content:start;
+  border-right:1px solid var(--ln-border-subtle)}
+.ms-der{display:flex;flex-direction:column;min-height:0;min-width:0}
+.ms .num{font-variant-numeric:tabular-nums}
+.ms-rotulo{margin:0;font-size:10.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--ln-text-faint)}
+
+.ms-barra{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:space-between}
+.ms-mes{display:flex;align-items:center;gap:2px;padding:3px;border-radius:12px;background:var(--ln-inset-bg)}
+.ms-mes b{min-width:130px;text-align:center;font-size:12.5px;color:var(--ln-text-in)}
+.ms-quien{margin:-8px 0 0;font-size:12px;font-weight:700;color:var(--ln-brand)}
+
+.ms-total{display:grid;gap:4px}
+.ms-total-cab{display:flex;align-items:center;gap:6px}
+.ms-n{font-size:34px;font-weight:900;line-height:1.1;color:var(--ln-text-in)}
+.ms-sub{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--ln-text-muted)}
+.ms-estado{padding:3px 8px;border-radius:999px;font-size:11px;font-weight:800;color:var(--c);
+  background:color-mix(in srgb,var(--c) 16%,transparent)}
+
+/* «?»: el texto de Cómo se calcula al pasar el mouse (o con foco) */
+.ms-ayuda{position:relative;display:inline-flex}
+.ms-ayuda button{all:unset;cursor:help;width:17px;height:17px;border-radius:50%;display:grid;place-items:center;font-size:10.5px;font-weight:900;
+  background:var(--ln-inset-bg);color:var(--ln-text-muted);border:1px solid var(--ln-border-subtle)}
+.ms-ayuda:hover button,.ms-ayuda button:focus-visible{background:var(--ln-brand);color:#fff;border-color:var(--ln-brand)}
+.ms-globo{position:absolute;left:-8px;top:calc(100% + 8px);z-index:5;width:min(340px,70vw);padding:12px 14px;border-radius:12px;
+  background:var(--ln-popover-bg);border:1px solid var(--ln-border-main);box-shadow:var(--ln-shadow);
+  font-size:11.5px;line-height:1.5;color:var(--ln-text-muted);font-weight:500;
+  opacity:0;visibility:hidden;transform:translateY(-4px);transition:opacity .15s,transform .15s,visibility .15s}
+.ms-ayuda:hover .ms-globo,.ms-ayuda:focus-within .ms-globo{opacity:1;visibility:visible;transform:none}
+.ms-globo b{display:block;margin-bottom:4px;font-size:12px;color:var(--ln-text-in)}
+.ms-globo ul{margin:0;padding-left:16px;display:grid;gap:3px}
+
+.ms-apilada{display:flex;height:14px;gap:2px;border-radius:999px;overflow:hidden;background:var(--ln-inset-bg)}
+.ms-apilada i{display:block;height:100%}
+
+.ms-conceptos{display:grid;border:1px solid var(--ln-border-subtle);border-radius:14px;overflow:hidden}
+/* minmax(0,1fr): sin esto la descripción empuja el monto fuera de la caja */
+.ms-fila{box-sizing:border-box;width:100%;display:grid;grid-template-columns:10px minmax(0,1fr) auto 36px 10px;gap:10px;align-items:center;
+  padding:11px 14px;border:0;border-top:1px solid var(--ln-border-subtle);background:none;color:inherit;font:inherit;text-align:left}
+.ms-fila:first-child{border-top:0}
+.ms-fila--btn{cursor:pointer}
+.ms-fila--btn:hover{background:var(--ln-inset-bg)}
+.ms-fila--btn[aria-pressed="true"]{background:color-mix(in srgb,var(--c) 12%,transparent);box-shadow:inset 3px 0 0 var(--c)}
+.ms-pt{display:inline-block;width:10px;height:10px;border-radius:3px;flex-shrink:0}
+.ms-pt--sm{width:7px;height:7px;margin-right:5px;vertical-align:1px}
+.ms-tx{display:grid;min-width:0}
+.ms-tx b{font-size:13px;color:var(--ln-text-in)}
+.ms-tx span{font-size:11.5px;line-height:1.4;color:var(--ln-text-muted);overflow-wrap:anywhere}
+.ms-m{font-weight:800;text-align:right;white-space:nowrap;color:var(--ln-text-in)}
+.ms-neg{color:var(--ln-danger)}
+.ms-pc{font-size:11.5px;text-align:right;color:var(--ln-text-faint)}
+.ms-fl{font-size:11px;color:var(--ln-text-faint)}
+.ms-pie{display:grid;grid-template-columns:10px minmax(0,1fr) auto 36px 10px;gap:10px;padding:12px 14px;white-space:nowrap;
+  border-top:2px solid var(--ln-border-subtle);background:var(--ln-inset-bg);font-weight:900;color:var(--ln-text-in)}
+
+.ms-hist{display:grid;gap:8px}
+.ms-meses{display:grid;gap:10px;align-items:end;height:120px}
+.ms-col{all:unset;cursor:pointer;display:grid;gap:5px;justify-items:center;align-content:end;height:100%}
+.ms-col:focus-visible{outline:2px solid var(--ln-focus,var(--ln-brand));outline-offset:2px;border-radius:8px}
+.ms-pila{width:34px;display:flex;flex-direction:column-reverse;gap:1px;border-radius:7px;overflow:hidden}
+.ms-pila i{display:block}
+.ms-col small{font-size:11px;font-weight:700;color:var(--ln-text-muted)}
+.ms-col em{font-style:normal;font-size:11px;color:var(--ln-text-faint)}
+.ms-col[aria-pressed="true"] small{color:var(--ln-brand)}
+
+.ms-p-cab{display:grid;gap:10px;padding:14px 18px 10px;border-bottom:1px solid var(--ln-border-subtle)}
+.ms-p-cab h3{margin:0;font-size:13px;font-weight:900;color:var(--ln-text-in)}
+.ms-p-cab h3 span{font-weight:700;color:var(--ln-text-faint)}
+.ms-p-cab .ui-seg{max-width:100%;overflow-x:auto;justify-self:start}
+.ms-pagos{flex:1;overflow:auto;padding:0 18px}
+.ms-pagos table{width:100%;border-collapse:collapse;font-size:12px}
+.ms-pagos th{position:sticky;top:0;z-index:1;background:var(--ln-popover-bg);text-align:left;padding:10px 0 6px;
+  font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--ln-text-faint);border-bottom:1px solid var(--ln-border-subtle)}
+.ms-pagos td{padding:8px 0;border-bottom:1px solid var(--ln-border-subtle);color:var(--ln-text-out);vertical-align:top}
+.ms-pagos td small{display:block;font-size:10.5px;color:var(--ln-text-faint)}
+.ms-pagos .ms-d{text-align:right;white-space:nowrap;padding-left:10px}
+.ms-f{width:48px;color:var(--ln-text-faint)}
+.ms-excl td{color:var(--ln-text-faint)}
+.ms-excl .ms-tch{text-decoration:line-through}
+.ms-marca{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:999px;font-size:10px;font-weight:800;vertical-align:1px;
+  color:var(--c);background:color-mix(in srgb,var(--c) 16%,transparent)}
+.ms-vacio{margin:0;padding:30px 0;text-align:center;font-size:12px;color:var(--ln-text-faint)}
+.ms-p-pie{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:12px 18px;font-size:12px;color:var(--ln-text-muted);
+  border-top:2px solid var(--ln-border-subtle);background:var(--ln-inset-bg)}
+.ms-p-pie b{color:var(--ln-text-in)}
+
+/* Angosta (o teléfono): una columna, los pagos abajo */
+@media (max-width:820px){
+  .ms{grid-template-columns:minmax(0,1fr);height:auto;overflow:visible}
+  .ms-izq{overflow:visible;border-right:0;border-bottom:1px solid var(--ln-border-subtle)}
+  .ms-der{min-height:420px}
+  .ms-pagos th{position:static}
+}

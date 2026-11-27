@@ -8,11 +8,11 @@ from flask_login import current_user
 from sqlalchemy.orm import defer
 
 from app import db
+from app.automatizaciones import audio_formato
 from app.automatizaciones.api import ROLES_CON_ACCESO, bp
 from app.models.inbox_work import AudioClip, QuickReply
 
 MAX_AUDIO = 8 * 1024 * 1024  # 8 MB: Instagram acepta audios de hasta 25 MB, pero viven en la base
-TIPOS_AUDIO = ('audio/mpeg', 'audio/mp4', 'audio/x-m4a', 'audio/aac', 'audio/ogg', 'audio/wav', 'audio/x-wav', 'audio/webm')
 ATAJO = re.compile(r'^[a-z0-9_]{1,30}$')
 
 
@@ -75,12 +75,16 @@ def subir_audio():
     nombre = (request.form.get('nombre') or '').strip()[:120]
     if archivo is None or not nombre:
         return jsonify({'message': 'Falta el audio o su nombre'}), 400
-    tipo = (archivo.mimetype or '').split(';')[0]
-    if tipo not in TIPOS_AUDIO:
-        return jsonify({'message': 'Subí un audio (mp3, m4a, ogg, wav o webm)'}), 400
+    tipo = audio_formato.tipo_de(archivo.mimetype, archivo.filename)
+    if tipo is None:
+        return jsonify({'message': 'Subí un audio (mp3, m4a, ogg, opus, wav o webm)'}), 400
     datos = archivo.read(MAX_AUDIO + 1)
     if len(datos) > MAX_AUDIO:
         return jsonify({'message': 'El audio pesa más de 8 MB'}), 400
+    try:
+        datos, tipo = audio_formato.reproducible(datos, tipo)
+    except audio_formato.AudioInvalido as error:
+        return jsonify({'message': str(error)}), 400
     duracion = request.form.get('duracion', type=float)
     a = AudioClip(name=nombre, mime=tipo, size=len(datos), data=datos, created_by=current_user.id,
                   duration_s=round(duracion) if duracion else None)

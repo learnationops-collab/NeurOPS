@@ -1,10 +1,14 @@
-// Las vistas de Confirmar de cada uno (ADR-W201): tipo (tablero, lista o semana), propiedades, filtro,
-// orden y agrupación. Se guardan en la cuenta junto con el dock (`dock_prefs.confirmar`, ADR-W164), así
+// Las vistas de Confirmar de cada uno (ADR-W201): tipo (tablero, lista o calendario), propiedades, filtro,
+// orden y agrupación; el calendario guarda también cuántos días ve y el zoom. Se guardan en la cuenta junto con el dock (`dock_prefs.confirmar`, ADR-W164), así
 // otra compu arranca igual; el navegador guarda una copia para leer al instante.
 import { useCallback, useSyncExternalStore } from 'react';
 import { avisarCambio, registrarParte } from '../../../sesion/dockServidor';
 
-export const TIPOS_DE_VISTA = { tablero: 'Tablero', lista: 'Lista', semana: 'Semana' };
+// La clave `semana` queda por las vistas ya guardadas; hoy es el calendario de 1 a 9 días.
+export const TIPOS_DE_VISTA = { tablero: 'Tablero', lista: 'Lista', semana: 'Calendario' };
+export const DIAS_CALENDARIO = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+export const ALTOS_CALENDARIO = [56, 80, 104, 136];
+const PROPS_CALENDARIO = ['hora', 'etapa', 'segmento', 'decision', 'inversion'];
 const MAX_VISTAS = 8;
 const PARTE = 'confirmar';
 const clave = (userId) => `confirmar-vistas:${userId}`;
@@ -20,8 +24,8 @@ export function vistasDeFabrica(esTriage) {
         { ...base, id: 'etapa', nombre: 'Por etapa', tipo: 'tablero', agrupar: 'etapa', props: sinCloser(PROPS_TABLERO) },
         { ...base, filtro: filtroVacio(), id: 'hora', nombre: esTriage ? 'Por hora' : 'Mis llamadas', tipo: 'lista', agrupar: 'urgencia',
             props: sinCloser(['hora', 'closer', 'etapa', 'segmento', 'avisos', 'inversion', 'decision']) },
-        { ...base, filtro: filtroVacio(), id: 'semana', nombre: esTriage ? 'Semana' : 'Mi semana', tipo: 'semana', agrupar: 'ninguno',
-            props: sinCloser(['closer', 'etapa']) },
+        { ...base, filtro: filtroVacio(), id: 'semana', nombre: esTriage ? 'Calendario' : 'Mi calendario', tipo: 'semana', agrupar: 'ninguno',
+            dias: 7, alto: 104, cal: 3, props: PROPS_CALENDARIO },
     ];
 }
 
@@ -30,10 +34,24 @@ function sana(v) {
     if (!v || typeof v !== 'object' || !TIPOS_DE_VISTA[v.tipo] || typeof v.id !== 'string') return null;
     const f = v.filtro && typeof v.filtro === 'object' ? v.filtro : {};
     const lista = (x) => (Array.isArray(x) ? x.filter(y => typeof y === 'string') : []);
+    let nombre = String(v.nombre || TIPOS_DE_VISTA[v.tipo]).slice(0, 40);
+    let props = lista(v.props);
+    // La «Semana» de fábrica pasó a ser el «Calendario» (25/11/2026).
+    if (v.id === 'semana') nombre = { Semana: 'Calendario', 'Mi semana': 'Mi calendario' }[nombre] || nombre;
+    // Todo calendario guardado antes de la versión 2 suma etapa, segmento, decisor e inversión adelante, sin
+    // sacar lo que la persona había prendido.
+    if (v.tipo === 'semana' && !(v.cal >= 2)) props = [...new Set([...PROPS_CALENDARIO, ...props])];
+    // Versión 3 (ADR-W220): la hora del calendario pasó a ser una propiedad que se apaga; arranca prendida.
+    if (v.tipo === 'semana' && !(v.cal >= 3) && !props.includes('hora')) props = ['hora', ...props];
     return {
-        id: v.id, tipo: v.tipo, nombre: String(v.nombre || TIPOS_DE_VISTA[v.tipo]).slice(0, 40),
+        id: v.id, tipo: v.tipo, nombre,
         agrupar: typeof v.agrupar === 'string' ? v.agrupar : 'etapa', orden: typeof v.orden === 'string' ? v.orden : 'hora', asc: v.asc !== false,
-        props: lista(v.props), filtro: { closers: lista(f.closers), etapas: lista(f.etapas), segmentos: lista(f.segmentos) },
+        props, ordenProps: lista(v.ordenProps), filtro: { closers: lista(f.closers), etapas: lista(f.etapas), segmentos: lista(f.segmentos) },
+        dias: DIAS_CALENDARIO.includes(v.dias) ? v.dias : 7,
+        // En el teléfono se eligen aparte (useTelefono): una semana no entra en 390 px.
+        diasTel: DIAS_CALENDARIO.includes(v.diasTel) ? v.diasTel : 3,
+        alto: ALTOS_CALENDARIO.includes(v.alto) ? v.alto : 104,
+        cal: 3,
     };
 }
 const sanas = (lista) => {
@@ -84,7 +102,7 @@ export function useVistasConfirmar(user, esTriage) {
     const crear = useCallback((tipo) => {
         if (vistas.length >= MAX_VISTAS) return null;
         const molde = vistasDeFabrica(esTriage).find(v => v.tipo === tipo);
-        const nueva = { ...molde, filtro: filtroVacio(), id: `v${Date.now().toString(36)}`, nombre: `${TIPOS_DE_VISTA[tipo]} nueva` };
+        const nueva = { dias: 7, alto: 104, cal: 3, ...molde, filtro: filtroVacio(), id: `v${Date.now().toString(36)}`, nombre: { tablero: 'Tablero nuevo', lista: 'Lista nueva', semana: 'Calendario nuevo' }[tipo] };
         guardar([...vistas, nueva]);
         return nueva.id;
     }, [vistas, guardar, esTriage]);

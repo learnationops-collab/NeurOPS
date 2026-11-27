@@ -2,7 +2,7 @@
 // Academia y `DockTools` de Leadership. Cada una aparece en el menú de sesión (y se puede fijar en el dock)
 // y se abre encima de cualquier pantalla. Sumar una es agregar un item acá y su componente en ./herramientas/.
 import { lazy } from 'react';
-import { CalendarClock, Compass, MessageCircle, MessageSquarePlus, Search, Settings } from 'lucide-react';
+import { CalendarClock, Compass, Megaphone, MessageCircle, MessageSquarePlus, Search, Settings, Wallet } from 'lucide-react';
 import AccionesConfiguracion from '../sesion/AccionesConfiguracion';
 
 export const HERRAMIENTAS = [
@@ -18,11 +18,42 @@ export const HERRAMIENTAS = [
     {
         key: 'turnos',
         label: 'Turnos',
-        hint: 'Los turnos que quedan de triage y de closers, por día',
+        hint: 'Lo que ve el lead en cada link y segmento, y los días que se pueden agendar',
         Icono: CalendarClock,
         roles: ['setter', 'closer', 'triage', 'admin', 'director_comercial', 'operator'],
-        ancho: 820,
+        ancho: 1040,
         Componente: lazy(() => import('./herramientas/TurnosVentana.jsx')),
+    },
+    // Mi sueldo (ADR-W223, pedido de Marlon): de qué se compone el sueldo del mes. El director ve a cualquiera del equipo.
+    {
+        key: 'mi-sueldo',
+        label: 'Mi sueldo',
+        hint: 'De qué se compone tu sueldo del mes: base, comisiones, bonos y los pagos que las suman',
+        Icono: Wallet,
+        roles: ['setter', 'closer', 'director_comercial', 'admin', 'operator'],
+        ancho: 1040,
+        Componente: lazy(() => import('./herramientas/miSueldo/MiSueldoVentana.jsx')),
+    },
+    // Broadcast de WhatsApp (ADR-W229): una plantilla aprobada a los próximos N de un CSV, a mano, con historial.
+    {
+        key: 'broadcast-wa',
+        label: 'Broadcast de WhatsApp',
+        hint: 'Mandar una plantilla aprobada a una lista de números y ver qué pasó con cada uno',
+        Icono: Megaphone,
+        roles: ['admin', 'operator'],
+        ancho: 620,
+        Componente: lazy(() => import('./herramientas/broadcastWa/BroadcastVentana.jsx')),
+    },
+    // El broadcast de un taller (ADR-W259): audiencia, flujo de recordatorios y plantillas. No va en el menú: se abre
+    // desde Planificar › Próximos talleres con `{ tallerId }`.
+    {
+        key: 'broadcast-taller',
+        label: 'Broadcast del taller',
+        Icono: Megaphone,
+        roles: ['admin', 'operator', 'director_marketing'],
+        enMenu: false,
+        ancho: 1180,
+        Componente: lazy(() => import('./herramientas/broadcastTaller/BroadcastTallerVentana.jsx')),
     },
     // El chat del equipo, que vive en la Academia (ADR-W171): General · Equipo, quién está conectado y Learnito.
     {
@@ -50,6 +81,8 @@ export const HERRAMIENTAS = [
         key: 'pedido-devs',
         label: 'Pedido a los devs',
         hint: 'Un cambio, un error o una duda de la plataforma, directo al Inbox de los devs',
+        // Al triage no le sirve (ADR-W257): lo suyo se reporta desde Mis reportes.
+        sinRoles: ['triage'],
         Icono: MessageSquarePlus,
         roles: null,
         ancho: 480,
@@ -63,14 +96,15 @@ export const HERRAMIENTAS = [
         Icono: Settings,
         roles: null,
         enMenu: false,
-        ancho: 900,
+        ancho: 1240,
         Acciones: AccionesConfiguracion,
         Componente: lazy(() => import('../sesion/ConfiguracionVentana.jsx')),
     },
 ];
 
-/** Si el rol de la sesión puede abrir la herramienta (`roles: null` = todos). */
-export const permitida = (h, user) => Boolean(h && user && (!h.roles || h.roles.includes(user.role)));
+/** Si el rol de la sesión puede abrir la herramienta (`roles: null` = todos; `sinRoles`, los que no). */
+export const permitida = (h, user) => Boolean(h && user && (!h.roles || h.roles.includes(user.role))
+    && !(h.sinRoles || []).includes(user.role));
 
 export const herramienta = (key) => HERRAMIENTAS.find(h => h.key === key) || null;
 

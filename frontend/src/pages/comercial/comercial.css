@@ -599,6 +599,10 @@
   display:flex;align-items:center;gap:var(--s1)}
 .dc-shell .dock--desborda .dock-despues{padding-left:14px;margin-left:-10px;
   background:linear-gradient(90deg,transparent,var(--bg-surface) 14px)}
+/* `--bg-surface` es translúcido: las secciones que pasaban por debajo se veían a través de Herramientas y
+   el avatar (en el teléfono quedaban encimados). Debajo va el fondo de la página, opaco: suma el mismo tono del dock. */
+@media (max-width:720px){.dc-shell .dock--desborda .dock-despues{
+  background:linear-gradient(90deg,transparent,var(--bg-surface) 14px),linear-gradient(90deg,transparent,var(--ln-page-base,#020617) 14px)}}
 /* La sesión al final del dock (ver `MenuSesion`): el avatar, con la cuenta de lo pendiente
    encima (los videos del Playbook) para que guardarlo en un menú no lo esconda. */
 .dc-shell .dock-sesion{position:relative;z-index:1;flex-shrink:0;display:grid;place-items:center;
@@ -645,13 +649,26 @@
 .dc-shell .menu-fila:hover .menu-fijar,.dc-shell .menu-fijar:focus-visible{opacity:1}
 .dc-shell .menu-fijar--puesta{opacity:1;color:var(--brand-secondary)}
 /* Las fijadas, a la izquierda del dock: un botón por acción, del tamaño del avatar. */
-.dc-shell .dock-fijadas{display:flex;align-items:center;gap:2px;flex-shrink:0}
+.dc-shell .dock-fijadas{display:flex;align-items:center;gap:4px;flex-shrink:0}
 .dc-shell .dock-fijada{position:relative;z-index:1;flex-shrink:0;display:grid;place-items:center;
   width:48px;height:56px;border-radius:17px;color:var(--text-muted);
   transition:background-color .18s ease,color .18s ease,transform .26s var(--spring)}
 .dc-shell .dock-fijada:hover{background:var(--mat-3);color:var(--text-on-surface)}
 .dc-shell .dock-fijada:active{transform:scale(.95)}
 .dc-shell .dock-fijada:focus-visible{outline:2px solid var(--brand-secondary);outline-offset:-2px}
+/* Con pendientes (ADR-W242): fijada sola hasta resolverse, con un borde que la marca. */
+/* 26/11/2026 (Mario: el borde rosa se veía feo y las separaba de las otras): sin borde. Se distingue por un aura
+   suave de su color (Inbox rosa, Avisos ámbar, Playbook verde: `--tono`, de `catalogoHerramientas`) que respira
+   despacio, el ícono de ese color y el globito del mismo tono. */
+.dc-shell .dock-fijada--pendiente{color:var(--tono, var(--brand-secondary));isolation:isolate}
+.dc-shell .dock-fijada--pendiente::before{content:"";position:absolute;inset:6px 4px;z-index:-1;border-radius:16px;
+  background:radial-gradient(closest-side,color-mix(in srgb,var(--tono, var(--brand-secondary)) 50%,transparent),transparent 80%);
+  filter:blur(5px);animation:dockAura 3.6s ease-in-out infinite}
+.dc-shell .dock-fijada--pendiente:hover{color:var(--tono, var(--brand-secondary))}
+.dc-shell .dock-fijada--pendiente .dock-sesion-aviso{background:var(--tono, var(--brand-secondary));color:#0d1030}
+@keyframes dockAura{0%,100%{opacity:.55;transform:scale(.9)}50%{opacity:1;transform:scale(1.06)}}
+@media (prefers-reduced-motion:reduce){.dc-shell .dock-fijada--pendiente::before{animation:none}}
+.dc-shell .menu-fijar--candado{opacity:1;color:var(--error, #c8433a);cursor:default}
 /* Las ventanas abiertas (ventanas/IslaVentanas.jsx): la que está a la vista lleva una rayita abajo. */
 .dc-shell .dock-ventana--abierta{color:var(--text-on-surface)}
 .dc-shell .dock-ventana--abierta::after{content:'';position:absolute;left:30%;right:30%;bottom:4px;height:3px;border-radius:2px;background:var(--brand-secondary)}

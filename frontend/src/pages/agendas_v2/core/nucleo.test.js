@@ -40,9 +40,9 @@ describe('disponibilidad', () => {
         const ocupado = (pid, t, dur) => t < b1 && t + dur * 60000 > b0;
         expect(slotsPersona(p, 45, agendaOpt(ag({ reservas: { n: 0 } }), 45), { ahora: LUNES, ocupado })).toEqual([Date.UTC(2026, 9, 5, 14), Date.UTC(2026, 9, 5, 14, 45)]);
     });
-    it('"días hábiles" no ofrece sábados ni domingos', () => {
-        const dias = diasDelHorizonte(agendaOpt(ag({ reservas: { n: 5, tipo: 'habiles' } }), 45), 'America/La_Paz', LUNES);
-        expect(dias.map(x => x.dow)).toEqual([1, 2, 3, 4, 5, 1]);
+    it('"días hábiles" cuenta el sábado y no el domingo', () => {
+        const dias = diasDelHorizonte(agendaOpt(ag({ reservas: { n: 6, tipo: 'habiles' } }), 45), 'America/La_Paz', LUNES);
+        expect(dias.map(x => x.dow)).toEqual([1, 2, 3, 4, 5, 6, 1]);
     });
     it('"días corridos" incluye hoy y los N siguientes', () => {
         expect(diasDelHorizonte(agendaOpt(ag({ reservas: { n: 3 } }), 45), 'America/La_Paz', LUNES)).toHaveLength(4);

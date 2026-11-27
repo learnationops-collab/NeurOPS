@@ -12,9 +12,10 @@
 // directo esa lista (`panelInicial`).
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal, flushSync } from 'react-dom';
-import { ArrowLeft, ArrowUpRight, ChevronRight, Pencil, Pin, PinOff, Search, Wrench, X } from 'lucide-react';
+import { ArrowLeft, ArrowUpRight, ChevronRight, Lock, Pencil, Pin, PinOff, Search, Wrench, X } from 'lucide-react';
 import { subirACapa } from '../components/standard/capa';
-import { esFijable, useFijadas } from '../sesion/fijadas';
+import { esFijable, tienePendientes, useFijadas } from '../sesion/fijadas';
+import { conFicha } from './catalogoHerramientas';
 import './herramientasModal.css';
 
 const Fila = ({ op, fijada, onAbrir, onFijar }) => {
@@ -30,7 +31,13 @@ const Fila = ({ op, fijada, onAbrir, onFijar }) => {
                 {op.panel && <ChevronRight size={15} aria-hidden="true" className="menu-flecha" />}
                 {op.va && <ArrowUpRight size={13} aria-hidden="true" className="menu-flecha" />}
             </button>
-            {onFijar && (
+            {tienePendientes(op) ? (
+                // Con pendientes queda fijada hasta resolverse (ADR-W242): el pin no se puede sacar.
+                <span className="menu-accion menu-fijar menu-fijar--candado" role="img" title="Se queda fijada hasta que la resuelvas"
+                    aria-label={`${op.label}: fijada hasta que la resuelvas`}>
+                    <Lock size={14} aria-hidden="true" />
+                </span>
+            ) : onFijar && (
                 <button type="button" role="menuitemcheckbox" data-fijar="" aria-checked={fijada} aria-label={rotulo} title={rotulo}
                     className={`menu-accion menu-fijar${fijada ? ' menu-fijar--puesta' : ''}`} onClick={onFijar}>
                     {fijada ? <PinOff size={15} aria-hidden="true" /> : <Pin size={15} aria-hidden="true" />}
@@ -216,7 +223,8 @@ export default function BotonHerramientas({ usuario, grupos = [], onEditar = nul
 
     return (
         <>
-            <button ref={boton} type="button" className={`dock-fijada ${clase}`.trim()} aria-label={rotulo} title={rotulo}
+            <button ref={boton} type="button" className={`dock-fijada ${clase}`.trim()} aria-label={rotulo}
+                data-dock-tip={principal ? `${rotulo}|Todo lo que no es una sección: buscar, crear, agendas, avisos · Ctrl+J` : `${rotulo}|${panelInicial ? conFicha(panelInicial).desc : ''}`}
                 aria-haspopup={enVentana ? "dialog" : "menu"} aria-expanded={abierto} onClick={() => (abierto ? cerrar() : abrir())}>
                 <Icono size={19} aria-hidden="true" />
                 <span className="dock-fijada-nombre">{rotulo}</span>

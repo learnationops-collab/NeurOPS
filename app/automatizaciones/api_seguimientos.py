@@ -48,3 +48,20 @@ def cancelar_seguimiento(seguimiento_id):
         return jsonify({'message': str(e)}), 409
     db.session.commit()
     return jsonify(seguimientos.resumen(s))
+
+
+@bp.route('/mensajes/<int:mensaje_id>/seguimiento', methods=['POST'])
+def marcar_seguimiento(mensaje_id):
+    """Marca o desmarca un mensaje del equipo como seguimiento (ADR-W255): `{marca: true|false}`."""
+    from app.automatizaciones.modelos import IgMensaje
+    marca = (request.get_json(silent=True) or {}).get('marca')
+    if not isinstance(marca, bool):
+        return jsonify({'message': 'Falta si es seguimiento o no'}), 400
+    m = db.session.get(IgMensaje, mensaje_id)
+    if m is None:
+        return jsonify({'message': 'Not found'}), 404
+    if m.direccion != IgMensaje.SALIENTE or m.origen != IgMensaje.OTRO:
+        return jsonify({'message': 'Solo un mensaje del equipo puede ser seguimiento'}), 400
+    m.seguimiento = marca
+    db.session.commit()
+    return jsonify({'id': m.id, 'seguimiento': m.seguimiento})

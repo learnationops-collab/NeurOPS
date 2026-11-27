@@ -75,7 +75,7 @@ const FichaTabs = ({ pestanas = [], activa, onCambiar, contadores = {} }) => {
                         aria-controls={`fi-panel-${p.id}`}
                         tabIndex={on ? 0 : -1}
                         onClick={() => onCambiar(p.id)}>
-                        {Icono && <Icono aria-hidden="true" />}
+                        {Icono && <span className="fi-tab-ico" aria-hidden="true"><Icono /></span>}
                         {p.label}
                         {/* Fuera del nombre accesible: el número duplica lo que ya se lee
                             dentro del panel, y pegado al rótulo haría que la pestaña se
@@ -86,8 +86,12 @@ const FichaTabs = ({ pestanas = [], activa, onCambiar, contadores = {} }) => {
                         {/* `layoutId` corre el subrayado de una pestaña a la otra en vez de
                             hacerlo reaparecer del otro lado. */}
                         {on && (
-                            <motion.span layoutId="fi-tab-sub" className="fi-tab-sub"
-                                aria-hidden="true" {...mov.subrayado} />
+                            <>
+                                <motion.span layoutId="fi-tab-fondo" className="fi-tab-fondo"
+                                    aria-hidden="true" {...mov.subrayado} />
+                                <motion.span layoutId="fi-tab-sub" className="fi-tab-sub"
+                                    aria-hidden="true" {...mov.subrayado} />
+                            </>
                         )}
                     </button>
                 );

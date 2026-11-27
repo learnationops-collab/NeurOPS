@@ -1,8 +1,8 @@
 """Reporte único del setter: lo que cuenta el Inbox (corregible) más lo que el setter carga a mano.
 
-Automático: `reporte_inbox.contar` (mensajes, cualificados, no leads, in-abribles y embudo) y las
-agendas generadas por canal (`_precarga_por_canal`, como el prefill de siempre). A mano: aperturas y
-sus respuestas por canal, bienvenidas y seguimientos por etapa. Se guarda con `setter_reporte_v2.escribir`
+Automático: `reporte_inbox.contar` (mensajes, cualificados, no leads, in-abribles, aperturas en
+entrantes y sus respuestas, bienvenidas y embudo) y las agendas generadas por canal (`_precarga_por_canal`,
+como el prefill de siempre). A mano: aperturas en dolor y seguimientos por etapa (sugeridos). Se guarda con `setter_reporte_v2.escribir`
 en `setter_daily_stats`, así Discord, «Mis datos» y la Vista General siguen leyendo lo mismo.
 """
 import logging
@@ -19,17 +19,18 @@ FUENTE = 'Salen del Inbox. Lo que no ve el Inbox lo cargás vos.'
 FUENTE_DETALLE = 'Inbox de Work'
 DOMINGO = 6
 CANALES = (('anuncios', 'ads', 'Anuncios'), ('inbound', 'inb', 'Inbound'))
-AUTO_CANAL = ('entrantes', 'leads', 'no_lead', 'inabribles', 'agendas')
+INBOX_CANAL = ('entrantes', 'leads', 'no_lead', 'inabribles', 'ap_entrantes', 'ap_entrantes_resp')
+AUTO_CANAL = (*INBOX_CANAL, 'agendas')
 EMBUDO = (('dolor', 'funnel_pain', 'Dolor'), ('oferta', 'funnel_offer', 'Oferta'), ('link', 'funnel_link', 'Link'))
-CORREGIBLES = tuple(f'{p}_{c}' for _, p, _ in CANALES for c in AUTO_CANAL) + tuple(col for _, col, _ in EMBUDO)
+BIENVENIDAS = (('hechas', 'bnv_hechas'), ('respondidas', 'bnv_respondidas'), ('aperturas', 'bnv_aperturas'),
+               ('aperturas_resp', 'bnv_aperturas_resp'))
+CORREGIBLES = (tuple(f'{p}_{c}' for _, p, _ in CANALES for c in AUTO_CANAL) + tuple(col for _, col, _ in EMBUDO)
+               + tuple(col for _, col in BIENVENIDAS))
 ETAPAS_FU = (('entrantes', 'qualification', 'entrantes'), ('dolor', 'pain', 'dolor'),
              ('oferta', 'offer', 'oferta'), ('link', 'link', 'link'))
 MANO = (
     *[(f'{p}_{c}', g, campo) for _, p, g in CANALES for c, campo in (
-        ('ap_entrantes', 'Aperturas en entrantes'), ('ap_entrantes_resp', 'Respondieron'),
         ('ap_dolor', 'Aperturas en dolor'), ('ap_dolor_resp', 'Respondieron (dolor)'))],
-    ('bnv_hechas', 'Bienvenidas', 'Hechas'), ('bnv_respondidas', 'Bienvenidas', 'Respondidas'),
-    ('bnv_aperturas', 'Bienvenidas', 'Aperturas'), ('bnv_aperturas_resp', 'Bienvenidas', 'Respondieron'),
     *[c for _, col, nombre in ETAPAS_FU for c in (
         (f'{col}_fu', 'Seguimientos', f'Enviados en {nombre}'), (f'{col}_fur', 'Seguimientos', f'Respondieron ({nombre})'))],
 )
@@ -93,9 +94,12 @@ def auto(user, dia, ctx):
     vals = {}
     for canal, p, _ in CANALES:
         del_canal = (inbox or {}).get(canal) or {}
-        for c in ('entrantes', 'leads', 'no_lead', 'inabribles'):
+        for c in INBOX_CANAL:
             vals[f'{p}_{c}'] = del_canal.get(c) if inbox else None
         vals[f'{p}_agendas'] = (por_canal.get(canal) or {}).get('agendas', 0)
+    bnv = (inbox or {}).get('bienvenidas') or {}
+    for k, col in BIENVENIDAS:
+        vals[col] = bnv.get(k) if inbox else None
     embudo = (inbox or {}).get('embudo') or {}
     for k, col, _ in EMBUDO:
         vals[col] = embudo.get(k)
@@ -175,9 +179,9 @@ def numeros(user, dia, ctx, vals, kpis):
     por_canal = [{'l': l, 'celdas': [celda(f'ads_{c}'), celda(f'inb_{c}')]}
                  for l, c in (('Nuevos mensajes', 'entrantes'), ('Cualificados', 'leads'), ('No leads', 'no_lead'),
                               ('In-abribles', 'inabribles'), ('Agendas', 'agendas'))]
-    aperturas = [{'l': l, 'celdas': [celda(f'ads_{c}', True), celda(f'inb_{c}', True)]}
-                 for l, c in (('En entrantes', 'ap_entrantes'), ('Respondieron', 'ap_entrantes_resp'),
-                              ('En dolor', 'ap_dolor'), ('Respondieron (dolor)', 'ap_dolor_resp'))]
+    aperturas = [{'l': l, 'celdas': [celda(f'ads_{c}', mano), celda(f'inb_{c}', mano)]}
+                 for l, c, mano in (('En entrantes', 'ap_entrantes', False), ('Respondieron', 'ap_entrantes_resp', False),
+                                    ('En dolor', 'ap_dolor', True), ('Respondieron (dolor)', 'ap_dolor_resp', True))]
     seguimientos = [{'l': nombre.capitalize(), 'celdas': [celda(f'{col}_fu', True), celda(f'{col}_fur', True)]}
                     for _, col, nombre in ETAPAS_FU]
     return {
@@ -190,12 +194,11 @@ def numeros(user, dia, ctx, vals, kpis):
         'bloques': [
             {'t': 'comparar', 'tit': 'Por canal', 'cols': ['Anuncios', 'Inbound'], 'corr': True, 'conv': False,
              'filas': por_canal},
-            {'t': 'comparar', 'tit': 'Aperturas', 'cols': ['Anuncios', 'Inbound'], 'corr': False, 'conv': False,
+            {'t': 'comparar', 'tit': 'Aperturas', 'cols': ['Anuncios', 'Inbound'], 'corr': True, 'conv': False,
              'filas': aperturas},
-            {'t': 'pasos', 'tit': 'Bienvenidas', 'series': [{'nombre': '', 'pasos': [
-                {'clave': c, 'l': l, 'v': vals.get(c), 'mano': True} for c, l in (
-                    ('bnv_hechas', 'Hechas'), ('bnv_respondidas', 'Respondidas'), ('bnv_aperturas', 'Aperturas'),
-                    ('bnv_aperturas_resp', 'Respondieron'))]}]},
+            {'t': 'comparar', 'tit': 'Bienvenidas', 'cols': ['Enviadas', 'Respondieron'], 'corr': True, 'conv': True,
+             'filas': [{'l': 'Bienvenidas', 'celdas': [celda('bnv_hechas'), celda('bnv_respondidas')]},
+                       {'l': 'Aperturas', 'celdas': [celda('bnv_aperturas'), celda('bnv_aperturas_resp')]}]},
             {'t': 'comparar', 'tit': 'Seguimientos por etapa', 'cols': ['Enviados', 'Respondieron'], 'corr': False,
              'conv': True, 'filas': seguimientos},
         ],

@@ -21,7 +21,7 @@ import { Esqueleto, Hueso, Renglon } from '../../../components/huesos/Huesos';
 // peor que el hueco. Las otras dos se reparten la fila (`.pareja`).
 const Rotulo = () => (
     <div className="flex items-start justify-between gap-2">
-        <div className="tud-lbl-v6">Comisión de este mes</div>
+        <div className="tud-lbl-v6">Comisión del mes</div>
         <span className="com-ic-v6" aria-hidden="true">
             <DollarSign size={14} />
         </span>
@@ -81,12 +81,12 @@ const ComisionMesCard = () => {
     }
 
     return (
-        <div className="tud-v6">
+        <div className="tud-v6 ws-com">
             <Rotulo />
             <div className="com-monto-v6">{money(data.commission)}</div>
             <div className="tud-foot-row-v6">
                 <span className="tud-foot-v6">
-                    {Math.round(data.rate * 100)}% de {money(data.cash_neto)} cobrados netos
+                    {Math.round(data.rate * 100)}% de {money(data.cash_neto)} netos
                 </span>
             </div>
             <PagosSinVerificar v={data.verificacion} />

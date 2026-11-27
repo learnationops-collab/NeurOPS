@@ -152,7 +152,7 @@
   - «Próxima a revisar» muestra las secciones con más puntos en vez de los criterios viejos.
 - **3 de Noviembre de 2026 (Hiring: el cierre de la búsqueda se configura por formulario)** *([CierreFormulario.jsx](../../frontend/src/pages/admin/hiring/components/forms/CierreFormulario.jsx), [hiring_forms.py](../../app/api/hiring_forms.py), [ADR-W078](../DECISIONS.md))*:
   - En la cabecera del formulario: «Cierre» con Fecha fija (la misma para todos), Por visita (N horas desde la primera visita) o Sin cuenta. Se guarda solo.
-  - Migración `c4e6a8b0d2f4`: `hiring_forms.cierre_modo`, `cierre_en`, `cierre_horas`. La API pública manda `cierre` y la página de la vacante lo usa para su reloj (va con institute-site).
+  - Migración `dc9f7bf7cfe1`: `hiring_forms.cierre_modo`, `cierre_en`, `cierre_horas`. La API pública manda `cierre` y la página de la vacante lo usa para su reloj (va con institute-site).
 - **3 de Noviembre de 2026 (Dirección comercial: el motivo de No show, Canceló y Reagendó se lee al pasar el mouse)** *([motivos_agenda.py](../../app/services/motivos_agenda.py), [MotivoDeEstado.jsx](../../frontend/src/pages/comercial/components/MotivoDeEstado.jsx), [Tip.jsx](../../frontend/src/pages/comercial/components/Tip.jsx))*:
   - En Revisar › Agendas, el chip de esos estados muestra en un globito el motivo, quién lo escribió, cuándo y (si se reagendó) la cita nueva; hay además una columna «Motivo» con el texto, que también sale en la exportación.
   - Lo marcado antes del 02/11 muestra «Sin motivo registrado»; las reagendas automáticas muestran la nota del sistema.
@@ -777,14 +777,17 @@
 - Filtros guardados en Analizar y Revisar: el botón «Filtros guardados», al lado de Filtro completo, guarda las condiciones y Cumple / No cumple con un nombre y los vuelve a poner con un clic; se renombran y se borran con deshacer. Son de cada persona y de cada tabla; los de Agendas sirven en las dos pantallas.
 - Analizar con filtro muestra solo lo del filtro: Segmentos, Por país, Por qué compran y las listas detrás de cada cifra (Destino de las agendas, No cerradas, Segmentos) cuentan solo las agendas filtradas. Se ocultan las personas sin datos en Segmentos, los segmentos en cero y las fuentes sin cobros. Con Jean Carlo + Elias, Paula, workshop + México, Perú: 39 agendas y $2.043 en todos los paneles.
 - Analizar: «Seguimientos en curso» y «Motivos» bajan al final del tablero, después de Por país (pedido de Kerwin, 21/11).
+
 ### 21/11/2026 · El motivo de las agendas canceladas en Google
 - Cuando el closer cancela o borra el evento en su Google Calendar, Work le pide el motivo: aviso en #📋-reportes que lo etiqueta, línea en el aviso diario de reportes pendientes y tarjeta «Canceladas en tu Google Calendar» arriba de su mazo, con opciones rápidas y un detalle. «La pasé a otro closer», «La reagendé por fuera» y «Error mío» vuelven la agenda a pendiente (ADR-W191, Leadership «Pedir al closer el motivo…»).
 - Revisar muestra «Falta el motivo · canceló en Google» en esas agendas; «Copiar motivos para IA» ya no copia la nota automática. Entran las de noviembre (en la copia de producción del 20/11, 5 de Jean Carlo; la de Mario es del 29/10 y queda afuera).
+
 ### 21/11/2026 · Closers en el Inbox de Talent
 - El Inbox de Talent tiene un desplegable al lado del título: 1 · Asistentes y 2 · Closers, con lo que espera en cada uno; se recuerda por navegador (ADR-W192).
 - Con Closers: próximo a revisar (mejor score sin votos), % de preselección y reserva, y tabla con conocimiento, cierre, inglés, video y llamada, WhatsApp y score. Pestañas «Por revisar» e «Incompletas». La búsqueda de la cabecera busca closers.
 - Ficha del closer con el diseño de la de Asistente: Cualitativo, Experiencia, Motivación y Archivos, desglose del score por criterio de Clarity (`GET /api/job-applications/<id>` suma `criterios`) y Preseleccionar / Reserva / Descartar como votos, más «Pasar a prueba» con la preselección.
 - Dock: la gema de Talent y el avatar ya no se apilan en la isla derecha (la envoltura del avatar va en fila en todas las pantallas) y la gema mide lo que la llave.
+
 ### 21/11/2026 · Búsqueda nueva de closers: Antiguos y Hiring · Closers
 - Las postulaciones de Closer se archivan (`job_applications.archivada_at`, migración `f7b9d1e3a5c7`): salen del Inbox, las pestañas, Analizados, Revisores y Estadísticas, pero quedan en la base con sus votos (ADR-W193). Se archivan las 682 de septiembre a noviembre para arrancar la búsqueda nueva con el Inbox en cero.
 - «Antiguos»: botón discreto al lado de las pestañas del Inbox de Closers con las postulaciones archivadas y el estado que tenían. Se abren con la misma ficha y, una vez abierto, la búsqueda también las encuentra.
@@ -827,7 +830,7 @@
 - «Simular conversación» prueba el embudo entero con el borrador: escribir como el lead, contestar como setter, adelantar el reloj. No manda ni guarda nada (ADR-W204).
 
 ### 24/11/2026 · Webhook de WhatsApp y arreglo del deploy de Embudos
-- El deploy de Embudos falló en producción: su migración repetía el ID `c4e6a8b0d2f4`, que ya usaba una de hiring, y Alembic quedó con dos heads. Pasa a `e8f0a2c4b6d1`. Producción siguió con el deploy anterior; no se aplicó nada a medias.
+- El deploy de Embudos falló en producción: su migración repetía el ID `dc9f7bf7cfe1`, que ya usaba una de hiring, y Alembic quedó con dos heads. Pasa a `e8f0a2c4b6d1`. Producción siguió con el deploy anterior; no se aplicó nada a medias.
 - Nuevo `/api/webhooks/whatsapp` para la app propia «Learnation Contacts» (Neurocogniciones LLC), primer paso del broadcast de WhatsApp al inbox de setters (proyecto #192, Estrategia 23/11). Verifica la suscripción con `WA_WEBHOOK_VERIFY_TOKEN`, comprueba la firma con `WA_APP_SECRET` y guarda cada evento crudo en `whatsapp_webhook_eventos`; el procesamiento al inbox va aparte.
 
 ### 24/11/2026 · Broadcast de WhatsApp: backend
@@ -854,3 +857,391 @@
 
 ### 26/11/2026 · Agendas: sin duplicados al reportar una agenda movida en Google (ADR-W240)
 - Fernando Sánchez le quedaba duplicado a Dari: movió la llamada en Google y reportó la agenda vieja que tenía abierta, y la nueva quedó pendiente. Ahora el reporte va a la agenda que la reemplazó ([reagenda.py](../../app/agendas_v2/reagenda.py), [escritura.py](../../app/api/ficha/escritura.py)).
+
+### 25/11/2026 · Un «Training» personal vuelve a ocupar
+- El filtro de capacitaciones internas (29/10) tomaba cualquier título con «training», así que el «🥊 Training» diario de Mario (13:30, su calendario personal) no bloqueaba y le cayó una agenda encima. Ahora solo se saltean «Training Session», «Trainning…» y «Capacitación»; las «Trainning Session» de Andrés siguen sin ocupar.
+
+### 25/11/2026 · Work como conector de claude.ai para la tabla de Testeo (ADR-W208)
+- Ruta nueva `/api/mcp/<MCP_PUBLICACION_TOKEN>`: un servidor MCP de solo lectura con la herramienta `metricas_publicacion` (visitas y clics a WhatsApp por anuncio de Meta, entrantes/agendas/ventas/cobrado por campaña de DM y agendas/ventas/cobrado del workshop del período, neto).
+- La usa Learnation Marketing (Publicación › Testeo, Escalado y Apagado) junto con los números de Meta. Se carga en claude.ai como conector propio «Learnation Work».
+- `workshop_metrics_service.resumen_periodo`: las cifras del workshop para cualquier período, con el criterio de `calcular_prefill`.
+- Variable nueva en Railway: `MCP_PUBLICACION_TOKEN`.
+
+### 25/11/2026 · Confirmación y reprogramar, rehechos (ADR-W209)
+- Confirmación: el pie queda con «Seguir después» y el CTA «Listo · 100% confirmado», más grande. Arriba, «¿Cambió algo con la llamada?» con Reprogramar, Canceló y Descalificado en tarjetas iguales que dicen qué hacen; «Eliminar lead» pasa a un link chico.
+- Reprogramar en tres pasos (con quién → día y hora → motivo): grupo Closers/Triage (por defecto el de quien tiene la llamada) y una persona o «Cualquiera» con sus horarios libres contados. Días y horas se tocan, en la hora del lead con la tuya debajo, en mañana/tarde/noche y de a 30 min.
+- «Con al menos»: la anticipación mínima de los horarios ofrecidos (15 min, 1 h, 2 h, 4 h o 1 día; 1 h por defecto, se recuerda).
+- Con «Cualquiera» la llamada queda con la persona actual si está libre; si no, con la que tiene más horarios libres (se puede cambiar entre las libres a esa hora).
+- `GET /api/ficha/<id>/reprogramar/opciones` devuelve los horarios de todo el grupo por persona con una sola lectura de ocupación (`a_triage.horarios_de_varios`).
+
+### 25/11/2026 · Confirmación: No show, CTA a todo el ancho y pestañas repartidas (ADR-W210)
+- Las tarjetas de «¿Cambió algo con la llamada?» son Reprogramar, Canceló y No show, sin descripción. Se sacan «Descalificado» y «Seguir después».
+- «No show»: motivo obligatorio y fecha para volver a escribirle (opcional); deja la cita en «No Show». Ruta nueva `POST /api/ficha/<id>/no-show`.
+- «Listo · 100% confirmado» va solo, a todo el ancho.
+- Las pestañas de la ficha (Confirmación, Resultado, Historial…) se reparten todo el ancho en pantalla ancha.
+
+### 25/11/2026 · Reprogramar con calendario y la ficha en modo enfoque (ADR-W211)
+- Al abrir Reprogramar, Canceló o No show, la ficha muestra solo la cabecera del lead y esa tarea: sin pestañas ni barra de guardado hasta «Volver».
+- Reprogramar: primero el día en un calendario (con cuántos horarios tiene), después la hora. Cada hora está en la del lead y dice de quién es y qué hora es para esa persona («Marlon · 10:30 en Bogotá»).
+- Tarjetas de personas con su cuenta de horarios y ciudad; resumen final con día, hora del lead y quién; movimiento en los pasos.
+- El pie de las sub-vistas ya no deja el hueco a la derecha en pantallas anchas.
+
+### 25/11/2026 · Confirmar: calendario de 1, 2, 3 o 7 días y barra siempre pegada (ADR-W214)
+- La fila de Confirmar (vistas, filtro, propiedades) queda pegada debajo del header en todas las vistas. El calendario es una sola caja del alto de la pantalla con la fila de días pegada y arranca una hora antes de ahora.
+- «Semana» pasa a «Calendario»: Hoy, anterior/siguiente, Día · 2 días · 3 días · Semana y zoom −/+.
+- Cada llamada muestra hora, nombre, etapa en texto y etiquetas: Triage/Closing, closer, decide, invierte, ingresos, segmento y respuestas del formulario. Las que se pisan se escalonan.
+- Propiedades nuevas: «Tipo de llamada» e «Ingresos». El filtro separa Triage de Closing.
+- El mazo de confirmaciones manda `closer_role`.
+
+### 25/11/2026 · Reprogramar con colores por closer, todos los horarios y banderas (ADR-W212)
+- Cada closer tiene su color: en su tarjeta, en los puntos del calendario y en cada hora. Las horas con más de uno libre se marcan como superpuestas.
+- Todos los horarios del día a la vista, en chips chicos por mañana/tarde/noche. Al elegir uno se ve con quién queda y su hora, con banderas.
+- Menos texto en los pasos; íconos en la cabecera, el grupo y las franjas.
+- Confirmación: tarjetas Reprogramar/Canceló/No show, pestañas y «Listo · 100% confirmado» con más calidad y movimiento.
+
+### 25/11/2026 · Configuración: Disponibilidad a lo ancho, Sesiones aparte y cupos libres (ADR-W213)
+- La ventana de Configuración abre más ancha (1240 px) y el horario se ve en 7 columnas.
+- Disponibilidad sin descripciones; zona y tope semanal más cortos, con ícono; se saca «Vaciar».
+- El tope por semana de la Configuración ahora se guarda (antes se perdía).
+- Sesiones es una pestaña propia.
+- Google Calendar: arriba los calendarios que te bloquean, abajo los que no, en dos columnas. WhatsApp en una fila.
+- Cupos libres de los próximos 7 días, por día, en Disponibilidad y en Google Calendar; se recalculan al editar el horario o cambiar un calendario y muestran cuánto subió o bajó (`POST /api/auth/me/disponibilidad/cupos`).
+
+### 25/11/2026 · Inbox: «Esperan respuesta» por último mensaje
+- La cola «Esperan respuesta» ordena por defecto por el último mensaje (el más reciente arriba), no por el que más espera: arriba quedaban los chats viejos ya cerrados y tapaban los importantes (pedido de Paula). «Esperan más de 1 h» sigue por espera, y cada uno puede cambiar el orden con Ordenar.
+
+### 25/11/2026 · Reprogramar: pasos y controles en la fila del título
+- El título «Reprogramar», los pasos y, en «Día y hora», la zona del lead y la anticipación van en una sola fila: más lugar para el calendario y los horarios.
+- La zona del lead dice solo el país («Chile»), sin «· la del lead».
+
+### 25/11/2026 · Workspace con sidebar y calendario con etiquetas (ADR-W215)
+- Siguiente, Confirmación y Comisión pasan a un sidebar chico a la derecha, pegado al scrollear: anillo animado, racha y chips, menos texto.
+- La barra de Confirmar arranca con las pestañas (sin repetir «Confirmar»).
+- Calendario: cada llamada con etiquetas de color (etapa, segmento, decisor, inversión por defecto) que entran animadas; al pasar el mouse se abre entera. Teclas 1, 2, 3, 7 (días), ← → y T (hoy).
+- El calendario de Confirmar (antes anotado como ADR-W212, número repetido) queda como ADR-W214.
+
+
+### 25/11/2026 · Reprogramar sin indicador de pasos
+- Se saca la fila «Con quién · Día y hora · Motivo»: se avanza con «Siguiente» y se vuelve con «Volver». Closers/Triage pasa a la fila del título, como la zona del lead y la anticipación.
+- Los controles de «Día y hora» dicen qué son en una palabra: «Lead:» con la bandera y «Espera:» con el reloj de arena, separados por una línea y con más aire entre ellos.
+
+### 25/11/2026 · Horario en calendario, Google Calendar y WhatsApp separados (ADR-W216)
+- El horario se marca en un calendario: arrastrar para marcar (también varios días de una), mover un bloque, estirar sus bordes, × para quitar, copiar el día desde su cabecera. La vista Lista queda como opción.
+- En la Lista, la ×, el + y copiar van en una sola fila; todos los íconos explican qué hacen al pasar el mouse.
+- Configuración: Google Calendar y WhatsApp son pestañas separadas.
+- WhatsApp con sus tres pasos (número, prueba, confirmado) y «Mandarme otra prueba».
+- Cupos con número que cuenta, aura y barras de color; la primera es «Hoy».
+
+### 25/11/2026 · Reprogramar más directo; «Volver» en la cabecera de la ficha
+- Tocar a una persona (o «Cualquiera») pasa solo a «Día y hora».
+- «Siguiente» aparece en la franja del horario elegido; el pie de abajo queda solo para «Reprogramar» en el último paso.
+- El «Volver» de toda sub-vista de la ficha (Reprogramar, Canceló, No show, cobros…) pasa a la cabecera, al lado de los íconos y de cerrar.
+
+### 25/11/2026 · Confirmar: tarjetas enteras de entrada, teclas 1 a 9 y menos movimiento
+- Calendario de Confirmar: cada llamada se ve entera desde el principio (todas sus etiquetas), sin tener que pasar el mouse.
+- Las teclas 1 a 9 eligen cuántos días ver (antes solo 1, 2, 3 y 7); desde 5 días las columnas van angostas.
+- Menos movimiento: las tarjetas y etiquetas aparecen al instante (sin escalonar ni agrandarse), igual que la columna de la derecha del Workspace y la Configuración (Disponibilidad, cupos, WhatsApp).
+
+### 25/11/2026 · Confirmar: lápiz para renombrar las vistas
+- Al pasar el mouse por una vista (Por etapa, Mis llamadas, Mi calendario…) aparece un lápiz que la renombra; el doble clic sigue andando.
+
+### 25/11/2026 · Workspace: riel derecho a toda la altura y barra pegada al header (ADR-W217)
+- El sidebar de tarjetas pasa a ser un riel de 288 px de arriba abajo: siguiente lead con sus etiquetas, barra por etapa animada, «Hoy» (pendientes por sección, racha, XP), próximas llamadas y comisión.
+- La barra de vistas de Confirmar queda pegada justo debajo del header, de borde a borde; el tablero y el calendario llenan el alto hasta el dock.
+
+
+### 25/11/2026 · Riel del Workspace: el siguiente lead entero y sin pisarse con el dock
+- La tarjeta del siguiente lead se achicaba (el riel la comprimía) y no se veían el nombre ni el botón: ahora ninguna pieza del riel se achica y el riel scrollea si no entra.
+- El riel termina arriba del dock y se desvanece al final; el fondo y la línea siguen hasta abajo. Secciones un poco más compactas.
+
+### 25/11/2026 · Reintento solo cuando Work se está actualizando
+- «Application failed to respond» al guardar Sesiones no era un error del guardado: Work tiene un volumen en Railway y en cada deploy el servidor se apaga ~1 minuto (ese día hubo cinco seguidos).
+- Ahora `services/api.js` reintenta solo los pedidos repetibles (GET, PUT, DELETE; un POST con `reintentable: true`) que reciben 502/503/504, durante ~90 s, con el aviso «Work se está actualizando… reintentando solo». Si igual falla, el mensaje sale en castellano.
+
+### 25/11/2026 · Riel más corto y tarjeta de Confirmar más limpia
+- Riel: sin la tarjeta del siguiente lead ni «Próximas llamadas» (pedido de Mario); queda Confirmación, Hoy y la comisión, y entra todo.
+- Tarjeta del tablero: el segmento es solo la letra (A, B, C, D) sobre el avatar, con los puntos en el title; la fila de datos queda en inversión · decisor · origen, y debajo del teléfono una línea chica con examen y país (sale del prefijo del teléfono).
+- Calendario y lista también muestran el segmento como letra sola.
+
+### 25/11/2026 · Novedades del Workspace: portada y recorrido (ADR-W218)
+- Closers y triage ven, al entrar, una portada a pantalla completa «Hay novedades en Work» con los seis cambios del día y «Mostrame».
+- El recorrido ilumina cada lugar real (riel, pestaña Calendario, calendario, tarjeta, la llamada para Confirmación, el personaje del dock) con una tarjeta animada al lado; Reprogramar y «Y además» van al centro.
+- Se vuelve a abrir desde Herramientas › Novedades o con `?novedades=1`. Se muestra una vez por persona y navegador.
+
+### 25/11/2026 · Novedades otra vez para todos y obligatorias (ADR-W219)
+- Vuelve a aparecer a todos los closers y triage, también a quien ya lo había visto.
+- No se puede cerrar ni posponer hasta terminar el último paso; recargar a la mitad lo empieza de nuevo.
+
+### 25/11/2026 · Confirmar: propiedades que no saltan, orden arrastrando y Hora que se apaga (ADR-W220)
+- Prender o apagar una propiedad ya no cambia el orden de la lista (antes la fila tocada saltaba y parecía que no cambiaba).
+- Cualquier fila se ordena arrastrándola; las etiquetas de la llamada salen en ese orden.
+- En el calendario, Hora prende y apaga la hora del título.
+
+### 25/11/2026 · Novedades: se puede probar todo durante el recorrido (ADR-W221)
+- «Probalo» en cada paso: abre una llamada en Confirmación, Reprogramar o tu horario; tocar lo iluminado también deja usarlo.
+- Mientras se prueba, el recorrido queda como un botón abajo a la izquierda, «Seguir el recorrido».
+
+### 25/11/2026 · Propiedades que quedan guardadas y changelog que vuelve con cada cambio (ADR-W222)
+- El servidor rechazaba las preferencias del dock de más de 20 000 caracteres sin avisar: el cambio de propiedades se perdía al recargar. Tope 100 000 y el rechazo queda en el log.
+- Prender o apagar una propiedad no guarda el orden; arrastrar guarda uno corto (sin las preguntas del formulario).
+- Novedades: cualquier cambio en el recorrido lo vuelve a mostrar a todos, también a quien ya lo terminó.
+
+### 25/11/2026 · Inbox: un mensaje que «no salió» ya no se manda dos veces
+- Cuando la conversación es de otra app (Kommo, ManyChat), Instagram a veces devuelve error y el mensaje sale igual: el setter veía «no salió» y al reintentar el lead lo recibía dos veces (4 casos de Paula hoy, también a Eli). Ahora, si Instagram ya entregó ese mismo texto hace menos de 2 minutos y quedó sin autor, Work no lo vuelve a mandar: lo da por enviado y lo pone a nombre de quien lo escribió.
+- En el chat, el «no salió» desaparece solo cuando el mensaje aparece como enviado.
+
+### 25/11/2026 · Inbox: el buscador encuentra lo que el equipo ya escribió
+- El buscador de Conversaciones busca por usuario o nombre; con «#palabra» (por ejemplo «#resúmenes») busca en los mensajes que el equipo le mandó a cada lead: sirve para encontrar una devolución ya dada y reusarla (pedido de Paula).
+
+### 25/11/2026 · «Mi sueldo» en Herramientas (ADR-W223)
+- Setters, closers y el director comercial tienen «Mi sueldo» en Herramientas › Mi cuenta: el total del mes con su estado, de qué se compone (sueldo base, comisión por primer pago, cuotas, renovaciones y upsells —o ventas propias y como director—, ajuste manual, bonos y descuentos) y los últimos 4 meses.
+- A la derecha, los pagos que suman la comisión; tocar un concepto deja solo los suyos. El «?» explica cómo se calcula.
+- El director, admin y operador eligen a cualquiera del equipo comercial (pedido de Marlon).
+
+### 25/11/2026 · Mi sueldo: lo que da 0 no aparece
+- Un sueldo base de 0 o un concepto sin comisión (por ejemplo, con todos sus pagos excluidos) ya no se muestra en la lista ni como filtro de pagos.
+
+### 25/11/2026 · Agendas: «días hábiles» incluye el sábado (ADR-W224)
+- Los eventos con «N días hábiles» cuentan y ofrecen de lunes a sábado; solo el domingo queda afuera. Antes salteaban el sábado: el lead nunca veía esos horarios y la ventana se estiraba (un miércoles con 3 hábiles llegaba al lunes; a Mario le agendaron así). Ahora llega al sábado ([disponibilidad.py](../../app/agendas_v2/nucleo/disponibilidad.py), [disponibilidad.js](../../frontend/src/pages/agendas_v2/core/disponibilidad.js)).
+
+### 25/11/2026 · Inbox: lo que pidieron los setters (reunión del 24/11)
+- La bandeja carga 500 conversaciones (antes 300, que se llenaban en 4 días) y al final ofrece «Cargar 500 más», hasta 2000. El último mensaje de cada una sale en una sola consulta (antes, una por conversación en cada refresco).
+- En el chat, lo que entró por un comentario dice «Comentario en una publicación», con link a la publicación (se le pide a Meta una vez y queda guardado).
+- Los mensajes de la Guía con varias partes salen de a uno, con 5 segundos entre cada uno; los que esperan se ven «en cola». Si uno no sale, los siguientes quedan con Reintentar para mandarlos en orden (antes se perdían).
+- La caja de texto crece hasta 220 px y después se desplaza: lo que pasaba del alto quedaba cortado.
+
+### 25/11/2026 · Discord: los reportes vuelven a #📋-reportes y sin @everyone
+- Desde el 23/11 los reportes de setter y closer llegaban a #📄-reports de fulfillment (la variable del webhook de reportes apuntaba a otro canal). Ahora los de closer, setter y triage salen por el bot al canal fijo de #📋-reportes de adquisitions; el webhook queda solo si no hay bot ([envio.py](../../app/services/discord_avisos/envio.py)). Se borraron los 10 mensajes que llegaron mal.
+- Los reportes ya no etiquetan a todos (pedido de Santi).
+- El reporte de closer cerrado solo a las 10:00 salía siempre «enviado tarde»: tomaba la hora del cierre como hora de envío. Ahora toma la última vez que escribió la persona ([cierre.py](../../app/reporte_dia/cierre.py)).
+
+### 25/11/2026 · Novedades: «Después» hasta 3 días (ADR-W225)
+- La portada de novedades ofrece «Después» con los días que quedan: lo deja hasta mañana. A los 3 días de haber aparecido ya no se puede aplazar y hay que hacer el recorrido ([Novedades.jsx](../../frontend/src/pages/closer/novedades/Novedades.jsx)).
+
+### 25/11/2026 · Turnos: lo que ve el lead y los días de cada link (ADR-W226)
+- Turnos abre en «Por link»: Workshop, Setting y Academy Web con los próximos 10 días, closers y triage, qué días ve el lead, qué queda fuera y los horarios de cada día con quién atiende. «Por segmento» muestra A, B, C y D del link elegido. La tabla de antes queda en «Semana del equipo».
+- Los días del link se cambian ahí mismo (− / +, hábiles o corridos) y van directo al link en vivo; los puede cambiar también el setter. «Copiar link» y «Abrir» en cada tarjeta; al setter le copia su link con su código.
+
+### 25/11/2026 · Portal: los setters ven Agendamiento
+- La tarjeta Agendamiento aparece en el Portal de los setters (Eli y Paula), en solo lectura como ya lo permitía el servidor desde el 10/10. Antes el rol setter solo tenía Setting e Inbox ([areas.js](../../frontend/src/utils/areas.js)).
+- Los setters ya no entran en solo lectura: configuran Agendamiento igual que la dirección comercial (ADR-W227, [api_admin.py](../../app/agendas_v2/api_admin.py)).
+
+### 25/11/2026 · #agendas de fulfillment: solo los resultados de Momentum
+- El resultado de cada llamada que reporta el closer iba entero a #agendas (y al canal Agendas del chat de la Academia). Ahora solo van las Momentum (seña y cierre); las llamadas de venta ya no se avisan ahí (pedido de Mario, 19/11 y 25/11) ([resultado.py](../../app/services/discord_avisos/resultado.py)).
+
+### 25/11/2026 · Work en el celular (ADR-W228)
+- El riel ya no queda encimado con el tablero: en el celular es una tira de tarjetas que se desliza; las vistas y sus controles van en dos filas deslizables; las etapas del tablero se deslizan de costado; la lista deja el nombre fijo; el calendario arranca en 3 días ([sidebar-v6.css](../../frontend/src/pages/closer/sidebar-v6.css), [confirmar.css](../../frontend/src/pages/closer/confirmar/confirmar.css)).
+- La ficha se abre a pantalla completa con la cabecera compacta, y las etapas de confirmación ya no se pisan ([ficha-telefono.css](../../frontend/src/components/ficha/ficha-telefono.css)).
+- El dock tapa bien las secciones detrás de Herramientas y el avatar. En el recorrido de novedades, la barra «Probando» vuelve a su alto (también en la compu).
+
+### 25/11/2026 · Inbox: el chat en el orden real y ajustes visuales
+- Los mensajes del bot se guardaban todos con la hora en que arrancó a responder, sin contar las pausas de «escribiendo…»: si el lead contestaba en el medio, su mensaje quedaba al final y el chat figuraba «sin respuesta» (caso de Paula). Ahora cada uno lleva la hora en que sale. Los chats anteriores no se corrigen.
+- La columna de la lista se desbordaba sobre el chat (buscador, filtros y «Elegir»): ahora respeta su ancho y «Asignadas a» se achica con «…». «Cargar 500 más» pasa a ser un link chico y el buscador dice «Usuario, nombre o #palabra».
+
+### 25/11/2026 · Broadcast de WhatsApp a mano (ADR-W229)
+- Herramienta nueva «Broadcast de WhatsApp» (Herramientas › Crear, admin y operador): se carga el CSV, se elige una plantilla aprobada y se manda a los próximos N, con el tope de 100 por día a la vista y «Frenar» ([broadcastWa/](../../frontend/src/ventanas/herramientas/broadcastWa/)).
+- «Historial» muestra cada envío con entregados, leídos, respondieron y fallaron; cada número con el botón que tocó, su chat en el Inbox y el setter. Se descarga en CSV.
+- Una sola tabla, `wa_envios`, en lugar de las dos de difusiones (vacías); sin envío automático ni flujo por difusión ([envios.py](../../app/whatsapp/envios.py)).
+
+### 25/11/2026 · Inbox: abren las conversaciones que empezaron por un comentario
+- Las conversaciones que arrancaron con un comentario en una publicación no cargaban (31 en las últimas 48 h; lo reportó un setter): el link a la publicación se le pedía al transporte real, pero el método había quedado en el de simulación. Ahora está en el real ([transporte.py](../../app/automatizaciones/transporte.py)).
+
+### 25/11/2026 · Inbox: el feedback de Mario
+- No lead e In-abrible salen de la bandeja: solo queda lo pendiente. Si el lead vuelve a escribir, reaparece; se ven filtrando por esa etapa y siguen en el Embudo (ADR-W230).
+- Filtro por canal (Instagram o WhatsApp), con cuántos hay de cada uno.
+- El nombre del lead va primero y grande (lista, chat y tarjeta); el @usuario queda debajo en la tarjeta.
+- Lo que Meta no deja ver se explica en palabras: «Mensaje que WhatsApp no deja ver acá: miralo en el teléfono» en vez de «[unsupported]», y los adjuntos de Instagram («📷 Imagen», «🎬 Compartió un reel»…) en vez de «📎 unsupported_type».
+
+### 25/11/2026 · Inbox: el bot contesta en público los comentarios (ADR-W231)
+- Cuando un comentario dispara un flujo, además del DM el bot contesta debajo del comentario («¡Te escribí por privado! 📩» y otras cuatro, al azar), como hacía ManyChat: al lead le llega la notificación y es más probable que abra el mensaje ([respuesta_publica.py](../../app/automatizaciones/respuesta_publica.py)).
+
+### 25/11/2026 · Broadcast de WhatsApp: al azar entre plantillas (ADR-W232)
+- Cada número recibe una de las marcadas, en partes iguales, y el historial compara cuánto leyó y respondió cada una.
+
+### 25/11/2026 · Agendas: Work sigue la reagenda hecha en Google después de la llamada (ADR-W233)
+- Dari movió en su Google Calendar la llamada de Melanie Rivera al domingo y Work la seguía mostrando atrasada: solo seguía los eventos movidos hasta 2 h después de la hora de la agenda. Ahora también sigue los de agendas sin reportar de los últimos 14 días, cuando el evento quedó en una hora futura ([movidas.py](../../app/agendas_v2/movidas.py)).
+
+### 25/11/2026 · Plantillas de WhatsApp con botones
+- El alta de plantillas acepta `botones` de respuesta rápida (hasta 10, de 25 caracteres): para las plantillas de la estrategia de referidos. Al enviarlas no llevan parámetros y el toque llega al inbox como texto, para el setter ([api.py](../../app/whatsapp/api.py)).
+
+### 25/11/2026 · Flujo de conversión con su propia apertura (dato, sin código)
+- «Direct Sale (conversión)» mandaba los mismos mensajes que Lead Magnet. Versión 2 con los de Eli: «Vi que comentaste una de mis publicaciones para ayudarte con tu preparación…» y «Genial entonces», con el saludo de cada setter.
+
+### 25/11/2026 · Inbox: los audios en ogg, opus o webm se pueden subir
+- Las notas de voz de WhatsApp (ogg/opus) y lo grabado en el navegador (webm) no se podían mandar: Instagram no los reproduce y el inbox los rechazaba (lo reportó Elias; no había ningún audio subido). Ahora el servidor los pasa a mp3 al subirlos ([audio_formato.py](../../app/automatizaciones/audio_formato.py), ffmpeg en el Dockerfile). Si el navegador no sabe el tipo, manda la extensión.
+- La fila de la bandeja muestra «🎤 Audio» (o el adjunto que sea) cuando el último mensaje no tiene texto, como un audio mandado desde la app; antes quedaba «…».
+
+### 25/11/2026 · Broadcast de WhatsApp: pestaña Plantillas y respuesta por botón (ADR-W234)
+- «Plantillas» al lado de «Historial»: todas las de Meta con su estado (aprobada, en revisión, rechazada con el motivo), cómo le llegan, crear una con botones, duplicar y borrar.
+- Cada botón de una plantilla puede contestar solo, con sus propios botones, asignar la conversación y ponerle una etiqueta ([respuestas.py](../../app/whatsapp/respuestas.py)). Sin configurar, queda para el setter como antes.
+- Triage (Dari) entra al Inbox como un setter y se le pueden asignar conversaciones; no entra al reparto de las campañas.
+
+### 25/11/2026 · Broadcast de WhatsApp: un envío fallido no saca al número
+- La prueba interna de referidos (Santi, Mario, Dari, Marlon) falló entera con «131042: Business eligibility payment issue»: la cuenta de WhatsApp Business no tiene método de pago. Esos envíos no llegaron, pero el número quedaba como «ya recibió» y no se le podía volver a mandar. Ahora un envío fallido no cuenta ([envios.py](../../app/whatsapp/envios.py)); las 4 filas de la prueba se borraron.
+
+### 25/11/2026 · WhatsApp: los celulares de Argentina y México se reconocen con y sin el 9 (o el 1)
+- En la prueba de referidos, Santi tocó un botón y quedó para el setter: el broadcast salió a 54 387… y WhatsApp respondió desde 549 387…, así que Work no lo reconocía como del broadcast ni sabía de qué plantilla era. Ahora las dos formas son el mismo número, al marcar la respuesta y al saltear a quien ya recibió ([cliente.py](../../app/whatsapp/cliente.py) `variantes`).
+
+### 25/11/2026 · Inbox: «No requiere respuesta» (ADR-W235)
+- Pedido de Paula y Elias (reporte #26): los leads que ya agendaron y mandaron el último mensaje quedaban en «Esperan respuesta». Arriba del chat hay un botón «No requiere respuesta» que lo saca de las colas de espera hasta que el lead vuelva a escribir; el mismo botón lo deshace ([api_trabajo.py](../../app/automatizaciones/api_trabajo.py) `marcar_resuelta`, [colas.js](../../frontend/src/pages/inbox/conversaciones/colas.js) `resuelta`). Migración `a2c4e6f8b0d1`.
+
+### 26/11/2026 · Broadcast de WhatsApp: tope de 200 por día
+- El tope propio del broadcast pasa de 100 a 200 por día ([envios.py](../../app/whatsapp/envios.py) `TOPE_DIARIO`). El número está en calidad verde y Meta permite 250 personas por día en este nivel; queda margen para las respuestas de los setters.
+- Un envío que falla ya no ocupa el tope del día ([envios.py](../../app/whatsapp/envios.py) `usados_hoy`): el primer lote real (64 no cerrados y 36 del taller) falló entero con «131042» (pago de Meta) y dejaba el día sin cupo.
+
+### 26/11/2026 · Inbox: el mensaje del broadcast se ve en el chat
+- Cuando un lead responde a un broadcast de WhatsApp, el chat arranca con la plantilla que recibió (con su nombre y los botones al pie), para que el setter sepa a qué responde ([plantilla_en_chat.py](../../app/whatsapp/plantilla_en_chat.py)). Se completó en los que ya habían respondido.
+- Primer envío real (26/11 de madrugada): 54 no cerrados y 33 del taller entregados; a la mañana respondieron 9 y 8.
+
+### 26/11/2026 · Broadcast de WhatsApp: la respuesta a un botón puede esperar y saludar por el nombre (ADR-W236)
+- En «Cuando tocan un botón» cada respuesta elige si sale al instante o a 1, 2 o 5 minutos, y `{nombre}` pone el primer nombre del lead ([respuestas.py](../../app/whatsapp/respuestas.py)). Pedido de Marlon para que «soy mario no el bot» no llegue en un segundo. Migración `b3d5f7a9c1e2`.
+
+### 26/11/2026 · Inbox: el número de WhatsApp arriba del chat
+- En los chats de WhatsApp, el número del lead aparece al lado del nombre en la línea de arriba; tocarlo lo copia ([Detalle.jsx](../../frontend/src/pages/inbox/conversaciones/Detalle.jsx) `Telefono`). Pedido de Mario: con nombres como «👻» no había forma de saber quién era sin abrir la ficha.
+
+### 26/11/2026 · Inbox: en WhatsApp se ve a qué mensaje responde el lead, y sus stickers, fotos y audios (ADR-W237)
+- Cuando el lead responde (o reacciona) a un mensaje en particular, arriba de su burbuja aparece el mensaje citado; tocarlo lleva hasta él ([medios.py](../../app/whatsapp/medios.py) `citas`, [Whatsapp.jsx](../../frontend/src/pages/inbox/conversaciones/Whatsapp.jsx)).
+- Los stickers, fotos, audios, videos y documentos se ven en el chat: se bajan de Meta cuando se abre la conversación ([api_medios.py](../../app/automatizaciones/api_medios.py)). Probado en producción con el chat de Jesus Montes: 4 citas encontradas y el sticker bajado.
+
+### 26/11/2026 · Inbox: panel del lead y línea de arriba del chat rediseñados (ADR-W238)
+- La tarjeta del lead muestra el nombre con que agendó en Work (no «👻»), su número y su última agenda; asignado, canal y bot en pastillas; la etapa con su avance y «Adelantar» al lado ([TarjetaLead.jsx](../../frontend/src/pages/inbox/conversaciones/TarjetaLead.jsx), [cliente_del_contacto.py](../../app/automatizaciones/cliente_del_contacto.py)).
+- La ficha (tareas, notas, variables, recorrido) son filas con ícono y cuenta ([FichaLead.jsx](../../frontend/src/pages/inbox/conversaciones/FichaLead.jsx)).
+- Arriba del chat y en la lista: barrita de etapa, reloj de espera y anillo de la ventana en vez de los tres puntos y los textos largos ([Indicadores.jsx](../../frontend/src/pages/inbox/conversaciones/Indicadores.jsx)).
+
+### 26/11/2026 · Inbox: tarjeta en bloques, chat más alto, caja más ancha y sin recuadro oscuro (ADR-W239)
+- El recuadro oscuro detrás de la barra de Conversaciones venía de Confirmar del closer, que usa las mismas clases; ahora no aplica dentro del Inbox ([confirmar.css](../../frontend/src/pages/closer/confirmar/confirmar.css)).
+- La tarjeta del lead va en bloques y trae lo que antes iba arriba del chat (número, espera, anillo, «No requiere»), el bot con «Pausar» y No lead / In-abrible a un toque ([Ahora.jsx](../../frontend/src/pages/inbox/conversaciones/Ahora.jsx), [TarjetaLead.jsx](../../frontend/src/pages/inbox/conversaciones/TarjetaLead.jsx)).
+- La caja de escribir: herramientas y Learnito en la fila de Chat/Nota/Tarea; el texto a todo el ancho ([Composer.jsx](../../frontend/src/pages/inbox/conversaciones/Composer.jsx)).
+- La fila de la bandeja en dos líneas, con el nombre con que agendó en Work ([Fila.jsx](../../frontend/src/pages/inbox/conversaciones/Fila.jsx)).
+- La bandeja termina arriba del dock ([useAltoLibre.js](../../frontend/src/pages/inbox/conversaciones/useAltoLibre.js)). «Volver a mi sesión» es una pastilla chica al lado del saludo.
+
+### 26/11/2026 · Espacio del setter: encabezado en una fila y el dock ya no tapa el chat (sigue ADR-W239)
+- El encabezado es «Hola, Paula.» y, a la derecha, botones redondos con ícono: Links (con un link lo copia; con varios abre la lista), Turnos, Tálamus y, simulando, el fantasma para volver a la sesión propia. Al pasar el mouse cada uno se estira y dice qué es. El subtítulo de la sección queda solo para el lector de pantalla ([SetterEspacioPage.jsx](../../frontend/src/pages/setter/SetterEspacioPage.jsx), [MisLinks.jsx](../../frontend/src/pages/setter/MisLinks.jsx)).
+- La bandeja seguía metida bajo el dock: el alto se medía una sola vez al montar, cuando la bandeja todavía estaba cargando. Ahora mide apenas aparece y con cada cambio de tamaño ([useAltoLibre.js](../../frontend/src/pages/inbox/conversaciones/useAltoLibre.js)).
+
+### 26/11/2026 · Espacio del setter: la barra de Conversaciones sube a la fila del saludo
+- En Conversaciones y Embudos, los filtros guardados, Chats | Embudo, Tareas, Avisos y Stats van en la misma fila que «Hola, Paula.» y los botones redondos; ya no hay fila «Conversaciones». El Inbox manda su barra con `HeaderActions` a un lugar del encabezado del setter con las clases de Thalamus ([SetterEspacioPage.jsx](../../frontend/src/pages/setter/SetterEspacioPage.jsx), [InboxEmbebido.jsx](../../frontend/src/pages/inbox/InboxEmbebido.jsx)).
+- Tareas, Avisos y Stats llevan su palabra al lado del ícono ([Conversaciones.jsx](../../frontend/src/pages/inbox/Conversaciones.jsx), [MisTareas.jsx](../../frontend/src/pages/inbox/conversaciones/MisTareas.jsx)).
+
+### 26/11/2026 · Broadcast de WhatsApp: los alumnos activos se saltean
+- Al revisar un CSV, el broadcast cuenta a los que tienen una suscripción vigente (por teléfono) y por defecto los saltea: un mensaje de captación no le llega a quien ya compró ([envios.py](../../app/whatsapp/envios.py) `alumnos_activos`). Se pueden incluir con «Incluirlos» (para referidos). Pedido de Mario: a un alumno le llegó el de reactivación del workshop.
+
+### 26/11/2026 · Agendas: sin duplicados al reportar una agenda movida en Google (ADR-W240)
+- Fernando Sánchez le quedaba duplicado a Dari: movió la llamada en Google y reportó la agenda vieja que tenía abierta, y la nueva quedó pendiente. Ahora el reporte va a la agenda que la reemplazó ([reagenda.py](../../app/agendas_v2/reagenda.py), [escritura.py](../../app/api/ficha/escritura.py)).
+
+### 26/11/2026 · Triage: «Seguir» como bandeja en cero y reagenda sin fecha (ADR-W241)
+- Pedido de la reunión del 25/11 (Dari y Mario). Para triage, Seguir tiene Hoy (atrasados y del día), Esperan fecha y Hechos hoy, con la cuenta de pendientes hacia 0 ([SeguirTriage.jsx](../../frontend/src/pages/closer/components/seguirTriage/SeguirTriage.jsx), [triage_seguir_service.py](../../app/services/triage_seguir_service.py)).
+- Cada fila se cierra ahí: «No respondió» programa el siguiente contacto; «Contestó» → agendó, pasa a closing, low ticket, más adelante o no le interesa (con motivo, sin pisar el show up). Todo se puede deshacer desde el aviso.
+- Reportar: «Reagenda → ¿Dejó una fecha? → No, va a avisar» en la ficha y «Reprogramó sin fecha» en la tarjeta de Atrasadas: sale de Atrasadas sin contar como cancelación. La ficha abierta desde Seguir arranca en el contacto.
+- La fila de Seguir del closer decía «Seguimiento N de 4»: la cadencia es de 3.
+
+### 26/11/2026 · Triage: los referidos los contesta Dari
+- Las respuestas a los botones de referidos (plantillas de Mario y de Marlon) se asignan a Dari, y las 9 conversaciones de referidos que habían quedado con Paula y Elias pasaron a ella (dato, sin código). Entra al Inbox desde el Portal (tarjeta Inbox del grupo Triage, desde el 25/11).
+
+### 26/11/2026 · Dock: lo que tiene pendientes queda fijado hasta resolverse (ADR-W242)
+- Inbox, Avisos, Conflictos, Mis reportes y Playbook con algo pendiente aparecen solos en la isla izquierda del dock, con su cuenta, y en Herramientas su pin es un candado ([fijadas.js](../../frontend/src/sesion/fijadas.js), [DockFijadas.jsx](../../frontend/src/pages/comercial/components/DockFijadas.jsx)). En 0 vuelven a lo que eligió cada uno.
+- El Inbox es una herramienta más para setters y triage, con las conversaciones asignadas que esperan respuesta ([api_pendientes.py](../../app/automatizaciones/api_pendientes.py), [useOpcionesDeInbox.js](../../frontend/src/pages/inbox/useOpcionesDeInbox.js)).
+
+### 26/11/2026 · Reporte del setter: las aperturas en entrantes salen del Inbox (ADR-W243)
+- Desde el 24/11 Elias y Paula escriben desde el Inbox y dejaron de cargar las aperturas (el KPI «Respuesta» quedaba en 0). Ahora «Aperturas en entrantes» y «Respondieron» se cuentan solas por canal: la primera vez que el equipo le escribe a mano a la conversación ese día, y si el lead contestó después. Son corregibles y tienen su lista «Inbox ›» ([reporte_inbox.py](../../app/automatizaciones/reporte_inbox.py), [setter.py](../../app/reporte_dia/setter.py)).
+- Aperturas y follow-ups ya no cuentan lo que mandó otra persona del equipo desde el Inbox en una conversación del setter (usa `autor_id`).
+- Siguen a mano: aperturas en dolor y bienvenidas.
+
+### 26/11/2026 · Espacio del setter: Links, Turnos, Tálamus y Volver con su palabra a la vista
+- Los botones redondos que solo decían qué eran al pasar el mouse ahora muestran ícono y palabra siempre, iguales a Tareas, Avisos y Stats. El de la simulación dice «Volver» ([setterEspacio.css](../../frontend/src/pages/setter/setterEspacio.css), [MisLinks.jsx](../../frontend/src/pages/setter/MisLinks.jsx)).
+
+### 26/11/2026 · Dock: tooltip con nombre y descripción, pendientes con aura, y la bandeja ya no queda debajo (ADR-W244)
+- Al pasar el mouse por un botón del dock aparece arriba su nombre y qué es, igual que Stats del Inbox ([DockTip.jsx](../../frontend/src/pages/comercial/components/DockTip.jsx)).
+- Inbox, Avisos y Playbook con pendientes: sin el borde rosa; un aura suave de su color y el globito del mismo tono ([comercial.css](../../frontend/src/pages/comercial/comercial.css), [DockFijadas.jsx](../../frontend/src/pages/comercial/components/DockFijadas.jsx)).
+- La bandeja de Conversaciones termina arriba del dock: lee su lugar del CSS en vez de verlo mientras entra animado ([useAltoLibre.js](../../frontend/src/pages/inbox/conversaciones/useAltoLibre.js)).
+
+### 26/11/2026 · Inbox: contador de espera en vivo, festejo o aviso al responder y botón Activo (ADR-W245)
+- La espera corre en minutos y segundos, con un anillo y una aguja; verde hasta 5 min, ámbar hasta 30, rojo después ([Cronometro.jsx](../../frontend/src/pages/inbox/conversaciones/Cronometro.jsx)).
+- Al responder en menos de 5 min aparece «¡Respondiste en …!» con papelitos; pasados 30 min, «Tardaste … guarda» ([ReaccionRespuesta.jsx](../../frontend/src/pages/inbox/conversaciones/ReaccionRespuesta.jsx)).
+- Botón «Activo / Inactivo» en la barra de arriba; Stats separa la mediana activo e inactivo y el tiempo activo ([Actividad.jsx](../../frontend/src/pages/inbox/conversaciones/Actividad.jsx), [actividad.py](../../app/automatizaciones/actividad.py), migración `dc9f7bf7cfe1`).
+
+### 26/11/2026 · Inbox: tarjeta del lead con palabra clave arriba, Transferir y «Tus números» (ADR-W246)
+- Arriba del nombre, el ícono del canal y la palabra clave con que entró; sin palabra clave, «Configurar palabra clave» ([Origen.jsx](../../frontend/src/pages/inbox/conversaciones/Origen.jsx)).
+- «Transferir» reemplaza a la pastilla «Vos»: un setter solo transfiere a otro setter ([Transferir.jsx](../../frontend/src/pages/inbox/conversaciones/Transferir.jsx)).
+- Al pie de la ficha, «Tus números»: respuesta activo e inactivo, agendas hoy y promedio diario ([MisStats.jsx](../../frontend/src/pages/inbox/conversaciones/MisStats.jsx), [api_actividad.py](../../app/automatizaciones/api_actividad.py)).
+- Botones de la tarjeta con aura ([tarjeta.css](../../frontend/src/pages/inbox/conversaciones/tarjeta.css)).
+
+### 26/11/2026 · Inbox: un solo «Filtro» arriba y botones agrupados (ADR-W247)
+- El botón «Filtro» de la barra junta las vistas (en tarjetas con su número), a quién está asignada y todos los filtros; Ordenar y Elegir van a su lado ([MacroFiltro.jsx](../../frontend/src/pages/inbox/conversaciones/MacroFiltro.jsx), [VistasFiltro.jsx](../../frontend/src/pages/inbox/conversaciones/VistasFiltro.jsx)).
+- La lista queda con el buscador y una cabecera nueva: número grande, orden, barrita de urgencia y sin leer ([ListaCab.jsx](../../frontend/src/pages/inbox/conversaciones/ListaCab.jsx)).
+- Tareas · Avisos · Stats · Links · Turnos en un solo grupo; sale Tálamus ([SetterEspacioPage.jsx](../../frontend/src/pages/setter/SetterEspacioPage.jsx)).
+
+### 26/11/2026 · Reporte del setter: las bienvenidas salen del Inbox (ADR-W248)
+- Bienvenida = conversación de Instagram que empieza el setter (nuevo seguidor). Se cuentan solas: hechas, respondidas, aperturas y respondieron, corregibles y con su lista ([reporte_inbox.py](../../app/automatizaciones/reporte_inbox.py), [setter.py](../../app/reporte_dia/setter.py)).
+- Lo que empieza el equipo ya no cuenta como entrante. Arregla el 26/11: las reactivaciones de WhatsApp de Elias y Paula entraban como entrantes de Inbound.
+- Lo único numérico a mano que queda: aperturas en dolor (sin definición todavía).
+
+### 26/11/2026 · Inbox: Enviar arriba, caja más limpia y menú «/» con íconos y vista previa (ADR-W249)
+- Enviar sube a la fila de herramientas; la caja dice «Escribir…», sin anillo azul ([Composer.jsx](../../frontend/src/pages/inbox/conversaciones/Composer.jsx), [composer.css](../../frontend/src/pages/inbox/conversaciones/composer.css)).
+- El menú «/» con secciones de color, íconos, atajos como teclas y vista previa a la derecha ([MenuRayo.jsx](../../frontend/src/pages/inbox/conversaciones/MenuRayo.jsx)).
+- Después de un deploy, una pestaña vieja se recarga sola si le falta un archivo (Learnito no abría) ([main.jsx](../../frontend/src/main.jsx)).
+
+### 26/11/2026 · Inbox: la columna del lead entra entera, botones sobrios (ADR-W250)
+- Espera, ventana y «No requiere» al lado de la palabra clave; «Tus números» arriba de Tareas en una fila ([TarjetaLead.jsx](../../frontend/src/pages/inbox/conversaciones/TarjetaLead.jsx), [FichaLead.jsx](../../frontend/src/pages/inbox/conversaciones/FichaLead.jsx)).
+- Botones rectangulares con poco redondeo y sin brillos ([tarjeta.css](../../frontend/src/pages/inbox/conversaciones/tarjeta.css)).
+- Learnito respondía «no respondió»: la Academia contaba el chat del equipo y las consultas de Work en un mismo límite por minuto y devolvía 429; ahora cada grupo tiene su contador (Academia, ADR-246).
+
+### 26/11/2026 · Learnito: la zona de Buenos Aires con su nombre actual
+- Con la zona `America/Buenos_Aires` (4 personas del equipo, entre ellas Paula) la Academia rechazaba cada pregunta a Learnito (422: valida con la lista actual de PHP). Work la manda como `America/Argentina/Buenos_Aires` ([copiloto.py](../../app/api/copiloto.py)).
+
+### 26/11/2026 · Tarjeta del lead: la fila de arriba en una línea
+- «Configurar palabra clave» se partía en tres renglones: ahora es «+ Clave» (el tooltip lo explica); la espera, la ventana y el check de «No requiere» van a la misma altura, con el mismo borde ([Origen.jsx](../../frontend/src/pages/inbox/conversaciones/Origen.jsx), [tarjeta.css](../../frontend/src/pages/inbox/conversaciones/tarjeta.css)).
+
+### 26/11/2026 · Tarjeta del lead: clave en una línea, «No requiere» junto al bot y panel de Estadísticas
+- La palabra clave va en minúscula y en una línea («DOCUMENTO 25» se partía); «No requiere» bajó al lado del interruptor «Pausar» del bot, con su rótulo abajo ([Ahora.jsx](../../frontend/src/pages/inbox/conversaciones/Ahora.jsx)).
+- «Tus números» pasa a ser el panel «Estadísticas», propio, entre la tarjeta y la ficha, con números grandes en 2×2; la ficha (Tareas, Notas, Variables, Recorrido) se titula «Seguimiento» ([MisStats.jsx](../../frontend/src/pages/inbox/conversaciones/MisStats.jsx), [Detalle.jsx](../../frontend/src/pages/inbox/conversaciones/Detalle.jsx)).
+
+### 26/11/2026 · Learnito cuenta «mis agendas» de un setter; Instagram y WhatsApp con su color
+- Learnito: a un setter, «mis agendas» son las que cargó (`setter_id`, por fecha de carga) ([learnito_conector.py](../../app/services/learnito_conector.py)); en la Academia, las preguntas en primera persona y las aclaraciones escritas después de unas opciones van al modelo en vez de volver a ofrecer tablas (ADR-247 de la Academia).
+- En la lista y en la tarjeta, el sello del avatar va lleno: degradé de Instagram o verde de WhatsApp, con el ícono blanco ([setting.css](../../frontend/src/pages/inbox/conversaciones/setting.css)).
+- Etapa: las rayitas del avance van adentro del botón de la etapa, que queda del alto de «Adelantar»; Transferir, No lead e In-abrible en tres columnas iguales, sin tocar el borde derecho ([TarjetaLead.jsx](../../frontend/src/pages/inbox/conversaciones/TarjetaLead.jsx)).
+- Learnito (ADR-W251): modal más ancho con sidebar de conversaciones (nueva, abrir, fijar, renombrar); la calificación se manda con «Enviar» y avisa «Calificación enviada».
+- La lista del Inbox muestra solo el ícono de la red (Instagram o WhatsApp, en su color), sin las iniciales.
+- «Adelantar» (ej. «Dolor») queda del mismo alto que el botón de la etapa.
+- Learnito (ADR-W252): adjuntar imagen, PDF o texto (clip, Ctrl+V o arrastrar); «⋯» en cada conversación con Fijar, Renombrar y Borrar; redactor en un solo cuadro con enviar redondo; calificación y uso en una línea; arreglado el scroll que se trababa al abrir una conversación.
+- Inbox (ADR-W253): el botón Learnito del chat abre un panel: lee toda la conversación (hasta 80 mensajes) y ofrece sugerir una respuesta, un seguimiento, resumirla, qué info sirve o una pregunta libre.
+- Arreglo: la build de Railway falló por un ícono inexistente en lucide 0.290 (`MessageSquareReply` → `Reply`).
+- Learnito: la conversación abierta desde el Inbox se titula con lo que vio el setter («Sugerime una respuesta para @…»), no con el contexto entero.
+
+### 26/11/2026 · Inbox: el Filtro por secciones y los seguimientos hechos por etapa (ADR-W254)
+- El Filtro va por secciones a la izquierda, con lo elegido debajo de cada nombre. Primera sección, Rápidos y guardados: Míos sin respuesta, Esperan más de 1 h, Se cierra la ventana, Toca seguimiento, Nuevos de hoy, Dolor sin seguimiento, Link sin respuesta, y los guardados ([MacroFiltro.jsx](../../frontend/src/pages/inbox/conversaciones/MacroFiltro.jsx), [seccionesFiltro.jsx](../../frontend/src/pages/inbox/conversaciones/seccionesFiltro.jsx)).
+- Seguimientos: Ninguno o Al menos uno, cuántos y cuándo fue el último, en la etapa elegida en Etapa del setting. La fila muestra cuántos lleva. La regla es la del reporte y la comparten ([seguimientos_hechos.py](../../app/automatizaciones/seguimientos_hechos.py)).
+- Fechas: «Desde ayer» y «Esta semana». Nuevo filtro de origen (Anuncios, Inbound, Bienvenida).
+
+### 26/11/2026 · Inbox: marcar a mano un seguimiento, y el recorrido que lo explica (ADR-W255)
+- Casilla «Seguimiento» al lado de Enviar: viene tildada si el lead no contestó tu último mensaje hace más de 1 h y dice qué número sería; se destilda si no es un seguimiento ([MarcaSeguimiento.jsx](../../frontend/src/pages/inbox/conversaciones/MarcaSeguimiento.jsx), [Composer.jsx](../../frontend/src/pages/inbox/conversaciones/Composer.jsx)).
+- Al pie de cada mensaje del equipo: «Seguimiento N» (tocarlo lo desmarca) o el ícono para marcarlo después ([Feed.jsx](../../frontend/src/pages/inbox/conversaciones/Feed.jsx), [api_seguimientos.py](../../app/automatizaciones/api_seguimientos.py)).
+- Lo marcado cuenta en el filtro y en el reporte del setter aunque no hayan pasado 12 h; lo desmarcado no cuenta ([seguimientos_hechos.py](../../app/automatizaciones/seguimientos_hechos.py), [reporte_inbox.py](../../app/automatizaciones/reporte_inbox.py)). Migración `f4b6d8a0c2e5`: `ig_mensajes.seguimiento`.
+- Recorrido de seguimientos en el Inbox, con la portada y el recorrido de las Novedades: 6 pasos sobre la pantalla real; se reabre con el «?» de la casilla ([tour/](../../frontend/src/pages/inbox/tour/), [Novedades.jsx](../../frontend/src/pages/closer/novedades/Novedades.jsx)). La huella del changelog de closers deja de incluir `Recorrido.jsx`, sin volver a mostrárselo a quien ya lo vio.
+- Link para compartir el recorrido: `https://work.thelearnation.com/inbox?tour=1`. Abre Conversaciones aunque la última sección usada fuera otra ([InboxApp.jsx](../../frontend/src/pages/inbox/InboxApp.jsx)).
+
+### 26/11/2026 · Ficha: el menú del segmento va encima de todo
+- El menú para cambiar el segmento del lead (A–D) no usaba la capa superior y podía quedar tapado; ahora usa `useEnPantalla` ([SegmentoLead.jsx](../../frontend/src/components/ficha/piezas/SegmentoLead.jsx)). Lo marcaba el test de flotantes.
+
+### 26/11/2026 · Workspace del triage: secciones de vez en cuando, a Herramientas (ADR-W256)
+- Compartidos, Abandonos, Métricas, Mis datos y Mi cartera vienen ocultas de fábrica para el triage; en el dock quedan Confirmar, Reportar, Seguir y Reporte ([CloserWorkflowPage.jsx](../../frontend/src/pages/closer/CloserWorkflowPage.jsx), [navegacionDock.js](../../frontend/src/ventanas/navegacionDock.js)).
+- Compartidos (leads sin leer) y Abandonos (por contactar) se fijan solos en el dock mientras tengan algo, con su cuenta y candado, como las herramientas con pendientes ([DockSecciones.jsx](../../frontend/src/pages/comercial/components/DockSecciones.jsx), [fijadas.js](../../frontend/src/sesion/fijadas.js), [TriageAbandonos.jsx](../../frontend/src/pages/triage/components/TriageAbandonos.jsx)).
+- En Herramientas, Compartidos y Abandonos van en Pendientes y las otras tres en Secciones ocultas, con descripción ([catalogoHerramientas.js](../../frontend/src/ventanas/catalogoHerramientas.js)). Si alguien vuelve a mostrar una en Editar navegación, queda mostrada.
+
+### 26/11/2026 · Herramientas del triage, solo con lo suyo (ADR-W257)
+- Para el triage salen Registrar un pago, Declarar una venta, Pedido a los devs y Quiero procrastinar; «Nuevo» no se muestra y «Reportar o pedir algo» va suelto en Crear ([DockSecciones.jsx](../../frontend/src/pages/comercial/components/DockSecciones.jsx), [herramientas.js](../../frontend/src/ventanas/herramientas.js), [CloserWorkflowPage.jsx](../../frontend/src/pages/closer/CloserWorkflowPage.jsx)).
+- Las herramientas aceptan `sinRoles`: para todos menos esos roles.
+
+### 26/11/2026 · Recorridos del triage y del Filtro de setters (ADR-W258)
+- Lo nuevo del triage, en 8 pasos sobre el Workspace (Seguir, Deshacer, sin fecha, fijadas, Herramientas, referidos): `https://work.thelearnation.com/triage/deck?tour=triage`; se reabre en Herramientas › Lo nuevo del triage ([TourTriage.jsx](../../frontend/src/pages/closer/tourTriage/TourTriage.jsx)).
+- El Filtro del Inbox, sección por sección con el panel abierto: `https://work.thelearnation.com/inbox?tour=filtros`; sale solo a los setters después del de seguimientos ([TourFiltros.jsx](../../frontend/src/pages/inbox/tour/TourFiltros.jsx)).
+- Las tandas no se abren dos juntas y un link de recorrido no deja abrir otro encima ([Novedades.jsx](../../frontend/src/pages/closer/novedades/Novedades.jsx)); escena de paso armada con datos ([EscenaGenerica.jsx](../../frontend/src/components/recorrido/EscenaGenerica.jsx)).
+- Arreglo: «Novedades» desde un botón volvía a abrir las del Workspace sin depender del evento del clic. La ayuda de Seguimientos del Filtro dice que también cuenta lo marcado a mano.
+
+### 26/11/2026 · Broadcast de WhatsApp de cada taller desde Planificar (ADR-W259) · en develop
+- Cada taller de Próximos talleres tiene «Broadcast» y un chip con contactos y pasos: abre la ventana con Audiencia, Flujo, Plantillas e Historial ([broadcastTaller/](../../frontend/src/ventanas/herramientas/broadcastTaller/), [ChipBroadcast.jsx](../../frontend/src/pages/admin/workshop/planificar/ChipBroadcast.jsx)).
+- Audiencia: CSV, agendaron y no cerraron, o los de otra etiqueta; cada número lleva la etiqueta del taller («WS 26/11»). Descarta agendados, clientes y alumnos (interruptores) y las bajas siempre ([audiencia.py](../../app/whatsapp/audiencia.py)).
+- Flujo: pasos relativos a la hora del taller con plantilla, variables, a quién y exclusiones; el reloj del motor los lanza y cada fila vence si no sale a tiempo ([taller.py](../../app/whatsapp/taller.py), [api_taller.py](../../app/whatsapp/api_taller.py)).
+- El tope del número cuenta personas distintas en 24 h; salen 40 por vuelta ([envios.py](../../app/whatsapp/envios.py)). Plantillas con {{1}}, {{2}}… y abiertas al director de marketing.
+- Inbox: Todos · Instagram · WhatsApp a la vista y WhatsApp por broadcast ([Canales.jsx](../../frontend/src/pages/inbox/conversaciones/Canales.jsx)).
+- Migración `c4e6a8b0d2f3` (`wa_planes_taller`, `wa_pasos_taller`, tres columnas en `wa_envios`).

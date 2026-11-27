@@ -1,8 +1,8 @@
 // Learnation Thalamus: la herramienta del director comercial para armar formularios, equipo,
 // prioridades y eventos de agenda. Dock en el orden real de configuración: 1 Forms · 2 Team ·
 // 3 Eventos · 4 Stats. Es el área «Agendamiento». Los funnels se crean y editan desde Eventos (ModalFunnel).
-// El setter (10/10/2026) entra en solo lectura: ve todo, copia su link y prueba el agendamiento, pero
-// lo que se configura queda deshabilitado o no aparece (ui/soloLectura.js). Lo decide el servidor.
+// El setter configura todo igual que la dirección (25/11/2026, ADR-W227). Si un rol vuelve a solo mirar,
+// lo que se configura queda deshabilitado (ui/soloLectura.js). Lo decide el servidor.
 
 import React, { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';

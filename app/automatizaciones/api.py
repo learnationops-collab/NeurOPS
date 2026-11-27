@@ -15,13 +15,14 @@ from app.automatizaciones.nucleo import grafo as g
 from app.models.instagram import InstagramWebhookEvento
 from app.models.tag import TARGET_IG_CONTACT
 from app.services import tags_service
-from app.models.user import ROLE_ADMIN, ROLE_DIRECTOR_COMERCIAL, ROLE_OPERATOR, ROLE_SETTER
+from app.models.user import ROLE_ADMIN, ROLE_DIRECTOR_COMERCIAL, ROLE_OPERATOR, ROLE_SETTER, ROLE_TRIAGE
 
 bp = Blueprint('inbox', __name__)
 
 # El operador es el super admin técnico (17/11/2026): también arma, publica y aprueba propuestas.
 ROLES_CON_ACCESO = (ROLE_ADMIN, ROLE_OPERATOR, ROLE_DIRECTOR_COMERCIAL)
-ROLES_DE_LECTURA = (ROLE_SETTER,)
+# Triage (Dari) atiende lo que le asignan, como un setter: la estrategia de referidos (25/11/2026).
+ROLES_DE_LECTURA = (ROLE_SETTER, ROLE_TRIAGE)
 # Lo único que el setter puede cambiar: el recorrido y el bot de una conversación (`api_acciones.py`)
 # sus etiquetas, incluido crear un grupo (`api_etiquetas.py`), los textos de los flujos (`api_mensajes.py`),
 # lo que trabaja sobre la conversación (`api_trabajo.py`), la biblioteca del equipo (`api_biblioteca.py`)
@@ -32,11 +33,12 @@ ACCIONES_DEL_SETTER = {'inbox.mover_en_flujo', 'inbox.bot_de_conversacion', 'inb
                        'inbox.escribir_al_lead', 'inbox.proponer_cambios',
                        'inbox.programar_seguimiento', 'inbox.cancelar_seguimiento',
                        'inbox.poner_etiqueta', 'inbox.sacar_etiqueta', 'inbox.guardar_mensajes',
-                       'inbox.marcar_leido', 'inbox.asignar_conversacion', 'inbox.mover_etapa', 'inbox.corregir_variable',
+                       'inbox.marcar_leido', 'inbox.marcar_resuelta', 'inbox.asignar_conversacion', 'inbox.mover_etapa', 'inbox.corregir_variable',
                        'inbox.crear_nota', 'inbox.crear_tarea', 'inbox.cambiar_tarea',
                        'inbox.crear_rapida', 'inbox.borrar_rapida', 'inbox.subir_audio', 'inbox.borrar_audio',
                        'inbox.mover_fase', 'inbox.marcar_canal', 'inbox.anotar_cita', 'inbox.etiquetar_varias',
-                       'inbox.publicar_guia', 'inbox.proponer_guia', 'inbox.simular_embudo'}
+                       'inbox.publicar_guia', 'inbox.proponer_guia', 'inbox.simular_embudo',
+                       'inbox.cambiar_actividad', 'inbox.marcar_seguimiento'}
 MAX_BYTES_GRAFO = 300_000
 MAX_NODOS = 300
 MENSAJES_POR_CONVERSACION = 300
@@ -255,17 +257,26 @@ def borrar_flujo(flujo_id):
 
 # --- Conversaciones ---------------------------------------------------------------------------
 
+# Hasta cuántas conversaciones trae la bandeja (de a 500, con «Cargar más»): entran 60 a 100 por día.
+TOPE_BANDEJA = 2000
+
+
 @bp.route('/conversaciones', methods=['GET'])
 def listar_conversaciones():
     buscar = (request.args.get('buscar') or '').strip().lower()
-    limite = min(max(request.args.get('limite', 100, type=int) or 100, 1), 300)
+    limite = min(max(request.args.get('limite', 100, type=int) or 100, 1), TOPE_BANDEJA)
     ultimo = (db.session.query(IgMensaje.contacto_id, db.func.max(IgMensaje.enviado_en).label('ultimo'),
                                db.func.min(IgMensaje.enviado_en).label('primero'),
                                db.func.count(IgMensaje.id).label('cantidad'))
               .group_by(IgMensaje.contacto_id).subquery())
     consulta = (db.session.query(IgContacto, ultimo.c.ultimo, ultimo.c.cantidad, ultimo.c.primero)
                 .join(ultimo, ultimo.c.contacto_id == IgContacto.id))
-    if buscar:
+    if buscar.startswith('#'):
+        # «#palabra»: lo que el equipo ya le escribió (buscar una devolución dada a otro lead).
+        patron = f'%{buscar[1:].strip()}%'
+        consulta = consulta.filter(IgContacto.id.in_(db.session.query(IgMensaje.contacto_id).filter(
+            IgMensaje.direccion == IgMensaje.SALIENTE, db.func.lower(IgMensaje.texto).like(patron))))
+    elif buscar:
         patron = f'%{buscar}%'
         consulta = consulta.filter(db.or_(db.func.lower(IgContacto.username).like(patron),
                                           db.func.lower(IgContacto.nombre).like(patron),
@@ -279,29 +290,47 @@ def listar_conversaciones():
     from app.automatizaciones import seguimientos  # importa el motor (por `escribir`): solo cuando se usa
     proximos = seguimientos.proximos(ids)
     toca = seguimientos.avisos([c for c, _, _, _ in filas])
+    from app.automatizaciones import seguimientos_hechos
+    hechos = seguimientos_hechos.por_fase(ids)
     avance = progreso.de_contactos([c for c, _, _, _ in filas], ejecuciones, ahora, current_user.id,
                                    {c.id: primero for c, _, _, primero in filas})
+    # El último mensaje de cada una, en una sola consulta (antes, una por conversación). En empate, el de id mayor.
+    ultimos = {m.contacto_id: m for m in IgMensaje.query.join(ultimo, db.and_(
+        ultimo.c.contacto_id == IgMensaje.contacto_id, ultimo.c.ultimo == IgMensaje.enviado_en))
+        .filter(IgMensaje.contacto_id.in_(ids)).order_by(IgMensaje.id).all()} if ids else {}
+    cerradas = fases.cerradas([c for c, _, _, _ in filas])
+    from app.automatizaciones import cliente_del_contacto
+    reales = cliente_del_contacto.nombres([c for c, _, _, _ in filas])
     salida = []
     for contacto, momento, cantidad, _ in filas:
         variables = contacto.variables or {}
         ejecucion = ejecuciones.get(contacto.id)
         abierta = ejecucion if ejecucion and ejecucion.estado in AutEjecucion.ABIERTOS else None
-        mensaje = (IgMensaje.query.filter_by(contacto_id=contacto.id)
-                   .order_by(IgMensaje.enviado_en.desc(), IgMensaje.id.desc()).first())
+        mensaje = ultimos.get(contacto.id)
         salida.append({
             'id': contacto.id,
             'igsid': contacto.igsid,
             'username': contacto.username,
             'nombre': contacto.nombre,
+            # El nombre con que agendó en Work (ADR-W238): «👻» en WhatsApp se lee como la persona.
+            'nombre_real': reales.get(contacto.id),
             'mensajes': cantidad,
             'ultimo_en': _iso(momento),
             'ultimo_texto': (mensaje.texto or '')[:140] if mensaje else '',
+            # Sin texto (un audio mandado desde la app): el tipo del adjunto, para la vista previa.
+            'ultimo_adjunto': next((a.get('type') for a in (mensaje.contenido or {}).get('adjuntos') or [] if isinstance(a, dict)),
+                                   None) if mensaje and not mensaje.texto and isinstance(mensaje.contenido, dict) else None,
             'ultimo_de': mensaje.origen if mensaje else None,
             # Para la ventana de Instagram (24 h / 7 días) y el próximo seguimiento, a la vista en la fila.
             'ultimo_entrante_en': _iso(contacto.ultimo_entrante_en),
+            'resuelta_en': _iso(contacto.resuelta_en),
             'seguimiento': proximos.get(contacto.id),
             'toca': toca.get(contacto.id),
+            # Los seguimientos que ya le hizo el equipo, por fase ({fase: {n, en, resp}}): el filtro del Inbox (ADR-W254).
+            'seguimientos_hechos': hechos.get(contacto.id) or {},
             'bot_pausado': bool(contacto.bot_pausado_hasta and contacto.bot_pausado_hasta > ahora),
+            # El broadcast de WhatsApp al que respondió (ADR-W259): la etiqueta del taller o «Broadcast».
+            'broadcast': variables.get('broadcast_nombre') or ('Broadcast' if variables.get('broadcast') else None),
             'examen': variables.get('examen'),
             'califica': variables.get('_califica'),
             'flujo': ejecucion.version.flujo.nombre if ejecucion else None,
@@ -311,6 +340,8 @@ def listar_conversaciones():
             'asignado': asignados.get(contacto.id),
             'canal': fases.canal(contacto, asignados.get(contacto.id)),
             'etiquetas': etiquetas.get(str(contacto.id), []),
+            # No lead / In-abrible sin mensajes nuevos del lead: sale de la bandeja (pedido de Mario, 25/11).
+            'cerrada': contacto.id in cerradas,
             **avance.get(contacto.id, {}),
         })
     return jsonify({'conversaciones': salida, 'mediana_respuesta': bandeja.mediana_respuesta(ahora),
@@ -327,6 +358,12 @@ def ver_conversacion(contacto_id):
     mensajes = list(reversed(mensajes))
     recorrido = bandeja.recorrido(contacto.id)
     elegidos = bandeja.elegidos(mensajes)
+    comentarios = bandeja.comentarios(mensajes)
+    from app.automatizaciones import seguimientos_hechos
+    numeros = seguimientos_hechos.numerados(mensajes)
+    from app.whatsapp import medios  # WhatsApp: a qué mensaje responde y el sticker/foto/audio que mandó
+    citas = medios.citas(mensajes, contacto.id)
+    from app.automatizaciones import cliente_del_contacto
     from app.automatizaciones import api_trabajo  # cuelga de `bp`: importarlo arriba sería circular
     notas, tareas = api_trabajo.historial(contacto.id)
     from app.automatizaciones import api_fases, seguimientos
@@ -343,9 +380,12 @@ def ver_conversacion(contacto_id):
         'contacto': {
             'id': contacto.id, 'igsid': contacto.igsid, 'username': contacto.username, 'nombre': contacto.nombre,
             'variables': contacto.variables or {}, 'ultimo_entrante_en': _iso(contacto.ultimo_entrante_en),
-            'bot_pausado_hasta': _iso(contacto.bot_pausado_hasta),
+            'bot_pausado_hasta': _iso(contacto.bot_pausado_hasta), 'resuelta_en': _iso(contacto.resuelta_en),
         },
         'asignado': asignado,
+        # Con qué palabra clave entró (y de qué campaña), para mostrarla arriba de la tarjeta (ADR-W246).
+        'entrada': bandeja.entrada(contacto.id),
+        'cliente': cliente_del_contacto.de(contacto),
         'etiquetas': tags_service.de(TARGET_IG_CONTACT, [contacto.id]).get(str(contacto.id), []),
         'ejecucion': recorrido[0] if recorrido else None,
         'recorrido': recorrido,
@@ -357,7 +397,13 @@ def ver_conversacion(contacto_id):
             'autor': m.autor.username if m.autor_id and m.autor else None,
             # Del bot: el botón que tocó el lead. Del lead: qué activó en el flujo (`efectos.py`).
             'elegido': elegidos.get(m.id),
+            # Vino de un comentario en una publicación, no de un DM: no siempre se le puede escribir.
+            'comentario': comentarios.get(m.id),
             'efecto': (m.contenido or {}).get('efecto') if isinstance(m.contenido, dict) else None,
+            'responde_a': citas.get(m.id),
+            'medio': medios.para_chat(m, contacto.id),
+            # Del equipo: «Seguimiento N» si cuenta como tal, y la marca a mano (ADR-W255).
+            'seguimiento': numeros.get(m.id), 'marca': m.seguimiento,
         } for m in mensajes],
     })
 

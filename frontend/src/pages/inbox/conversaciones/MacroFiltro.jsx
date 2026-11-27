@@ -1,105 +1,18 @@
-// El filtro de la bandeja, comprimido en un botón de ícono (ADR-W184: dos columnas). A la izquierda, la cola; a la
-// derecha, la etapa del setting, la etiqueta (un subdesplegable con buscador: pueden ser muchas), a quién está
-// asignada, si califica, cuándo empezó la última conversación y quién mandó el último mensaje. Al pie se guarda
-// con un nombre: queda en los chips de arriba de la lista y en la cabecera. El número sobre el ícono: cuántos hay.
+// El Filtro de la bandeja (ADR-W184; desde ADR-W247 es el botón «Filtro» de la barra de arriba; desde ADR-W254, por
+// secciones). A la izquierda, las secciones: Rápidos y guardados primero, y cada una con lo que tiene elegido debajo de
+// su nombre. A la derecha, la sección abierta (`seccionesFiltro.jsx`). Arriba, lo puesto en chips con su ×; al pie,
+// Limpiar, cuántas quedan y guardar con un nombre (queda en Guardados). El número sobre el botón: cuántas hay.
 import { useEffect, useRef, useState } from 'react';
-import { ChevronDown, Search, SlidersHorizontal, Star } from 'lucide-react';
+import { SlidersHorizontal, Star } from 'lucide-react';
+import { vistaActual } from './VistasFiltro';
 import useEnPantalla from '../../../components/ui/useEnPantalla';
-import { Button, Chip, IconButton, Input, InputGroup, Segmented, toast } from '../../../components/standard';
-import { COLAS, asignados, claveEtiqueta, cumpleFiltro, etiquetasDe, filtrar } from './colas';
-import { FASES, colorDe, corto } from './fasesSetting';
+import { Button, InputGroup, toast } from '../../../components/standard';
+import { contar } from './colas';
 import { useGuardados } from './guardados';
-import Resumen from './Resumen';
+import Resumen, { partesDe } from './Resumen';
+import SeccionFiltro, { SECCIONES } from './seccionesFiltro';
 import { VACIO, activos } from './filtros';
-
-const RANGOS = [['hoy', 'Hoy'], ['ayer', 'Ayer'], ['rango', 'Personalizado']];
-const alternar = (lista, x) => (lista.includes(x) ? lista.filter((y) => y !== x) : [...lista, x]);
-
-function Opciones({ valor, opciones, onElegir }) {
-    return (
-        <div className="cv-macro-chips">
-            {opciones.map(([v, label, n, color]) => (
-                <Chip key={String(v)} as="button" type="button" color={color} aria-pressed={valor === v} onClick={() => onElegir(valor === v ? null : v)}>
-                    {label}{n != null && <span className="cv-cuenta">{n}</span>}
-                </Chip>
-            ))}
-        </div>
-    );
-}
-
-// Hoy · Ayer · Personalizado; con Personalizado, desde y hasta.
-function Rango({ clave, filtro, cambiar }) {
-    return (
-        <>
-            <Opciones valor={filtro[clave]} opciones={RANGOS} onElegir={(v) => cambiar({ [clave]: v })} />
-            {filtro[clave] === 'rango' && (
-                <div className="cv-macro-fechas">
-                    <Input variant="date" type="date" aria-label="Desde" value={filtro[`${clave}Desde`]} onChange={(e) => cambiar({ [`${clave}Desde`]: e.target.value })} />
-                    <span className="t-cap mut">a</span>
-                    <Input variant="date" type="date" aria-label="Hasta" value={filtro[`${clave}Hasta`]} onChange={(e) => cambiar({ [`${clave}Hasta`]: e.target.value })} />
-                </div>
-            )}
-        </>
-    );
-}
-
-// Una casilla por fase, en dos columnas, con su número en el color de su etapa y cuántas hay.
-function Fases({ lista, elegidas, onCambiar }) {
-    return (
-        <div className="cv-macro-fases">
-            {FASES.map((f) => (
-                <label key={f.id} className={`cv-macro-fase${elegidas.includes(f.id) ? ' cv-macro-fase--on' : ''}`} style={{ '--c': colorDe(f) }}>
-                    <input type="checkbox" checked={elegidas.includes(f.id)} onChange={() => onCambiar(alternar(elegidas, f.id))} />
-                    <span className="cv-macro-fase-n">{f.n}</span>
-                    <span className="cv-macro-fase-t">{corto(f)}</span>
-                    <span className="t-cap mut40">{lista.filter((c) => c.fase === f.id).length}</span>
-                </label>
-            ))}
-        </div>
-    );
-}
-
-// Las etiquetas de la lista, por grupo, en un subdesplegable con buscador.
-function EtiquetasFiltro({ lista, elegidas, onCambiar }) {
-    const [abierto, setAbierto] = useState(false);
-    const [buscar, setBuscar] = useState('');
-    const todas = etiquetasDe(lista).filter((e) => `${e.group || ''} ${e.name}`.toLowerCase().includes(buscar.trim().toLowerCase()));
-    const grupos = [...new Set(todas.map((e) => e.group || 'Sin grupo'))];
-    const nombre = (k) => k.split(':').slice(1).join(':');
-    return (
-        <div className="cv-macro-sub">
-            <button type="button" className="cv-macro-sub-btn" aria-expanded={abierto} onClick={() => setAbierto((a) => !a)}>
-                <span>{elegidas.length ? elegidas.map(nombre).join(', ') : 'Cualquier etiqueta'}</span>
-                {elegidas.length > 0 && <Chip subtle>{elegidas.length}</Chip>}
-                <ChevronDown size={14} aria-hidden="true" />
-            </button>
-            {abierto && (
-                <div className="cv-macro-sub-pop">
-                    <InputGroup prefix={<Search size={14} />}>
-                        <label className="sr" htmlFor="cv-tag-buscar">Buscar etiqueta</label>
-                        <input id="cv-tag-buscar" value={buscar} onChange={(e) => setBuscar(e.target.value)} placeholder="Buscar etiqueta" autoComplete="off" autoFocus />
-                    </InputGroup>
-                    {!todas.length && <p className="t-cap mut">Ninguna etiqueta en la lista{buscar ? ' con ese nombre' : ''}.</p>}
-                    {grupos.map((g) => (
-                        <div key={g} className="cv-macro-sub-grupo">
-                            <span className="t-rotulo">{g}</span>
-                            {todas.filter((e) => (e.group || 'Sin grupo') === g).map((e) => {
-                                const k = claveEtiqueta(e);
-                                return (
-                                    <label key={k} className="cv-macro-fase">
-                                        <input type="checkbox" checked={elegidas.includes(k)} onChange={() => onCambiar(alternar(elegidas, k))} />
-                                        <Chip subtle color={e.color}>{e.name}</Chip>
-                                        <span className="t-cap mut40">{e.n}</span>
-                                    </label>
-                                );
-                            })}
-                        </div>
-                    ))}
-                </div>
-            )}
-        </div>
-    );
-}
+import './filtro.css';
 
 function Guardar({ filtro, onGuardado }) {
     const guardados = useGuardados();
@@ -108,22 +21,46 @@ function Guardar({ filtro, onGuardado }) {
         e.preventDefault();
         if (!nombre.trim()) return;
         guardados.guardar(nombre.trim(), filtro);
-        toast('Filtro guardado: queda arriba de la lista');
+        toast('Filtro guardado: queda en Rápidos y guardados');
+        setNombre('');
         onGuardado();
     };
     return (
         <form className="cv-macro-guardar" onSubmit={guardar}>
             <InputGroup prefix={<Star size={14} />}>
                 <label className="sr" htmlFor="cv-filtro-nombre">Nombre del filtro</label>
-                <input id="cv-filtro-nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Nombre, ej.: Propuestas sin respuesta" autoComplete="off" />
+                <input id="cv-filtro-nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Nombre, ej.: Dolor con 2 seguimientos" autoComplete="off" />
             </InputGroup>
             <Button type="submit" variant="primary" disabled={!nombre.trim()}>Guardar</Button>
         </form>
     );
 }
 
+// La columna de las secciones: el nombre, lo elegido debajo y cuántos filtros tiene puestos.
+function Secciones({ sec, onSec, partes, vista }) {
+    return (
+        <nav className="cv-filtro-secs" aria-label="Secciones del filtro">
+            {SECCIONES.map((s) => {
+                const suyas = partes.filter((p) => p.sec === s.key);
+                const eleg = s.key === 'rapidos' ? (vista && vista.id !== 'todos' ? vista.label : '') : suyas.map((p) => p.texto).join(' · ');
+                return (
+                    <button key={s.key} type="button" className={`cv-filtro-sec${sec === s.key ? ' cv-filtro-sec--on' : ''}`}
+                        aria-current={sec === s.key ? 'true' : undefined} onClick={() => onSec(s.key)}>
+                        <span className="cv-filtro-sec-t">
+                            <span>{s.label}</span>
+                            {eleg && <small>{eleg}</small>}
+                        </span>
+                        {suyas.length > 0 && <span className="cv-filtro-sec-n">{suyas.length}</span>}
+                    </button>
+                );
+            })}
+        </nav>
+    );
+}
+
 export default function MacroFiltro({ lista, filtro, onCambiar, ahora, yo }) {
     const [abierto, setAbierto] = useState(false);
+    const [sec, setSec] = useState('rapidos');
     const caja = useRef(null);
     const pop = useEnPantalla();
 
@@ -137,50 +74,32 @@ export default function MacroFiltro({ lista, filtro, onCambiar, ahora, yo }) {
     }, [abierto]);
 
     const cambiar = (parte) => onCambiar({ ...filtro, ...parte });
-    // Las cuentas de cada cola respetan los otros filtros puestos, no el propio.
-    const sinCola = lista.filter((c) => cumpleFiltro(c, filtro, ahora));
-    const setters = asignados(lista);
-    const nombre = (s) => (s.id === yo ? 'Vos' : s.username);
     const n = activos(filtro);
+    const guardados = useGuardados();
+    const vista = vistaActual(filtro, yo, guardados.lista);
+    const cuantas = contar(lista, { ...filtro, ahora });
+    const partes = abierto ? partesDe(lista, filtro, yo) : [];
 
     return (
         <div className="cv-macro" ref={caja}>
-            <IconButton label="Filtros" data-tip="Filtros" pressed={abierto} onClick={() => setAbierto((a) => !a)}
-                className={n ? 'cv-macro-btn cv-macro-btn--activo' : 'cv-macro-btn'}
-                icon={<><SlidersHorizontal size={16} />{n > 0 && <span className="cv-macro-n">{n}</span>}</>} />
+            <button type="button" className={`cv-barra-btn cv-filtro-btn${n ? ' cv-filtro-btn--activo' : ''}`} aria-expanded={abierto}
+                data-tip={`Filtro · ${vista ? vista.label : 'a medida'}|${n ? `${n} ${n === 1 ? 'filtro puesto' : 'filtros puestos'}` : 'Sin filtros'}: ${cuantas} conversaciones`}
+                onClick={() => setAbierto((a) => !a)}>
+                <SlidersHorizontal size={15} aria-hidden="true" />Filtro
+                <span className="cv-filtro-n" key={cuantas}>{cuantas}</span>
+                {n > 0 && <span className="cv-filtro-puntos" aria-hidden="true">{Array.from({ length: Math.min(n, 4) }, (_, i) => <i key={i} style={{ '--i': i }} />)}</span>}
+            </button>
             {abierto && (
-                <div className="cv-macro-pop" ref={pop} role="dialog" aria-label="Filtros">
-                    <Resumen lista={lista} filtro={filtro} onCambiar={onCambiar} yo={yo} />
-                    <div className="cv-macro-col">
-                        <span className="t-rotulo">Cola</span>
-                        <Segmented orientation="vertical" label="Cola" value={filtro.cola} onChange={(cola) => cambiar({ cola })}
-                            options={COLAS.map((c) => ({ value: c.value, label: c.label, count: sinCola.filter((x) => c.cumple(x, ahora)).length }))} />
-                    </div>
-                    <div className="cv-macro-col">
-                        <span className="t-rotulo">Etapa del setting</span>
-                        <Fases lista={lista} elegidas={filtro.fases || []} onCambiar={(fases) => cambiar({ fases })} />
-                        <span className="t-rotulo">Etiqueta</span>
-                        <EtiquetasFiltro lista={lista} elegidas={filtro.etiquetas || []} onCambiar={(etiquetas) => cambiar({ etiquetas })} />
-                        <span className="t-rotulo">Asignado a</span>
-                        <Opciones valor={filtro.asignado} onElegir={(asignado) => cambiar({ asignado })} opciones={[
-                            ...setters.map((s) => [s.id, nombre(s), s.n]),
-                            ['ninguno', 'Sin asignar', lista.filter((c) => !c.asignado).length, 'var(--warning)'],
-                        ]} />
-                        <span className="t-rotulo">Calificación</span>
-                        <Opciones valor={filtro.califica} onElegir={(califica) => cambiar({ califica })}
-                            opciones={[['si', 'Califica', null, 'var(--success)'], ['no', 'No califica', null, 'var(--error)']]} />
-                        <span className="t-rotulo">Inicio de la última conversación</span>
-                        <Rango clave="inicio" filtro={filtro} cambiar={cambiar} />
-                        <span className="t-rotulo">Último mensaje enviado por</span>
-                        <Opciones valor={filtro.envioPor} onElegir={(envioPor) => cambiar({ envioPor })}
-                            opciones={[['lead', 'El lead', null, 'var(--brand-secondary)'], ...setters.map((s) => [s.id, nombre(s)]), ['bot', 'El bot']]} />
-                        <span className="t-cap mut">en</span>
-                        <Rango clave="envio" filtro={filtro} cambiar={cambiar} />
+                <div className="cv-macro-pop cv-filtro-pop" ref={pop} role="dialog" aria-label="Filtros">
+                    <Resumen partes={partes} filtro={filtro} onCambiar={onCambiar} />
+                    <Secciones sec={sec} onSec={setSec} partes={partes} vista={vista} />
+                    <div className="cv-filtro-panel">
+                        <SeccionFiltro sec={sec} lista={lista} filtro={filtro} cambiar={cambiar} onCambiar={onCambiar} ahora={ahora} yo={yo} />
                     </div>
                     <div className="cv-macro-pie">
                         <Button variant="ghost" disabled={!n} onClick={() => onCambiar({ ...VACIO, orden: filtro.orden })}>Limpiar</Button>
-                        <span className="t-cap mut">{filtrar(lista, { ...filtro, ahora }).length} conversaciones</span>
-                        <Guardar filtro={filtro} onGuardado={() => setAbierto(false)} />
+                        <span className="t-cap mut">{cuantas} conversaciones</span>
+                        <Guardar filtro={filtro} onGuardado={() => setSec('rapidos')} />
                     </div>
                 </div>
             )}

@@ -1,9 +1,10 @@
 // El valor de una propiedad de la agenda en una celda de la lista, o en una línea de la semana.
 import { formatCountdown } from '../../../utils/datetime';
 import { ETAPAS_CONFIRMACION, etapaDeConfirmacion } from './etapas';
-import { avisosDe, cuandoEs, decisionDe, esDeFormulario, inversionDe, respuestaDe } from './propiedades';
+import { avisosDe, cuandoEs, decisionDe, esDeFormulario, ingresosDe, inversionDe, respuestaDe, tipoDe } from './propiedades';
 
-const TONO_SEGMENTO = { A: 'var(--cl-success, #3ecf8e)', B: 'var(--cl-info, #5aa9ff)', C: 'var(--cl-warning, #f5b84a)', D: 'var(--cl-magenta, #ff3fa4)' };
+export const TONO_TIPO = { triage: 'var(--cl-lila, #7D8BFF)', closing: 'var(--cl-magenta, #ff3fa4)' };
+export const TONO_SEGMENTO = { A: 'var(--cl-success, #3ecf8e)', B: 'var(--cl-info, #5aa9ff)', C: 'var(--cl-warning, #f5b84a)', D: 'var(--cl-magenta, #ff3fa4)' };
 const fmtPuntos = (n) => (Number(n) > 0 ? '+' : '') + Number(n).toLocaleString('es-AR', { maximumFractionDigits: 1 });
 
 export const Etiqueta = ({ color, children, title }) => <span className="cv-tag" style={{ '--c': color }} title={title}>{children}</span>;
@@ -20,7 +21,7 @@ export function urgenciaDe(a, ahora) {
     return { texto: c.label, color };
 }
 
-export const textoDe = (a, clave, { nombreCloser } = {}) => {
+export const textoDe = (a, clave, { nombreCloser, userId, esTriage } = {}) => {
     if (esDeFormulario(clave)) return respuestaDe(a, clave);
     switch (clave) {
         case 'hora': return cuandoEs(a).hora || '';
@@ -33,6 +34,8 @@ export const textoDe = (a, clave, { nombreCloser } = {}) => {
         case 'examen': return a.examen || '';
         case 'inversion': return inversionDe(a);
         case 'decision': return decisionDe(a);
+        case 'ingresos': return ingresosDe(a);
+        case 'tipo': return tipoDe(a, { userId, esTriage }).titulo;
         case 'notas_setter': return a.setter_notes || '';
         default: return '';
     }
@@ -54,7 +57,8 @@ export default function Celda({ agenda: a, clave, ahora, nombreCloser }) {
         );
     }
     if (clave === 'closer') return <span className="cv-txt">{textoDe(a, clave, { nombreCloser }) || '—'}</span>;
-    if (clave === 'segmento' && a.segmento) return <Etiqueta color={TONO_SEGMENTO[a.segmento]}>{textoDe(a, clave)}</Etiqueta>;
+    if (clave === 'tipo') { const t = tipoDe(a); return <Etiqueta color={TONO_TIPO[t.clave]}>{t.titulo}</Etiqueta>; }
+    if (clave === 'segmento' && a.segmento) return <Etiqueta color={TONO_SEGMENTO[a.segmento]} title={textoDe(a, clave)}>{a.segmento}</Etiqueta>;
     if (clave === 'avisos') {
         const avisos = avisosDe(a);
         return avisos.length ? avisos.map(t => <Etiqueta key={t} color="var(--cl-warning, #f5b84a)">{t}</Etiqueta>) : <span className="cv-mute">—</span>;

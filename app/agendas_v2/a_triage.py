@@ -100,7 +100,7 @@ def sesion_propia_de(user):
 
 
 def personas_que_atienden():
-    """[{id, nombre, rol}] de las cuentas activas con horario en Team que toman llamadas (closers y triage):
+    """[{id, nombre, rol, tz}] de las cuentas activas con horario en Team que toman llamadas (closers y triage):
     a quién se le puede mover una agenda."""
     d = servicio.colecciones()
     usuarios = servicio._usuarios_de_personas(d)
@@ -110,7 +110,8 @@ def personas_que_atienden():
         u = users.get(usuarios.get(p['id']))
         triage = es_triage(d, p)
         if u and (triage or es_closer(d, p)) and horas_semana(p) > 0:
-            filas.append({'id': u.id, 'nombre': u.username, 'rol': 'triage' if triage else 'closer'})
+            filas.append({'id': u.id, 'nombre': u.username, 'rol': 'triage' if triage else 'closer',
+                          'tz': p.get('tz') or TZ_DEF})
     return sorted(filas, key=lambda f: f['nombre'].lower())
 
 
@@ -136,6 +137,29 @@ def horarios_de(persona_id, dias=14, ahora=None, evento_id=None):
     ocupado = servicio._ocupacion(ahora_ms, {p['id']: user.id})['ocupado']
     slots = slots_persona(p, dur, o, ahora=ahora_ms, ocupado=ocupado, margen=margen)
     return [servicio.ms_a_dt(t).isoformat() + 'Z' for t in slots]
+
+
+def horarios_de_varios(persona_ids, dias=14, ahora=None, antelacion_min=15):
+    """{user_id: [inicios libres ISO UTC]} de varias personas con una sola lectura de ocupación (sus agendas
+    y su Google): para reprogramar «con cualquiera» del grupo sin pedir los horarios de a uno. Desde
+    `antelacion_min` minutos: la pantalla filtra después con la anticipación que elige cada uno."""
+    ahora = ahora or datetime.utcnow()
+    d = servicio.colecciones()
+    users = User.query.filter(User.id.in_(list(persona_ids) or [0])).all()
+    pares = [(u, servicio.persona_de_usuario(d, u)) for u in users]
+    pares = [(u, p) for u, p in pares if p]
+    if not pares:
+        return {}
+    ahora_ms = servicio.dt_a_ms(ahora)
+    ocupado = servicio._ocupacion(ahora_ms, {p['id']: u.id for u, p in pares})['ocupado']
+    salida = {}
+    for u, p in pares:
+        dur, margen = sesion_de_la_persona(d, p)
+        o = agenda_opt({'reservas': {'modo': 'dias', 'n': dias, 'tipo': 'corridos', 'desde': '', 'hasta': ''},
+                        'antel': {'n': antelacion_min, 'u': 'min'}, 'paso': {'n': 15, 'u': 'min'}}, dur)
+        slots = slots_persona(p, dur, o, ahora=ahora_ms, ocupado=ocupado, margen=margen)
+        salida[u.id] = [servicio.ms_a_dt(t).isoformat() + 'Z' for t in slots]
+    return salida
 
 
 def _validar(appt, ahora):

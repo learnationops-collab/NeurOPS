@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { CalendarClock, Check, ChevronDown, ChevronRight, ClipboardCopy, Contact, Copy, GraduationCap, Megaphone, Pencil, Phone, User, Video, X } from 'lucide-react';
+import { ArrowLeft, CalendarClock, Check, ChevronDown, ChevronRight, ClipboardCopy, Contact, Copy, GraduationCap, Megaphone, Pencil, Phone, User, Video, X } from 'lucide-react';
 import { IconButton } from '../standard';
 import IdentidadesPersona from './piezas/IdentidadesPersona';
 import useMovimiento from './piezas/useMovimiento';
@@ -141,7 +141,7 @@ const ErrorDeCampo = ({ id, texto }) => (
     <span id={id} role="alert" className="fi-dato-error">{texto}</span>
 );
 
-const FichaHeader = ({ ficha, onAccion, onCerrar, puedeEditar = true }) => {
+const FichaHeader = ({ ficha, onAccion, onCerrar, onVolver = null, puedeEditar = true }) => {
     const { abierto, alternar, cerrar, caja, pop } = usePopover();
     const mov = useMovimiento();
     const id = ficha?.identidad || {};
@@ -356,6 +356,13 @@ const FichaHeader = ({ ficha, onAccion, onCerrar, puedeEditar = true }) => {
                     </div>
                 )}
                 <div className="fi-cab-acciones">
+                    {/* El «Volver» de la sub-vista abierta (piezas/volverArriba.js). */}
+                    {onVolver && !editando && (
+                        <button type="button" className="fi-cab-volver" onClick={onVolver}>
+                            <ArrowLeft size={15} />
+                            Volver
+                        </button>
+                    )}
                     {editando ? (
                         <>
                             <button type="button" className="btn btn--linea btn--sm"

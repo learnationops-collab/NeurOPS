@@ -9,7 +9,7 @@ export default function useEquipo() {
     const [equipo, setEquipo] = useState(cache);
     useEffect(() => {
         if (cache) return;
-        inboxApi.setters().then((s) => { cache = s; setEquipo(s); }).catch(() => setEquipo([]));
+        inboxApi.asignables().then((s) => { cache = s; setEquipo(s); }).catch(() => setEquipo([]));
     }, []);
     return equipo || [];
 }

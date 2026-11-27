@@ -628,7 +628,7 @@
 
 - **Fecha:** 2026-11-03 · **Subsistema:** Hiring (Talent › Forms) e institute-site · **Estado:** implementado.
 - **Contexto:** la página de la vacante tenía una cuenta regresiva fija en el código: 96 h desde la primera visita de cada persona. Mario quiere elegir desde el panel una fecha real (por ejemplo, el jueves) o la ventana por visita, por formulario.
-- **Decisión:** columnas `hiring_forms.cierre_modo` ('fecha' | 'visita' | NULL), `cierre_en` (UTC) y `cierre_horas` (migración `c4e6a8b0d2f4`). El editor las configura en la cabecera (`CierreFormulario`: Fecha fija / Por visita / Sin cuenta) con el autoguardado; `PUT /hiring/forms/<id>` las valida (horas de 1 a 720). `GET /api/public/assistant-form` devuelve `cierre` y la página de la vacante lo aplica a su reloj: fecha igual para todos, horas desde la primera visita (por link) o sin reloj. Si la API no contesta, sigue la ventana de 96 h por visita.
+- **Decisión:** columnas `hiring_forms.cierre_modo` ('fecha' | 'visita' | NULL), `cierre_en` (UTC) y `cierre_horas` (migración `dc9f7bf7cfe1`). El editor las configura en la cabecera (`CierreFormulario`: Fecha fija / Por visita / Sin cuenta) con el autoguardado; `PUT /hiring/forms/<id>` las valida (horas de 1 a 720). `GET /api/public/assistant-form` devuelve `cierre` y la página de la vacante lo aplica a su reloj: fecha igual para todos, horas desde la primera visita (por link) o sin reloj. Si la API no contesta, sigue la ventana de 96 h por visita.
 - **Qué se pierde:** `hiring_config.cierre` (fecha global sin uso en la página) queda sin efecto. Pasada la fecha, la página muestra el reloj en cero, pero el formulario sigue abierto mientras esté activo.
 - **Consecuencias:** se corrige el reloj, que redondeaba los días hacia arriba (2,5 días mostraba «03 días 12 horas»).
 
@@ -1886,6 +1886,208 @@
 - **Qué se pierde:** nada. El canal suma una mención por aviso.
 - **Consecuencias:** sin migración. Los abandonos ya etiquetaban al triage y no cambian.
 
+## ADR-W208: Work como conector MCP de claude.ai para la tabla de Testeo de Learnation Marketing
+
+- **Fecha:** 2026-11-25 · **Subsistema:** Marketing (`app/api/mcp_publicacion.py`, `app/services/publicacion_metricas_service.py`, `workshop_metrics_service.resumen_periodo`) · **Estado:** implementado.
+- **Contexto:** Mario mira lo publicado desde el artifact Learnation Marketing (pestañas Testeo, Escalado y Apagado) y necesita junto a los números de Meta lo que solo sabe Work: clics al grupo de WhatsApp, agendas, ventas y cobrado. Un artifact no puede llamar a work.thelearnation.com; solo habla con los conectores de claude.ai. Se descartó dejar un archivo en Drive cada hora (Mario no lo quiere: otra pieza y datos viejos).
+- **Decisión:** Work expone un servidor MCP mínimo (HTTP, respuestas JSON, sin SSE) en `/api/mcp/<MCP_PUBLICACION_TOKEN>` con una sola herramienta de lectura, `metricas_publicacion(desde, hasta, zona)`: visitas y clics a WhatsApp por anuncio de Meta (`utm_content`), los números del embudo de DM por campaña (`anuncios_service.tablero`) y las agendas, ventas y cobrado neto del workshop del período. Se agrega en claude.ai como conector propio «Learnation Work»; la página lo llama al entrar y con Actualizar.
+- **Qué se pierde:** las agendas y ventas del workshop no se parten por anuncio ni por campaña (el lead de la landing es anónimo hasta que agenda): con dos campañas de workshop a la vez van solo al total. El secreto va en la dirección, no en una cabecera (claude.ai no manda cabeceras a un conector sin OAuth).
+- **Consecuencias:** variable nueva `MCP_PUBLICACION_TOKEN` (20+ caracteres) en Railway; sin ella la ruta responde 503 y con otro secreto, 401. Cambiar el secreto obliga a volver a cargar el conector en claude.ai.
+
+## ADR-W209: Confirmación con jerarquía de botones y reprogramar en tres pasos con los horarios de todo el grupo
+
+- **Fecha:** 2026-11-25 · **Subsistema:** Ficha, pestaña Confirmación (`TabConfirmacion.jsx`, `confirmacion/SubReprogramar.jsx`, `PasoPersona.jsx`, `PasoHorario.jsx`, `reprogramar.js`, `reprogramar.css`), `GET /api/ficha/<id>/reprogramar/opciones`, `a_triage.horarios_de_varios` · **Estado:** implementada
+- **Contexto:** Mario (25/11) marcó que en Confirmación los cinco botones pesaban igual y no se entendía cuál era el principal, y que reprogramar era confuso: había que elegir una persona en un desplegable (mezclando closers y triage), después un día y una «Hora en tu zona» que decía «Primero el día», sin ver todas las opciones de una ni poder ofrecerle al lead el horario de cualquier closer.
+- **Decisión:** el pie deja solo «Seguir después» y el CTA «Listo · 100% confirmado», más grande. Arriba, «¿Cambió algo con la llamada?» con tres tarjetas iguales que dicen qué hace cada una (Reprogramar, Canceló, Descalificado); «Eliminar lead» pasa a un link chico. Reprogramar es un asistente de tres pasos (con quién → día y hora → motivo): grupo Closers/Triage (por defecto el de quien tiene la llamada), y una persona o «Cualquiera» con sus horarios libres contados. Los días y las horas se tocan (sin desplegables), en la hora del lead, con la tuya debajo, agrupadas en mañana/tarde/noche y de a 30 min (se pueden ver los :15 y :45). «Con al menos» fija la anticipación mínima (15 min, 1 h, 2 h, 4 h o 1 día; 1 h por defecto, se recuerda en el navegador): el servidor manda desde 15 min y la pantalla filtra, así las cuentas del paso 1 también la respetan. Con «Cualquiera» la llamada queda con la persona actual si está libre; si no, con la que tiene más horarios libres, y se puede cambiar entre las libres a esa hora. El endpoint devuelve los horarios por persona de todo el grupo con una sola lectura de ocupación.
+- **Qué se pierde:** el endpoint ya no acepta `persona_id` ni devuelve `horarios` sueltos (su único consumidor era esta pantalla). Las horas :15/:45 quedan a un clic.
+- **Consecuencias:** sin migración. `reprogramar` (escritura) no cambia: recibe `inicio`, `persona_id` y `motivo` como antes, y vuelve a comprobar el horario al guardar.
+
+## ADR-W210: Confirmación sin «Descalificado» ni «Seguir después», con «No show», y pestañas de la ficha a todo el ancho
+
+- **Fecha:** 2026-11-25 · **Subsistema:** Ficha (`TabConfirmacion.jsx`, `confirmacion/SubNoShow.jsx`, `FichaTabs` en `ficha.css`), `POST /api/ficha/<id>/no-show` (`ficha_acciones_service.no_show`). Sigue a ADR-W209 · **Estado:** implementada
+- **Contexto:** al ver ADR-W209 en producción, Mario pidió: las pestañas amontonadas a la izquierda dejaban medio ancho vacío; «Seguir después» no ayudaba; el CTA quedaba corrido con mucho espacio a la derecha; las descripciones de las tarjetas sobraban; ninguna llamada se descalifica desde la confirmación; y faltaba marcar al lead que no contesta nada ni aparece.
+- **Decisión:** las tarjetas son Reprogramar, Canceló y No show, sin descripción. «No show» pide el motivo (ADR-W066) y, en «Sí» por defecto, la fecha para volver a escribirle; deja la cita en «No Show» por `process_agenda` (mismo permiso que cancelar: `reportar`). «Listo · 100% confirmado» va solo y a todo el ancho; ya confirmado, queda «Deshacer confirmación». Se sacan «Seguir después» y «Descalificado» (y `SubDescalificar.jsx`). En pantalla ancha las pestañas de la ficha se reparten el ancho, centradas.
+- **Qué se pierde:** descalificar desde la confirmación. La ruta `/descalificar` queda en el servidor por si se vuelve a usar desde otro lado.
+- **Consecuencias:** sin migración.
+
+## ADR-W211: la ficha en modo enfoque durante una sub-vista y reprogramar con calendario (día → hora) y de quién es cada horario
+
+- **Fecha:** 2026-11-25 · **Subsistema:** Ficha (`FichaLeadModal.jsx` `enfoque`, `SubVista` `extra`, `confirmacion/SubReprogramar.jsx`, `PasoPersona.jsx`, `PasoHorario.jsx`, `CalendarioDias.jsx`, `reprogramar.css`, `.fi-pie` en `ficha.css`), `a_triage.personas_que_atienden` (`tz`). Sigue a ADR-W209 y W210 · **Estado:** implementada
+- **Contexto:** Mario (25/11) vio que al reprogramar seguían a la vista las pestañas (Resultado, Historial, Bitácora…) y la barra de guardado, que el paso de día y hora mostraba todo junto (una tira de días y una grilla de horas), y que «la tuya» no decía de quién era cada horario ni qué hora era para el closer.
+- **Decisión:** con una sub-vista de Confirmación abierta (reprogramar, canceló, no show, eliminar), la ficha muestra solo la cabecera del lead y esa tarea; «Volver» trae las pestañas. Reprogramar: título y pasos conectados en una fila; personas en tarjetas con su cuenta de horarios y su ciudad; el paso 2 es primero un calendario del mes (solo se tocan los días con horarios, con cuántos) y después la lista de horas de ese día: la hora grande es la del lead y al lado cada persona libre con su hora y su ciudad («Marlon · 10:30 en Bogotá»). Con varias libres se elige con quién en la misma fila. El paso 3 es un resumen (día, hora del lead, quién y su hora) y el motivo. Entradas con movimiento (pasos que entran desde el costado según la dirección, tarjetas y horas escalonadas), nada con `prefers-reduced-motion`. El pie de las sub-vistas deja de reservar el hueco del botón de bugs en pantallas de 1430 px o más, donde el modal no llega hasta él.
+- **Qué se pierde:** la hora de quien reprograma ya no se muestra (se muestra la de la persona que toma la llamada, que es la que importa).
+- **Consecuencias:** sin migración. `personas` de `reprogramar/opciones` suma `tz` (la de Team; por defecto `TZ_DEF`).
+
+## ADR-W214: Confirmar con Calendario de 1, 2, 3 o 7 días, barra siempre pegada y llamadas que dicen su estado
+
+- **Número:** se subió como ADR-W212, que otra entrada tomó al mismo tiempo; se renumeró el 25/11/2026.
+- **Fecha:** 2026-11-25 · **Subsistema:** mazo, pestaña Confirmaciones (`frontend/src/pages/closer/confirmar/`, `app/api/closer.py`). Extiende ADR-W201.
+- **Contexto:** Mario, simulando a Darian en `/triage/deck`: la fila de vistas «a veces» quedaba pegada y a veces no (no era sticky: la Semana tenía su propio scroll de 680 px dentro de una página que también scrollea, y la fila de días se iba). Las llamadas eran un color y un nombre cortado («12:00 Sh…»), solo se veía la semana, y el filtro mezclaba a Darian (triage) con Marlon y Mario (closers). Pidió el calendario como Planning de Leadership, mejor diseñado.
+- **Decisión:** 1) la fila de Confirmar (vistas y controles) queda pegada debajo del header en todas las vistas; el calendario es una sola caja del alto de la pantalla con la fila de días pegada arriba, y al abrir se ubica una hora antes de ahora (o de la primera llamada). 2) La vista «Semana» pasa a «Calendario» (la clave `semana` queda por las vistas guardadas) con una segunda fila: Hoy, anterior/siguiente, Día · 2 días · 3 días · Semana y zoom −/+; la vista guarda `dias` y `alto`. 3) Cada llamada muestra la hora, el nombre, la etapa en texto y las propiedades prendidas como etiquetas (tipo de llamada, closer, decide, invierte, ingresos, segmento, respuestas del formulario); las que se pisan se escalonan y, si empiezan juntas, van lado a lado. Hora entera con línea, media hora más tenue, finde apenas marcado y hoy en magenta. 4) Propiedades nuevas: «Tipo de llamada» (Triage o Closing, con 2ª o Momentum) e «Ingresos» (de la pregunta del formulario que hable de ingresos o sueldo). 5) El filtro separa Triage de Closing, cada grupo con «Solo …».
+- **Qué se pierde:** el «Custom» de Planning (rango libre) no se hizo: 1, 2, 3 o 7 días. Ordenar no aparece en el calendario (el orden lo da la hora). Las llamadas siguen suponiendo 45 minutos.
+- **Consecuencias:** sin migración. El mazo de confirmaciones suma `closer_role` (rol de quien toma la llamada); sin ese dato (versión vieja del backend) una llamada del propio triage cuenta como Triage. Una «Semana» de fábrica guardada se renombra sola a «Calendario» y, si tenía solo closer y etapa, toma las propiedades nuevas.
+
+## ADR-W212: reprogramar con un color por persona, todos los horarios en grilla y banderas; tarjetas, pestañas y CTA con movimiento
+
+- **Fecha:** 2026-11-25 · **Subsistema:** Ficha (`confirmacion/PasoPersona.jsx`, `PasoHorario.jsx`, `CalendarioDias.jsx`, `Bandera.jsx`, `SubReprogramar.jsx`, `reprogramar.css`; `FichaTabs.jsx` y `ficha.css`), `reprogramar/opciones` (`zonas[].pais`, `zona_lead.codigo`). Sigue a ADR-W211 · **Estado:** implementada
+- **Contexto:** Mario (25/11) pidió menos texto y más íconos, color y movimiento; ver todos los horarios de una (no solo en punto y media), más chicos y en varias por fila; saber de un vistazo de quién es cada horario y cuándo se superponen; las tarjetas del paso 1 sin espacio vacío a la derecha; y más calidad en las tarjetas de acción, las pestañas y el CTA.
+- **Decisión:** cada persona tiene un color fijo (por id; el rosa queda para lo elegido), en su avatar, en los puntos de cada día del calendario y en cada hora. Las horas van todas, en una grilla de chips por franja (mañana/tarde/noche con su ícono); un chip con dos o más libres lleva la marca de superpuesto y la cabecera del día cuenta cuántos hay. Al elegir una hora aparece abajo «hora del lead → persona y su hora» con banderas, y ahí se elige con quién si hay varias. Banderas (las SVG de Thalamus) en la zona del lead, en cada persona y en el resumen. Paso 1: grupo con ícono, tarjetas que llenan el ancho, sin descripciones («Actual» como etiqueta). Cabecera: ícono, «Reprogramar» y pasos con íconos. Confirmación: tarjetas con ícono en insignia y un gesto propio al pasar el mouse, pestañas con fondo que se desliza e ícono que salta, CTA con degradado, brillo periódico y check animado. Todo quieto con `prefers-reduced-motion`.
+- **Qué se pierde:** el filtro «solo en punto y media». La hora de cada persona ya no está en cada horario (está en el tooltip y en el detalle al elegir).
+- **Consecuencias:** sin migración.
+
+## ADR-W213: Configuración más ancha, Disponibilidad y Sesiones separadas, y los cupos libres de los próximos 7 días
+
+- **Fecha:** 2026-11-25 · **Subsistema:** Configuración (`sesion/Configuracion.jsx`, `ventanas/herramientas.js`), `conf/disponibilidad.jsx` (nuevo), `conf/Cupos.jsx` (nuevo), `conf/cuenta.jsx` (Google Calendar y WhatsApp), `team/Horario.jsx`, `POST /api/auth/me/disponibilidad/cupos` (`app/agendas_v2/cupos.py`), `guardar_disponibilidad` · **Estado:** implementada
+- **Contexto:** Mario (25/11) vio la Disponibilidad angosta, con descripciones que ocupaban lugar, el «Vaciar» que no usa y Mis sesiones mezclado abajo. En Integraciones la lista de calendarios no entraba en una pantalla y mezclaba activos con inactivos. Al cambiar el horario o los calendarios no sabía qué efecto tenía. Además el tope por semana de la Configuración no se guardaba (el servidor solo leía horario y zona).
+- **Decisión:** la ventana de Configuración abre a 1240 px (o el ancho de la pantalla) y el horario va en 7 columnas desde 760 px. Disponibilidad: sin tarjeta de título ni descripción; arriba los cupos libres; la barra lleva zona, tope semanal, «L a V 9–18» y Guardar; se saca «Vaciar» (también en Team). Sesiones pasa a su propia pestaña (closer y triage). Google Calendar: los calendarios que bloquean arriba y los que no se revisan abajo, en dos columnas, con los cupos en el medio; WhatsApp en una fila. Los cupos son los inicios que el motor le ofrecería a un lead en los próximos 7 días (su sesión, su margen, sus agendas y lo marcado como Ocupado en sus calendarios de conflicto; lo «Disponible» no bloquea), contra los que tendría con solo su horario, por día; con el horario sin guardar se recalculan mientras edita y al cambiar un calendario se vuelve a leer Google. Muestran cuánto subió o bajó.
+- **Qué se pierde:** «Vaciar» el horario de un toque. Los cupos no aplican el tope semanal (lo informa aparte) ni la prioridad entre closers: son lo que podría recibir, no lo que va a recibir.
+- **Consecuencias:** sin migración. `PUT /auth/me/disponibilidad` acepta `llamadas_semana` y el GET lo devuelve.
+
+## ADR-W215: sidebar chico a la derecha en el Workspace y llamadas del calendario con etiquetas de color
+
+- **Fecha:** 2026-11-25 · **Subsistema:** Workspace del closer y del triage (`CloserWorkflowPage.jsx`, `sidebar-v6.css`, `components/TarjetaAnillo.jsx`) y Confirmar (`confirmar/`). Extiende ADR-W214.
+- **Contexto:** Mario, mirando Confirmar: las tres tarjetas de arriba (Tu siguiente paso, Confirmación, Comisión) ocupaban media pantalla con mucho texto, la palabra «Confirmar» se repetía (dock y barra), y en el calendario «no se ve lo que le puse»: las llamadas eran un nombre cortado y una línea gris.
+- **Decisión:** 1) las tres tarjetas pasan a un sidebar de 236 px a la derecha, pegado al scrollear: «Siguiente» con nombre y CTA corto (sin origen ni @), un anillo animado con el porcentaje, la cuenta (7/11), la racha y chips (pendientes, 2ª, Momentum, XP), y la comisión con cifra grande y una línea. Debajo de 1100 px vuelve a ser una fila arriba. En «Cerrar el día» no hay sidebar, como antes. 2) La barra de Confirmar ya no repite el título: arranca con las pestañas. 3) Cada llamada del calendario lleva etiquetas de color con ícono que entran escalonadas: etapa (punto que late si está por contactar), segmento con puntos, inversión corta (verde, o roja si no puede invertir), decisor (verde) o no decisor (ámbar), tipo, closer y el resto neutras; al pasar el mouse la llamada se abre entera. De fábrica: etapa, segmento, decisor e inversión; los calendarios guardados los suman sin sacar lo que ya tenían. 4) Teclas en el calendario: 1, 2, 3 y 7 eligen los días; ← y → se mueven; T vuelve a hoy (no con el foco en un campo ni con la ficha abierta). 5) `inversionCorta` y el resumen del decisor pasan a `confirmar/propiedades.js` (`decisorCorto`): tablero y calendario dicen lo mismo.
+- **Qué se pierde:** el sidebar le quita 258 px al contenido en todas las vistas del Workspace salvo Cerrar el día; el contenedor pasa de 1280 a 1440 px para compensar. La línea «origen · @instagram» del siguiente paso ya no se ve.
+- **Consecuencias:** sin backend ni migración.
+
+## ADR-W216: horario en vista Calendario (arrastrar), Google Calendar y WhatsApp en pestañas propias, y más movimiento
+
+- **Fecha:** 2026-11-25 · **Subsistema:** Horario (`team/HorarioCalendario.jsx` nuevo, `team/Horario.jsx`), Configuración (`sesion/Configuracion.jsx`, `ConfiguracionContext.jsx`), `conf/cuenta.jsx` (WhatsApp), `conf/Cupos.jsx`, `thalamus.css`. Sigue a ADR-W213 · **Estado:** implementada
+- **Contexto:** al ver ADR-W213, Mario (25/11) marcó que en cada día la ×, el + y copiar quedaban en líneas distintas y no se entendía de qué eran; pidió poder marcar el horario en un calendario arrastrando, separar Google Calendar y WhatsApp en dos pestañas, y más movimiento, aura y color.
+- **Decisión:** el editor de horario tiene dos vistas (Calendario por defecto, Lista; se recuerda en el navegador), en la Configuración y en Team. Calendario: una columna por día de 6 a 24 h (antes si hay horarios antes), de a 30 min; arrastrar sobre lo vacío marca un horario y, si se cruza a otros días, lo marca en todos; arrastrar un bloque lo mueve; sus bordes cambian inicio y fin; la × lo quita; copiar el día está en su cabecera. Lo que se pisa o se toca en un día queda unido. Cada día tiene su tono (de rosa a violeta). Lista: la ×, el + y copiar en una sola fila. Todo botón de solo ícono dice qué hace al pasar el mouse (se monta `Tooltip` en la Configuración, que no lo tenía: el detalle de los cupos tampoco se veía). Integraciones se parte en Google Calendar y WhatsApp; el tab viejo `integraciones` abre Google Calendar. WhatsApp muestra sus tres pasos (número, prueba, confirmado) con el actual latiendo, aura verde al quedar confirmado y «Mandarme otra prueba». Los cupos cuentan hasta el número nuevo, llevan aura y barras con el tono de cada día, y la primera dice «Hoy».
+- **Qué se pierde:** nada de lo que había: la Lista sigue igual de completa.
+- **Consecuencias:** sin migración ni cambios de servidor.
+
+## ADR-W217: el Workspace con riel derecho a toda la altura y la barra de vistas pegada al header
+
+- **Fecha:** 2026-11-25 · **Subsistema:** Workspace del closer y del triage (`CloserWorkflowPage.jsx`, `sidebar-v6.css`, `useAltoHeader.js`, `components/RailResumen.jsx`, `confirmar/ChipsLead.jsx`). Reemplaza el sidebar de tarjetas de ADR-W215.
+- **Contexto:** Mario vio el sidebar de ADR-W215 en producción: tres tarjetas flotando arriba a la derecha con un hueco enorme abajo, la barra de vistas separada del header por un margen y metida en una caja, y el tablero cortado a media pantalla.
+- **Decisión:** 1) debajo del header, dos paneles a toda la altura: el contenido y un riel de 288 px separado por una línea (no tarjetas), pegado y con scroll propio. 2) El riel: el siguiente lead con sus etiquetas (etapa, segmento, decisor, inversión) y el CTA; el progreso de la sección con una barra por etapa que crece animada y su leyenda; «Hoy», con lo que falta en Confirmar, Reportar y Seguir (cada fila lleva a su sección), la racha y los XP; las próximas 5 llamadas en línea de tiempo (abren la ficha); y la comisión al pie. 3) La barra de vistas va pegada justo debajo del header, de borde a borde del panel, con la pestaña activa subrayada en magenta sobre la línea. 4) El tablero llena el alto hasta el dock y el calendario también. 5) El header se alinea con el contenido. 6) Sin anillos ni emoji: íconos de lucide. 7) Debajo de 1100 px el riel es una franja arriba del contenido.
+- **Qué se pierde:** el anillo de ADR-W215. El riel le quita 288 px al contenido en todas las vistas menos «Cerrar el día».
+- **Consecuencias:** sin backend. `--ws-top` (alto del header) lo mide la página y lo usan la barra y el riel; Confirmar ya no lo mide por su cuenta.
+
+
+## ADR-W218: Novedades del Workspace con portada a pantalla completa y recorrido por los lugares reales de Work
+
+- **Fecha:** 2026-11-25 · **Subsistema:** Workspace del closer y del triage (`pages/closer/novedades/`: `contenido.js`, `Novedades.jsx`, `Recorrido.jsx`, `Mocks.jsx`, `novedades.css`; `CloserWorkflowPage.jsx`; `data-tipo` en las pestañas de `confirmar/BarraVistas.jsx`) · **Estado:** implementada
+- **Contexto:** Mario (25/11) quiso que closers y triage se enteren de todo lo que cambió hoy (riel, calendario de Confirmar, tarjetas, Confirmación, Reprogramar, horario) con un aviso que aparezca solo y los lleve por cada cambio («abrí por acá»), no con un mensaje aparte. El `OnboardingTour` viejo (MainLayout) no llega al Workspace, que no usa MainLayout, y tiene el estilo anterior.
+- **Decisión:** la primera vez que alguien entra al Workspace después de una tanda (`VERSION`) ve una portada a pantalla completa tipo estreno (humo, título grande, los seis cambios en íconos, «Mostrame» y «Después»), con el lenguaje de la presentación de Pareto en Leadership. «Mostrame» arranca un recorrido de ocho pasos: oscurece la pantalla menos el lugar real del cambio (aro magenta que late), y al lado una tarjeta con una escena animada del cambio, título y una línea. Work se mueve solo a donde hace falta (Confirmar, la vista Tablero o Calendario); en «Nuevo: Calendario» la pestaña se puede tocar y tocarla avanza. Si el lugar no está (sin llamadas), la tarjeta va al centro y la escena lo explica igual. El último paso ofrece «Abrir mi horario» (Configuración › Disponibilidad). Se vuelve a ver desde Herramientas › Novedades o con `?novedades=1`. Teclas: ← →, Esc cierra.
+- **Qué se pierde:** lo visto se guarda en el navegador (por usuario), no en la cuenta: en otra computadora la portada aparece de nuevo. «Después» la pospone solo hasta la próxima visita.
+- **Consecuencias:** sin backend ni migración. Para la próxima tanda se cambian `VERSION` y `PASOS` en `contenido.js` (y las escenas en `Mocks.jsx` si hacen falta); el resto no cambia.
+
+## ADR-W219: las Novedades del Workspace, otra vez para todos y obligatorias
+
+- **Fecha:** 2026-11-25 · **Subsistema:** Workspace (`pages/closer/novedades/`). Sigue a ADR-W218 · **Estado:** implementada
+- **Contexto:** Mario pidió que el recorrido vuelva a salir también a quien ya lo vio (él incluido) y que sea obligatorio completarlo.
+- **Decisión:** `VERSION` pasa a `2026-11-25-2`, así le aparece a todos de nuevo. Mientras no lo terminó, no hay cruz, «Después» ni Esc en la portada ni en el recorrido; queda visto recién al tocar «Listo» o «Abrir mi horario» en el último paso (si recarga a la mitad, vuelve a empezar). Ya visto, abrirlo desde Herramientas › Novedades o con `?novedades=1` deja cerrarlo.
+- **Qué se pierde:** posponerlo. Sigue guardado por navegador: en otra computadora se vuelve a pedir.
+- **Consecuencias:** sin backend.
+
+## ADR-W220: Propiedades de Confirmar con filas quietas, orden arrastrando cualquier fila y la hora del calendario que se apaga
+
+- **Fecha:** 2026-11-25 · **Subsistema:** Confirmar (`confirmar/PopoverPropiedades.jsx` nuevo, `PopoverVista.jsx`, `VistaCalendario.jsx`, `vistasConfirmar.js`, `confirmar.css`). Sigue a ADR-W201 y W214 · **Estado:** implementada
+- **Contexto:** Mario (25/11), en el calendario de Confirmar: apagar y prender Hora no cambiaba nada; Teléfono sí, pero Etapa, Segmento y las demás «no»; y no se podían ordenar arrastrando. Probado: el cambio sí se guardaba, pero las prendidas se dibujaban primero, así que la fila tocada saltaba abajo y bajo el mouse quedaba otra todavía prendida (Teléfono no saltaba porque ya estaba justo debajo de las prendidas). La hora del calendario se mostraba siempre. El arrastre era el nativo del navegador y solo ordenaba entre las prendidas.
+- **Decisión:** la lista tiene un orden fijo que se guarda en la vista (`ordenProps`); prender o apagar no mueve nada. Se ordena arrastrando cualquier fila, prendida o no (dnd-kit, con 4 px antes de arrancar para que el switch se siga tocando), dentro de su sección; lo prendido se guarda en ese orden y las etiquetas salen así. En el calendario la hora del título se ve solo con Hora prendida; los calendarios guardados (versión `cal` 3) la suman prendida, así nadie la pierde.
+- **Qué se pierde:** las prendidas ya no se juntan arriba solas.
+- **Consecuencias:** sin backend; las vistas suman `ordenProps` y `cal: 3`.
+
+## ADR-W221: en el recorrido de Novedades se puede probar todo
+
+- **Fecha:** 2026-11-25 · **Subsistema:** Workspace (`pages/closer/novedades/`). Sigue a ADR-W218 y W219 · **Estado:** implementada
+- **Contexto:** Mario: durante el recorrido había cosas que no dejaba abrir (la llamada para ver Confirmación, el calendario); tiene que dejar experimentar todo.
+- **Decisión:** el lugar iluminado siempre se puede tocar. Cada paso con algo para usar tiene «Probalo»: en Confirmación abre la primera llamada en su pestaña Confirmación; en Reprogramar, además toca Reprogramar; en Tu horario abre Configuración › Disponibilidad; en el resto deja usar lo iluminado. Al probar (con «Probalo» o tocando el lugar) el velo y la tarjeta se van y queda abajo a la izquierda «Probando · <paso>» con «Seguir el recorrido», que vuelve al mismo paso. Mientras se prueba, el recorrido no toma ninguna tecla (Esc cierra la ficha, ← → mueven el calendario). Sigue siendo obligatorio: el botón no se puede cerrar.
+- **Qué se pierde:** «Abrir mi horario» ya no cierra el recorrido; ahora es «Probalo» y el último paso se termina con «Listo».
+- **Consecuencias:** sin backend. Los pasos suman `probar(ctx)` en `contenido.js`.
+
+## ADR-W222: las preferencias del dock se guardan aunque las vistas sean grandes, y el changelog vuelve a salir con cada cambio
+
+- **Fecha:** 2026-11-25 · **Subsistema:** Confirmar (`confirmar/PopoverPropiedades.jsx`), dock (`sesion/dockServidor.js`, `PUT /auth/me/dock` en `app/api/auth.py`), Novedades (`novedades/Novedades.jsx`). Sigue a ADR-W220 y W221 · **Estado:** implementada
+- **Contexto:** Mario: en el tablero las propiedades «no andan» (prender o apagar no queda). En el navegador funcionan (probado con clics reales); pero `PUT /auth/me/dock` rechaza más de 20 000 caracteres y el error se tragaba: el cambio quedaba solo en el navegador y al recargar ganaba lo de la cuenta. ADR-W220 lo empeoró guardando en cada vista el orden de todas las propiedades, con el texto entero de cada pregunta del formulario. Además pidió que, si cambia el changelog, le vuelva a aparecer a todos, él incluido, al recargar.
+- **Decisión:** el tope pasa a 100 000 y un rechazo queda en el log del servidor y en la consola. Prender o apagar ya no guarda el orden; las filas quedan en el orden del catálogo (o el arrastrado) y no se mueven. Al arrastrar se guarda `ordenProps` sin las preguntas del formulario, salvo que se haya ordenado una. Novedades: lo visto se compara contra `VERSION` más una huella del código de `contenido.js`, `Mocks.jsx` y `Recorrido.jsx`; cualquier cambio en el recorrido lo vuelve a mostrar (obligatorio) a todos sin tocar `VERSION`.
+- **Qué se pierde:** las prendidas ya no aparecen primero en la lista de Propiedades. Un arreglo chico en el recorrido también lo vuelve a mostrar.
+- **Consecuencias:** sin migración. El bundle suma el texto de esos tres archivos (~10 KB comprimido) para la huella.
+
+## ADR-W223: «Mi sueldo», la composición del sueldo del mes en una herramienta del dock
+
+- **Fecha:** 2026-11-25 · **Subsistema:** Nómina comercial (`app/services/mi_sueldo_service.py`, `GET /api/mi-sueldo` en `app/api/mi_sueldo.py`), herramientas en ventana (`ventanas/herramientas/miSueldo/`, `ventanas/herramientas.js`, grupo «Mi cuenta» en `catalogoHerramientas.js`). Mockup: `docs/mockups/composicion-salarial/` · **Estado:** implementada
+- **Contexto:** Marlon pidió ver la composición salarial del equipo: tomar un mes y entender cuánto sale de cada cosa. Payroll ya muestra base, comisión y descuentos por persona, pero no separa de dónde sale la comisión, no tiene los bonos ni la comisión escrita a mano de Finanzas, y solo lo ve quien entra a Finanzas.
+- **Decisión:** una herramienta «Mi sueldo» en el dock de setters, closers y el director comercial (y admin/operador). Ventana de dos columnas. A la izquierda: el mes (‹ ›), el total con su estado (mes en curso, pendiente, en camino, pagado, en revisión), una barra con la parte de cada cosa, los conceptos (sueldo base; la comisión por tipo de pago —primer pago, cuotas, renovaciones, upsells— o, para el director, por partida —ventas propias y como director—; ajuste manual si la comisión se escribió a mano en Finanzas; bonos; descuentos por transferencia recibida) y los últimos 4 meses en barras apiladas. A la derecha: los pagos del mes que dan comisión, todos o los del concepto tocado, con neto, bruto, %, comisión y las marcas de verificación y exclusión. «Cómo se calcula» va en un «?» al pasar el mouse. Cada uno ve lo suyo; el director, admin y operador eligen a cualquiera de la nómina comercial. No calcula nada propio: la comisión es la de `comisiones_del_rango` y base, bonos, comisión manual y estado, los de `MonthlyPayroll`, así dice lo mismo que Payroll y Finanzas.
+- **Qué se pierde:** Fulfillment no está (su % es por programa y fuente; queda en Payroll). Los bonos no dicen por qué se dieron (Finanzas guarda solo el monto). El sueldo base del mes en curso es el del mes entero, no prorrateado.
+- **Consecuencias:** sin migración. Cada pedido calcula la nómina de 4 meses (`comisiones_del_rango` una vez, sobre el rango entero).
+
+## ADR-W224: «días hábiles» van de lunes a sábado
+
+- **Fecha:** 2026-11-25 · **Subsistema:** Agendas 2.0 (`app/agendas_v2/nucleo/disponibilidad.py`, `frontend/src/pages/agendas_v2/core/disponibilidad.js`) · **Estado:** implementada
+- **Contexto:** a Mario le agendaron un miércoles para el lunes siguiente con «Sesión de Aceleración» (3 días hábiles). «Hábiles» salteaba sábado y domingo: el lunes era el tercer día y el sábado no se ofrecía nunca, aunque los closers y el triage atienden ese día y el panel Turnos lo muestra con lugar.
+- **Decisión:** «días hábiles» cuenta y ofrece de lunes a sábado; solo el domingo queda afuera. Desde un miércoles, 3 hábiles son jueves, viernes y sábado.
+- **Qué se pierde:** no hay forma de pedir «solo lunes a viernes» con este modo; si hace falta, se usa el horario de cada persona (sin franjas el sábado).
+- **Consecuencias:** sin migración. Cambia en todos los eventos con «hábiles» (Sesión de Aceleración, Sesión diagnóstica, Consultoría): la ventana se acorta un día de calendario cuando la cruza un sábado y aparecen los horarios del sábado.
+
+## ADR-W225: «Después» en las novedades, con un plazo de 3 días
+
+- **Fecha:** 25/11/2026 · **Estado:** aceptada
+- **Contexto:** El changelog (ADR-W218, W222) era obligatorio apenas aparecía: quien entraba con una llamada encima no podía dejarlo para más tarde. Mario pidió poder aplazarlo hasta 3 días y que después ya no se pueda.
+- **Decisión:** Mientras el recorrido no esté terminado, la portada ofrece «Después» con los días que quedan; lo deja hasta el día siguiente (medianoche local). El plazo corre desde la primera vez que aparece cada tanda (huella `VISTA`) y vive en `localStorage` (`ln_novedades_<id>_aplazo`). Vencidos los 3 días vuelve a ser obligatorio: sin cruz, «Después» ni Esc. La cruz del recorrido también aplaza dentro del plazo.
+- **Qué se pierde:** El plazo es por navegador: en otro equipo arranca de nuevo. Se aceptó por simple; si hiciera falta, pasa a la cuenta como el dock.
+- **Consecuencias:** El cambio está en `Novedades.jsx`, que no entra en la huella: quien ya terminó el recorrido no lo vuelve a ver por esto.
+
+## ADR-W226: Turnos muestra lo que ve el lead y deja cambiar los días del link
+
+- **Fecha:** 2026-11-25 · **Subsistema:** Agendas 2.0, herramienta Turnos (`app/agendas_v2/turnos_lead.py`, `GET /turnos-lead` y `PUT /eventos/<id>/dias` en `api_admin.py`, `secciones/team/LoQueVe.jsx`, `GrillaLead.jsx`, `useLoQueVe.js`, `ventanas/herramientas/TurnosVentana.jsx`). Mockup: `docs/mockups/turnos-ventana/` · **Estado:** implementada
+- **Contexto:** Santi veía en Turnos números distintos de los que ofrecía el link: la tabla suma la capacidad de la semana por grupo, sin la antelación ni la ventana de días del evento, y no dice hasta qué día puede agendar el lead. Pidió verlo por link y por segmento (A, B, C, D), sacar los links desde ahí y cambiar rápido los días si son muchos o pocos.
+- **Decisión:** Turnos abre en «Por link»: una tarjeta por link publicado con segmentación (Workshop, Setting, Academy Web) con 10 días desde hoy en dos filas, closers (segmentos que toman la sesión del link) y triage (los que toman otra, C/D), marcando lo que el lead ve, lo que hay fuera de la ventana y los días de la ventana sin horarios; al tocar un día, sus horarios y de quién son. «Por segmento»: se elige el link y hay un bloque por segmento. Los horarios los calcula el backend con el mismo núcleo que la página pública (versión publicada, personas elegibles, agendas, Google, mínimo diario, la sesión de la regla del segmento). Los días se cambian con − / + y hábiles/corridos: se escriben en el borrador y en lo publicado a la vez, sin pasar por Publicar, y los puede cambiar también el setter. «Copiar link» le pone al setter su código. La tabla de antes queda como «Semana del equipo».
+- **Qué se pierde:** cambiar los días no deja el paso por Publicar como control: lo cambia cualquiera de la dirección o un setter y queda en vivo. La ventana se edita por link, no por segmento (es del evento que abre el lead). No se desplazan agendas C/D al calcular lo que vería un A/B.
+- **Consecuencias:** sin migración. Cada lectura corre la asignación 2 veces por segmento y link (~30) con la ocupación leída una vez; se refresca cada 60 s con la ventana visible.
+
+## ADR-W227: los setters configuran Agendamiento
+
+- **Fecha:** 2026-11-25 · **Subsistema:** Agendas 2.0 (`app/agendas_v2/api_admin.py`, `frontend/src/utils/areas.js`) · **Estado:** implementada
+- **Contexto:** desde el 10/10/2026 el setter entraba a Thalamus en solo lectura, y sin tarjeta en el Portal no llegaba. Mario pidió que Eli y Paula (setters) vean Agendamiento y puedan modificarlo.
+- **Decisión:** el rol setter tiene la tarjeta Agendamiento en el Portal y el mismo acceso que la dirección comercial en `/api/agendas-v2`: `ROLE_SETTER` pasa a `ROLES_CON_ACCESO` y `ROLES_DE_LECTURA` queda vacío. `/estado` le devuelve `solo_lectura: false`, así que la pantalla no bloquea nada, y recibe los datos completos (emails de Team, contacto de las reservas).
+- **Qué se pierde:** el resguardo de que solo la dirección cambie lo que es de todos: un setter puede borrar un funnel o un evento y dejar sin agendas al equipo, y ve los datos de leads de otros setters.
+- **Consecuencias:** sin migración. El mecanismo de solo lectura (`ROLES_DE_LECTURA`, `ui/soloLectura.js`) queda para volver a usarlo si hiciera falta.
+
+## ADR-W228: el Workspace de closers y triage en el teléfono
+
+- **Fecha:** 25/11/2026 · **Estado:** aceptada
+- **Contexto:** Mario, con capturas del celular: «se ve muy mal todo». El riel (ADR-W217) se dibujaba debajo del tablero: con `overflow:auto` la grilla le daba a su fila 33 px. La barra de vistas ocupaba cuatro renglones, el tablero apilaba las etapas, el calendario mostraba una semana en 390 px, la ficha llenaba la pantalla con la cabecera y el dock dejaba ver las secciones a través de Herramientas. La barra «Probando» del recorrido medía 172 px (tomaba el relleno del contenido; en la compu también).
+- **Decisión:** Hasta 720 px: el riel es una tira de tarjetas que se desliza de costado (progreso, Hoy, comisión) y el área va en columna; hasta 1100 px el riel ya no scrollea por dentro. Las vistas y los controles van en dos filas que se deslizan, y los menús se abren a lo ancho. Las etapas del tablero se deslizan de costado, una por pantalla. La lista deja el nombre fijo a la izquierda. El calendario del teléfono guarda sus propios días (`diasTel`, 3 de entrada) para no tocar los de la compu. La ficha es una hoja a pantalla completa, con los botones arriba y los datos de a dos (`ficha-telefono.css`). En el dock, Herramientas tapa con fondo opaco. En el recorrido, el primer paso dice «Tu día, siempre arriba» (se cambia en `Novedades.jsx`, fuera de la huella, para no volver a mostrarlo a todos).
+- **Qué se pierde:** En el teléfono el tablero muestra una etapa a la vez y la comisión queda en la tercera tarjeta del riel.
+- **Consecuencias:** Los cortes son 720 px (teléfono), 520 px (ficha) y 1100 px (riel arriba). Las capas de Novedades quedan fuera del relleno de `.ws-area`.
+
+## ADR-W229: el broadcast de WhatsApp se manda a mano desde una herramienta, con una sola tabla
+
+- **Fecha:** 2026-11-25 · **Subsistema:** WhatsApp propio (`app/whatsapp/envios.py`, `historial.py`, `api.py`; modelo `WaEnvio`), herramienta en ventana (`ventanas/herramientas/broadcastWa/`). Mockup: `docs/mockups/difusiones-whatsapp/` · **Estado:** implementada
+- **Contexto:** las difusiones de ADR-W206 salían solas a lo largo del día (dos tablas: la difusión y sus destinos, con tope y flujo por difusión). Para la reactivación de los grupos viejos (#192) se quiere controlar el proceso: elegir cuándo y a cuántos se manda, con un CSV. Los botones de la plantilla no llevan flujo: al tocar uno, el setter sigue el setting a mano.
+- **Decisión:** una herramienta «Broadcast de WhatsApp» (Herramientas › Crear, admin y operador). Se carga el CSV (dice cuántos hay para mandar, cuántos ya recibieron, repetidos e inválidos), se elige una plantilla aprobada (se ve como le llega a la persona) y se manda a los próximos N. Salen de a 10 por minuto en el reloj del motor; «Frenar» saca lo que no salió. El tope es de 100 por día para el número, sumando plantillas (lo enviado hoy en Argentina más lo pendiente). «Historial» muestra cada envío con enviados, entregados, leídos, respondieron y fallaron; tocando uno, sus números con el botón que tocaron, su chat y el setter, y se descarga en CSV. Todo vive en una tabla, `wa_envios` (una fila por número, agrupadas por `lote`); el CSV no se guarda. Un número va una sola vez. Los que responden entran al Inbox asignados a un setter, con `variables.origen = 'broadcast'`.
+- **Qué se pierde:** el envío automático y el flujo por difusión (`flujo_id`, el botón de la plantilla como inicio de un flujo, de ADR-W206). Un número que falló (por ejemplo, sin WhatsApp) no se reintenta. Sin horario: sale cuando alguien toca «Enviar».
+- **Consecuencias:** migración `e3a1c5f7b9d2`: crea `wa_envios` y borra `wa_difusiones` y `wa_difusion_destinos` (vacías en producción). Para otra lista con los mismos números (por ejemplo, alumnos para #196) habrá que revisar la regla de «una sola vez».
+
+## ADR-W230: No lead e In-abrible salen de la bandeja del Inbox
+
+- **Fecha:** 25/11/2026 · **Subsistema:** Inbox (`app/automatizaciones/fases.py` `cerradas`, `api.py`; `pages/inbox/conversaciones/colas.js`) · **Estado:** aceptada
+- **Contexto:** Mario: «si es un no lead, que desaparezca del inbox; solo aparece lo pendiente». Paula no tenía cómo sacar chats ya cerrados: seguían en «Esperan respuesta» y tapaban los importantes. No había ninguna forma de cerrar o archivar.
+- **Decisión:** un chat marcado No lead o In-abrible no aparece en ninguna cola de la lista. Si el lead escribe por DM después de la marca, vuelve solo. Se ven pidiendo esa etapa en el filtro, y el Embudo los sigue mostrando en su columna. Marcar la salida es la forma de cerrar un chat; no hay un «archivar» aparte.
+- **Qué se pierde:** verlos de un vistazo en la lista: quien busca uno cerrado tiene que filtrar por esa etapa (el buscador tampoco los muestra sin ese filtro).
+- **Consecuencias:** sin migración: la marca sale de `ig_fases` (la última salida) contra `ultimo_entrante_en`. La lista recibe `cerrada` por conversación.
+
+## ADR-W231: el bot contesta en público el comentario que dispara un flujo
+
+- **Fecha:** 25/11/2026 · **Subsistema:** Motor de Instagram (`app/automatizaciones/respuesta_publica.py`, `motor.py` `_iniciar`, `transporte.py` `responder_comentario`) · **Estado:** implementada
+- **Contexto:** un setter avisó que no se activaba la respuesta automática a los comentarios. El motor mandaba solo la respuesta privada (el DM). ManyChat además contestaba debajo del comentario, y eso le manda una notificación al lead, que así abre más el DM.
+- **Decisión:** cuando un comentario arranca un flujo y la respuesta privada sale, el bot contesta el comentario en público con una frase corta que avisa del DM. Elige al azar entre cinco frases fijas para que Instagram no lo tome como spam. Si Meta la rechaza, queda en el log y el flujo sigue igual.
+- **Qué se pierde:** las frases no se eligen por flujo ni por campaña: son las mismas para todos y se cambian en el código.
+- **Consecuencias:** sin migración. Hace falta el permiso de comentarios del token (`instagram_business_manage_comments`, el mismo que ya trae los comentarios por webhook). La respuesta pública no se guarda como mensaje del chat.
+
+## ADR-W232: el broadcast reparte al azar entre plantillas para compararlas
+
+- **Fecha:** 2026-11-25 · **Subsistema:** herramienta «Broadcast de WhatsApp» (ADR-W229: `app/whatsapp/envios.py`, `historial.py`, `ventanas/herramientas/broadcastWa/`) · **Estado:** implementada
+- **Contexto:** la reactivación (#192) tiene tres textos aprobados (reactivacion_a, b y c) y la idea es ver cuál responde mejor.
+- **Decisión:** con más de una plantilla aprobada, la herramienta arranca en «Al azar entre N» (se pueden desmarcar). En cada «Enviar» los números se reparten en partes iguales y en orden al azar. El historial muestra, por plantilla, cuántos se enviaron, qué porcentaje leyó y qué porcentaje respondió (sobre los entregados); cada número dice qué plantilla recibió, también en el CSV descargado.
+- **Qué se pierde:** con envíos chicos (100 por día, unos 33 por plantilla) la diferencia entre plantillas puede ser azar; hay que juntar varios días antes de elegir.
+- **Consecuencias:** sin migración: la plantilla ya se guardaba por número. El POST /envios pasa a recibir `plantillas: [{nombre, idioma}]`.
+
 ## ADR-W233: Work sigue la movida en Google de una agenda que ya pasó sin reportar
 
 - **Fecha:** 25/11/2026 · **Subsistema:** Agendas 2.0, seguimiento del Calendar (`app/agendas_v2/movidas.py`) · **Estado:** implementada
@@ -1894,6 +2096,54 @@
 - **Qué se pierde:** una agenda vieja cuyo evento se corrió a otra hora también pasada (por ejemplo, para dejar anotada la hora real) no se toca: eso lo sigue reportando el closer. Más allá de 14 días, una movida no se sigue.
 - **Consecuencias:** sin migración. La lectura del Calendar de cada closer cubre 14 días más hacia atrás. El 25/11 el ensayo sobre producción (solo lectura) encontró una sola agenda en ese caso, la de Melanie.
 
+## ADR-W234: las plantillas de WhatsApp se gestionan desde el broadcast y cada botón puede contestar solo
+
+- **Fecha:** 25/11/2026 · **Subsistema:** herramienta «Broadcast de WhatsApp» (ADR-W229: `app/whatsapp/api_plantillas.py`, `respuestas.py`, `ventanas/herramientas/broadcastWa/`) e Inbox · **Estado:** implementada (mockup `docs/mockups/plantillas-whatsapp/`, aprobado por Santi)
+- **Contexto:** la estrategia de referidos de Mario (prueba 50/50 con la de Marlon) manda una plantilla con dos botones: «¿Qué beneficios tengo?» contesta con Learnation Fellows y «Sí, conozco a alguien» manda el link del grupo, y todo cae en Dari con la etiqueta «Estrategia Mario». Las plantillas se creaban por API, sin ver su estado, y tocar un botón quedaba siempre para el setter (ADR-W229).
+- **Decisión:** un botón «Plantillas» al lado de «Historial»: lista las de Meta con su estado (y el motivo si la rechazan), las crea con botones de respuesta rápida, las duplica (editar una aprobada la vuelve a revisión) y las borra. Cada botón de una plantilla puede tener una respuesta (`wa_respuestas_boton`): el mensaje que sale solo, sus botones (hasta 3, de 20 caracteres: cada uno sigue la respuesta de otro botón de la plantilla o queda para el setter), a quién se asigna y qué etiqueta lleva. Vive en Work: se cambia sin pasar por Meta. Para que Dari atienda, triage entra al Inbox como un setter y se le pueden asignar conversaciones, sin entrar al reparto de las campañas.
+- **Qué se pierde:** no va por el motor de flujos: su límite de botones es el de Instagram (20) y no asigna ni etiqueta. Una respuesta es un solo mensaje, sin esperas ni condiciones. La plantilla de un toque se saca del broadcast que recibió ese número (cada número recibe uno solo); si se manda la misma plantilla por otra vía, su botón no se reconoce.
+- **Consecuencias:** migración `f4b2d6a8c0e3`. Un toque sin respuesta configurada sigue igual que antes. Los botones de la respuesta de referidos no pueden decir «Sí, conozco a alguien» (21 caracteres): van con un texto de hasta 20.
+
+## ADR-W235: «No requiere respuesta» saca un chat de «Esperan respuesta» hasta que el lead vuelva a escribir
+
+- **Fecha:** 25/11/2026 · **Subsistema:** Inbox (`app/automatizaciones/api_trabajo.py` `marcar_resuelta`, `ig_contactos.resuelta_en`; `pages/inbox/conversaciones/colas.js` `resuelta`, `Detalle.jsx`) · **Estado:** implementada
+- **Contexto:** Paula y Elias (reporte #26) tenían en «Esperan respuesta» leads que ya agendaron y mandaron el último mensaje («gracias», «listo»). No hay nada que contestarles, y la única forma de cerrar un chat (ADR-W230) era marcarlo No lead o In-abrible, que no aplica a quien agendó.
+- **Decisión:** arriba del chat, cuando lo último lo escribió el lead, un botón «No requiere respuesta». La conversación deja de esperar (sale de «Esperan respuesta», «Esperan más de 1 h», del contador de espera de la fila y de «Tuyas esperando»), pero sigue en la bandeja y en «Todas». Si el lead escribe de nuevo, vuelve a esperar sola. El mismo botón deshace la marca, y cada cambio deja un evento en el chat.
+- **Qué se pierde:** no se cierra sola por etapa (por ejemplo, Agendó): un agendado que pregunta algo tiene que seguir apareciendo. Hay que marcar cada chat a mano. La marca no cuenta para la mediana de respuesta.
+- **Consecuencias:** migración `a2c4e6f8b0d1` (columna `resuelta_en`, idempotente). El setter puede marcarla (`inbox.marcar_resuelta`).
+
+## ADR-W236: la respuesta a un botón de WhatsApp puede esperar y llevar el nombre del lead
+
+- **Fecha:** 26/11/2026 · **Subsistema:** herramienta «Broadcast de WhatsApp», respuesta por botón (ADR-W234: `app/whatsapp/respuestas.py`, `ventanas/herramientas/broadcastWa/Respuestas.jsx`) · **Estado:** implementada
+- **Contexto:** los textos de Marlon para no cerrados y referidos piden «delay de 1 minuto» y saludan por el nombre («como va, nombre? soy mario no el bot»). Una respuesta que llega en un segundo delata al bot.
+- **Decisión:** cada respuesta elige cuándo sale (al instante, 1, 2 o 5 minutos). Con espera, queda en `wa_respuestas_pendientes` y la manda el reloj del motor; asignar y etiquetar se hacen en el momento del toque. `{nombre}` en el texto pasa a ser el primer nombre: el del CSV del broadcast y, si no hay, el del perfil de WhatsApp; sin ninguno se borra con la coma de antes. Un toque nuevo reemplaza la respuesta que esperaba.
+- **Qué se pierde:** el reloj corre una vez por minuto: «1 minuto» sale entre 1 y 2 minutos después. Mientras espera, el setter no ve en el chat qué va a salir.
+- **Consecuencias:** migración `b3d5f7a9c1e2` (columna `demora_segundos` y tabla `wa_respuestas_pendientes`).
+
+## ADR-W237: el chat de WhatsApp muestra a qué mensaje responde el lead y los stickers, fotos y audios que manda
+
+- **Fecha:** 26/11/2026 · **Subsistema:** Inbox, chat de WhatsApp (`app/whatsapp/medios.py`, `app/automatizaciones/api_medios.py`, `pages/inbox/conversaciones/Whatsapp.jsx`, `Feed.jsx`) · **Estado:** implementada
+- **Contexto:** Mario (26/11) vio respuestas sueltas como «De este» o «Por ahora no» que en el teléfono citan un mensaje del setter; en Work no se sabía a cuál. Los stickers, fotos y audios se veían como «Sticker» o «📷 Imagen». El webhook ya guardaba todo (`contenido.whatsapp`): el `context.id` del mensaje citado y el id de Meta del archivo.
+- **Decisión:** la conversación devuelve, por mensaje, `responde_a` (el mensaje citado por `mid`, también el de una reacción) y `medio` (tipo, leyenda y una ruta del Inbox que baja el archivo de Meta con el token). Arriba de la burbuja va «Respondió a tu mensaje» con dos líneas del citado; tocarlo lleva a ese mensaje y lo resalta. El sticker se ve sin burbuja; la foto, el audio, el video y el documento, en la burbuja. El navegador guarda el archivo una semana y el servidor lo último que bajó (hasta 2 MB por archivo).
+- **Qué se pierde:** Meta guarda los archivos 30 días: después el chat avisa que hay que mirarlo en el teléfono. Si el mensaje citado se mandó desde el teléfono y no está en Work, la cita dice que no está acá. Instagram queda igual: su webhook no guarda el `reply_to`.
+- **Consecuencias:** sin migración. Lo viejo se ve también, porque el dato ya estaba guardado.
+
+## ADR-W238: el panel del lead y la línea de arriba del chat, con menos texto: íconos, barras y un anillo
+
+- **Fecha:** 26/11/2026 · **Subsistema:** Inbox, conversación abierta (`TarjetaLead.jsx`, `FichaLead.jsx`, `Indicadores.jsx`, `Detalle.jsx`, `Fila.jsx`, `Embudo.jsx`; `app/automatizaciones/cliente_del_contacto.py`) · **Estado:** implementada
+- **Contexto:** Mario (26/11) vio la columna derecha desordenada: un «👻» sin saber quién es, «Vos» suelto, «Manual» más grande que todo, tareas y notas con frases enteras. Arriba del chat, tres puntos que no se entendían, «2 Conexión» cortado y «quedan 23 h 51 min para responder».
+- **Decisión:** la tarjeta muestra el nombre del `Client` de Work que coincide con el número (o el @), con el número debajo y el canal en el avatar, y su última agenda en una línea. Asignado, canal y bot van en una línea de pastillas iguales; la etapa dice la fase («Conexión») con la etapa chica debajo, una barra de avance por fase y «Adelantar» al lado. La ficha son cuatro filas con ícono y cuenta; lo explicativo pasa al tooltip. Arriba del chat y en la lista: la etapa como barrita con su nombre corto (y un bot rojo o ámbar si el bot falló o está en pausa), la espera como reloj y la ventana para responder como un anillo que se vacía. Arriba del chat no va la etapa: está en la tarjeta.
+- **Qué se pierde:** los tres puntos decían el estado de las tres etapas a la vez; ahora se ve solo la fase y, del bot, solo si falló o está en pausa. Los textos de ayuda ya no están a la vista: van en el tooltip. Un lead sin `Client` con su número o su @ sigue con el nombre del perfil.
+- **Consecuencias:** sin migración. La conversación devuelve `cliente` (`{id, nombre, email, agenda}`); al 26/11 lo encuentra en 19 de 30 chats de WhatsApp.
+
+## ADR-W239: la línea de arriba del chat pasa a la tarjeta del lead, la caja gana ancho y la bandeja no se mete bajo el dock
+
+- **Fecha:** 26/11/2026 · **Subsistema:** Inbox (`Ahora.jsx`, `TarjetaLead.jsx`, `Composer.jsx`, `Fila.jsx`, `useAltoLibre.js`, `cliente_del_contacto.nombres`), espacio del setter (`SetterEspacioPage.jsx`) y Confirmar del closer (`confirmar.css`) · **Estado:** implementada
+- **Contexto:** sobre ADR-W238, Mario (26/11) pidió: la tarjeta agrupada y no apilada; arriba del chat nada (el número, la espera y la ventana a la tarjeta), para darle alto al chat; las herramientas de la caja al lado de Chat/Nota/Tarea con Learnito resaltado y «Pausar el bot» en la tarjeta; No lead e In-abrible a un toque; la fila de la bandeja en dos líneas con el nombre real; «Volver a mi sesión» chico; y que el dock no tape el chat. También el recuadro oscuro detrás de la barra de Conversaciones: venía de `confirmar.css`, que usa las mismas clases (`.cv`, `.cv-barra`, `.cv-lista`…) sin acotar y, una vez cargada, pintaba la barra del Inbox con su fondo fijo.
+- **Decisión:** la tarjeta va en bloques: quién es (nombre real, número que se copia, examen, última agenda) · ahora y bot (espera, anillo, «No requiere», el flujo y el interruptor «Pausar», que la caja usa al enviar) · asignación y etiquetas · etapa con «Adelantar» y los botones No lead / In-abrible (con «Deshacer»). La línea de arriba del chat se va. La caja pone rápidas, audios, seguimiento y Learnito (con brillo) en la fila de los modos y el texto a todo el ancho. La fila de la bandeja: nombre, examen, espera y hora; debajo, la vista previa y en íconos la etapa, la ventana, tareas, seguimientos, etiquetas (puntos) y el asignado; la lista trae `nombre_real` en una consulta por canal. El alto de la bandeja se mide en vivo hasta lo fijo de abajo (el dock). En `confirmar.css` las clases que comparte con el Inbox llevan `:not(:where(.inbox *))` (sin cambiar su peso), y las animaciones nuevas del Inbox usan el prefijo `ib-`. «Volver a mi sesión» es una pastilla ámbar al lado del saludo.
+- **Qué se pierde:** el estado del bot ya no está en una pastilla de la línea de asignación, sino en su bloque. En la fila, la etapa se ve sin su nombre (va en el tooltip) y las etiquetas como puntos de color. «Pausar el bot» ya no está al lado del botón de enviar.
+- **Consecuencias:** sin migración. Al 26/11, 36 de las últimas 500 conversaciones tienen nombre real en Work.
+
 ## ADR-W240: el reporte de una agenda movida en Google va a la que la reemplazó
 
 - **Fecha:** 26/11/2026 · **Subsistema:** Ficha › Resultado y reporte de triage (`app/api/ficha/escritura.py`, `app/agendas_v2/reagenda.py` `vigente_tras_movidas`) · **Estado:** implementada
@@ -1901,3 +2151,203 @@
 - **Decisión:** si se reporta (Resultado o triage) una agenda que Work reemplazó por una movida en Google, el reporte se aplica a la que la reemplazó, siguiendo la cadena, mientras esa siga sin reportar. Una reagenda hecha en Work no se redirige: reportar la vieja ahí puede ser una corrección. No hay botón para marcar duplicadas (Kerwin, 26/11: «mejor sin ese botón, arreglemos lo que salga mal»).
 - **Qué se pierde:** un reporte que de verdad era para la agenda vieja después de una movida en Google ya no puede caer ahí.
 - **Consecuencias:** sin migración. La cadena se lee de `agenda_payload` (`reagenda_de`, `movida_en_google`): solo cubre agendas de Agendas 2.0.
+
+## ADR-W241: «Seguir» de triage es una bandeja que se vacía cada día, y la reagenda sin fecha existe en triage
+
+- **Fecha:** 26/11/2026 · **Subsistema:** Workspace de triage, seguimientos (`app/services/triage_seguir_service.py`, `app/api/triage_seguir.py`, `pages/closer/components/seguirTriage/`, `components/ficha/triage/recorrido.js`) · **Estado:** implementada (mockup `docs/mockups/seguimientos-triage/`, aprobado por Santi)
+- **Contexto:** reunión de ventas del 25/11. En «Seguir», Dari veía solo los cobros (que no hace) y sus «lo va a pensar» quedaban detrás de un «ver»; un seguimiento se abría en el resumen del reporte y no en el contacto; cerrar uno en negativo eran 7 pasos y guardaba «Lead Perdido» encima del Show up del triage. En triage, «Reagenda» exigía una fecha: si el lead no la daba, la llamada quedaba en Atrasadas y trababa el reporte, o se marcaba como cancelación. Mario quiere la bandeja de seguimientos en cero cada día.
+- **Decisión:** para triage, «Seguir» es una bandeja con tres pestañas: **Hoy** (atrasados y los del día, más los no show y cancelaciones que nunca tuvieron seguimiento), **Esperan fecha** (los que dijeron «te aviso») y **Hechos hoy**, con la cuenta de pendientes hacia cero. Cada fila se resuelve ahí: «No respondió» (siguiente contacto de la cadencia 0, 3 y 7 días; en el último pregunta si se cierra) y «Contestó» con cinco salidas (agendó, pasa a closing, low ticket, más adelante, no le interesa); cada acción se puede deshacer desde el aviso. «No le interesa» cierra el seguimiento con su motivo sin tocar el resultado ni la calificación de la llamada. Closing y low ticket abren la ficha en Resultado (es volver a reportar la llamada). En el reporte de triage, «Reagenda → ¿Dejó una fecha? → No, va a avisar» guarda Reagendado con «Reprogramó sin fecha» y, si el lead dijo un momento, esa fecha aproximada; la tarjeta de Atrasadas tiene la misma acción sin abrir la ficha. La ficha abierta desde un seguimiento arranca en el contacto.
+- **Qué se pierde:** para triage, los Show up ya calificados (pasaron al closer o al low ticket) dejan de aparecer como seguimientos derivados: no eran trabajo de triage. La meta de 50 hechos del closer no se muestra a triage. El closer y sus cobros no cambian.
+- **Consecuencias:** sin migración: usa las columnas de seguimiento de `Appointment`; «esperan fecha» es `seguimiento_sub` que empieza con «Reprogramó sin fecha». Al estrenarlo, Dari tiene 26 pendientes (13 atrasados, sobre todo low ticket en seguimiento, y 13 no show sin seguimiento). La fila vieja de Seguir dice «de 3» (la cadencia es de 3 contactos; decía «de 4»).
+
+## ADR-W242: una herramienta con pendientes queda fijada en el dock hasta resolverse
+
+- **Fecha:** 26/11/2026 · **Subsistema:** dock y Herramientas (`sesion/fijadas.js`, `pages/comercial/components/DockFijadas.jsx`, `ventanas/BotonHerramientas.jsx`) e Inbox (`app/automatizaciones/api_pendientes.py`) · **Estado:** implementada (mockup `docs/mockups/dock-pendientes/`, aprobado por Santi)
+- **Contexto:** una herramienta con algo pendiente (conversaciones sin contestar, avisos sin leer) solo se veía si la persona la había fijado o si abría Herramientas: se podía ignorar. Pedido de Santi a partir de Dari, que no veía su Inbox.
+- **Decisión:** Inbox, Avisos, Conflictos, Mis reportes y Playbook, con su cuenta en más de 0, van solos a la isla de fijadas, primero y con un borde; en Herramientas su pin pasa a un candado («Se queda fijada hasta que la resuelvas»). En 0 vuelven a lo que eligió la persona. El Inbox se suma a Herramientas para setters y triage, con la cuenta de sus conversaciones asignadas que esperan respuesta (la misma regla de la bandeja, de los últimos 30 días), que se pide cada minuto.
+- **Qué se pierde:** mientras haya pendientes no se puede sacar del dock. Las secciones del Workspace (Confirmar, Reportar, Seguir) no entran: ya muestran su cuenta en el medio del dock.
+- **Consecuencias:** sin migración. Nueva ruta `GET /api/inbox/mis-pendientes`. Al estrenarlo, los setters tienen entre 40 y 50 conversaciones esperando y Dari, 3.
+
+## ADR-W243: las aperturas en entrantes del setter las cuenta el Inbox
+
+- **Fecha:** 26/11/2026 · **Subsistema:** reporte del setter (`app/reporte_dia/setter.py`, `setter_detalle.py`) e Inbox (`app/automatizaciones/reporte_inbox.py`) · **Estado:** implementada. Sigue a ADR-W185, que las dejó «A confirmar».
+- **Contexto:** desde el 24/11 Elias y Paula trabajan en el Inbox: el 26/11, 227 de 248 mensajes del equipo salieron desde Work con autor, y marcan las fases (dolor, propuesta, link, no lead, in-abrible). Ese mismo día dejaron de cargar las aperturas a mano (0 en entrantes, respuestas vacías), así que el KPI «Respuesta» del reporte quedó en 0. Lo demás ya lo aceptaban tal como lo contaba el Inbox. Comparado contra lo que cargaron a mano del 18 al 23/11, «la primera vez que el equipo le escribe a mano a la conversación, ese día» da las aperturas en el mismo orden (Elias 22 contra 25 y 12 contra 13; Paula 14 contra 13 y 9 contra 8). Las respuestas dan por debajo, porque ellos contaban a todos los que contestaron ese día.
+- **Decisión:**
+  1. **Aperturas en entrantes**, por canal: conversaciones del setter cuyo primer mensaje manual del equipo (el bot no cuenta) cae ese día. **Respondieron**: de esas, las que el lead contestó después. Pasan de «a mano» a automáticas y corregibles, con su lista «Inbox ›», como los nuevos mensajes.
+  2. Con el autor que guarda el Inbox (`ig_mensajes.autor_id`), en aperturas y follow-ups cuentan los mensajes del setter y los que no tienen autor (Kommo o la app de Instagram). Lo que mandó otra persona del equipo desde el Inbox en una conversación del setter deja de contar para él.
+  3. Las aperturas en dolor y las bienvenidas siguen a mano: nunca tuvieron otro valor que 0 y el Inbox no tiene cómo distinguirlas.
+- **Qué se pierde:** la respuesta a las aperturas queda más baja que la que cargaban a mano (la de antes no es comparable). Corregir el número sigue siendo posible y queda «Corregido · era N».
+- **Consecuencias:** sin migración. Los días ya cerrados no cambian; un día cerrado que se edita recalcula con la regla nueva. El formulario viejo (`/public/setter-report/prefill`) no cambia.
+
+## ADR-W244: el dock con tooltip de nombre y descripción, y lo pendiente con aura en vez de borde
+
+- **Fecha:** 26/11/2026 · **Subsistema:** dock (`pages/comercial/components/DockTip.jsx`, `DockFijadas.jsx`, `DockSecciones.jsx`, `comercial.css`, `dock2.css`) e Inbox (`useAltoLibre.js`) · **Estado:** implementada. Sigue a ADR-W242.
+- **Contexto:** Mario: los botones del dock solo tenían el `title` del navegador, que se cortaba («esperan tu…»), mientras que Stats del Inbox muestra nombre y una línea que explica qué es. Las fijadas con pendientes llevaban un borde rosa que se veía feo y las separaba de las otras. Y la bandeja del Inbox seguía terminando debajo del dock: el dock entra animado desde abajo y la medición lo encontraba fuera de lugar o todavía sin montar.
+- **Decisión:**
+  1. Un solo tooltip para todo el dock (`DockTip`): cualquier botón con `data-dock-tip="Nombre|Qué es"` lo muestra arriba de él, en un portal. La descripción sale del catálogo de Herramientas (o de lo que dice la opción: «47 conversaciones esperan tu respuesta»). Lo usan las fijadas, Herramientas y las secciones.
+  2. Las fijadas con pendientes ya no llevan borde: un aura suave de su color (Inbox rosa, Avisos ámbar, Playbook verde) que respira despacio, el ícono y el globito de ese color.
+  3. `useAltoLibre` lee dónde empieza el dock de su CSS (`bottom` + alto sin transformar), vuelve a medir cada 1,5 s y, si no lo encuentra, igual reserva 112 px abajo.
+- **Qué se pierde:** el `title` nativo en esos botones (el lector de pantalla sigue con su `aria-label`).
+- **Consecuencias:** sin migración. Los tonos son los de Herramientas (`--herr-*`).
+
+## ADR-W245: contador de espera en vivo, reacción al responder y «Activo / Inactivo» del setter
+
+- **Fecha:** 26/11/2026 · **Subsistema:** Inbox (`conversaciones/Cronometro.jsx`, `reloj.js`, `ReaccionRespuesta.jsx`, `Actividad.jsx`, `Stats.jsx`; `app/automatizaciones/actividad.py`, `api_actividad.py`, `bandeja.py`) · **Estado:** implementada.
+- **Contexto:** Mario quiere que la espera se vea correr (minutos y segundos) para dar urgencia, que el setter reciba un festejo al responder rápido y un aviso al tardar, y poder separar la demora de cuando el setter está atendiendo de cuando no.
+- **Decisión:**
+  1. **Contador** en la fila de la bandeja y en la tarjeta del lead: m:ss (h:mm:ss desde la hora), un anillo que se llena hacia el próximo corte y una aguja que gira cada minuto. Verde hasta 5 min, ámbar hasta 30, rojo y latiendo después. Un solo reloj por segundo para toda la pantalla.
+  2. **Al responder** a un lead que esperaba: menos de 5 min, «¡Respondiste en 3:12!» con papelitos; más de 30 min, «Tardaste 42:10… guarda». Entre medio, nada.
+  3. **Activo / Inactivo**: un botón en la barra de arriba. Prenderlo abre un rato en `setter_actividad`, apagarlo lo cierra; un rato abierto más de 12 h se cierra solo en ese tope. Stats muestra la mediana propia respondiendo activo e inactivo y el tiempo activo de las últimas 24 h.
+- **Qué se pierde:** el chip «49 min» de la espera (lo reemplaza el contador). La demora sigue contándose al setter asignado, no a quien escribió.
+- **Consecuencias:** migración `dc9f7bf7cfe1` (tabla `setter_actividad`). Nueva ruta `GET/PUT /api/inbox/actividad`. Lo de antes del 26/11 cuenta como inactivo.
+
+## ADR-W246: la tarjeta del lead con origen arriba, «Transferir» y «Tus números»
+
+- **Fecha:** 26/11/2026 · **Subsistema:** Inbox (`conversaciones/TarjetaLead.jsx`, `Origen.jsx`, `Transferir.jsx`, `MisStats.jsx`, `tarjeta.css`; `bandeja.entrada`, `GET /api/inbox/mis-stats`) · **Estado:** implementada.
+- **Contexto:** Mario: la pastilla «Vos» para delegar no se entendía y dejaba pasar a cualquiera; «Anuncios» no decía la palabra clave con que entró el lead; los botones se veían planos; y quería sus números a mano en la columna del lead.
+- **Decisión:**
+  1. **Origen**, arriba del nombre: el ícono del canal (anuncio, inbound, bienvenida; tocarlo lo cambia) y la palabra clave del recorrido con que entró (`AutEjecucion.clave`). Si no tiene, «Configurar palabra clave» la guarda en la variable `palabra_clave`.
+  2. **Transferir** (antes «Delegar»), al lado de No lead e In-abrible: un setter solo ve a los otros setters (Paula → Eli, no a Dari) y triage a triage; la dirección ve a todos y «Sin asignar». `/asignables` manda el rol.
+  3. **Tus números**, al pie de la ficha: mediana de respuesta activo e inactivo (24 h), agendas cargadas hoy (en la zona del setter) y promedio diario de 30 días (`Appointment.setter_id`, `created_at`).
+  4. Botones con vidrio y aura de su color (Transferir azul, salidas rojo, Adelantar con degradé).
+- **Qué se pierde:** ver de un vistazo a quién está asignada (queda en el tooltip de Transferir y en la fila de la bandeja).
+- **Consecuencias:** sin migración.
+
+## ADR-W247: un solo «Filtro» arriba, la lista sin filtros a la izquierda y los botones de la derecha en un grupo
+
+- **Fecha:** 26/11/2026 · **Subsistema:** Inbox (`Conversaciones.jsx`, `conversaciones/MacroFiltro.jsx`, `VistasFiltro.jsx`, `ListaCab.jsx`, `barra.css`) y espacio del setter (`SetterEspacioPage.jsx`, `setterEspacio.css`) · **Estado:** implementada. Sigue a ADR-W184.
+- **Contexto:** Mario: había dos lugares para filtrar (el desplegable «Míos sin respuesta» arriba y, a la izquierda, «Asignadas a…», el filtro, ordenar y Elegir); la línea «5 conversaciones · por último mensaje · 1 sin leer» era texto plano; Tálamus sobraba (ya está Turnos) y los botones de la derecha iban sueltos.
+- **Decisión:**
+  1. **Filtro** en la barra de arriba: un botón con el número de conversaciones que deja y un punto por filtro puesto. Adentro, arriba, las vistas en tarjetas (Todos, Míos recientes, Míos sin respuesta, Todos los míos, Sin asignar y las guardadas ★, cada una con su número) y debajo todos los filtros de siempre (cola, canal, etapa, etiqueta, asignado, calificación, fechas) y Guardar. Ordenar y Elegir van pegados al Filtro.
+  2. A la izquierda queda solo el buscador. La cabecera de la lista: el número grande, cómo está ordenada, una barrita de las que esperan (verde < 5 min, ámbar 5-30, rojo > 30) y las sin leer latiendo.
+  3. Tareas · Avisos · Stats y Links · Turnos · Volver forman una sola cápsula de botones. Sale Tálamus.
+- **Qué se pierde:** el desplegable «A quién está asignada» a la vista (queda en el Filtro y en sus vistas) y los chips de filtros guardados arriba de la lista (ahora son vistas del Filtro).
+- **Consecuencias:** sin migración. Se borran `FiltrosGuardados.jsx` y `ChipsGuardados.jsx` del Inbox.
+
+## ADR-W248: las bienvenidas del setter las cuenta el Inbox, y lo que empieza el equipo no es un entrante
+
+- **Fecha:** 26/11/2026 · **Subsistema:** reporte del setter (`app/reporte_dia/setter.py`, `setter_detalle.py`) e Inbox (`app/automatizaciones/reporte_inbox.py`) · **Estado:** implementada. Sigue a ADR-W243.
+- **Contexto:** Santi pasó la definición: una bienvenida es un nuevo seguidor al que el setter le hace una apertura, o sea una conversación que empieza el setter. Se cargaban a mano y siempre en 0. Instagram no avisa de un seguidor nuevo, pero el Inbox sí sabe quién mandó el primer mensaje. Al revisarlo apareció además que las conversaciones de WhatsApp que empieza el setter (el 26/11, 10 de Elias y 11 de Paula, reactivaciones de gente de las clases) entraban como entrantes de Inbound en cuanto el lead contestaba. La apertura en dolor sigue sin definición (Marlon todavía no está seguro).
+- **Decisión:**
+  1. Una conversación cuyo primer mensaje es del equipo, a mano (antes que el lead y que el bot), no es un entrante: no suma a nuevos mensajes, cualificados ni aperturas en entrantes. Tampoco las marcadas en el canal Bienvenida.
+  2. En Instagram, esas conversaciones son **bienvenidas**: hechas (el primer mensaje del setter cae ese día), respondidas (el lead contestó), aperturas (el setter volvió a escribir después de esa respuesta) y respondieron (el lead contestó a eso). Automáticas, corregibles y con su lista. El bloque pasa a la forma de Seguimientos: enviadas, respondieron y el porcentaje de respuesta.
+  3. En WhatsApp no se cuentan en el reporte.
+  4. La apertura en dolor sigue a mano; es lo único numérico que queda a mano.
+- **Qué se pierde:** el embudo de pasos de las bienvenidas: ahora son dos filas con su respuesta. Las reactivaciones de WhatsApp no aparecen en el reporte. No se puede saber si el seguidor es nuevo: cuenta cualquier conversación de Instagram que empieza el setter.
+- **Consecuencias:** sin migración. Los días ya cerrados no cambian.
+
+## ADR-W249: la caja de escribir con Enviar arriba y el menú «/» con íconos y vista previa
+
+- **Fecha:** 26/11/2026 · **Subsistema:** Inbox (`conversaciones/Composer.jsx`, `MenuRayo.jsx`, `composer.css`) · **Estado:** implementada.
+- **Contexto:** Mario: Enviar al lado de la caja le quitaba ancho para escribir; «Escribile al lead · Enter envía · / respuestas rápidas» era mucho texto; el anillo azul al escribir y la barra de desplazamiento se veían mal; el menú «/» era una lista de texto difícil de leer (pidió algo como el de Notion).
+- **Decisión:**
+  1. Enviar (o Guardar, en Nota) va arriba, a la derecha de Chat · Nota · Tarea y las herramientas. La caja queda a todo el ancho, dice «Escribir…», sin anillo azul y con una barra finita.
+  2. El menú «/»: secciones con ícono y color (Guía, Variables, Links de agenda, Respuestas rápidas, Audios, Pasos), cada opción con su ícono, el título, el atajo como tecla y la variante (A/B) como chip; a la derecha, la vista previa de la opción bajo el mouse con el texto entero y qué hace.
+- **Qué se pierde:** la ayuda «Enter envía» a la vista (queda en el tooltip de Enviar).
+- **Consecuencias:** sin migración. También: si una pestaña vieja pide un archivo de una versión anterior después de un deploy, la página se recarga sola una vez (`main.jsx`, `vite:preloadError`); antes el botón de Learnito «no hacía nada».
+
+## ADR-W250: la tarjeta del lead entra entera y con botones sobrios
+
+- **Fecha:** 26/11/2026 · **Subsistema:** Inbox (`conversaciones/TarjetaLead.jsx`, `Origen.jsx`, `Ahora.jsx`, `FichaLead.jsx`, `MisStats.jsx`, `tarjeta.css`) · **Estado:** implementada. Sigue a ADR-W246.
+- **Contexto:** Mario: la columna derecha no entraba sin desplazarse y los botones (degradés, brillos, muy redondeados) se veían «de IA», no profesionales.
+- **Decisión:** el contador de espera, la ventana y «No requiere» (solo ícono) suben a la fila de la palabra clave; «Tus números» va arriba de Tareas en una fila de cuatro; Transferir, No lead, In-abrible, Adelantar, la etapa y las pastillas pasan a rectángulos de 6-8 px de radio, fondo neutro y el color solo en el ícono.
+- **Qué se pierde:** el texto «No requiere» a la vista (queda en el tooltip).
+- **Consecuencias:** sin migración.
+
+## 🏛️ ADR-W251: Learnito con sus conversaciones al costado (fijar y renombrar en Work) y calificación con «Enviar»
+
+- **Fecha:** 2026-11-26 · **Subsistema:** Learnito (modal)
+- **Contexto:** Mario pidió ver todas las conversaciones con Learnito, abrir una nueva, fijar y renombrar, y un modal más ancho. Al calificar, tocar una cara no confirmaba nada: no se sabía si se había mandado.
+- **Decisión:** el modal pasa a 1040 px con un sidebar: «Nueva conversación» arriba y la lista de la Academia (`/learnito/historial`), con las fijadas primero. Tocar una la abre entera (`/learnito/historial/<id>`) y se sigue escribiendo en ella. Fijar y renombrar se guardan en Work (tabla `learnito_conversaciones`: user_id, conversacion_id, titulo, fijada; `PATCH /learnito/historial/<id>`), porque es de la pantalla de cada uno y no cambia el contrato con el cerebro. La calificación se elige con una cara, admite una nota opcional (el `nota` que ya aceptaba `rate`) y se manda con «Enviar»; después queda «Calificación enviada» con «Cambiar».
+- **Qué se pierde (nombrado):** el nombre y el pin no viajan a la Academia (en su pantalla se ve el título automático). Debajo de 760 px el sidebar se oculta.
+- **Consecuencias:** migración `e7a2c4f6b8d1` (idempotente). Sin cambios en la Academia.
+
+## 🏛️ ADR-W252: Learnito: archivos, borrar conversaciones y un redactor de un solo cuadro
+
+- **Fecha:** 2026-11-26 · **Subsistema:** Learnito (modal)
+- **Contexto:** Mario pidió subir archivos y pegar capturas para que Learnito los analice, borrar conversaciones, encontrar fácil el fijar, y ordenar la parte de abajo (el placeholder largo, el micrófono y «Enviar» sueltos, la calificación y el uso apilados). Además, al abrir una conversación del sidebar no se podía bajar.
+- **Decisión:** el redactor es un cuadro: arriba las fichas de los archivos, el texto («Preguntale a Learnito…») y abajo adjuntar (clip), la pista «@ nombra · / acciones», dictar y un botón redondo de enviar. Se adjunta con el clip, pegando (Ctrl+V) o arrastrando: imagen, PDF, texto o CSV, hasta 3 de 5 MB (`useAdjuntos.js`); viajan en base64 a la Academia (su ADR-248), que los lee con el modelo. Debajo, en una línea, la calificación y el uso. Cada conversación del sidebar tiene «⋯» con Fijar, Renombrar (también con doble clic) y Borrar (pide un segundo toque); borrar la archiva en la Academia (`DELETE /learnito/historial/<id>`). La lista de mensajes baja con su propio scroll: `scrollIntoView` corría también el modal y después no se podía bajar.
+- **Qué se pierde (nombrado):** los archivos no se guardan; al reabrir la conversación queda su nombre, no el archivo. Borrar no libera el uso del mes.
+- **Consecuencias:** sin migraciones en Work. Depende del deploy de la Academia con ADR-248.
+
+## 🏛️ ADR-W253: El Learnito del chat lee la conversación y pregunta qué querés
+
+- **Fecha:** 2026-11-26 · **Subsistema:** Inbox (redactor) · Learnito
+- **Contexto:** el botón Learnito del chat mandaba siempre la misma pregunta («qué info del programa me sirve», ADR-W150, que pedía no redactar el mensaje) con los últimos 20 mensajes. Mario pidió que primero lea toda la conversación y pregunte qué hace falta: algo puntual, una respuesta o un seguimiento.
+- **Decisión:** el botón abre un panel (`LearnitoLead.jsx`) con cuatro opciones (sugerir una respuesta, sugerir un seguimiento, resumir la conversación, qué info sirve) y un campo para preguntar algo de esa conversación. Cada opción va con su `intencion` a `/inbox/conversaciones/<id>/learnito` (`learnito_inbox.INTENCIONES`), que arma la pregunta con lo que se sabe del lead, las notas y hasta 80 mensajes, y abre el modal de Learnito. «Sugerir una respuesta» da dos opciones del próximo mensaje: Mario cambia la regla de ADR-W150 (no redactar); el setter elige, copia o edita.
+- **Qué se pierde (nombrado):** un clic más para la pregunta de antes («Qué info me sirve»). La conversación larga cuesta más tokens (Rápido, centavos de centavo).
+- **Consecuencias:** sin migraciones. Sin cambios en la Academia.
+
+## ADR-W254: el Filtro del Inbox por secciones, con Rápidos primero y los seguimientos hechos por etapa
+
+- **Fecha:** 26/11/2026 · **Subsistema:** Inbox › Conversaciones (`MacroFiltro.jsx`, `seccionesFiltro.jsx`, `piezasFiltro.jsx`, `VistasFiltro.jsx`, `filtros.js`, `colas.js`, `Fila.jsx`; `app/automatizaciones/seguimientos_hechos.py`, `api.py`, `reporte_inbox.py`) · **Estado:** implementada (mockup `docs/mockups/filtros-inbox/`, aprobado por Santi). Sigue a ADR-W247.
+- **Contexto:** los setters querían filtrar por cuántos seguimientos le hicieron a un lead en una etapa («los de Dolor con 2 seguimientos»). El Filtro era una sola columna con todo junto y no sabía nada de los seguimientos ya hechos (solo del que toca por la cadencia).
+- **Decisión:**
+  1. El panel del Filtro va por **secciones** a la izquierda: Rápidos y guardados, Estado, Etapa del setting, Seguimientos, Quién y de dónde, Fechas y Etiquetas. Debajo del nombre de cada sección se lee lo que tiene elegido, y al lado, cuántos filtros. Dentro de una sección las opciones se suman; entre secciones se cumplen todas. Cada opción dice cuántas conversaciones quedarían con ella puesta.
+  2. **Rápidos y guardados** es la primera sección: las tarjetas que estaban arriba del panel, con una línea que dice qué es cada una. Se suman Esperan más de 1 h, Se cierra la ventana, Toca seguimiento, Dolor sin seguimiento y Link sin respuesta; «Míos recientes» pasa a llamarse «Nuevos de hoy». Abajo, los guardados de cada uno.
+  3. **Seguimientos**: la etapa no se elige ahí, sale de Etapa del setting (sin etapa, cuentan todos). Primero «Ninguno» o «Al menos uno»; con «Al menos uno» aparecen la cantidad (1, 2, 3, 4 o más) y cuándo fue el último. Además, si contestó el último y «Toca seguimiento ahora».
+  4. Un seguimiento hecho es la regla del reporte: un mensaje del equipo después de 12 h sin respuesta, en la fase en que estaba la conversación (sin marca, Conexión). La regla vive en `seguimientos_hechos.py` y la usan la lista y el reporte del setter, así dan lo mismo. La lista trae `seguimientos_hechos` por fase (cuántos, cuándo el último y si lo contestó), y la fila muestra cuántos lleva en las fases filtradas.
+  5. «Ayer» pasa a «Desde ayer» (ayer y hoy) y se suma «Esta semana» (los últimos 7 días), en todas las fechas del filtro.
+  6. Se suma el filtro de **origen** (Anuncios, Inbound, Bienvenida).
+- **Qué se pierde:** «Ayer» solo (sin hoy) ya no existe; se pide con Personalizado. Un filtro guardado con «Ayer» ahora incluye hoy. Los seguimientos de antes del 24/11 casi todos caen en Conversión (las fases no se marcaban), así que filtrar Dolor u Oferta solo encuentra lo de estos días. La etiqueta se elige en su sección, sin subdesplegable.
+- **Consecuencias:** sin migración. Lo que mandó otra persona del equipo cuenta en la lista (es lo que vio el lead) y no en el reporte del setter, como antes. Medido en producción: 500 conversaciones en 0,03 s; el reporte de Elias y Paula del 23 al 26/11 da lo mismo que antes del cambio.
+
+## ADR-W255: marcar a mano un mensaje como seguimiento, y el recorrido que lo explica
+
+- **Fecha:** 26/11/2026 · **Subsistema:** Inbox › Conversaciones (`MarcaSeguimiento.jsx`, `Composer.jsx`, `Feed.jsx`; `app/automatizaciones/seguimientos_hechos.py`, `reporte_inbox.py`, `api_escribir.py`, `api_seguimientos.py`, `api.py`), recorrido (`pages/inbox/tour/`, `closer/novedades/Novedades.jsx` y `Recorrido.jsx`) · **Estado:** implementada (mockup `docs/mockups/seguimientos-inbox/`, aprobado por Santi). Sigue a ADR-W254.
+- **Contexto:** el equipo pidió una guía de cómo hacer seguimientos y poder marcar los que hace a mano. El Inbox tenía tres piezas que siguen: la cadencia por fase (ADR-W204, cargada pero apagada), el seguimiento programado del reloj (ADR-W148, usado una vez) y la regla de las 12 h que cuenta el filtro y el reporte (ADR-W254). Un mensaje mandado a las 6 h sin respuesta no contaba, y no había cómo decir que sí. Santi pidió no perder ninguna función ni hacer el Inbox «de seguimientos»: solo un lugar para la marca.
+- **Decisión:**
+  1. Cada mensaje del equipo puede llevar una marca (`ig_mensajes.seguimiento`): `True` es seguimiento, `False` no lo es aunque pasen 12 h, `None` decide la regla de siempre. La regla vive en `seguimientos_hechos.es_seguimiento` y la usan la lista, el filtro y el reporte, así dan lo mismo.
+  2. Antes de mandar: una casilla «Seguimiento» al lado de Enviar, solo en modo Chat. Viene tildada sola cuando lo último de la conversación es del equipo y el lead no contesta hace más de 1 h, y dice qué número sería («Seguimiento 2», contando desde la última respuesta del lead, como la cadencia). Tocarla la cambia. Sin tocar y sin sugerir, el mensaje va sin marca. En los mensajes de la Guía que salen de a varios, la marca va solo con el primero.
+  3. Después de mandar: al pie de cada mensaje del equipo, «Seguimiento N» si cuenta (tocarlo lo desmarca), o un ícono que aparece al pasar el mouse para marcarlo. `POST /api/inbox/mensajes/<id>/seguimiento`, abierto al setter.
+  4. El recorrido: la portada y el recorrido de las Novedades del Workspace (ADR-W218) con una tanda propia para el Inbox, en 6 pasos sobre la pantalla de verdad (la casilla, el pie del mensaje, el reloj, «Toca seguimiento», el Filtro y Stats). Sale a quien abre el Inbox, se aplaza hasta 3 días y después es obligatorio, como allá. Se vuelve a abrir con el «?» al lado de la casilla o con `?tour=1`. `Novedades.jsx` recibe la tanda (`tanda`) y `Recorrido.jsx` las escenas (`Escena`).
+- **Qué se pierde:** nada de lo de antes: el reloj, el chip de lo programado, la cadencia y la regla de las 12 h siguen igual. La huella del changelog de closers ya no incluye `Recorrido.jsx`, así un cambio del recorrido para el Inbox no les reabre el changelog; quien ya había terminado la tanda del 25/11 la sigue teniendo vista (`VISTA_ANTERIOR`, solo mientras el contenido no cambie). Un mensaje mandado desde Kommo no se puede marcar antes de mandarlo, solo después.
+- **Consecuencias:** migración `f4b6d8a0c2e5` (idempotente): columna `seguimiento` en `ig_mensajes`. El chat trae `seguimiento` (el número) y `marca` por mensaje. Lo marcado entre 1 y 12 h ahora suma en los follow-ups del reporte del setter.
+
+## ADR-W256: en el Workspace del triage, Compartidos, Abandonos, Métricas, Mis datos y Mi cartera pasan a Herramientas
+
+- **Fecha:** 26/11/2026 · **Subsistema:** dock del Workspace (`CloserWorkflowPage.jsx`, `ventanas/navegacionDock.js`, `DockSecciones.jsx`, `sesion/fijadas.js`, `ventanas/catalogoHerramientas.js`, `triage/components/TriageAbandonos.jsx`). Sigue a ADR-W242.
+- **Contexto:** el dock del triage tenía nueve secciones: las tres de trabajo (Confirmar, Reportar, Seguir), el Reporte y cinco que se usan de vez en cuando. Santi pidió que Compartidos y Abandonos funcionen como herramientas que aparecen solo cuando hay algo nuevo, y que Métricas, Mis datos y Mi cartera queden ocultas de fábrica.
+- **Decisión:**
+  1. Una sección puede venir **oculta de fábrica** (`ocultaDeFabrica`). Sale del medio del dock y queda en Herramientas, como cualquier sección oculta. Si la persona la vuelve a mostrar en Editar navegación, queda guardado (`mostrados`) y no se vuelve a ocultar; «Restablecer» la oculta de nuevo.
+  2. Para el triage: Compartidos, Abandonos, Métricas, Mis datos y Mi cartera vienen ocultas. En el dock quedan Confirmar, Reportar, Seguir y Reporte.
+  3. Una sección oculta puede traer `pendientes`. Con alguno, se comporta como las herramientas con pendientes (ADR-W242): va a la isla de fijadas, primero, con su cuenta, y su pin pasa a candado hasta que llega a 0. Compartidos cuenta los leads compartidos sin leer; Abandonos, los que faltan contactar (últimas 48 h, cada minuto).
+  4. En Herramientas: Compartidos y Abandonos van en Pendientes, y las otras tres en Secciones ocultas, cada una con su descripción.
+- **Qué se pierde:** el triage ya no ve Métricas, Mis datos y Mi cartera en el dock sin abrir Herramientas, salvo que las vuelva a mostrar. Quien ya había ocultado o mostrado secciones a mano conserva lo suyo. El closer no cambia.
+- **Consecuencias:** sin migración ni backend: `/triage/abandonos` ya existía. La configuración del dock suma `mostrados` (viaja a la cuenta con el resto, `dockServidor`).
+
+## ADR-W257: Herramientas del triage, solo con lo suyo
+
+- **Fecha:** 26/11/2026 · **Subsistema:** Herramientas del dock (`DockSecciones.jsx`, `ventanas/herramientas.js`, `ventanas/catalogoHerramientas.js`, `CloserWorkflowPage.jsx`). Sigue a ADR-W256.
+- **Contexto:** Herramientas junta lo de la pantalla, lo de la cuenta y lo de todas las pantallas, y al triage le llegaban opciones de otros roles: registrar un pago y declarar una venta (Dari tiene una venta en toda su historia), Pedido a los devs y «Quiero procrastinar», que agarra un seguimiento de closer cuando el triage tiene su propio Seguir. Con eso no encontraba lo propio.
+- **Decisión:** para el rol triage salen Registrar un pago, Declarar una venta, Pedido a los devs (`sinRoles` en `herramientas.js`: una herramienta para todos menos esos roles) y Quiero procrastinar. Sin pago ni venta, «Nuevo» solo tenía «Reportar o pedir algo»: no se muestra, y Reportar va suelto en Herramientas › Crear. Quedan Buscar lead, Turnos, Learnito, Inbox, Chat, Leadership, Novedades, los pendientes (Avisos, Mis reportes, Conflictos, Playbook, Compartidos, Abandonos), las secciones ocultas y lo de la cuenta.
+- **Qué se pierde:** si un triage alguna vez cierra una venta, la declara desde la ficha del lead o le pide a un closer; no tiene el atajo. Un «Nuevo» que el triage tuviera fijado en el dock deja de dibujarse.
+- **Consecuencias:** sin backend. Los demás roles no cambian.
+
+## ADR-W258: dos recorridos nuevos, el del triage y el del Filtro de setters, sobre la misma pieza de Novedades
+
+- **Fecha:** 26/11/2026 · **Subsistema:** recorridos (`closer/novedades/Novedades.jsx`, `closer/tourTriage/TourTriage.jsx`, `inbox/tour/TourFiltros.jsx`, `components/recorrido/EscenaGenerica.jsx`). Sigue a ADR-W255.
+- **Contexto:** Santi pidió un recorrido con lo nuevo del triage del 25 y 26/11 (sobre todo Seguir, sin lo que hizo Mario, que ya tiene sus Novedades) y otro del Filtro del Inbox (ADR-W254), que a los setters no se les explicó bien. Los dos con link para mandar.
+- **Decisión:**
+  1. **Triage** (`/triage/deck?tour=triage`, 8 pasos): Seguir como bandeja (Hoy, Esperan fecha, Hechos hoy), Atrasados primero y la cadencia de 3 contactos, un toque por lead, Deshacer, Reprogramó sin fecha, lo pendiente que se fija solo, el dock más corto con Herramientas propias y los referidos en el Inbox. Sale solo al rol triage, después de las Novedades del Workspace; se reabre en Herramientas › Lo nuevo del triage.
+  2. **Filtro** (`/inbox?tour=filtros`, 8 pasos): abre el panel de verdad y va por Rápidos, secciones, Etapa, Seguimientos, Quién y de dónde, Fechas y Guardar. Sale solo a los setters, después del de seguimientos.
+  3. La pieza de Novedades suma `valor` (qué valor del parámetro abre esa tanda), `espera(user)` (otra tanda va primero, así no se abren dos juntas) y no abre sola ninguna tanda si el link pide otra. `tandaVista` y `novedadesVistas` dicen si alguien ya terminó una.
+  4. `EscenaGenerica`: la escena de un paso armada con datos (ícono, chips, filas, un número, una nota), para no dibujar cada escena a mano.
+- **Arreglo de paso:** `abrirNovedades` desde un `onClick` recibía el evento del clic y, desde ADR-W255, lo tomaba como el nombre de la tanda; ahora un argumento que no es texto abre las del Workspace. El texto de ayuda de Seguimientos del Filtro suma «o el que marcaste como seguimiento» (ADR-W255).
+- **Qué se pierde:** nada. Quien entra por un link de recorrido no ve ese día otro recorrido pendiente; le sale en la próxima entrada.
+- **Consecuencias:** sin backend. El triage puede ver tres recorridos seguidos en días distintos (Novedades, el suyo y, si entra al Inbox, el de seguimientos).
+
+## ADR-W259: el broadcast de cada taller se arma en Planificar, con audiencia etiquetada y recordatorios programados
+
+- **Fecha:** 26/11/2026 · **Subsistema:** WhatsApp propio (`app/whatsapp/taller.py`, `audiencia.py`, `api_taller.py`, `envios.py`, `entrantes.py`; modelos `WaPlanTaller`, `WaPasoTaller` y tres columnas de `WaEnvio`), ventana «Broadcast del taller» (`ventanas/herramientas/broadcastTaller/`), Planificar › Próximos talleres e Inbox (`Canales.jsx`). Mockup: `docs/mockups/broadcast-workshop/` (aprobado por Mario) · **Estado:** implementada
+- **Contexto:** los recordatorios de cada taller se mandan a mano (las tareas de ADR-W022 en Leadership) y la herramienta «Broadcast de WhatsApp» (ADR-W229) manda una plantilla por vez a un CSV, un número una sola vez y con un tope de 200 mensajes por día. Mario quiere configurar y programar desde Planificar el broadcast de cada taller, como en ManyChat: ver a cuántos se les puede mandar, cargar una lista con una etiqueta para saber a quién se le mandó (y mandarle otra cosa al mismo grupo), crear y ver las plantillas y armar el flujo de recordatorios. Las respuestas van al Inbox, con WhatsApp separado de Instagram y por broadcast.
+- **Decisión:**
+  - Cada taller tiene un plan. Su **audiencia** son los contactos `wa:` con la etiqueta del plan («WS 26/11»): cargar un CSV, los que agendaron y no cerraron en un taller (sin venta ni seña) o los de otra etiqueta crea el contacto (sin setter: se asigna cuando responde) y le pone la etiqueta. Un contacto sin mensajes no aparece en el Inbox. Al mandar se descartan, con un interruptor cada uno, los que ya agendaron, los clientes y los alumnos vigentes (por los últimos 8 dígitos del teléfono); las **bajas** (responden «baja» o «stop», etiqueta «Baja WhatsApp») siempre.
+  - El **flujo** son pasos: cuándo (al programar, minutos antes o después del inicio, o un día a una hora de Argentina), qué plantilla aprobada y qué va en cada variable ({{1}} nombre, hora, día, Meet, grupo o un texto fijo), a quién (todos, los que no respondieron, los que tocaron un botón, una etiqueta) y a quién no (etiquetas). Las **ramas** son las respuestas por botón de ADR-W234/W236, editables desde el paso. «Programar» deja los pasos en manos del reloj del motor, que en su momento arma la lista y deja un lote en `wa_envios`. Un taller nuevo arranca con la copia del flujo «estándar» (el último guardado como tal).
+  - Cada fila de un paso **vence** (antes del taller, a las 6 h o al inicio; después, a las 24 h): un recordatorio que no salió a tiempo no sale. Salen hasta 40 por vuelta (antes 10), primero lo que vence antes.
+  - El **tope** del número pasa a contar personas distintas en 24 h, como Meta, y no mensajes del día: el segundo recordatorio a la misma persona no suma. Sigue en 200 (margen sobre 250). Una persona nueva espera si el tope está lleno.
+  - «Un número va una sola vez» (ADR-W229) queda solo para el broadcast a mano, y los recordatorios de un taller no cuentan para esa regla.
+  - Las plantillas (verlas, crearlas, sus respuestas) pasan a admitir también al director de marketing (`workshop_required`); borrar sigue siendo de admin y operador. Una plantilla nueva puede tener {{1}}, {{2}}, {{3}}… con ejemplos.
+  - En el Inbox, la lista tiene Todos · Instagram · WhatsApp a la vista y, en WhatsApp, el broadcast al que respondió cada uno (`broadcast`: la etiqueta del taller o «Broadcast»).
+- **Qué se pierde:** un paso que ya salió no se cambia. Las ramas valen para todos los envíos de una plantilla, no por paso (para ramas distintas, otra plantilla). «Tocaron» reconoce el texto del botón desde el primer paso del taller: si dos plantillas tienen un botón igual, cuentan los dos. Con 236 personas y 200 de tope, la bienvenida no le llega a todos el mismo día. La regla de no mandarle a quien ya recibió un broadcast a mano deja de mirar los recordatorios.
+- **Consecuencias:** migración `c4e6a8b0d2f3` (idempotente): `wa_planes_taller`, `wa_pasos_taller` y `paso_id`, `parametros` y `vence_en` en `wa_envios`. Las tareas de rituales de ADR-W022 siguen creándose en Leadership: sacarlas queda para cuando el broadcast del taller corra solo.

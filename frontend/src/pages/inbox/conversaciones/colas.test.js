@@ -17,8 +17,7 @@ describe('Bandeja › colas', () => {
         expect([colorEspera(5), colorEspera(45), colorEspera(200)]).toEqual(['var(--text-muted)', 'var(--warning)', 'var(--error)']);
     });
 
-    it('las colas de espera ordenan por la que más espera', () => {
-        expect(filtrar(LISTA, { cola: 'esperan', ahora: AHORA }).map((c) => c.id)).toEqual([2, 1]);
+    it('«Esperan más de 1 h» ordena por la que más espera', () => {
         expect(filtrar(LISTA, { cola: 'esperan_hora', ahora: AHORA }).map((c) => c.id)).toEqual([2]);
     });
 

@@ -1,5 +1,9 @@
-import { useFijadas } from '../../../sesion/fijadas';
+import { tienePendientes, useFijadas } from '../../../sesion/fijadas';
 import BotonHerramientas from '../../../ventanas/BotonHerramientas';
+import { conFicha } from '../../../ventanas/catalogoHerramientas';
+
+// «Nombre|Qué es» para el tooltip del dock (`DockTip`), y su color para el aura de lo pendiente.
+const fichaDe = (op) => { const f = conFicha(op); return { tip: f.desc ? `${op.label}|${f.desc}` : op.label, tono: `var(--herr-${f.color || 'rosa'})` }; };
 
 /**
  * Lo fijado en el dock (isla izquierda): las opciones de Herramientas que el usuario fijó (Nuevo,
@@ -12,7 +16,10 @@ import BotonHerramientas from '../../../ventanas/BotonHerramientas';
 const DockFijadas = ({ usuario, opciones, onElegir, sep = 'despues', tope = null, onMas = null }) => {
     const { fijadas } = useFijadas(usuario);
     const porId = new Map(opciones.map((op) => [op.id, op]));
-    const todas = fijadas.map((id) => porId.get(id)).filter(Boolean);
+    // Lo que tiene pendientes va primero aunque no esté fijado, hasta resolverse (ADR-W242).
+    const pendientes = opciones.filter(tienePendientes);
+    const todas = [...pendientes, ...fijadas.filter((id) => !pendientes.some((p) => p.id === id))
+        .map((id) => porId.get(id)).filter(Boolean)];
     if (!todas.length) return null;
     const visibles = tope ? todas.slice(0, tope) : todas;
     const resto = todas.length - visibles.length;
@@ -23,15 +30,16 @@ const DockFijadas = ({ usuario, opciones, onElegir, sep = 'despues', tope = null
                 {visibles.map((op) => (op.panel ? (
                     <BotonHerramientas key={op.id} usuario={usuario} Icono={op.Icono} rotulo={op.label} panelInicial={op} />
                 ) : (
-                    <button key={op.id} type="button" className="dock-fijada" onClick={() => onElegir(op.id)}
-                        aria-label={op.titulo ? `${op.label}, ${op.titulo}` : op.label} title={op.label}>
+                    <button key={op.id} type="button" className={`dock-fijada${tienePendientes(op) ? ' dock-fijada--pendiente' : ''}`} onClick={() => onElegir(op.id)}
+                        aria-label={op.titulo ? `${op.label}, ${op.titulo}` : op.label}
+                        data-dock-tip={fichaDe(op).tip} style={{ '--tono': fichaDe(op).tono }}>
                         <op.Icono size={19} aria-hidden="true" />
                         {op.cuenta != null && <span className="dock-sesion-aviso" aria-hidden="true">{op.cuenta}</span>}
                     </button>
                 )))}
                 {resto > 0 && (
                     <button type="button" className="dock-fijada dock-mas" onClick={onMas}
-                        aria-label={`${resto} ${resto === 1 ? 'acceso fijado más' : 'accesos fijados más'}, en Herramientas`} title="Más en Herramientas">
+                        aria-label={`${resto} ${resto === 1 ? 'acceso fijado más' : 'accesos fijados más'}, en Herramientas`} data-dock-tip={`+${resto}|Más accesos fijados, en Herramientas`}>
                         +{resto}
                     </button>
                 )}

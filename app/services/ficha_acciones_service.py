@@ -915,6 +915,17 @@ def cancelar(appt, datos, usuario):
     return {'id': appt.id, 'status': 'Cancelado', 'motivo': motivo}
 
 
+def no_show(appt, datos, usuario):
+    """El lead no apareció: no contestó la confirmación ni se presentó (ADR-W210). Lo marca la Confirmación
+    sin pasar por el árbol de Resultado. Pide el motivo, como «No Show» en todos lados (ADR-W066), y admite
+    dejar la fecha para volver a escribirle, igual que «Canceló»."""
+    motivo = _motivo_de('No Show', datos.get('motivo'))
+    _process_agenda(appt, usuario, {'status': 'No Show', 'note': motivo,
+                                    'fecha_seguimiento': datos.get('fecha_seguimiento')})
+    db.session.commit()
+    return {'id': appt.id, 'status': 'No Show', 'motivo': motivo}
+
+
 # --- Reasignar el closer ----------------------------------------------------------------------
 
 def closer_activo(closer_id):

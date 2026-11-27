@@ -1,0 +1,70 @@
+/* Broadcast de WhatsApp (herramientas/broadcastWa, ADR-W229). */
+.bw{display:grid;gap:12px;max-height:min(680px,calc(100vh - 210px));overflow:auto;color:var(--ln-text-out)}
+.bw-barra{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.bw-cuerpo{display:grid;gap:14px;align-content:start}
+.bw-rotulo{display:block;margin-bottom:8px;font-size:10.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--ln-text-faint)}
+.bw-barra .bw-rotulo{margin:0}
+.bw-s{font-size:12px;color:var(--ln-text-muted)}
+
+.bw-drop{display:flex;align-items:center;gap:12px;padding:12px;border:1.5px dashed var(--ln-border-subtle);border-radius:14px;background:var(--ln-inset-bg)}
+.bw-drop-ic{display:grid;place-items:center;width:36px;height:36px;border-radius:10px;color:#1f9d6b;background:color-mix(in srgb,#25D366 16%,transparent)}
+.bw-drop-t{flex:1;min-width:0;display:grid}
+.bw-drop-t b{font-size:13.5px;color:var(--ln-text-in);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bw-drop-t small{font-size:12px;color:var(--ln-text-muted)}
+.bw-lectura{display:flex;flex-wrap:wrap;gap:12px;margin-top:8px;font-size:12.5px;color:var(--ln-text-muted)}
+.bw-lectura b{color:var(--ln-text-in)}
+.bw-lectura .bw-aviso,.bw-lectura .bw-aviso b{color:var(--ln-warning,#c98a14)}
+
+.bw-fila{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.bw-chat{margin-top:10px;padding:12px;border-radius:14px;background:#efe7dd}
+.bw-burbuja{max-width:92%;padding:9px 11px;border-radius:4px 12px 12px 12px;background:#fff;color:#1c2033;font-size:13px;line-height:1.45;white-space:pre-line}
+.bw-botones{display:grid;gap:4px;max-width:92%;margin-top:4px}
+.bw-botones span{padding:7px;border-radius:8px;background:#fff;color:#0a7cc1;font-size:12.5px;font-weight:600;text-align:center}
+
+.bw-envio{display:flex;align-items:center;flex-wrap:wrap;gap:10px;padding-top:12px;border-top:1px solid var(--ln-border-subtle)}
+.bw-cupo{display:flex;align-items:center;gap:8px;margin-left:auto;font-size:12.5px;color:var(--ln-text-muted)}
+.bw-cupo b{color:var(--ln-text-in)}
+.bw-medidor i,.bw-prog i{display:block;height:100%;border-radius:99px;background:#25D366}
+.bw-medidor{display:block;width:90px;height:7px;border-radius:99px;overflow:hidden;background:var(--ln-inset-bg)}
+.bw-ayuda{flex-basis:100%;font-size:12px;color:var(--ln-text-muted)}
+
+.bw-curso{display:flex;align-items:center;flex-wrap:wrap;gap:10px;padding:9px 12px;border-radius:12px;font-size:13px;
+  color:var(--ln-text-in);background:color-mix(in srgb,#25D366 14%,transparent)}
+.bw-prog{flex:1;min-width:80px;height:6px;border-radius:99px;overflow:hidden;background:color-mix(in srgb,#25D366 22%,transparent)}
+
+.bw-lote{display:grid;gap:6px;width:100%;padding:12px 14px;border:1px solid var(--ln-border-subtle);border-radius:14px;
+  text-align:left;color:inherit;background:var(--ln-inset-bg);cursor:pointer}
+.bw-lote--on{border-color:var(--ln-text-in);box-shadow:0 0 0 1px var(--ln-text-in)}
+.bw-lote-top{display:flex;align-items:baseline;flex-wrap:wrap;gap:8px}
+.bw-lote-top b{font-size:13.5px;color:var(--ln-text-in)}
+.bw-lote-top .ui-chip{margin-left:auto}
+.bw-embudo{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--ln-text-muted)}
+.bw-embudo b{font-size:13px;color:var(--ln-text-in)}
+
+.bw-tabla{max-height:360px;overflow:auto;border:1px solid var(--ln-border-subtle);border-radius:14px}
+.bw-tabla table{width:100%;border-collapse:collapse;font-size:12.5px}
+.bw-tabla th{position:sticky;top:0;padding:7px 10px;text-align:left;font-size:10.5px;font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--ln-text-faint);background:var(--ln-popover-bg,var(--bg-flotante))}
+.bw-tabla td{padding:8px 10px;border-top:1px solid var(--ln-border-subtle);vertical-align:middle}
+.bw-tel{font-size:12px;color:var(--ln-text-muted);font-variant-numeric:tabular-nums}
+.bw-link{font-weight:600;color:var(--ln-info,#3b7dd8)}
+.bw-pie{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;color:var(--ln-text-muted)}
+.bw-marcas{margin-top:8px}
+.bw-marcas .ui-chip{cursor:pointer}
+.bw-cuerpo .ui-seg{margin-top:10px}
+.bw-compara{display:grid;gap:4px;padding-top:6px;border-top:1px solid var(--ln-border-subtle)}
+.bw-compara>span{display:grid;grid-template-columns:minmax(0,1.3fr) repeat(3,minmax(0,1fr));gap:8px;font-size:12px;color:var(--ln-text-muted)}
+.bw-compara b{font-size:12.5px;color:var(--ln-text-in);overflow:hidden;text-overflow:ellipsis}
+.bw-compara .bw-resp{color:#7D63E6;font-weight:700}
+
+/* Plantillas: la lista de Meta, la nueva y qué pasa al tocar cada botón. */
+.bw-pl-lista{gap:8px}
+.bw-pl-cat{margin-left:auto}
+.bw-pl-lista .bw-lote-top .ui-chip{margin-left:0}
+.bw-pl-txt{font-size:12.5px;color:var(--ln-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bw-pl-motivo{font-size:12px;color:var(--ln-error,#c8433a)}
+.bw-envio .bw-pl-ayuda{flex:1 1 200px}
+.bw-pl-dos{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:start}
+.bw-campo{display:grid;gap:6px;font-size:12.5px;font-weight:600;color:var(--ln-text-in)}
+.bw-campo .bw-fila>.ui-input,.bw-fila>.ui-input{flex:1;min-width:120px}
+.bw-cuenta{width:40px;text-align:right;font-variant-numeric:tabular-nums}

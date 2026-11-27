@@ -5,7 +5,9 @@ Canales (variables de entorno):
   · no_califica / abandonos: DISCORD_NO_CALIFICA_WEBHOOK / DISCORD_ABANDONOS_WEBHOOK (sin ellas, el de agendas).
   · onboarding (#onboardings de fulfillment) y wins (#wins): el bot (DISCORD_BOT_TOKEN; el canal, BOT) o, sin
     bot, DISCORD_ONBOARDING_WEBHOOK / DISCORD_WINS_WEBHOOK.
-  · reportes: DISCORD_REPORTS_WEBHOOK.
+  · reportes (los reportes del día de closer, setter y triage, a #📋-reportes de adquisitions): el bot, al ID
+    fijo del canal; sin bot, DISCORD_REPORTS_WEBHOOK o la integración `discord_reports`. Con el webhook solo, un
+    cambio de variable los mandaba a otro canal (pasó el 22/11/2026: llegaron a #📄-reports de fulfillment).
   · resultados (#agendas de fulfillment, el resultado de cada llamada): solo el bot.
   · new_call (#🔔-new-call de adquisitions, las llamadas del día): solo el bot.
   · reportes_ventas (#📋-reportes de adquisitions, los reportes que faltan): solo el bot.
@@ -37,6 +39,7 @@ BOT = {
     'resultados': ('DISCORD_RESULTADOS_CHANNEL_ID', '1570066248274808932'),  # #agendas (fulfillment)
     'new_call': ('DISCORD_NEW_CALL_CHANNEL_ID', '1332458560524914718'),  # #🔔-new-call (adquisitions)
     'reportes_ventas': ('DISCORD_REPORTES_VENTAS_CHANNEL_ID', '1342945225890336910'),  # #📋-reportes (adquisitions)
+    'reportes': ('DISCORD_REPORTES_VENTAS_CHANNEL_ID', '1342945225890336910'),  # el mismo canal
 }
 
 
@@ -111,3 +114,26 @@ def despachar(canal, cuerpo, armar_imagen=None, **kw):
 
     threading.Thread(target=correr, daemon=True, name=f'discord-{canal}').start()
     return True
+
+
+def destino_reportes():
+    """A dónde van los reportes del día: el canal `reportes` o, sin él, la integración `discord_reports`."""
+    lugar = destino('reportes')
+    if lugar:
+        return lugar
+    from app.models import Integration
+    integracion = Integration.query.filter_by(key='discord_reports').first()
+    url = (integracion.payload_config or {}).get('webhook_url') if integracion else None
+    return ('webhook', url) if url else None
+
+
+def post_reporte(**kwargs):
+    """`requests.post` al destino de los reportes (bot o webhook), con los mismos `data`/`json`/`files`.
+    None si no hay destino."""
+    lugar = destino_reportes()
+    if not lugar:
+        return None
+    tipo, valor = lugar
+    url = f'{API}/channels/{valor}/messages' if tipo == 'bot' else valor
+    headers = {'Authorization': f"Bot {os.environ['DISCORD_BOT_TOKEN']}"} if tipo == 'bot' else {}
+    return requests.post(url, headers=headers, **kwargs)

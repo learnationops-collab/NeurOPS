@@ -34,6 +34,19 @@ def normalizar(telefono):
     return digitos if 8 <= len(digitos) <= 15 else None
 
 
+def variantes(telefono):
+    """El número y su otra forma: un celular de Argentina se escribe 54… o 549… y uno de México 52… o 521…;
+    WhatsApp responde desde la forma con 9 (o 1) aunque se le haya mandado a la otra."""
+    t = telefono or ''
+    salida = {t}
+    for pais, extra, largo in (('54', '9', 12), ('52', '1', 12)):
+        if t.startswith(pais + extra) and len(t) == largo + 1:
+            salida.add(pais + t[len(pais) + 1:])
+        elif t.startswith(pais) and len(t) == largo:
+            salida.add(pais + extra + t[len(pais):])
+    return salida
+
+
 def configurado():
     return bool(os.environ.get('WA_ACCESS_TOKEN') and os.environ.get('WA_PHONE_NUMBER_ID'))
 
@@ -59,14 +72,32 @@ class ClienteWhatsapp:
         return self.mandar(telefono, {'type': 'template', 'template': plantilla})
 
     def plantillas(self):
-        """Las plantillas de la cuenta: [{name, status, category, language, components}]."""
+        """Las plantillas de la cuenta: [{name, status, category, language, components, rejected_reason}]."""
         datos = self._pedir('get', f'{self.waba_id}/message_templates',
-                            params={'fields': 'name,status,category,language,components', 'limit': 100})
+                            params={'fields': 'name,status,category,language,components,rejected_reason', 'limit': 200})
         return datos.get('data') or []
 
     def crear_plantilla(self, nombre, idioma, categoria, componentes):
         return self._pedir('post', f'{self.waba_id}/message_templates', json={
             'name': nombre, 'language': idioma, 'category': categoria, 'components': componentes})
+
+    def borrar_plantilla(self, nombre):
+        return self._pedir('delete', f'{self.waba_id}/message_templates', params={'name': nombre})
+
+    def medio(self, media_id):
+        """El archivo de un mensaje entrante: (bytes, mime). La URL de Meta también pide el token."""
+        info = self._pedir('get', media_id)
+        if not info.get('url'):
+            raise ErrorDeEnvio('Meta no devolvió el archivo')
+        try:
+            respuesta = self.sesion.get(info['url'], timeout=30, headers={'Authorization': f'Bearer {self.token}'})
+        except requests.RequestException as error:
+            logger.error(f'[WHATSAPP] medio {media_id}: {error}')
+            raise ErrorDeEnvio(str(error))
+        if respuesta.status_code >= 400:
+            logger.error(f'[WHATSAPP] medio {media_id}: HTTP {respuesta.status_code}')
+            raise ErrorDeEnvio(f'HTTP {respuesta.status_code}')
+        return respuesta.content, info.get('mime_type') or respuesta.headers.get('Content-Type') or 'application/octet-stream'
 
     def mandar(self, telefono, cuerpo):
         datos = self._pedir('post', f'{self.phone_number_id}/messages',

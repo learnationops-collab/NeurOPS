@@ -1,0 +1,133 @@
+/* Workspace con riel derecho (ADR-W217). Debajo del header, dos paneles a toda la altura: el contenido
+   (tablero, lista, calendario, datos) y un riel de 288 px separado por una línea, sin tarjetas flotando.
+   --ws-top: alto del header (useAltoHeader). --ws-pad: margen lateral del contenido, que la barra de
+   Confirmar usa para ir de borde a borde. Escala de espacios: 4 · 8 · 12 · 16 · 20 · 24 · 32. */
+
+.ws-pagina{--ws-pad:24px;--ws-rail:288px;--ws-dock:112px}
+/* El header se alinea con el contenido en vez de centrarse en 1280 px. */
+.ws-pagina header.top-v6 .topin{max-width:none;padding-left:var(--ws-pad);padding-right:var(--ws-pad)}
+
+/* El fondo y la línea del riel los pinta el área, así llegan hasta abajo aunque el riel termine sobre el dock. */
+.ws-area.ws-area{display:grid;grid-template-columns:minmax(0,1fr) var(--ws-rail);gap:0;align-items:start;
+  background:linear-gradient(to left,rgba(255,255,255,.022) calc(var(--ws-rail) - 1px),rgba(255,255,255,.07) calc(var(--ws-rail) - 1px) var(--ws-rail),transparent var(--ws-rail));
+  max-width:none;margin:0;padding:0;min-height:calc(100dvh - var(--ws-top,64px))}
+.ws-area > *{grid-column:1;min-width:0}
+/* El contenido: sin margen arriba (la barra de Confirmar va pegada al header) y con lugar abajo para el dock.
+   Las capas de Novedades se montan acá pero son fijas: con este relleno la barra «Probando» medía 172 px. */
+.ws-area > :not(.ws-side):not(.dc-shell):not(.nv-portada):not(.nv-rec):not(.nv-probando){padding:0 var(--ws-pad) calc(var(--ws-dock) + 20px + env(safe-area-inset-bottom,0px))}
+/* Las vistas sin barra pegada (Reportar, Seguir, Mis datos…) arrancan con aire. */
+.ws-area > :not(.ws-side):not(.dc-shell) > :first-child:not(:has(.cv)){margin-top:20px}
+
+/* El tablero llena el alto: las columnas llegan hasta el dock. */
+.ws-area .kb-v6 .kcol-v6{min-height:calc(100dvh - var(--ws-top,64px) - 52px - 20px - var(--ws-dock) - 20px)}
+
+/* ---------- Riel ---------- */
+/* El riel termina arriba del dock (no se pisa con el grupo de la derecha) y scrollea si no entra todo. */
+.ws-area > .ws-side{grid-column:2;grid-row:1;position:sticky;top:var(--ws-top,64px);height:calc(100dvh - var(--ws-top,64px) - var(--ws-dock) - 12px);
+  -webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - 20px),transparent);mask-image:linear-gradient(to bottom,#000 calc(100% - 20px),transparent);
+  display:flex;flex-direction:column;gap:0;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.14) transparent;
+  padding:16px 16px 20px;
+  --cv-text:#fff;--cv-muted:rgba(255,255,255,.62);--cv-faint:rgba(255,255,255,.42)}
+
+/* Ahora: el siguiente lead, con su aura (la única pieza con fondo propio del riel). */
+.ws-area .ws-side .tsp-v6{padding:16px;border-radius:16px;gap:10px;margin-bottom:8px}
+.ws-area .ws-side .tsp-top-v6{gap:8px;min-height:20px}
+.ws-area .ws-side .tsp-lbl-v6{display:none}
+.ws-area .ws-side .tsp-top-v6 .flex-1{display:none}
+.ws-area .ws-side .tsp-badge-v6{font-size:10px;padding:3px 8px;letter-spacing:.06em}
+.ws-area .ws-side .tsp-name-v6{font-size:19px;line-height:1.15;letter-spacing:-.015em;white-space:normal;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;text-wrap:balance}
+.ws-area .ws-side .tsp-sub-v6{display:none}
+.ws-area .ws-side .tsp-cta-v6{height:38px;min-height:0;padding:0 14px;font-size:11px;letter-spacing:.12em;border-radius:99px;margin-top:2px}
+.ws-area .ws-side .tsp-done-v6 .tsp-name-v6{font-size:16px}
+.ws-area > .ws-side > *{flex-shrink:0}
+.rail-chips{display:flex;flex-wrap:wrap;gap:4px;position:relative}
+
+/* Secciones: separadas por aire y una línea, no por cajas. Más aire arriba del título que abajo. */
+.rail-sec{padding:16px 4px 14px;border-top:1px solid rgba(255,255,255,.07)}
+.rail-h{margin:0 0 10px;font-size:13px;font-weight:700;color:var(--cv-muted);letter-spacing:0}
+.rail-cifra{margin:0 0 12px;display:flex;align-items:baseline;gap:6px;font-variant-numeric:tabular-nums}
+.rail-cifra b{font-size:26px;font-weight:800;line-height:1;color:#fff;letter-spacing:-.02em}
+.rail-cifra span{font-size:13px;color:var(--cv-muted)}
+.rail-cifra em{margin-left:auto;font-style:normal;font-size:13px;font-weight:700;color:var(--cl-magenta-light,#FF6AD5)}
+
+/* La barra por etapa: el momento animado del riel. Cada tramo crece desde la izquierda, escalonado. */
+.rail-barra{display:flex;gap:3px;height:8px;border-radius:99px;background:rgba(255,255,255,.06);overflow:hidden}
+.rail-barra i{display:block;min-width:6px;border-radius:99px;background:var(--c);transform-origin:left;
+  animation:rail-crece .5s ease-out backwards}
+.rail-leyenda{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:4px}
+.rail-leyenda li{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--cv-muted)}
+.rail-leyenda li i{width:8px;height:8px;border-radius:99px;background:var(--c)}
+.rail-leyenda li b{margin-left:auto;font-weight:700;color:#fff;font-variant-numeric:tabular-nums}
+.rail-nota{margin:10px 0 0;font-size:12px;line-height:1.45;color:var(--cv-faint)}
+
+/* Hoy: cada sección pendiente es un acceso. */
+.rail-hoy{list-style:none;margin:0;padding:0;display:grid;gap:2px}
+.rail-hoy button{all:unset;box-sizing:border-box;cursor:pointer;width:100%;display:flex;align-items:center;gap:10px;height:34px;padding:0 8px 0 10px;
+  border-radius:10px;font-size:13px;color:rgba(255,255,255,.86);transition:background .2s,color .2s}
+.rail-hoy button:hover{background:rgba(255,255,255,.06)}
+.rail-hoy button[aria-current]{background:color-mix(in srgb,var(--cl-magenta,#FF3FA4) 12%,transparent);color:#fff}
+.rail-hoy button:focus-visible,.rail-prox button:focus-visible{outline:2px solid var(--cl-magenta,#FF3FA4);outline-offset:-2px}
+.rail-hoy svg{width:16px;height:16px;flex:none;color:var(--cv-muted)}
+.rail-hoy button[aria-current] svg{color:var(--cl-magenta-light,#FF6AD5)}
+.rail-hoy span{flex:1}
+.rail-hoy b{min-width:22px;height:20px;padding:0 7px;border-radius:99px;display:grid;place-items:center;font-size:11.5px;font-weight:700;font-variant-numeric:tabular-nums;
+  color:#fff;background:color-mix(in srgb,var(--cl-magenta,#FF3FA4) 30%,transparent)}
+.rail-hoy--cero b{background:rgba(255,255,255,.07);color:var(--cv-faint)}
+.rail-hoy .rail-flecha{width:14px;height:14px;opacity:0;transform:translateX(-4px);transition:opacity .2s,transform .25s cubic-bezier(.16,1,.3,1)}
+.rail-hoy button:hover .rail-flecha{opacity:.6;transform:none}
+.rail-logros{display:flex;gap:8px;margin-top:12px;padding:0 2px}
+.rail-logros span{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border-radius:99px;font-size:12px;font-weight:600;
+  color:var(--cl-warning,#D9A441);background:color-mix(in srgb,var(--cl-warning,#D9A441) 12%,transparent)}
+.rail-logros span + span{color:var(--cl-lila,#7D8BFF);background:color-mix(in srgb,var(--cl-lila,#7D8BFF) 12%,transparent)}
+.rail-logros svg{width:13px;height:13px}
+
+/* Próximas llamadas: una línea de tiempo; el punto lleva el color de la etapa. */
+.rail-prox{list-style:none;margin:0;padding:0 0 0 6px;position:relative}
+.rail-prox::before{content:"";position:absolute;left:9px;top:12px;bottom:12px;width:1px;background:rgba(255,255,255,.1)}
+.rail-prox li{position:relative}
+.rail-prox li::before{content:"";position:absolute;left:0;top:15px;width:7px;height:7px;border-radius:99px;background:var(--c);box-shadow:0 0 0 3px #0a0e2a}
+.rail-prox button{all:unset;box-sizing:border-box;cursor:pointer;width:100%;display:grid;grid-template-columns:42px minmax(0,1fr);column-gap:8px;
+  padding:7px 8px 7px 18px;border-radius:10px;transition:background .2s}
+.rail-prox button:hover{background:rgba(255,255,255,.05)}
+.rail-prox time{grid-row:span 2;font-size:12.5px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums;padding-top:1px}
+.rail-prox__n{font-size:13px;color:rgba(255,255,255,.88);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rail-prox small{font-size:11px;color:var(--cv-faint)}
+
+/* Comisión: al final del riel. */
+.ws-area .ws-side .ws-com{margin-top:auto;padding:16px 4px 4px;border:0;border-top:1px solid rgba(255,255,255,.07);border-radius:0;background:none;box-shadow:none;min-height:0}
+.ws-area .ws-side .ws-com .tud-lbl-v6{font-size:13px;font-weight:700;letter-spacing:0;text-transform:none;color:var(--cv-muted)}
+.ws-area .ws-side .ws-com .com-monto-v6{font-size:28px;line-height:1.1;margin-top:8px;font-variant-numeric:tabular-nums}
+.ws-area .ws-side .ws-com .tud-foot-row-v6{margin-top:4px}
+.ws-area .ws-side .ws-com .tud-foot-v6{font-size:12px}
+
+@keyframes rail-crece{from{transform:scaleX(0)}}
+
+/* Pantallas angostas: el riel vuelve a ser una franja arriba del contenido. Sin scroll propio: con
+   `overflow:auto` la grilla le daba a su fila 33 px y el tablero se dibujaba encima del riel. */
+@media (max-width:1100px){
+  .ws-area.ws-area{grid-template-columns:minmax(0,1fr);background:none}
+  .ws-area > .ws-side{grid-column:1;position:static;height:auto;overflow:visible;-webkit-mask-image:none;mask-image:none;border-left:0;border-bottom:1px solid rgba(255,255,255,.07);
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:0 20px;padding:16px var(--ws-pad)}
+  .ws-area > .ws-side > *{border-top:0}
+  .ws-area > :not(.ws-side):not(.dc-shell){grid-row:2}
+}
+/* Teléfono: el riel es una tira de tarjetas que se desliza de costado (progreso, Hoy, comisión), así el
+   tablero arranca a la vista. Las tarjetas miden lo mismo y asoma la siguiente. */
+@media (max-width:720px){
+  .ws-pagina{--ws-pad:16px;--ws-dock:96px}
+  /* En columna y no en grilla: la tira scrollea de costado y la grilla volvía a darle una fila de 33 px. */
+  .ws-area.ws-area{display:flex;flex-direction:column;align-items:stretch}
+  .ws-area > *{flex-shrink:0}
+  .ws-area > .ws-side{display:flex;flex-direction:row;gap:10px;overflow-x:auto;overflow-y:hidden;min-height:min-content;scroll-snap-type:x mandatory;scroll-padding:0 var(--ws-pad);
+    scrollbar-width:none;padding:12px var(--ws-pad);border-bottom:0}
+  .ws-area > .ws-side::-webkit-scrollbar{display:none}
+  .ws-area > .ws-side > *{flex:0 0 min(84%,320px);scroll-snap-align:start;margin:0;padding:14px;border-radius:16px;
+    border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03)}
+  .ws-area .ws-side .ws-com{margin-top:0;padding:14px;border:1px solid rgba(255,255,255,.08);border-radius:16px;background:rgba(255,255,255,.03)}
+  .rail-sec .rail-cifra{margin-bottom:10px}
+  .rail-leyenda{margin-top:8px;gap:2px}
+  .rail-hoy button{height:32px}
+  .rail-logros{margin-top:8px}
+}
+@media (prefers-reduced-motion:reduce){.rail-barra i,.rail-hoy .rail-flecha{animation:none;transition:none}}

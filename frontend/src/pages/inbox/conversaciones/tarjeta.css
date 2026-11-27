@@ -1,0 +1,124 @@
+/* La tarjeta del lead (ADR-W246): por dónde entró arriba, los botones con aura y «Tus números» al pie de la ficha. */
+
+/* Origen: el ícono del canal y la palabra clave, arriba del nombre. */
+.thalamus.inbox .cv-origen{display:flex;align-items:center;gap:6px;min-width:0;margin-bottom:2px}
+.thalamus.inbox .cv-origen-canal{--c:var(--brand-secondary);width:26px;height:26px;flex:none;display:grid;place-items:center;border-radius:9px;cursor:pointer;
+  color:var(--c);border:1px solid color-mix(in srgb,var(--c) 40%,transparent);
+  background:radial-gradient(circle at 30% 25%,color-mix(in srgb,var(--c) 30%,transparent),color-mix(in srgb,var(--c) 10%,transparent));
+  box-shadow:0 0 14px color-mix(in srgb,var(--c) 22%,transparent);transition:transform .2s cubic-bezier(.3,1.6,.5,1),box-shadow .2s}
+.thalamus.inbox .cv-origen-canal:hover{transform:rotate(-8deg) scale(1.08);box-shadow:0 0 20px color-mix(in srgb,var(--c) 38%,transparent)}
+.thalamus.inbox .cv-origen-clave{display:inline-flex;align-items:center;gap:5px;min-width:0;max-width:100%;height:24px;padding:0 10px;border-radius:999px;
+  border:1px solid color-mix(in srgb,var(--brand-secondary) 35%,transparent);background:color-mix(in srgb,var(--brand-secondary) 10%,transparent);
+  color:var(--text-main);font:inherit;font-size:11.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;cursor:pointer}
+.thalamus.inbox .cv-origen-clave:disabled{cursor:default;opacity:1}
+.thalamus.inbox .cv-origen-clave::before{content:"#";color:var(--brand-secondary);font-weight:900}
+.thalamus.inbox .cv-origen-clave svg{flex:none;color:var(--text-muted)}
+.thalamus.inbox .cv-origen-config{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 10px;border-radius:999px;cursor:pointer;
+  border:1px dashed color-mix(in srgb,var(--warning) 55%,transparent);background:color-mix(in srgb,var(--warning) 8%,transparent);
+  color:var(--warning);font:inherit;font-size:11.5px;font-weight:700;animation:ib-config 2.4s ease-in-out infinite}
+@keyframes ib-config{0%,100%{box-shadow:0 0 0 0 transparent}50%{box-shadow:0 0 12px color-mix(in srgb,var(--warning) 25%,transparent)}}
+.thalamus.inbox .cv-origen-form{display:flex;align-items:center;gap:4px;min-width:0;flex:1}
+.thalamus.inbox .cv-origen-form input{flex:1;min-width:0;height:26px;padding:0 10px;border-radius:999px;border:1px solid var(--brand-secondary);
+  background:var(--bg-input);color:var(--text-main);font:inherit;font-size:12px;outline:none}
+.thalamus.inbox .cv-origen-form button{width:26px;height:26px;display:grid;place-items:center;border-radius:50%;border:0;cursor:pointer;background:var(--brand-secondary);color:var(--on-brand, #fff)}
+.thalamus.inbox .cv-origen-form button:disabled{opacity:.4;cursor:default}
+.thalamus.inbox .cv-tarjeta-op--actual{color:var(--text-muted);font-size:11.5px;cursor:default}
+
+/* Botones sobrios (Mario, 26/11: «más Apple»): rectángulos con 8 px de radio, fondo neutro, el color solo en el ícono
+   y en el texto, sin degradés ni brillos. */
+.thalamus.inbox .cv-salidas{display:flex;gap:6px;align-items:stretch}
+.thalamus.inbox .cv-accion-caja{flex:1;display:flex}
+.thalamus.inbox .cv-accion{--c:var(--error);flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;height:30px;padding:0 8px;border-radius:8px;cursor:pointer;
+  font:inherit;font-size:12px;font-weight:600;white-space:nowrap;color:var(--text-main);
+  border:1px solid var(--border-subtle);background:color-mix(in srgb,var(--text-main) 4%,transparent);transition:background .15s,border-color .15s,transform .1s}
+.thalamus.inbox .cv-accion svg{color:var(--c)}
+.thalamus.inbox .cv-accion:hover{background:color-mix(in srgb,var(--text-main) 8%,transparent);border-color:var(--border-main)}
+.thalamus.inbox .cv-accion:active{transform:scale(.98)}
+.thalamus.inbox .cv-accion:disabled{opacity:.45;cursor:default;transform:none}
+.thalamus.inbox .cv-accion--transferir{--c:var(--info)}
+.thalamus.inbox .cv-salidas .cv-salidas-fuera{flex:2;align-self:center}
+
+.thalamus.inbox .cv-adelantar.ui-btn{height:36px;border-radius:8px;background:var(--brand-secondary);border-color:transparent;box-shadow:none;
+  font-weight:700;letter-spacing:0;text-transform:none}
+.thalamus.inbox .cv-adelantar.ui-btn:hover{filter:brightness(1.08);box-shadow:none}
+.thalamus.inbox .cv-etapa-btn{border-radius:8px;box-shadow:none}
+.thalamus.inbox .cv-origen-canal{border-radius:7px;background:color-mix(in srgb,var(--c) 12%,transparent);box-shadow:none}
+.thalamus.inbox .cv-origen-canal:hover{transform:none;box-shadow:none;background:color-mix(in srgb,var(--c) 20%,transparent)}
+.thalamus.inbox .cv-origen-clave,.thalamus.inbox .cv-origen-config{border-radius:6px}
+.thalamus.inbox .cv-origen-config{animation:none}
+.thalamus.inbox .cv-origen-der{margin-left:auto;display:inline-flex;align-items:center;gap:4px;flex:none}
+.thalamus.inbox .cv-origen-der .cv-ahora{flex-wrap:nowrap;gap:4px}
+.thalamus.inbox .cv-origen-der .cv-crono{border-radius:6px}
+.thalamus.inbox .cv-resolver--ico{width:24px;height:24px;padding:0;justify-content:center;border-radius:6px}
+.thalamus.inbox .cv-tarjeta .cv-pastilla,.thalamus.inbox .cv-tarjeta .ui-chip.ui-chip{border-radius:6px}
+
+/* Tus números: arriba de Tareas, en una sola fila de cuatro. */
+.thalamus.inbox .cv-mis{display:grid;gap:6px;padding-bottom:10px;border-bottom:1px solid var(--border-subtle)}
+.thalamus.inbox .cv-mis-tit{font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--text-muted)}
+.thalamus.inbox .cv-mis-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
+.thalamus.inbox .cv-mis-dato{--c:var(--info);position:relative;display:grid;gap:0;padding:7px 7px 6px;border-radius:8px;
+  border:1px solid var(--border-subtle);background:color-mix(in srgb,var(--text-main) 3%,transparent);animation:ib-mis .4s cubic-bezier(.3,1.4,.5,1) both}
+.thalamus.inbox .cv-mis-dato:nth-child(2){animation-delay:.05s}
+.thalamus.inbox .cv-mis-dato:nth-child(3){animation-delay:.1s}
+.thalamus.inbox .cv-mis-dato:nth-child(4){animation-delay:.15s}
+.thalamus.inbox .cv-mis-ico{display:block;color:var(--c);margin-bottom:2px}
+.thalamus.inbox .cv-mis-ico svg{width:12px;height:12px}
+.thalamus.inbox .cv-mis-dato b{font-size:15px;font-weight:800;line-height:1.15;font-variant-numeric:tabular-nums;color:var(--text-main);white-space:nowrap}
+.thalamus.inbox .cv-mis-dato b small{margin-left:2px;font-size:9.5px;font-weight:600;color:var(--text-muted)}
+.thalamus.inbox .cv-mis-dato > span:last-child{font-size:9.5px;font-weight:600;line-height:1.2;color:var(--text-muted)}
+@keyframes ib-mis{from{opacity:0;transform:translateY(6px) scale(.97)}to{opacity:1;transform:none}}
+
+@media (prefers-reduced-motion:reduce){
+  .thalamus.inbox .cv-origen-config,.thalamus.inbox .cv-mis-dato{animation:none}
+}
+
+/* La fila de arriba en una sola línea y todo a la misma altura (Mario, 26/11: «Configurar palabra clave» se partía en
+   tres renglones y el check de «No requiere» se veía suelto). */
+.thalamus.inbox .cv-origen{flex-wrap:nowrap;min-width:0;gap:4px}
+.thalamus.inbox .cv-origen > .cv-tarjeta-pop-caja{flex:none}
+.thalamus.inbox .cv-origen-clave{flex:0 1 auto;min-width:0}
+.thalamus.inbox .cv-origen-config{flex:none;white-space:nowrap;height:24px;padding:0 8px;gap:4px;font-size:11px;font-weight:600;
+  border-style:dashed;background:none;color:var(--text-muted);border-color:var(--border-main)}
+.thalamus.inbox .cv-origen-config:hover{color:var(--warning);border-color:color-mix(in srgb,var(--warning) 55%,transparent)}
+.thalamus.inbox .cv-origen-canal{width:24px;height:24px}
+.thalamus.inbox .cv-origen-der .cv-crono,.thalamus.inbox .cv-origen-der .cv-ind{height:24px;padding:0 7px 0 5px;border-radius:6px;font-size:11px}
+.thalamus.inbox .cv-origen-der .cv-crono svg,.thalamus.inbox .cv-origen-der .cv-ind svg{width:14px;height:14px}
+.thalamus.inbox .cv-resolver.cv-resolver--ico{margin-left:0;width:24px;height:24px;padding:0;justify-content:center;border-radius:6px;border:1px solid var(--border-subtle);
+  background:color-mix(in srgb,var(--text-main) 4%,transparent);color:var(--text-muted)}
+.thalamus.inbox .cv-resolver.cv-resolver--ico:hover{color:var(--success);border-color:color-mix(in srgb,var(--success) 45%,transparent);background:color-mix(in srgb,var(--success) 10%,transparent)}
+.thalamus.inbox .cv-resolver.cv-resolver--ico.cv-resolver--on{color:var(--success);border-color:color-mix(in srgb,var(--success) 45%,transparent)}
+
+/* Mario, 26/11/2026: la palabra clave en una línea y en minúscula («DOCUMENTO 25» se partía en dos); «No requiere» bajó al
+   lado del interruptor «Pausar» del bot, con su rótulo abajo como él. */
+.thalamus.inbox .cv-origen-clave{text-transform:none;letter-spacing:0;font-weight:600;font-size:12px;white-space:nowrap;padding:0 8px;gap:3px}
+.thalamus.inbox .cv-origen-clave .cv-elipsis{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.thalamus.inbox .cv-origen-clave::before{font-weight:700;margin-right:1px}
+.thalamus.inbox .cv-bot-resolver{padding-left:8px;border-left:1px solid var(--border-subtle)}
+.thalamus.inbox .cv-bot-resolver .cv-resolver.cv-resolver--ico{width:26px;height:26px;border-radius:8px}
+.thalamus.inbox .cv-bot-resolver .cv-resolver--on + small{color:var(--success)}
+
+/* Mario, 26/11/2026: «Estadísticas» en su panel, con números grandes en 2×2; la ficha de abajo se llama «Seguimiento». */
+.thalamus.inbox .cv-derecha > .cv-mis{flex:none;padding-bottom:var(--ui-s4);border-bottom:1px solid var(--ui-border-subtle);gap:8px}
+.thalamus.inbox .cv-mis-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.thalamus.inbox .cv-mis-dato{gap:2px;padding:10px 11px 9px;border-radius:10px}
+.thalamus.inbox .cv-mis-ico{position:absolute;top:9px;right:9px;margin:0;width:22px;height:22px;display:grid;place-items:center;border-radius:6px;background:color-mix(in srgb,var(--c) 14%,transparent)}
+.thalamus.inbox .cv-mis-ico svg{width:13px;height:13px}
+.thalamus.inbox .cv-mis-dato b{font-size:22px;font-weight:700;line-height:1.05;letter-spacing:-.02em}
+.thalamus.inbox .cv-mis-dato b small{font-size:11px;letter-spacing:0}
+.thalamus.inbox .cv-mis-dato > span:last-child{font-size:11px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.thalamus.inbox .cv-ficha > .cv-mis-tit{margin:0 0 4px}
+
+/* Mario, 26/11/2026: las rayitas del avance van adentro del botón de la etapa (afuera lo hacían ver más chico que
+   «Adelantar»), y Transferir · No lead · In-abrible en tres columnas iguales, sin pasarse del borde derecho. */
+.thalamus.inbox .cv-etapa-btn{position:relative;padding:7px 10px 12px;border-radius:10px}
+.thalamus.inbox .cv-etapa-btn .cv-avance{position:absolute;left:10px;right:10px;bottom:5px;padding:0;gap:2px}
+.thalamus.inbox .cv-etapa-btn .cv-avance i{height:3px}
+.thalamus.inbox .cv-adelantar{border-radius:10px}
+.thalamus.inbox .cv-salidas{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;min-width:0}
+.thalamus.inbox .cv-salidas > *{min-width:0}
+.thalamus.inbox .cv-salidas .cv-accion{min-width:0;width:100%;gap:5px;padding:0 6px;white-space:nowrap;overflow:hidden;font-size:12px}
+.thalamus.inbox .cv-salidas .cv-accion svg{flex:none}
+.thalamus.inbox .cv-salidas .cv-salidas-fuera{grid-column:span 2}
+/* «Adelantar» del alto del botón de la etapa (Mario, 26/11/2026). */
+.thalamus.inbox .cv-etapa{align-items:stretch}
+.thalamus.inbox .cv-etapa .cv-adelantar.ui-btn{align-self:stretch;height:auto;min-height:0;border-radius:10px;padding:0 14px}

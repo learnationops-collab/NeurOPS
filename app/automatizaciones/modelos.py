@@ -82,6 +82,8 @@ class IgContacto(db.Model):
     canal = db.Column(db.String(20), nullable=True)
     # En qué embudo está (ADR-W204). Sin embudo: Conversión, el de `fases.py`.
     embudo_id = db.Column(db.Integer, db.ForeignKey('aut_embudos.id', ondelete='SET NULL'), nullable=True, index=True)
+    # «No requiere respuesta» (ADR-W235): sale de «Esperan respuesta» hasta que el lead vuelva a escribir.
+    resuelta_en = db.Column(db.DateTime, nullable=True)
 
 
 class IgFase(db.Model):
@@ -165,6 +167,8 @@ class IgMensaje(db.Model):
     autor = db.relationship('User', foreign_keys=[autor_id])
     # El paso de la Guía del setting que se mandó (`etapa:paso:opción`, ADR-W197): de acá sale qué opción responde más.
     guia = db.Column(db.String(120), nullable=True, index=True)
+    # Marca del equipo (ADR-W255): True lo marcó como seguimiento, False lo desmarcó; None, la regla de las 12 h.
+    seguimiento = db.Column(db.Boolean, nullable=True)
 
 
 class AutCampana(db.Model):
@@ -362,3 +366,14 @@ class GuiaPropuesta(db.Model):
 
     autor = db.relationship('User', foreign_keys=[autor_id])
     revisor = db.relationship('User', foreign_keys=[revisor_id])
+
+
+class SetterActividad(db.Model):
+    """Un rato en que el setter marcó «Activo» en el Inbox (ADR-W245): de `desde` a `hasta` (abierto mientras
+    sigue activo). Sirve para separar la demora de respuesta estando activo de la demora estando inactivo."""
+    __tablename__ = 'setter_actividad'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    desde = db.Column(db.DateTime, nullable=False, default=ahora, index=True)
+    hasta = db.Column(db.DateTime, nullable=True)

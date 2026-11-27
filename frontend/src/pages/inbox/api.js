@@ -29,7 +29,13 @@ export const inboxApi = {
     ponerEtiqueta: (id, etiqueta) => api.post(`/inbox/conversaciones/${id}/etiquetas`, etiqueta).then((r) => r.data.etiquetas),
     sacarEtiqueta: (id, tagId) => api.delete(`/inbox/conversaciones/${id}/etiquetas/${tagId}`).then((r) => r.data.etiquetas),
     // Lo que el setter trabaja sobre la conversación (app/automatizaciones/api_trabajo.py)
+    // «Activo / Inactivo» del setter (ADR-W245).
+    actividad: () => api.get('/inbox/actividad').then(datos),
+    misStats: () => api.get('/inbox/mis-stats').then(datos),
+    cambiarActividad: (activo) => api.put('/inbox/actividad', { activo }).then(datos),
     leido: (id) => api.post(`/inbox/conversaciones/${id}/leido`, null, { conservarCache: true }),
+    resuelta: (id, si) => (si ? api.post(`/inbox/conversaciones/${id}/resuelta`)
+        : api.delete(`/inbox/conversaciones/${id}/resuelta`)).then(datos),
     asignar: (id, setterId) => api.post(`/inbox/conversaciones/${id}/asignar`, { setter_id: setterId }).then(datos),
     moverEtapa: (id, etapa) => api.put(`/inbox/conversaciones/${id}/etapa`, { etapa }).then(datos),
     // Fases del setting, canal, citas y etiquetado de varias (app/automatizaciones/api_fases.py, ADR-W184)
@@ -54,10 +60,12 @@ export const inboxApi = {
     aprobarPropuesta: (pid, respuesta) => api.post(`/inbox/propuestas/${pid}/aprobar`, { respuesta }).then(datos),
     rechazarPropuesta: (pid, respuesta) => api.post(`/inbox/propuestas/${pid}/rechazar`, { respuesta }).then(datos),
     // La pregunta a Learnito con el contexto del lead (ADR-W150): `pedido` es lo escrito en la caja, si hay.
-    preguntaLearnito: (cid, pedido) => api.get(`/inbox/conversaciones/${cid}/learnito`, { params: { pedido } }).then(datos),
+    preguntaLearnito: (cid, pedido, intencion) => api.get(`/inbox/conversaciones/${cid}/learnito`, { params: { pedido, intencion } }).then(datos),
     // Seguimiento condicional: `{ horas, texto | audio_id, pausar }`; sale si el lead no respondió.
     programarSeguimiento: (cid, cuerpo) => api.post(`/inbox/conversaciones/${cid}/seguimientos`, cuerpo).then(datos),
     cancelarSeguimiento: (sid) => api.delete(`/inbox/seguimientos/${sid}`).then(datos),
+    // Marcar o desmarcar un mensaje del equipo como seguimiento (ADR-W255).
+    marcarSeguimiento: (mid, marca) => api.post(`/inbox/mensajes/${mid}/seguimiento`, { marca }).then(datos),
     // Escribirle al lead: `{ texto }` o `{ audio_id }`, y `pausar` (el bot, por defecto sí).
     escribir: (cid, cuerpo) => api.post(`/inbox/conversaciones/${cid}/escribir`, cuerpo).then(datos),
     audios: () => api.get('/inbox/audios').then((r) => r.data.audios),
@@ -85,4 +93,5 @@ export const inboxApi = {
     simularEmbudo: (slug, acciones, borrador) => api.post(`/inbox/embudos/${slug}/simular`, { acciones, borrador }).then(datos),
     catalogo: () => api.get('/inbox/catalogo').then((r) => r.data.mensajes),
     setters: () => api.get('/inbox/setters').then((r) => r.data.setters),
+    asignables: () => api.get('/inbox/asignables').then((r) => r.data.setters),
 };

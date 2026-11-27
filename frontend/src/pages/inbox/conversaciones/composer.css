@@ -1,0 +1,83 @@
+/* La caja de escribir y el menú «/» (ADR-W248). */
+
+/* Enviar arriba, a la derecha de la fila de herramientas. */
+.thalamus.inbox .cv-comp-cab .cv-comp-enviar.ui-btn{margin-left:auto;height:32px;padding:0 14px;border-radius:999px;letter-spacing:.04em;
+  box-shadow:0 6px 18px -6px color-mix(in srgb,var(--brand-secondary) 70%,transparent)}
+.thalamus.inbox .cv-comp-cab .ui-chip + .cv-comp-enviar.ui-btn{margin-left:6px}
+.thalamus.inbox .cv-comp-cab .cv-comp-enviar.ui-btn:not(:disabled):hover svg{transform:translate(2px,-2px)}
+.thalamus.inbox .cv-comp-cab .cv-comp-enviar.ui-btn svg{transition:transform .2s cubic-bezier(.3,1.6,.5,1)}
+
+/* La caja: sin el anillo azul al escribir, texto suave y una barra de desplazamiento finita. */
+.thalamus.inbox .cv-comp-fila .ui-textarea.ui-textarea{font-size:13.5px;font-weight:400;border-color:var(--border-subtle);background:color-mix(in srgb,var(--bg-input, #0b1030) 60%,transparent);
+  scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--text-muted) 35%,transparent) transparent;transition:border-color .2s,background .2s}
+.thalamus.inbox .cv-comp-fila .ui-textarea.ui-textarea::placeholder{font-weight:400;color:color-mix(in srgb,var(--text-muted) 70%,transparent)}
+.thalamus.inbox .cv-comp-fila .ui-textarea.ui-textarea:focus,.thalamus.inbox .cv-comp-fila .ui-textarea.ui-textarea:focus-visible{outline:none;box-shadow:none;
+  border-color:var(--border-main);background:color-mix(in srgb,var(--bg-input, #0b1030) 80%,transparent)}
+.thalamus.inbox .cv-comp-fila .ui-textarea.ui-textarea::-webkit-scrollbar{width:6px}
+.thalamus.inbox .cv-comp-fila .ui-textarea.ui-textarea::-webkit-scrollbar-track{background:transparent}
+.thalamus.inbox .cv-comp-fila .ui-textarea.ui-textarea::-webkit-scrollbar-thumb{border-radius:99px;background:color-mix(in srgb,var(--text-muted) 30%,transparent)}
+.thalamus.inbox .cv-comp-fila .ui-textarea.ui-textarea{resize:none}
+
+/* El menú «/»: la lista a la izquierda y la vista previa a la derecha. */
+.thalamus.inbox .cv-rayo{display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:0;padding:0;max-height:380px;overflow:hidden;
+  animation:ib-mis .22s cubic-bezier(.3,1.4,.5,1) both}
+.thalamus.inbox .cv-rayo-lista{overflow-y:auto;padding:6px;display:grid;align-content:start;gap:1px;max-height:378px;
+  scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--text-muted) 30%,transparent) transparent}
+.thalamus.inbox .cv-rayo-sec{--c:var(--info);display:flex;align-items:center;gap:6px;padding:10px 8px 4px;font-size:10.5px;font-weight:900;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--c)}
+.thalamus.inbox .cv-rayo-sec:first-child{padding-top:4px}
+.thalamus.inbox .cv-rayo-sec small{font-size:10.5px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--text-muted)}
+.thalamus.inbox .cv-rayo-op{display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:10px}
+.thalamus.inbox .cv-rayo-op:hover,.thalamus.inbox .cv-rayo-op:focus-visible{background:var(--bg-element);outline:none}
+.thalamus.inbox .cv-rayo-ico{width:28px;height:28px;flex:none;display:grid;place-items:center;border-radius:8px;color:var(--c);
+  background:color-mix(in srgb,var(--c) 14%,transparent);border:1px solid color-mix(in srgb,var(--c) 22%,transparent);transition:transform .2s cubic-bezier(.3,1.6,.5,1)}
+.thalamus.inbox .cv-rayo-op:hover .cv-rayo-ico{transform:scale(1.08) rotate(-6deg)}
+.thalamus.inbox .cv-rayo-txt{flex:1;min-width:0;display:grid;gap:1px}
+.thalamus.inbox .cv-rayo-op .cv-rayo-txt b{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:var(--text-main);white-space:nowrap;overflow:hidden}
+.thalamus.inbox .cv-rayo-op .cv-rayo-txt > span{font-size:11.5px;color:var(--text-muted);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.thalamus.inbox .cv-rayo-chip{font-style:normal;height:17px;padding:0 6px;border-radius:6px;display:inline-grid;place-items:center;font-size:10px;font-weight:800;
+  color:var(--c);background:color-mix(in srgb,var(--c) 16%,transparent)}
+.thalamus.inbox .cv-rayo-chip--suave{color:var(--text-muted);background:var(--bg-item)}
+.thalamus.inbox .cv-rayo-kbd{flex:none;font:inherit;font-size:10.5px;font-weight:700;padding:2px 6px;border-radius:6px;color:var(--text-muted);
+  background:var(--bg-item);border:1px solid var(--border-subtle)}
+.thalamus.inbox .cv-rayo-nueva{display:flex;align-items:center;gap:8px;margin:2px 0 4px;padding:6px 8px;border:1px dashed var(--border-subtle);border-radius:10px;
+  background:none;color:var(--text-muted);font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+.thalamus.inbox .cv-rayo-nueva:hover{color:var(--warning);border-color:color-mix(in srgb,var(--warning) 50%,transparent)}
+.thalamus.inbox .cv-rayo-cargando{padding:6px 8px;font-size:11.5px;color:var(--text-muted)}
+.thalamus.inbox .cv-rayo-vista{border-left:1px solid var(--border-subtle);padding:14px;overflow-y:auto;background:color-mix(in srgb,var(--bg-item) 50%,transparent)}
+.thalamus.inbox .cv-rayo-vista-in{display:grid;gap:8px;animation:ib-mis .2s ease-out both}
+.thalamus.inbox .cv-rayo-vista-in b{font-size:13px;font-weight:800;color:var(--text-main)}
+.thalamus.inbox .cv-rayo-vista-in p{margin:0;font-size:12px;line-height:1.5;color:var(--text-main);white-space:pre-wrap;word-break:break-word}
+.thalamus.inbox .cv-rayo-vista-in small{font-size:11px;color:var(--text-muted)}
+.thalamus.inbox .cv-rayo-vista-vacia{margin:0;font-size:11.5px;color:var(--text-muted)}
+@media (max-width:760px){.thalamus.inbox .cv-rayo{grid-template-columns:1fr}.thalamus.inbox .cv-rayo-vista{display:none}}
+
+/* El Learnito del chat (ADR-W253): arriba del botón, qué hacer con la conversación leída. */
+.thalamus.inbox .cv-ll{position:relative;display:inline-flex}
+.thalamus.inbox .cv-ll-pop{position:absolute;left:50%;bottom:calc(100% + 10px);transform:translateX(-50%);z-index:40;width:340px;padding:12px;display:grid;gap:10px;
+  border-radius:16px;border:1px solid var(--border-main);background:var(--bg-flotante, #11143a);
+  box-shadow:0 24px 60px -12px rgb(0 0 0 / .55),0 0 0 1px color-mix(in srgb,var(--brand-secondary) 18%,transparent);animation:cvLlEntra .22s cubic-bezier(.2,.9,.3,1.2) both;transform-origin:50% 100%}
+@keyframes cvLlEntra{from{opacity:0;transform:translateX(-50%) translateY(8px) scale(.97)}to{opacity:1;transform:translateX(-50%)}}
+.thalamus.inbox .cv-ll-cab{display:flex;align-items:center;gap:10px}
+.thalamus.inbox .cv-ll-cab > span:last-child{display:grid;line-height:1.25}
+.thalamus.inbox .cv-ll-cab b{font-size:13px;font-weight:650;color:var(--text-main)}
+.thalamus.inbox .cv-ll-cab small{font-size:11.5px;color:var(--text-muted)}
+.thalamus.inbox .cv-ll-ojo{width:32px;height:32px;flex:none;display:grid;place-items:center;border-radius:10px;color:#fff;
+  background:linear-gradient(135deg,#3B5BFF,var(--brand-secondary,#FF3FA4));box-shadow:0 0 18px -4px color-mix(in srgb,var(--brand-secondary,#FF3FA4) 70%,transparent)}
+.thalamus.inbox .cv-ll-ojo svg{animation:ib-chispa 2.4s ease-in-out infinite}
+.thalamus.inbox .cv-ll-ops{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.thalamus.inbox .cv-ll-op{display:flex;align-items:flex-start;gap:8px;padding:9px;border-radius:10px;border:1px solid var(--border-subtle);text-align:left;cursor:pointer;
+  background:color-mix(in srgb,var(--text-main) 3%,transparent);color:var(--text-main);font:inherit;transition:border-color .15s,background .15s,transform .15s;
+  animation:cvLlOp .3s calc(var(--i) * 40ms) cubic-bezier(.2,.8,.3,1) both}
+@keyframes cvLlOp{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.thalamus.inbox .cv-ll-op:hover{border-color:color-mix(in srgb,var(--c) 50%,transparent);background:color-mix(in srgb,var(--c) 9%,transparent);transform:translateY(-1px)}
+.thalamus.inbox .cv-ll-op-ico{width:26px;height:26px;flex:none;display:grid;place-items:center;border-radius:7px;color:var(--c);background:color-mix(in srgb,var(--c) 14%,transparent)}
+.thalamus.inbox .cv-ll-op > span:last-child{display:grid;gap:1px;min-width:0;line-height:1.25}
+.thalamus.inbox .cv-ll-op b{font-size:12px;font-weight:600}
+.thalamus.inbox .cv-ll-op small{font-size:10.5px;color:var(--text-muted)}
+.thalamus.inbox .cv-ll-preg{display:flex;align-items:center;gap:6px;padding:4px 4px 4px 12px;border-radius:12px;border:1px solid var(--border-main);background:color-mix(in srgb,var(--text-main) 4%,transparent)}
+.thalamus.inbox .cv-ll-preg:focus-within{border-color:color-mix(in srgb,var(--brand-secondary) 55%,transparent)}
+.thalamus.inbox .cv-ll-preg input{flex:1;min-width:0;height:28px;border:0;outline:none;background:none;color:var(--text-main);font:inherit;font-size:12.5px}
+.thalamus.inbox .cv-ll-preg button{width:28px;height:28px;flex:none;display:grid;place-items:center;border-radius:50%;border:0;cursor:pointer;background:var(--brand-secondary);color:#fff}
+.thalamus.inbox .cv-ll-preg button:disabled{background:color-mix(in srgb,var(--text-main) 12%,transparent);color:var(--text-muted);cursor:default}
+@media (prefers-reduced-motion:reduce){.thalamus.inbox :is(.cv-ll-pop,.cv-ll-op,.cv-ll-ojo svg){animation:none}}

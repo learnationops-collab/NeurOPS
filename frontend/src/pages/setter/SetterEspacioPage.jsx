@@ -1,10 +1,11 @@
 import React, { Suspense, lazy, useCallback, useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { BarChart3, BookOpen, CalendarClock, CalendarDays, CheckCircle2, ClipboardList, Ghost, Link2, MessagesSquare, Share2 } from 'lucide-react';
 import api from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
+import { dataThemeDe, useApariencia } from '../../context/AparienciaContext';
 import { usePlaybook } from '../../contexts/PlaybookContext';
 import { revertImpersonation } from '../../utils/impersonation';
 import { armarMenuSesion, rotuloDeSesion } from '../../sesion/menuSesion';
@@ -18,7 +19,7 @@ import { REVISAR_DEL_SETTER } from '../comercial/components/tablasSetter';
 import '../comercial/comercial.css';
 import './setterEspacio.css';
 import MisAgendas from './agendas/MisAgendas';
-import MisLinks, { copiar } from './MisLinks';
+import MisLinks, { BotonIcono, copiar } from './MisLinks';
 import { abrirVentana } from '../../ventanas/ventanasStore';
 import { marcaDelDock } from './agendas/meses';
 import ReporteSeccion from '../reporte/ReporteSeccion';
@@ -107,10 +108,10 @@ const CLAVES_DEL_DRILL_DOWN = ['t', 'f', 'ft'];
 
 const SetterEspacioPage = () => {
     const { user, logout } = useAuth();
+    const apariencia = useApariencia();
     const { abrir: abrirConfiguracion } = useConfiguracion();
     const { pendingCount, openPlaybook } = usePlaybook();
     const [params, setParams] = useSearchParams();
-    const navegar = useNavigate();
     const reducir = useReducedMotion();
     const [saliendo, setSaliendo] = useState(false);
     // La marca de «Reporte» en el dock: ✓ con hoy completo, ámbar si hoy o ayer quedan incompletos.
@@ -218,51 +219,38 @@ const SetterEspacioPage = () => {
                 de vidrio flotan encima. Quieto con movimiento reducido. */}
             <div className="aura-pag" aria-hidden="true"><i /><i /><i /><i /></div>
             <div className="setter-espacio-wrap">
-                {/* El encabezado en una línea, como el artifact: el número de la sección en el
-                    dock, el saludo con lo que se hace ahí y, si la sección tiene, sus pestañas.
-                    El nombre de la sección lo dice el dock; acá se lee igual con un lector. */}
+                {/* El encabezado en una línea: el número de la sección en el dock, el saludo, las pestañas si la
+                    sección tiene y los botones redondos. Lo que se hace en la sección y su nombre se leen con un
+                    lector (Mario, 26/11: sin el subtítulo a la vista). */}
                 <div className="dc-shell dc-shell--embebido">
                     <header className="tope setter-top">
                         <div className="hola">
                             <span className="head-num num" aria-hidden="true">{numeroDe(seccion)}</span>
                             <h1>
-                                <span className="sr">{seccionActual.label}. </span>
-                                Hola, {nombreDePila(nombre)}.{' '}
-                                {seccionActual.sub && <span className="sub">{seccionActual.sub}</span>}
+                                <span className="sr">{seccionActual.label}. {seccionActual.sub} </span>
+                                Hola, {nombreDePila(nombre)}.
                             </h1>
                         </div>
+                        {/* En Conversaciones y Embudos, la barra del Inbox (filtros, Chats | Embudo, tareas, avisos, stats)
+                            sube a esta fila: `HeaderActions` la manda acá (Mario, 26/11: una sola fila arriba). Lleva las
+                            clases de Thalamus para que la barra se vea igual que dentro del Inbox. */}
+                        {['conversaciones', 'guia'].includes(seccion) && (
+                            <div id="ui-header-actions" className="thalamus inbox setter-slot" data-theme={dataThemeDe(apariencia, undefined)} />
+                        )}
                         {seccionActual.tabs && (
                             <Segmented opciones={seccionActual.tabs} valor={tab} onChange={elegirTab}
                                 ariaLabel={`Vistas de ${seccionActual.label}`} />
                         )}
-                        {/* Su link de agendamiento, a la vista en todas las secciones (14/10/2026). */}
-                        {/* Tálamus (Agendas 2.0) en solo lectura, junto a sus links: los eventos y horarios
-                            de triage y de closing a un clic (Sales Team, 07/11/2026; antes estaba en el
-                            menú del avatar). Desde su menú, «Volver a mi espacio» trae de vuelta acá. */}
+                        {/* A la derecha, un grupo de botones pegados (Mario, 26/11): Links, Turnos y, simulando, el fantasma para volver a la sesión propia (solo lo ve quien simula; también
+                            está en el menú del avatar). Al pasar el mouse cada uno se estira y dice qué es. */}
                         <MisLinks>
-                            {/* Los turnos que quedan, en una ventana encima de su espacio (ventanas/, 17/11/2026);
-                                Tálamus entero sigue a un clic al lado. */}
-                            <button type="button" className="pastilla pastilla--sm setter-link"
-                                title="Los turnos que quedan de triage y de closers, por día" onClick={() => abrirVentana('turnos')}>
-                                <CalendarClock size={14} />
-                                <span className="setter-link-t">Turnos</span>
-                            </button>
-                            <button type="button" className="pastilla pastilla--sm setter-link"
-                                title="Ver los turnos libres del equipo en Tálamus" onClick={() => navegar('/agendas-v2?ver=available')}>
-                                <CalendarDays size={14} />
-                                <span className="setter-link-t">Tálamus</span>
-                            </button>
+                            <BotonIcono icono={CalendarClock} rotulo="Los turnos que quedan de triage y de closers, por día" onClick={() => abrirVentana('turnos')}>Turnos</BotonIcono>
+                            {user?.is_impersonating && (
+                                <BotonIcono icono={Ghost} tono="simula" rotulo="Estás simulando su sesión: tocá para volver a la tuya" disabled={saliendo} onClick={volverAMiSesion}>
+                                    {saliendo ? 'Volviendo…' : 'Volver'}
+                                </BotonIcono>
+                            )}
                         </MisLinks>
-                        {/* Simulando, la salida es terminar la simulación. Ya no es la ÚNICA
-                            salida de ningún lado: moverse entre secciones es el dock. También está
-                            en el menú del avatar, pero acá se ve sin buscarla. */}
-                        {user?.is_impersonating && (
-                            <button type="button" className="btn btn--linea btn--sm setter-volver" disabled={saliendo}
-                                title="Volver a tu sesión original" onClick={volverAMiSesion}>
-                                <Ghost size={15} />
-                                {saliendo ? 'Volviendo…' : 'Volver a mi sesión'}
-                            </button>
-                        )}
                     </header>
                 </div>
 

@@ -436,6 +436,28 @@ def _resumen(personas, agendas, compradores, ventas, cobros=()):
     }
 
 
+def resumen_periodo(desde, hasta, timezone_str='America/La_Paz'):
+    """Agendas, ventas y cobrado (neto) del workshop, vivo + grabación, con alta en los días locales
+    [desde, hasta] (25/11/2026, la tabla de Testeo de Learnation Marketing). Mismo criterio que
+    `calcular_prefill`, pero el período lo elige quien pregunta en vez de la ventana del taller."""
+    tz = _tz(timezone_str)
+    grupos = _agendas_por_embudo(desde, hasta, tz)
+    vistas = set()
+    personas = _agrupar_por_persona(grupos['vivo'], vistas) + _agrupar_por_persona(grupos['landing'], vistas)
+    cobros_vivo, cobros_landing = set(), set()
+    compradores_vivo, ventas_vivo = _ventas_de(grupos['vivo'], set(), cobros_vivo)
+    compradores_landing, ventas_landing = _ventas_de(grupos['landing'], compradores_vivo, cobros_landing)
+    resumen = _resumen(personas, grupos['vivo'] + grupos['landing'], compradores_vivo | compradores_landing,
+                       ventas_vivo | ventas_landing, cobros_vivo | cobros_landing)
+    return {
+        'agendas': resumen['agendas'],
+        'llamadas': resumen['llamadas'],
+        'show_up': resumen['show_up'],
+        'ventas': resumen['sales'],
+        'cobrado': round(resumen['cash_collected'], 2),
+    }
+
+
 def calcular_prefill(dia, timezone_str='America/La_Paz'):
     """Metricas automaticas del workshop del dia `dia` (date), vivo + grabacion."""
     tz = _tz(timezone_str)

@@ -35,6 +35,7 @@ class TransporteSimulado:
     def __init__(self):
         self.enviados = []
         self.pausas = []
+        self.respuestas_publicas = []
         self.perfiles = {}  # igsid → {'username', 'name'} que devolvería Instagram
         self._contador = itertools.count(1)
 
@@ -49,6 +50,13 @@ class TransporteSimulado:
 
     def perfil(self, igsid):
         return self.perfiles.get(igsid, {})
+
+    def permalink(self, media_id):
+        return None
+
+    def responder_comentario(self, comentario_id, texto):
+        self.respuestas_publicas.append({'comentario_id': comentario_id, 'texto': texto})
+        return True
 
     def tomar_control(self, igsid):
         return True
@@ -95,6 +103,14 @@ class TransporteMeta:
         Instagram no los da."""
         return self._get(igsid, {'fields': 'name,username,is_user_follow_business'})
 
+    def permalink(self, media_id):
+        """El link público de una publicación de la cuenta; None si Meta no lo da."""
+        return self._get(media_id, {'fields': 'permalink'}).get('permalink')
+
+    def responder_comentario(self, comentario_id, texto):
+        """Respuesta pública debajo del comentario (le llega la notificación al lead). True si salió."""
+        return bool(self._post(f'{comentario_id}/replies', {'message': texto}, en_cuenta=False).get('id'))
+
     def tomar_control(self, igsid):
         """True si la conversación quedó bajo el control de esta app."""
         return bool(self._post('take_thread_control', {'recipient': {'id': igsid}}).get('success'))
@@ -131,10 +147,11 @@ class TransporteMeta:
             return {}
         return datos
 
-    def _post(self, ruta, cuerpo):
+    def _post(self, ruta, cuerpo, en_cuenta=True):
         if not self.token or not self.cuenta_id:
             raise ErrorDeEnvio('Falta IG_ACCESS_TOKEN')
-        respuesta = self.sesion.post(f'{API}/{self.cuenta_id}/{ruta}', json=cuerpo,
+        url = f'{API}/{self.cuenta_id}/{ruta}' if en_cuenta else f'{API}/{ruta}'
+        respuesta = self.sesion.post(url, json=cuerpo,
                                      headers={'Authorization': f'Bearer {self.token}'}, timeout=15)
         datos = respuesta.json() if respuesta.content else {}
         if respuesta.status_code >= 400 or 'error' in datos:

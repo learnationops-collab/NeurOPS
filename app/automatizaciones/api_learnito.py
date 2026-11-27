@@ -16,4 +16,4 @@ def pregunta_para_learnito(contacto_id):
     from app.automatizaciones import api_trabajo  # cuelga de `bp`: importarlo arriba sería circular
     notas, _ = api_trabajo.historial(contacto.id)
     return jsonify(learnito_inbox.pregunta(contacto, [n['texto'] for n in notas if n.get('texto')],
-                                           request.args.get('pedido')))
+                                           request.args.get('pedido'), request.args.get('intencion')))

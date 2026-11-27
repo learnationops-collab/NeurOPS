@@ -32,6 +32,12 @@ export const LOW_TICKET = [
   { valor: 'descartado', label: 'Perdido', sub: 'No hay nada que hacer' },
   { valor: 'no_pitch', label: 'No se lo presenté', sub: 'No llegué a ofrecerlo' },
 ];
+// Reagenda sin fecha: el lead pidió otro día pero no lo dio; espera en «Seguir» (ADR-W241).
+export const DEJO_FECHA = [
+  { valor: 'si', label: 'Sí', sub: 'Elegís día y hora: vuelve a Confirmar' },
+  { valor: 'no', label: 'No, va a avisar', sub: 'Queda en Seguir › Esperan fecha' },
+];
+export const sinFecha = (r) => r.res === 'reagenda' && r.dejo === 'no';
 const ASISTENCIA = { asistio: 'asistio', no_asistio: 'no_show', cancelo: 'cancelo', reagenda: 'reagenda' };
 
 const etiqueta = (lista, valor) => lista.find((o) => o.valor === valor)?.label || '';
@@ -65,7 +71,9 @@ export function secuencia(r) {
     if (descalifica(r)) s.push(...pasosDelLowTicket(r), 'por_que');
     if (piensa(r)) s.push('fecha_seg', 'por_que');
   } else if (r.res === 'reagenda') {
-    s.push('reagenda', 'nota');
+    s.push('dejo_fecha');
+    if (r.dejo === 'si') s.push('reagenda', 'nota');
+    if (sinFecha(r)) s.push('cuando_avisa', 'nota');
   } else if (r.res) {
     s.push('nota');
   }
@@ -144,7 +152,8 @@ export function hitos(r, hechos, guardado) {
       lista.push({ key: 'por_que', label: 'Qué piensa', estado: est(dado('por_que')) },
         { key: 'seg', label: 'Seguimiento', estado: r.seguimiento ? 'hecho' : 'pendiente' });
     } else if (r.res === 'reagenda') {
-      lista.push({ key: 'reagenda', label: 'Fecha nueva', estado: est(dado('reagenda')) });
+      lista.push(sinFecha(r) ? { key: 'cuando_avisa', label: 'Sin fecha', estado: est(dado('cuando_avisa')) }
+        : { key: 'reagenda', label: 'Fecha nueva', estado: est(dado('reagenda')) });
     } else if (!r.res || r.res === 'asistio' || r.res === 'no_asistio' || r.res === 'cancelo') {
       // El lead que no pasó al closer ni al low ticket queda para seguirlo: tocar el hito abre las opciones.
       lista.push({ key: 'seg', label: 'Seguimiento', estado: r.seguimiento ? 'hecho' : 'pendiente' });
@@ -165,7 +174,11 @@ export function filas(r, { closers = [], medios = [], personas = [], legible = (
       fila('Llamada con el closer', legible(r.cuando, r.tz), 'horario');
       fila('Nota para el closer', r.notaCloser, 'nota_closer');
     }
-    if (r.res === 'reagenda') fila('Fecha nueva', legible(r.nueva), 'reagenda');
+    if (r.res === 'reagenda' && !sinFecha(r)) fila('Fecha nueva', legible(r.nueva), 'reagenda');
+    if (sinFecha(r)) {
+      fila('Fecha nueva', 'No la dio: avisa el lead', 'dejo_fecha');
+      fila('Dijo que escribe', r.fechaAviso || 'No dijo', 'cuando_avisa');
+    }
   }
   if (descalifica(r) || r.modo === 'actualizar') fila('Low ticket', etiqueta(LOW_TICKET, r.lt), 'lt');
   if (vende(r)) {
@@ -193,6 +206,10 @@ export function payload(r) {
   if (r.modo === 'venta') return { low_ticket: 'cerrado', venta: venta(r) };
   if (r.modo === 'actualizar') {
     return { low_ticket: r.lt, fecha_seguimiento: r.fechaSeg, ...(r.lt === 'cerrado' ? { venta: venta(r) } : {}) };
+  }
+  if (sinFecha(r)) {
+    return { asistencia: 'reagenda', sin_fecha: true, cuando: r.fechaAviso ? 'dia' : null,
+      fecha: r.fechaAviso || null, nota: (r.nota || '').trim() };
   }
   if (r.res === 'reagenda') {
     return { asistencia: 'reagenda', fecha: datetimeLocalToUtcIso(r.nueva), nota: (r.nota || '').trim() };

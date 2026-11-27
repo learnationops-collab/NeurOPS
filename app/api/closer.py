@@ -1537,6 +1537,8 @@ def get_closer_deck():
         # El lead avisó al agendar que ningún horario le sirve (ADR-W199): sigue en pie, hay que reagendarla.
         formatted["sin_horario"] = sin_horario.de(a)
         formatted["viene_de_triage"] = bool(a.agenda_triage_id)
+        # Quién toma la llamada: el calendario de Confirmar separa las de triage de las de closing.
+        formatted["closer_role"] = a.closer.role if a.closer else None
         formatted_appointments.append(formatted)
         
     formatted_appointments.sort(key=lambda x: 0 if x.get('unread_comment', False) else 1)

@@ -2,18 +2,21 @@
 // cada pregunta del formulario que respondieron los leads del tablero (`f:<pregunta>`).
 import { parseUtcIso, splitLocalDateTime } from '../../../utils/datetime';
 import { ETAPAS_CONFIRMACION, etapaDeConfirmacion } from './etapas';
+import { COUNTRY_CODES } from '../../public/booking/constants';
 
 export const PROPIEDADES_AGENDA = [
     { clave: 'hora', titulo: 'Hora', ancho: '150px' },
     { clave: 'telefono', titulo: 'Teléfono', ancho: '160px' },
     { clave: 'closer', titulo: 'Closer', ancho: '130px', soloTriage: true },
     { clave: 'etapa', titulo: 'Etapa', ancho: '150px' },
+    { clave: 'tipo', titulo: 'Tipo de llamada', ancho: '130px' },
     { clave: 'segmento', titulo: 'Segmento', ancho: '110px' },
     { clave: 'avisos', titulo: 'Avisos', ancho: '210px' },
     { clave: 'origen', titulo: 'Origen', ancho: '160px' },
     { clave: 'examen', titulo: 'Examen', ancho: '140px' },
     { clave: 'inversion', titulo: 'Inversión', ancho: '170px' },
     { clave: 'decision', titulo: 'Decisión', ancho: '150px' },
+    { clave: 'ingresos', titulo: 'Ingresos', ancho: '160px' },
     { clave: 'notas_setter', titulo: 'Nota del setter', ancho: '280px' },
 ];
 
@@ -48,6 +51,60 @@ export const decisionDe = (a) => {
     const fd = respuestas(a);
     const k = Object.keys(fd).find(x => /decisi|decid|acompa|qui[eé]n\s+(paga|financ|apoya)|apoyo/i.test(x));
     return k ? texto(fd[k]) : '';
+};
+
+export const ingresosDe = (a) => {
+    const fd = respuestas(a);
+    const k = Object.keys(fd).find(x => /ingres|gan[aá]s|sueldo|salario|factur/i.test(x));
+    return k ? texto(fd[k]) : '';
+};
+
+// Triage o closing: lo dice el rol de quien toma la llamada; sin rol (datos viejos), la del triage que mira
+// es de triage. Momentum y 2ª llamada se aclaran.
+export function tipoDe(a, { userId, esTriage } = {}) {
+    const triage = a.closer_role ? a.closer_role === 'triage' : !!(esTriage && userId && a.closer_id === userId);
+    if (triage) return { clave: 'triage', titulo: 'Triage' };
+    const extra = a.tipo_llamada === 'segunda' ? ' · 2ª' : a.tipo_llamada === 'momentum' ? ' · Momentum' : '';
+    return { clave: 'closing', titulo: 'Closing' + extra };
+}
+
+// La inversión del formulario en pocas palabras, para la tarjeta: «Entre $200 y $500 USD.» →
+// «$200–500 USD», «Más de 1000 USD» → «+$1.000 USD» y cualquier forma de «no puedo» → «Sin
+// inversión» (pedido del 23/10/2026). El texto completo queda en el `title`.
+const milesAr = (n) => Number(n).toLocaleString('es-AR');
+export const inversionCorta = (txt) => {
+    const t = String(txt || '').trim().replace(/\.$/, '');
+    if (/\b(no\s+(puedo|estoy|tengo|cuento|dispongo)|ninguna|nada|sin\s+(inversi|presupuesto|dinero))/i.test(t)) return { texto: 'Sin inversión', sin: true };
+    const nums = (t.match(/\d[\d.,]*/g) || []).map(x => Number(x.replace(/[.,](?=\d{3}\b)/g, '').replace(',', '.'))).filter(n => n > 0);
+    const usd = /usd|d[oó]lar/i.test(t) ? ' USD' : '';
+    if (nums.length >= 2) return { texto: `$${milesAr(nums[0])}–${milesAr(nums[1])}${usd}` };
+    if (nums.length === 1) {
+        const signo = /m[aá]s\s+de|desde|\+/i.test(t) ? '+' : /menos\s+de|hasta/i.test(t) ? '<' : '';
+        return { texto: `${signo}$${milesAr(nums[0])}${usd}` };
+    }
+    return { texto: t.length > 22 ? `${t.slice(0, 21)}…` : t };
+};
+
+// Si decide solo o necesita a alguien más, sacado del formulario: la pregunta que habla de
+// decidir, de acompañamiento o de quién paga. Sin una pregunta así, no se muestra nada.
+export const decisorCorto = (a) => {
+    const fd = a.form_data && typeof a.form_data === 'object' ? a.form_data : {};
+    const clave = Object.keys(fd).find(k => /decisi|decid|acompa|qui[eé]n\s+(paga|financ|apoya)|apoyo/i.test(k));
+    const v = clave ? String(fd[clave] ?? '').trim() : '';
+    if (!v) return null;
+    if (/pareja|familia|padre|madre|espos|consult|acompa|otra persona|alguien|junto|no\b/i.test(v)) {
+        return { texto: 'No decisor', solo: false, title: v };
+    }
+    if (/yo\b|solo|sola|m[ií] mism|por mi cuenta|s[ií]\b/i.test(v)) return { texto: 'Decisor', solo: true, title: v };
+    return { texto: v.length > 20 ? `${v.slice(0, 19)}…` : v, solo: null, title: v };
+};
+
+// El país del lead por el prefijo de su teléfono («+56 9…» → Chile); el prefijo más largo gana.
+const PREFIJOS = [...COUNTRY_CODES].sort((x, y) => y.code.length - x.code.length);
+export const paisDe = (a) => {
+    const t = String(a?.phone || '').replace(/[^\d+]/g, '');
+    if (!t.startsWith('+')) return '';
+    return PREFIJOS.find(c => t.startsWith(c.code))?.country || '';
 };
 
 export const avisosDe = (a) => [

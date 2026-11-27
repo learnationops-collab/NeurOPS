@@ -191,3 +191,6 @@ def marcar_agenda_duplicada(appt_id):
     if not ok:
         return jsonify({"message": mensaje}), 400
     return jsonify({"message": mensaje, "kept_id": conservada}), 200
+
+
+from app.api import triage_seguir  # noqa: E402,F401  (rutas de «Seguir» de triage en este blueprint)

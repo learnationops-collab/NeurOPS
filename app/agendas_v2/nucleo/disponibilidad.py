@@ -40,7 +40,7 @@ def agenda_opt(ag, dur):
 
 def dias_del_horizonte(o, tz, ahora):
     """Días (claves YYYY-MM-DD en la zona `tz`) en los que el evento ofrece horarios, desde hoy.
-    "Días hábiles" cuenta y ofrece solo de lunes a viernes. `m` del resultado empieza en 0, como en JS."""
+    "Días hábiles" cuenta y ofrece de lunes a sábado: el equipo atiende los sábados. `m` del resultado empieza en 0, como en JS."""
     hoy = date.fromisoformat(clave_dia(ahora, tz))
     if o['modo'] == 'siempre':
         tope = MAX_DIAS
@@ -55,7 +55,7 @@ def dias_del_horizonte(o, tz, ahora):
         b = hoy + timedelta(days=i)
         dow, clave = (b.weekday() + 1) % 7, b.isoformat()
         if o['modo'] == 'dias' and o['tipo'] == 'habiles':
-            if dow in (0, 6):
+            if dow == 0:
                 continue
             if i > 0:
                 habiles += 1

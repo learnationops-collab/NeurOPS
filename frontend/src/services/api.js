@@ -69,6 +69,17 @@ api.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
+// Work tiene un volumen en Railway: en cada deploy el servidor se apaga ~1 minuto y el proxy contesta
+// 502/503 («Application failed to respond»). Los pedidos que se pueden repetir sin efecto doble (GET,
+// PUT, DELETE; un POST solo con `reintentable: true`) se reintentan solos hasta ~90 s, con un aviso.
+const CAIDO = new Set([502, 503, 504]);
+const ESPERAS = [2000, 3000, 5000, 8000, 10000, 12000, 15000, 15000, 20000];
+const REPETIBLES = new Set(['get', 'head', 'options', 'put', 'delete']);
+const MSJ_ACTUALIZANDO = 'Work se está actualizando. Probá de nuevo en un minuto.';
+let avisado = 0;
+const avisar = (texto, tone) => import('../components/standard').then(m => m.toast(texto, tone)).catch(() => {});
+const esperar = (ms) => new Promise(r => setTimeout(r, ms));
+
 api.interceptors.response.use(
     (response) => {
         // Lo recordado por las vistas (cacheDeVistas) deja de ser verdad apenas algo se guarda: la
@@ -100,6 +111,21 @@ api.interceptors.response.use(
                 error.config.headers['X-CSRFToken'] = freshToken;
                 return api.request(error.config);
             }
+        }
+
+        const metodo = (error.config?.method || 'get').toLowerCase();
+        if (error.config && CAIDO.has(error.response?.status) && (REPETIBLES.has(metodo) || error.config.reintentable)) {
+            const intento = error.config._reintento || 0;
+            if (intento < ESPERAS.length) {
+                if (intento === 0 && Date.now() - avisado > 30000) { avisado = Date.now(); avisar('Work se está actualizando… reintentando solo.'); }
+                error.config._reintento = intento + 1;
+                await esperar(ESPERAS[intento]);
+                return api.request(error.config);
+            }
+        }
+        if (CAIDO.has(error.response?.status) && error.response.data && typeof error.response.data === 'object'
+            && /failed to respond|bad gateway|unavailable/i.test(String(error.response.data.message || ''))) {
+            error.response.data = { ...error.response.data, message: MSJ_ACTUALIZANDO };
         }
 
         // Fallo de servidor o de red en una petición que modifica estado: ofrece el

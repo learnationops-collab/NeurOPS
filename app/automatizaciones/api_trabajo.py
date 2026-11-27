@@ -80,6 +80,20 @@ def marcar_leido(contacto_id):
     return '', 204
 
 
+@bp.route('/conversaciones/<int:contacto_id>/resuelta', methods=['POST', 'DELETE'])
+def marcar_resuelta(contacto_id):
+    """«No requiere respuesta» (ADR-W235): lo último del lead no pide contestar (ya agendó, dio las gracias).
+    Vale hasta que vuelva a escribir: lo compara la bandeja (`colas.esperaMin`). DELETE la saca."""
+    contacto, error = _contacto_o_404(contacto_id)
+    if error:
+        return error
+    marcar = request.method == 'POST'
+    contacto.resuelta_en = servicio.ahora() if marcar else None
+    evento(contacto.id, 'Marcada como «no requiere respuesta»' if marcar else 'Volvió a esperar respuesta')
+    db.session.commit()
+    return jsonify({'resuelta_en': _iso(contacto.resuelta_en)})
+
+
 @bp.route('/conversaciones/<int:contacto_id>/asignar', methods=['POST'])
 def asignar_conversacion(contacto_id):
     """`setter_id`: a quién pasa (null: sin asignar). Manda sobre el reparto hasta una entrada nueva."""
@@ -89,7 +103,7 @@ def asignar_conversacion(contacto_id):
     setter_id = _cuerpo().get('setter_id')
     setter = None
     if setter_id is not None:
-        setter = next((u for u in reparto.setters_activos() if u.id == setter_id), None)
+        setter = next((u for u in reparto.asignables() if u.id == setter_id), None)
         if setter is None:
             return jsonify({'message': 'Elegí un setter activo'}), 400
     contacto.setter_id = setter.id if setter else None

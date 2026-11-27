@@ -3,9 +3,12 @@
 // variable). Debajo de cada respuesta del lead, qué activó en el flujo. Al final, lo que el setter acaba de
 // mandar y todavía no confirmó Instagram (`useEnvio`): «enviando…» o «no salió» con Reintentar.
 import { useEffect, useRef } from 'react';
-import { Bot, CalendarCheck, Check, History, RotateCcw, StickyNote, X, Zap } from 'lucide-react';
+import { Bot, CalendarCheck, Check, History, MessageCircle, RotateCcw, StickyNote, X, Zap } from 'lucide-react';
 import { Button, IconButton } from '../../../components/standard';
 import { rotuloPaso } from '../estadoFlujo';
+import { ADJUNTOS } from './colas';
+import { Cita, Medio } from './Whatsapp';
+import { MarcaEnMensaje } from './MarcaSeguimiento';
 
 const ABIERTA = ['en_curso', 'esperando_respuesta', 'esperando_tiempo'];
 
@@ -28,11 +31,20 @@ function textoEfecto(e) {
     return null;
 }
 
-function Burbuja({ m }) {
+function Burbuja({ m, onCambio }) {
     return (
-        <li className={`cv-burbuja cv-burbuja--${m.direccion} cv-burbuja--${m.origen}`} data-mensaje={m.id} data-direccion={m.direccion}>
-            {m.texto && <p>{m.texto}</p>}
-            {m.adjuntos.map((a, i) => <p key={i} className="mut">📎 {a}</p>)}
+        <li className={`cv-burbuja cv-burbuja--${m.direccion} cv-burbuja--${m.origen}${m.medio?.tipo === 'sticker' ? ' cv-burbuja--sticker' : ''}`}
+            data-mensaje={m.id} data-direccion={m.direccion}>
+            {m.comentario && (
+                <span className="cv-comentario" data-tip="No es un DM|Comentó una publicación: si no abrió la conversación, puede que no se le pueda escribir">
+                    <MessageCircle size={12} aria-hidden="true" />Comentario en una publicación
+                    {m.comentario.permalink && <a href={m.comentario.permalink} target="_blank" rel="noreferrer">Ver publicación</a>}
+                </span>
+            )}
+            {m.responde_a && <Cita cita={m.responde_a} />}
+            {m.medio && <Medio medio={m.medio} />}
+            {(m.medio ? m.medio.leyenda : m.texto) && <p>{m.medio ? m.medio.leyenda : m.texto}</p>}
+            {m.adjuntos.map((a, i) => <p key={i} className="mut">{ADJUNTOS[a] || `📎 ${a}`}</p>)}
             {m.botones.length > 0 && (
                 <div className={`cv-botones${m.elegido ? ' cv-botones--respondido' : ''}`}>
                     {m.botones.map((b) => (b === m.elegido
@@ -44,17 +56,18 @@ function Burbuja({ m }) {
                 {m.origen === 'motor' && <><Bot size={12} aria-hidden="true" />Automático · </>}
                 {m.origen === 'otro' && (m.autor ? `${m.autor} · ` : 'Equipo · ')}
                 {momento(m.en)}
+                <MarcaEnMensaje m={m} onCambio={onCambio} />
             </span>
         </li>
     );
 }
 
-function Item({ x }) {
+function Item({ x, onCambio }) {
     if (x.tipo === 'mensaje') {
         const efecto = x.m.efecto && textoEfecto(x.m.efecto);
         return (
             <>
-                <Burbuja m={x.m} />
+                <Burbuja m={x.m} onCambio={onCambio} />
                 {efecto && <li className="cv-efecto"><Zap size={11} aria-hidden="true" /><span>{efecto}</span></li>}
             </>
         );
@@ -90,13 +103,13 @@ function Pendiente({ p, onReintentar, onDescartar }) {
                     <Button size="sm" icon={<RotateCcw size={12} />} onClick={() => onReintentar(p)}>Reintentar</Button>
                     <IconButton size="xs" label="Descartar" icon={<X size={12} />} onClick={() => onDescartar(p.id)} />
                 </span>
-            ) : <span className="cv-meta">Vos · enviando…</span>}
+            ) : <span className="cv-meta">Vos · {p.estado === 'cola' ? 'en cola, sale en unos segundos' : 'enviando…'}</span>}
         </li>
     );
 }
 
 // `onSeleccion`: al soltar el mouse con texto seleccionado (Anotar resaltando, `Cita.jsx`).
-export default function Feed({ mensajes, notas, tareas, pendientes = [], onReintentar, onDescartar, onSeleccion }) {
+export default function Feed({ mensajes, notas, tareas, pendientes = [], onReintentar, onDescartar, onSeleccion, onCambio }) {
     const lista = useRef(null);
     const items = [
         ...mensajes.map((m) => ({ tipo: 'mensaje', en: m.en, key: `m${m.id}`, m })),
@@ -108,7 +121,7 @@ export default function Feed({ mensajes, notas, tareas, pendientes = [], onReint
     useEffect(() => { if (lista.current) lista.current.scrollTop = lista.current.scrollHeight; }, [cantidad]);
     return (
         <ol className="cv-mensajes" ref={lista} onMouseUp={onSeleccion}>
-            {items.map((x) => <Item key={x.key} x={x} />)}
+            {items.map((x) => <Item key={x.key} x={x} onCambio={onCambio} />)}
             {pendientes.map((p) => <Pendiente key={p.id} p={p} onReintentar={onReintentar} onDescartar={onDescartar} />)}
         </ol>
     );

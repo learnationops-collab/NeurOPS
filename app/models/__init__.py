@@ -28,6 +28,7 @@ from .subscription import Subscription, SubscriptionEvent, SUBSCRIPTION_STATUSES
 from .ficha_opcion import FichaOpcion
 from .client_merge_log import ClientMergeLog
 from .system_log import SystemLog
+from .learnito_conversacion import LearnitoConversacion
 from .person import Person, PersonIdentity, PersonEvent, Conversation, IDENTITY_KINDS, IDENTITY_USOS, PERSON_EVENT_KINDS
 from .academy_snapshot import AcademySnapshot
 from .embudo import EmbudoConfig, EmbudoRegistro
@@ -40,7 +41,8 @@ from .playbook import (
     PlaybookLessonProgress, PlaybookCompletion, QUESTION_TYPES
 )
 from .instagram import InstagramWebhookEvento
-from .whatsapp import WhatsappWebhookEvento, WaDifusion, WaDifusionDestino
+from .whatsapp import WhatsappWebhookEvento, WaEnvio, WaRespuestaBoton, WaRespuestaPendiente
+from .whatsapp_taller import WaPlanTaller, WaPasoTaller
 from .ai_usage import AiUsage
 from .intento_limitado import IntentoLimitado
 from .tag import Tag, TagGroup, TARGET_IG_CONTACT
@@ -74,7 +76,7 @@ __all__ = [
     'AssistantApplication', 'AssistantClarityWeight', 'HiringForm', 'HiringConfig',
     'PlaybookRoadmap', 'PlaybookModule', 'PlaybookLesson', 'PlaybookQuestion', 'PlaybookOption',
     'PlaybookLessonProgress', 'PlaybookCompletion', 'QUESTION_TYPES',
-    'InstagramWebhookEvento', 'AiUsage', 'IntentoLimitado',
+    'InstagramWebhookEvento', 'AiUsage', 'IntentoLimitado', 'LearnitoConversacion',
     'EmbudoConfig', 'EmbudoRegistro',
 ]
 

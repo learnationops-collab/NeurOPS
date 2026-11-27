@@ -20,7 +20,9 @@ pasaron al conector (app/services/copiloto_herramientas.py).
 from flask import Blueprint, jsonify, request
 from flask_login import current_user
 
+from app import db
 from app.decorators import copiloto_required
+from app.models import LearnitoConversacion
 from app.services import learnito_conector
 from app.services.learnation_service import LearnationAPIError, LearnationService
 
@@ -29,9 +31,21 @@ bp = Blueprint('copiloto_api', __name__)
 MAX_CARACTERES = 4000
 
 
+# Nombres viejos de zona que la Academia no acepta (valida con la lista actual de PHP): con
+# «America/Buenos_Aires» respondía 422 y Learnito no contestaba (26/11/2026).
+ZONAS_ACTUALES = {
+    'America/Buenos_Aires': 'America/Argentina/Buenos_Aires',
+    'America/Cordoba': 'America/Argentina/Cordoba',
+    'America/Catamarca': 'America/Argentina/Catamarca',
+    'America/Jujuy': 'America/Argentina/Jujuy',
+    'America/Mendoza': 'America/Argentina/Mendoza',
+}
+
+
 def _quien(user):
+    zona = ZONAS_ACTUALES.get(user.timezone, user.timezone)
     datos = {'id': user.id, 'nombre': user.username or user.email, 'email': user.email, 'rol': user.role,
-             'zona': user.timezone}
+             'zona': zona}
     return {k: v for k, v in datos.items() if v}
 
 
@@ -60,7 +74,12 @@ def learnito():
     pedido = {k: cuerpo[k] for k in ('pregunta', 'boton', 'conversacion_id') if cuerpo.get(k) not in (None, '')}
     if isinstance(pedido.get('pregunta'), str):
         pedido['pregunta'] = pedido['pregunta'].strip()[:MAX_CARACTERES]
-    if not pedido.get('pregunta') and not isinstance(pedido.get('boton'), dict):
+    # Archivos para que los lea (imagen, PDF o texto en base64; ADR-W252, su ADR-248): los valida la Academia.
+    adjuntos = [a for a in (cuerpo.get('adjuntos') or [])[:3] if isinstance(a, dict) and a.get('datos')]
+    if adjuntos:
+        pedido['adjuntos'] = [{'nombre': str(a.get('nombre') or 'archivo')[:200], 'tipo': str(a.get('tipo') or ''),
+                               'datos': str(a['datos'])} for a in adjuntos]
+    if not pedido.get('pregunta') and not isinstance(pedido.get('boton'), dict) and not adjuntos:
         return jsonify({'error': 'Escribí una pregunta.'}), 400
     data, estado = _a_la_academia('ask', pedido)
     if estado != 200:
@@ -116,7 +135,42 @@ def learnito_historial():
     data, estado = _a_la_academia('history', {})
     if estado != 200:
         return jsonify(data), estado
-    return jsonify({'conversaciones': data.get('conversaciones') or []}), 200
+    # Con lo de Work (ADR-W251): el nombre que le puso y si la fijó; las fijadas, arriba.
+    prefs = {p.conversacion_id: p for p in LearnitoConversacion.query.filter_by(user_id=current_user.id)}
+    lista = []
+    for c in data.get('conversaciones') or []:
+        p = prefs.get(c.get('id'))
+        lista.append({**c, 'titulo': (p and p.titulo) or c.get('titulo'), 'fijada': bool(p and p.fijada)})
+    lista.sort(key=lambda c: not c['fijada'])
+    return jsonify({'conversaciones': lista}), 200
+
+
+@bp.route('/learnito/historial/<int:conversacion_id>', methods=['DELETE'])
+@copiloto_required
+def learnito_borrar(conversacion_id):
+    """Borra una conversación de la lista (ADR-W252): la Academia la archiva y deja de pedir que se califique."""
+    data, estado = _a_la_academia('archive', {'conversacion_id': conversacion_id})
+    if estado == 200:
+        LearnitoConversacion.query.filter_by(user_id=current_user.id, conversacion_id=conversacion_id).delete()
+        db.session.commit()
+    return jsonify(data), estado
+
+
+@bp.route('/learnito/historial/<int:conversacion_id>', methods=['PATCH'])
+@copiloto_required
+def learnito_ordenar(conversacion_id):
+    """{titulo?, fijada?}: renombra o fija una conversación propia, solo en Work (ADR-W251). Título vacío vuelve al de la Academia."""
+    cuerpo = request.get_json(silent=True) or {}
+    p = LearnitoConversacion.query.filter_by(user_id=current_user.id, conversacion_id=conversacion_id).first()
+    if not p:
+        p = LearnitoConversacion(user_id=current_user.id, conversacion_id=conversacion_id)
+        db.session.add(p)
+    if 'titulo' in cuerpo:
+        p.titulo = (str(cuerpo.get('titulo') or '').strip()[:120]) or None
+    if 'fijada' in cuerpo:
+        p.fijada = bool(cuerpo.get('fijada'))
+    db.session.commit()
+    return jsonify({'id': conversacion_id, 'titulo': p.titulo, 'fijada': p.fijada}), 200
 
 
 @bp.route('/learnito/historial/<int:conversacion_id>', methods=['GET'])

@@ -19,6 +19,7 @@ from app.automatizaciones.transporte import ErrorDeEnvio
 VENTANA_HUMANA = timedelta(days=7)
 HUMAN_AGENT = 'HUMAN_AGENT'
 LARGO_MAXIMO = 1000  # el tope de texto de un mensaje de Instagram
+YA_ENTREGADO = timedelta(minutes=2)
 
 
 def ventana(contacto, ahora):
@@ -90,11 +91,29 @@ def enviar(motor, contacto, autor_id, texto=None, url_audio=None, nombre_audio=N
     cuerpo = cuerpo_de(texto, url_audio)
     if pausar:
         motor.pausar(contacto, CORTADA_POR_ECO)
+    ya = _ya_entregado(contacto, cuerpo, motor.ahora)
+    if ya:
+        ya.autor_id, ya.guia = autor_id, guia
+        db.session.flush()
+        return ya
     try:
         mid = _mandar(motor, contacto, cuerpo, HUMAN_AGENT if estado == 'humana' else None)
     except ErrorDeEnvio as error:
         raise AccionInvalida(f'Instagram no lo aceptó: {error}')
     return _guardar(contacto, mid, cuerpo, autor_id, nombre_audio, guia, motor.ahora)
+
+
+def _ya_entregado(contacto, cuerpo, ahora):
+    """El mismo texto que Instagram ya entregó hace un momento y quedó sin autor (llegó solo su eco). Pasa cuando
+    Meta devuelve error pero el mensaje sale igual (conversación de otra app): reintentar lo mandaba dos veces."""
+    texto = cuerpo.get('text')
+    if not texto:
+        return None
+    return IgMensaje.query.filter(
+        IgMensaje.contacto_id == contacto.id, IgMensaje.direccion == IgMensaje.SALIENTE,
+        IgMensaje.origen == IgMensaje.OTRO, IgMensaje.autor_id.is_(None), IgMensaje.texto == texto,
+        IgMensaje.enviado_en >= ahora - YA_ENTREGADO,
+    ).order_by(IgMensaje.enviado_en.desc()).first()
 
 
 def _guardar(contacto, mid, cuerpo, autor_id, nombre_audio, guia, ahora):

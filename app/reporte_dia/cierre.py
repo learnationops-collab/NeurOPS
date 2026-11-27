@@ -32,6 +32,9 @@ def cerrar_dia(user, dia, rol):
         db.session.commit()
         return False
     tocado = close.id is not None
+    # La última vez que escribió la persona, antes de que el cierre toque la fila: el autoflush de
+    # `persistir` pone `updated_at` en la hora del cierre y el reporte salía siempre «enviado tarde».
+    close.escrito_en = close.updated_at
     calc = calcular(user, dia, rol, close)
     d = datos(close)
     # Lo sugerido queda fijo: es lo que se guarda y lo que se ve después.

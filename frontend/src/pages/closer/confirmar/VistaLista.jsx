@@ -12,7 +12,7 @@ const whatsapp = (tel) => `https://wa.me/${String(tel || '').replace(/\D/g, '')}
 export default function VistaLista({ vista, grupos, catalogo, ahora, nombreCloser, seleccionada, onAbrir, onMover, primario }) {
     const [abiertos, setAbiertos] = useState({}); // clave de grupo → true/false (sin tocar: lo que diga el grupo)
     const props = vista.props.map(k => catalogo.find(p => p.clave === k)).filter(Boolean);
-    const columnas = ['minmax(200px,1.3fr)', ...props.map(p => p.ancho), '170px'].join(' ');
+    const columnas = ['minmax(var(--cv-col1, 200px),1.3fr)', ...props.map(p => p.ancho), '170px'].join(' ');
     const conGrupos = vista.agrupar !== 'ninguno';
     if (!grupos.some(g => g.items.length)) {
         return <EmptyState title="Nada con estos filtros">Probá sacar algún filtro o cambiar de vista.</EmptyState>;

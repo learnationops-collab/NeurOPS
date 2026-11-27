@@ -3,6 +3,7 @@ import { DockContexto } from './dockContexto';
 import useOpcionesDeReporte from '../../../components/feedback/useOpcionesDeReporte';
 import useOpcionesDeAvisos from '../../../components/avisos/useOpcionesDeAvisos';
 import useOpcionesDeConflictos from '../../conflictos/useOpcionesDeConflictos';
+import useOpcionesDeInbox from '../../inbox/useOpcionesDeInbox';
 import Mascota from '../../../components/mascota/Mascota';
 import { mascotaDe } from '../../../components/mascota/mascotas';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -28,7 +29,8 @@ const MenuSesion = ({ nombre, rol, grupos }) => {
     const avisos = useOpcionesDeAvisos();
     const reportes = useOpcionesDeReporte();
     const conflictos = useOpcionesDeConflictos();
-    const todas = [...grupos.flat(), ...avisos.opciones, ...conflictos.opciones,
+    const inbox = useOpcionesDeInbox();
+    const todas = [...grupos.flat(), ...inbox.opciones, ...avisos.opciones, ...conflictos.opciones,
         ...reportes.opciones.map(({ accion, ...op }) => op)];
     const configuracion = todas.find(op => op.id === 'configuracion');
     // Configuración también se publica (seccion 'config'): la barra lateral la pone en la fila de la tarjeta.

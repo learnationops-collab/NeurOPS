@@ -43,6 +43,7 @@ def test_las_rutas_abiertas_a_anonimos_son_exactamente_las_inventariadas(app, db
     monkeypatch.setenv('ACADEMY_INBOUND_API_TOKEN', 'token-de-prueba')
     monkeypatch.setenv('DEV_PLATFORM_INBOUND_API_TOKEN', 'token-de-prueba')
     monkeypatch.setenv('CRON_SECRET', 'secreto-de-prueba-con-mas-de-veinte-caracteres')
+    monkeypatch.setenv('MCP_PUBLICACION_TOKEN', 'secreto-mcp-de-prueba-con-mas-de-veinte')
 
     abiertas = _rutas_abiertas_a_anonimos(app)
 

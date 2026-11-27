@@ -142,3 +142,13 @@ html.dock-lateral.dock-lateral--abierta #root{padding-left:280px}
 .dc-shell .menu-item--herr{align-items:center}
 .dc-shell .menu-item--herr .menu-herr-tx{flex:1 1 0;min-width:0;grid-template-columns:minmax(0,1fr)}
 .dc-shell .menu-item--herr .menu-cuenta{margin-left:0}
+
+/* El tooltip del dock (DockTip.jsx): nombre y qué es, como el del Inbox. Arriba del botón, con una flechita. */
+.dc-shell .dock-tip{position:fixed;z-index:1;max-width:260px;padding:9px 13px;border-radius:13px;pointer-events:none;
+  background:var(--bg-flotante);border:1px solid var(--border-main);border-top-color:var(--sheen);
+  box-shadow:var(--shadow-main),0 0 0 1px rgba(0,0,0,.2);color:var(--text-on-surface);text-align:left;
+  animation:dcTipInArriba .16s ease-out both}
+.dc-shell .dock-tip b{display:block;font-size:12.5px;font-weight:800;white-space:nowrap}
+.dc-shell .dock-tip span{display:block;margin-top:2px;font-size:11.5px;font-weight:600;line-height:1.4;color:var(--text-muted)}
+.dc-shell .dock-tip--abajo{animation-name:dcTipIn}
+@media (prefers-reduced-motion:reduce){.dc-shell .dock-tip{animation:none}}

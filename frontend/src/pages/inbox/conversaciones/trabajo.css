@@ -62,7 +62,7 @@
 .thalamus.inbox .cv-comp-check{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:var(--text-muted)}
 .thalamus.inbox .cv-comp-check input{accent-color:var(--brand-secondary);margin:0}
 .thalamus.inbox .cv-comp-fila{display:flex;align-items:flex-end;gap:6px}
-.thalamus.inbox .cv-comp-fila .ui-textarea.ui-textarea{flex:1;min-width:0;min-height:42px;max-height:140px}
+.thalamus.inbox .cv-comp-fila .ui-textarea.ui-textarea{flex:1;min-width:0;min-height:42px;max-height:220px;overflow-y:auto} /* pasado el tope, se desplaza (antes quedaba cortado) */
 .thalamus.inbox .cv-comp-tarea{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .thalamus.inbox .cv-comp-tarea .ui-input.ui-input:first-child{flex:1 1 220px}
 .thalamus.inbox .cv-comp-tarea .ui-select{min-width:140px}

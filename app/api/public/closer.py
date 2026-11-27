@@ -336,7 +336,7 @@ def _mensaje_discord(datos):
     """El texto que acompaña la imagen en Discord: una línea; el detalle ya está en la imagen.
     Un reporte mandado tarde lo dice con el día del envío (la fecha es la del día reportado)."""
     tarde = f" · enviado tarde, el {datos['sent_date_str']}" if datos['late'] else ""
-    return f"🎯 **Reporte de closer** · {datos['closer_name']} · {datos['date_str']}{tarde} @everyone"
+    return f"🎯 **Reporte de closer** · {datos['closer_name']} · {datos['date_str']}{tarde}"
 
 
 def _trigger_closer_report_discord(report):
@@ -348,15 +348,8 @@ def _trigger_closer_report_discord(report):
         import json
         from app.services.image_service import ImageService
 
-        import os
-        url = os.environ.get('DISCORD_REPORTS_WEBHOOK')
-        if not url:
-            from app.models import Integration
-            integration = Integration.query.filter_by(key='discord_reports').first()
-            if integration and integration.payload_config:
-                url = integration.payload_config.get('webhook_url')
-
-        if not url:
+        from app.services.discord_avisos.envio import destino_reportes, post_reporte
+        if not destino_reportes():
             print("[Discord Closer] No webhook URL configured in environment or database.")
             return
 
@@ -382,7 +375,7 @@ def _trigger_closer_report_discord(report):
             'file1': ('closer_report.png', img_buffer, 'image/png'),
         }
 
-        res = req.post(url, files=files, data={"payload_json": json.dumps(json_payload)}, timeout=25)
+        res = post_reporte(files=files, data={"payload_json": json.dumps(json_payload)}, timeout=25)
         print(f"[Discord Closer] Status: {res.status_code}")
 
     except Exception as e:

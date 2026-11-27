@@ -4,7 +4,7 @@ El triage trabaja con la misma vista del closer (mazo, ficha, confirmación, seg
 propio es cómo se reporta la llamada, y por eso vive acá y no en el árbol del closer:
 
   · asistió, no se presentó o canceló: lo mismo que reporta el closer (`ficha_acciones_service.resultado`);
-  · reagenda: la misma agenda pasa a la hora nueva y vuelve a confirmarse, como la reagenda del closer;
+  · reagenda: la misma agenda pasa a la hora nueva y vuelve a confirmarse; sin fecha, espera en «Seguir»;
   · si asistió, calificación económica: **calificado** (puede invertir más de 500 USD) pasa al closer
     con una agenda nueva y una nota; **descalificado** cierra con el low ticket de 100 USD;
   · **lo va a pensar** (seguimiento): asistió y podría calificar, pero no decidió; queda con fecha de
@@ -200,6 +200,9 @@ def reportar(appt, datos, usuario):
         _log(appt, usuario, f'{usuario.username} actualizó el triage: {_LOW_TICKET_TEXTO[appt.triage_low_ticket]}.')
         return {**bloque(appt), 'avisos': avisos, 'vendio': vende}
 
+    if datos.get('asistencia') == 'reagenda' and datos.get('sin_fecha'):  # sin fecha: a «Seguir» (ADR-W241)
+        from app.services.triage_seguir_service import reportar_sin_fecha
+        return {**reportar_sin_fecha(appt, datos, usuario), **bloque(appt), 'avisos': [], 'vendio': False}
     _validar(appt, datos)
     if datos['asistencia'] == 'reagenda':
         return _reagendar(appt, datos, usuario)

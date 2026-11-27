@@ -172,15 +172,8 @@ def submit_triage_tracker():
 
             img_buf = ImageService.generate_triage_tracker_card(render_data)
             
-            import os
-            webhook_url = os.environ.get('DISCORD_REPORTS_WEBHOOK')
-            if not webhook_url:
-                from app.models import Integration
-                integration = Integration.query.filter_by(key='discord_reports').first()
-                if integration and integration.payload_config:
-                    webhook_url = integration.payload_config.get('webhook_url')
-
-            if not webhook_url:
+            from app.services.discord_avisos.envio import destino_reportes, post_reporte
+            if not destino_reportes():
                 print("[Discord Triage Tracker] No webhook URL configured in environment or database.")
                 return
             payload = {
@@ -191,7 +184,7 @@ def submit_triage_tracker():
             files = {
                 "file": ("triage_tracker.png", img_buf, "image/png")
             }
-            res = requests.post(webhook_url, data=payload, files=files, timeout=20)
+            res = post_reporte(data=payload, files=files, timeout=20)
             print(f"[Discord Triage Tracker] Status: {res.status_code}")
         except Exception as e:
             print(f"[Discord Triage Tracker Error] {e}")

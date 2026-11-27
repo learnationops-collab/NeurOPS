@@ -13,6 +13,12 @@ COMO = {
     'leads': 'De los nuevos mensajes, los que contestaron algo (al bot o a vos) y no son in-abribles. Incluye a los no leads.',
     'no_lead': 'De los nuevos mensajes, los marcados como no lead o que el bot dio por no calificados.',
     'inabribles': 'De los nuevos mensajes, los marcados como in-abribles.',
+    'ap_entrantes': 'Conversaciones a las que les escribiste a mano por primera vez hoy (no cuenta el bot).',
+    'ap_entrantes_resp': 'De esas aperturas, las que el lead contestó después.',
+    'bnv_hechas': 'Conversaciones de Instagram que empezaste vos hoy (nuevos seguidores), o marcadas en el canal Bienvenida.',
+    'bnv_respondidas': 'De esas bienvenidas, las que el lead contestó.',
+    'bnv_aperturas': 'De las que contestaron, a las que les volviste a escribir.',
+    'bnv_aperturas_resp': 'De esas aperturas, las que el lead contestó.',
     'agendas': 'Agendas que reservaste hoy (por la fecha en que se creó la agenda, no la de la llamada).',
     'embudo': 'Conversaciones que llegaron hoy por primera vez a esta etapa (lo que marcás en el Inbox).',
     'cualificados': 'Entrantes cualificados de tus dos canales.',
@@ -42,13 +48,15 @@ def registros(user, dia, clave, ctx):
     """{cols, filas, como} de un número del setter, o None si no tiene registros (lo a mano)."""
     det = (ctx.get('inbox') or {}).get('detalle') or {}
     pre, _, campo = clave.partition('_')
-    if pre in CANAL and campo in ('entrantes', 'leads', 'no_lead', 'inabribles'):
+    if pre in CANAL and campo in ('entrantes', 'leads', 'no_lead', 'inabribles', 'ap_entrantes', 'ap_entrantes_resp'):
         como = COMO['entrantes_canal' if campo == 'entrantes' else campo]
         return {'cols': COLS, 'filas': _filas(user, det, [f'{CANAL[pre]}.{campo}']), 'como': como}
     if clave in ('ads_agendas', 'inb_agendas', 'agendas'):
         r = _agendas(user, ctx)
         r['como'] = COMO['agendas'] + (' Se muestran las de los dos canales.' if clave != 'agendas' else '')
         return r
+    if clave.startswith('bnv_') and clave in COMO:
+        return {'cols': COLS, 'filas': _filas(user, det, [f'bienvenidas.{clave[4:]}']), 'como': COMO[clave]}
     if clave in EMBUDO:
         return {'cols': COLS, 'filas': _filas(user, det, [f'embudo.{EMBUDO[clave]}']), 'como': COMO['embudo']}
     if clave in ('entrantes', 'cualificados'):

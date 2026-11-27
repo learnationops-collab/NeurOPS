@@ -23,7 +23,7 @@ const irALeadership = (usuario) => () => {
 };
 
 export const BotonFila = ({ Icono, label, onClick, cuenta = null, clase = '' }) => (
-    <button type="button" className={`dock-fijada ${clase}`.trim()} onClick={onClick} aria-label={label} title={label}>
+    <button type="button" className={`dock-fijada ${clase}`.trim()} onClick={onClick} aria-label={label} data-dock-tip={label}>
         <Icono size={18} aria-hidden="true" />
         {cuenta != null && <span className="dock-sesion-aviso" aria-hidden="true">{cuenta}</span>}
     </button>

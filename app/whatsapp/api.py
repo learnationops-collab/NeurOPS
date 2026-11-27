@@ -1,31 +1,31 @@
-"""/api/whatsapp: difusiones (broadcast) y plantillas. Solo admin.
+"""/api/whatsapp: la herramienta «Broadcast de WhatsApp» (ADR-W229) y las plantillas. Solo admin y operador.
 
-  · GET  /difusiones                 → lista con el conteo por estado.
-  · POST /difusiones                 → {nombre, plantilla, idioma?, con_nombre?, destino?, tope_diario?, flujo_id?,
-                                         numeros: [{telefono, nombre}] | csv}
-  · POST /difusiones/<id>/numeros    → suma números (mismo formato).
-  · PATCH /difusiones/<id>           → {estado?: activa|pausada, tope_diario?, flujo_id?}
-    `flujo_id`: el flujo que sigue al tocar un botón de la plantilla (`flujos.py`); null lo saca.
-  · GET  /plantillas                 → las de la cuenta, con su estado de aprobación.
-  · POST /plantillas                 → {nombre, texto, categoria?: MARKETING|UTILITY, idioma?, ejemplo_nombre?}
+  · POST /envios/revisar            → {csv, sin_alumnos?} → cuántos hay para mandar, ya recibieron, inválidos,
+                                       repetidos y alumnos vigentes (sin_alumnos, por defecto: se saltean).
+  · POST /envios                    → {csv, plantillas: [{nombre, idioma}], cantidad, sin_alumnos?} → manda a los próximos
+                                       `cantidad`; con varias plantillas, cada número recibe una al azar.
+  · GET  /envios                    → el historial: cada envío (lote) con su conteo, y el tope de hoy.
+  · GET  /envios/<lote>             → los números de ese envío.
+  · POST /envios/<lote>/frenar      → saca lo que todavía no salió.
+  · GET  /plantillas                → las de la cuenta, con su estado de aprobación.
+  · POST /plantillas                → {nombre, texto, categoria?: MARKETING|UTILITY, idioma?, ejemplo_nombre?,
+                                       botones?: [texto]} (respuesta rápida)
 """
 import csv
 import io
+import re
+from datetime import datetime
 
 from flask import Blueprint, jsonify, request
 from flask_login import current_user, login_required
 
 from app import db
 from app.automatizaciones.transporte import ErrorDeEnvio
-from app.automatizaciones.modelos import AutFlujo
-from app.decorators import admin_required
-from app.models.whatsapp import WaDifusion
-from app.whatsapp import difusion as dif
+from app.decorators import admin_required, workshop_required
+from app.whatsapp import envios, historial
 from app.whatsapp.cliente import ClienteWhatsapp
 
 bp = Blueprint('whatsapp', __name__)
-DESTINOS = ('setting', 'workshop')
-TOPE_MAXIMO = 250  # lo que deja Meta sin verificar el negocio
 
 
 def _filas(datos):
@@ -47,88 +47,78 @@ def _filas(datos):
              'nombre': f[i_nom] if i_nom is not None and len(f) > i_nom else None} for f in filas if f]
 
 
-def _flujo(valor):
-    """(flujo_id, error)."""
-    if valor in (None, ''):
-        return None, None
-    flujo = db.session.get(AutFlujo, valor) if str(valor).isdigit() else None
-    return (flujo.id, None) if flujo else (None, 'Ese flujo no existe')
-
-
-def _tope(valor, por_defecto=30):
+def _plantillas(pedidas):
+    """[(nombre, idioma, con_nombre)] de las pedidas, todas aprobadas (si no, error). con_nombre: lleva {{1}}."""
+    if not pedidas:
+        raise envios.EnvioInvalido('Elegí una plantilla')
     try:
-        return max(1, min(int(valor), TOPE_MAXIMO))
-    except (TypeError, ValueError):
-        return por_defecto
+        todas = ClienteWhatsapp().plantillas()
+    except ErrorDeEnvio as error:
+        raise envios.EnvioInvalido(f'Meta no respondió: {error}')
+    salida = []
+    for pedida in pedidas:
+        nombre, idioma = (pedida.get('nombre') or '').strip(), (pedida.get('idioma') or 'es').strip()
+        p = next((x for x in todas if x['name'] == nombre and x.get('language') == idioma), None)
+        if p is None or p.get('status') != 'APPROVED':
+            raise envios.EnvioInvalido(f'{nombre or "Esa plantilla"} no está aprobada')
+        cuerpo = next((c.get('text') or '' for c in p.get('components') or [] if c.get('type') == 'BODY'), '')
+        salida.append((nombre, idioma, '{{1}}' in cuerpo))
+    return salida
 
 
-@bp.route('/difusiones', methods=['GET'])
+def _hoy():
+    ahora = datetime.utcnow()
+    return {'usados': envios.usados_hoy(ahora), 'tope': envios.TOPE_DIARIO}
+
+
+@bp.route('/envios/revisar', methods=['POST'])
+@login_required
+@admin_required
+def revisar():
+    datos = request.get_json(silent=True) or {}
+    r = envios.revisar(_filas(datos), datos.get('sin_alumnos', True) is not False)
+    return jsonify({**r, 'para_mandar': len(r['para_mandar']), 'hoy': _hoy()})
+
+
+@bp.route('/envios', methods=['POST'])
+@login_required
+@admin_required
+def enviar():
+    datos = request.get_json(silent=True) or {}
+    try:
+        cantidad = int(datos.get('cantidad') or 0)
+        plantillas = _plantillas([p for p in datos.get('plantillas') or [] if isinstance(p, dict)])
+        lote, n = envios.crear_lote(_filas(datos), plantillas, cantidad, current_user.id, datetime.utcnow(),
+                                    datos.get('sin_alumnos', True) is not False)
+    except (TypeError, ValueError) as error:
+        return jsonify({'message': str(error) if isinstance(error, envios.EnvioInvalido) else 'Cantidad inválida'}), 400
+    return jsonify({'lote': lote, 'cantidad': n, 'hoy': _hoy()}), 201
+
+
+@bp.route('/envios', methods=['GET'])
 @login_required
 @admin_required
 def listar():
-    return jsonify({'difusiones': [dif.resumen(d) for d in WaDifusion.query.order_by(WaDifusion.id.desc()).all()]})
+    return jsonify({'lotes': historial.lotes(), 'hoy': _hoy()})
 
 
-@bp.route('/difusiones', methods=['POST'])
+@bp.route('/envios/<lote>', methods=['GET'])
 @login_required
 @admin_required
-def crear():
-    datos = request.get_json(silent=True) or {}
-    nombre, plantilla = (datos.get('nombre') or '').strip(), (datos.get('plantilla') or '').strip()
-    if not nombre or not plantilla:
-        return jsonify({'message': 'Falta el nombre o la plantilla'}), 400
-    destino = datos.get('destino') if datos.get('destino') in DESTINOS else 'setting'
-    flujo_id, error = _flujo(datos.get('flujo_id'))
-    if error:
-        return jsonify({'message': error}), 400
-    difusion = WaDifusion(nombre=nombre[:150], plantilla=plantilla[:120], idioma=(datos.get('idioma') or 'es')[:10],
-                          con_nombre=datos.get('con_nombre', True) is not False, destino=destino,
-                          tope_diario=_tope(datos.get('tope_diario')), flujo_id=flujo_id,
-                          creado_por_id=current_user.id)
-    db.session.add(difusion)
-    db.session.flush()
-    carga = dif.cargar(difusion, _filas(datos))
-    db.session.commit()
-    return jsonify({'difusion': dif.resumen(difusion), 'carga': carga}), 201
+def numeros(lote):
+    return jsonify({'numeros': historial.numeros(lote)})
 
 
-@bp.route('/difusiones/<int:difusion_id>/numeros', methods=['POST'])
+@bp.route('/envios/<lote>/frenar', methods=['POST'])
 @login_required
 @admin_required
-def sumar_numeros(difusion_id):
-    difusion = db.session.get(WaDifusion, difusion_id)
-    if difusion is None:
-        return jsonify({'message': 'Not found'}), 404
-    carga = dif.cargar(difusion, _filas(request.get_json(silent=True) or {}))
-    if difusion.estado == WaDifusion.TERMINADA and carga['agregados']:
-        difusion.estado = WaDifusion.PAUSADA
-    db.session.commit()
-    return jsonify({'difusion': dif.resumen(difusion), 'carga': carga})
-
-
-@bp.route('/difusiones/<int:difusion_id>', methods=['PATCH'])
-@login_required
-@admin_required
-def editar(difusion_id):
-    difusion = db.session.get(WaDifusion, difusion_id)
-    if difusion is None:
-        return jsonify({'message': 'Not found'}), 404
-    datos = request.get_json(silent=True) or {}
-    if datos.get('estado') in (WaDifusion.ACTIVA, WaDifusion.PAUSADA):
-        difusion.estado = datos['estado']
-    if 'tope_diario' in datos:
-        difusion.tope_diario = _tope(datos['tope_diario'], difusion.tope_diario)
-    if 'flujo_id' in datos:
-        difusion.flujo_id, error = _flujo(datos['flujo_id'])
-        if error:
-            return jsonify({'message': error}), 400
-    db.session.commit()
-    return jsonify({'difusion': dif.resumen(difusion)})
+def frenar(lote):
+    return jsonify({'frenados': envios.frenar(lote), 'hoy': _hoy()})
 
 
 @bp.route('/plantillas', methods=['GET'])
 @login_required
-@admin_required
+@workshop_required
 def plantillas():
     try:
         return jsonify({'plantillas': ClienteWhatsapp().plantillas()})
@@ -136,21 +126,61 @@ def plantillas():
         return jsonify({'message': str(error)}), 502
 
 
+BOTONES_MAX, LARGO_BOTON = 10, 25
+
+
+def _botones(pedidos):
+    """(textos, problema) de los botones de respuesta rápida: los límites de Meta (10, de 25 caracteres)."""
+    if not pedidos:
+        return [], None
+    if not isinstance(pedidos, list):
+        return [], 'Los botones van como lista de textos'
+    botones = [(b or '').strip() if isinstance(b, str) else '' for b in pedidos]
+    if '' in botones:
+        return [], 'Hay un botón vacío'
+    if len(botones) > BOTONES_MAX:
+        return [], f'Van hasta {BOTONES_MAX} botones'
+    largo = next((b for b in botones if len(b) > LARGO_BOTON), None)
+    if largo:
+        return [], f'«{largo}» pasa los {LARGO_BOTON} caracteres'
+    if len(set(botones)) != len(botones):
+        return [], 'Hay dos botones iguales'
+    return botones, None
+
+
 @bp.route('/plantillas', methods=['POST'])
 @login_required
-@admin_required
+@workshop_required
 def crear_plantilla():
-    """Una plantilla de texto. Si el texto lleva {{1}}, `ejemplo_nombre` es el ejemplo que pide Meta."""
+    """Una plantilla de texto. Si el texto lleva {{1}}, `ejemplo_nombre` es el ejemplo que pide Meta.
+    `botones`: textos de respuesta rápida; al enviarla no llevan parámetros y el toque llega como texto."""
     datos = request.get_json(silent=True) or {}
     nombre, texto = (datos.get('nombre') or '').strip().lower(), (datos.get('texto') or '').strip()
     if not nombre or not texto:
         return jsonify({'message': 'Falta el nombre o el texto'}), 400
+    botones, problema = _botones(datos.get('botones'))
+    if problema:
+        return jsonify({'message': problema}), 400
     cuerpo = {'type': 'BODY', 'text': texto}
-    if '{{1}}' in texto:
-        cuerpo['example'] = {'body_text': [[datos.get('ejemplo_nombre') or 'Laura']]}
+    variables = sorted({int(n) for n in re.findall(r'\{\{(\d+)\}\}', texto)})
+    if variables != list(range(1, len(variables) + 1)):
+        return jsonify({'message': 'Las variables van en orden: {{1}}, {{2}}, {{3}}…'}), 400
+    if variables:
+        # `ejemplos`: uno por variable (lo pide Meta); el primero cae en `ejemplo_nombre` si no llega.
+        ejemplos = [str(e).strip() for e in datos.get('ejemplos') or [] if str(e).strip()]
+        ejemplos = (ejemplos or [datos.get('ejemplo_nombre') or 'Laura'])
+        ejemplos += ['ejemplo'] * (len(variables) - len(ejemplos))
+        cuerpo['example'] = {'body_text': [ejemplos[:len(variables)]]}
+    componentes = [cuerpo]
+    if botones:
+        componentes.append({'type': 'BUTTONS', 'buttons': [{'type': 'QUICK_REPLY', 'text': b} for b in botones]})
     categoria = datos.get('categoria') if datos.get('categoria') in ('MARKETING', 'UTILITY') else 'MARKETING'
     try:
-        respuesta = ClienteWhatsapp().crear_plantilla(nombre, datos.get('idioma') or 'es', categoria, [cuerpo])
+        respuesta = ClienteWhatsapp().crear_plantilla(nombre, datos.get('idioma') or 'es', categoria, componentes)
     except ErrorDeEnvio as error:
         return jsonify({'message': str(error)}), 400
     return jsonify(respuesta), 201
+
+
+from app.whatsapp import api_plantillas  # noqa: E402,F401  (registra sus rutas en este blueprint)
+from app.whatsapp import api_taller  # noqa: E402,F401

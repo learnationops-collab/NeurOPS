@@ -103,3 +103,21 @@ export default function TriageAbandonos() {
         </div>
     );
 }
+
+// Cuántos abandonos faltan contactar, para el dock (ADR-W256): con alguno, Abandonos queda fijado hasta
+// resolverse. Se vuelve a contar cada minuto y al cambiar de sección (`clave`).
+const porContactarDe = (datos) => (datos?.abandonos || []).filter((a) => !a.contacto).length;
+export function useAbandonosPorContactar(activo, clave) {
+    const [n, setN] = useState(() => porContactarDe(leerCache(CLAVE_ABANDONOS)?.datos));
+    useEffect(() => {
+        if (!activo) return undefined;
+        let vivo = true;
+        const pedir = () => api.get('/triage/abandonos')
+            .then((res) => { if (!vivo) return; guardarCache(CLAVE_ABANDONOS, res.data); setN(porContactarDe(res.data)); })
+            .catch(() => {});
+        pedir();
+        const id = setInterval(pedir, 60000);
+        return () => { vivo = false; clearInterval(id); };
+    }, [activo, clave]);
+    return activo ? n : 0;
+}

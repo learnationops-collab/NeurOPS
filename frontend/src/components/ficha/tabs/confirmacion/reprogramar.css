@@ -1,0 +1,270 @@
+/* Reprogramar (Confirmación): personas, calendario y horas. Mismos tokens que ficha.css.
+   Rosa (--brand-secondary) = lo elegido. Cada persona tiene su color (--p), el mismo en
+   su tarjeta, en los puntos del calendario y en cada hora. */
+
+.dc-shell .rp-bandera{display:inline-block;width:18px;height:12px;border-radius:2px;overflow:hidden;flex-shrink:0;
+  box-shadow:0 0 0 1px rgb(255 255 255 / .18)}
+.dc-shell .rp-bandera svg{display:block;width:100%;height:100%}
+.dc-shell .rp-con-bandera{display:inline-flex;align-items:center;gap:6px}
+
+/* Cabecera: título con ícono y, al lado, los controles del paso */
+.dc-shell .fi-sub-cab{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s3) var(--s6)}
+.dc-shell .rp-titulo{display:inline-flex;align-items:center;gap:var(--s3)}
+.dc-shell .rp-titulo-ico{width:36px;height:36px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;
+  color:var(--brand-secondary);background:color-mix(in srgb,var(--brand-secondary) 16%,transparent);
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--brand-secondary) 35%,transparent)}
+
+
+.dc-shell .rp-paso{display:grid;gap:var(--s5)}
+
+/* Cargando */
+.dc-shell .rp-cargando{display:flex;align-items:center;gap:var(--s3);padding:var(--s6) 0;color:var(--text-muted);font-size:13px}
+.dc-shell .rp-pulso{width:10px;height:10px;border-radius:50%;background:var(--brand-secondary);animation:rp-pulso 1.1s ease-in-out infinite}
+@keyframes rp-pulso{0%,100%{transform:scale(.7);opacity:.5}50%{transform:scale(1.15);opacity:1}}
+
+/* Paso 1: grupo y personas (las tarjetas llenan todo el ancho) */
+.dc-shell .rp-personas{display:grid;gap:var(--s3);grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.dc-shell .rp-persona{--p:var(--brand-secondary);position:relative;isolation:isolate;overflow:visible;display:flex;align-items:center;gap:var(--s3);
+  min-height:88px;padding:var(--s4) var(--s5);border-radius:var(--radius-control);border:1px solid var(--border-main);
+  background:radial-gradient(130% 120% at 0% 0%,color-mix(in srgb,var(--p) 14%,transparent),transparent 55%),var(--bg-element);
+  color:var(--text-on-surface);text-align:left;cursor:pointer;
+  transition:border-color .2s ease,box-shadow .3s ease,transform .3s cubic-bezier(.16,1,.3,1)}
+.dc-shell .rp-persona:hover:not(:disabled){transform:translateY(-3px);border-color:color-mix(in srgb,var(--p) 55%,var(--border-main));
+  box-shadow:0 14px 28px -18px color-mix(in srgb,var(--p) 90%,transparent)}
+.dc-shell .rp-persona:active:not(:disabled){transform:translateY(-1px) scale(.99)}
+.dc-shell .rp-persona:disabled{opacity:.4;cursor:default}
+.dc-shell .rp-persona[aria-pressed="true"]{border-color:var(--brand-secondary);
+  background:radial-gradient(130% 120% at 0% 0%,color-mix(in srgb,var(--brand-secondary) 20%,transparent),transparent 60%),var(--bg-element);
+  box-shadow:0 0 0 3px var(--brand-secondary-surface),0 14px 30px -16px color-mix(in srgb,var(--brand-secondary) 80%,transparent)}
+.dc-shell .rp-persona-txt{display:grid;gap:4px;min-width:0;flex:1}
+.dc-shell .rp-persona-txt b{font-size:15px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dc-shell .rp-persona-pie{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--text-muted)}
+.dc-shell .rp-actual{font-style:normal;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+  padding:2px 6px;border-radius:999px;color:var(--p);background:color-mix(in srgb,var(--p) 16%,transparent)}
+.dc-shell .rp-persona-n{display:grid;justify-items:end;line-height:1}
+.dc-shell .rp-persona-n b{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.dc-shell .rp-persona-n small{font-size:11px;color:var(--text-muted);margin-top:3px}
+.dc-shell .rp-persona-check{position:absolute;top:-8px;right:-8px;width:22px;height:22px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;background:var(--brand-secondary);color:var(--ink);
+  transform:scale(0);transition:transform .3s cubic-bezier(.16,1,.3,1)}
+.dc-shell .rp-persona[aria-pressed="true"] .rp-persona-check{transform:scale(1)}
+.dc-shell .rp-pila{display:flex;flex-shrink:0;color:var(--brand-secondary)}
+.dc-shell .rp-pila > * + *{margin-left:-10px}
+.dc-shell .rp-pila > .ui-avatar{box-shadow:0 0 0 2px var(--bg-element)}
+
+/* Cabecera: título · pasos · (en «Día y hora») zona del lead y anticipación, todo en una fila */
+.dc-shell .fi-sub-cab{justify-content:flex-start}
+.dc-shell .rp-cab{flex:1;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--s3) var(--s5)}
+.dc-shell .rp-controles{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s3);margin-left:auto;
+  animation:rp-abre .3s cubic-bezier(.16,1,.3,1) backwards}
+.dc-shell .rp-controles{gap:var(--s3) var(--s5)}
+.dc-shell .rp-control{display:flex;align-items:center;gap:var(--s2)}
+.dc-shell .rp-control .ui-select{min-width:130px}
+.dc-shell .rp-control-rot{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--text-muted);white-space:nowrap}
+.dc-shell .rp-control-rot svg{color:var(--brand-secondary)}
+.dc-shell .rp-control-sep{width:1px;height:24px;background:var(--border-main)}
+@media (max-width:760px){.dc-shell .rp-control-sep{display:none}}
+
+/* Paso 2: calendario + horas */
+.dc-shell .rp-agenda{display:grid;grid-template-columns:minmax(280px,330px) minmax(0,1fr);gap:var(--s6);align-items:start}
+@media (max-width:820px){.dc-shell .rp-agenda{grid-template-columns:1fr}}
+
+.dc-shell .rp-cal{padding:var(--s4);border-radius:var(--radius-control);border:1px solid var(--border-subtle);background:var(--bg-element)}
+.dc-shell .rp-cal-cab{display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--s3);min-height:28px}
+.dc-shell .rp-cal-cab b{font-size:14px;font-weight:600}
+.dc-shell .rp-cal-nav{display:flex;gap:var(--s1)}
+.dc-shell .rp-cal-nav button{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  border:1px solid var(--border-main);background:transparent;color:var(--text-on-surface);cursor:pointer}
+.dc-shell .rp-cal-nav button:disabled{opacity:.3;cursor:default}
+.dc-shell .rp-cal-nav button:not(:disabled):hover{background:var(--bg-element-hover)}
+.dc-shell .rp-cal-grilla{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.dc-shell .rp-cal-sem{text-align:center;font-size:11px;font-weight:700;color:var(--text-muted);padding-bottom:var(--s1)}
+.dc-shell .rp-cal-dia{position:relative;aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  border-radius:10px;border:1px solid color-mix(in srgb,var(--brand-secondary) 18%,transparent);
+  background:color-mix(in srgb,var(--brand-secondary) 8%,transparent);
+  color:var(--text-on-surface);font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;cursor:pointer;
+  transition:background .2s ease,border-color .2s ease,transform .25s cubic-bezier(.16,1,.3,1)}
+.dc-shell .rp-cal-dia:hover:not(:disabled){border-color:var(--brand-secondary);transform:scale(1.08)}
+.dc-shell .rp-cal-dia:disabled{background:transparent;border-color:transparent;color:var(--text-muted);opacity:.35;cursor:default;font-weight:400}
+.dc-shell .rp-cal-dia[data-hoy]:disabled::after{content:"";position:absolute;bottom:4px;width:4px;height:4px;border-radius:50%;background:currentColor}
+.dc-shell .rp-cal-dia[data-hoy] > span:first-child{text-decoration:underline;text-underline-offset:3px}
+.dc-shell .rp-cal-puntos{display:flex;gap:2px;height:5px}
+.dc-shell .rp-cal-puntos i{width:5px;height:5px;border-radius:50%}
+.dc-shell .rp-cal-dia[aria-pressed="true"]{background:var(--brand-secondary);border-color:var(--brand-secondary);color:var(--ink);
+  transform:scale(1.06);box-shadow:0 8px 18px -8px var(--brand-secondary)}
+.dc-shell .rp-cal-dia[aria-pressed="true"] .rp-cal-puntos i{box-shadow:0 0 0 1.5px var(--ink)}
+
+.dc-shell .rp-horas-col{min-height:320px;display:grid}
+.dc-shell .rp-horas-lista{display:grid;gap:var(--s4);align-content:start}
+.dc-shell .rp-horas-cab{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:var(--s2) var(--s4)}
+.dc-shell .rp-horas-cab > div:first-child{display:grid;gap:4px}
+.dc-shell .rp-horas-cab b{font-size:17px;font-weight:600}
+.dc-shell .rp-horas-cab b::first-letter{text-transform:uppercase}
+.dc-shell .rp-horas-cab small{font-size:12px;color:var(--text-muted)}
+.dc-shell .rp-leyenda{display:flex;flex-wrap:wrap;gap:var(--s2)}
+.dc-shell .rp-leyenda-p{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 10px;border-radius:999px;
+  font-size:12px;font-weight:600;color:var(--text-on-surface);
+  background:color-mix(in srgb,var(--p,var(--text-muted)) 14%,transparent);
+  border:1px solid color-mix(in srgb,var(--p,var(--text-muted)) 35%,transparent)}
+.dc-shell .rp-leyenda-p i{width:8px;height:8px;border-radius:50%;background:var(--p)}
+.dc-shell .rp-leyenda-sup{--p:var(--brand-secondary)}
+.dc-shell .rp-leyenda-sup svg{color:var(--brand-secondary)}
+
+.dc-shell .rp-franja{display:grid;gap:var(--s2)}
+.dc-shell .rp-franja-tit{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--text-muted)}
+.dc-shell .rp-franja-tit svg{color:var(--brand-secondary);opacity:.85}
+.dc-shell .rp-chips{display:grid;gap:var(--s2);grid-template-columns:repeat(auto-fill,minmax(74px,1fr))}
+.dc-shell .rp-chip{position:relative;display:flex;flex-direction:column;align-items:center;gap:5px;padding:9px 4px 8px;
+  border-radius:12px;border:1px solid var(--border-subtle);background:var(--bg-element);color:var(--text-on-surface);cursor:pointer;
+  transition:border-color .2s ease,background .2s ease,transform .25s cubic-bezier(.16,1,.3,1),box-shadow .25s ease}
+.dc-shell .rp-chip b{font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.dc-shell .rp-chip:hover{border-color:var(--border-main);background:var(--bg-element-hover);transform:translateY(-2px)}
+.dc-shell .rp-chip-puntos{display:flex;gap:3px;height:6px}
+.dc-shell .rp-chip-puntos i{width:6px;height:6px;border-radius:50%}
+/* Superpuesto: más de una persona libre a esa hora */
+.dc-shell .rp-chip[data-sup]{border-color:color-mix(in srgb,var(--brand-secondary) 30%,var(--border-subtle))}
+.dc-shell .rp-chip[data-sup]::after{content:"";position:absolute;top:5px;right:5px;width:6px;height:6px;border-radius:2px;
+  background:var(--brand-secondary);opacity:.8;transform:rotate(45deg)}
+.dc-shell .rp-chip[aria-checked="true"]{background:var(--brand-secondary);border-color:var(--brand-secondary);color:var(--ink);
+  transform:translateY(-2px) scale(1.04);box-shadow:0 10px 22px -10px var(--brand-secondary)}
+.dc-shell .rp-chip[aria-checked="true"] .rp-chip-puntos i{box-shadow:0 0 0 1.5px var(--ink)}
+.dc-shell .rp-chip[aria-checked="true"]::after{background:var(--ink)}
+
+/* Detalle de la hora elegida: hora del lead → con quién y su hora */
+.dc-shell .rp-detalle{display:flex;flex-wrap:wrap;align-items:center;gap:var(--s3) var(--s4);padding:var(--s3) var(--s4);
+  border-radius:var(--radius-control);border:1px solid var(--brand-secondary);
+  background:color-mix(in srgb,var(--brand-secondary) 9%,var(--bg-element))}
+.dc-shell .rp-detalle-lead{display:inline-flex;align-items:center;gap:var(--s2)}
+.dc-shell .rp-detalle-lead b{font-size:22px;font-weight:700;font-variant-numeric:tabular-nums}
+.dc-shell .rp-detalle-flecha{color:var(--brand-secondary)}
+.dc-shell .rp-detalle-gente{display:flex;flex-wrap:wrap;gap:var(--s2)}
+.dc-shell .rp-detalle-p{display:inline-flex;align-items:center;gap:var(--s2);padding:4px 12px 4px 4px;border-radius:999px;
+  border:1px solid color-mix(in srgb,var(--p) 35%,transparent);background:color-mix(in srgb,var(--p) 10%,transparent);
+  color:var(--text-on-surface);font-size:13px;font-weight:600;cursor:pointer;transition:border-color .2s ease,background .2s ease,opacity .2s ease}
+.dc-shell .rp-detalle-p em{font-style:normal;font-weight:500;color:var(--text-muted);font-variant-numeric:tabular-nums}
+.dc-shell .rp-detalle-p:disabled{cursor:default}
+.dc-shell .rp-detalle-gente[role="radiogroup"] .rp-detalle-p[aria-pressed="false"]{opacity:.55}
+.dc-shell .rp-detalle-p[aria-pressed="true"]{border-color:var(--p);background:color-mix(in srgb,var(--p) 20%,transparent)}
+
+.dc-shell .rp-vacio{display:grid;justify-items:center;align-content:center;gap:var(--s2);padding:var(--s6);text-align:center;
+  border-radius:var(--radius-control);border:1px dashed var(--border-main);color:var(--text-muted)}
+.dc-shell .rp-vacio svg{color:var(--brand-secondary)}
+.dc-shell .rp-vacio b{font-size:15px;font-weight:600;color:var(--text-on-surface)}
+.dc-shell .rp-vacio small{font-size:13px;max-width:36ch}
+
+@keyframes rp-abre{from{opacity:0;transform:translateY(-4px)}}
+
+/* Paso 3: resumen y motivo */
+.dc-shell .rp-resumen{display:grid;grid-template-columns:auto auto minmax(0,1fr);align-items:center;gap:var(--s6);
+  padding:var(--s5) var(--s6);border-radius:var(--radius-control);border:1px solid var(--brand-secondary);
+  background:radial-gradient(120% 140% at 0% 0%,color-mix(in srgb,var(--brand-secondary) 18%,transparent),transparent 60%),var(--bg-element)}
+@media (max-width:700px){.dc-shell .rp-resumen{grid-template-columns:auto 1fr;gap:var(--s4)}
+  .dc-shell .rp-resumen-quien{grid-column:1 / -1}}
+.dc-shell .rp-resumen-dia{display:grid;justify-items:center;width:72px;padding:var(--s2) 0;border-radius:14px;
+  background:var(--brand-secondary);color:var(--ink);line-height:1.1;box-shadow:0 10px 22px -10px var(--brand-secondary)}
+.dc-shell .rp-resumen-dia small{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.dc-shell .rp-resumen-dia b{font-size:28px;font-weight:800;font-variant-numeric:tabular-nums}
+.dc-shell .rp-resumen-hora{display:grid;gap:4px}
+.dc-shell .rp-resumen-hora b{font-size:34px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.02em;line-height:1}
+.dc-shell .rp-resumen-hora small{font-size:12px;color:var(--text-muted)}
+.dc-shell .rp-resumen-quien{display:flex;align-items:center;gap:var(--s3);padding-left:var(--s6);border-left:1px solid var(--border-main)}
+@media (max-width:700px){.dc-shell .rp-resumen-quien{padding-left:0;border-left:0}}
+.dc-shell .rp-resumen-quien > div{display:grid;gap:4px}
+.dc-shell .rp-resumen-quien b{font-size:16px;font-weight:600}
+.dc-shell .rp-resumen-quien small{font-size:12px;color:var(--text-muted)}
+.dc-shell .rp-motivo{display:grid;gap:var(--s2)}
+
+@media (prefers-reduced-motion:reduce){
+  .dc-shell .rp-pulso{animation:none}
+  .dc-shell .rp-persona,.dc-shell .rp-cal-dia,.dc-shell .rp-chip{transition:none}
+}
+
+/* Pie de Confirmación: lo que cambió en tres tarjetas y el CTA a todo el ancho; eliminar, aparte.
+   Cada tarjeta lleva su ícono en una insignia de su color y un gesto propio al pasar el mouse
+   (el calendario pasa la hoja, la cancelación tiembla, el teléfono suena). Entran escalonadas. */
+.dc-shell .cf-cambio{display:grid;gap:var(--s3)}
+.dc-shell .cf-cambio-cab{display:flex;align-items:center;justify-content:space-between;gap:var(--s3)}
+.dc-shell .cf-cambio-grid{display:grid;gap:var(--s3);grid-template-columns:repeat(3,minmax(0,1fr))}
+@media (max-width:700px){.dc-shell .cf-cambio-grid{grid-template-columns:1fr}}
+
+.dc-shell .cf-cambio-grid .fi-accion{min-height:68px;flex-direction:row;align-items:center;justify-content:flex-start;
+  gap:var(--s3);padding:var(--s3) var(--s5);font-size:15px;font-weight:600;letter-spacing:-.005em;
+  border-color:color-mix(in srgb,var(--c) 28%,transparent);
+  background:
+    radial-gradient(120% 140% at 0% 0%,color-mix(in srgb,var(--c) 22%,transparent),transparent 60%),
+    color-mix(in srgb,var(--c) 6%,var(--bg-element));
+  transition:transform .3s cubic-bezier(.16,1,.3,1),border-color .25s ease,box-shadow .3s ease;
+  animation:cf-entra .45s cubic-bezier(.16,1,.3,1) backwards}
+.dc-shell .cf-cambio-grid .fi-accion:nth-child(2){animation-delay:.06s}
+.dc-shell .cf-cambio-grid .fi-accion:nth-child(3){animation-delay:.12s}
+@keyframes cf-entra{from{opacity:0;transform:translateY(10px) scale(.98)}}
+.dc-shell .cf-cambio-grid .fi-accion:hover:not(:disabled){filter:none;transform:translateY(-3px);
+  border-color:color-mix(in srgb,var(--c) 60%,transparent);
+  box-shadow:0 14px 30px -18px color-mix(in srgb,var(--c) 90%,transparent)}
+.dc-shell .cf-cambio-grid .fi-accion:active:not(:disabled){transform:translateY(-1px) scale(.99)}
+.dc-shell .cf-cambio-grid .fi-accion:disabled{opacity:.45;cursor:default}
+
+/* Insignia del ícono */
+.dc-shell .cf-cambio-grid .fi-accion > span:first-child{width:40px;height:40px;flex-shrink:0;border-radius:12px;
+  align-items:center;justify-content:center;
+  background:color-mix(in srgb,var(--c) 18%,transparent);
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--c) 30%,transparent);
+  transition:background .25s ease,box-shadow .25s ease}
+.dc-shell .cf-cambio-grid .fi-accion svg{width:20px;height:20px;color:var(--c)}
+.dc-shell .cf-cambio-grid .fi-accion:hover:not(:disabled) > span:first-child{
+  background:color-mix(in srgb,var(--c) 28%,transparent);
+  box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--c) 55%,transparent),0 0 18px -4px color-mix(in srgb,var(--c) 70%,transparent)}
+
+/* Brillo que cruza la tarjeta */
+.dc-shell .cf-cambio-grid .fi-accion::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
+  background:linear-gradient(105deg,transparent 35%,color-mix(in srgb,var(--c) 18%,transparent) 50%,transparent 65%);
+  transform:translateX(-110%)}
+.dc-shell .cf-cambio-grid .fi-accion:hover:not(:disabled)::after{transform:translateX(110%);transition:transform .7s cubic-bezier(.16,1,.3,1)}
+
+/* Gestos de cada ícono */
+.dc-shell .cf-cambio-grid .fi-accion:nth-child(1):hover:not(:disabled) svg{animation:cf-hoja .6s cubic-bezier(.16,1,.3,1)}
+.dc-shell .cf-cambio-grid .fi-accion:nth-child(2):hover:not(:disabled) svg{animation:cf-tiembla .45s ease-in-out}
+.dc-shell .cf-cambio-grid .fi-accion:nth-child(3):hover:not(:disabled) svg{animation:cf-suena .7s ease-in-out}
+@keyframes cf-hoja{0%{transform:none}35%{transform:translateY(-3px) rotate(-8deg)}70%{transform:translateY(1px) rotate(4deg)}100%{transform:none}}
+@keyframes cf-tiembla{0%,100%{transform:none}20%{transform:translateX(-3px)}40%{transform:translateX(3px)}60%{transform:translateX(-2px)}80%{transform:translateX(2px)}}
+@keyframes cf-suena{0%,100%{transform:none}10%,30%,50%{transform:rotate(-14deg)}20%,40%,60%{transform:rotate(14deg)}75%{transform:rotate(-4deg)}}
+
+.dc-shell .cf-eliminar{background:none;border:0;padding:var(--s1) 0;display:inline-flex;align-items:center;gap:var(--s1);
+  color:var(--text-muted);font-size:12px;cursor:pointer;transition:color .2s ease}
+.dc-shell .cf-eliminar:hover:not(:disabled){color:var(--error)}
+.dc-shell .cf-eliminar:disabled{opacity:.4;cursor:default}
+
+/* CTA: degradado de la marca, sombra con caída, un brillo que pasa cada tanto y el check que se dibuja
+   al pasar el mouse. Deshabilitado queda plano y sin movimiento. */
+.dc-shell .btn.cf-cta{position:relative;isolation:isolate;overflow:hidden;display:flex;align-items:center;justify-content:center;
+  gap:var(--s3);width:100%;min-height:58px;font-size:15px;letter-spacing:.1em;border:0;
+  background:linear-gradient(120deg,var(--brand-secondary) 0%,color-mix(in srgb,var(--brand-secondary) 72%,#fff) 55%,var(--brand-secondary) 100%);
+  background-size:200% 100%;
+  box-shadow:0 12px 28px -12px color-mix(in srgb,var(--brand-secondary) 85%,transparent),inset 0 1px 0 rgb(255 255 255 / .25);
+  transition:transform .3s cubic-bezier(.16,1,.3,1),box-shadow .3s ease,background-position .6s ease;
+  animation:cf-entra .5s cubic-bezier(.16,1,.3,1) .18s backwards}
+.dc-shell .btn.cf-cta::after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
+  background:linear-gradient(105deg,transparent 40%,rgb(255 255 255 / .35) 50%,transparent 60%);
+  transform:translateX(-100%);animation:cf-brillo 4.5s cubic-bezier(.16,1,.3,1) 1.2s infinite}
+@keyframes cf-brillo{0%{transform:translateX(-100%)}30%,100%{transform:translateX(100%)}}
+.dc-shell .btn.cf-cta:hover:not(:disabled){transform:translateY(-2px);background-position:100% 0;
+  box-shadow:0 18px 36px -14px color-mix(in srgb,var(--brand-secondary) 95%,transparent),inset 0 1px 0 rgb(255 255 255 / .3)}
+.dc-shell .btn.cf-cta:active:not(:disabled){transform:translateY(0) scale(.995)}
+.dc-shell .btn.cf-cta svg{width:20px;height:20px;flex-shrink:0}
+.dc-shell .btn.cf-cta:hover:not(:disabled) svg{animation:cf-check .55s cubic-bezier(.16,1,.3,1)}
+@keyframes cf-check{0%{transform:scale(.6) rotate(-20deg);opacity:.4}60%{transform:scale(1.2) rotate(6deg);opacity:1}100%{transform:none}}
+.dc-shell .btn.cf-cta:disabled{background:var(--bg-element);color:var(--text-muted);box-shadow:none;animation:none}
+.dc-shell .btn.cf-cta:disabled::after{display:none}
+.dc-shell .cf-pie{display:flex;justify-content:flex-end}
+
+@media (prefers-reduced-motion:reduce){
+  .dc-shell .cf-cambio-grid .fi-accion,.dc-shell .cf-cta{animation:none;transition:none}
+  .dc-shell .cf-cambio-grid .fi-accion svg,.dc-shell .cf-cta svg{animation:none !important}
+  .dc-shell .cf-cambio-grid .fi-accion::after,.dc-shell .cf-cta::after{display:none}
+}
+
+/* «Siguiente» dentro de la franja del horario elegido, a la derecha */
+.dc-shell .rp-detalle-sig{margin-left:auto;animation:rp-abre .3s cubic-bezier(.16,1,.3,1) .08s backwards}
+.dc-shell .rp-detalle-sig svg{transition:transform .25s cubic-bezier(.16,1,.3,1)}
+.dc-shell .rp-detalle-sig:hover svg{transform:translateX(3px)}

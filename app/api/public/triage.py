@@ -113,16 +113,9 @@ def _trigger_triage_report_webhook(report):
         import requests
         import json
         from app.services.image_service import ImageService
-        
-        import os
-        url = os.environ.get('DISCORD_REPORTS_WEBHOOK')
-        if not url:
-            from app.models import Integration
-            integration = Integration.query.filter_by(key='discord_reports').first()
-            if integration and integration.payload_config:
-                url = integration.payload_config.get('webhook_url')
 
-        if not url:
+        from app.services.discord_avisos.envio import destino_reportes, post_reporte
+        if not destino_reportes():
             print("[Discord Triage] No webhook URL configured in environment or database.")
             return
         
@@ -154,7 +147,7 @@ def _trigger_triage_report_webhook(report):
         img_buffer = ImageService.generate_triage_report_card(img_data)
         
         # Metadatos Discord
-        content = f"🎯 **Reporte de triage** · {report.triage_name} · {report.date.strftime('%d/%m/%Y')} @everyone"
+        content = f"🎯 **Reporte de triage** · {report.triage_name} · {report.date.strftime('%d/%m/%Y')}"
         
         json_payload = {
             "content": content,
@@ -173,7 +166,7 @@ def _trigger_triage_report_webhook(report):
             'file': ('triage_report.png', img_buffer, 'image/png')
         }
         
-        res = requests.post(url, files=files, data={"payload_json": json.dumps(json_payload)}, timeout=10)
+        res = post_reporte(files=files, data={"payload_json": json.dumps(json_payload)}, timeout=10)
         print(f"[Discord Triage] Status: {res.status_code}")
         
     except Exception as e:

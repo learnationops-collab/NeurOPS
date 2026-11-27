@@ -307,6 +307,10 @@
 .thalamus.inbox .cv-botones{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .thalamus.inbox .cv-botones span{padding:4px 10px;border-radius:999px;border:1px solid currentColor;font-size:12px;font-weight:700}
 .thalamus.inbox .cv-meta{display:flex;align-items:center;gap:4px;margin-top:4px;font-size:10.5px;opacity:.75}
+.thalamus.inbox .cv-comentario{display:flex;align-items:center;gap:4px;margin-bottom:4px;font-size:10.5px;font-weight:600;color:var(--warning)}
+.thalamus.inbox .cv-comentario a{margin-left:6px;color:inherit;text-decoration:underline}
+.thalamus.inbox .cv-mas{display:block;margin:6px auto 2px;padding:4px 10px;border:0;background:none;color:var(--text-muted);font-size:11.5px;font-weight:600;text-decoration:underline;cursor:pointer}
+.thalamus.inbox .cv-mas:hover{color:var(--brand-secondary)}
 /* El botón que eligió el lead, relleno; los demás, apagados. Debajo de su respuesta, qué activó. */
 .thalamus.inbox .cv-botones--respondido span{opacity:.45}
 .thalamus.inbox .cv-botones--respondido .cv-elegido{opacity:1;display:inline-flex;align-items:center;gap:4px;background:var(--on-brand);color:var(--brand-secondary);border-color:var(--on-brand)}

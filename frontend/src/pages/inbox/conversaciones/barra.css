@@ -1,0 +1,62 @@
+/* La barra de arriba del Inbox (ADR-W247): el Filtro con Ordenar y Elegir pegados, el grupo Tareas · Avisos · Stats,
+   las vistas del Filtro en tarjetas y la cabecera de la lista con el número grande y la barrita de urgencia. */
+
+/* Grupos de botones pegados: una sola cápsula, los botones sin borde adentro. */
+.thalamus.inbox .cv-filtro-grupo,.thalamus.inbox .cv-barra-grupo{display:flex;align-items:center;gap:2px;padding:3px;border-radius:999px;flex:none;
+  border:1px solid var(--border-subtle);background:color-mix(in srgb,var(--bg-input, #0b1030) 70%,transparent)}
+.thalamus.inbox :is(.cv-filtro-grupo,.cv-barra-grupo) .cv-barra-btn{height:30px;padding:0 11px;border-color:transparent;background:none}
+.thalamus.inbox :is(.cv-filtro-grupo,.cv-barra-grupo) .cv-barra-btn:hover{background:var(--bg-item, rgba(255,255,255,.06));border-color:transparent}
+.thalamus.inbox :is(.cv-filtro-grupo,.cv-barra-grupo) .cv-barra-btn--on{background:var(--brand-secondary);color:var(--on-brand, #fff)}
+.thalamus.inbox .cv-filtro-grupo .ui-ibtn{width:30px;height:30px;border-color:transparent;background:none}
+.thalamus.inbox .cv-filtro-grupo .ui-ibtn:hover{background:var(--bg-item, rgba(255,255,255,.06))}
+.thalamus.inbox .cv-filtro-grupo .cv-macro-pop,.thalamus.inbox .cv-filtro-grupo .cv-orden-pop{left:0;right:auto;z-index:60}
+.thalamus.inbox .cv-filtro-grupo .cv-macro-pop{width:min(660px,calc(100vw - 32px))}
+.thalamus.inbox .cv-elegir:empty{padding:0 8px}
+
+/* El botón Filtro: con filtros puestos se tiñe, el número de conversaciones entra con un pop y un punto por filtro. */
+.thalamus.inbox .cv-filtro-btn{gap:7px}
+.thalamus.inbox .cv-filtro-btn--activo{color:var(--brand-secondary)}
+.thalamus.inbox .cv-filtro-btn[aria-expanded="true"]{background:var(--brand-secondary-surface, color-mix(in srgb,var(--brand-secondary) 14%,transparent))}
+.thalamus.inbox .cv-filtro-n{min-width:22px;height:20px;padding:0 6px;border-radius:99px;display:grid;place-items:center;font-size:11px;font-weight:900;
+  font-variant-numeric:tabular-nums;color:var(--text-main);background:color-mix(in srgb,var(--brand-secondary) 22%,transparent);animation:ib-pop .35s cubic-bezier(.3,1.6,.5,1) both}
+.thalamus.inbox .cv-filtro-puntos{display:inline-flex;gap:3px}
+.thalamus.inbox .cv-filtro-puntos i{width:5px;height:5px;border-radius:50%;background:var(--brand-secondary);animation:ib-pop .3s calc(var(--i) * 60ms) both}
+
+/* Las vistas del Filtro: tarjetas con ícono, número grande y nombre. */
+.thalamus.inbox .cv-vistas{grid-column:1 / -1;display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:6px;padding-bottom:var(--s3);border-bottom:1px solid var(--border-subtle)}
+.thalamus.inbox .cv-vista{--c:var(--info);position:relative;display:grid;justify-items:start;gap:2px;padding:9px 10px;border-radius:13px;cursor:pointer;text-align:left;font:inherit;
+  color:var(--text-muted);border:1px solid var(--border-subtle);background:color-mix(in srgb,var(--c) 5%,transparent);
+  animation:ib-mis .4s calc(var(--i) * 40ms) cubic-bezier(.3,1.4,.5,1) both;transition:border-color .2s,background .2s,transform .15s,box-shadow .2s}
+.thalamus.inbox .cv-vista:hover{border-color:color-mix(in srgb,var(--c) 45%,transparent);transform:translateY(-1px)}
+.thalamus.inbox .cv-vista--on{color:var(--text-main);border-color:var(--c);background:color-mix(in srgb,var(--c) 16%,transparent);
+  box-shadow:0 0 22px -6px color-mix(in srgb,var(--c) 70%,transparent)}
+.thalamus.inbox .cv-vista-ico{color:var(--c)}
+.thalamus.inbox .cv-vista b{font-size:19px;font-weight:900;line-height:1.1;color:var(--text-main);font-variant-numeric:tabular-nums}
+.thalamus.inbox .cv-vista-t{font-size:11px;font-weight:700;line-height:1.25}
+.thalamus.inbox .cv-vista-x{position:absolute;top:6px;right:6px;width:18px;height:18px;display:grid;place-items:center;border-radius:50%;opacity:0;color:var(--text-muted);transition:opacity .15s}
+.thalamus.inbox .cv-vista:hover .cv-vista-x{opacity:1}
+.thalamus.inbox .cv-vista-x:hover{background:var(--bg-item);color:var(--error)}
+
+/* La cabecera de la lista. */
+.thalamus.inbox .cv-lc{display:flex;align-items:center;gap:9px;padding:2px 8px 10px}
+.thalamus.inbox .cv-lc-n{font-size:26px;font-weight:900;line-height:1;letter-spacing:-.03em;font-variant-numeric:tabular-nums;color:var(--text-main);
+  animation:ib-pop .4s cubic-bezier(.3,1.6,.5,1) both}
+.thalamus.inbox .cv-lc-t{display:grid;line-height:1.15;min-width:0}
+.thalamus.inbox .cv-lc-t b{font-size:12px;font-weight:800;color:var(--text-main)}
+.thalamus.inbox .cv-lc-t small{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;color:var(--text-muted)}
+.thalamus.inbox .cv-lc-barra{flex:1;min-width:40px;max-width:120px;height:6px;margin-left:auto;display:flex;gap:2px;border-radius:99px;overflow:hidden}
+.thalamus.inbox .cv-lc-barra i{min-width:6px;border-radius:99px;transform-origin:left;animation:ib-crece .6s calc(var(--i) * 90ms) cubic-bezier(.2,.8,.3,1) both}
+.thalamus.inbox .cv-lc-ok{background:var(--success)}
+.thalamus.inbox .cv-lc-atento{background:var(--warning)}
+.thalamus.inbox .cv-lc-tarde{background:var(--error)}
+.thalamus.inbox .cv-lc-nuevos{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 8px;border-radius:99px;font-size:11px;font-weight:900;
+  color:var(--brand-secondary);background:color-mix(in srgb,var(--brand-secondary) 14%,transparent)}
+.thalamus.inbox .cv-lc-barra + .cv-lc-nuevos{margin-left:0}
+.thalamus.inbox .cv-lc > .cv-lc-nuevos:nth-child(3){margin-left:auto}
+.thalamus.inbox .cv-lc-nuevos i{position:relative;width:6px;height:6px;border-radius:50%;background:currentColor}
+.thalamus.inbox .cv-lc-nuevos i::after{content:"";position:absolute;inset:-2px;border-radius:50%;border:1.5px solid currentColor;animation:ib-activo 1.6s ease-out infinite}
+@keyframes ib-crece{from{transform:scaleX(0)}to{transform:none}}
+
+@media (prefers-reduced-motion:reduce){
+  .thalamus.inbox .cv-vista,.thalamus.inbox .cv-lc-n,.thalamus.inbox .cv-lc-barra i,.thalamus.inbox .cv-lc-nuevos i::after,.thalamus.inbox .cv-filtro-n{animation:none}
+}

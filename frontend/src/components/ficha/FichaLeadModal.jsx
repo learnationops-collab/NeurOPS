@@ -6,6 +6,7 @@ import FichaTabs from './FichaTabs';
 import { Aviso, diaLegible, useMovimiento } from './piezas';
 import NotaEnTooltip from './piezas/NotaEnTooltip';
 import BarraGuardado from './piezas/BarraGuardado';
+import VolverArriba from './piezas/volverArriba';
 import { Hueso } from '../huesos/Huesos';
 import { enSoloLectura, leerEstado } from './estadoFicha';
 import { ejecutarAccion, ejecutarConsulta, mensajeDeError, obtenerFicha } from './fichaApi';
@@ -18,6 +19,7 @@ import TabFormulario from './tabs/TabFormulario';
 import TabComunicacion from './tabs/TabComunicacion';
 import ResultadoTriage from './tabs/ResultadoTriage';
 import './ficha.css';
+import './ficha-telefono.css';
 
 /**
  * Cascarón de la ficha del lead: scrim, cabecera, tablist y UN panel.
@@ -113,6 +115,7 @@ const MENSAJES = {
     quitar_acceso_academia: 'Acceso a la Academia quitado: vence hoy. Se puede renovar cuando haga falta.',
     reprogramar: 'Llamada reprogramada.',
     cancelar: 'Cancelación registrada.',
+    no_show: 'No show registrado.',
     descalificar: 'Lead descalificado: la llamada se canceló.',
     pasar_a_recuperacion: 'Llamada pasada a seguimiento de recuperación: está en tu pestaña Seguimientos.',
     eliminar: 'Lead eliminado.',
@@ -360,13 +363,21 @@ const FichaLeadModal = ({
     }, []);
     const onRecargar = useCallback(() => cargar(), [cargar]);
 
-    const props = { ficha, onAccion, onConsultar, onRecargar, irA, puedeEditar: estado.puedeEditar };
+    // Enfoque: con una sub-vista abierta (reprogramar, canceló, no show…) la ficha muestra solo la cabecera
+    // y esa tarea; las pestañas y la barra de guardado vuelven al tocar «Volver» (25/11/2026).
+    const [enfoque, setEnfoque] = useState(false);
+    useEffect(() => { setEnfoque(false); }, [pestana, appointmentId]);
+    // El «Volver» de la sub-vista abierta, que se dibuja en la cabecera (piezas/volverArriba.js).
+    const [volver, setVolver] = useState(null);
+    const volverArriba = useMemo(() => ({ registrar: (fn) => setVolver(() => fn) }), []);
+
+    const props = { ficha, onAccion, onConsultar, onRecargar, irA, puedeEditar: estado.puedeEditar, onEnfoque: setEnfoque };
 
     const panel = () => {
         switch (pestana) {
             case 'conf': return <TabConfirmacion {...props} />;
             // La llamada de triage tiene su propio reporte (calificación y low ticket), no el árbol del closer.
-            case 'resultado': if (ficha?.triage?.es_triage) return <ResultadoTriage {...props} />;
+            case 'resultado': if (ficha?.triage?.es_triage) return <ResultadoTriage {...props} seguimientoPedido={seguimientoPedido} />;
                 return TabResultado
                 ? <Suspense fallback={<Esqueleto />}><TabResultado {...props} arrancarEnVenta={venderAlAbrir} seguimientoPedido={seguimientoPedido} /></Suspense>
                 : <Faltante label="Resultado" />;
@@ -397,24 +408,25 @@ const FichaLeadModal = ({
                             <button type="button" className="ibtn" aria-label="Cerrar" onClick={onCerrar}>×</button>
                         </div>
                     ) : (
-                        <FichaHeader ficha={ficha} onAccion={onAccion}
+                        <FichaHeader ficha={ficha} onAccion={onAccion} onVolver={volver}
                             onCerrar={onCerrar} puedeEditar={estado.puedeEditar} />
                     )}
                 </div>
 
                 {/* El tablist espera a la ficha: sin ella `estado.pestanas` es el catálogo
                     entero y se verían seis pestañas que todavía no se sabe si aplican. */}
-                {ficha && estado.pestanas.length > 0 && (
+                {ficha && !enfoque && estado.pestanas.length > 0 && (
                     <FichaTabs pestanas={estado.pestanas} activa={pestana} onCambiar={setPestana}
                         contadores={{ com: ficha.comunicacion?.notas?.length || 0 }} />
                 )}
 
+                <VolverArriba.Provider value={volverArriba}>
                 <div className="fi-modal-panel"
                     id={pestana ? `fi-panel-${pestana}` : undefined}
                     role={pestana ? 'tabpanel' : undefined}
                     aria-labelledby={pestana ? `fi-tab-${pestana}` : undefined}>
                     <div style={{ display: 'grid', gap: 'var(--s3)' }}>
-                        {ficha && !soloLectura && estado.puedeEditar && <BarraGuardado leidaEn={leidaEn} onVerificar={() => cargar()} />}
+                        {ficha && !enfoque && !soloLectura && estado.puedeEditar && <BarraGuardado leidaEn={leidaEn} onVerificar={() => cargar()} />}
                         {aviso && (
                             <Aviso tono={aviso.tono} titulo={aviso.texto} onCerrar={() => setAviso(null)} />
                         )}
@@ -422,7 +434,7 @@ const FichaLeadModal = ({
                             vista en cualquier pestaña para que el closer llegue con contexto. */}
                         {/* Solo el título: la nota completa (que también queda en Comunicación) se
                             lee con formato al pasar el ratón, para no ocupar media ficha. */}
-                        {ficha?.triage?.viene_de_triage && (
+                        {!enfoque && ficha?.triage?.viene_de_triage && (
                             <NotaEnTooltip texto={ficha.triage.viene_de_triage.nota || 'Sin nota del triage.'}>
                                 <Aviso tono="info" titulo={[
                                     `Viene de triage · aprobado por ${ficha.triage.viene_de_triage.por || 'el triage'}`,
@@ -443,6 +455,7 @@ const FichaLeadModal = ({
                         )}
                     </div>
                 </div>
+                </VolverArriba.Provider>
             </div>
         </div>
     );

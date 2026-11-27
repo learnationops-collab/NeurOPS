@@ -53,6 +53,9 @@ def escribir_al_lead(contacto_id):
                                       nombre_audio=audio.name if audio else None,
                                       pausar=datos.get('pausar', True) is not False,
                                       guia=guia.clave_valida(datos.get('guia')))
+            # La casilla «Seguimiento» del chat (ADR-W255): sin tocarla no viene y decide la regla de las 12 h.
+            if isinstance(datos.get('seguimiento'), bool):
+                mensaje.seguimiento = datos['seguimiento']
             hasta = contacto.bot_pausado_hasta
             respuesta = {'id': mensaje.id, 'texto': mensaje.texto, 'en': mensaje.enviado_en.isoformat() + 'Z',
                          'bot_pausado_hasta': hasta.isoformat() + 'Z' if hasta else None}

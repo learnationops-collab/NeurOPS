@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { CalendarCheck } from 'lucide-react';
 import useEnPantalla from '../../../components/ui/useEnPantalla';
-import { Avatar, IconButton } from '../../../components/standard';
+import { Avatar } from '../../../components/standard';
 import { inboxApi } from '../api';
 import { recordado, recordar } from '../recuerdo';
 import { quien } from './colas';
@@ -33,8 +33,11 @@ export default function MisTareas({ onAbrir, marca }) {
     const vencidas = tareas.filter((t) => t.vence && new Date(t.vence) < ahora).length;
     return (
         <div className="cv-macro" ref={caja}>
-            <IconButton label="Mis tareas" data-tip="Mis tareas" pressed={abierto} onClick={() => setAbierto((a) => !a)}
-                icon={<><CalendarCheck size={16} />{tareas.length > 0 && <span className={`cv-macro-n${vencidas ? ' cv-macro-n--alerta' : ''}`}>{tareas.length}</span>}</>} />
+            <button type="button" className={`cv-barra-btn${abierto ? ' cv-barra-btn--on' : ''}`} aria-expanded={abierto} data-tip="Mis tareas|Las de todas tus conversaciones"
+                onClick={() => setAbierto((a) => !a)}>
+                <CalendarCheck size={15} aria-hidden="true" />Tareas
+                {tareas.length > 0 && <span className={`cv-barra-n${vencidas ? ' cv-barra-n--alerta' : ''}`}>{tareas.length}</span>}
+            </button>
             {abierto && (
                 <div className="cv-tareas-pop" ref={pop} role="dialog" aria-label="Mis tareas">
                     <span className="t-rotulo">Mis tareas</span>

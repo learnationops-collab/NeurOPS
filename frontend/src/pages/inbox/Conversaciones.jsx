@@ -1,35 +1,42 @@
 // Sección Conversaciones, como bandeja de trabajo (estilo Kommo): la lista, el chat y la ficha del lead,
-// o la vista Embudo (una columna por sub-etapa). En la cabecera, al lado del título, los filtros guardados
-// y Chats | Embudo; a la derecha, Mis tareas, avisos y Stats. Arriba de la lista (ADR-W184): el buscador, a quién
-// está asignada, el filtro, Ordenar y «Elegir» (etiquetar varias), y los filtros guardados; en el Embudo, que no
-// tiene lista, el buscador y el filtro van en la cabecera. La lista y el chat abierto
+// o la vista Embudo (una columna por sub-etapa). En la cabecera (ADR-W247): el Filtro (vistas, a quién está asignada
+// y todo lo demás), Ordenar y «Elegir» (etiquetar varias), Chats | Embudo; a la derecha, Activo, y Mis tareas, avisos
+// y Stats en un solo grupo. Arriba de la lista solo el buscador (en el Embudo va en la cabecera). La lista y el chat abierto
 // se vuelven a pedir solos cada 20 s. Con el teclado: ↑↓ cambian de conversación y Esc la cierra. Las sin leer
 // van al título de la pestaña y, con permiso, como aviso del escritorio (`useAvisos`).
 import { useCallback, useEffect, useState } from 'react';
 import { BarChart3, Bell, Kanban, ListChecks, MessageSquare, Search, Tag } from 'lucide-react';
-import { Button, EmptyState, HeaderActions, IconButton, InputGroup, Panel, Segmented, Select } from '../../components/standard';
+import { Button, EmptyState, HeaderActions, InputGroup, Panel, Segmented } from '../../components/standard';
 import { useAuth } from '../../contexts/AuthContext';
 import { inboxApi } from './api';
-import { REFRESCO, asignados, filtrar, ordenDe } from './conversaciones/colas';
-import ChipsGuardados from './conversaciones/ChipsGuardados';
+import useAltoLibre from './conversaciones/useAltoLibre';
+import { REFRESCO, filtrar, ordenDe } from './conversaciones/colas';
+import Canales from './conversaciones/Canales';
 import EtiquetarVarias from './conversaciones/EtiquetarVarias';
 import Ordenar from './conversaciones/Ordenar';
 import Detalle from './conversaciones/Detalle';
 import Embudo from './conversaciones/Embudo';
 import Fila from './conversaciones/Fila';
-import FiltrosGuardados from './conversaciones/FiltrosGuardados';
+import ListaCab from './conversaciones/ListaCab';
 import MacroFiltro from './conversaciones/MacroFiltro';
 import MisTareas from './conversaciones/MisTareas';
-import Resumen from './conversaciones/Resumen';
 import Stats from './conversaciones/Stats';
+import Actividad from './conversaciones/Actividad';
 import { VACIO } from './conversaciones/filtros';
 import { useBorradores } from './conversaciones/borradores';
 import useAvisos from './conversaciones/useAvisos';
 import { recordado, recordar } from './recuerdo';
 import './conversaciones/trabajo.css';
 import './conversaciones/setting.css';
+import './conversaciones/crono.css';
+import './conversaciones/tarjeta.css';
+import './conversaciones/barra.css';
+import './conversaciones/composer.css';
+import TourSeguimientos from './tour/TourSeguimientos';
+import TourFiltros from './tour/TourFiltros';
 
-const LIMITE = 300;
+// De a cuántas se cargan (pedido de los setters, 24/11: con 300 se perdían los seguimientos de hace 4 días).
+const LIMITE = 500;
 const VISTAS = [
     { value: 'chats', label: 'Chats', icon: <MessageSquare size={14} /> },
     { value: 'embudo', label: 'Embudo', icon: <Kanban size={14} /> },
@@ -46,19 +53,19 @@ function useAhora() {
 }
 
 // La lista: al buscar, a los 250 ms; después, cada REFRESCO sin vaciar lo que se ve. `vuelta` la pide ya.
-function useConversaciones(buscar) {
+function useConversaciones(buscar, limite) {
     const [datos, setDatos] = useState(() => recordado(`conversaciones:${buscar.trim()}`));
     const [error, setError] = useState(null);
     const [vuelta, setVuelta] = useState(0);
     useEffect(() => {
         let vivo = true;
-        const pedir = () => inboxApi.conversaciones(buscar.trim(), LIMITE)
+        const pedir = () => inboxApi.conversaciones(buscar.trim(), limite)
             .then((d) => { recordar(`conversaciones:${buscar.trim()}`, d); if (vivo) { setDatos(d); setError(null); } })
             .catch(() => { if (vivo) setError('No se pudieron cargar las conversaciones'); });
         const primera = setTimeout(pedir, vuelta ? 0 : 250);
         const cada = setInterval(pedir, REFRESCO);
         return () => { vivo = false; clearTimeout(primera); clearInterval(cada); };
-    }, [buscar, vuelta]);
+    }, [buscar, vuelta, limite]);
     const recargar = useCallback(() => setVuelta((v) => v + 1), []);
     return [datos, error, recargar];
 }
@@ -90,8 +97,10 @@ export default function Conversaciones() {
     const { user } = useAuth() || {};
     const yo = user?.id ?? null;
     const [buscar, setBuscar] = useState('');
+    // La bandeja termina arriba del dock, nunca debajo (`useAltoLibre`).
+    const [bandeja, alto] = useAltoLibre();
     // El setter arranca en lo suyo sin respuesta; el resto, en todo lo que espera.
-    const [filtro, setFiltro] = useState(() => ({ ...VACIO, cola: 'esperan', asignado: user?.role === 'setter' ? yo : null }));
+    const [filtro, setFiltro] = useState(() => ({ ...VACIO, cola: 'esperan', asignado: ['setter', 'triage'].includes(user?.role) ? yo : null }));
     const [vista, setVista] = useState('chats');
     // `?c=<id>` abre esa conversación (el link «Abrir chat» de la lista del reporte del setter).
     const [elegida, setElegida] = useState(() => Number(new URLSearchParams(window.location.search).get('c')) || null);
@@ -102,7 +111,8 @@ export default function Conversaciones() {
     const [marcadas, setMarcadas] = useState([]);
     const [etiquetando, setEtiquetando] = useState(false);
     const borradores = useBorradores();
-    const [datos, error, recargar] = useConversaciones(buscar);
+    const [limite, setLimite] = useState(LIMITE);
+    const [datos, error, recargar] = useConversaciones(buscar, limite);
     const ahora = useAhora();
 
     // Lo que acabo de leer deja de contar como «sin leer» sin esperar a la próxima vuelta (hasta que llegue otro).
@@ -115,30 +125,17 @@ export default function Conversaciones() {
     const dejarDeElegir = () => { setEligiendo(false); setMarcadas([]); };
     const abrir = useCallback((id) => { setVista('chats'); setElegida(id); }, []);
     useTeclado(vista === 'chats' && !eligiendo ? visibles : [], elegida, setElegida);
-    const avisos = useAvisos(lista, { yo, soloMias: user?.role === 'setter', elegida, onAbrir: abrir });
+    const avisos = useAvisos(lista, { yo, soloMias: ['setter', 'triage'].includes(user?.role), elegida, onAbrir: abrir });
     // En lo propio no hace falta decir de quién es; en el resto, sí.
     const conAsignado = filtro.asignado !== yo;
 
     const buscador = (
         <InputGroup className="cv-buscar" prefix={<Search size={16} />}>
             <label className="sr" htmlFor="cv-buscar">Buscar por usuario</label>
-            <input id="cv-buscar" value={buscar} onChange={(e) => setBuscar(e.target.value)} placeholder="Buscar por usuario o nombre" autoComplete="off" />
+            <input id="cv-buscar" value={buscar} onChange={(e) => setBuscar(e.target.value)} placeholder="Usuario, nombre o #palabra" autoComplete="off" />
         </InputGroup>
     );
     const macro = <MacroFiltro lista={lista} filtro={filtro} onCambiar={setFiltro} ahora={ahora} yo={yo} />;
-    // A quién está asignada, al lado del filtro (Social Selling, 17/11).
-    const opcionesAsignado = [
-        { value: 'todos', label: `De todos · ${lista.length}` },
-        ...asignados(lista).map((s) => ({ value: String(s.id), label: `${s.id === yo ? 'Asignadas a vos' : s.username} · ${s.n}` })),
-        { value: 'ninguno', label: `Sin asignar · ${lista.filter((c) => !c.asignado).length}` },
-    ];
-    const valorAsignado = filtro.asignado == null ? 'todos' : String(filtro.asignado);
-    // El setter arranca en lo suyo aunque todavía no tenga ninguna asignada.
-    if (!opcionesAsignado.some((o) => o.value === valorAsignado)) {
-        opcionesAsignado.splice(1, 0, { value: valorAsignado, label: filtro.asignado === yo ? 'Asignadas a vos · 0' : 'Otro setter · 0' });
-    }
-    const elegirAsignado = (v) => setFiltro({ ...filtro, asignado: v === 'todos' ? null : v === 'ninguno' ? 'ninguno' : Number(v) });
-
     let listado;
     if (error && !datos) listado = <EmptyState>{error}</EmptyState>;
     else if (!datos) listado = <EmptyState>Cargando…</EmptyState>;
@@ -151,16 +148,15 @@ export default function Conversaciones() {
     } else if (!visibles.length) {
         listado = <EmptyState>{filtro.cola === 'esperan' ? 'Nadie espera respuesta con este filtro. 🎉' : 'No hay conversaciones con este filtro.'}</EmptyState>;
     } else {
-        const sinLeer = visibles.filter((c) => c.sin_leer > 0).length;
         listado = (
             <>
-                <p className="cv-lista-cab t-cap mut">
-                    {visibles.length === 1 ? '1 conversación' : `${visibles.length} conversaciones`}
-                    {` · ${orden.corto}`}
-                    {sinLeer > 0 && <span className="cv-lista-nuevos"> · {sinLeer} sin leer</span>}
-                </p>
+                <ListaCab visibles={visibles} orden={orden} ahora={ahora} />
                 <ul>{visibles.map((c) => <Fila key={c.id} c={c} ahora={ahora} yo={yo} conAsignado={conAsignado} elegida={elegida === c.id} borrador={borradores[c.id]} onElegir={setElegida}
-                    eligiendo={eligiendo} marcada={marcadas.includes(c.id)} onMarcar={marcar} />)}</ul>
+                    eligiendo={eligiendo} marcada={marcadas.includes(c.id)} onMarcar={marcar} fases={filtro.fases} />)}</ul>
+                {lista.length >= limite && (
+                    <button type="button" className="cv-mas" data-tip="Cargar más|Los filtros miran solo las conversaciones cargadas"
+                        onClick={() => setLimite((n) => n + LIMITE)}>Cargar {LIMITE} más</button>
+                )}
                 {eligiendo ? (
                     <div className="cv-masiva">
                         <b>{marcadas.length ? `${marcadas.length} ${marcadas.length === 1 ? 'elegida' : 'elegidas'}` : 'Tocá las que querés etiquetar'}</b>
@@ -175,34 +171,40 @@ export default function Conversaciones() {
         <>
             <HeaderActions>
                 <div className="barra cv-barra">
-                    <FiltrosGuardados lista={lista} filtro={filtro} onCambiar={setFiltro} ahora={ahora} yo={yo} />
+                    <div className="cv-filtro-grupo">
+                        {macro}
+                        <Ordenar filtro={filtro} onCambiar={setFiltro} />
+                        {vista === 'chats' && (
+                            <button type="button" className={`cv-barra-btn cv-elegir${eligiendo ? ' cv-barra-btn--on' : ''}`} aria-pressed={eligiendo}
+                                data-tip={eligiendo ? 'Listo|Terminar de elegir' : 'Elegir|Marcar varias para etiquetarlas juntas'}
+                                onClick={() => (eligiendo ? dejarDeElegir() : setEligiendo(true))}>
+                                <ListChecks size={15} aria-hidden="true" />{eligiendo ? 'Listo' : ''}
+                            </button>
+                        )}
+                    </div>
                     <Segmented size="sm" label="Vista" value={vista} onChange={setVista} options={VISTAS} />
+                    {vista === 'embudo' && buscador}
                     <div className="barra-der">
-                        {vista === 'embudo' && buscador}
-                        {vista === 'embudo' && macro}
+                        <Actividad />
+                        <div className="cv-barra-grupo">
                         <MisTareas onAbrir={abrir} marca={datos} />
                         {avisos.soportado && avisos.permiso === 'default' && (
-                            <IconButton label="Activar avisos" data-tip="Activar avisos|Te avisa cuando te escribe un lead, aunque estés en otra pestaña" icon={<Bell size={16} />} onClick={avisos.pedirPermiso} />
+                            <button type="button" className="cv-barra-btn" data-tip="Activar avisos|Te avisa cuando te escribe un lead, aunque estés en otra pestaña" onClick={avisos.pedirPermiso}>
+                                <Bell size={15} aria-hidden="true" />Avisos
+                            </button>
                         )}
-                        <IconButton label="Stats" data-tip="Stats" icon={<BarChart3 size={16} />} onClick={() => setStats(true)} />
+                        <button type="button" className="cv-barra-btn" data-tip="Stats|Cómo vienen tus conversaciones" onClick={() => setStats(true)}>
+                            <BarChart3 size={15} aria-hidden="true" />Stats
+                        </button>
+                        </div>
                     </div>
                 </div>
             </HeaderActions>
-            {vista === 'embudo' ? <Embudo lista={visibles} ahora={ahora} onAbrir={abrir} onMovida={recargar} /> : (
-                <div className={`cv${elegida ? ' cv--abierta' : ''}`}>
+            {vista === 'embudo' ? <Embudo lista={filtrar(lista, { ...filtro, ahora, conCerradas: true })} ahora={ahora} onAbrir={abrir} onMovida={recargar} /> : (
+                <div className={`cv${elegida ? ' cv--abierta' : ''}`} ref={bandeja} style={alto ? { height: alto, minHeight: 0 } : undefined}>
                     <Panel as="section" size="sm" className="cv-lista" aria-label="Conversaciones">
-                        <div className="cv-lista-buscar">
-                            {buscador}
-                            <div className="cv-lista-filtros">
-                                <Select label="Asignadas a" className="cv-asignado-sel" value={valorAsignado} options={opcionesAsignado} onChange={elegirAsignado} />
-                                {macro}
-                                <Ordenar filtro={filtro} onCambiar={setFiltro} />
-                                <Button size="sm" variant={eligiendo ? 'primary' : 'secondary'} icon={<ListChecks />}
-                                    onClick={() => (eligiendo ? dejarDeElegir() : setEligiendo(true))}>{eligiendo ? 'Listo' : 'Elegir'}</Button>
-                            </div>
-                        </div>
-                        <ChipsGuardados lista={lista} filtro={filtro} onCambiar={setFiltro} ahora={ahora} />
-                        {datos && <Resumen lista={lista} filtro={filtro} onCambiar={setFiltro} yo={yo} />}
+                        <div className="cv-lista-buscar">{buscador}</div>
+                        <Canales lista={lista} filtro={filtro} onCambiar={setFiltro} />
                         {listado}
                     </Panel>
                     {elegida
@@ -214,6 +216,9 @@ export default function Conversaciones() {
                 <EtiquetarVarias conversaciones={lista.filter((c) => marcadas.includes(c.id))} onCerrar={() => setEtiquetando(false)}
                     onHecho={() => { setEtiquetando(false); dejarDeElegir(); recargar(); }} />
             )}
+            {/* El recorrido de seguimientos (ADR-W255): portada y pasos sobre el Inbox de verdad. */}
+            <TourSeguimientos user={user} />
+            <TourFiltros user={user} />
             {stats && (
                 <Stats lista={lista} mediana={datos?.mediana_respuesta} setters={datos?.medianas_setters || []} yo={yo} ahora={ahora}
                     onCerrar={() => setStats(false)} />

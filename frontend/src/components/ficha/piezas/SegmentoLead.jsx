@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Check } from 'lucide-react';
 import { COLOR_SEGMENTO } from '../../../pages/admin/marketing/todos/segmentos';
+import useEnPantalla from '../../ui/useEnPantalla';
 
 /**
  * El segmento A/B/C/D del lead junto al nombre de la ficha, como un círculo del color del segmento con su letra
@@ -24,6 +25,7 @@ const SegmentoLead = ({ segmento, puntos, manual, puedeCambiar, onCambiar }) => 
     const [abierto, setAbierto] = useState(false);
     const [guardando, setGuardando] = useState(false);
     const ref = useRef(null);
+    const pop = useEnPantalla(); // el menú va en la capa superior, encima de todo
 
     useEffect(() => {
         if (!abierto) return undefined;
@@ -57,7 +59,7 @@ const SegmentoLead = ({ segmento, puntos, manual, puedeCambiar, onCambiar }) => 
                 <Circulo segmento={segmento} />
             </button>
             {abierto && (
-                <div className="fi-pop fi-segl-menu" role="listbox" aria-label="Segmento del lead">
+                <div className="fi-pop fi-segl-menu" ref={pop} role="listbox" aria-label="Segmento del lead">
                     {OPCIONES.map((o) => {
                         const on = (o.key || null) === (segmento || null);
                         return (

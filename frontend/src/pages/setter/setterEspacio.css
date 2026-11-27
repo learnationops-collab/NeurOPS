@@ -52,12 +52,8 @@
   letter-spacing:-.025em;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .setter-espacio .hola h1 .sub{color:var(--text-muted);font-weight:600;letter-spacing:-.015em}
 .setter-espacio .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-.setter-espacio .setter-volver{margin-left:auto}
 /* Sus links de agendamiento, al final de la línea: tocar uno lo copia. */
 .setter-espacio .setter-links{display:flex;flex-wrap:wrap;gap:var(--s2);margin-left:auto;min-width:0}
-.setter-espacio .setter-links + .setter-volver{margin-left:0}
-.setter-espacio .setter-link{max-width:260px;min-width:0}
-.setter-espacio .setter-link-t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* Las pestañas del encabezado, como en el artifact: la elegida en el rosa de marca. */
 .setter-espacio .setter-top .tabs{background:var(--bg-input);border-color:var(--border-subtle)}
@@ -85,3 +81,51 @@
   .setter-espacio .dc-shell .tab[aria-selected="true"]{animation:none}
   .setter-espacio .aura-pag i{animation:none}
 }
+
+/* Botones redondos del encabezado (26/11/2026): solo el ícono; al pasar el mouse se estiran y dicen qué son. */
+.setter-espacio .setter-top{flex-wrap:nowrap}
+.setter-espacio .setter-links{flex-wrap:nowrap;align-items:center;gap:6px}
+.setter-espacio .setter-links-caja{position:relative}
+.setter-espacio .setter-ico{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 12px;border-radius:999px;cursor:pointer;white-space:nowrap;
+  border:1px solid var(--border-subtle, rgba(255,255,255,.12));background:color-mix(in srgb,var(--bg-input, #0b1030) 70%,transparent);color:var(--text-muted, #aab);
+  font:inherit;font-size:12.5px;font-weight:700;transition:background .2s,color .2s,border-color .2s,transform .15s}
+.setter-espacio .setter-ico svg{flex:none;transition:transform .25s cubic-bezier(.3,1.6,.5,1)}
+.setter-espacio .setter-ico:is(:hover,:focus-visible,[aria-expanded="true"]){color:var(--text-main, #fff);border-color:var(--border-main, rgba(255,255,255,.24))}
+.setter-espacio .setter-ico:hover svg{transform:rotate(-8deg) scale(1.12)}
+.setter-espacio .setter-ico:active{transform:scale(.95)}
+.setter-espacio .setter-ico--simula{position:relative;color:var(--ln-warning, #D9A441);border-color:color-mix(in srgb,var(--ln-warning, #D9A441) 50%,transparent);
+  background:color-mix(in srgb,var(--ln-warning, #D9A441) 14%,transparent)}
+.setter-espacio .setter-ico--simula:hover{color:var(--ln-warning, #D9A441);background:color-mix(in srgb,var(--ln-warning, #D9A441) 24%,transparent)}
+.setter-espacio .setter-ico--simula svg{animation:setterFantasma 2.8s ease-in-out infinite}
+.setter-espacio .setter-ico--simula::after{content:"";position:absolute;inset:-1px;border-radius:inherit;border:1px solid var(--ln-warning, #D9A441);animation:setterOnda 2.8s ease-out infinite;pointer-events:none}
+@keyframes setterFantasma{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+@keyframes setterOnda{0%{opacity:.6;transform:scale(1)}70%,100%{opacity:0;transform:scale(1.35)}}
+.setter-espacio .setter-links-pop{position:absolute;top:calc(100% + 8px);right:0;z-index:50;min-width:240px;display:grid;gap:2px;padding:6px;border-radius:14px;
+  background:var(--bg-flotante, #0d1235);border:1px solid var(--border-main, rgba(255,255,255,.18));box-shadow:var(--shadow-main, 0 20px 40px rgba(0,0,0,.4));animation:setterTabOn .2s var(--spring) both}
+.setter-espacio .setter-links-op{display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;border:0;border-radius:10px;background:none;color:inherit;font-size:12.5px;text-align:left;cursor:pointer}
+.setter-espacio .setter-links-op:hover{background:var(--bg-item, rgba(255,255,255,.06))}
+.setter-espacio .setter-links-op svg:last-child{margin-left:auto;opacity:.6}
+@media (max-width:700px){.setter-espacio .setter-top{flex-wrap:wrap}}
+@media (prefers-reduced-motion:reduce){.setter-espacio .setter-ico--simula svg,.setter-espacio .setter-ico--simula::after{animation:none}}
+
+/* Conversaciones y Embudos: la barra del Inbox entra en la fila del saludo (`#ui-header-actions`) */
+.setter-espacio .setter-slot{flex:1 1 auto;min-width:0;display:flex}
+.setter-espacio .setter-slot:empty{display:none}
+.setter-espacio .setter-top:has(.setter-slot:not(:empty)) .hola{flex:0 1 auto}
+.setter-espacio .setter-slot .ui-header__bar{flex:1;min-width:0}
+.setter-espacio .setter-slot .cv-barra.barra{gap:8px;margin:0;justify-content:flex-start;flex-wrap:nowrap}
+@media (max-width:1100px){.setter-espacio .setter-top:has(.setter-slot:not(:empty)){flex-wrap:wrap}.setter-espacio .setter-slot{order:3;flex-basis:100%}}
+
+/* Links, Turnos y el fantasma en un grupo de botones pegados (Mario, 26/11); en Conversaciones se suelda con el de
+   Tareas · Avisos · Stats del Inbox, que queda justo a su izquierda: una sola cápsula. El saludo ya no se corta. */
+.setter-espacio .setter-links{gap:2px;padding:3px;border-radius:999px;border:1px solid var(--border-subtle, rgba(255,255,255,.12));
+  background:color-mix(in srgb,var(--bg-input, #0b1030) 70%,transparent)}
+.setter-espacio .setter-links .setter-ico{height:30px;padding:0 11px;border-color:transparent;background:none}
+.setter-espacio .setter-links .setter-ico:is(:hover,:focus-visible,[aria-expanded="true"]){background:var(--bg-item, rgba(255,255,255,.06));border-color:transparent}
+.setter-espacio .setter-links .setter-ico--simula{background:color-mix(in srgb,var(--ln-warning, #D9A441) 14%,transparent)}
+.setter-espacio .setter-top:has(.setter-slot .cv-barra-grupo) .setter-slot .cv-barra-grupo{border-top-right-radius:0;border-bottom-right-radius:0;border-right:0;padding-right:0}
+.setter-espacio .setter-top:has(.setter-slot .cv-barra-grupo) .setter-links{margin-left:calc(-1 * var(--s4));border-top-left-radius:0;border-bottom-left-radius:0;border-left:0;
+  position:relative;padding-left:5px}
+.setter-espacio .setter-top:has(.setter-slot .cv-barra-grupo) .setter-links::before{content:"";position:absolute;left:0;top:9px;bottom:9px;width:1px;background:var(--border-subtle, rgba(255,255,255,.12))}
+.setter-espacio .setter-top:has(.setter-slot:not(:empty)) .hola{flex:none}
+.setter-espacio .setter-top .hola h1{white-space:nowrap}

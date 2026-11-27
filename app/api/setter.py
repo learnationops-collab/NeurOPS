@@ -37,22 +37,15 @@ def _trigger_setter_report_webhook(stat):
         import json
         from app.services.image_service import ImageService
 
-        import os
-        url = os.environ.get('DISCORD_REPORTS_WEBHOOK')
-        if not url:
-            from app.models import Integration
-            integration = Integration.query.filter_by(key='discord_reports').first()
-            if integration and integration.payload_config:
-                url = integration.payload_config.get('webhook_url')
-
-        if not url:
+        from app.services.discord_avisos.envio import destino_reportes, post_reporte
+        if not destino_reportes():
             print("[Discord Setter] No webhook URL configured in environment or database.")
             return
 
         # El reporte v2 (por canal, desde el 10/10/2026) tiene su propio mensaje y su tarjeta. El
         # v1 sigue saliendo exactamente como antes.
         if (getattr(stat, 'report_version', None) or 1) >= 2:
-            _enviar_reporte_v2(url, stat)
+            _enviar_reporte_v2(stat)
             return
 
         # 1. Prepare Data for Image
@@ -64,7 +57,7 @@ def _trigger_setter_report_webhook(stat):
         img_buffer = ImageService.generate_setter_report_card(img_data)
 
         # 3. Discord Metadata
-        content = f"🚀 **Reporte de setter** · {setter_name} · {stat.date.strftime('%d/%m/%Y')} @everyone"
+        content = f"🚀 **Reporte de setter** · {setter_name} · {stat.date.strftime('%d/%m/%Y')}"
 
         json_payload = {
             "content": content,
@@ -82,7 +75,7 @@ def _trigger_setter_report_webhook(stat):
         }
 
         # 4. Send
-        res = requests.post(url, files=files, data={"payload_json": json.dumps(json_payload)}, timeout=20)
+        res = post_reporte(files=files, data={"payload_json": json.dumps(json_payload)}, timeout=20)
         print(f"[Discord Setter] Status: {res.status_code}")
         
     except Exception as e:
@@ -91,15 +84,15 @@ def _trigger_setter_report_webhook(stat):
         traceback.print_exc()
 
 
-def _enviar_reporte_v2(url, stat):
+def _enviar_reporte_v2(stat):
     """Discord de un reporte v2: la tarjeta por canal con una línea de texto.
 
     Si la tarjeta no se puede dibujar (depende del Chromium del servidor), el Resumen sale
     completo en el texto: el reporte llega igual en vez de no llegar.
     """
     import json
-    import requests
     from app.services import setter_reporte_discord
+    from app.services.discord_avisos.envio import post_reporte
     from app.services.image_service import ImageService
 
     nombre = stat.setter.username if stat.setter else 'Setter'
@@ -111,7 +104,7 @@ def _enviar_reporte_v2(url, stat):
 
     if tarjeta is None:
         payload = {"content": setter_reporte_discord.texto_de_discord(stat, nombre)}
-        res = requests.post(url, json=payload, timeout=20)
+        res = post_reporte(json=payload, timeout=20)
     else:
         payload = {"content": setter_reporte_discord.texto_corto(stat, nombre)}
         payload["embeds"] = [{
@@ -119,7 +112,7 @@ def _enviar_reporte_v2(url, stat):
             "image": {"url": "attachment://setter_report.png"},
             "footer": {"text": "NeurOPS Stats"},
         }]
-        res = requests.post(url, files={'file1': ('setter_report.png', tarjeta, 'image/png')},
+        res = post_reporte(files={'file1': ('setter_report.png', tarjeta, 'image/png')},
                             data={"payload_json": json.dumps(payload)}, timeout=20)
     print(f"[Discord Setter v2] Status: {res.status_code}")
 

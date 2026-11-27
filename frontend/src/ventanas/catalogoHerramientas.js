@@ -3,20 +3,31 @@
 // Las opciones salen de cada pantalla (MenuSesion), del catálogo en ventana (herramientas.js) y de las
 // secciones ocultas; acá solo se les da lugar. Una opción que no está acá cae en «Esta pantalla».
 
-export const GRUPOS = ['Crear', 'Buscar', 'Agendas', 'Asistente', 'Pendientes', 'Esta pantalla', 'Secciones ocultas', 'Ir a', 'Sesión'];
+export const GRUPOS = ['Crear', 'Buscar', 'Agendas', 'Asistente', 'Pendientes', 'Mi cuenta', 'Esta pantalla', 'Secciones ocultas', 'Ir a', 'Sesión'];
 
 const CATALOGO = {
     nuevo: { grupo: 'Crear', desc: 'Una agenda, un pago, una venta o un pedido al equipo técnico.', color: 'rosa' },
+    'reportar-bug': { grupo: 'Crear', desc: 'Algo que falló o que necesitás, al equipo técnico.', color: 'rosa' },
     'tool:pedido-devs': { grupo: 'Crear', desc: 'Un cambio, un error o una duda de la plataforma, al Inbox de los devs.', color: 'violeta' },
+    'tool:broadcast-wa': { grupo: 'Crear', desc: 'Una plantilla de WhatsApp a una lista de números, con el historial de lo mandado.', color: 'verde' },
     'tool:buscar': { grupo: 'Buscar', desc: 'Cualquier lead y su ficha · Ctrl+K', color: 'rosa' },
     playbook: { grupo: 'Asistente', desc: 'Los videos del Playbook.', color: 'verde' },
     simular: { grupo: 'Ir a', desc: 'Ver Work como lo ve otra persona.', color: 'violeta' },
     'tool:turnos': { grupo: 'Agendas', desc: 'Los turnos que quedan de triage y de closers, con sus horarios.', color: 'azul' },
     links: { grupo: 'Agendas', desc: 'Tus links de agendamiento: tocá uno para copiarlo.', color: 'azul' },
+    'tour-triage': { grupo: 'Asistente', desc: 'El recorrido de lo nuevo en Seguir y en el dock.', color: 'violeta' },
     learnito: { grupo: 'Asistente', desc: 'Preguntale lo que necesites · Ctrl+L', color: 'violeta' },
+    inbox: { grupo: 'Pendientes', desc: 'Tus conversaciones de Instagram y WhatsApp.', color: 'rosa', va: true },
     avisos: { grupo: 'Pendientes', desc: 'Lo que el sistema te avisó.', color: 'ambar' },
     conflictos: { grupo: 'Pendientes', desc: 'Datos sueltos para revisar.', color: 'rojo' },
     'mis-reportes': { grupo: 'Pendientes', desc: 'Lo que reportaste o pediste, y sus respuestas.', color: 'verde' },
+    // Secciones del Workspace del triage que van ocultas de fábrica (ADR-W256): se abren desde acá.
+    'sec:compartidos': { grupo: 'Pendientes', desc: 'Leads en los que alguien te nombró con @ en el chat.', color: 'azul', va: true },
+    'sec:abandonos': { grupo: 'Pendientes', desc: 'Dejaron sus datos y no agendaron (últimas 48 h).', color: 'ambar', va: true },
+    'sec:metricas': { grupo: 'Secciones ocultas', desc: 'El embudo de tus llamadas de triage.', color: 'violeta', va: true },
+    'sec:dashboard': { grupo: 'Secciones ocultas', desc: 'Tus números de las agendas que llevaste.', color: 'violeta', va: true },
+    'sec:cartera': { grupo: 'Secciones ocultas', desc: 'Tus leads y clientes, en una tabla.', color: 'violeta', va: true },
+    'tool:mi-sueldo': { grupo: 'Mi cuenta', desc: 'Tu sueldo del mes: base, comisiones, bonos y los pagos que las suman.', color: 'verde' },
     procrastinar: { grupo: 'Esta pantalla', desc: 'Un seguimiento al azar para arrancar.', color: 'ambar' },
     portal: { grupo: 'Ir a', desc: 'Otra área o rol, Cortex (Playbook) y Simular.', color: 'azul' },
     'mi-espacio': { grupo: 'Ir a', desc: 'Tu pantalla de trabajo.', color: 'gris', va: true },

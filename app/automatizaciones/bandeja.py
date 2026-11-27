@@ -104,8 +104,8 @@ def recorrido(contacto_id):
 
 
 def _demoras(ahora, horas):
-    """[(contacto_id, minutos)]: cada vez que a un mensaje del lead le sigue uno de una persona del
-    equipo (no el bot), en las últimas horas."""
+    """[(contacto_id, minutos, cuándo contestó)]: cada vez que a un mensaje del lead le sigue uno de una persona
+    del equipo (no el bot), en las últimas horas."""
     mensajes = (db.session.query(IgMensaje.contacto_id, IgMensaje.origen, IgMensaje.enviado_en)
                 .filter(IgMensaje.enviado_en >= ahora - timedelta(hours=horas))
                 .order_by(IgMensaje.contacto_id, IgMensaje.enviado_en, IgMensaje.id).all())
@@ -113,26 +113,72 @@ def _demoras(ahora, horas):
     for m in mensajes:
         if anterior and anterior.contacto_id == m.contacto_id and anterior.origen == IgMensaje.LEAD \
                 and m.origen == IgMensaje.OTRO:
-            demoras.append((m.contacto_id, (m.enviado_en - anterior.enviado_en).total_seconds() / 60))
+            demoras.append((m.contacto_id, (m.enviado_en - anterior.enviado_en).total_seconds() / 60, m.enviado_en))
         anterior = m
     return demoras
 
 
 def mediana_respuesta(ahora, horas=24):
     """Minutos que tarda el equipo (no el bot) en contestar el mensaje de un lead, en las últimas horas."""
-    demoras = [minutos for _, minutos in _demoras(ahora, horas)]
+    demoras = [minutos for _, minutos, _ in _demoras(ahora, horas)]
     return round(median(demoras)) if demoras else None
 
 
 def medianas_por_setter(ahora, horas=24):
-    """[{id, username, mediana, respuestas}] por setter. Meta no dice quién contestó desde Kommo o
-    Instagram: la respuesta se le cuenta al setter asignado a la conversación (decidido el 27/10/2026)."""
+    """[{id, username, mediana, respuestas, activo, inactivo, segundos_activo}] por setter. Meta no dice quién
+    contestó desde Kommo o Instagram: la respuesta se le cuenta al setter asignado a la conversación (decidido
+    el 27/10/2026). `activo` / `inactivo`: {mediana, respuestas} según si contestó con «Activo» prendido
+    (ADR-W245); None si no hubo respuestas así."""
+    from app.automatizaciones import actividad
     demoras = _demoras(ahora, horas)
-    asignados = asignaciones(list({cid for cid, _ in demoras}))
+    asignados = asignaciones(list({cid for cid, _, _ in demoras}))
     por_setter = {}
-    for cid, minutos in demoras:
+    for cid, minutos, en in demoras:
         setter = asignados.get(cid)
         if setter:
-            por_setter.setdefault((setter['id'], setter['username']), []).append(minutos)
-    return sorted(({'id': sid, 'username': nombre, 'mediana': round(median(m)), 'respuestas': len(m)}
-                   for (sid, nombre), m in por_setter.items()), key=lambda s: s['mediana'])
+            por_setter.setdefault((setter['id'], setter['username']), []).append((minutos, en))
+    desde = ahora - timedelta(hours=horas)
+    rangos = actividad.periodos([sid for sid, _ in por_setter], desde, ahora) if por_setter else {}
+
+    def resumen(valores):
+        return {'mediana': round(median(valores)), 'respuestas': len(valores)} if valores else None
+
+    salida = []
+    for (sid, nombre), filas in por_setter.items():
+        suyos = rangos.get(sid, [])
+        activas = [m for m, en in filas if actividad.activo_en(suyos, en)]
+        inactivas = [m for m, en in filas if not actividad.activo_en(suyos, en)]
+        salida.append({'id': sid, 'username': nombre, 'mediana': round(median([m for m, _ in filas])), 'respuestas': len(filas),
+                       'activo': resumen(activas), 'inactivo': resumen(inactivas),
+                       'segundos_activo': round(sum((b - a).total_seconds() for a, b in suyos))})
+    return sorted(salida, key=lambda s: s['mediana'])
+
+
+def comentarios(mensajes):
+    """{mensaje_id: {'permalink'}} de los que son un comentario (no un DM), para marcarlos en el chat con su
+    publicación. El link se le pide a Meta una vez y queda en el mensaje."""
+    from sqlalchemy.orm.attributes import flag_modified
+    from app.automatizaciones.transporte import TransporteMeta
+    salida, transporte = {}, None
+    for m in mensajes:
+        c = m.contenido if isinstance(m.contenido, dict) else {}
+        if m.direccion != IgMensaje.ENTRANTE or not c.get('comentario_id'):
+            continue
+        if 'permalink' not in c and c.get('publicacion_id'):
+            transporte = transporte or TransporteMeta()
+            c['permalink'] = transporte.permalink(c['publicacion_id'])
+            m.contenido = c
+            flag_modified(m, 'contenido')
+        salida[m.id] = {'permalink': c.get('permalink')}
+    if transporte:
+        db.session.commit()
+    return salida
+
+
+def entrada(contacto_id):
+    """{clave, campana, anuncio} de su recorrido más nuevo que entró por palabra clave, o None."""
+    fila = (db.session.query(AutEjecucion.clave, AutCampana.nombre, AutEjecucion.meta_ad_id)
+            .outerjoin(AutCampana, AutCampana.id == AutEjecucion.campana_id)
+            .filter(AutEjecucion.contacto_id == contacto_id, AutEjecucion.clave.isnot(None))
+            .order_by(AutEjecucion.id.desc()).first())
+    return {'clave': fila[0], 'campana': fila[1], 'anuncio': fila[2]} if fila else None

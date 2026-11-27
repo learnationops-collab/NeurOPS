@@ -31,36 +31,13 @@ class WhatsappWebhookEvento(db.Model):
         }
 
 
-class WaDifusion(db.Model):
-    """Un broadcast: una plantilla aprobada que sale a una lista de números, de a poco y con tope diario.
-
-    `destino` dice a dónde lleva (setting o workshop) para medir de dónde vienen los leads. Las respuestas
-    entran al Inbox de setters como contactos `wa:<número>` con `variables.difusion` = id de esta difusión.
-    Mandar no crea contactos: en la bandeja aparecen solo los que contestan.
+class WaEnvio(db.Model):
+    """Un número al que se le mandó (o se le está mandando) una plantilla desde la herramienta «Broadcast de
+    WhatsApp» (ADR-W229). Una sola tabla: cada «Enviar» es un `lote`; los estados los va actualizando el webhook
+    (enviado → entregado → leído), y si responde queda su conversación y lo primero que escribió (`respuesta`).
+    Mandar no crea contactos: en el Inbox aparecen solo los que contestan.
     """
-    __tablename__ = 'wa_difusiones'
-
-    ACTIVA, PAUSADA, TERMINADA = 'activa', 'pausada', 'terminada'
-
-    id = db.Column(db.Integer, primary_key=True)
-    nombre = db.Column(db.String(150), nullable=False)
-    plantilla = db.Column(db.String(120), nullable=False)
-    idioma = db.Column(db.String(10), nullable=False, default='es')
-    # Si la plantilla lleva {{1}} con el nombre de la persona.
-    con_nombre = db.Column(db.Boolean, nullable=False, default=True)
-    destino = db.Column(db.String(20), nullable=False, default='setting')
-    tope_diario = db.Column(db.Integer, nullable=False, default=30)
-    estado = db.Column(db.String(20), nullable=False, default=PAUSADA)
-    creado_en = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-    creado_por_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
-    # El flujo que sigue cuando tocan un botón de la plantilla (`app/whatsapp/flujos.py`). Sin flujo, todo va al setter.
-    flujo_id = db.Column(db.Integer, db.ForeignKey('aut_flujos.id', ondelete='SET NULL'), nullable=True)
-
-
-class WaDifusionDestino(db.Model):
-    """Cada número de una difusión y lo que pasó con su mensaje (lo actualizan los estados del webhook)."""
-    __tablename__ = 'wa_difusion_destinos'
-    __table_args__ = (db.UniqueConstraint('difusion_id', 'telefono', name='uq_wa_difusion_telefono'),)
+    __tablename__ = 'wa_envios'
 
     PENDIENTE, ENVIADO, ENTREGADO, LEIDO, RESPONDIO, FALLO = (
         'pendiente', 'enviado', 'entregado', 'leido', 'respondio', 'fallo')
@@ -68,12 +45,55 @@ class WaDifusionDestino(db.Model):
     ORDEN = {PENDIENTE: 0, ENVIADO: 1, ENTREGADO: 2, LEIDO: 3, RESPONDIO: 4, FALLO: 5}
 
     id = db.Column(db.Integer, primary_key=True)
-    difusion_id = db.Column(db.Integer, db.ForeignKey('wa_difusiones.id', ondelete='CASCADE'), nullable=False, index=True)
+    lote = db.Column(db.String(36), nullable=False, index=True)
+    plantilla = db.Column(db.String(120), nullable=False)
+    idioma = db.Column(db.String(10), nullable=False, default='es')
+    con_nombre = db.Column(db.Boolean, nullable=False, default=True)  # la plantilla lleva {{1}} con el nombre
     telefono = db.Column(db.String(20), nullable=False, index=True)  # solo dígitos, con código de país
     nombre = db.Column(db.String(150), nullable=True)
     estado = db.Column(db.String(20), nullable=False, default=PENDIENTE, index=True)
     wamid = db.Column(db.String(200), nullable=True, unique=True)
+    creado_en = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
     enviado_en = db.Column(db.DateTime, nullable=True, index=True)
     actualizado_en = db.Column(db.DateTime, nullable=True)
     error = db.Column(db.String(300), nullable=True)
+    respuesta = db.Column(db.String(200), nullable=True)
+    enviado_por_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
     contacto_id = db.Column(db.Integer, db.ForeignKey('ig_contactos.id', ondelete='SET NULL'), nullable=True)
+    # Del broadcast de un taller (ADR-W259): el paso que lo mandó, lo que va en {{1}}, {{2}}… («{nombre}» se
+    # completa al mandar) y hasta cuándo puede salir (pasado eso, un recordatorio ya no sirve).
+    paso_id = db.Column(db.Integer, db.ForeignKey('wa_pasos_taller.id', ondelete='SET NULL'), nullable=True, index=True)
+    parametros = db.Column(db.JSON, nullable=True)
+    vence_en = db.Column(db.DateTime, nullable=True)
+
+
+class WaRespuestaBoton(db.Model):
+    """Qué pasa cuando tocan un botón de una plantilla (herramienta «Broadcast de WhatsApp», pestaña Plantillas).
+    Vive en Work y no en Meta: se cambia sin pasar por revisión. `texto` sale solo; `botones` [{titulo, va_a}]
+    son los del mensaje que sale (hasta 3, de 20 caracteres), y `va_a` es el botón de la plantilla cuya respuesta
+    sigue (None: queda para el setter). `asignar_a` y `etiqueta` se aplican a la conversación."""
+    __tablename__ = 'wa_respuestas_boton'
+
+    id = db.Column(db.Integer, primary_key=True)
+    plantilla = db.Column(db.String(120), nullable=False, index=True)
+    boton = db.Column(db.String(25), nullable=False)
+    texto = db.Column(db.Text, nullable=True)
+    botones = db.Column(db.JSON, nullable=True)
+    asignar_a = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    etiqueta = db.Column(db.String(60), nullable=True)
+    # Cuántos segundos espera el mensaje antes de salir (0: al instante). Asignar y etiquetar no esperan.
+    demora_segundos = db.Column(db.Integer, nullable=False, default=0, server_default="0")
+    actualizado_en = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (db.UniqueConstraint('plantilla', 'boton', name='uq_wa_respuestas_boton'),)
+
+
+class WaRespuestaPendiente(db.Model):
+    """La respuesta a un botón que espera su demora (`WaRespuestaBoton.demora_segundos`). La manda el reloj del
+    motor cuando llega `enviar_en` y se borra. Una por contacto: un toque nuevo reemplaza la que esperaba."""
+    __tablename__ = 'wa_respuestas_pendientes'
+
+    id = db.Column(db.Integer, primary_key=True)
+    contacto_id = db.Column(db.Integer, db.ForeignKey('ig_contactos.id', ondelete='CASCADE'), nullable=False, unique=True)
+    regla_id = db.Column(db.Integer, db.ForeignKey('wa_respuestas_boton.id', ondelete='CASCADE'), nullable=False)
+    enviar_en = db.Column(db.DateTime, nullable=False, index=True)

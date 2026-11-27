@@ -6,7 +6,7 @@ import api from '../services/api';
 vi.mock('../services/api', () => ({ default: { get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() } }));
 
 const CLOSER = { role: 'closer', username: 'jc' };
-const integraciones = () => fireEvent.click(screen.getByRole('tab', { name: /Integraciones/ }));
+const integraciones = () => fireEvent.click(screen.getByRole('tab', { name: /Google Calendar/ }));
 
 describe('Configuración', () => {
     beforeEach(() => { api.get.mockReset(); api.put.mockReset(); api.delete.mockReset(); });
@@ -16,7 +16,7 @@ describe('Configuración', () => {
         render(<Configuracion user={CLOSER} />);
         integraciones();
         expect(await screen.findByRole('button', { name: /Conectar con Google/i })).toBeTruthy();
-        expect(screen.getByText(/sin él, el sistema de agendas no te ofrece/i)).toBeTruthy();
+        expect(screen.getByText(/para recibir agendas/i)).toBeTruthy();
         expect(api.get).toHaveBeenCalledWith('/google/calendars');
     });
 

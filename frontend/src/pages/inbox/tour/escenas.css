@@ -1,0 +1,52 @@
+/* Escenas del recorrido de seguimientos del Inbox (ADR-W255). Usan las variables y animaciones de novedades.css. */
+.tr-burbuja { align-self: flex-end; max-width: 80%; padding: 8px 11px; border-radius: 14px 14px 4px 14px; background: rgba(167, 139, 255, .22);
+  font-size: 12px; line-height: 1.35; animation: nvSube .5s .1s both; }
+.tr-burbuja small { display: flex; gap: 5px; align-items: center; justify-content: flex-end; margin-top: 4px; font-size: 10px; color: var(--nv-mut); }
+.tr-silencio { align-self: center; font-size: 10.5px; color: var(--nv-mut2); animation: nvSube .5s .25s both; }
+.tr-fila { display: flex; justify-content: flex-end; gap: 8px; animation: nvSube .5s .4s both; }
+.tr-check { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 99px; border: 1px solid rgba(255, 255, 255, .15);
+  color: var(--nv-mut); animation: trCheck 3.2s 1s infinite; }
+.tr-check i { width: 14px; height: 14px; border-radius: 4px; border: 1.5px solid currentColor; display: grid; place-items: center; }
+.tr-check svg { width: 10px; height: 10px; opacity: 0; animation: trTilde 3.2s 1s infinite; }
+.tr-enviar { display: inline-flex; align-items: center; gap: 5px; padding: 5px 12px; border-radius: 99px; background: var(--nv-mag); color: #fff; }
+.tr-enviar svg { width: 12px; height: 12px; }
+@keyframes trCheck { 0%, 15% { color: var(--nv-mut); border-color: rgba(255, 255, 255, .15); background: none; }
+  25%, 90% { color: var(--nv-vio); border-color: var(--nv-vio); background: rgba(167, 139, 255, .14); } 100% { color: var(--nv-mut); } }
+@keyframes trTilde { 0%, 15% { opacity: 0; } 25%, 90% { opacity: 1; } 100% { opacity: 0; } }
+
+.tr-mensaje { position: relative; }
+.tr-burbuja--grande { font-size: 13px; align-self: center; }
+.tr-marcar { display: inline-flex; animation: trMarcar 3.6s infinite; }
+.tr-marcar svg, .tr-tag svg { width: 11px; height: 11px; }
+.tr-tag { display: inline-flex; align-items: center; gap: 3px; color: var(--nv-vio); font-weight: 800; opacity: 0; width: 0; overflow: hidden; white-space: nowrap;
+  animation: trTag 3.6s infinite; }
+@keyframes trMarcar { 0%, 15% { opacity: 0; } 22%, 45% { opacity: 1; } 50%, 100% { opacity: 0; width: 0; } }
+@keyframes trTag { 0%, 48% { opacity: 0; width: 0; } 55%, 92% { opacity: 1; width: 92px; } 100% { opacity: 0; width: 0; } }
+.tr-puntero { position: absolute; right: 34%; bottom: 52px; width: 14px; height: 14px; border-radius: 99px; background: #fff; box-shadow: 0 0 0 4px rgba(255, 255, 255, .2);
+  animation: nvPuntero 3.6s infinite; }
+
+.tr-programar { align-items: center; text-align: center; }
+.tr-reloj { width: 42px; height: 42px; border-radius: 14px; display: grid; place-items: center; background: rgba(167, 139, 255, .18); color: var(--nv-vio); animation: nvFlota 3s infinite; }
+.tr-horas { display: flex; gap: 6px; }
+.tr-horas span { padding: 4px 9px; border-radius: 99px; background: rgba(255, 255, 255, .06); color: var(--nv-mut); animation: nvSube .4s both; }
+.tr-horas .is-on { background: var(--nv-vio); color: #fff; box-shadow: 0 0 14px rgba(167, 139, 255, .5); }
+.tr-programar em, .tr-filtro em, .tr-reporte em { font-style: normal; font-weight: 500; color: var(--nv-mut); font-size: 11.5px; }
+
+.tr-row { display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 12px; background: rgba(255, 255, 255, .05);
+  animation: nvBrota .5s calc(.15s + var(--k) * .15s) both; }
+.tr-row > i { width: 26px; height: 26px; border-radius: 99px; display: grid; place-items: center; font-style: normal; background: rgba(255, 255, 255, .12); }
+.tr-row span { display: grid; flex: 1; }
+.tr-row small { font-size: 10.5px; color: var(--nv-mut); font-weight: 500; }
+.tr-row em { display: inline-flex; gap: 4px; align-items: center; font-style: normal; font-size: 10.5px; color: #f5b94a; }
+.tr-row em svg { width: 11px; height: 11px; animation: nvLatido 1.6s infinite; }
+
+.tr-filtro { align-items: center; }
+.tr-filtro-t { display: inline-flex; gap: 6px; align-items: center; }
+.tr-filtro-t svg { width: 14px; height: 14px; }
+.tr-chips { display: flex; gap: 6px; }
+.tr-chips span { padding: 4px 10px; border-radius: 99px; background: rgba(255, 255, 255, .06); color: var(--nv-mut); animation: trChip 5s calc(var(--k) * 1s) infinite; }
+@keyframes trChip { 0%, 18% { background: var(--nv-cian); color: #062a30; } 22%, 100% { background: rgba(255, 255, 255, .06); color: var(--nv-mut); } }
+
+.tr-reporte { align-items: center; text-align: center; }
+.tr-reporte svg { width: 26px; height: 26px; color: var(--nv-verde); }
+.tr-reporte b { font-size: 44px; line-height: 1; font-weight: 900; letter-spacing: -.03em; }
