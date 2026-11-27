@@ -4,38 +4,24 @@
 import { useEffect, useState } from 'react';
 import { Plus, X } from 'lucide-react';
 import { Accordion, Button, IconButton, Input, LinkButton, Select, Switch, TextArea, toast } from '../../../components/standard';
+import Despues, { URL_VALIDA } from './Despues';
+import Espera, { espera } from './Espera';
 
 const LARGO_BOTON = 20;
 const MAX_BOTONES = 3;
-const MAX_DEMORA = 3600;
 const LINK = '__link__';
 const VACIA = { texto: '', botones: [], asignar_a: null, etiqueta: '', demora_segundos: 0 };
-const UNIDADES = [{ value: '1', label: 'segundos' }, { value: '60', label: 'minutos' }];
 
 const esLink = (b) => b.url != null;
-const espera = (s) => (!s ? '' : s % 60 === 0 ? ` a los ${s / 60} min` : ` a los ${s} s`);
 
-function resumen(r, asignables) {
+/** Qué pasa con ese botón, en una línea (también lo usan las ramas del flujo de un taller). */
+export function resumen(r, asignables = []) {
     if (!r || (!r.texto && !r.asignar_a && !r.etiqueta)) return 'Queda para el setter';
     const quien = asignables.find((a) => a.id === r.asignar_a)?.nombre;
-    const link = (r.botones || []).some(esLink);
-    return [r.texto ? `${link ? 'Manda el link' : 'Contesta solo'}${espera(r.demora_segundos)}` : null, quien && `Asigna a ${quien}`, r.etiqueta && `Etiqueta «${r.etiqueta}»`].filter(Boolean).join(' · ');
-}
-
-/** Cuánto espera la respuesta, en segundos o minutos (guarda segundos, hasta 60 min). */
-function Espera({ segundos, onChange }) {
-    const [unidad, setUnidad] = useState(segundos && segundos % 60 === 0 ? 60 : 1);
-    const poner = (cifra, u) => onChange(Math.min(MAX_DEMORA, Math.max(0, Math.round((Number(cifra) || 0) * u))));
-    return (
-        <div className="bw-fila">
-            <span className="bw-s">Sale</span>
-            <Input variant="number" type="number" min="0" value={segundos ? segundos / unidad : 0} aria-label="Espera"
-                onChange={(e) => poner(e.target.value, unidad)} />
-            <Select size="sm" label="Unidad" value={String(unidad)} options={UNIDADES}
-                onChange={(u) => { setUnidad(Number(u)); poner(segundos / unidad, Number(u)); }} />
-            <span className="bw-s">{segundos ? 'después del toque' : '0 = al instante'}</span>
-        </div>
-    );
+    const link = (r.botones || []).find(esLink);
+    return [r.texto ? `${link ? 'Manda el link' : 'Contesta solo'}${espera(r.demora_segundos)}` : null,
+        link?.despues && 'al abrirlo, otro mensaje', quien && `Asigna a ${quien}`, r.etiqueta && `Etiqueta «${r.etiqueta}»`]
+        .filter(Boolean).join(' · ');
 }
 
 /** Opción única: después de elegir un botón de un mensaje, los otros contestan «ya elegiste». Vale para la plantilla. */
@@ -89,7 +75,9 @@ function Editor({ nombre, boton, botones, inicial, asignables, datos, onGuardada
     const conLink = r.botones.some(esLink);
     const elegirDestino = (i, v) => cambiar('botones', r.botones.map((b, j) => (j !== i ? b
         : v === LINK ? { titulo: b.titulo, url: b.url || '' } : { titulo: b.titulo, va_a: v || null })));
-    const linkMal = r.botones.some((b) => esLink(b) && !/^https?:\/\/\S+$/.test(b.url.trim()));
+    const linkMal = r.botones.some((b) => esLink(b) && (!URL_VALIDA.test(b.url.trim())
+        || (b.despues && b.despues.url && !URL_VALIDA.test(b.despues.url.trim()))
+        || (b.despues && b.despues.url && !(b.despues.titulo || '').trim())));
     return (
         <div className="bw-cuerpo">
             <label className="bw-campo">
@@ -109,8 +97,11 @@ function Editor({ nombre, boton, botones, inicial, asignables, datos, onGuardada
                             <IconButton size="sm" icon={<X />} label="Quitar botón" onClick={() => cambiar('botones', r.botones.filter((_, j) => j !== i))} />
                         </div>
                         {esLink(b) && (
-                            <Input value={b.url} placeholder="https://drive.google.com/…" aria-label="Link del botón" invalid={linkMal}
-                                onChange={(e) => cambiarBoton(i, 'url', e.target.value)} />
+                            <>
+                                <Input value={b.url} placeholder="https://drive.google.com/…" aria-label="Link del botón" invalid={linkMal}
+                                    onChange={(e) => cambiarBoton(i, 'url', e.target.value)} />
+                                <Despues valor={b.despues} onChange={(d) => cambiarBoton(i, 'despues', d)} />
+                            </>
                         )}
                     </div>
                 ))}
@@ -128,11 +119,13 @@ function Editor({ nombre, boton, botones, inicial, asignables, datos, onGuardada
     );
 }
 
-export default function Respuestas({ nombre, botones, datos }) {
+/** `onCambio(respuestas)`: avisa lo guardado (el flujo de un taller muestra las ramas al día). */
+export default function Respuestas({ nombre, botones, datos, onCambio }) {
     const [estado, setEstado] = useState(null);
     useEffect(() => {
         datos.respuestas(nombre).then(setEstado).catch((e) => toast(datos.mensaje(e, 'No se pudieron traer las respuestas'), 'error'));
     }, [nombre]); // eslint-disable-line react-hooks/exhaustive-deps
+    useEffect(() => { if (estado && onCambio) onCambio(estado.respuestas); }, [estado]); // eslint-disable-line react-hooks/exhaustive-deps
     if (!estado) return <span className="bw-s">Trayendo qué pasa con cada botón…</span>;
     const de = (b) => estado.respuestas.find((r) => r.boton === b);
     const guardada = (r) => setEstado((e) => ({ ...e, respuestas: [...e.respuestas.filter((x) => x.boton !== r.boton), r] }));

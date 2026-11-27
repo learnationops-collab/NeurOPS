@@ -72,7 +72,7 @@ function Variables({ paso, plantilla, cambiar }) {
     );
 }
 
-export default function PasoEditor({ paso, plantillas, botonesDelFlujo, wa, cambiar, quitar }) {
+export default function PasoEditor({ paso, plantillas, botonesDelFlujo, wa, cambiar, quitar, onReglas }) {
     const bloqueado = paso.estado === 'lanzado' || paso.estado === 'vencido';
     const plantilla = plantillas.find((p) => p.name === paso.plantilla);
     const { botones } = partesDe(plantilla);
@@ -103,6 +103,7 @@ export default function PasoEditor({ paso, plantillas, botonesDelFlujo, wa, camb
                         const p = plantillas.find((x) => x.name === v);
                         cambiar({ plantilla: v, idioma: p?.language || 'es', parametros: [] });
                     }} />
+                <small className="bt-s">Un paso es un envío programado y va con plantilla. Lo que sale justo al tocar un botón o al abrir un link se arma en las ramas del paso anterior.</small>
             </div>
             {plantilla && <Variables paso={paso} plantilla={plantilla} cambiar={cambiar} />}
             <div className="bt-campo">
@@ -128,7 +129,8 @@ export default function PasoEditor({ paso, plantillas, botonesDelFlujo, wa, camb
                 <div className="bt-campo">
                     <span>Ramas · qué pasa al tocar cada botón</span>
                     <small className="bt-s">Vale para todos los envíos de {plantilla.name}. Poné una etiqueta para filtrar los pasos siguientes.</small>
-                    <Respuestas key={plantilla.name} nombre={plantilla.name} botones={botones} datos={wa} />
+                    <Respuestas key={plantilla.name} nombre={plantilla.name} botones={botones} datos={wa}
+                        onCambio={(lista) => onReglas?.(plantilla.name, lista)} />
                 </div>
             )}
         </div>

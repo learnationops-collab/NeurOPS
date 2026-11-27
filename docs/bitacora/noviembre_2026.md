@@ -1254,3 +1254,8 @@
 - Un botón de la respuesta puede abrir un link (por ejemplo, el Drive de un recurso): «Al tocarlo › Abre un link» ([Respuestas.jsx](../../frontend/src/ventanas/herramientas/broadcastWa/Respuestas.jsx), [respuestas.py](../../app/whatsapp/respuestas.py)).
 - «Opción única» por plantilla: si ya eligió un botón de un mensaje, los otros contestan «Ya elegiste…» (texto editable).
 - La espera de la respuesta va en segundos o minutos; las cortas salen a su hora sin esperar el reloj. Migración `e6a8c0d2f4b5`.
+
+### 27/11/2026 · WhatsApp: mensaje al abrir el link de una respuesta y ramas al día en el flujo (ADR-W261)
+- «Cuando abre el link»: el botón con link de una respuesta puede mandar otro mensaje al abrirse (por ejemplo, agregar el evento a Google Calendar), con espera y botón propio. El link pasa por Work, que anota y redirige ([links.py](../../app/whatsapp/links.py), [Despues.jsx](../../frontend/src/ventanas/herramientas/broadcastWa/Despues.jsx)).
+- Arreglo: las ramas del flujo de un taller decían «Queda para el setter» aunque el botón ya tuviera respuesta ([Flujo.jsx](../../frontend/src/ventanas/herramientas/broadcastTaller/Flujo.jsx)).
+- Migración `a8c0e2f4b6d7`.

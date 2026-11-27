@@ -110,3 +110,5 @@ class WaRespuestaPendiente(db.Model):
     contacto_id = db.Column(db.Integer, db.ForeignKey('ig_contactos.id', ondelete='CASCADE'), nullable=False, unique=True)
     regla_id = db.Column(db.Integer, db.ForeignKey('wa_respuestas_boton.id', ondelete='CASCADE'), nullable=False)
     enviar_en = db.Column(db.DateTime, nullable=False, index=True)
+    # 'respuesta': el mensaje de la regla; 'despues': el que sale al abrir su link (ADR-W261).
+    cual = db.Column(db.String(10), nullable=False, default='respuesta', server_default='respuesta')
