@@ -1,4 +1,4 @@
-/* Puente de Learnation Marketing en Work (ADR-W278).
+/* Puente de Learnation Marketing en Work (ADR-W280).
    La página es el artifact de claude.ai tal cual. Este script le da el mismo `window.claude.use(nombre)` que
    tenía allá (db, user, sample, assets, downloads, mcp, permissions), atendido por las rutas
    /api/marketing-app/* de Work con la sesión de quien la abre. */

@@ -59,7 +59,7 @@ const NombreBloque = ({ nombre, onRenombrar }) => {
     );
 };
 
-const EditorPreguntas = ({ preguntas, originales, onCambiar }) => {
+const EditorPreguntas = ({ preguntas, originales, puesto, onCambiar }) => {
     const [sel, setSel] = useState(preguntas[0]?.id || null);
     const [arrastrando, setArrastrando] = useState(null);
     const [sobre, setSobre] = useState(null);
@@ -161,6 +161,7 @@ const EditorPreguntas = ({ preguntas, originales, onCambiar }) => {
                         primera={i === 0}
                         ultima={i === preguntas.length - 1}
                         depende={dependientes(preguntas, q.id)}
+                        puesto={puesto}
                         onCambiar={(cambio) => set(q.id, cambio)}
                         onTipo={(tipo) => {
                             const { lista, id } = cambiarTipo(preguntas, q, tipo);

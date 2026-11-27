@@ -63,7 +63,7 @@ const SECCIONES = [
     { id: 'reuniones', label: 'Reuniones', Icono: Mic },
 ];
 
-// Learnation Marketing (el artifact de claude.ai, ADR-W278): solo para las cuentas de `app/marketing_app/acceso.py`.
+// Learnation Marketing (el artifact de claude.ai, ADR-W280): solo para las cuentas de `app/marketing_app/acceso.py`.
 // Quien entra solo por Marketing (no es operador ni admin) ve únicamente esa sección.
 const MARKETING = { id: 'marketing', label: 'Marketing', Icono: Megaphone };
 const ROLES_DE_OPERACIONES = ['operator', 'admin'];

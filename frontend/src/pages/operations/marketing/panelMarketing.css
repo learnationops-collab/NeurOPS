@@ -1,4 +1,4 @@
-/* Learnation Marketing a pantalla completa, sin pisar el dock de Operaciones (ADR-W278). */
+/* Learnation Marketing a pantalla completa, sin pisar el dock de Operaciones (ADR-W280). */
 .panel-marketing{
   position:fixed;z-index:40;
   background:linear-gradient(170deg,#04071C 0%,#0A0E3D 52%,#060A2A 100%);

@@ -1,4 +1,4 @@
-"""El conector «Google Drive» de Learnation Marketing, atendido por Work (ADR-W278).
+"""El conector «Google Drive» de Learnation Marketing, atendido por Work (ADR-W280).
 
 Usa la cuenta conectada en la autorización `drive_marketing` (app/services/google_aparte.py) y contesta con la
 forma del conector de claude.ai: archivos con `id`, `title`, `mimeType`, `parentId`, `capabilities`,

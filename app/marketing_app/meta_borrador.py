@@ -1,4 +1,4 @@
-"""Crear, corregir y publicar en Meta desde Learnation Marketing en Work (ADR-W278): «pausado = borrador».
+"""Crear, corregir y publicar en Meta desde Learnation Marketing en Work (ADR-W280): «pausado = borrador».
 
 El conector de claude.ai deja lo creado en el borrador del Administrador de anuncios y lo publica con
 `ads_activate_entity`. La Graph API no tiene ese borrador: acá la campaña, sus conjuntos y sus anuncios se

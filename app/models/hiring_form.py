@@ -39,6 +39,9 @@ class HiringForm(db.Model):
     slug = db.Column(db.String(60), nullable=True, unique=True)
     # Publicado en su link. Puede haber varios.
     activo = db.Column(db.Boolean, nullable=False, default=False)
+    # A qué puesto postula: 'asistente' (AssistantApplication, /vacante/<slug>/) o 'closer'
+    # (JobApplication, /formulario/; hay uno solo, ver hiring_forms_closer). ADR-W280.
+    puesto = db.Column(db.String(20), nullable=False, default='asistente', server_default='asistente')
     # Lista de preguntas con el esquema del `PREGUNTAS` del formulario público,
     # más dos claves del editor: `on` (si se pregunta) y `base` (si es una de
     # las 35 originales, que se pueden apagar o borrar, menos el nombre).

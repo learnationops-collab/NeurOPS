@@ -1,4 +1,4 @@
-"""Las lecturas de Meta del puente (ADR-W278), con las mismas respuestas que el conector «Meta Ads MCP»:
+"""Las lecturas de Meta del puente (ADR-W280), con las mismas respuestas que el conector «Meta Ads MCP»:
 
 - `ads_get_ad_videos`: `{ad_videos: [{id, title}], next_cursor}`; con `video_ids`, los campos pedidos.
 - `ads_get_creatives`: `{creatives: [...]}` con los campos pedidos.

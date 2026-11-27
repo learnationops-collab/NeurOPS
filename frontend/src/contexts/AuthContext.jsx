@@ -23,7 +23,7 @@ export const AuthProvider = ({ children }) => {
                     const me = res.data?.user || {};
                     const cuentas = me.cuentas_vinculadas || [];
                     const roles = me.roles || [];
-                    // Learnation Marketing (ADR-W278): quién la ve se decide en el servidor y puede cambiar sin login.
+                    // Learnation Marketing (ADR-W280): quién la ve se decide en el servidor y puede cambiar sin login.
                     const marketing = !!me.marketing_app;
                     if (JSON.stringify([cuentas, roles, marketing]) === JSON.stringify([savedUser.cuentas_vinculadas || [], savedUser.roles || [], !!savedUser.marketing_app])) return;
                     const actualizado = { ...savedUser, cuentas_vinculadas: cuentas, roles, marketing_app: marketing };

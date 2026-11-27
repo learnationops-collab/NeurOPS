@@ -12,8 +12,10 @@ import logging
 from flask import request, jsonify
 
 from app import db
-from app.models import JobApplication
+from app.models import HiringForm, JobApplication
+from app.models.job_application import CAMPOS_FORMULARIO
 from app.api.public import bp
+from app.services import hiring_forms, hiring_forms_closer
 from app.services.limite_intentos import limitar
 
 MAX_CORTO = 160
@@ -65,6 +67,58 @@ def _set_si_presente(app_row, campo, valor):
     if isinstance(valor, list) and len(valor) == 0:
         return
     setattr(app_row, campo, valor)
+
+
+# Claves del payload que no son respuestas: nunca van a `respuestas_extra`.
+RESERVADAS = {'nombre', 'dedupe_key', 'completo', 'form_id'}
+
+
+@bp.route('/public/closer-form', methods=['GET'])
+def ver_closer_form():
+    """Las preguntas prendidas del formulario de Closer (Talent › Forms, ADR-W280), en orden y
+    sin las claves del editor, y su cierre. Inactivo: `activo: false` (la página muestra la
+    búsqueda cerrada). `?preview=<id>`: el mismo formulario para la vista previa del editor."""
+    form = hiring_forms_closer.asegurar_closer()
+    data = {
+        "activo": bool(form.activo),
+        "id": form.id,
+        "nombre": form.nombre,
+        "preguntas": hiring_forms.preguntas_publicas(form),
+        "cierre": form.cierre_dict(),
+    }
+    if request.args.get('preview'):
+        data["preview"] = True
+    return jsonify(data), 200
+
+
+def _guardar_extras(app_row, data):
+    """Las respuestas a preguntas del formulario que no tienen columna van a `respuestas_extra`.
+    Lo que no viene en este POST no borra lo que ya estaba (mismo criterio que `_set_si_presente`)."""
+    form = db.session.get(HiringForm, app_row.form_id) if app_row.form_id else None
+    if form is None:
+        return
+    extras = dict(app_row.respuestas_extra or {})
+    cambio = False
+    for pregunta in form.preguntas or []:
+        pid = pregunta.get('id') if isinstance(pregunta, dict) else None
+        if not pid or pid in CAMPOS_FORMULARIO or pid in RESERVADAS:
+            continue
+        valor = data.get(pid)
+        valor = _lista(valor) if isinstance(valor, list) else _texto(valor, MAX_LARGO)
+        if valor and extras.get(pid) != valor:
+            extras[pid] = valor
+            cambio = True
+    if cambio:
+        app_row.respuestas_extra = extras  # dict nuevo: db.JSON solo detecta reasignaciones
+
+
+def _form_closer(valor):
+    if isinstance(valor, str) and valor.strip().isdigit():
+        valor = int(valor.strip())
+    if isinstance(valor, bool) or not isinstance(valor, int):
+        return None
+    form = db.session.get(HiringForm, valor)
+    return form if form is not None and form.puesto == 'closer' else None
 
 
 @bp.route('/public/job-applications', methods=['POST'])
@@ -127,6 +181,11 @@ def crear_job_application():
         # Solo se prende: mismo motivo que arriba, un request viejo (completo=False)
         # no debe apagar una postulación que otro más nuevo ya marcó terminada.
         app_row.completo = app_row.completo or bool(data.get('completo'))
+        if app_row.form_id is None:
+            form = _form_closer(data.get('form_id'))
+            if form is not None:
+                app_row.form_id = form.id
+        _guardar_extras(app_row, data)
 
         db.session.commit()
 

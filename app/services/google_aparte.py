@@ -136,7 +136,7 @@ CORREO = Autorizacion('correo', 'Correo saliente (Gmail)', 'https://www.googleap
 MEET = Autorizacion('meet', 'Reuniones de Meet (notas automáticas)', 'https://www.googleapis.com/auth/meetings.space.settings',
                     'las Momentum activan solas las notas, la transcripción y la grabación con',
                     'Hasta que se vuelva a conectar, las Momentum no activan solas las notas de Gemini.')
-# Learnation Marketing (ADR-W278): el Drive de las carpetas de videos (leer, crear carpetas, copiar, renombrar y
+# Learnation Marketing (ADR-W280): el Drive de las carpetas de videos (leer, crear carpetas, copiar, renombrar y
 # mover), lo que en claude.ai hacía el conector de Google Drive.
 DRIVE_MARKETING = Autorizacion('drive_marketing', 'Drive de Learnation Marketing', 'https://www.googleapis.com/auth/drive',
                                'Learnation Marketing usa el Drive de',

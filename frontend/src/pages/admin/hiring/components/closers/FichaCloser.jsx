@@ -180,7 +180,10 @@ const FichaCloser = ({ applicationId, ids, onClose, onNavigate, onDecidido }) =>
 
     const puntaje = puntajeCloser(d.criterios);
     const puntos = Object.fromEntries(puntaje.map((r) => [r.id, r]));
-    const abiertasDe = ABIERTAS.filter(([id]) => !vacio(d[id]));
+    // Más las preguntas sumadas en Talent › Forms (sin columna), al final y con su enunciado (ADR-W280).
+    const extras = (d.extras || []).filter((e) => !vacio(e.valor));
+    const valorDe = (id) => (id.startsWith('x:') ? extras.find((e) => `x:${e.id}` === id)?.valor : d[id]);
+    const abiertasDe = [...ABIERTAS.filter(([id]) => !vacio(d[id])), ...extras.map((e) => [`x:${e.id}`, e.t])];
     const todasAbiertas = abiertasDe.length > 0 && abiertasDe.every(([id]) => abiertas.has(id));
     const digitos = soloDigitos(d.whatsapp);
     const videoHref = href(d.video);
@@ -281,7 +284,7 @@ const FichaCloser = ({ applicationId, ids, onClose, onNavigate, onDecidido }) =>
                                     </button>
                                 </div>
                                 {abiertasDe.map(([id, titulo], k) => (
-                                    <Respuesta key={`${applicationId}-${id}`} id={id} titulo={titulo} valor={d[id]} pts={puntos[id]} orden={k}
+                                    <Respuesta key={`${applicationId}-${id}`} id={id} titulo={titulo} valor={valorDe(id)} pts={puntos[id]} orden={k}
                                         abierta={abiertas.has(id)} copiado={copiado === titulo} onToggle={toggle} onCopiar={copiar} />
                                 ))}
                             </>

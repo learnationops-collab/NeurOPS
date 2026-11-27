@@ -69,7 +69,7 @@ const ProtectedRoute = ({ children, roles = [], permitir = null }) => {
     return <Navigate to="/login" />;
   }
 
-  // `permitir`: una puerta extra que no es un rol (Learnation Marketing, ADR-W278).
+  // `permitir`: una puerta extra que no es un rol (Learnation Marketing, ADR-W280).
   if (roles.length > 0 && !roles.includes(user.role) && !(permitir && permitir(user))) {
     // Redirigir a su dashboard correspondiente si intenta entrar a ruta ajena
     // (mapa único en utils/roleLanding.js, el mismo que usa el login).

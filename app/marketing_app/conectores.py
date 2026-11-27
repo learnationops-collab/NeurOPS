@@ -1,4 +1,4 @@
-"""Los conectores de claude.ai que usa Learnation Marketing, atendidos por Work (ADR-W278).
+"""Los conectores de claude.ai que usa Learnation Marketing, atendidos por Work (ADR-W280).
 
 La página llama `mcp.callTool(servidor, herramienta, entrada)` igual que en claude.ai; el puente lo manda acá
 y esto contesta con la misma forma que el conector: «Meta Ads MCP» (Graph API, meta_lectura/meta_borrador),

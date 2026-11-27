@@ -19,7 +19,9 @@ const LinkFormulario = ({ form, onCambio }) => {
     const espera = useRef(null);
     useEffect(() => () => clearTimeout(espera.current), []);
 
-    const link = linkDe(form.slug);
+    // El de Closer vive en un link fijo (/vacante/): se copia, no se cambia (ADR-W280).
+    const fijo = form.link || null;
+    const link = fijo || linkDe(form.slug);
 
     const copiar = async () => {
         try {
@@ -74,7 +76,7 @@ const LinkFormulario = ({ form, onCambio }) => {
             </a>
             <IconButton size="sm" icon={copiado ? <Check /> : <Copy />} label={copiado ? 'Copiado' : 'Copiar link'}
                 title={copiado ? 'Copiado' : 'Copiar link'} onClick={copiar} disabled={!link} />
-            <IconButton size="sm" icon={<Pencil />} label="Cambiar link" title="Cambiar link" onClick={abrir} />
+            {!fijo && <IconButton size="sm" icon={<Pencil />} label="Cambiar link" title="Cambiar link" onClick={abrir} />}
             {error && <FieldError>{error}</FieldError>}
         </div>
     );

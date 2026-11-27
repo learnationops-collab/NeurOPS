@@ -1,4 +1,4 @@
-"""Learnation Marketing dentro de Work (ADR-W278): la base de documentos y los archivos que el artifact de
+"""Learnation Marketing dentro de Work (ADR-W280): la base de documentos y los archivos que el artifact de
 claude.ai guardaba con sus capacidades `db` y `assets`.
 
 `MarketingAppDoc` es un documento JSON por ruta (`coleccion/doc_id`), como el almacén del artifact: la página

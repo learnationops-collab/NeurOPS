@@ -415,7 +415,7 @@ def get_me():
 
 
 def _tiene_marketing(user=None):
-    """¿Ve Learnation Marketing en /ops/dashboard? (ADR-W278)."""
+    """¿Ve Learnation Marketing en /ops/dashboard? (ADR-W280)."""
     from app.marketing_app.acceso import puede
     try:
         return puede(user)

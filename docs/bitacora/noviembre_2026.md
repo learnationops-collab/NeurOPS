@@ -1377,3 +1377,7 @@
 ### 27/11/2026 · Broadcast de WhatsApp: se saltean los que agendaron o son clientes (ADR-W279)
 - Al leer el CSV, además de los que ya recibieron uno y los alumnos activos, se saltean los que agendaron alguna vez o son clientes, compraran o no. «Incluirlos» los vuelve a sumar ([envios.py](../../app/whatsapp/envios.py), [Mandar.jsx](../../frontend/src/ventanas/herramientas/broadcastWa/Mandar.jsx)).
 - Lista de los grupos viejos del taller (3.153 números): quedan 2.484 sin contactar.
+### 27/11/2026 · Forms: el formulario de Closer, conectado (ADR-W280)
+- El formulario de Closer aparece en Talent › Forms como uno más: se editan sus preguntas, opciones, ayuda y condiciones, se prende o apaga cada una, se suman nuevas, se cambia el cierre y se prueba en la vista previa. Su link es fijo (/vacante/) y no se duplica ni se borra ([hiring_forms_closer.py](../../app/services/hiring_forms_closer.py), [HiringForms.jsx](../../frontend/src/pages/admin/hiring/components/forms/HiringForms.jsx)).
+- `GET /api/public/closer-form` da sus preguntas y su cierre a institute.thelearnation.com/formulario/; el alta guarda con qué formulario contestó y las respuestas a preguntas nuevas, que la ficha del closer muestra al final ([job_applications.py](../../app/api/public/job_applications.py), [FichaCloser.jsx](../../frontend/src/pages/admin/hiring/components/closers/FichaCloser.jsx)). Migración `d4f6a8c0e2b1`.
+- La vacante de Closer se reabrió hasta el lun 30/11 23:59 ART (institute-site).

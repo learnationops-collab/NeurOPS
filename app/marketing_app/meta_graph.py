@@ -1,4 +1,4 @@
-"""Las llamadas a la Graph API de Meta del puente de Learnation Marketing (ADR-W278).
+"""Las llamadas a la Graph API de Meta del puente de Learnation Marketing (ADR-W280).
 
 Token: `META_ADS_WRITE_TOKEN` (un usuario del sistema con `ads_management`, para crear y publicar) y, si no
 está, `META_ADS_TOKEN` (el de solo lectura del gasto, que alcanza para leer). La versión, la de

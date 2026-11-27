@@ -234,12 +234,18 @@ def _rotulo(p, pos):
     return f"«{p.get('id')}»" if p.get('id') else f'la pregunta {pos + 1}'
 
 
-def validar_preguntas(lista):
+def validar_preguntas(lista, puesto='asistente'):
     """Revisa la lista que manda el editor. Levanta PreguntasInvalidas con un
     mensaje claro si algo no sirve; las claves que no conoce las deja pasar
     (son del editor o del formulario público)."""
     if not isinstance(lista, list) or not lista:
         raise PreguntasInvalidas('Las preguntas tienen que ser una lista no vacía.')
+    # El de Closer (ADR-W280) tiene sus propios tipos y sus propias originales.
+    if puesto == 'closer':
+        from app.services import hiring_forms_closer as hfc
+        tipos, ids_base = hfc.TIPOS, hfc.IDS_BASE
+    else:
+        tipos, ids_base = TIPOS, IDS_BASE
     if len(json.dumps(lista, ensure_ascii=False).encode('utf-8')) > MAX_BYTES:
         raise PreguntasInvalidas('El formulario es demasiado grande (más de 200 KB). Acortá textos u opciones.')
 
@@ -257,8 +263,8 @@ def validar_preguntas(lista):
             raise PreguntasInvalidas(f'El id «{pid}» está repetido: cada pregunta necesita uno propio.')
         vistos.add(pid)
 
-        if p.get('tipo') not in TIPOS:
-            raise PreguntasInvalidas(f'{rotulo}: el tipo tiene que ser uno de {", ".join(TIPOS)}.')
+        if p.get('tipo') not in tipos:
+            raise PreguntasInvalidas(f'{rotulo}: el tipo tiene que ser uno de {", ".join(tipos)}.')
         if not isinstance(p.get('t', ''), str) or len(p.get('t', '')) > MAX_TITULO:
             raise PreguntasInvalidas(f'{rotulo}: el enunciado es texto de hasta {MAX_TITULO} caracteres.')
         if p.get('bloque') is not None and (not isinstance(p['bloque'], str) or len(p['bloque']) > MAX_BLOQUE):
@@ -288,7 +294,7 @@ def validar_preguntas(lista):
         if si is not None and not (isinstance(si, dict) and isinstance(si.get('id'), str)):
             raise PreguntasInvalidas(f'{rotulo}: la condición tiene que decir de qué pregunta depende.')
 
-        if p.get('base') and pid not in IDS_BASE:
+        if p.get('base') and pid not in ids_base:
             raise PreguntasInvalidas(f'{rotulo}: una pregunta nueva no puede marcarse como base.')
 
     # Las originales se pueden borrar (el score las toma como apagadas, ver
@@ -325,7 +331,7 @@ def asegurar_semilla():
     """Si todavía no hay ningún formulario, crea el de las 35 preguntas actuales
     (activo) y le asigna las postulaciones que ya existían. Devuelve el creado o
     None. Una consulta barata en el caso normal: se llama en cada endpoint."""
-    if db.session.query(HiringForm.id).first() is not None:
+    if db.session.query(HiringForm.id).filter(HiringForm.puesto == 'asistente').first() is not None:
         return None
     form = HiringForm(nombre=NOMBRE_BASE, slug=SLUG_BASE, activo=True, preguntas=copy.deepcopy(PREGUNTAS_BASE))
     db.session.add(form)
@@ -339,7 +345,7 @@ def asegurar_semilla():
 def form_activo():
     """El que muestra el link viejo (/vacante-assistant/, sin slug): el activo
     más antiguo. Con varios activos, cada uno vive además en su propio link."""
-    return HiringForm.query.filter_by(activo=True).order_by(HiringForm.id).first()
+    return HiringForm.query.filter_by(activo=True, puesto='asistente').order_by(HiringForm.id).first()
 
 
 # --- Link público ------------------------------------------------------------
@@ -411,10 +417,17 @@ def resumen(form, respuestas=None):
 
 
 def form_dict(form, respuestas=None, con_preguntas=False):
+    closer = form.puesto == 'closer'
+    if closer:
+        from app.services import hiring_forms_closer as hfc
+        respuestas = {**(respuestas or {}), form.id: hfc.respuestas()}
     data = {
         "id": form.id,
         "nombre": form.nombre,
         "slug": form.slug,
+        "puesto": form.puesto,
+        # El de Closer vive en un link fijo (/vacante/ y /formulario/), sin slug.
+        "link": hfc.LINK if closer else None,
         "activo": bool(form.activo),
         "created_at": form.created_at.isoformat() if form.created_at else None,
         "updated_at": form.updated_at.isoformat() if form.updated_at else None,
@@ -423,7 +436,7 @@ def form_dict(form, respuestas=None, con_preguntas=False):
     if con_preguntas:
         data["preguntas"] = form.preguntas or []
         # Para que el editor ofrezca volver a sumar las originales que se borraron.
-        data["originales"] = PREGUNTAS_BASE
+        data["originales"] = hfc.PREGUNTAS_CLOSER if closer else PREGUNTAS_BASE
     return data
 
 

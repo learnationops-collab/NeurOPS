@@ -3,7 +3,7 @@ import api from '../../../services/api';
 import './panelMarketing.css';
 
 /**
- * Learnation Marketing (el artifact de claude.ai) dentro de /ops/dashboard?step=marketing (ADR-W278).
+ * Learnation Marketing (el artifact de claude.ai) dentro de /ops/dashboard?step=marketing (ADR-W280).
  *
  * La página es el HTML del artifact con su puente (`app/marketing_app/puente.js`), en un iframe del mismo
  * origen (`srcdoc`): usa la sesión de Work, y `/_blob/…` y los links de los creativos resuelven contra Work.

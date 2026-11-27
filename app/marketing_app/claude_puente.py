@@ -1,4 +1,4 @@
-"""Learnito de Learnation Marketing en Work (ADR-W278): la capacidad `sample` del artifact, con la API de Claude
+"""Learnito de Learnation Marketing en Work (ADR-W280): la capacidad `sample` del artifact, con la API de Claude
 de Work (`ClaudeService`, que registra el gasto en `AiUsage` bajo la función `learnation_marketing`).
 
 Una vuelta por pedido: la página (su puente) manda la conversación y sus herramientas; si Claude pide una,

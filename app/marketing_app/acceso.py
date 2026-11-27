@@ -1,4 +1,4 @@
-"""Quién entra a Learnation Marketing en Work (ADR-W278): Mario, Marlon, Santi y Kerwin, por su mail.
+"""Quién entra a Learnation Marketing en Work (ADR-W280): Mario, Marlon, Santi y Kerwin, por su mail.
 
 No depende del rol: Marlon y Kerwin no son operadores y la sección vive en /ops/dashboard. Entra la persona
 si el mail de su cuenta, o el de cualquiera de sus cuentas vinculadas, está en la lista. `MARKETING_APP_EMAILS`

@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     FileText, Globe, Copy, Trash2, Eye, Pencil, Plus, ArrowLeft, Monitor, Smartphone, RotateCcw, AlertTriangle,
-    CheckCircle2, Loader2,
+    CheckCircle2, Loader2, Briefcase,
 } from 'lucide-react';
 import api from '../../../../../services/api';
 import { Humo } from '../../../../comercial/components/Shared';
 import { Chip } from '../Piezas';
-import { URL_FORMULARIO, resumen } from '../../lib/formularios';
+import { URL_FORMULARIO, URL_FORMULARIO_CLOSER, resumen } from '../../lib/formularios';
 import EditorPreguntas from './EditorPreguntas';
 import LinkFormulario from './LinkFormulario';
 import CierreFormulario from './CierreFormulario';
@@ -33,6 +33,8 @@ const Switch = ({ on, onClick, etiqueta, ok = false, disabled }) => (
 
 const Tarjeta = ({ f, onSlug, onActivar, onDuplicar, onBorrar, onAbrir, borrando, onPedirBorrar, onCancelarBorrar }) => {
     const r = f.resumen || {};
+    // El de Closer (ADR-W280) es uno solo: no se duplica ni se borra.
+    const closer = f.puesto === 'closer';
     return (
         <article className={`tl-fcard${f.activo ? ' tl-fcard--on caja' : ''}`}>
             {f.activo && <Humo colores={HUMO_MARCA} tarjeta />}
@@ -40,14 +42,14 @@ const Tarjeta = ({ f, onSlug, onActivar, onDuplicar, onBorrar, onAbrir, borrando
                 <span className="tl-icono-m"><FileText size={20} /></span>
                 <button type="button" className="tl-fcard-nom" onClick={() => onAbrir(f.id, 'preguntas')}>
                     <b>{f.nombre}</b>
-                    <small>Creado el {fecha(f.created_at)}</small>
+                    <small>{closer ? <><Briefcase size={12} /> Closers · /formulario/</> : `Creado el ${fecha(f.created_at)}`}</small>
                 </button>
                 {f.activo ? <Chip c="var(--success)" icono={Globe}>En la página</Chip> : <Chip c="var(--idle)">Inactivo</Chip>}
             </div>
             <div className="tl-datos">
                 <div className="tl-dato"><b>{r.activas ?? '—'}<small> / {r.total ?? '—'}</small></b><span>Preguntas activas</span></div>
                 <div className="tl-dato tl-dato--ko"><b>{r.excluyentes ?? '—'}</b><span>Excluyentes</span></div>
-                <div className="tl-dato"><b>{r.respuestas ?? 0}</b><span>Respuestas</span></div>
+                <div className="tl-dato"><b>{r.respuestas ?? 0}</b><span>{closer ? 'De esta búsqueda' : 'Respuestas'}</span></div>
             </div>
             <LinkFormulario form={f} onCambio={(slug) => onSlug(f.id, slug)} />
             {borrando ? (
@@ -67,13 +69,17 @@ const Tarjeta = ({ f, onSlug, onActivar, onDuplicar, onBorrar, onAbrir, borrando
                         {f.activo ? 'Activo' : 'Inactivo'}
                     </span>
                     <div className="der">
-                        <button type="button" className="ibtn ibtn--sm" onClick={() => onDuplicar(f.id)} title="Duplicar" aria-label={`Duplicar ${f.nombre}`}><Copy /></button>
-                        <button type="button" className="ibtn ibtn--sm ibtn--peligro" onClick={() => onPedirBorrar(f.id)}
-                            disabled={f.activo || (r.respuestas || 0) > 0}
-                            title={f.activo ? 'Un activo no se borra: primero desactivalo' : (r.respuestas || 0) > 0 ? 'Tiene respuestas: desactivalo en vez de borrarlo' : 'Eliminar'}
-                            aria-label={`Eliminar ${f.nombre}`}>
-                            <Trash2 />
-                        </button>
+                        {!closer && (
+                            <>
+                                <button type="button" className="ibtn ibtn--sm" onClick={() => onDuplicar(f.id)} title="Duplicar" aria-label={`Duplicar ${f.nombre}`}><Copy /></button>
+                                <button type="button" className="ibtn ibtn--sm ibtn--peligro" onClick={() => onPedirBorrar(f.id)}
+                                    disabled={f.activo || (r.respuestas || 0) > 0}
+                                    title={f.activo ? 'Un activo no se borra: primero desactivalo' : (r.respuestas || 0) > 0 ? 'Tiene respuestas: desactivalo en vez de borrarlo' : 'Eliminar'}
+                                    aria-label={`Eliminar ${f.nombre}`}>
+                                    <Trash2 />
+                                </button>
+                            </>
+                        )}
                         <button type="button" className="btn btn--sm btn--linea" onClick={() => onAbrir(f.id, 'previa')}><Eye /> Probar</button>
                         <button type="button" className="btn btn--sm btn--linea" onClick={() => onAbrir(f.id, 'preguntas')}><Pencil /> Editar</button>
                     </div>
@@ -230,7 +236,8 @@ const Editor = ({ id, modo, onModo, onVolver }) => {
     const E = ESTADO[estado];
     // En local se puede apuntar el marco a un formulario servido aparte (ver institute-site).
     const api0 = import.meta.env.VITE_TALENT_FORM_API ? `&api=${encodeURIComponent(import.meta.env.VITE_TALENT_FORM_API)}` : '';
-    const src = `${URL_FORMULARIO}?preview=${id}&v=${version}${api0}`;
+    const base = form.puesto === 'closer' ? URL_FORMULARIO_CLOSER : URL_FORMULARIO;
+    const src = `${base}?preview=${id}&v=${version}${api0}`;
 
     return (
         <>
@@ -285,7 +292,7 @@ const Editor = ({ id, modo, onModo, onVolver }) => {
                         <LinkFormulario form={form} onCambio={(slug) => setForm((prev) => ({ ...prev, slug }))} />
                         <CierreFormulario cierre={form.cierre} onCambio={(cierre) => cambiar({ cierre })} />
                     </section>
-                    <EditorPreguntas preguntas={form.preguntas || []} originales={form.originales || []} onCambiar={(preguntas) => cambiar({ preguntas })} />
+                    <EditorPreguntas preguntas={form.preguntas || []} originales={form.originales || []} puesto={form.puesto} onCambiar={(preguntas) => cambiar({ preguntas })} />
                 </>
             )}
         </>

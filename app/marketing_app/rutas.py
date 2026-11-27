@@ -1,4 +1,4 @@
-"""Las rutas de Learnation Marketing en Work (ADR-W278). Todas piden la sesión de Work y la lista de
+"""Las rutas de Learnation Marketing en Work (ADR-W280). Todas piden la sesión de Work y la lista de
 `acceso.py`; las que escriben, además, el CSRF de siempre (lo manda el puente de la página).
 
 GET  /api/marketing-app/pagina          la página del artifact con su puente (va en el iframe de /ops/dashboard)

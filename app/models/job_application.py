@@ -94,6 +94,11 @@ class JobApplication(db.Model):
     # vez de reabrir la vieja. None mientras está activa.
     archivada_at = db.Column(db.DateTime, nullable=True, index=True)
 
+    # Con qué formulario editable (HiringForm puesto 'closer') se contestó, y las respuestas a
+    # preguntas sin columna (las que se suman desde Talent › Forms). ADR-W280.
+    form_id = db.Column(db.Integer, db.ForeignKey('hiring_forms.id'), nullable=True)
+    respuestas_extra = db.Column(db.JSON, nullable=True)
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -187,8 +192,22 @@ class JobApplication(db.Model):
                 "porque": self.porque,
                 "fuente": self.fuente,
                 "bolsa": self.bolsa,
+                "extras": self.extras(),
             })
         return data
+
+    def extras(self):
+        """Las respuestas a preguntas sin columna (sumadas en Talent › Forms), con su enunciado
+        y en el orden del formulario: [{id, t, valor}]."""
+        guardadas = self.respuestas_extra or {}
+        if not guardadas:
+            return []
+        from app.models.hiring_form import HiringForm
+        form = db.session.get(HiringForm, self.form_id) if self.form_id else None
+        titulos = {p.get('id'): p.get('t') for p in ((form.preguntas if form else None) or []) if isinstance(p, dict)}
+        orden = list(titulos) + [k for k in guardadas if k not in titulos]
+        return [{"id": k, "t": titulos.get(k) or k, "valor": guardadas[k]}
+                for k in orden if k in guardadas and not k.endswith('_pts')]
 
     def __repr__(self):
         return f'<JobApplication {self.nombre} · {self.email}>'
