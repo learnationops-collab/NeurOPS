@@ -1,0 +1,93 @@
+/* Ficha de Closer (27/11/2026): se lee como un documento. Izquierda: las respuestas abiertas, cada
+   una para desplegar y replegar. Derecha: lo que se mide y, fijas abajo, las decisiones.
+   Usa los tokens de `.tl-fi` (fichaPostulacion.css). */
+
+/* index.css fuerza `font-weight: regular !important` en div/span/button fuera de unas pocas cajas,
+   con una especificidad alta (diez :not). `:is(#tl-fc-peso, …)` toma la especificidad de un id
+   —no hace falta que exista— y así los pesos de esta ficha se respetan. */
+:is(#tl-fc-peso, .tl-fc-resp-t, .tl-fc-btn, .tl-fc-btn span, .tl-fc-dato b, .tl-fc-crit b, .tl-fc-pts, .tl-fc-todas){font-weight:700 !important}
+:is(#tl-fc-peso, .tl-fc-resp-txt, .tl-fc-resp-prev, .tl-fc-dato span, .tl-fc-crit > span:first-child, .tl-fc-lista li){font-weight:400 !important}
+
+.tl-fc-cuerpo{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;padding:16px 16px 16px 24px}
+
+/* --- Lectura --- */
+.tl-fc-lectura{min-height:0;overflow-y:auto;padding-right:8px;display:flex;flex-direction:column;gap:8px;scrollbar-width:thin}
+.tl-fc-lect-cab{display:flex;align-items:center;justify-content:space-between;padding:4px 4px 6px}
+.tl-fc-todas{height:30px;padding:0 14px;border-radius:999px;font-size:12.5px;color:var(--text-muted);background:var(--bg-element);
+  border:1px solid var(--border-subtle);transition:color .15s ease,background .15s ease}
+.tl-fc-todas:hover{color:var(--text-on-surface);background:var(--bg-element-hover)}
+
+.tl-fc-resp{border-radius:18px;background:var(--bg-surface);border:1px solid var(--border-subtle);
+  transition:border-color .2s ease,background .2s ease;animation:tlFiEntra .35s cubic-bezier(.2,.8,.2,1) backwards}
+.tl-fc-resp:hover{border-color:var(--border-main)}
+.tl-fc-resp.is-abierta{border-color:color-mix(in srgb,var(--brand-secondary) 30%,var(--border-main))}
+.tl-fc-resp-cab{display:flex;align-items:center;gap:12px;width:100%;padding:14px 18px;text-align:left;background:none;border:0;cursor:pointer;
+  color:var(--text-on-surface)}
+.tl-fc-resp-t{flex:1;min-width:0;font-size:16px;letter-spacing:-.01em}
+.tl-fc-pts{flex:none;padding:3px 9px;border-radius:999px;font-size:12px;font-variant-numeric:tabular-nums;
+  color:var(--brand-secondary);background:color-mix(in srgb,var(--brand-secondary) 12%,transparent)}
+.tl-fc-pts small{opacity:.6}
+.tl-fc-resp-flecha{flex:none;color:var(--text-muted-40);transition:transform .25s cubic-bezier(.3,.8,.2,1),color .15s ease}
+.tl-fc-resp-cab:hover .tl-fc-resp-flecha{color:var(--text-on-surface)}
+.tl-fc-resp.is-abierta .tl-fc-resp-flecha{transform:rotate(180deg);color:var(--brand-secondary)}
+/* Cerrada: una sola línea de adelanto, para saber de qué va sin abrirla. */
+.tl-fc-resp-prev{margin:-6px 0 0;padding:0 18px 14px;font-size:14px;line-height:1.5;color:var(--text-muted);cursor:pointer;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Abierta: el texto entero, cómodo de leer (renglón de ~75 caracteres). */
+.tl-fc-resp-cuerpo{display:grid;grid-template-rows:0fr;transition:grid-template-rows .3s cubic-bezier(.3,.8,.2,1)}
+.tl-fc-resp.is-abierta .tl-fc-resp-cuerpo{grid-template-rows:1fr}
+.tl-fc-resp-cuerpo > div{min-height:0;overflow:hidden;padding:0 18px}
+.tl-fc-resp.is-abierta .tl-fc-resp-cuerpo > div{padding-bottom:14px}
+.tl-fc-resp-txt{margin:0;max-width:75ch;font-size:16px;line-height:1.7;color:color-mix(in srgb,var(--text-on-surface) 88%,transparent);
+  white-space:pre-line}
+.tl-fc-lista{margin:0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:8px}
+.tl-fc-lista li{padding:6px 12px;border-radius:999px;font-size:14px;background:var(--bg-element);border:1px solid var(--border-subtle)}
+.tl-fc-copiar{display:inline-flex;align-items:center;gap:6px;margin-top:10px;height:26px;padding:0 10px;border-radius:999px;font-size:12px;
+  color:var(--text-muted-40);background:none;border:1px solid transparent;transition:color .15s ease,border-color .15s ease}
+.tl-fc-copiar:hover{color:var(--text-on-surface);border-color:var(--border-subtle)}
+
+/* --- Lado: lo que se mide y la decisión --- */
+.tl-fc-lado{min-height:0;display:flex;flex-direction:column;border-radius:20px;background:var(--bg-surface);border:1px solid var(--border-main);overflow:hidden}
+.tl-fc-lado-scroll{flex:1;min-height:0;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:14px;scrollbar-width:thin}
+.tl-fc-lado-scroll > *{flex:none}
+.tl-fc-crit{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:baseline;gap:4px 12px;padding:7px 0;border-top:1px solid var(--border-subtle)}
+.tl-fc-crit > span:first-child{font-size:14px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tl-fc-crit b{font-size:15px;font-variant-numeric:tabular-nums}
+.tl-fc-crit b small{font-size:11.5px;color:var(--text-muted)}
+.tl-fc-crit .tl-fi-barra{grid-column:1 / -1}
+.tl-fc-datos{display:flex;flex-direction:column}
+.tl-fc-dato{display:flex;justify-content:space-between;gap:14px;padding:8px 4px;border-top:1px solid var(--border-subtle);font-size:14.5px}
+.tl-fc-dato:first-child{border-top:0}
+.tl-fc-dato span{flex:none;color:var(--text-muted)}
+.tl-fc-dato b{text-align:right;min-width:0}
+/* Las respuestas largas (reporte, herramientas, de dónde llegó) bajan abajo del rótulo. */
+.tl-fc-dato.is-largo{flex-direction:column;gap:3px}
+.tl-fc-dato.is-largo b{text-align:left;font-size:14px;line-height:1.45}
+
+/* Decisiones: siempre a la vista, abajo del lado, en baldosas de color. */
+.tl-fc-decide{flex:none;display:grid;gap:8px;padding:12px;border-top:1px solid var(--border-main);
+  background:color-mix(in srgb,var(--bg-element) 60%,transparent)}
+.tl-fc-botones{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.tl-fc-botones.is-cuatro{grid-template-columns:repeat(2,minmax(0,1fr))}
+.tl-fc-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:68px;padding:10px 6px;border-radius:16px;
+  cursor:pointer;color:var(--c);background:color-mix(in srgb,var(--c) 12%,transparent);border:1px solid color-mix(in srgb,var(--c) 40%,transparent);
+  transition:transform .14s ease,background .18s ease,box-shadow .18s ease,color .18s ease}
+.tl-fc-btn span{font-size:12.5px;line-height:1.15;text-align:center;color:var(--text-on-surface)}
+.tl-fc-btn:hover{transform:translateY(-2px);background:color-mix(in srgb,var(--c) 22%,transparent);
+  box-shadow:0 12px 26px -14px var(--c)}
+.tl-fc-btn:active{transform:scale(.97)}
+/* Mi voto: la baldosa se llena de su color. Tocarla otra vez lo deshace. */
+.tl-fc-btn.is-activo{background:var(--c);border-color:transparent;color:var(--ink);box-shadow:0 12px 28px -12px var(--c)}
+.tl-fc-btn.is-activo span{color:var(--ink)}
+
+@media (max-width:1000px){
+  .tl-fc-cuerpo{grid-template-columns:minmax(0,1fr) 300px;padding:12px}
+}
+@media (max-width:760px){
+  .tl-fc-cuerpo{grid-template-columns:minmax(0,1fr);overflow-y:auto}
+  .tl-fc-lectura{overflow:visible}
+  .tl-fc-lado-scroll{overflow:visible}
+}
+@media (prefers-reduced-motion:reduce){
+  .tl-fc-resp,.tl-fc-resp-cuerpo,.tl-fc-resp-flecha{animation:none;transition:none}
+}

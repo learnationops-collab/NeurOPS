@@ -1335,3 +1335,6 @@
 
 ### 27/11/2026 · Flujo del taller: botones de respuesta en los pasos de mensaje (ADR-W272)
 - Un paso de mensaje común lleva hasta 3 botones de respuesta además del link; cada botón, y el link con «al abrir el link», tiene su nodo en el lienzo como los de una plantilla ([PasoEditor.jsx](../../frontend/src/ventanas/herramientas/broadcastTaller/PasoEditor.jsx), [respuestas.py](../../app/whatsapp/respuestas.py)).
+### 27/11/2026 · Ficha de Closer para leer y decidir (ADR-W273)
+- Respuestas abiertas en acordeón (una línea de adelanto cerrada, el texto entero abierta, «Desplegar todas»); a la derecha el score con su desglose, conocimiento, cierre, inglés, reporte, herramientas y perfil; abajo, fijas, Preseleccionar / Reserva / Descartar en baldosas de color. Sin la sección Archivos ([FichaCloser.jsx](../../frontend/src/pages/admin/hiring/components/closers/FichaCloser.jsx), [fichaCloser.css](../../frontend/src/pages/admin/hiring/components/closers/fichaCloser.css)).
+- Las fichas de Talent (Closer y Asistente) dejan libre el alto del dock: ya no quedan debajo ([HiringCandidateModal.jsx](../../frontend/src/pages/admin/hiring/components/HiringCandidateModal.jsx)).
