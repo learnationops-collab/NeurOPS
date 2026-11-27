@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { Check, RotateCcw, X } from 'lucide-react';
 import { subirACapa } from '../../../../../components/standard/capa';
 import { cierreNum } from '../../lib/closers';
-import { CIERRES, ESTADOS_ANTIGUOS, FILTRO_DEFAULT, QUITAR, cuantosActivos, cuantosQuita, pasa } from '../../lib/antiguos';
+import { CIERRES, ESTADOS_ANTIGUOS, FILTRO_DEFAULT, QUITAR, TENER, cuantosActivos, cuantosQuita, cumple, pasa } from '../../lib/antiguos';
 
 // El filtro de «Antiguos» (ADR-W277): qué estados entran, a quiénes sacar y desde qué % de cierre.
 // Cada opción muestra cuántos suma o saca con el resto del filtro como está.
@@ -67,32 +67,44 @@ const MenuAntiguos = ({ ancla, filas, ctx, filtro, onCambiar, onCerrar }) => {
                     <button type="button" className="ibtn" onClick={onCerrar} aria-label="Cerrar"><X size={16} /></button>
                 </div>
 
-                <p className="tl-msub">Estado</p>
-                {ESTADOS_ANTIGUOS.map((e) => (
-                    <Opcion key={e.id} on={filtro.estados.includes(e.id)} label={e.label} punto={e.c}
-                        cuenta={sinEstado.filter((p) => p.veredicto === e.id).length} onClick={() => alternar('estados', e.id)} />
-                ))}
-                <p className="tl-mnota">{filtro.estados.length ? 'Solo los estados marcados.' : 'Sin marcar ninguno, entran todos.'}</p>
+                <div className="tl-mcols">
+                    <div>
+                        <p className="tl-msub">Estado</p>
+                        {ESTADOS_ANTIGUOS.map((e) => (
+                            <Opcion key={e.id} on={filtro.estados.includes(e.id)} label={e.label} punto={e.c}
+                                cuenta={sinEstado.filter((p) => p.veredicto === e.id).length} onClick={() => alternar('estados', e.id)} />
+                        ))}
+                        <p className="tl-mnota">{filtro.estados.length ? 'Solo los estados marcados.' : 'Sin marcar ninguno, entran todos.'}</p>
 
-                <div className="tl-msep" />
-                <p className="tl-msub">Sacar a los que</p>
-                {QUITAR.map((o) => (
-                    <Opcion key={o.id} on={filtro.quitar.includes(o.id)} label={o.label} nota={o.nota}
-                        cuenta={`−${cuantosQuita(filas.filter((p) => pasa(p, filtro, ctx, o.id)), o.id, ctx)}`}
-                        onClick={() => alternar('quitar', o.id)} />
-                ))}
+                        <div className="tl-msep" />
+                        <p className="tl-msub">Cierre mínimo</p>
+                        <div className="tl-mcierre" role="group" aria-label="Cierre mínimo">
+                            {CIERRES.map((n) => (
+                                <button key={n} type="button" aria-pressed={filtro.cierreMin === n} onClick={() => onCambiar({ ...filtro, cierreMin: n })}>
+                                    {n ? `${n}%+` : 'Todos'}
+                                    <span>{n ? sinCierre.filter((p) => (cierreNum(p.cierre) ?? -1) >= n).length : sinCierre.length}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                    <div>
+                        <p className="tl-msub">Que tengan</p>
+                        {TENER.map((o) => (
+                            <Opcion key={o.id} on={filtro.tener.includes(o.id)} label={o.label}
+                                cuenta={filas.filter((p) => pasa(p, filtro, ctx, o.id) && cumple(p, o.id)).length}
+                                onClick={() => alternar('tener', o.id)} />
+                        ))}
+                        <p className="tl-mnota">{filtro.tener.length > 1 ? 'Tienen que cumplir todas las marcadas.' : 'Cada número: cuántos lo cumplen con el resto del filtro.'}</p>
 
-                <div className="tl-msep" />
-                <p className="tl-msub">Cierre mínimo</p>
-                <div className="tl-mcierre" role="group" aria-label="Cierre mínimo">
-                    {CIERRES.map((n) => (
-                        <button key={n} type="button" aria-pressed={filtro.cierreMin === n} onClick={() => onCambiar({ ...filtro, cierreMin: n })}>
-                            {n ? `${n}%+` : 'Todos'}
-                            <span>{n ? sinCierre.filter((p) => (cierreNum(p.cierre) ?? -1) >= n).length : sinCierre.length}</span>
-                        </button>
-                    ))}
+                        <div className="tl-msep" />
+                        <p className="tl-msub">Sacar a los que</p>
+                        {QUITAR.map((o) => (
+                            <Opcion key={o.id} on={filtro.quitar.includes(o.id)} label={o.label} nota={o.nota}
+                                cuenta={((n) => (n ? `−${n}` : '0'))(cuantosQuita(filas.filter((p) => pasa(p, filtro, ctx, o.id)), o.id, ctx))}
+                                onClick={() => alternar('quitar', o.id)} />
+                        ))}
+                    </div>
                 </div>
-
                 <div className="tl-mpie">
                     <button type="button" className="btn btn--sm btn--linea" disabled={!cuantosActivos(filtro)} onClick={() => onCambiar(FILTRO_DEFAULT)}>
                         <RotateCcw /> Quitar filtros

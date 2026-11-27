@@ -1,5 +1,5 @@
 import { soloDigitos, href } from './escalas';
-import { cierreNum } from './closers';
+import { NIVEL_INGLES, cierreNum } from './closers';
 
 // «Antiguos» de Closers (ADR-W277): los de búsquedas anteriores, con un filtro para armar la lista
 // de a quién volver a escribirle, y su CSV.
@@ -18,25 +18,46 @@ export const QUITAR = [
     { id: 'repostulados', label: 'Se volvieron a postular', nota: 'Tienen una postulación más nueva' },
     { id: 'incompletos', label: 'No terminaron el formulario' },
     { id: 'sinWhatsapp', label: 'Sin WhatsApp' },
-    { id: 'sinVideo', label: 'Sin video de presentación' },
 ];
+
+// Lo que tienen que tener sí o sí (todas las marcadas a la vez): para rescatar, de los descartados o
+// sin calificar, a los que valen un mensaje.
+const EXPERIENCIA = ['Tengo formación + experiencia', 'Tengo experiencia'];
+export const TENER = [
+    { id: 'cierre', label: 'Midieron su % de cierre' },
+    { id: 'experiencia', label: 'Experiencia como closer' },
+    { id: 'video', label: 'Video de presentación' },
+    { id: 'llamada', label: 'Llamada grabada' },
+    { id: 'ingles', label: 'Inglés intermedio o más' },
+];
+const tiene = {
+    cierre: (p) => cierreNum(p.cierre) != null,
+    experiencia: (p) => EXPERIENCIA.includes(p.conocimiento),
+    video: (p) => !!href(p.video),
+    llamada: (p) => !!href(p.llamada),
+    ingles: (p) => (NIVEL_INGLES[p.ingles] ?? 0) >= 2,
+};
+export const cumple = (p, id) => tiene[id](p);
 
 export const CIERRES = [0, 20, 30, 50];
 
-export const FILTRO_DEFAULT = { estados: [], quitar: [], cierreMin: 0 };
+export const FILTRO_DEFAULT = { estados: [], quitar: [], tener: [], cierreMin: 0 };
 const CLAVE = 'neurops-talent-filtro-antiguos-v1';
 
 export const leerFiltro = () => {
     try {
         const f = JSON.parse(window.localStorage.getItem(CLAVE) || 'null');
-        return f ? { ...FILTRO_DEFAULT, ...f } : FILTRO_DEFAULT;
+        if (!f) return FILTRO_DEFAULT;
+        const r = { ...FILTRO_DEFAULT, ...f };
+        // «Sin video» pasó de «Sacar» a «Que tengan».
+        return { ...r, quitar: r.quitar.filter((id) => QUITAR.some((o) => o.id === id)), tener: r.tener.filter((id) => tiene[id]) };
     } catch { return FILTRO_DEFAULT; }
 };
 export const guardarFiltro = (f) => {
     try { window.localStorage.setItem(CLAVE, JSON.stringify(f)); } catch { /* sin almacenamiento: dura la sesión */ }
 };
 
-export const cuantosActivos = (f) => f.estados.length + f.quitar.length + (f.cierreMin ? 1 : 0);
+export const cuantosActivos = (f) => f.estados.length + f.quitar.length + f.tener.length + (f.cierreMin ? 1 : 0);
 
 // La misma persona se reconoce por su email o por su WhatsApp (los últimos 8 dígitos, así no importa
 // si lo escribió con o sin código de país). Al archivar se vacía `dedupe_key`, por eso no sirve.
@@ -68,13 +89,13 @@ const quita = {
     repostulados: (p, ctx) => ctx.repostulados.has(p.id),
     incompletos: (p) => !p.completo,
     sinWhatsapp: (p) => soloDigitos(p.whatsapp).length < 7,
-    sinVideo: (p) => !href(p.video),
 };
 
 /** Pasa el filtro salvo, opcionalmente, una de sus partes (para contar cuánto suma cada opción). */
 export const pasa = (p, f, ctx, salvo) => {
     if (salvo !== 'estados' && f.estados.length && !f.estados.includes(p.veredicto)) return false;
     if (salvo !== 'cierre' && f.cierreMin && !((cierreNum(p.cierre) ?? -1) >= f.cierreMin)) return false;
+    if (!f.tener.every((id) => id === salvo || tiene[id](p))) return false;
     return f.quitar.every((id) => id === salvo || !quita[id]?.(p, ctx));
 };
 
@@ -88,7 +109,7 @@ const celda = (v) => {
 };
 
 export const descargarCsv = (lista, etiquetaEstado) => {
-    const cab = ['Nombre', 'Estado', 'Cierre %', 'WhatsApp', 'Link WhatsApp', 'Email', 'País', 'Video', 'Postuló', 'Formulario'];
+    const cab = ['Nombre', 'Estado', 'Cierre %', 'WhatsApp', 'Link WhatsApp', 'Email', 'País', 'Conocimiento', 'Inglés', 'Video', 'Llamada', 'Postuló', 'Formulario'];
     const filas = lista.map((p) => {
         const d = soloDigitos(p.whatsapp);
         return [
@@ -99,7 +120,10 @@ export const descargarCsv = (lista, etiquetaEstado) => {
             d.length >= 7 ? `https://wa.me/${d}` : '',
             p.email || '',
             p.pais || '',
+            p.conocimiento || '',
+            p.ingles || '',
             href(p.video) || '',
+            href(p.llamada) || '',
             (p.created_at || '').slice(0, 10),
             p.completo ? 'Completo' : 'A medias',
         ];

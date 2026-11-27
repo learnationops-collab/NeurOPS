@@ -643,7 +643,10 @@ body.tl-redim *{cursor:col-resize!important;user-select:none!important}
 @keyframes tlBaja{0%{transform:none}45%{transform:translateY(3px)}100%{transform:none}}
 
 /* El menú del filtro de Antiguos. */
-.tl-capa .tl-menu--antiguos{width:min(360px,calc(100vw - 32px))}
+.tl-capa .tl-menu--antiguos{width:min(680px,calc(100vw - 32px))}
+.tl-capa .tl-mcols{display:grid;grid-template-columns:1fr 1fr;gap:4px 14px}
+.tl-capa .tl-mcols > div + div{border-left:1px solid var(--border-subtle);padding-left:10px}
+@media (max-width:720px){.tl-capa .tl-mcols{grid-template-columns:1fr}.tl-capa .tl-mcols > div + div{border-left:0;padding-left:0}}
 .tl-capa .tl-menu--antiguos .punto{width:8px;height:8px;border-radius:50%;flex-shrink:0;background:var(--c);box-shadow:0 0 8px -1px var(--c)}
 .tl-capa .tl-menu--antiguos .lbl small{display:block;font-size:11.5px;font-weight:500;color:var(--text-muted-40);margin-top:1px}
 .tl-capa .tl-menu--antiguos .val{font-variant-numeric:tabular-nums}
