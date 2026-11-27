@@ -101,7 +101,9 @@ def boton_tocado(contacto, mensaje):
 
 
 def con_nombre(texto, nombre):
-    """`{nombre}` pasa a ser el primer nombre; sin nombre se va con la coma o el espacio de antes."""
+    """`{nombre}` pasa a ser el primer nombre; sin nombre se va con la coma o el espacio de antes. `{{1}}` vale lo
+    mismo: en una plantilla es el nombre y se escribe igual en los mensajes que no lo son (ADR-W266)."""
+    texto = texto.replace('{{1}}', '{nombre}')
     primero = (nombre or '').strip().split(' ')[0].title()
     return texto.replace('{nombre}', primero) if primero else re.sub(r',?\s*\{nombre\}', '', texto)
 
