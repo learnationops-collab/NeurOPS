@@ -1,93 +1,146 @@
 /* Ficha de Closer (27/11/2026): se lee como un documento. Izquierda: las respuestas abiertas, cada
-   una para desplegar y replegar. Derecha: lo que se mide y, fijas abajo, las decisiones.
-   Usa los tokens de `.tl-fi` (fichaPostulacion.css). */
+   una para desplegar y plegar. Derecha: lo que se mide y, fijas abajo, las decisiones.
+   Usa los tokens de `.tl-fi` (fichaPostulacion.css). Va en un portal, fuera del `.dc-shell`. */
 
-/* index.css fuerza `font-weight: regular !important` en div/span/button fuera de unas pocas cajas,
+/* index.css fuerza `font-weight: regular !important` en div/span/button/p fuera de unas pocas cajas,
    con una especificidad alta (diez :not). `:is(#tl-fc-peso, …)` toma la especificidad de un id
    —no hace falta que exista— y así los pesos de esta ficha se respetan. */
-:is(#tl-fc-peso, .tl-fc-resp-t, .tl-fc-btn, .tl-fc-btn span, .tl-fc-dato b, .tl-fc-crit b, .tl-fc-pts, .tl-fc-todas){font-weight:700 !important}
-:is(#tl-fc-peso, .tl-fc-resp-txt, .tl-fc-resp-prev, .tl-fc-dato span, .tl-fc-crit > span:first-child, .tl-fc-lista li){font-weight:400 !important}
+:is(#tl-fc-peso, .tl-fc-resp-t, .tl-fc-btn-l, .tl-fc-crit b, .tl-fc-dato b, .tl-fc-medidor b){font-weight:600 !important}
+:is(#tl-fc-peso, .tl-fc-resp-txt, .tl-fc-resp-prev, .tl-fc-lect-cab > span, .tl-fc-todas, .tl-fc-dato span,
+  .tl-fc-crit > span:first-child, .tl-fc-lista li, .tl-fc-medidor small, .tl-fc-btn-votos i){font-weight:400 !important}
+:is(#tl-fc-peso, .tl-fc-btn-k){font-weight:700 !important}
 
-.tl-fc-cuerpo{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;padding:16px 16px 16px 24px}
+.tl-fi{--fc-ease:cubic-bezier(.16,1,.3,1);--fc-hairline:rgba(255,255,255,.07)}
+.tl-fi ::selection{background:color-mix(in srgb,var(--brand-secondary) 35%,transparent)}
+.tl-fc-cuerpo{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 344px;gap:20px;padding:20px 20px 20px 28px}
+
+/* Barras de desplazamiento finas, del color de la interfaz, con aire alrededor. */
+.tl-fc-lectura,.tl-fc-lado-scroll{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.16) transparent}
+.tl-fc-lectura::-webkit-scrollbar,.tl-fc-lado-scroll::-webkit-scrollbar{width:10px}
+.tl-fc-lectura::-webkit-scrollbar-thumb,.tl-fc-lado-scroll::-webkit-scrollbar-thumb{border:3px solid transparent;border-radius:99px;
+  background:rgba(255,255,255,.16) padding-box}
+.tl-fc-lectura::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.3) padding-box}
 
 /* --- Lectura --- */
-.tl-fc-lectura{min-height:0;overflow-y:auto;padding-right:8px;display:flex;flex-direction:column;gap:8px;scrollbar-width:thin}
-.tl-fc-lect-cab{display:flex;align-items:center;justify-content:space-between;padding:4px 4px 6px}
-.tl-fc-todas{height:30px;padding:0 14px;border-radius:999px;font-size:12.5px;color:var(--text-muted);background:var(--bg-element);
-  border:1px solid var(--border-subtle);transition:color .15s ease,background .15s ease}
-.tl-fc-todas:hover{color:var(--text-on-surface);background:var(--bg-element-hover)}
+.tl-fc-lectura{min-height:0;overflow-y:auto;padding:2px 16px 24px 0;display:flex;flex-direction:column;gap:10px}
+.tl-fc-lect-cab{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 2px 6px}
+.tl-fc-lect-cab > span{font-size:13px;color:var(--text-muted)}
+.tl-fc-todas{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 14px;border-radius:999px;font-size:13px;cursor:pointer;
+  color:var(--text-muted);background:transparent;border:1px solid var(--fc-hairline);transition:color .2s ease,background .2s ease,border-color .2s ease}
+.tl-fc-todas:hover{color:var(--text-on-surface);background:rgba(255,255,255,.05);border-color:var(--border-main)}
 
-.tl-fc-resp{border-radius:18px;background:var(--bg-surface);border:1px solid var(--border-subtle);
-  transition:border-color .2s ease,background .2s ease;animation:tlFiEntra .35s cubic-bezier(.2,.8,.2,1) backwards}
-.tl-fc-resp:hover{border-color:var(--border-main)}
-.tl-fc-resp.is-abierta{border-color:color-mix(in srgb,var(--brand-secondary) 30%,var(--border-main))}
-.tl-fc-resp-cab{display:flex;align-items:center;gap:12px;width:100%;padding:14px 18px;text-align:left;background:none;border:0;cursor:pointer;
-  color:var(--text-on-surface)}
-.tl-fc-resp-t{flex:1;min-width:0;font-size:16px;letter-spacing:-.01em}
-.tl-fc-pts{flex:none;padding:3px 9px;border-radius:999px;font-size:12px;font-variant-numeric:tabular-nums;
-  color:var(--brand-secondary);background:color-mix(in srgb,var(--brand-secondary) 12%,transparent)}
-.tl-fc-pts small{opacity:.6}
-.tl-fc-resp-flecha{flex:none;color:var(--text-muted-40);transition:transform .25s cubic-bezier(.3,.8,.2,1),color .15s ease}
-.tl-fc-resp-cab:hover .tl-fc-resp-flecha{color:var(--text-on-surface)}
-.tl-fc-resp.is-abierta .tl-fc-resp-flecha{transform:rotate(180deg);color:var(--brand-secondary)}
-/* Cerrada: una sola línea de adelanto, para saber de qué va sin abrirla. */
-.tl-fc-resp-prev{margin:-6px 0 0;padding:0 18px 14px;font-size:14px;line-height:1.5;color:var(--text-muted);cursor:pointer;
+.tl-fc-resp{position:relative;border-radius:16px;background:rgba(255,255,255,.025);border:1px solid var(--fc-hairline);
+  transition:background .3s var(--fc-ease),border-color .3s var(--fc-ease),box-shadow .3s var(--fc-ease);
+  animation:tlFcEntra .5s var(--fc-ease) backwards;animation-delay:calc(var(--i,0) * 45ms)}
+.tl-fc-resp:hover{background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.11)}
+.tl-fc-resp.is-abierta{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.12);box-shadow:0 18px 40px -28px rgba(0,0,0,.9)}
+.tl-fc-resp-cab{display:flex;align-items:center;gap:10px;padding:6px 10px 6px 6px}
+.tl-fc-resp-abrir{flex:1;min-width:0;display:grid;grid-template-columns:28px minmax(0,1fr);align-items:center;column-gap:6px;row-gap:2px;
+  padding:10px 4px;text-align:left;background:none;border:0;border-radius:12px;cursor:pointer;color:var(--text-on-surface)}
+.tl-fc-resp-flecha{justify-self:center;color:var(--text-muted-40);transform:rotate(-90deg);
+  transition:transform .35s var(--fc-ease),color .2s ease}
+.tl-fc-resp-abrir:hover .tl-fc-resp-flecha{color:var(--text-on-surface)}
+.tl-fc-resp.is-abierta .tl-fc-resp-flecha{transform:none;color:var(--brand-secondary)}
+.tl-fc-resp-t{font-size:15px;line-height:1.35;letter-spacing:-.005em}
+/* Cerrada: una línea de adelanto, para saber de qué va sin abrirla. */
+.tl-fc-resp-prev{grid-column:2;font-size:13.5px;line-height:1.5;color:var(--text-muted-40);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-/* Abierta: el texto entero, cómodo de leer (renglón de ~75 caracteres). */
-.tl-fc-resp-cuerpo{display:grid;grid-template-rows:0fr;transition:grid-template-rows .3s cubic-bezier(.3,.8,.2,1)}
+
+/* Puntos de Clarity: número y un riel corto, del color de qué tan bien le fue. */
+.tl-fc-medidor{flex:none;display:grid;grid-template-columns:auto auto;align-items:baseline;justify-content:end;column-gap:1px;row-gap:5px;
+  min-width:58px;font-variant-numeric:tabular-nums}
+.tl-fc-medidor b{font-size:14px;color:var(--text-on-surface)}
+.tl-fc-medidor small{font-size:11.5px;color:var(--text-muted-40)}
+.tl-fc-medidor i{grid-column:1 / -1;position:relative;height:3px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden}
+.tl-fc-medidor i::after{content:"";position:absolute;inset:0 auto 0 0;width:var(--p);border-radius:inherit;background:var(--c);
+  transform-origin:left;animation:tlFiLlena 1s var(--fc-ease) backwards;animation-delay:calc(.2s + var(--i,0) * 45ms)}
+
+/* Copiar: aparece al pasar por la respuesta. */
+.tl-fc-copiar{flex:none;display:grid;place-items:center;width:32px;height:32px;border-radius:10px;cursor:pointer;
+  color:var(--text-muted-40);background:transparent;border:0;opacity:0;transition:opacity .2s ease,color .2s ease,background .2s ease}
+.tl-fc-resp:hover .tl-fc-copiar,.tl-fc-copiar:focus-visible,.tl-fc-copiar.is-hecho{opacity:1}
+.tl-fc-copiar:hover{color:var(--text-on-surface);background:rgba(255,255,255,.07)}
+.tl-fc-copiar.is-hecho{color:var(--success)}
+
+/* Abierta: el texto entero, cómodo de leer, alineado con el título. */
+.tl-fc-resp-cuerpo{display:grid;grid-template-rows:0fr;transition:grid-template-rows .45s var(--fc-ease)}
 .tl-fc-resp.is-abierta .tl-fc-resp-cuerpo{grid-template-rows:1fr}
-.tl-fc-resp-cuerpo > div{min-height:0;overflow:hidden;padding:0 18px}
-.tl-fc-resp.is-abierta .tl-fc-resp-cuerpo > div{padding-bottom:14px}
-.tl-fc-resp-txt{margin:0;max-width:75ch;font-size:16px;line-height:1.7;color:color-mix(in srgb,var(--text-on-surface) 88%,transparent);
-  white-space:pre-line}
+.tl-fc-resp-cuerpo > div{min-height:0;overflow:hidden;padding:0 24px 0 44px;opacity:0;transform:translateY(-4px);
+  transition:opacity .3s ease,transform .45s var(--fc-ease)}
+.tl-fc-resp-cuerpo > div > :last-child{margin-bottom:20px}
+.tl-fc-resp.is-abierta .tl-fc-resp-cuerpo > div{opacity:1;transform:none;transition-delay:.05s}
+.tl-fc-resp-txt{margin:0;max-width:70ch;font-size:15.5px;line-height:1.7;color:rgba(255,255,255,.82);white-space:pre-line;text-wrap:pretty}
 .tl-fc-lista{margin:0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:8px}
-.tl-fc-lista li{padding:6px 12px;border-radius:999px;font-size:14px;background:var(--bg-element);border:1px solid var(--border-subtle)}
-.tl-fc-copiar{display:inline-flex;align-items:center;gap:6px;margin-top:10px;height:26px;padding:0 10px;border-radius:999px;font-size:12px;
-  color:var(--text-muted-40);background:none;border:1px solid transparent;transition:color .15s ease,border-color .15s ease}
-.tl-fc-copiar:hover{color:var(--text-on-surface);border-color:var(--border-subtle)}
+.tl-fc-lista li{padding:6px 12px;border-radius:999px;font-size:14px;color:rgba(255,255,255,.85);background:rgba(255,255,255,.06);
+  border:1px solid var(--fc-hairline)}
 
 /* --- Lado: lo que se mide y la decisión --- */
-.tl-fc-lado{min-height:0;display:flex;flex-direction:column;border-radius:20px;background:var(--bg-surface);border:1px solid var(--border-main);overflow:hidden}
-.tl-fc-lado-scroll{flex:1;min-height:0;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:14px;scrollbar-width:thin}
+.tl-fc-lado{min-height:0;display:flex;flex-direction:column;border-radius:20px;overflow:hidden;
+  background:rgba(255,255,255,.03);border:1px solid var(--fc-hairline)}
+.tl-fc-lado-scroll{flex:1;min-height:0;overflow-y:auto;padding:14px 12px 16px 14px;display:flex;flex-direction:column;gap:18px}
 .tl-fc-lado-scroll > *{flex:none}
-.tl-fc-crit{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:baseline;gap:4px 12px;padding:7px 0;border-top:1px solid var(--border-subtle)}
-.tl-fc-crit > span:first-child{font-size:14px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.tl-fc-crit b{font-size:15px;font-variant-numeric:tabular-nums}
-.tl-fc-crit b small{font-size:11.5px;color:var(--text-muted)}
-.tl-fc-crit .tl-fi-barra{grid-column:1 / -1}
-.tl-fc-datos{display:flex;flex-direction:column}
-.tl-fc-dato{display:flex;justify-content:space-between;gap:14px;padding:8px 4px;border-top:1px solid var(--border-subtle);font-size:14.5px}
+.tl-fc-crit{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:baseline;gap:6px 12px;padding:8px 0;border-top:1px solid var(--fc-hairline)}
+.tl-fc-crit > span:first-child{font-size:13.5px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tl-fc-crit b{font-size:14.5px;font-variant-numeric:tabular-nums}
+.tl-fc-crit b small{font-size:11.5px;color:var(--text-muted-40)}
+.tl-fc-crit .tl-fi-barra{grid-column:1 / -1;height:3px}
+.tl-fc-datos{display:flex;flex-direction:column;padding:0 4px}
+.tl-fc-dato{display:flex;justify-content:space-between;align-items:baseline;gap:14px;padding:9px 0;border-top:1px solid var(--fc-hairline);font-size:14px}
 .tl-fc-dato:first-child{border-top:0}
 .tl-fc-dato span{flex:none;color:var(--text-muted)}
-.tl-fc-dato b{text-align:right;min-width:0}
+.tl-fc-dato b{text-align:right;min-width:0;color:var(--text-on-surface)}
 /* Las respuestas largas (reporte, herramientas, de dónde llegó) bajan abajo del rótulo. */
-.tl-fc-dato.is-largo{flex-direction:column;gap:3px}
-.tl-fc-dato.is-largo b{text-align:left;font-size:14px;line-height:1.45}
+.tl-fc-dato.is-largo{flex-direction:column;gap:4px}
+.tl-fc-dato.is-largo b{text-align:left;font-size:13.5px;line-height:1.5;color:rgba(255,255,255,.85)}
 
-/* Decisiones: siempre a la vista, abajo del lado, en baldosas de color. */
-.tl-fc-decide{flex:none;display:grid;gap:8px;padding:12px;border-top:1px solid var(--border-main);
-  background:color-mix(in srgb,var(--bg-element) 60%,transparent)}
+/* --- Decisiones: siempre a la vista, en baldosas de color --- */
+.tl-fc-decide{flex:none;padding:12px;border-top:1px solid var(--fc-hairline);
+  background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(255,255,255,.045))}
 .tl-fc-botones{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .tl-fc-botones.is-cuatro{grid-template-columns:repeat(2,minmax(0,1fr))}
-.tl-fc-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:68px;padding:10px 6px;border-radius:16px;
-  cursor:pointer;color:var(--c);background:color-mix(in srgb,var(--c) 12%,transparent);border:1px solid color-mix(in srgb,var(--c) 40%,transparent);
-  transition:transform .14s ease,background .18s ease,box-shadow .18s ease,color .18s ease}
-.tl-fc-btn span{font-size:12.5px;line-height:1.15;text-align:center;color:var(--text-on-surface)}
-.tl-fc-btn:hover{transform:translateY(-2px);background:color-mix(in srgb,var(--c) 22%,transparent);
-  box-shadow:0 12px 26px -14px var(--c)}
-.tl-fc-btn:active{transform:scale(.97)}
-/* Mi voto: la baldosa se llena de su color. Tocarla otra vez lo deshace. */
-.tl-fc-btn.is-activo{background:var(--c);border-color:transparent;color:var(--ink);box-shadow:0 12px 28px -12px var(--c)}
-.tl-fc-btn.is-activo span{color:var(--ink)}
+.tl-fc-btn{position:relative;isolation:isolate;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+  min-height:92px;padding:14px 6px 12px;border-radius:16px;cursor:pointer;color:var(--text-on-surface);
+  background:linear-gradient(160deg,color-mix(in srgb,var(--c) 20%,transparent),color-mix(in srgb,var(--c) 6%,transparent));
+  border:1px solid color-mix(in srgb,var(--c) 35%,transparent);
+  transition:transform .35s var(--fc-ease),box-shadow .35s var(--fc-ease),border-color .25s ease,background .25s ease}
+/* Brillo que cruza la baldosa al pasar el mouse. */
+.tl-fc-btn::before{content:"";position:absolute;inset:-40% auto -40% -60%;width:45%;z-index:-1;transform:skewX(-20deg) translateX(-120%);
+  background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--c) 45%,transparent),transparent);
+  transition:transform .7s var(--fc-ease)}
+.tl-fc-btn:hover{transform:translateY(-3px);border-color:color-mix(in srgb,var(--c) 70%,transparent);
+  box-shadow:0 14px 28px -16px var(--c),0 2px 6px -2px rgba(0,0,0,.6)}
+.tl-fc-btn:hover::before{transform:skewX(-20deg) translateX(520%)}
+.tl-fc-btn:active{transform:translateY(-1px) scale(.97);transition-duration:.1s}
+.tl-fc-btn:focus-visible{outline:2px solid var(--c);outline-offset:2px}
+.tl-fc-btn-ico{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;color:var(--ink);background:var(--c);
+  box-shadow:0 6px 16px -6px var(--c);transition:transform .45s var(--fc-ease)}
+.tl-fc-btn:hover .tl-fc-btn-ico{transform:scale(1.1) rotate(-6deg)}
+.tl-fc-btn-l{font-size:13px;line-height:1.15;text-align:center;letter-spacing:-.005em}
+.tl-fc-btn-k{position:absolute;top:7px;right:8px;display:grid;place-items:center;min-width:18px;height:18px;padding:0 4px;border-radius:6px;
+  font:inherit;font-size:10px;color:color-mix(in srgb,var(--c) 85%,#fff);background:rgba(0,0,0,.25);border:1px solid color-mix(in srgb,var(--c) 30%,transparent)}
+.tl-fc-btn-votos{display:flex;gap:4px;flex-wrap:wrap;justify-content:center}
+.tl-fc-btn-votos i{padding:2px 7px;border-radius:99px;font-size:10.5px;font-style:normal;color:var(--text-on-surface);
+  background:color-mix(in srgb,var(--c) 28%,rgba(0,0,0,.3))}
+/* Mi voto: la baldosa se llena de su color y el ícono pasa a un tilde que entra con un rebote. */
+.tl-fc-btn.is-activo{background:var(--c);border-color:transparent;color:var(--ink);
+  box-shadow:0 16px 32px -14px var(--c),inset 0 1px 0 rgba(255,255,255,.35)}
+.tl-fc-btn.is-activo .tl-fc-btn-ico{background:var(--ink);color:var(--c);animation:tlFcVoto .5s var(--fc-ease)}
+.tl-fc-btn.is-activo .tl-fc-btn-k{color:var(--ink);background:rgba(255,255,255,.3);border-color:transparent}
+.tl-fc-btn.is-activo .tl-fc-btn-votos i{color:var(--ink);background:rgba(255,255,255,.35)}
+
+@keyframes tlFcEntra{from{opacity:0;transform:translateY(8px)}}
+@keyframes tlFcVoto{0%{transform:scale(.4)}60%{transform:scale(1.18)}100%{transform:scale(1)}}
 
 @media (max-width:1000px){
-  .tl-fc-cuerpo{grid-template-columns:minmax(0,1fr) 300px;padding:12px}
+  .tl-fc-cuerpo{grid-template-columns:minmax(0,1fr) 300px;gap:14px;padding:14px}
 }
 @media (max-width:760px){
   .tl-fc-cuerpo{grid-template-columns:minmax(0,1fr);overflow-y:auto}
-  .tl-fc-lectura{overflow:visible}
-  .tl-fc-lado-scroll{overflow:visible}
+  .tl-fc-lectura,.tl-fc-lado-scroll{overflow:visible;padding-right:0}
+  .tl-fc-resp-cuerpo > div{padding-left:16px;padding-right:16px}
+  .tl-fc-copiar{opacity:1}
 }
 @media (prefers-reduced-motion:reduce){
-  .tl-fc-resp,.tl-fc-resp-cuerpo,.tl-fc-resp-flecha{animation:none;transition:none}
+  .tl-fc-resp,.tl-fc-resp-cuerpo,.tl-fc-resp-cuerpo > div,.tl-fc-resp-flecha,.tl-fc-btn,.tl-fc-btn::before,.tl-fc-btn-ico,
+  .tl-fc-medidor i::after{animation:none;transition:none}
 }

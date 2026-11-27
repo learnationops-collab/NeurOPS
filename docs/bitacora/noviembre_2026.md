@@ -1341,3 +1341,7 @@
 
 ### 27/11/2026 · Arreglo: «Al abrir el link» en pasos de mensaje guardados antes del cambio
 - Un paso de mensaje con link guardado antes de ADR-W272 decía «Este botón no tiene link» al abrir «Al abrir el link»: ahora se arma con el link del paso y queda al guardar ([PanelNodo.jsx](../../frontend/src/ventanas/herramientas/broadcastTaller/PanelNodo.jsx)).
+### 27/11/2026 · Ficha de Closer: segunda pasada de diseño
+- La ficha va en un portal, fuera del `.dc-shell`: su reset de botones dejaba los títulos pegados al borde y las decisiones sin color.
+- Respuestas como apartados de documento: flecha, título y una línea de adelanto; abiertas, el texto a 70 caracteres por renglón, alineado con el título. Sin el borde rosa. Los puntos de Clarity pasan a un medidor discreto (número y riel del color del resultado) y «Copiar» aparece al pasar el mouse.
+- Decisiones en baldosas de color con ícono en círculo, brillo al pasar, rebote al votar, atajos P / R / D / T y los nombres de quienes ya eligieron cada una. Barras de desplazamiento finas y con aire ([FichaCloser.jsx](../../frontend/src/pages/admin/hiring/components/closers/FichaCloser.jsx), [fichaCloser.css](../../frontend/src/pages/admin/hiring/components/closers/fichaCloser.css)).
