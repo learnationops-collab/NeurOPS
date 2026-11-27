@@ -11,6 +11,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { inboxApi } from './api';
 import useAltoLibre from './conversaciones/useAltoLibre';
 import { REFRESCO, filtrar, ordenDe } from './conversaciones/colas';
+import Canales from './conversaciones/Canales';
 import EtiquetarVarias from './conversaciones/EtiquetarVarias';
 import Ordenar from './conversaciones/Ordenar';
 import Detalle from './conversaciones/Detalle';
@@ -203,6 +204,7 @@ export default function Conversaciones() {
                 <div className={`cv${elegida ? ' cv--abierta' : ''}`} ref={bandeja} style={alto ? { height: alto, minHeight: 0 } : undefined}>
                     <Panel as="section" size="sm" className="cv-lista" aria-label="Conversaciones">
                         <div className="cv-lista-buscar">{buscador}</div>
+                        <Canales lista={lista} filtro={filtro} onCambiar={setFiltro} />
                         {listado}
                     </Panel>
                     {elegida

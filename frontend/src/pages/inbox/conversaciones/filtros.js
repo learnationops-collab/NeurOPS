@@ -7,12 +7,12 @@
 // bienvenida. Seguimientos hechos (ADR-W254), en las fases elegidas: `fuCant` null · 0 (ninguno) · 'alguno' · 1 · 2 ·
 // 3 · '4+'; `fuCuando`, como `inicio` sin rango; `fuResp` 'si' · 'no' (el último). `toca`: lo pide la cadencia.
 export const VACIO = {
-    cola: 'todas', canal: null, asignado: null, etiqueta: null, etapa: null, califica: null, fases: [], etiquetas: [], orden: null,
+    cola: 'todas', canal: null, broadcast: null, asignado: null, etiqueta: null, etapa: null, califica: null, fases: [], etiquetas: [], orden: null,
     inicio: null, inicioDesde: '', inicioHasta: '', envioPor: null, envio: null, envioDesde: '', envioHasta: '',
     origen: null, fuCant: null, fuCuando: null, fuResp: null, toca: false,
 };
 // Las que cuentan como «un filtro puesto» (las fechas de un rango van con su filtro; el orden no filtra).
-const CLAVES = ['cola', 'canal', 'asignado', 'etiqueta', 'etapa', 'califica', 'fases', 'etiquetas', 'inicio', 'envioPor', 'envio',
+const CLAVES = ['cola', 'canal', 'broadcast', 'asignado', 'etiqueta', 'etapa', 'califica', 'fases', 'etiquetas', 'inicio', 'envioPor', 'envio',
     'origen', 'fuCant', 'fuCuando', 'fuResp', 'toca'];
 const DOLOR = ['dolor', 'consecuencia', 'compromiso'];
 const CLAVE = 'inbox-filtros';
@@ -87,7 +87,8 @@ export function resumen(f, { colas, etapas, nombre, etiqueta, fase = (x) => x })
         poner('personas', `Último mensaje de ${quien}`, { envioPor: null });
     }
     if (f.origen) poner('personas', `Origen: ${ORIGENES[f.origen] || f.origen}`, { origen: null });
-    if (f.canal) poner('personas', f.canal === 'wa' ? 'Por WhatsApp' : 'Por Instagram', { canal: null });
+    if (f.canal) poner('personas', f.canal === 'wa' ? 'Por WhatsApp' : 'Por Instagram', { canal: null, broadcast: null });
+    if (f.broadcast) poner('personas', `Del broadcast ${f.broadcast}`, { broadcast: null });
     if (f.califica) poner('personas', f.califica === 'si' ? 'Califican' : 'No califican', { califica: null });
     if (f.inicio) poner('fechas', `Empezaron ${cuando(f, 'inicio')}`, { inicio: null, inicioDesde: '', inicioHasta: '' });
     if (f.envio) poner('fechas', `Último mensaje ${cuando(f, 'envio')}`, { envio: null, envioDesde: '', envioHasta: '' });

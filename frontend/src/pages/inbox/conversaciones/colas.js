@@ -152,6 +152,8 @@ export function cumpleFiltro(c, f, ahora) {
     // No lead / In-abrible que no volvió a escribir: fuera de la bandeja, salvo que se pida esa etapa en el filtro.
     if (c.cerrada && !f.conCerradas && !(f.fases || []).includes(c.fase)) return false;
     if (f.canal && (f.canal === 'wa') !== esWhatsapp(c)) return false;
+    // El broadcast de WhatsApp al que respondió (ADR-W259): la etiqueta del taller o «Broadcast».
+    if (f.broadcast && c.broadcast !== f.broadcast) return false;
     if (f.etiqueta && !(c.etiquetas || []).some((e) => claveEtiqueta(e) === f.etiqueta)) return false;
     if (f.etiquetas?.length && !(c.etiquetas || []).some((e) => f.etiquetas.includes(claveEtiqueta(e)))) return false;
     if (f.fases?.length && !f.fases.includes(c.fase)) return false;

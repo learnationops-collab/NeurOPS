@@ -329,6 +329,8 @@ def listar_conversaciones():
             # Los seguimientos que ya le hizo el equipo, por fase ({fase: {n, en, resp}}): el filtro del Inbox (ADR-W254).
             'seguimientos_hechos': hechos.get(contacto.id) or {},
             'bot_pausado': bool(contacto.bot_pausado_hasta and contacto.bot_pausado_hasta > ahora),
+            # El broadcast de WhatsApp al que respondió (ADR-W259): la etiqueta del taller o «Broadcast».
+            'broadcast': variables.get('broadcast_nombre') or ('Broadcast' if variables.get('broadcast') else None),
             'examen': variables.get('examen'),
             'califica': variables.get('_califica'),
             'flujo': ejecucion.version.flujo.nombre if ejecucion else None,

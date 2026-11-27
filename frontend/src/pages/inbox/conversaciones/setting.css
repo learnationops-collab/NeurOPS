@@ -13,6 +13,9 @@
 .thalamus.inbox .cv-lista-filtros{display:flex;gap:6px;align-items:center;min-width:0}
 .thalamus.inbox .cv-lista-filtros > :not(.cv-asignado-sel){flex:none}
 .thalamus.inbox .cv-asignado-sel.ui-select{flex:1;min-width:0}
+/* Instagram · WhatsApp y, en WhatsApp, el broadcast (ADR-W259). */
+.thalamus.inbox .cv-canales{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:0 2px 8px;min-width:0}
+.thalamus.inbox .cv-canales .ui-select{flex:1;min-width:0}
 .thalamus.inbox .cv-lista-buscar .cv-macro-pop{left:0;right:auto;width:min(640px,calc(100vw - 32px));z-index:40}
 .thalamus.inbox .cv-chips-guardados{display:flex;gap:5px;overflow-x:auto;padding:0 4px 8px;scrollbar-width:none}
 .thalamus.inbox .cv-chips-guardados .ui-chip.ui-chip{height:24px;font-size:11px;cursor:pointer;flex:none}
