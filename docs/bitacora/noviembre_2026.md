@@ -1245,3 +1245,6 @@
 - El lienzo se arrastra con el mouse y tiene zoom. Mockup en `docs/mockups/flujo-taller-lienzo/`.### 27/11/2026 · Login: ojo de la contraseña, «Iniciar sesión» y el logo correcto
 - El ojo para ver la contraseña queda visible aunque el navegador autocomplete el campo (antes lo pintaba celeste y lo tapaba). La flecha pasa a un botón «Iniciar sesión» a todo el ancho ([LoginPage.jsx](../../frontend/src/pages/auth/LoginPage.jsx), [login.css](../../frontend/src/pages/auth/login.css)).
 - Isotipo de Learnation redibujado: la L con la curva cóncava, en todas sus copias (login y headers, reservas, favicon y reportes).
+### 27/11/2026 · Login: «Recordarme» y la pestaña nueva entra directo
+- «Recordarme» (prendido por defecto): la sesión dura 30 días en vez de 24 h, en el token y en la cookie, y el usuario queda escrito para la próxima vez. Entrar con Google también dura 30 días ([LoginPage.jsx](../../frontend/src/pages/auth/LoginPage.jsx), [auth.py](../../app/api/auth.py)).
+- Con sesión abierta, una pestaña nueva de Work (o la raíz, que cae en /login) entra directo al área en vez de mostrar el login.
