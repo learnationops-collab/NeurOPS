@@ -122,14 +122,42 @@ def compute_criteria_values(app):
     return {criterio: round(fn(app), 4) for criterio, fn in _REGLAS.items()}
 
 
+# Qué preguntas mira cada criterio (ADR-W280). Si en el formulario con que contestó están todas
+# apagadas, a esa persona no se le preguntó: el criterio no cuenta (no suma ni resta).
+PREGUNTAS_DE_CRITERIO = {
+    'formacion': ('formacion', 'conocimiento'),
+    'experiencia': ('habilidades', 'dedicacion', 'conocimiento'),
+    'cierre': ('cierre',),
+    'ingles': ('ingles',),
+    'video': ('video', 'llamada'),
+    'obstaculo': ('obstaculo',),
+    'objetivos': ('objetivos',),
+}
+
+
+def criterios_apagados(app):
+    """Los criterios sin ninguna pregunta prendida en el formulario de `app` (vacío sin formulario)."""
+    if not getattr(app, 'form_id', None):
+        return frozenset()
+    from app import db
+    from app.models import HiringForm
+    form = db.session.get(HiringForm, app.form_id)  # identity map: una consulta por formulario
+    prendidas = {p.get('id') for p in ((form.preguntas if form else None) or [])
+                 if isinstance(p, dict) and p.get('on') is not False}
+    return frozenset(c for c, ids in PREGUNTAS_DE_CRITERIO.items() if not prendidas.intersection(ids))
+
+
 def score_de(app, weights):
     """weights: dict {criterio: peso}. Fórmula del handoff:
     round( Σ(peso_i · valor_i) / Σ(peso_i) × 100 ). Los pesos se normalizan
     solos (no hace falta que sumen 100)."""
     valores = compute_criteria_values(app)
+    fuera = criterios_apagados(app)
     num = 0.0
     den = 0.0
     for criterio, peso in (weights or {}).items():
+        if criterio in fuera:
+            continue
         num += (peso or 0) * valores.get(criterio, 0.0)
         den += (peso or 0)
     if den == 0:

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     FileText, Globe, Copy, Trash2, Eye, Pencil, Plus, ArrowLeft, Monitor, Smartphone, RotateCcw, AlertTriangle,
-    CheckCircle2, Loader2, Briefcase,
+    CheckCircle2, Loader2,
 } from 'lucide-react';
 import api from '../../../../../services/api';
 import { Humo } from '../../../../comercial/components/Shared';
@@ -42,7 +42,7 @@ const Tarjeta = ({ f, onSlug, onActivar, onDuplicar, onBorrar, onAbrir, borrando
                 <span className="tl-icono-m"><FileText size={20} /></span>
                 <button type="button" className="tl-fcard-nom" onClick={() => onAbrir(f.id, 'preguntas')}>
                     <b>{f.nombre}</b>
-                    <small>{closer ? <><Briefcase size={12} /> Closers · /formulario/</> : `Creado el ${fecha(f.created_at)}`}</small>
+                    <small>{closer ? 'Closers · /formulario/' : `Creado el ${fecha(f.created_at)}`}</small>
                 </button>
                 {f.activo ? <Chip c="var(--success)" icono={Globe}>En la página</Chip> : <Chip c="var(--idle)">Inactivo</Chip>}
             </div>

@@ -1388,3 +1388,5 @@
 - Pasadas las 24 h desde el último mensaje del lead, Work ya no intenta mandar (Meta rechazaba `HUMAN_AGENT` porque la app no pasó la App Review): la caja avisa «Mandalo desde Instagram y marcalo como seguimiento» con el link al chat ([escribir.py](../../app/automatizaciones/escribir.py), [ventana.js](../../frontend/src/pages/inbox/conversaciones/ventana.js)).
 - El anillo, «Se cierra la ventana» (aviso a las 3 h) y el orden por cierre cuentan 24 h; no se programa un seguimiento para después del cierre ([seguimientos.py](../../app/automatizaciones/seguimientos.py)).
 - Cuando Meta apruebe Human Agent: `IG_HUMAN_AGENT=1` en Railway y vuelven los 7 días.
+### 27/11/2026 · Clarity de Closer: las preguntas apagadas no cuentan
+- Mario apagó en Forms 4 preguntas del formulario de Closer (reporte, obstáculo, objetivos y por qué Learnation): la página ya no las pregunta. Para quien contesta con ese formulario, los criterios de Clarity sin ninguna pregunta prendida (hoy obstáculo y objetivos) no entran en el score ni en el desglose de la ficha, así no pierde puntos por algo que no se le preguntó ([clarity.py](../../app/services/clarity.py) `criterios_apagados`).
