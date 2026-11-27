@@ -1,10 +1,10 @@
 // Un paso del flujo: cuándo sale, qué plantilla, qué va en cada variable, a quién y a quién no. Lo que pasa al tocar
 // cada botón son nodos propios del lienzo (ADR-W262): acá solo se listan para abrirlos y va la opción única.
-import { Trash2 } from 'lucide-react';
-import { Button, Input, Segmented, Select, Stepper, Switch, TextArea } from '../../../components/standard';
+import { Plus, Trash2, X } from 'lucide-react';
+import { Button, IconButton, Input, LinkButton, Segmented, Select, Stepper, Switch, TextArea } from '../../../components/standard';
 import { partesDe } from '../broadcastWa/useBroadcast';
 import { OpcionUnica } from '../broadcastWa/Respuestas';
-import { A_QUIEN, VARIABLES, variablesDe } from './useBroadcastTaller';
+import { A_QUIEN, VARIABLES, fuenteDe, variablesDe } from './useBroadcastTaller';
 
 const MODOS = [
     { value: 'relativo', label: 'Antes o después' },
@@ -82,6 +82,7 @@ function MensajeComun({ paso, cambiar }) {
     const m = paso.mensaje || { texto: '' };
     const poner = (cambios) => cambiar({ mensaje: { ...m, ...cambios } });
     const linkMal = Boolean(m.url) && !/^https?:\/\/\S+$/.test(m.url.trim());
+    const botones = m.botones || [];
     return (
         <div className="bt-campo">
             <span>Mensaje</span>
@@ -94,6 +95,17 @@ function MensajeComun({ paso, cambiar }) {
                 <Input value={m.url || ''} placeholder="https://…" aria-label="Link del botón" invalid={linkMal}
                     onChange={(e) => poner({ url: e.target.value })} />
             </div>
+            <span>Botones de respuesta <small className="bt-s">(hasta 3; con link salen en un segundo mensaje)</small></span>
+            {botones.map((b, i) => (
+                <div key={i} className="bt-fila">
+                    <Input value={b.titulo} maxLength={20} placeholder="Sí, voy" aria-label="Texto del botón" invalid={!b.titulo.trim()}
+                        onChange={(e) => poner({ botones: botones.map((x, j) => (j === i ? { titulo: e.target.value } : x)) })} />
+                    <IconButton size="sm" icon={<X />} label="Quitar botón" onClick={() => poner({ botones: botones.filter((_, j) => j !== i) })} />
+                </div>
+            ))}
+            {botones.length < 3 && (
+                <LinkButton icon={<Plus />} onClick={() => poner({ botones: [...botones, { titulo: '' }] })}>Botón de respuesta</LinkButton>
+            )}
         </div>
     );
 }
@@ -115,10 +127,10 @@ function Activo({ paso, sucio, ocupado, onEstado }) {
     );
 }
 
-export default function PasoEditor({ paso, plantillas, botonesDelFlujo, wa, config, cambiar, quitar, onBoton, onConfig, sucio, ocupado, onEstado }) {
+export default function PasoEditor({ paso, plantillas, botonesDelFlujo, wa, config, cambiar, quitar, onBoton, onLink, onConfig, sucio, ocupado, onEstado }) {
     const bloqueado = paso.estado === 'lanzado' || paso.estado === 'vencido';
     const plantilla = plantillas.find((p) => p.name === paso.plantilla);
-    const { botones } = partesDe(plantilla);
+    const fuente = fuenteDe(paso, plantillas);
     if (bloqueado) {
         return (
             <div className="bt-caja bt-editor">
@@ -182,14 +194,23 @@ export default function PasoEditor({ paso, plantillas, botonesDelFlujo, wa, conf
                     onChange={(e) => cambiar({ excluir: e.target.value.split(',').map((x) => x.trimStart()) })} />
                 <small className="bt-s">Separadas por coma.</small>
             </label>
-            {plantilla && botones.length > 0 && (
+            {(fuente.botones.length > 0 || fuente.link) && (
                 <div className="bt-campo">
-                    <span>Botones de la plantilla</span>
-                    <div className="bt-fila">
-                        {botones.map((b) => <Button key={b} size="sm" onClick={() => onBoton(b)}>«{b}» →</Button>)}
-                    </div>
-                    <small className="bt-s">Tocá un botón (acá o en el lienzo) para armar qué pasa al tocarlo. Vale para todos los envíos de {plantilla.name}.</small>
-                    {config && <OpcionUnica key={plantilla.name} nombre={plantilla.name} inicial={config} datos={wa} onCambio={onConfig} />}
+                    <span>Qué pasa al tocar cada botón</span>
+                    {!fuente.clave || sucio ? (
+                        <small className="bt-s">Guardá el flujo para armar lo que pasa al tocar los botones de este mensaje.</small>
+                    ) : (
+                        <>
+                            <div className="bt-fila">
+                                {fuente.botones.map((b) => <Button key={b} size="sm" onClick={() => onBoton(b)}>«{b}» →</Button>)}
+                                {fuente.link && <Button size="sm" onClick={onLink}>🔗 Al abrir «{fuente.link.titulo}» →</Button>}
+                            </div>
+                            <small className="bt-s">Tocá un botón (acá o en el lienzo) para armar qué pasa al tocarlo.{fuente.plantilla ? ` Vale para todos los envíos de ${fuente.plantilla.name}.` : ''}</small>
+                            {config && fuente.botones.length > 1 && (
+                                <OpcionUnica key={fuente.clave} nombre={fuente.clave} inicial={config} datos={wa} onCambio={onConfig} />
+                            )}
+                        </>
+                    )}
                 </div>
             )}
         </div>

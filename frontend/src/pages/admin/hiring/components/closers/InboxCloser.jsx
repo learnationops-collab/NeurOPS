@@ -3,7 +3,8 @@ import { AlertTriangle, ArrowUpRight, Check, ChevronRight, PhoneCall, PlayCircle
 import api from '../../../../../services/api';
 import { Humo } from '../../../../comercial/components/Shared';
 import { soloDigitos } from '../../lib/escalas';
-import { banda, fechaCorta, haceTxt, horasDesde } from '../../lib/vista';
+import { banda, fechaCorta, haceTxt, horasDesde, minAncho, plantillaCols } from '../../lib/vista';
+import { Encabezado } from '../TablaPostulaciones';
 import {
     CONOCIMIENTO_CORTO, NIVEL_INGLES, cierreNum, coincideCloser, puntajeCloser,
 } from '../../lib/closers';
@@ -30,16 +31,30 @@ export const PESTANAS_INBOX_CLOSER = [
 ];
 
 const COLS = [
-    ['Candidato', 'minmax(220px,1.7fr)', ''],
-    ['Postuló', '92px', ''],
-    ['Conocimiento', 'minmax(150px,1fr)', ''],
-    ['Cierre', '118px', ''],
-    ['Inglés', '92px', ''],
-    ['Material', '104px', 'cen'],
-    ['WhatsApp', '176px', ''],
-    ['Score', '92px', 'der'],
+    { id: 'cand', label: 'Candidato', w: 'minmax(220px,1.7fr)', min: 220 },
+    { id: 'fecha', label: 'Postuló', w: '92px', min: 84 },
+    { id: 'conoc', label: 'Conocimiento', w: 'minmax(150px,1fr)', min: 150 },
+    { id: 'cierre', label: 'Cierre', w: '118px', min: 96 },
+    { id: 'ingles', label: 'Inglés', w: '92px', min: 72 },
+    { id: 'material', label: 'Material', w: '104px', min: 80, cen: true },
+    { id: 'wa', label: 'WhatsApp', w: '176px', min: 140 },
+    { id: 'score', label: 'Score', w: '92px', min: 60, der: true },
 ];
-const PLANTILLA = `${COLS.map((c) => c[1]).join(' ')} 44px`;
+
+// Los anchos que cada quien ajusta en la tabla de closers (como en la de Asistentes): una comodidad
+// personal, guardada en el navegador.
+const CLAVE_ANCHOS = 'neurops-talent-anchos-closer-v1';
+const leerAnchos = () => {
+    try {
+        const a = JSON.parse(window.localStorage.getItem(CLAVE_ANCHOS) || '{}');
+        return a && typeof a === 'object' ? a : {};
+    } catch {
+        return {};
+    }
+};
+const guardarAnchos = (a) => {
+    try { window.localStorage.setItem(CLAVE_ANCHOS, JSON.stringify(a)); } catch { /* sin almacenamiento: dura la sesión */ }
+};
 
 const Foco = ({ p, onAbrir }) => {
     const [razones, setRazones] = useState([]);
@@ -178,12 +193,26 @@ const Fila = ({ p, conEstado, incompleta, onAbrir }) => {
     );
 };
 
-const InboxCloser = ({ closers, pestana, q }) => {
+// `filasSeccion`: la lista ya armada de Analyze o Winners (closers de un veredicto). Sin ella es el Inbox.
+const InboxCloser = ({ closers, pestana, q, filasSeccion = null }) => {
     const {
         filas, incompletas, porRevisar, archivadas, cargando, error, cargar, cargarArchivadas,
     } = closers;
     const [abierta, setAbierta] = useState(null);
     const [listaFicha, setListaFicha] = useState([]);
+    const [anchos, setAnchos] = useState(leerAnchos);
+    // Mientras se arrastra cambia en pantalla; se guarda al soltar (`px` null), con flechas o con el
+    // doble clic que lo restablece (`undefined`).
+    const cambiarAncho = (id, px, persistir) => setAnchos((prev) => {
+        let nuevos = prev;
+        if (px !== null) {
+            nuevos = { ...prev };
+            if (px === undefined) delete nuevos[id];
+            else nuevos[id] = px;
+        }
+        if (persistir) guardarAnchos(nuevos);
+        return nuevos;
+    });
     const tabla = useRef(null);
     const enBusqueda = q.length > 0;
     const incompleta = !enBusqueda && pestana === 'incompletas';
@@ -193,11 +222,13 @@ const InboxCloser = ({ closers, pestana, q }) => {
         if (pestana === 'antiguos' && archivadas === null) cargarArchivadas();
     }, [pestana, archivadas, cargarArchivadas]);
 
+    const enSeccion = !enBusqueda && Array.isArray(filasSeccion);
     const lista = useMemo(() => {
         if (enBusqueda) return [...filas, ...incompletas, ...(archivadas || [])].filter((p) => coincideCloser(p, q));
+        if (filasSeccion) return [...filasSeccion].sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
         if (antiguos) return archivadas || [];
         return incompleta ? incompletas : porRevisar;
-    }, [enBusqueda, q, filas, incompletas, porRevisar, incompleta, antiguos, archivadas]);
+    }, [enBusqueda, q, filas, incompletas, porRevisar, incompleta, antiguos, archivadas, filasSeccion]);
     const ids = useMemo(() => lista.map((p) => p.id), [lista]);
 
     // Al cambiar de pestaña las barritas vuelven a crecer.
@@ -213,6 +244,14 @@ const InboxCloser = ({ closers, pestana, q }) => {
 
     let vacio = null;
     if (cargando || (antiguos && archivadas === null)) vacio = <p className="t-cap mut40">Cargando postulaciones…</p>;
+    else if (enSeccion) {
+        vacio = (
+            <>
+                <span className="tl-vacio-ico tl-vacio-ico--idle"><Search size={22} /></span>
+                <p className="t-h3">Ningún closer en este estado</p>
+            </>
+        );
+    }
     else if (antiguos) vacio = <p className="t-h3">No hay postulaciones de búsquedas anteriores</p>;
     else if (enBusqueda) {
         vacio = (
@@ -227,7 +266,7 @@ const InboxCloser = ({ closers, pestana, q }) => {
             <>
                 <AlDia />
                 <p className="t-h3">Revisaste a todos los closers</p>
-                <p className="mut t-cap">Los que califiques siguen en la sección Closers del dock.</p>
+                <p className="mut t-cap">Los que califiques pasan a Analyze.</p>
             </>
         );
     } else {
@@ -237,7 +276,7 @@ const InboxCloser = ({ closers, pestana, q }) => {
     return (
         <>
             {error && <div className="tl-aviso-error"><AlertTriangle size={16} />{error}</div>}
-            {!enBusqueda && !incompleta && !antiguos && !cargando && (
+            {!enBusqueda && !enSeccion && !incompleta && !antiguos && !cargando && (
                 <div className="tl-resumen">
                     <Foco p={porRevisar[0] || null} onAbrir={abrir} />
                     <Avance filas={filas} />
@@ -245,9 +284,12 @@ const InboxCloser = ({ closers, pestana, q }) => {
             )}
             <div className="tl-tabla-scroll">
                 <div ref={tabla} className="tl-tabla" role="table" aria-label="Postulaciones de Closer"
-                    style={{ '--cols': PLANTILLA, '--minw': '1080px' }}>
+                    style={{ '--cols': plantillaCols(COLS, anchos), '--minw': `${Math.max(1080, minAncho(COLS, anchos))}px` }}>
                     <div className="tl-tcab" role="row">
-                        {COLS.map(([l, , al]) => <div key={l} className={`tl-th${al ? ` ${al}` : ''}`} role="columnheader"><span>{incompleta && l === 'Score' ? 'Avance' : l}</span></div>)}
+                        {COLS.map((c) => (
+                            <Encabezado key={c.id} col={c} etiqueta={incompleta && c.id === 'score' ? 'Avance' : c.label}
+                                onAncho={cambiarAncho} ancho={anchos[c.id]} />
+                        ))}
                         <span />
                     </div>
                     {lista.length === 0 && <div className="tl-vacio">{vacio}</div>}

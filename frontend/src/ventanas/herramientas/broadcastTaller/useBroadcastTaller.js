@@ -26,6 +26,24 @@ export const A_QUIEN = [
     { value: 'etiqueta', label: 'Etiqueta…' },
 ];
 
+export const LINK_BOTON = '__link__';
+
+/**
+ * De dónde salen los botones de un paso y con qué clave se guardan sus respuestas (ADR-W272): los de la plantilla
+ * (clave = su nombre) o los del mensaje común (clave = `paso:<id>`, null mientras el paso no se guardó). `link`: si
+ * el mensaje común tiene botón con link (su «al abrir el link» es la regla `__link__`).
+ */
+export function fuenteDe(paso, plantillas) {
+    if (paso.tipo === 'mensaje') {
+        const m = paso.mensaje || {};
+        return { clave: paso.id ? `paso:${paso.id}` : null, botones: (m.botones || []).map((b) => b.titulo).filter(Boolean),
+            link: m.url ? { titulo: m.titulo || 'Abrir' } : null, plantilla: null };
+    }
+    const plantilla = plantillas.find((p) => p.name === paso.plantilla) || null;
+    const botones = (plantilla?.components || []).find((c) => c.type === 'BUTTONS')?.buttons?.map((b) => b.text) || [];
+    return { clave: paso.plantilla || null, botones, link: null, plantilla };
+}
+
 export const pasoNuevo = () => ({
     id: null, nombre: '', tipo: 'plantilla', mensaje: { texto: '' }, modo: 'relativo', minutos: -120, dias: 0, hora: '10:00', plantilla: '', idioma: 'es',
     parametros: [], a_quien: 'todos', valor: '', excluir: [], estado: 'borrador', por_estado: {},

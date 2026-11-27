@@ -20,7 +20,16 @@ from app.whatsapp.cliente import ClienteWhatsapp
 
 
 def _botones_de(nombre):
-    """Los textos de los botones de esa plantilla en Meta, o None si no existe."""
+    """Los textos de los botones de esa plantilla en Meta, o None si no existe. `paso:<id>`: los de un paso de
+    mensaje común (ADR-W272), más su link si tiene."""
+    if nombre.startswith('paso:'):
+        from app.models.whatsapp_taller import WaPasoTaller
+        from app.whatsapp.respuestas import LINK_BOTON
+        paso = db.session.get(WaPasoTaller, int(nombre[5:])) if nombre[5:].isdigit() else None
+        if paso is None:
+            return None
+        m = paso.mensaje or {}
+        return [b['titulo'] for b in m.get('botones') or []] + ([LINK_BOTON] if m.get('url') else [])
     p = next((x for x in ClienteWhatsapp().plantillas() if x['name'] == nombre), None)
     if p is None:
         return None

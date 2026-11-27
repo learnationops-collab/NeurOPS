@@ -1323,3 +1323,28 @@
 ### 27/11/2026 · WhatsApp: nombre del perfil primero y, sin nombre, texto acomodado (ADR-W271)
 - Se le escribe a cada uno con su nombre de WhatsApp; sin nombre, «{nombre}, en 5 horas…» sale «En 5 horas…» y la plantilla con {{1}} lleva «👋» ([respuestas.py](../../app/whatsapp/respuestas.py), [audiencia.py](../../app/whatsapp/audiencia.py)).
 - Prueba acelerada del flujo del 28/11 con el número del equipo en el plan de prueba del 26/11: Opening, botones y mensaje de Calendar funcionaron.
+
+### 27/11/2026 · El chat dice de qué día es cada mensaje y hace cuánto no responde
+- Cada mensaje dice «hoy 10:34», «ayer 10:34» o «25 nov 10:34», y el chat tiene separadores de día («Hoy», «Ayer», «Miércoles 25 nov») que quedan fijos arriba al deslizar ([Feed.jsx](../../frontend/src/pages/inbox/conversaciones/Feed.jsx)).
+- Al pie del chat, si lo último es del equipo: «No responde hace 2 d · tu último hace 3 h». Pasa a ámbar con «toca seguimiento» cuando el último tuyo tiene más de 12 h, y a rojo con 3 días sin responder. Al pasar el mouse, su última respuesta y tu último mensaje con fecha.
+
+### 27/11/2026 · Talent: la fecha de postulación siempre a la vista
+- La columna «Postuló» («Hace 3 días» · «24 nov») pasa a fija en la tabla de postulaciones: ya no se puede ocultar desde Columnas, así que aparece también en las vistas guardadas que la tenían apagada ([vista.js](../../frontend/src/pages/admin/hiring/lib/vista.js)).
+
+### 27/11/2026 · Analyze: Actuales o Antiguas
+- A la izquierda de las pestañas de Analyze, un selector «Actuales · N / Antiguas · N»: Actuales son las que postularon en el mes en curso; Antiguas, las de antes. La tabla y las cuentas de Seleccionadas, Reserva y Descartadas siguen el período elegido. Arranca siempre en Actuales ([HiringDashboardPage.jsx](../../frontend/src/pages/admin/hiring/HiringDashboardPage.jsx), [vista.js](../../frontend/src/pages/admin/hiring/lib/vista.js)).
+
+### 27/11/2026 · Revisión de closers: solo revisores activos
+- El estado de la revisión por revisor deja afuera las cuentas dadas de baja (la de admin vieja de Marlon), así figuran solo Mario y Marlon con sus cuentas actuales ([job_applications.py](../../app/api/job_applications.py)).
+
+### 27/11/2026 · Marlon revisa Talent como Mario (ADR-W193, ampliación)
+- Con el rol «Hiring · Closers», Marlon ve Inbox (Asistentes y Closers), Analyze, Winners y Stats, y decide en cada postulación. No ve Forms, la sección Closers ni los ajustes, y no puede eliminar ([HiringDashboardPage.jsx](../../frontend/src/pages/admin/hiring/HiringDashboardPage.jsx), [assistant_applications.py](../../app/api/assistant_applications.py), [hiring_forms.py](../../app/api/hiring_forms.py)).
+
+### 27/11/2026 · Talent: Closers en todas las secciones, cabecera compacta y banderas de todos los países
+- El desplegable Asistentes / Closers va al lado del título en Inbox, Analyze, Winners y Stats. Con Closers, Analyze muestra closers en Seleccionadas, Reserva, A decidir y Descartadas (con Actuales / Antiguas: Antiguas suma las búsquedas archivadas), Winners en En prueba y Baja, y Stats las estadísticas de closers. Las tablas usan las columnas de closer (conocimiento, cierre, inglés, material). La sección Closers sigue igual ([HiringDashboardPage.jsx](../../frontend/src/pages/admin/hiring/HiringDashboardPage.jsx), [InboxCloser.jsx](../../frontend/src/pages/admin/hiring/components/closers/InboxCloser.jsx), [closers.js](../../frontend/src/pages/admin/hiring/lib/closers.js)).
+- Cabecera en una fila: Actuales / Antiguas junto al título, pestañas más chicas, filtro redondo y buscador en barrita (lupa y Ctrl K) que se abre al tocarlo ([talent.css](../../frontend/src/pages/admin/hiring/talent.css)).
+- El ancho de las columnas se ajusta también en la tabla de closers. El tirador ya no muestra rayas fijas: aparece una línea fina al pasar y se estira en rosa al arrastrar.
+- Banderas para todos los países de las postulaciones (Colombia, Costa Rica, España, México, Ecuador, Chile, Uruguay y el resto); «Otro» lleva una neutra ([Piezas.jsx](../../frontend/src/pages/admin/hiring/components/Piezas.jsx)).
+
+### 27/11/2026 · Flujo del taller: botones de respuesta en los pasos de mensaje (ADR-W272)
+- Un paso de mensaje común lleva hasta 3 botones de respuesta además del link; cada botón, y el link con «al abrir el link», tiene su nodo en el lienzo como los de una plantilla ([PasoEditor.jsx](../../frontend/src/ventanas/herramientas/broadcastTaller/PasoEditor.jsx), [respuestas.py](../../app/whatsapp/respuestas.py)).

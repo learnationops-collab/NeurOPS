@@ -210,12 +210,14 @@
 .talent .tl-th > button[aria-sort="ascending"] svg{transform:rotate(180deg)}
 /* Tirador del ancho de la columna: arrastrar, flechas o doble clic para volver al de fábrica */
 .talent .tl-tir{position:absolute;top:8px;bottom:8px;right:-9px;width:12px;z-index:2;cursor:col-resize;border-radius:4px;touch-action:none}
-.talent .tl-tir::after{content:"";position:absolute;left:5px;top:0;bottom:0;width:2px;border-radius:2px;background:var(--border-main);
-  opacity:0;transition:opacity .16s ease,background-color .16s ease}
-.talent .tl-tcab:hover .tl-tir::after{opacity:1}
+/* Discreto: no hay rayas fijas entre columnas. Al pasar por el borde aparece una línea fina y corta;
+   al arrastrar se estira a todo el alto en el rosa de la marca, con un brillo suave. */
+.talent .tl-tir::after{content:"";position:absolute;left:5px;top:50%;width:2px;height:0;border-radius:2px;
+  background:var(--brand-secondary);opacity:0;transform:translateY(-50%);
+  transition:opacity .18s ease,height .25s var(--spring,cubic-bezier(.3,.8,.2,1)),box-shadow .2s ease}
 .talent .tl-tir:hover::after,
-.talent .tl-tir:focus-visible::after,
-.talent .tl-tir.activo::after{opacity:1;background:var(--focus-blue)}
+.talent .tl-tir:focus-visible::after{opacity:.9;height:16px}
+.talent .tl-tir.activo::after{opacity:1;height:100%;box-shadow:0 0 10px var(--brand-secondary)}
 .talent .tl-tir:focus-visible{box-shadow:none}
 body.tl-redim,
 body.tl-redim *{cursor:col-resize!important;user-select:none!important}
@@ -624,3 +626,32 @@ body.tl-redim *{cursor:col-resize!important;user-select:none!important}
 .talent .tl-antiguos:hover{color:var(--text-muted)}
 .talent .tl-antiguos[aria-pressed="true"]{color:var(--text-on-surface);background:var(--mat-1)}
 .talent .tl-antiguos:focus-visible{outline:2px solid var(--brand-secondary);outline-offset:2px}
+
+/* Analyze: «Actuales / Antiguas» (postularon este mes o antes), al lado del desplegable de búsqueda. */
+.talent .tl-periodo.ui-select{height:38px;padding:0 12px 0 10px;border-radius:999px;font-weight:700;font-size:13.5px;
+  background:color-mix(in srgb,var(--bg-element) 80%,transparent);border:1px solid var(--border-main)}
+.talent .tl-periodo.ui-select:hover{border-color:var(--border-control,var(--border-main))}
+.tl-periodo-punto{display:block;width:8px;height:8px;border-radius:50%;background:currentColor;box-shadow:0 0 10px -1px currentColor}
+
+/* Cabecera compacta (27/11/2026): los desplegables van junto al título y a la derecha queda una sola
+   fila —buscador corto, pestañas chicas y el filtro—, todos de 40 px de alto. */
+.talent .tl-tope-der{gap:10px}
+.talent .tl-controles{flex-wrap:nowrap;gap:10px}
+.talent .tl-tope .tabs{padding:3px;gap:2px}
+.talent .tl-tope .tab{height:32px;padding:0 13px;font-size:12.5px;gap:7px}
+.talent .tl-tope .tab .cuenta{font-size:10.5px}
+.talent .tl-tope .tl-vista-btn{width:40px;height:40px;border-radius:999px}
+.talent .tl-tope .tl-vista-btn svg{width:17px;height:17px}
+/* El buscador es una barrita: lupa y Ctrl K. Se abre al hacer foco o mientras tiene texto. */
+.talent .tl-tope-der .busca.tl-busca{flex:0 0 auto;width:132px;height:40px;padding:0 10px 0 12px;gap:8px;border-radius:999px;
+  transition:width .35s var(--spring,cubic-bezier(.3,.8,.2,1)),border-color .2s ease}
+.talent .tl-busca input{min-width:0;flex:1;font-size:13px}
+.talent .tl-busca input::placeholder{color:var(--text-muted-40)}
+.talent .tl-busca:focus-within,
+.talent .tl-busca.tl-busca--con{width:260px}
+.talent .tl-busca:not(:focus-within):not(.tl-busca--con) input::placeholder{color:transparent}
+@media (max-width:980px){.talent .tl-controles{flex-wrap:wrap}}
+/* País que no está en la lista de banderas («Otro (fuera de estos países)»): una neutra con un globito. */
+.talent .tl-flag--otro{background:var(--mat-1);box-shadow:inset 0 0 0 1px var(--border-main)}
+.talent .tl-flag--otro::after{content:"";position:absolute;left:50%;top:50%;width:6px;height:6px;border-radius:50%;
+  transform:translate(-50%,-50%);border:1px solid var(--text-muted-40)}

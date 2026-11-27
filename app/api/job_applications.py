@@ -359,7 +359,8 @@ def revisores_job_applications():
     # `User.role.in_(...)` (ver `_RolComparator` en app/models/user.py) encuentra a quien TENGA el
     # rol, principal o adicional (`roles_extra`): el operador con `hiring` de rol extra también vota
     # (cuando trabaja con ese rol) y tiene que figurar. Una persona con los dos roles sale una vez.
-    usuarios = User.query.filter(User.role.in_(ROLES_REVISORES)).order_by(User.username).all()
+    # Solo cuentas activas: la de admin vieja de Marlon (dada de baja) ya no revisa y no tiene que figurar.
+    usuarios = User.query.filter(User.role.in_(ROLES_REVISORES), User.is_active.is_(True)).order_by(User.username).all()
     revisores = []
     for u in usuarios:
         # `mosaico`: un valor por postulación completa, en el mismo orden que `completas`, con

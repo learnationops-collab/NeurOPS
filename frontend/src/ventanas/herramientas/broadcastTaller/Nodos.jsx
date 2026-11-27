@@ -6,6 +6,7 @@ import { Chip } from '../../../components/standard';
 import { embudo, partesDe } from '../broadcastWa/useBroadcast';
 import { espera } from '../broadcastWa/Espera';
 import { ponen } from '../broadcastWa/Respuestas';
+import { LINK_BOTON } from './useBroadcastTaller';
 
 export const ESTADOS = {
     borrador: { label: 'Desactivado', color: 'var(--ln-text-faint, #8a8ea0)' },
@@ -31,11 +32,13 @@ function Boton({ ancla, link, onTocar, children }) {
     );
 }
 
-export function NodoPaso({ i, paso, plantilla, config, elegido, onElegir, onBoton }) {
+export function NodoPaso({ i, paso, plantilla, config, elegido, onElegir, onBoton, onLink }) {
     const estado = ESTADOS[paso.estado] || ESTADOS.borrador;
-    const { cuerpo, botones } = partesDe(plantilla);
     const salio = paso.lote ? embudo(paso.por_estado) : null;
     const mensaje = paso.tipo === 'mensaje' ? paso.mensaje || {} : null;
+    const { cuerpo } = partesDe(plantilla);
+    // Los botones de la plantilla o los de respuesta del mensaje común (ADR-W272); los dos abren sus respuestas.
+    const botones = mensaje ? (mensaje.botones || []).map((b) => b.titulo).filter(Boolean) : partesDe(plantilla).botones;
     return (
         <button type="button" className={`lz-nodo lz-nodo--paso${elegido ? ' lz-nodo--on' : ''}`} data-nodo={`p${i}`} onClick={onElegir}>
             <span className="lz-tipo lz-tipo--paso">{mensaje ? 'Paso · mensaje (24 h)' : 'Paso · plantilla'} <Chip subtle color={estado.color}>{estado.label}</Chip></span>
@@ -43,12 +46,16 @@ export function NodoPaso({ i, paso, plantilla, config, elegido, onElegir, onBoto
             {mensaje
                 ? (mensaje.texto ? <span className="lz-burbuja">{corto(mensaje.texto)}</span> : <span className="lz-s">Sin mensaje</span>)
                 : paso.plantilla ? <span className="lz-burbuja">{corto(cuerpo || paso.plantilla)}</span> : <span className="lz-s">Sin plantilla</span>}
-            {mensaje?.url && <span className="lz-bts"><Boton link>{mensaje.titulo || 'Abrir'}</Boton></span>}
+            {mensaje?.url && (
+                <span className="lz-bts">
+                    <Boton link ancla={paso.id ? `p${i}:b:${LINK_BOTON}` : undefined} onTocar={paso.id ? onLink : undefined}>{mensaje.titulo || 'Abrir'}</Boton>
+                </span>
+            )}
             {botones.length > 0 && <span className="lz-bts">{botones.map((b) => <Boton key={b} ancla={`p${i}:b:${b}`} onTocar={() => onBoton(b)}>{b}</Boton>)}</span>}
             <span className="lz-s">
                 {A_QUIEN[paso.a_quien]}{paso.valor ? ` «${paso.valor}»` : ''}
                 {salio ? ` · ${salio.enviados} enviados · ${salio.respondieron} respondieron` : paso.estimado != null ? ` · ~${paso.estimado}` : ''}
-                {config?.opcion_unica && !mensaje ? ' · Opción única' : ''}
+                {config?.opcion_unica ? ' · Opción única' : ''}
                 {mensaje ? ' · solo con la ventana abierta' : ''}
             </span>
         </button>

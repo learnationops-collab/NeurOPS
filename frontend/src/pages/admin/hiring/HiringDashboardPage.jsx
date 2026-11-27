@@ -20,13 +20,15 @@ import ConfigTalent from './components/ConfigTalent';
 import HiringForms from './components/forms/HiringForms';
 import PanelesConservados from '../../../components/ui/PanelesConservados';
 import { IsotipoTalent } from './components/Piezas';
+import { Select } from '../../../components/standard';
 import AlDia from './components/AlDia';
 import InboxCloser, { PESTANAS_INBOX_CLOSER } from './components/closers/InboxCloser';
 import MenuPuesto from './components/closers/MenuPuesto';
-import { guardarPuesto, leerPuesto, useClosers } from './lib/closers';
+import { PESTANAS_CLOSER_SECCION, guardarPuesto, leerPuesto, useClosers } from './lib/closers';
+import PostulacionesStatsTab from '../postulaciones/components/PostulacionesStatsTab';
 import PostulacionesCloser, { PESTANAS_CLOSER } from '../postulaciones/PostulacionesCloser';
 import {
-    PESTANAS, agrupar, colsVisibles, coincide, cuentas as contar, enPestana, filtrosActivos, guardarVista, leerVista,
+    PERIODOS, PESTANAS, agrupar, colsVisibles, coincide, cuentas as contar, enPeriodo, enPestana, esDelMes, filtrosActivos, guardarVista, leerVista,
     normalizar, ordenar, pasaFiltros, vistaDefault,
 } from './lib/vista';
 import '../../comercial/comercial.css';
@@ -59,13 +61,18 @@ const SECCIONES = [
 
 const ES_TABLA = new Set(['pend', 'anal', 'fin']);
 
-// El rol `hiring_closers` (ADR-W193) ve Talent solo con la búsqueda de Closer: el Inbox (fijo en
-// Closers) y la sección Closers. Nada de Asistentes: ni sus secciones, ni sus pedidos, ni los ajustes.
-const SECCIONES_SOLO_CLOSERS = new Set(['pend', 'closers']);
+// Las secciones que siguen al desplegable Asistentes / Closers (al lado del título): con Closers
+// elegido, Inbox, Analyze, Winners y Stats muestran closers (27/11/2026).
+const SECCIONES_PUESTO = new Set(['pend', 'anal', 'fin', 'stats']);
+
+// El rol `hiring_closers` (Marlon, dirección comercial; ADR-W193, ampliado el 27/11/2026) revisa y decide
+// como Mario en Inbox (Asistentes y Closers), Analyze, Winners y Stats. No ve Forms ni la sección Closers,
+// no toca los ajustes de Talent ni elimina postulaciones: eso lo arma Mario.
+const SECCIONES_REVISOR = new Set(['pend', 'anal', 'fin', 'stats']);
 
 // `?s=closers` (el redirect de /admin/postulaciones) elige la sección con la que se entra.
-const seccionDeEntrada = (s, soloClosers) => (
-    SECCIONES.some((x) => x.id === s && (!soloClosers || SECCIONES_SOLO_CLOSERS.has(x.id))) ? s : 'pend'
+const seccionDeEntrada = (s, esRevisor) => (
+    SECCIONES.some((x) => x.id === s && (!esRevisor || SECCIONES_REVISOR.has(x.id))) ? s : 'pend'
 );
 
 const Pestanas = ({ lista, actual, onElegir, cuentaDe }) => (
@@ -84,10 +91,12 @@ const HiringDashboardPage = () => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
     const [params, setParams] = useSearchParams();
-    const soloClosers = user?.role === 'hiring_closers';
+    const esRevisor = user?.role === 'hiring_closers';
 
-    const [seccion, setSeccion] = useState(() => seccionDeEntrada(params.get('s'), soloClosers));
-    const [pestanas, setPestanas] = useState({ pend: 'online', anal: 'seleccionada', fin: 'testeo', closers: 'pendientes', pendCloser: 'revisar' });
+    const [seccion, setSeccion] = useState(() => seccionDeEntrada(params.get('s'), esRevisor));
+    const [pestanas, setPestanas] = useState({ pend: 'online', anal: 'seleccionada', fin: 'testeo', closers: 'pendientes', pendCloser: 'revisar', analCloser: 'preseleccionada', finCloser: 'testeo' });
+    // Analyze: «Actuales» (postularon este mes) o «Antiguas» (antes). Arranca siempre en Actuales.
+    const [periodo, setPeriodo] = useState('actuales');
     const [statsTab, setStatsTab] = useState('panorama');
     const [statsSeg, setStatsSeg] = useState('gen');
     const [query, setQuery] = useState('');
@@ -105,7 +114,7 @@ const HiringDashboardPage = () => {
     const [entradas, setEntradas] = useState(0);
     // Qué búsqueda mira el Inbox: Asistentes o Closers (ADR-W192). Se recuerda por navegador.
     const [puestoElegido, setPuesto] = useState(leerPuesto);
-    const puesto = soloClosers ? 'closer' : puestoElegido;
+    const puesto = puestoElegido;
     const closers = useClosers();
     const buscador = useRef(null);
     const botonVista = useRef(null);
@@ -144,12 +153,10 @@ const HiringDashboardPage = () => {
     }, []);
 
     useEffect(() => {
-        // Sin acceso a Asistentes no se piden: el servidor las negaría (403).
-        if (soloClosers) { setCargando(false); return; }
         cargar();
         cargarPesos();
         api.get('/hiring/config').then((res) => setBusquedaCfg(res.data)).catch(() => setBusquedaCfg(null));
-    }, [cargar, cargarPesos, soloClosers]);
+    }, [cargar, cargarPesos]);
 
     // La `s` solo dice dónde se entra: ya leída, se saca de la URL (con `replace`, sin sumar un paso
     // al historial). La sección no vive en la URL, y si quedaba, recargar después de pasar a Inbox
@@ -190,7 +197,7 @@ const HiringDashboardPage = () => {
     // ajustes de la herramienta (Clarity y búsqueda), que también abre el orbe del dock.
     const gruposDeSesion = armarMenuSesion({
         user, navigate, logout,
-        acciones: soloClosers ? [] : [{ id: 'talent', label: 'Ajustes de Talent', Icono: SlidersHorizontal, onClick: () => setConfig('clarity') }],
+        acciones: esRevisor ? [] : [{ id: 'talent', label: 'Ajustes de Talent', Icono: SlidersHorizontal, onClick: () => setConfig('clarity') }],
         configuracion: { onClick: () => abrirConfiguracion() },
         // El admin aterriza en Operaciones desde que se retiró su panel (/admin/ventas, 10/10/2026).
         ir: user?.role === 'admin' ? [{ id: 'operaciones', label: 'Volver a Operaciones', Icono: ArrowLeft, onClick: () => navigate('/ops/dashboard') }] : [],
@@ -204,7 +211,11 @@ const HiringDashboardPage = () => {
     const hospeda = seccion === 'closers';
     const visitoClosers = useRef(false);
     if (hospeda) visitoClosers.current = true;
-    const modoCloser = puesto === 'closer' && seccion === 'pend';
+    const modoCloser = puesto === 'closer' && ES_TABLA.has(seccion);
+    const statsCloser = puesto === 'closer' && seccion === 'stats';
+    // Closers y las Stats de closers son de Postulaciones (Tailwind): van fuera del `.dc-shell`.
+    const fuera = hospeda || statsCloser;
+    const pestanaCloser = seccion === 'pend' ? pestanas.pendCloser : pestanas[`${seccion}Closer`];
     const q = hospeda || modoCloser ? '' : query.trim();
     const qCloser = modoCloser ? query.trim() : '';
     const enBusqueda = q.length > 0;
@@ -215,8 +226,25 @@ const HiringDashboardPage = () => {
     const base = useMemo(() => {
         if (enBusqueda) return todas.filter((p) => coincide(p, q));
         if (!ES_TABLA.has(seccion)) return [];
-        return todas.filter((p) => enPestana(p, seccion, pestana));
-    }, [todas, enBusqueda, q, seccion, pestana]);
+        return todas.filter((p) => enPestana(p, seccion, pestana) && (seccion !== 'anal' || enPeriodo(p, periodo)));
+    }, [todas, enBusqueda, q, seccion, pestana, periodo]);
+
+    // Closers en Analyze: Actuales = postularon este mes; Antiguas = antes, más las de búsquedas archivadas.
+    useEffect(() => {
+        if (puesto === 'closer' && seccion === 'anal' && closers.archivadas === null) closers.cargarArchivadas();
+    }, [puesto, seccion, closers.archivadas, closers.cargarArchivadas]); // eslint-disable-line react-hooks/exhaustive-deps
+    const closersDe = useCallback((per) => (per === 'actuales'
+        ? closers.filas.filter((p) => esDelMes(p))
+        : [...closers.filas.filter((p) => !esDelMes(p)), ...(closers.archivadas || [])]), [closers.filas, closers.archivadas]);
+    const closersPeriodo = useMemo(() => closersDe(periodo), [closersDe, periodo]);
+    const filasCloserSeccion = useMemo(() => {
+        if (!modoCloser || seccion === 'pend') return null;
+        const fuente = seccion === 'anal' ? closersPeriodo : closers.filas;
+        return fuente.filter((p) => p.veredicto === pestanaCloser);
+    }, [modoCloser, seccion, closersPeriodo, closers.filas, pestanaCloser]);
+
+    // Las cuentas de las pestañas de Analyze son las del período elegido.
+    const cPeriodo = useMemo(() => contar(todas.filter((p) => enPeriodo(p, periodo))), [todas, periodo]);
 
     const filas = useMemo(() => ordenar(base.filter((p) => pasaFiltros(p, cfg.filtros)), cfg.orden), [base, cfg.filtros, cfg.orden]);
     const grupos = useMemo(() => agrupar(filas, cfg.agrupar), [filas, cfg.agrupar]);
@@ -234,7 +262,7 @@ const HiringDashboardPage = () => {
     const modoDescarte = !enBusqueda && ((seccion === 'anal' && pestana === 'descartado') || (seccion === 'fin' && pestana === 'baja'));
 
     // Al cambiar de sección o de pestaña las barritas de la tabla vuelven a crecer.
-    useEffect(() => { setEntradas((n) => n + 1); }, [seccion, pestana, enBusqueda]);
+    useEffect(() => { setEntradas((n) => n + 1); }, [seccion, pestana, enBusqueda, periodo]);
     useEffect(() => { if (!esTabla) setMenuAbierto(false); }, [esTabla]);
 
     const elegirSeccion = (id) => {
@@ -273,7 +301,7 @@ const HiringDashboardPage = () => {
 
     // --- Cabecera: las pestañas de cada sección y el botón Vista ---
     let controles = null;
-    if (modoCloser) {
+    if (modoCloser && seccion === 'pend') {
         const cuentaCloser = { revisar: closers.porRevisar.length, incompletas: closers.incompletas.length };
         const enAntiguos = pestanas.pendCloser === 'antiguos';
         controles = qCloser ? null : (
@@ -291,11 +319,20 @@ const HiringDashboardPage = () => {
                 )}
             </>
         );
+    } else if (modoCloser) {
+        const fuente = seccion === 'anal' ? closersPeriodo : closers.filas;
+        controles = qCloser ? null : (
+            <Pestanas lista={PESTANAS_CLOSER_SECCION[seccion]} actual={pestanaCloser}
+                cuentaDe={(id) => fuente.filter((p) => p.veredicto === id).length}
+                onElegir={(id) => setPestanas((prev) => ({ ...prev, [`${seccion}Closer`]: id }))} />
+        );
     } else if (!enBusqueda && ES_TABLA.has(seccion)) {
         // Híbridos casi nunca tiene a nadie: la pestaña aparece solo si hay alguna (o si es la abierta).
         const lista = PESTANAS[seccion].filter((t) => t.id !== 'hibrido' || c.hibrido > 0 || pestana === 'hibrido');
-        controles = <Pestanas lista={lista} actual={pestana} onElegir={(id) => setPestanas((prev) => ({ ...prev, [seccion]: id }))} cuentaDe={(id) => c[id === 'incompletas' ? 'incompletas' : id]} />;
-    } else if (!enBusqueda && seccion === 'stats') {
+        const cs = seccion === 'anal' ? cPeriodo : c;
+        const pestanasSec = <Pestanas lista={lista} actual={pestana} onElegir={(id) => setPestanas((prev) => ({ ...prev, [seccion]: id }))} cuentaDe={(id) => cs[id === 'incompletas' ? 'incompletas' : id]} />;
+        controles = pestanasSec;
+    } else if (!enBusqueda && seccion === 'stats' && !statsCloser) {
         controles = (
             <>
                 <Pestanas lista={[{ id: 'panorama', label: 'Panorama' }, { id: 'paises', label: 'Comparar países' }]} actual={statsTab} onElegir={setStatsTab} />
@@ -318,11 +355,17 @@ const HiringDashboardPage = () => {
             const n = puesto === 'closer' ? closers.porRevisar.length : c.pend;
             return n ? [{ tipo: 'cuenta', texto: String(n), titulo: `${n} sin ${puesto === 'closer' ? 'calificar' : 'analizar'}` }] : [];
         })(),
-        anal: c.anal ? [{ tipo: 'cuenta', texto: String(c.anal), titulo: `${c.anal} analizadas` }] : [],
-        fin: c.fin ? [{ tipo: 'cuenta', texto: String(c.fin), titulo: `${c.fin} finalistas` }] : [],
+        anal: (() => {
+            const n = puesto === 'closer' ? closers.filas.filter((p) => !['sin_calificar', 'testeo', 'baja'].includes(p.veredicto)).length : c.anal;
+            return n ? [{ tipo: 'cuenta', texto: String(n), titulo: `${n} analizad${puesto === 'closer' ? 'os' : 'as'}` }] : [];
+        })(),
+        fin: (() => {
+            const n = puesto === 'closer' ? closers.filas.filter((p) => ['testeo', 'baja'].includes(p.veredicto)).length : c.fin;
+            return n ? [{ tipo: 'cuenta', texto: String(n), titulo: `${n} finalistas` }] : [];
+        })(),
     };
     const secciones = SECCIONES
-        .filter((s) => !soloClosers || SECCIONES_SOLO_CLOSERS.has(s.id))
+        .filter((s) => !esRevisor || SECCIONES_REVISOR.has(s.id))
         .map((s) => ({ ...s, marcas: marcas[s.id] || [] }));
 
     const vacio = (() => {
@@ -375,17 +418,28 @@ const HiringDashboardPage = () => {
             {/* En Closers el `.dc-shell` se achica a la cabecera (y al dock, que es fijo) y
                 Postulaciones va debajo, fuera de él; el fondo de la página lo pone una capa fija
                 (`.tl-fondo`), así las dos partes se ven como una sola pantalla. */}
-            {hospeda && <div className="tl-fondo" aria-hidden="true" />}
-            <div className={`dc-shell talent${hospeda ? ' talent--hospeda' : ''}`}>
+            {fuera && <div className="tl-fondo" aria-hidden="true" />}
+            <div className={`dc-shell talent${fuera ? ' talent--hospeda' : ''}`}>
                 <div className="wrap">
                     <header className="tl-tope">
                         <div className="tl-marca">
                             <IsotipoTalent />
                             <div className="tl-tit">
                                 <h1 className="t-h1">{titulo}</h1>
-                                {seccion === 'pend' && !enBusqueda && !soloClosers && (
+                                {SECCIONES_PUESTO.has(seccion) && !enBusqueda && (
                                     <MenuPuesto valor={puesto} cuentas={{ asistente: c.pend, closer: closers.porRevisar.length }}
                                         onCambiar={(v) => { setPuesto(v); guardarPuesto(v); setQuery(''); }} />
+                                )}
+                                {seccion === 'anal' && !enBusqueda && !qCloser && (
+                                    <Select className="tl-periodo" size="sm" label="Período de postulación" value={periodo} onChange={setPeriodo}
+                                        options={PERIODOS.map((o) => ({
+                                            value: o.id,
+                                            label: `${o.label} · ${puesto === 'closer'
+                                                ? closersDe(o.id).filter((p) => p.veredicto === pestanaCloser).length
+                                                : todas.filter((p) => p.veredicto === pestana && enPeriodo(p, o.id)).length}`,
+                                            icon: <i className="tl-periodo-punto" />,
+                                            iconColor: o.c,
+                                        }))} />
                                 )}
                                 {!enBusqueda && seccion === 'forms' && formActivoNombre && (
                                     <p className="tl-sub">Búsqueda: <b>{formActivoNombre}</b></p>
@@ -394,8 +448,8 @@ const HiringDashboardPage = () => {
                             </div>
                         </div>
                         <div className="tl-tope-der">
-                            {!hospeda && (
-                                <label className="busca" htmlFor="tl-q">
+                            {!fuera && (
+                                <label className={`busca tl-busca${query ? ' tl-busca--con' : ''}`} htmlFor="tl-q">
                                     <Search />
                                     <input
                                         id="tl-q"
@@ -404,7 +458,7 @@ const HiringDashboardPage = () => {
                                         autoComplete="off"
                                         value={query}
                                         onChange={(e) => setQuery(e.target.value)}
-                                        placeholder={modoCloser ? 'Buscar closer, país o correo' : 'Buscar candidata, país o provincia'}
+                                        placeholder={modoCloser ? 'Buscar closer' : 'Buscar candidata'}
                                         aria-label="Buscar postulante"
                                     />
                                     {enBusqueda ? (
@@ -435,12 +489,12 @@ const HiringDashboardPage = () => {
                         </div>
                     </header>
 
-                    {!hospeda && (
-                        <main className="tl-vista" key={`${seccion}|${modoCloser ? 'closer' : ''}|${enBusqueda ? 'q' : ''}|${seccion === 'stats' ? statsTab : ''}`}>
+                    {!fuera && (
+                        <main className="tl-vista" key={`${seccion}|${modoCloser ? `closer|${pestanaCloser}` : ''}|${enBusqueda ? 'q' : ''}|${seccion === 'stats' ? statsTab : ''}`}>
                             {errorCarga && <div className="tl-aviso-error"><AlertTriangle size={16} />{errorCarga}</div>}
                             {errorBorrado && <div className="tl-aviso-error"><AlertTriangle size={16} />{errorBorrado}</div>}
 
-                            {modoCloser && <InboxCloser closers={closers} pestana={pestanas.pendCloser} q={qCloser} />}
+                            {modoCloser && <InboxCloser closers={closers} pestana={pestanaCloser} q={qCloser} filasSeccion={filasCloserSeccion} />}
 
                             {!modoCloser && !enBusqueda && seccion === 'pend' && !cargando && (
                                 <ResumenInbox
@@ -487,7 +541,7 @@ const HiringDashboardPage = () => {
                                         return nueva;
                                     })}
                                     onAbrir={abrir}
-                                    onEliminar={eliminar}
+                                    onEliminar={esRevisor ? undefined : eliminar}
                                     onLimpiarFiltros={() => cambiarVista({ ...cfg, filtros: vistaDefault().filtros })}
                                     vacio={vacio}
                                 />
@@ -508,7 +562,7 @@ const HiringDashboardPage = () => {
                     ariaLabel="Secciones de Learnation Talent"
                     despues={(
                         <>
-                            {soloClosers ? (
+                            {esRevisor ? (
                                 <span className="tl-orb" aria-hidden="true"><IsotipoTalent tam={50} id="tlGDock" className="" etiqueta="" /></span>
                             ) : (
                                 <button
@@ -524,7 +578,7 @@ const HiringDashboardPage = () => {
                             )}
                             <MenuSesion
                                 nombre={user?.name || user?.username || ''}
-                                rol={rotuloDeSesion(user, soloClosers ? 'Hiring · Closers' : 'Hiring')}
+                                rol={rotuloDeSesion(user, esRevisor ? 'Hiring · Revisión' : 'Hiring')}
                                 grupos={gruposDeSesion}
                             />
                         </>
@@ -534,6 +588,12 @@ const HiringDashboardPage = () => {
 
             {/* Closers, una vez abierta, queda montada y escondida al pasar a otra sección o pestaña:
                 volver no recarga (PostulacionesCloser conserva cada pestaña con PanelesConservados). */}
+            {statsCloser && (
+                <main className="tl-hospedado dash-v6 text-base">
+                    <PostulacionesStatsTab />
+                </main>
+            )}
+
             {visitoClosers.current && (
                 <main className="tl-hospedado dash-v6 text-base" hidden={!hospeda} style={hospeda ? undefined : { display: 'none' }}>
                     <PostulacionesCloser pestana={pestanas.closers} />
@@ -551,7 +611,7 @@ const HiringDashboardPage = () => {
                 />
             )}
 
-            {config && !soloClosers && (
+            {config && !esRevisor && (
                 <ConfigTalent
                     tab={config}
                     onTab={setConfig}

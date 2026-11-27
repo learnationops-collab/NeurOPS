@@ -22,26 +22,63 @@ export const LOGO_APP = {
 };
 
 // Banderas dibujadas con degradados: los emoji de bandera no se dibujan en
-// Windows (salen como «AR», «BR»).
-const FONDO_BANDERA = {
-    Argentina: 'linear-gradient(180deg,#75AADB 0 33.3%,#fff 33.3% 66.6%,#75AADB 66.6%)',
-    Venezuela: 'linear-gradient(180deg,#FFCC00 0 33.3%,#00247D 33.3% 66.6%,#CF142B 66.6%)',
-    Brasil: '#009C3B',
-    es: 'linear-gradient(180deg,#AA151B 0 25%,#F1BF00 25% 75%,#AA151B 75%)',
+// Windows (salen como «AR», «BR»). Versión simplificada (franjas y bloques, sin
+// escudos ni estrellas): a 18 px alcanza para reconocerlas. Se buscan sin tildes
+// ni mayúsculas, así «Mexico» y «México» dan la misma.
+const h3 = (a, b, c) => `linear-gradient(180deg,${a} 0 33.3%,${b} 33.3% 66.6%,${c} 66.6%)`;
+const v3 = (a, b, c) => `linear-gradient(90deg,${a} 0 33.3%,${b} 33.3% 66.6%,${c} 66.6%)`;
+const triangulo = (c) => `linear-gradient(to bottom right,${c} 50%,transparent 50.5%) 0 0/46% 50% no-repeat, linear-gradient(to top right,${c} 50%,transparent 50.5%) 0 100%/46% 50% no-repeat`;
+const BANDERAS = {
+    argentina: h3('#75AADB', '#fff', '#75AADB'),
+    venezuela: h3('#FFCC00', '#00247D', '#CF142B'),
+    brasil: '#009C3B',
+    colombia: 'linear-gradient(180deg,#FCD116 0 50%,#003893 50% 75%,#CE1126 75%)',
+    ecuador: 'linear-gradient(180deg,#FFDD00 0 50%,#034EA2 50% 75%,#ED1C24 75%)',
+    'costa rica': 'linear-gradient(180deg,#002B7F 0 16.6%,#fff 16.6% 33.3%,#CE1126 33.3% 66.6%,#fff 66.6% 83.3%,#002B7F 83.3%)',
+    espana: 'linear-gradient(180deg,#AA151B 0 25%,#F1BF00 25% 75%,#AA151B 75%)',
+    mexico: v3('#006847', '#fff', '#CE1126'),
+    peru: v3('#D91023', '#fff', '#D91023'),
+    guatemala: v3('#4997D0', '#fff', '#4997D0'),
+    'republica dominicana': 'linear-gradient(#fff,#fff) center/100% 20% no-repeat, linear-gradient(#fff,#fff) center/16% 100% no-repeat, conic-gradient(#CE1126 0 25%,#002D62 0 50%,#CE1126 0 75%,#002D62 0)',
+    panama: 'conic-gradient(#DA121A 0 25%,#fff 0 50%,#072357 0 75%,#fff 0)',
+    uruguay: 'radial-gradient(circle at 19% 26%,#FCD116 0 9%,transparent 10%), linear-gradient(#fff,#fff) 0 0/38% 56% no-repeat, repeating-linear-gradient(180deg,#fff 0 11.1%,#0038A8 11.1% 22.2%)',
+    chile: 'linear-gradient(#0039A6,#0039A6) 0 0/34% 50% no-repeat, linear-gradient(180deg,#fff 0 50%,#D52B1E 50%)',
+    paraguay: h3('#D52B1E', '#fff', '#0038A8'),
+    bolivia: h3('#D52B1E', '#F9E300', '#007934'),
+    honduras: h3('#0073CF', '#fff', '#0073CF'),
+    'el salvador': h3('#0F47AF', '#fff', '#0F47AF'),
+    nicaragua: h3('#0067C6', '#fff', '#0067C6'),
+    'estados unidos': 'linear-gradient(#3C3B6E,#3C3B6E) 0 0/42% 54% no-repeat, repeating-linear-gradient(180deg,#B22234 0 7.69%,#fff 7.69% 15.38%)',
+    'puerto rico': `${triangulo('#0050F0')}, repeating-linear-gradient(180deg,#ED0000 0 20%,#fff 20% 40%)`,
+    cuba: `${triangulo('#CF142B')}, repeating-linear-gradient(180deg,#002A8F 0 20%,#fff 20% 40%)`,
+    alemania: h3('#000', '#DD0000', '#FFCE00'),
+    suiza: 'linear-gradient(#fff,#fff) center/62% 22% no-repeat, linear-gradient(#fff,#fff) center/22% 62% no-repeat, #D52B1E',
+    albania: '#E41E20',
+    angola: 'linear-gradient(180deg,#CC092F 0 50%,#000 50%)',
+    afganistan: v3('#000', '#D32011', '#007A36'),
+    italia: v3('#009246', '#fff', '#CE2B37'),
+    francia: v3('#0055A4', '#fff', '#EF4135'),
+    portugal: 'linear-gradient(90deg,#006600 0 40%,#FF0000 40%)',
+    // Idiomas (inglés y español) de las columnas de idiomas.
     en: 'linear-gradient(#C8102E,#C8102E) center/100% 20% no-repeat, linear-gradient(#C8102E,#C8102E) center/20% 100% no-repeat, linear-gradient(#fff,#fff) center/100% 36% no-repeat, linear-gradient(#fff,#fff) center/34% 100% no-repeat, linear-gradient(33deg, transparent 44%, #fff 44% 56%, transparent 56%), linear-gradient(-33deg, transparent 44%, #fff 44% 56%, transparent 56%), #012169',
 };
+BANDERAS.es = BANDERAS.espana;
 
+const clave = (t) => String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
+
+/** Cualquier país con nombre tiene bandera; uno que no está en la lista («Otro…») lleva una neutra. */
 export const Bandera = ({ de, grande = false, titulo }) => {
-    if (!de || !FONDO_BANDERA[de]) return null;
+    if (!de || clave(de) === 'sin pais') return null;
+    const fondo = BANDERAS[clave(de)];
     return (
         <span
-            className={`tl-flag${grande ? ' tl-flag--g' : ''}`}
-            style={{ background: FONDO_BANDERA[de] }}
+            className={`tl-flag${grande ? ' tl-flag--g' : ''}${fondo ? '' : ' tl-flag--otro'}`}
+            style={fondo ? { background: fondo } : undefined}
             role="img"
             aria-label={titulo || de}
             title={titulo || de}
         >
-            {de === 'Brasil' && <span className="rombo" />}
+            {clave(de) === 'brasil' && <span className="rombo" />}
         </span>
     );
 };

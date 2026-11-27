@@ -160,7 +160,7 @@ const Celda = ({ id, p, ctx }) => {
 };
 
 /** Encabezado de una columna: botón de orden (si ordena) y tirador del ancho. */
-const Encabezado = ({ col, etiqueta, orden, onOrden, onAncho, ancho }) => {
+export const Encabezado = ({ col, etiqueta, orden = {}, onOrden, onAncho, ancho }) => {
     const ref = useRef(null);
     const arrastre = useRef(null);
     const cls = `tl-th${col.cen ? ' cen' : col.der ? ' der' : ''}`;

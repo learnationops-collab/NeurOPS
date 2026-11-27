@@ -188,6 +188,7 @@ def lanzar(paso, evento, ahora, grupos=None):
         contactos = en_ventana(contactos, ahora)
         m = dict(paso.mensaje or {})
         m['texto'] = con_variables(m.get('texto') or '', evento)
+        m['paso_id'] = paso.id  # para armar sus botones (`respuestas.partes_de_paso`)
         for c in contactos:
             db.session.add(WaEnvio(lote=paso.lote, plantilla=WaEnvio.MENSAJE, idioma=paso.idioma or 'es', con_nombre=False,
                                    telefono=telefono_de(c.igsid), nombre=audiencia.nombre_de(c), contacto_id=c.id, creado_en=ahora,
@@ -237,7 +238,46 @@ def _validar_mensaje(m):
     salida = {'texto': texto}
     if url:
         salida.update(titulo=titulo, url=url)
+    # ADR-W272: botones de respuesta, como los de una plantilla; lo que pasa al tocarlos son reglas `paso:<id>`.
+    botones = []
+    for b in m.get('botones') or []:
+        t = str((b or {}).get('titulo') if isinstance(b, dict) else b or '').strip()
+        if not t:
+            raise PasoInvalido('Hay un botón sin texto')
+        if len(t) > 20:
+            raise PasoInvalido(f'«{t}» pasa los 20 caracteres de WhatsApp')
+        if t.lower() in {x['titulo'].lower() for x in botones}:
+            raise PasoInvalido('Hay dos botones iguales')
+        botones.append({'titulo': t})
+    if len(botones) > 3:
+        raise PasoInvalido('Van hasta 3 botones de respuesta (más el del link)')
+    if botones:
+        salida['botones'] = botones
     return salida
+
+
+def clave_de(paso):
+    """Con qué nombre se guardan las respuestas de los botones de un paso de mensaje (ADR-W272)."""
+    return f'paso:{paso.id}'
+
+
+def _sincronizar_link(paso):
+    """El link de un paso de mensaje vive también como regla (`paso:<id>`, `__link__`), así puede tener «al abrir el
+    link» con el mismo editor y la misma ruta que el de una respuesta. Sin link, la regla se borra."""
+    from app.models.whatsapp import WaRespuestaBoton
+    from app.whatsapp.respuestas import LINK_BOTON
+    regla = WaRespuestaBoton.query.filter_by(plantilla=clave_de(paso), boton=LINK_BOTON).first()
+    m = (paso.mensaje or {}) if paso.tipo == 'mensaje' else {}
+    if not m.get('url'):
+        if regla:
+            db.session.delete(regla)
+        return
+    despues = ((regla.botones or [{}])[0] or {}).get('despues') if regla else None
+    boton = {'titulo': m.get('titulo') or 'Abrir', 'url': m['url'], **({'despues': despues} if despues else {})}
+    if regla is None:
+        regla = WaRespuestaBoton(plantilla=clave_de(paso), boton=LINK_BOTON)
+        db.session.add(regla)
+    regla.texto, regla.botones = m.get('texto') or None, [boton]
 
 
 def con_variables(texto, evento):
@@ -314,6 +354,10 @@ def guardar(plan, datos):
         # Lo lanzado no se borra aunque falte en el pedido: su historial queda.
         nuevos += [p for p in quedan.values() if p.estado in (WaPasoTaller.LANZADO, WaPasoTaller.VENCIDO)]
         plan.pasos = nuevos
+        db.session.flush()  # los pasos nuevos necesitan su id para la regla de su link
+        for p in nuevos:
+            if p.estado not in (WaPasoTaller.LANZADO, WaPasoTaller.VENCIDO):
+                _sincronizar_link(p)
     db.session.commit()
 
 

@@ -7,7 +7,7 @@ import { Button, EmptyState, toast } from '../../../components/standard';
 import { partesDe } from '../broadcastWa/useBroadcast';
 import Lienzo from './Lienzo';
 import PanelNodo from './PanelNodo';
-import { mensajeDe, pasoNuevo } from './useBroadcastTaller';
+import { fuenteDe, mensajeDe, pasoNuevo } from './useBroadcastTaller';
 
 const limpio = (p) => ({ ...p, excluir: (p.excluir || []).map((x) => x.trim()).filter(Boolean) });
 
@@ -15,14 +15,17 @@ const limpio = (p) => ({ ...p, excluir: (p.excluir || []).map((x) => x.trim()).f
 function useReglas(nombres, plantillas, wa) {
     const [reglas, setReglas] = useState({});
     useEffect(() => {
-        nombres.filter((n) => !(n in reglas) && plantillas.some((p) => p.name === n && partesDe(p).botones.length))
+        // Las claves `paso:<id>` (botones de un mensaje común, ADR-W272) llegan solo si el paso tiene botones o link.
+        nombres.filter((n) => !(n in reglas) && (n.startsWith('paso:') || plantillas.some((p) => p.name === n && partesDe(p).botones.length)))
             .forEach((n) => wa.respuestas(n).then((r) => setReglas((x) => ({ ...x, [n]: r }))).catch(() => {}));
     }, [nombres, plantillas]); // eslint-disable-line react-hooks/exhaustive-deps
     const guardada = (n, regla) => setReglas((x) => ({
         ...x, [n]: { ...x[n], respuestas: [...(x[n]?.respuestas || []).filter((r) => r.boton !== regla.boton), regla] },
     }));
     const config = (n, c) => setReglas((x) => ({ ...x, [n]: { ...x[n], config: c } }));
-    return { reglas, guardada, config };
+    // Guardar el flujo crea o cambia la regla del link de un paso de mensaje (`__link__`): se vuelven a pedir.
+    const recargarPasos = () => setReglas((x) => Object.fromEntries(Object.entries(x).filter(([n]) => !n.startsWith('paso:'))));
+    return { reglas, guardada, config, recargarPasos };
 }
 
 export default function Flujo({ datos, wa }) {
@@ -34,9 +37,12 @@ export default function Flujo({ datos, wa }) {
     useEffect(() => { if (!sucio) setPasos(plan.pasos); }, [plan.pasos, sucio]);
 
     const plantillas = wa.plantillas || [];
-    const nombres = useMemo(() => [...new Set(pasos.map((p) => p.plantilla).filter(Boolean))], [pasos]);
-    const { reglas, guardada, config } = useReglas(nombres, plantillas, wa);
-    const botonesDelFlujo = [...new Set(nombres.flatMap((n) => partesDe(plantillas.find((p) => p.name === n)).botones))];
+    const nombres = useMemo(() => [...new Set(pasos.map((p) => {
+        const f = fuenteDe(p, plantillas);
+        return f.botones.length || f.link || f.plantilla ? f.clave : null;
+    }).filter(Boolean))], [pasos, plantillas]);
+    const { reglas, guardada, config, recargarPasos } = useReglas(nombres, plantillas, wa);
+    const botonesDelFlujo = [...new Set(pasos.flatMap((p) => fuenteDe(p, plantillas).botones))];
 
     const cambiar = (i, cambios) => { setPasos(pasos.map((p, j) => (j === i ? { ...p, ...cambios } : p))); setSucio(true); };
     const sumar = () => { setPasos([...pasos, pasoNuevo()]); setSel({ tipo: 'paso', i: pasos.length }); setSucio(true); };
@@ -49,7 +55,10 @@ export default function Flujo({ datos, wa }) {
     const correr = async (accion, ok) => {
         setOcupado(true);
         try {
-            if (sucio) await datos.guardar({ pasos: pasos.map(limpio) });
+            if (sucio) {
+                await datos.guardar({ pasos: pasos.map(limpio) });
+                recargarPasos();
+            }
             setSucio(false);
             const r = accion ? await accion() : null;
             toast(ok(r));

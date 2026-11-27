@@ -3,16 +3,24 @@
 // enchufe de cada botón (`data-ancla`) al nodo que abre (`data-nodo`). Se arrastra con el mouse y tiene zoom.
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { Minus, Plus } from 'lucide-react';
-import { partesDe } from '../broadcastWa/useBroadcast';
 import { claveDespues, claveResp, NodoDespues, NodoPaso, NodoRespuesta } from './Nodos';
-import { cuandoEnPalabras, fechaCorta } from './useBroadcastTaller';
+import { cuandoEnPalabras, fechaCorta, fuenteDe, LINK_BOTON } from './useBroadcastTaller';
 
 const ZOOMS = [0.6, 0.75, 0.9, 1, 1.15];
 const AZUL = '#5b9bff', VERDE = '#25D366';
 
 /** Los cables de una fila: [ancla, nodo destino, color]. */
-function cablesDe(i, botones, reglas) {
+function cablesDe(i, botones, reglas, link) {
     const salida = [];
+    // El link de un paso de mensaje común (ADR-W272): su «al abrir el link» es la regla `__link__`.
+    const reglaLink = link ? reglas?.find((r) => r.boton === LINK_BOTON) : null;
+    const despuesLink = reglaLink?.botones?.find((b) => b.url != null)?.despues;
+    if (despuesLink) {
+        salida.push([`p${i}:b:${LINK_BOTON}`, claveDespues(i, LINK_BOTON), VERDE]);
+        (despuesLink.botones || []).forEach((db, j) => {
+            if (db.va_a) salida.push([`${claveDespues(i, LINK_BOTON)}:b${j}`, claveResp(i, db.va_a), AZUL]);
+        });
+    }
     botones.forEach((b) => {
         salida.push([`p${i}:b:${b}`, claveResp(i, b), AZUL]);
         const regla = reglas?.find((r) => r.boton === b);
@@ -89,12 +97,11 @@ export default function Lienzo({ pasos, plantillas, reglas, sel, onSel, onSumarP
     const [zoom, setZoom] = useState(3);
     const escala = ZOOMS[zoom];
     const filas = pasos.map((p, i) => {
-        const plantilla = plantillas.find((x) => x.name === p.plantilla);
-        const { botones } = partesDe(plantilla);
-        const datos = reglas[p.plantilla];
-        return { p, i, plantilla, botones, datos, respuestas: datos?.respuestas || [] };
+        const { plantilla, botones, link, clave } = fuenteDe(p, plantillas);
+        const datos = clave ? reglas[clave] : null;
+        return { p, i, plantilla, botones, link, datos, respuestas: datos?.respuestas || [] };
     });
-    const cables = filas.flatMap((f) => cablesDe(f.i, f.botones, f.respuestas));
+    const cables = filas.flatMap((f) => cablesDe(f.i, f.botones, f.respuestas, f.link));
     const trazos = useCables(mundo, cables, escala, JSON.stringify([pasos, reglas, sel]));
     const arrastre = useArrastre(caja);
     const es = (tipo, i, boton) => sel?.tipo === tipo && sel.i === i && (boton == null || sel.boton === boton);
@@ -116,15 +123,17 @@ export default function Lienzo({ pasos, plantillas, reglas, sel, onSel, onSumarP
                         </g>
                     ))}
                 </svg>
-                {filas.map(({ p, i, plantilla, botones, datos, respuestas }) => {
-                    const conDespues = respuestas.filter((r) => botones.includes(r.boton) && (r.botones || []).some((b) => b.url != null && b.despues));
+                {filas.map(({ p, i, plantilla, botones, link, datos, respuestas }) => {
+                    const conDespues = respuestas.filter((r) => (botones.includes(r.boton) || (link && r.boton === LINK_BOTON))
+                        && (r.botones || []).some((b) => b.url != null && b.despues));
                     return (
                         <section key={p.id || `n${i}`} className="lz-fila" aria-label={p.nombre || `Paso ${i + 1}`}>
                             <span className="lz-cuando">{cuandoEnPalabras(p)}{p.momento && ` · ${fechaCorta(p.momento)}`}</span>
                             <div className="lz-cols">
                                 <div className="lz-col">
                                     <NodoPaso i={i} paso={p} plantilla={plantilla} config={datos?.config} elegido={es('paso', i)}
-                                        onElegir={() => onSel({ tipo: 'paso', i })} onBoton={(b) => onSel({ tipo: 'resp', i, boton: b })} />
+                                        onElegir={() => onSel({ tipo: 'paso', i })} onBoton={(b) => onSel({ tipo: 'resp', i, boton: b })}
+                                        onLink={() => onSel({ tipo: 'despues', i, boton: LINK_BOTON })} />
                                 </div>
                                 {botones.length > 0 && (
                                     <div className="lz-col">
