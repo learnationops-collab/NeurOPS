@@ -23,11 +23,12 @@ import { IsotipoTalent } from './components/Piezas';
 import { Select } from '../../../components/standard';
 import AlDia from './components/AlDia';
 import InboxCloser, { PESTANAS_INBOX_CLOSER } from './components/closers/InboxCloser';
+import AntiguosCloser, { ESTADOS_ANTIGUOS, filtrarAntiguos } from './components/closers/AntiguosCloser';
 import MenuPuesto from './components/closers/MenuPuesto';
 import { PESTANAS_CLOSER_SECCION, guardarPuesto, leerPuesto, useClosers } from './lib/closers';
 import PostulacionesStatsTab from '../postulaciones/components/PostulacionesStatsTab';
 import {
-    PERIODOS, PESTANAS, agrupar, colsVisibles, coincide, cuentas as contar, enPeriodo, enPestana, esDelMes, filtrosActivos, guardarVista, leerVista,
+    PERIODOS, PESTANAS, agrupar, colsVisibles, coincide, cuentas as contar, enPeriodo, enPestana, filtrosActivos, guardarVista, leerVista,
     normalizar, ordenar, pasaFiltros, vistaDefault,
 } from './lib/vista';
 import '../../comercial/comercial.css';
@@ -93,6 +94,9 @@ const HiringDashboardPage = () => {
     const [pestanas, setPestanas] = useState({ pend: 'online', anal: 'seleccionada', fin: 'testeo', closers: 'pendientes', pendCloser: 'revisar', analCloser: 'preseleccionada', finCloser: 'testeo' });
     // Analyze: «Actuales» (postularon este mes) o «Antiguas» (antes). Arranca siempre en Actuales.
     const [periodo, setPeriodo] = useState('actuales');
+    // Closers en Analyze y Winners: «Antiguos» muestra los de búsquedas anteriores, de cualquier estado.
+    const [antiguos, setAntiguos] = useState(false);
+    const [estadoAntiguos, setEstadoAntiguos] = useState('todos');
     const [statsTab, setStatsTab] = useState('panorama');
     const [statsSeg, setStatsSeg] = useState('gen');
     const [query, setQuery] = useState('');
@@ -219,19 +223,16 @@ const HiringDashboardPage = () => {
         return todas.filter((p) => enPestana(p, seccion, pestana) && (seccion !== 'anal' || enPeriodo(p, periodo)));
     }, [todas, enBusqueda, q, seccion, pestana, periodo]);
 
-    // Closers en Analyze: Actuales = postularon este mes; Antiguas = antes, más las de búsquedas archivadas.
+    // Closers en Analyze y Winners: las de la búsqueda en curso, por veredicto. Las de búsquedas
+    // anteriores (archivadas) van aparte, en «Antiguos».
+    const verAntiguos = antiguos && puesto === 'closer' && (seccion === 'anal' || seccion === 'fin');
     useEffect(() => {
-        if (puesto === 'closer' && seccion === 'anal' && closers.archivadas === null) closers.cargarArchivadas();
-    }, [puesto, seccion, closers.archivadas, closers.cargarArchivadas]); // eslint-disable-line react-hooks/exhaustive-deps
-    const closersDe = useCallback((per) => (per === 'actuales'
-        ? closers.filas.filter((p) => esDelMes(p))
-        : [...closers.filas.filter((p) => !esDelMes(p)), ...(closers.archivadas || [])]), [closers.filas, closers.archivadas]);
-    const closersPeriodo = useMemo(() => closersDe(periodo), [closersDe, periodo]);
+        if (verAntiguos && closers.archivadas === null) closers.cargarArchivadas();
+    }, [verAntiguos, closers.archivadas, closers.cargarArchivadas]); // eslint-disable-line react-hooks/exhaustive-deps
     const filasCloserSeccion = useMemo(() => {
         if (!modoCloser || seccion === 'pend') return null;
-        const fuente = seccion === 'anal' ? closersPeriodo : closers.filas;
-        return fuente.filter((p) => p.veredicto === pestanaCloser);
-    }, [modoCloser, seccion, closersPeriodo, closers.filas, pestanaCloser]);
+        return closers.filas.filter((p) => p.veredicto === pestanaCloser);
+    }, [modoCloser, seccion, closers.filas, pestanaCloser]);
 
     // Las cuentas de las pestañas de Analyze son las del período elegido.
     const cPeriodo = useMemo(() => contar(todas.filter((p) => enPeriodo(p, periodo))), [todas, periodo]);
@@ -293,28 +294,33 @@ const HiringDashboardPage = () => {
     let controles = null;
     if (modoCloser && seccion === 'pend') {
         const cuentaCloser = { revisar: closers.porRevisar.length, incompletas: closers.incompletas.length };
-        const enAntiguos = pestanas.pendCloser === 'antiguos';
         controles = qCloser ? null : (
-            <>
-                <Pestanas lista={PESTANAS_INBOX_CLOSER} actual={pestanas.pendCloser} cuentaDe={(id) => cuentaCloser[id]}
-                    onElegir={(id) => setPestanas((prev) => ({ ...prev, pendCloser: id }))} />
-                {/* Las postulaciones de búsquedas anteriores (archivadas, ADR-W193): un acceso discreto,
-                    no una pestaña más, para que el Inbox muestre solo a los que postulan ahora. */}
-                {closers.cuentaArchivadas > 0 && (
-                    <button type="button" className="tl-antiguos" aria-pressed={enAntiguos}
-                        title="Postulaciones de búsquedas anteriores"
-                        onClick={() => setPestanas((prev) => ({ ...prev, pendCloser: enAntiguos ? 'revisar' : 'antiguos' }))}>
-                        <Archive size={14} />Antiguos<span className="cuenta">{closers.cuentaArchivadas}</span>
-                    </button>
-                )}
-            </>
+            <Pestanas lista={PESTANAS_INBOX_CLOSER} actual={pestanas.pendCloser} cuentaDe={(id) => cuentaCloser[id]}
+                onElegir={(id) => setPestanas((prev) => ({ ...prev, pendCloser: id }))} />
         );
     } else if (modoCloser) {
-        const fuente = seccion === 'anal' ? closersPeriodo : closers.filas;
-        controles = qCloser ? null : (
-            <Pestanas lista={PESTANAS_CLOSER_SECCION[seccion]} actual={pestanaCloser}
-                cuentaDe={(id) => fuente.filter((p) => p.veredicto === id).length}
-                onElegir={(id) => setPestanas((prev) => ({ ...prev, [`${seccion}Closer`]: id }))} />
+        // Antiguos (ADR-W193): los de búsquedas anteriores, para volver a contactarlos. Encendido, las
+        // pestañas pasan a filtrar esa lista por estado.
+        const archivadas = closers.archivadas || [];
+        const botonAntiguos = closers.cuentaArchivadas > 0 && (
+            <button type="button" className="tl-antiguos" aria-pressed={antiguos}
+                title="Closers de búsquedas anteriores, de cualquier estado"
+                onClick={() => setAntiguos((v) => !v)}>
+                <Archive size={14} />Antiguos<span className="cuenta">{closers.cuentaArchivadas}</span>
+            </button>
+        );
+        controles = qCloser && !verAntiguos ? null : (
+            <>
+                {verAntiguos ? (
+                    <Pestanas lista={ESTADOS_ANTIGUOS.filter((e) => e.id === 'todos' || e.id === estadoAntiguos || filtrarAntiguos(archivadas, e.id).length)}
+                        actual={estadoAntiguos} cuentaDe={(id) => filtrarAntiguos(archivadas, id).length} onElegir={setEstadoAntiguos} />
+                ) : (
+                    <Pestanas lista={PESTANAS_CLOSER_SECCION[seccion]} actual={pestanaCloser}
+                        cuentaDe={(id) => closers.filas.filter((p) => p.veredicto === id).length}
+                        onElegir={(id) => setPestanas((prev) => ({ ...prev, [`${seccion}Closer`]: id }))} />
+                )}
+                {botonAntiguos}
+            </>
         );
     } else if (!enBusqueda && ES_TABLA.has(seccion)) {
         // Híbridos casi nunca tiene a nadie: la pestaña aparece solo si hay alguna (o si es la abierta).
@@ -417,13 +423,11 @@ const HiringDashboardPage = () => {
                                     <MenuPuesto valor={puesto} cuentas={{ asistente: c.pend, closer: closers.porRevisar.length }}
                                         onCambiar={(v) => { setPuesto(v); guardarPuesto(v); setQuery(''); }} />
                                 )}
-                                {seccion === 'anal' && !enBusqueda && !qCloser && (
+                                {seccion === 'anal' && puesto !== 'closer' && !enBusqueda && (
                                     <Select className="tl-periodo" size="sm" label="Período de postulación" value={periodo} onChange={setPeriodo}
                                         options={PERIODOS.map((o) => ({
                                             value: o.id,
-                                            label: `${o.label} · ${puesto === 'closer'
-                                                ? closersDe(o.id).filter((p) => p.veredicto === pestanaCloser).length
-                                                : todas.filter((p) => p.veredicto === pestana && enPeriodo(p, o.id)).length}`,
+                                            label: `${o.label} · ${todas.filter((p) => p.veredicto === pestana && enPeriodo(p, o.id)).length}`,
                                             icon: <i className="tl-periodo-punto" />,
                                             iconColor: o.c,
                                         }))} />
@@ -476,11 +480,12 @@ const HiringDashboardPage = () => {
                     </header>
 
                     {!fuera && (
-                        <main className="tl-vista" key={`${seccion}|${modoCloser ? `closer|${pestanaCloser}` : ''}|${enBusqueda ? 'q' : ''}|${seccion === 'stats' ? statsTab : ''}`}>
+                        <main className="tl-vista" key={`${seccion}|${modoCloser ? `closer|${verAntiguos ? `ant|${estadoAntiguos}` : pestanaCloser}` : ''}|${enBusqueda ? 'q' : ''}|${seccion === 'stats' ? statsTab : ''}`}>
                             {errorCarga && <div className="tl-aviso-error"><AlertTriangle size={16} />{errorCarga}</div>}
                             {errorBorrado && <div className="tl-aviso-error"><AlertTriangle size={16} />{errorBorrado}</div>}
 
-                            {modoCloser && <InboxCloser closers={closers} pestana={pestanaCloser} q={qCloser} filasSeccion={filasCloserSeccion} />}
+                            {modoCloser && verAntiguos && <AntiguosCloser closers={closers} estado={estadoAntiguos} q={qCloser} />}
+                            {modoCloser && !verAntiguos && <InboxCloser closers={closers} pestana={pestanaCloser} q={qCloser} filasSeccion={filasCloserSeccion} />}
 
                             {!modoCloser && !enBusqueda && seccion === 'pend' && !cargando && (
                                 <ResumenInbox
