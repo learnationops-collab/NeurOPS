@@ -1373,3 +1373,7 @@
 ### 27/11/2026 · Antiguos de Closers: WhatsApp con la invitación escrita
 - Tocar el WhatsApp de un antiguo abre el chat con el mensaje de Dari ya escrito (vacante con +6 leads cualificados por día y el link de postulación, institute.thelearnation.com/vacante/). El link del CSV es el mismo ([antiguos.js](../../frontend/src/pages/admin/hiring/lib/antiguos.js) `waReinvitar`).
 - Dari González suma el rol extra `hiring_closers` (Talent con Closers), como Marlon.
+
+### 27/11/2026 · Broadcast de WhatsApp: se saltean los que agendaron o son clientes (ADR-W279)
+- Al leer el CSV, además de los que ya recibieron uno y los alumnos activos, se saltean los que agendaron alguna vez o son clientes, compraran o no. «Incluirlos» los vuelve a sumar ([envios.py](../../app/whatsapp/envios.py), [Mandar.jsx](../../frontend/src/ventanas/herramientas/broadcastWa/Mandar.jsx)).
+- Lista de los grupos viejos del taller (3.153 números): quedan 2.484 sin contactar.

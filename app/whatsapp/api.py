@@ -76,7 +76,8 @@ def _hoy():
 @admin_required
 def revisar():
     datos = request.get_json(silent=True) or {}
-    r = envios.revisar(_filas(datos), datos.get('sin_alumnos', True) is not False)
+    r = envios.revisar(_filas(datos), datos.get('sin_alumnos', True) is not False,
+                       datos.get('sin_agendados', True) is not False)
     return jsonify({**r, 'para_mandar': len(r['para_mandar']), 'hoy': _hoy()})
 
 
@@ -89,7 +90,7 @@ def enviar():
         cantidad = int(datos.get('cantidad') or 0)
         plantillas = _plantillas([p for p in datos.get('plantillas') or [] if isinstance(p, dict)])
         lote, n = envios.crear_lote(_filas(datos), plantillas, cantidad, current_user.id, datetime.utcnow(),
-                                    datos.get('sin_alumnos', True) is not False)
+                                    datos.get('sin_alumnos', True) is not False, datos.get('sin_agendados', True) is not False)
     except (TypeError, ValueError) as error:
         return jsonify({'message': str(error) if isinstance(error, envios.EnvioInvalido) else 'Cantidad inválida'}), 400
     return jsonify({'lote': lote, 'cantidad': n, 'hoy': _hoy()}), 201
