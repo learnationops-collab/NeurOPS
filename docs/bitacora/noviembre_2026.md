@@ -1300,3 +1300,5 @@
 ### 27/11/2026 · El chat dice de qué día es cada mensaje y hace cuánto no responde
 - Cada mensaje dice «hoy 10:34», «ayer 10:34» o «25 nov 10:34», y el chat tiene separadores de día («Hoy», «Ayer», «Miércoles 25 nov») que quedan fijos arriba al deslizar ([Feed.jsx](../../frontend/src/pages/inbox/conversaciones/Feed.jsx)).
 - Al pie del chat, si lo último es del equipo: «No responde hace 2 d · tu último hace 3 h». Pasa a ámbar con «toca seguimiento» cuando el último tuyo tiene más de 12 h, y a rojo con 3 días sin responder. Al pasar el mouse, su última respuesta y tu último mensaje con fecha.
+### 27/11/2026 · Talent: la fecha de postulación siempre a la vista
+- La columna «Postuló» («Hace 3 días» · «24 nov») pasa a fija en la tabla de postulaciones: ya no se puede ocultar desde Columnas, así que aparece también en las vistas guardadas que la tenían apagada ([vista.js](../../frontend/src/pages/admin/hiring/lib/vista.js)).

@@ -146,7 +146,7 @@ export const banda = (score) => (score >= 80 ? 'var(--success)' : score >= 60 ? 
 
 export const COLS = [
     { id: 'cand', label: 'Candidata', w: 'minmax(190px,1.6fr)', min: 190, fija: true, orden: 'nombre' },
-    { id: 'fecha', label: 'Postuló', w: '88px', min: 84, orden: 'fecha' },
+    { id: 'fecha', label: 'Postuló', w: '88px', min: 84, fija: true, orden: 'fecha' },
     { id: 'pide', label: 'Pide / mes', w: '88px', min: 84, orden: 'pide' },
     { id: 'exp', label: 'Experiencia', w: '84px', min: 80, orden: 'exp' },
     { id: 'ia', label: 'Techo de IA', w: '104px', min: 96, orden: 'ia' },
