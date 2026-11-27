@@ -2379,3 +2379,42 @@
 - **Decisión:** el lienzo pone cada paso en una fila (el siguiente paso, debajo) y lo que sale de él crece hacia la derecha: de cada botón de la plantilla sale un cable a su respuesta, del botón con link un cable verde a «Al abrir el link» y de un botón que «Sigue «X»» un cable a la respuesta de X. Un botón sin respuesta muestra un nodo punteado para armarla. Tocar un nodo (o un botón dentro de él) abre en el panel solo ese nodo: el paso (cuándo, plantilla, a quién, lista de botones y opción única), la respuesta del botón o el mensaje al abrir su link. Los cables se miden del DOM; el lienzo se arrastra y tiene zoom (60–115 %).
 - **Qué se pierde:** cambiar de nodo descarta lo que no se guardó en el que se dejó. Las respuestas siguen siendo de la plantilla: si dos pasos usan la misma, sus nodos de respuesta son los mismos y se ven en las dos filas.
 - **Consecuencias:** sin migración ni cambios de API. La pestaña Plantillas sigue con la lista de botones de siempre (`Respuestas`, con todo junto).
+## ADR-W263: los recorridos se pueden dejar para después, se retoman donde quedaron y tienen un recordatorio fijo
+
+- **Fecha:** 27/11/2026 · **Subsistema:** recorridos de novedades (`closer/novedades/Novedades.jsx`, `Recorrido.jsx`, `Recuerda.jsx`, `novedades.css`), que usan el Workspace de closers y triage y el Inbox (`inbox/tour/`) · **Estado:** implementada
+- **Contexto:** en el Inbox, la tarjeta del recorrido de seguimientos se veía rota: el estilo general de la pantalla (`.dc-shell button{background:none;border:0;padding:0}`) le ganaba a los botones, así que «Probalo» quedaba sin borde y pegado a «Siguiente», que perdía su color. Para salir había solo una cruz, que aplazaba sin decirlo. Después de cerrarlo no quedaba nada a la vista que recordara que faltaba terminarlo. Mario pidió además una explicación más clara de los seguimientos.
+- **Decisión:**
+  - Los estilos de los botones del recorrido se escriben con `:is(.nv-portada, .nv-rec, .nv-probando)` y le ganan al estilo general de cualquier pantalla.
+  - Mientras queden días del plazo (ADR-W225), arriba de la tarjeta dice **«Ver después»** en vez de la cruz. La portada también dice «Ver después». Ya visto, vuelve la cruz.
+  - El paso donde quedó se guarda (`<clave>_paso`). El recordatorio retoma desde ahí sin pasar por la portada.
+  - **Recordatorio:** mientras no lo termine, aparece un botón redondo chiquito con un aro que gira lento (más lleno cuanto más avanzó) y un punto que respira. Va en el lugar que reserva cada pantalla (`data-nv-recuerda`): en el Inbox, el grupo Tareas · Stats; en el Workspace, al lado del título. Al pasar el mouse dice cuántos pasos faltan. Si otra tanda va primero (`espera`), aparece el de esa.
+  - Los textos del recorrido de seguimientos se reescribieron: qué es un seguimiento, qué hacer y dónde. Quien ya lo había terminado con los textos de antes no lo vuelve a ver (`anterior`).
+- **Qué se pierde:** el plazo de 3 días vuelve a contar para quien lo tenía a medias, porque los textos cambiaron. El recordatorio no aparece en pantallas que no reservan su lugar.
+- **Consecuencias:** sin cambios de API. El código del recorrido no entra en la huella (ADR-W255), así que estos cambios no le vuelven a abrir las novedades a nadie.
+
+## ADR-W264: los costados del Inbox se mueven con una manija y tienen aura
+
+- **Fecha:** 27/11/2026 · **Subsistema:** Inbox, vista Conversaciones (`Conversaciones.jsx`, `conversaciones/Tirador.jsx`, `Detalle.jsx`, `ListaCab.jsx`, `sidebar.css`, `inbox.css`) · **Estado:** implementada
+- **Contexto:** a Mario le gusta el orden de la lista y de la columna del lead (tarjeta, Estadísticas, Seguimiento), pero quiere un diseño mejor: más motion, un poco menos de texto y más aura. Además, quiere poder mover un poco cada costado a la izquierda o a la derecha.
+- **Decisión:**
+  - **Manijas:** una en el borde de la lista que da al chat y otra en el de la columna del lead. Aparecen al pasar el mouse por la bandeja; al arrastrarlas crecen y brillan. La lista va de 260 a 440 px (360 de base); la columna del lead, de 260 a 380 (290 de base). Doble clic o Inicio vuelve al ancho de base; las flechas mueven de a 16 px. El ancho se guarda en este navegador (`cv_ancho_izq` y `cv_ancho_der`) y la grilla lo lee de `--cv-izq` y `--cv-der`. En pantallas medianas ese ancho tiene tope (ADR-W263 y su arreglo responsive).
+  - **Aura:** humo magenta y violeta que se mueve lento adentro de la lista y de cada panel de la columna del lead, cada uno con su ritmo.
+  - **Motion:**
+    - El chat elegido tiene una barrita con brillo que crece.
+    - Las filas de la lista se corren un poco al pasar el mouse.
+    - Los paneles de la columna del lead entran de a uno.
+    - Las cifras de Estadísticas se levantan con su color.
+  - **Menos texto:** el orden de la lista («por último mensaje») y los atajos de teclado pasan a íconos que lo dicen al pasar el mouse.
+- **Qué se pierde:** el orden ya no se lee sin pasar el mouse. El ancho no viaja con la cuenta: en otra compu arranca en el de base.
+- **Consecuencias:** sin cambios de API. Con movimiento reducido no hay aura animada ni entradas.
+
+## ADR-W265: la respuesta a un botón pone y saca etiquetas, y el link va junto a otros botones
+
+- **Fecha:** 27/11/2026 · **Subsistema:** respuestas por botón (`app/whatsapp/respuestas.py`, `tags_service.sacar_por_nombre`, `WaRespuestaBoton.etiquetas`/`.quitar`), editor (`broadcastWa/Respuestas.jsx`, `Despues.jsx`) y lienzo del flujo (`broadcastTaller/Nodos.jsx`, `Lienzo.jsx`) · **Estado:** implementada
+- **Contexto:** a la misma persona le pueden llegar varios envíos y elegir «Darme acceso» en uno y «Darme de baja» en otro, o al revés. Con una sola etiqueta que se pone, quedaban las dos. En ManyChat cada botón pone una etiqueta y saca la contraria. Además, un botón con link (ADR-W260) iba solo, y en el mensaje con el link de Google Calendar Mario quiere sumar botones que lleven a otros caminos.
+- **Decisión:**
+  - Cada respuesta tiene **etiquetas que pone y etiquetas que saca** (varias, separadas por coma). Primero saca y después pone; sacar una que no tiene no hace nada. `etiqueta` queda con la primera de las que pone, para lo que ya la leía.
+  - Un mensaje puede llevar **un botón con link y hasta 3 de respuesta**, también el que sale al abrir el link. WhatsApp no los mezcla en un mensaje: sale el texto con el link y, justo debajo, un segundo mensaje («👇») con los botones de respuesta. Los botones del mensaje de «al abrir el link» siguen la respuesta de un botón de la plantilla y cuentan como un mensaje aparte para la opción única (origen «<botón>>link»).
+  - En el lienzo, la respuesta muestra «+ etiquetas» y «− etiquetas», y de los botones de «Al abrir el link» salen cables a la respuesta que siguen.
+- **Qué se pierde:** con link y botones de respuesta, a la persona le llegan dos mensajes y los botones quedan en el segundo, con «👇» como texto. Si el primero falla, el segundo no sale.
+- **Consecuencias:** migración `c1e3a5b7d9f2` (idempotente). La API de respuestas acepta `etiquetas` y `quitar` (listas); `etiqueta` sola se sigue aceptando.

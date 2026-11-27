@@ -1263,3 +1263,29 @@
 ### 27/11/2026 · El flujo del taller en un lienzo de nodos y cables (ADR-W262)
 - Pestaña Flujo del broadcast: cada paso es una fila y de cada botón sale un cable a su respuesta, y del link a lo que sale al abrirlo; el panel muestra solo el nodo tocado, sin estirarse hacia abajo ([Lienzo.jsx](../../frontend/src/ventanas/herramientas/broadcastTaller/Lienzo.jsx), [PanelNodo.jsx](../../frontend/src/ventanas/herramientas/broadcastTaller/PanelNodo.jsx)).
 - El lienzo se arrastra con el mouse y tiene zoom. Mockup en `docs/mockups/flujo-taller-lienzo/`.
+
+### 27/11/2026 · Login: ojo de la contraseña, «Iniciar sesión» y el logo correcto
+- El ojo para ver la contraseña queda visible aunque el navegador autocomplete el campo (antes lo pintaba celeste y lo tapaba). La flecha pasa a un botón «Iniciar sesión» a todo el ancho ([LoginPage.jsx](../../frontend/src/pages/auth/LoginPage.jsx), [login.css](../../frontend/src/pages/auth/login.css)).
+- Isotipo de Learnation redibujado: la L con la curva cóncava, en todas sus copias (login y headers, reservas, favicon y reportes).
+
+### 27/11/2026 · Login: «Recordarme» y la pestaña nueva entra directo
+- «Recordarme» (prendido por defecto): la sesión dura 30 días en vez de 24 h, en el token y en la cookie, y el usuario queda escrito para la próxima vez. Entrar con Google también dura 30 días ([LoginPage.jsx](../../frontend/src/pages/auth/LoginPage.jsx), [auth.py](../../app/api/auth.py)).
+- Con sesión abierta, una pestaña nueva de Work (o la raíz, que cae en /login) entra directo al área en vez de mostrar el login.
+
+### 27/11/2026 · Recorridos: «Ver después», retomar y recordatorio; Inbox responsive; caja de escribir más compacta (ADR-W263)
+- La tarjeta del recorrido de seguimientos se veía rota en el Inbox: «Probalo» sin borde y pegado a «Siguiente», que perdía su color. El estilo general de la pantalla les ganaba a sus botones ([novedades.css](../../frontend/src/pages/closer/novedades/novedades.css)).
+- «Ver después» arriba de la tarjeta y en la portada. El recorrido se retoma desde el paso donde quedó.
+- Recordatorio fijo mientras no se termine: un botón chiquito con un aro que gira y un punto que respira, en la barra del Inbox y al lado del título del Workspace ([Recuerda.jsx](../../frontend/src/pages/closer/novedades/Recuerda.jsx)).
+- Textos del recorrido de seguimientos más claros ([TourSeguimientos.jsx](../../frontend/src/pages/inbox/tour/TourSeguimientos.jsx)).
+- Arreglo: con la ventana más chica (menos de 1300 px) no se veía el chat. La columna del lead bajaba debajo del chat y se comía toda la altura. Ahora hay tres columnas más angostas hasta 1050 px. Por debajo, la columna del lead va abajo con tope de alto y su propio scroll. Tareas, Avisos y Stats quedan solo con su ícono para que la barra no se pise ([inbox.css](../../frontend/src/pages/inbox/inbox.css)).
+- Caja de escribir: en Chat · Nota · Tarea solo el elegido lleva su nombre. «Seguimiento» es más chico y tiene una flechita con «Marcar como seguimiento» y «Cómo hacer un seguimiento» (el recorrido), que reemplaza al «?» suelto ([MarcaSeguimiento.jsx](../../frontend/src/pages/inbox/conversaciones/MarcaSeguimiento.jsx)).
+
+### 27/11/2026 · Inbox: costados movibles, con aura y más motion (ADR-W264)
+- La lista y la columna del lead se mueven con una manija en el borde que da al chat. Doble clic vuelve al ancho de siempre ([Tirador.jsx](../../frontend/src/pages/inbox/conversaciones/Tirador.jsx)).
+- Aura magenta y violeta en los paneles. El chat elegido tiene una barrita con brillo, los paneles del lead entran de a uno y las cifras de Estadísticas se levantan al pasar el mouse ([sidebar.css](../../frontend/src/pages/inbox/conversaciones/sidebar.css)).
+- El orden de la lista y los atajos de teclado pasan a íconos con su explicación al pasar el mouse.
+
+### 27/11/2026 · Respuestas de WhatsApp: poner y sacar etiquetas, y link junto a otros botones (ADR-W265)
+- Cada respuesta a un botón pone unas etiquetas y saca otras, como en ManyChat (por ejemplo, «Darme acceso» pone «confirmado» y saca «baja») ([Respuestas.jsx](../../frontend/src/ventanas/herramientas/broadcastWa/Respuestas.jsx), [respuestas.py](../../app/whatsapp/respuestas.py)).
+- Un botón con link puede ir con hasta 3 botones de respuesta, también en el mensaje al abrir el link: salen en dos mensajes seguidos ([Despues.jsx](../../frontend/src/ventanas/herramientas/broadcastWa/Despues.jsx)). El lienzo muestra las etiquetas y los cables de esos botones.
+- Migración `c1e3a5b7d9f2`.

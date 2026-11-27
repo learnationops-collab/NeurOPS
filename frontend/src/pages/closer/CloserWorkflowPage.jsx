@@ -1597,6 +1597,8 @@ const CloserWorkflowPage = () => {
                             <h1>{esTriage ? 'Triage Workspace' : 'Closer Workspace'}</h1>
                             <small>Learnation</small>
                         </div>
+                        {/* El recordatorio de las novedades sin terminar (ADR-W263). */}
+                        <span data-nv-recuerda="" style={{ display: 'contents' }} />
                     </div>
                     
                     <div className="search-v6">

@@ -765,7 +765,7 @@ header.top-v6 {
 }
 @media (max-width: 640px) {
   .topin.topin--buscador { grid-template-columns: auto minmax(0, 1fr); }
-  .topin--buscador .brand-v6 > div:last-child { display: none; }
+  .topin--buscador .brand-v6 > div:nth-child(2) { display: none; }
 }
 .brand-v6 {
   display: flex;

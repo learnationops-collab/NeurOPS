@@ -17,8 +17,12 @@ function cablesDe(i, botones, reglas) {
         salida.push([`p${i}:b:${b}`, claveResp(i, b), AZUL]);
         const regla = reglas?.find((r) => r.boton === b);
         (regla?.botones || []).forEach((rb, k) => {
-            if (rb.url != null && rb.despues) salida.push([`${claveResp(i, b)}:b${k}`, claveDespues(i, b), VERDE]);
-            else if (rb.va_a) salida.push([`${claveResp(i, b)}:b${k}`, claveResp(i, rb.va_a), AZUL]);
+            if (rb.url != null && rb.despues) {
+                salida.push([`${claveResp(i, b)}:b${k}`, claveDespues(i, b), VERDE]);
+                (rb.despues.botones || []).forEach((db, j) => {
+                    if (db.va_a) salida.push([`${claveDespues(i, b)}:b${j}`, claveResp(i, db.va_a), AZUL]);
+                });
+            } else if (rb.va_a) salida.push([`${claveResp(i, b)}:b${k}`, claveResp(i, rb.va_a), AZUL]);
         });
     });
     return salida;
@@ -135,7 +139,8 @@ export default function Lienzo({ pasos, plantillas, reglas, sel, onSel, onSumarP
                                     <div className="lz-col">
                                         {conDespues.map((r) => (
                                             <NodoDespues key={r.boton} i={i} boton={r.boton} despues={r.botones.find((b) => b.url != null).despues}
-                                                elegido={es('despues', i, r.boton)} onElegir={() => onSel({ tipo: 'despues', i, boton: r.boton })} />
+                                                elegido={es('despues', i, r.boton)} onElegir={() => onSel({ tipo: 'despues', i, boton: r.boton })}
+                                                onBoton={(db) => onSel({ tipo: 'resp', i, boton: db.va_a })} />
                                         ))}
                                     </div>
                                 )}

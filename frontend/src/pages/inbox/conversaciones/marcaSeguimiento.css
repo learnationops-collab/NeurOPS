@@ -14,3 +14,30 @@
 .thalamus.inbox .cv-seg-marcar{opacity:0;color:inherit;transition:opacity .15s}
 .thalamus.inbox .cv-burbuja:hover .cv-seg-marcar,.thalamus.inbox .cv-seg-marcar:focus-visible{opacity:1}
 .thalamus.inbox .cv-seg-tag:disabled,.thalamus.inbox .cv-seg-marcar:disabled{cursor:wait;opacity:.5}
+
+/* La casilla en una cápsula con su flechita y el desplegable (Mario, 27/11/2026). */
+.thalamus.inbox .cv-comp-cab .cv-seg-grupo{gap:0;height:26px;border:1px solid var(--border-subtle);border-radius:999px;transition:border-color .2s,background .2s}
+.thalamus.inbox .cv-comp-cab .cv-seg-grupo--on{border-color:color-mix(in srgb,#7D63E6 55%,transparent);background:color-mix(in srgb,#7D63E6 12%,transparent)}
+.thalamus.inbox .cv-comp-cab .cv-seg-grupo .cv-seg-casilla{height:24px;padding:0 4px 0 9px;gap:5px;border:0;background:none;font-size:11px}
+.thalamus.inbox .cv-comp-cab .cv-seg-grupo .cv-seg-casilla-box{width:12px;height:12px;border-radius:3.5px}
+.thalamus.inbox .cv-seg-mas{display:grid;place-items:center;width:22px;height:24px;padding:0 4px 0 0;border:0;background:none;color:var(--text-muted);cursor:pointer;border-radius:0 999px 999px 0}
+.thalamus.inbox .cv-seg-mas:hover,.thalamus.inbox .cv-seg-mas[aria-expanded="true"]{color:var(--text-main)}
+.thalamus.inbox .cv-seg-mas svg{transition:transform .25s cubic-bezier(.3,1.4,.5,1)}
+.thalamus.inbox .cv-seg-mas[aria-expanded="true"] svg{transform:rotate(180deg)}
+.thalamus.inbox .cv-seg-grupo--on .cv-seg-mas{color:#7D63E6}
+@keyframes cvSegPop{from{opacity:0;transform:translateY(6px) scale(.97)}to{opacity:1;transform:none}}
+.thalamus.inbox .cv-seg-pop{position:absolute;right:0;bottom:calc(100% + 8px);z-index:70;width:250px;display:grid;gap:2px;padding:6px;border-radius:14px;
+  border:1px solid var(--border-main);background:var(--bg-flotante, var(--bg-popover, #141836));box-shadow:0 18px 40px rgba(0,0,0,.4);
+  transform-origin:bottom right;animation:cvSegPop .22s cubic-bezier(.3,1.3,.5,1) both}
+.thalamus.inbox .cv-seg-op{display:flex;align-items:center;gap:10px;width:100%;padding:8px;border:0;border-radius:10px;background:none;color:var(--text-main);text-align:left;cursor:pointer}
+.thalamus.inbox .cv-seg-op:hover{background:var(--bg-item, rgba(255,255,255,.06))}
+.thalamus.inbox .cv-seg-op > span:not(.cv-seg-op-ico){display:grid;flex:1;min-width:0}
+.thalamus.inbox .cv-seg-op b{font-size:12.5px;font-weight:700}
+.thalamus.inbox .cv-seg-op small{font-size:11px;color:var(--text-muted)}
+.thalamus.inbox .cv-seg-op-ico{display:grid;place-items:center;flex:none;width:28px;height:28px;border-radius:9px;color:#7D63E6;background:color-mix(in srgb,#7D63E6 14%,transparent)}
+.thalamus.inbox .cv-seg-op--tour .cv-seg-op-ico{color:var(--brand-secondary);background:color-mix(in srgb,var(--brand-secondary) 14%,transparent)}
+.thalamus.inbox .cv-seg-op-ok{color:#7D63E6;flex:none}
+@media (prefers-reduced-motion:reduce){.thalamus.inbox .cv-seg-pop{animation:none}}
+
+/* Chat · Nota · Tarea: solo el elegido con su nombre; los otros, ícono solo y cuadrado. */
+.thalamus.inbox .cv-modos .ui-seg__item:not([aria-pressed="true"]){padding-left:9px;padding-right:9px}

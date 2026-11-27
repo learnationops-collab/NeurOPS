@@ -55,8 +55,8 @@ export const AuthProvider = ({ children }) => {
         return userData;
     };
 
-    const login = async (username, password) => {
-        const response = await api.post('/auth/login', { username, password, timezone: browserTimezone() });
+    const login = async (username, password, recordar = true) => {
+        const response = await api.post('/auth/login', { username, password, recordar, timezone: browserTimezone() });
         return guardar(response.data);
     };
 

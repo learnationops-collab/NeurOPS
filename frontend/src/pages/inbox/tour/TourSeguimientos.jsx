@@ -18,37 +18,39 @@ const PASOS = [
     {
         id: 'casilla', mock: 'casilla', target: '.cv-seg-casilla', antes: abrirUna,
         titulo: 'Marcá tus seguimientos',
-        texto: 'Al lado de Enviar. Viene tildada sola si el lead no contestó tu último mensaje hace más de 1 h. Si no es un seguimiento, destildala antes de mandar.',
+        texto: 'Un seguimiento es volver a escribirle a quien no te contestó. Si pasó más de 1 h desde tu último mensaje, la casilla al lado de Enviar ya viene tildada. ¿No es un seguimiento? Destildala antes de mandar.',
     },
     {
         id: 'mensaje', mock: 'mensaje', target: () => ultimo('.cv-burbuja--otro .cv-meta'), antes: abrirUna,
-        titulo: '¿Te olvidaste? Marcalo en el mensaje',
-        texto: 'Pasá el mouse por un mensaje tuyo y tocá el ícono que aparece al pie. «Seguimiento N» dice que cuenta; tocalo para desmarcarlo.',
+        titulo: '¿Te olvidaste de marcarlo?',
+        texto: 'Pasá el mouse por tu mensaje y tocá el ícono que aparece al pie. Queda «Seguimiento N» y ya cuenta. Para sacarlo, tocalo de nuevo.',
     },
     {
         id: 'programar', mock: 'programar', target: '[aria-label="Seguimiento si no responde"]',
-        titulo: 'O dejalo programado',
-        texto: 'El reloj sigue igual: un texto o un audio que sale solo si no responde en 1 h, 3 h, 24 h o 2 a 3 días. Si escribe antes, se cancela.',
+        titulo: 'Dejalo programado',
+        texto: 'Con el reloj, escribí un texto o grabá un audio y elegí cuándo sale: 1 h, 3 h, 24 h o 2 a 3 días. Si el lead contesta antes, no se manda.',
     },
     {
         id: 'toca', mock: 'toca', target: '.cv-item-ico--toca',
-        titulo: 'Lo que pide la fase',
-        texto: 'Si el embudo tiene la cadencia prendida, la fila y la caja dicen «Toca seguimiento N». Los textos están en Embudos › la fase › Si no contesta.',
+        titulo: 'Work te avisa cuándo toca',
+        texto: 'Si la fase tiene cadencia, la fila y la caja de escribir dicen «Toca seguimiento N». El mensaje sugerido se edita en Embudos › la fase › Si no contesta.',
     },
     {
         id: 'filtro', mock: 'filtro', target: () => porTexto('.cv-barra button', /^\s*Filtro/),
         titulo: 'Encontrá a quién seguir',
-        texto: 'Filtro › Seguimientos: los que tienen ninguno, 1, 2, 3 o más en una etapa, cuándo fue el último y si lo contestaron.',
+        texto: 'En Filtro › Seguimientos elegís cuántos lleva cada lead (ninguno, 1, 2, 3 o más) y en qué etapa, cuándo fue el último y si contestó.',
     },
     {
         id: 'reporte', mock: 'reporte', target: () => porTexto('.cv-barra button', /Stats/),
-        titulo: 'Cuenta en tu reporte',
-        texto: 'Lo que marcás suma en tus follow-ups, aunque no hayan pasado 12 h. Lo que destildás no cuenta.',
+        titulo: 'Suma en tu reporte',
+        texto: 'Cada seguimiento marcado cuenta en tus follow-ups del día, aunque no hayan pasado 12 h. Lo que destildás no cuenta.',
     },
 ];
 
 export const TANDA_SEGUIMIENTOS = {
     vista: `${VERSION}-${huella(PASOS.map((p) => p.titulo + p.texto).join('|'))}`,
+    // Textos reescritos (ADR-W263): quien ya lo había terminado con los de antes no lo vuelve a ver.
+    anterior: `${VERSION}-18ksj35`,
     clave: (user) => `ln_tour_seguimientos_${user?.id ?? 'anon'}`, evento: EVENTO, param: 'tour',
     fecha: '26 nov', titulo: ['Seguimientos,', 'más simples.'], cuenta: 'cosas para tus seguimientos',
     etiqueta: 'Seguimientos en el Inbox', Escena, pasos: PASOS,

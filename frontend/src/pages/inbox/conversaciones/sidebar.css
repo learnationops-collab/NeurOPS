@@ -1,0 +1,58 @@
+/* Los costados del Inbox (Mario, 27/11/2026): la lista y la columna del lead se mueven un poco con una manija, tienen
+   aura que se mueve lento y un poco más de motion; el orden y los atajos pasan a íconos. */
+
+/* ---------- Manijas ---------- */
+.thalamus.inbox .cv-derecha{position:relative}
+.thalamus.inbox .cv-tirador{position:absolute;top:0;bottom:0;z-index:8;width:14px;display:grid;place-items:center;cursor:col-resize;touch-action:none;outline:none}
+.thalamus.inbox .cv-tirador--izq{right:calc(var(--s3, 12px) / -2 - 7px)}
+.thalamus.inbox .cv-tirador--der{left:calc(var(--s3, 12px) / -2 - 7px)}
+.thalamus.inbox .cv-tirador i{width:4px;height:36px;border-radius:99px;background:var(--border-main);opacity:0;transform:scaleY(.6);
+  transition:opacity .2s,transform .3s cubic-bezier(.3,1.4,.5,1),height .3s cubic-bezier(.3,1.4,.5,1),background .2s,box-shadow .2s}
+.thalamus.inbox .cv:hover .cv-tirador i{opacity:.55;transform:none}
+.thalamus.inbox .cv-tirador:hover i,.thalamus.inbox .cv-tirador:focus-visible i{opacity:1;height:64px;background:linear-gradient(var(--brand-secondary),#7D63E6)}
+.thalamus.inbox .cv-tirador.is-activo i{opacity:1;height:96px;background:linear-gradient(var(--brand-secondary),#7D63E6);
+  box-shadow:0 0 18px color-mix(in srgb,var(--brand-secondary) 70%,transparent),0 0 40px color-mix(in srgb,#7D63E6 45%,transparent)}
+body.cv-arrastrando,body.cv-arrastrando *{cursor:col-resize !important;user-select:none !important}
+@media (max-width:1050px){.thalamus.inbox .cv-tirador--der{display:none}}
+@media (max-width:760px){.thalamus.inbox .cv-tirador{display:none}}
+
+/* ---------- Aura: humo magenta y violeta que se mueve lento adentro de cada panel ---------- */
+@keyframes cvAura{0%{background-position:0% 0%,100% 100%}50%{background-position:40% 25%,65% 70%}100%{background-position:15% 60%,90% 30%}}
+.thalamus.inbox :is(.cv-lista,.cv-derecha > .ui-panel){position:relative;isolation:isolate}
+.thalamus.inbox :is(.cv-lista,.cv-derecha > .ui-panel)::after{content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;pointer-events:none;
+  background:radial-gradient(45% 35% at 50% 50%,color-mix(in srgb,var(--brand-secondary) 20%,transparent),transparent 70%),
+    radial-gradient(45% 35% at 50% 50%,color-mix(in srgb,#7D63E6 22%,transparent),transparent 70%);
+  background-size:180% 180%,200% 200%;background-repeat:no-repeat;animation:cvAura 22s ease-in-out infinite alternate}
+.thalamus.inbox .cv-derecha > .ui-panel:nth-child(3)::after{animation-duration:26s;animation-delay:-8s}
+.thalamus.inbox .cv-derecha > .ui-panel:nth-child(4)::after{animation-duration:30s;animation-delay:-15s}
+
+/* ---------- Lista ---------- */
+.thalamus.inbox .cv-lc-t{display:flex;align-items:center;gap:6px}
+.thalamus.inbox .cv-lc-t .cv-lc-orden{display:grid;place-items:center;width:20px;height:20px;border-radius:6px;color:var(--text-muted);cursor:help;transition:background .2s,color .2s}
+.thalamus.inbox .cv-lc-t .cv-lc-orden:hover{background:var(--bg-item, rgba(255,255,255,.06));color:var(--text-main)}
+.thalamus.inbox .cv-item{position:relative;transition:background .2s,border-color .2s,translate .25s cubic-bezier(.3,1.4,.5,1)}
+.thalamus.inbox .cv-item:hover{translate:2px 0}
+@keyframes cvMarca{from{transform:scaleY(0);opacity:0}to{transform:none;opacity:1}}
+.thalamus.inbox .cv-item[aria-pressed="true"]::before{content:"";position:absolute;left:-1px;top:12px;bottom:12px;width:3px;border-radius:3px;
+  background:linear-gradient(var(--brand-secondary),#7D63E6);box-shadow:0 0 12px color-mix(in srgb,var(--brand-secondary) 70%,transparent);
+  animation:cvMarca .35s cubic-bezier(.3,1.4,.5,1) both}
+.thalamus.inbox .cv-item[aria-pressed="true"]{box-shadow:0 8px 24px color-mix(in srgb,var(--brand-secondary) 16%,transparent)}
+.thalamus.inbox .cv-lista-pie{display:flex;justify-content:center;margin:0;padding:6px}
+.thalamus.inbox .cv-atajos{display:grid;place-items:center;width:28px;height:28px;border-radius:9px;color:var(--text-muted);opacity:.6;cursor:help;transition:opacity .2s,background .2s}
+.thalamus.inbox .cv-atajos:hover,.thalamus.inbox .cv-atajos:focus-visible{opacity:1;background:var(--bg-item, rgba(255,255,255,.06))}
+
+/* ---------- Columna del lead: entra de a un panel; las cifras se levantan con su color ---------- */
+@keyframes cvLado{from{opacity:0;transform:translateX(14px)}to{opacity:1;transform:none}}
+.thalamus.inbox .cv-derecha > .ui-panel{animation:cvLado .45s cubic-bezier(.22,.8,.2,1) both}
+.thalamus.inbox .cv-derecha > .ui-panel:nth-child(3){animation-delay:.07s}
+.thalamus.inbox .cv-derecha > .ui-panel:nth-child(4){animation-delay:.14s}
+.thalamus.inbox .cv-mis-dato{transition:translate .25s cubic-bezier(.3,1.4,.5,1),border-color .2s,box-shadow .2s}
+.thalamus.inbox .cv-mis-dato:hover{translate:0 -2px;border-color:color-mix(in srgb,var(--c) 45%,transparent);
+  box-shadow:0 10px 24px color-mix(in srgb,var(--c) 18%,transparent)}
+.thalamus.inbox .cv-mis-dato:hover .cv-mis-ico{box-shadow:0 0 14px color-mix(in srgb,var(--c) 55%,transparent)}
+.thalamus.inbox .cv-mis-ico{transition:box-shadow .25s}
+
+@media (prefers-reduced-motion:reduce){
+  .thalamus.inbox :is(.cv-lista,.cv-derecha > .ui-panel)::after,.thalamus.inbox .cv-derecha > .ui-panel,.thalamus.inbox .cv-item[aria-pressed="true"]::before{animation:none}
+  .thalamus.inbox :is(.cv-item,.cv-mis-dato):hover{translate:none}
+}

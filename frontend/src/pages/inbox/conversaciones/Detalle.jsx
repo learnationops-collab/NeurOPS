@@ -12,6 +12,7 @@ import GloboCita, { seleccionDelLead } from './Cita';
 import Composer from './Composer';
 import Feed from './Feed';
 import FichaLead from './FichaLead';
+import Tirador from './Tirador';
 import MisStats from './MisStats';
 import TarjetaLead from './TarjetaLead';
 import useEnvio from './useEnvio';
@@ -111,6 +112,7 @@ export default function Detalle({ id, yo, onLeido, onCambio }) {
             <Chat datos={datos} yo={yo} pausar={pausar} onCambio={cambio} pegar={pegar} selector={selector}
                 onSelector={(elegido) => { setSelector(null); if (elegido) setPegar({ ...elegido, n: Date.now() }); }} />
             <div className="cv-derecha">
+                <Tirador lado="der" />
                 <TarjetaLead datos={datos} fase={fase} canal={datos.canal} yo={yo} pausar={pausar} onPausar={setPausar} onCambio={cambio} onMover={mover} />
                 <MisStats />
                 <FichaLead contacto={datos.contacto} tareas={datos.tareas || []} recorrido={datos.recorrido || []}

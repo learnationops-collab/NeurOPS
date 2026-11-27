@@ -165,7 +165,7 @@
 .thalamus.inbox .cv-buscar.ui-entry{flex:0 1 260px;height:36px}
 .thalamus.inbox .cv-lista-buscar{padding:2px 2px 8px}
 .thalamus.inbox .cv-lista-buscar .cv-buscar.ui-entry{width:100%}
-.thalamus.inbox .cv{display:grid;grid-template-columns:360px minmax(0,1fr) 290px;gap:var(--s3);height:var(--inbox-alto);min-height:520px}
+.thalamus.inbox .cv{display:grid;grid-template-columns:var(--cv-izq,360px) minmax(0,1fr) var(--cv-der,290px);gap:var(--s3);height:var(--inbox-alto);min-height:520px}
 .thalamus.inbox .cv > *{min-height:0}
 .thalamus.inbox .cv-detalle--vacio{grid-column:span 2}
 .thalamus.inbox .cv-cuenta{opacity:.6;font-variant-numeric:tabular-nums;margin-left:4px}
@@ -330,18 +330,32 @@
 .thalamus.inbox .cv-recorrido li::before{content:'';position:absolute;left:0;top:5px;width:8px;height:8px;border-radius:50%;background:var(--c, var(--text-muted))}
 .thalamus.inbox .cv-recorrido strong{font-size:12.5px}
 
-/* Sin lugar para la ficha al costado: va debajo del chat. */
+/* Pantallas medianas (Mario, 27/11/2026: al achicar la ventana no se veía el chat). Antes la ficha bajaba debajo del
+   chat en una fila `auto`; desde que la columna derecha tiene tarjeta, Estadísticas y Seguimiento, esa fila se
+   comía toda la altura y el chat quedaba en 0. Ahora: tres columnas más angostas hasta 1050 px; debajo, la columna
+   derecha va bajo el chat con un tope de alto y su propio scroll, y el chat siempre conserva lo suyo. */
 @media (max-width: 1300px){
-  .thalamus.inbox .cv{grid-template-columns:320px minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto}
+  .thalamus.inbox .cv{grid-template-columns:clamp(250px,var(--cv-izq,290px),330px) minmax(0,1fr) clamp(250px,var(--cv-der,280px),320px)}
+}
+@media (max-width: 1050px){
+  .thalamus.inbox .cv{grid-template-columns:clamp(240px,var(--cv-izq,270px),300px) minmax(0,1fr);grid-template-rows:minmax(320px,1fr) auto}
   .thalamus.inbox .cv .cv-lista{grid-row:span 2}
   .thalamus.inbox .cv-detalle--vacio{grid-column:auto;grid-row:span 2}
-  .thalamus.inbox .cv-ficha{max-height:220px}
+  .thalamus.inbox .cv-derecha{max-height:36dvh;overflow-y:auto;overscroll-behavior:contain}
+  .thalamus.inbox .cv-derecha > .cv-ficha{flex:none}
+}
+/* La barra de arriba sin lugar: los botones del grupo Tareas · Avisos · Stats quedan solo con su ícono (dicen qué
+   son al pasar el mouse), así no se pisan con Links y Turnos. */
+@media (max-width: 1400px){
+  .thalamus.inbox .cv-barra-grupo .cv-barra-btn{font-size:0;gap:0;padding:0 9px}
+  .thalamus.inbox .cv-barra-grupo .cv-barra-btn .cv-barra-n{font-size:10.5px;margin-left:4px}
 }
 @media (max-width: 760px){
   .thalamus.inbox .cv{grid-template-columns:minmax(0,1fr);grid-template-rows:none;height:auto}
   .thalamus.inbox .cv .cv-lista{grid-row:auto;max-height:45dvh}
   .thalamus.inbox .cv-detalle{min-height:60dvh}
   .thalamus.inbox .cv-ficha{max-height:none}
+  .thalamus.inbox .cv-derecha{max-height:none;overflow:visible}
   .thalamus.inbox .cv-barra.barra,.thalamus.inbox .cv-barra .barra-der{flex-wrap:wrap}
   .thalamus.inbox .cv-buscar.ui-entry{flex:1 1 100%}
   .thalamus.inbox .cv-chat-asignado .t-cap{display:none}
