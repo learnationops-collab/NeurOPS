@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronRight, PlayCircle } from 'lucide-react';
+import { ChevronRight, PlayCircle, X } from 'lucide-react';
 import { soloDigitos, href } from '../../lib/escalas';
 import { fechaCorta, minAncho, plantillaCols } from '../../lib/vista';
-import { cierreNum, coincideCloser } from '../../lib/closers';
+import { cierreNum } from '../../lib/closers';
 import { Bandera, Chip, Inicial, Riel } from '../Piezas';
 import { VEREDICTO } from '../comun';
 import { Encabezado } from '../TablaPostulaciones';
@@ -11,21 +11,8 @@ import logoWhatsapp from '../../assets/apps/whatsapp.png';
 
 // «Antiguos» de Analyze y Winners con Closers elegido (27/11/2026): los closers de búsquedas anteriores
 // (archivados, ADR-W193) en una sola lista, de cualquier estado, para volver a contactarlos. Lo justo
-// para decidir a quién escribirle: estado, cierre, si dejó video y su WhatsApp.
-
-/** El filtro por estado de la cabecera: todos o un veredicto. */
-export const ESTADOS_ANTIGUOS = [
-    { id: 'todos', label: 'Todos' },
-    { id: 'preseleccionada', label: 'Seleccionados', c: 'var(--success)' },
-    { id: 'en_reserva', label: 'Reserva', c: 'var(--info)' },
-    { id: 'decidir', label: 'A decidir', c: 'var(--warning)' },
-    { id: 'testeo', label: 'En prueba', c: 'var(--warning)' },
-    { id: 'baja', label: 'Baja', c: 'var(--error)' },
-    { id: 'descartado', label: 'Descartados', c: 'var(--idle)' },
-    { id: 'sin_calificar', label: 'Sin calificar', c: 'var(--text-muted-40)' },
-];
-
-export const filtrarAntiguos = (filas, estado) => (estado === 'todos' ? filas : filas.filter((p) => p.veredicto === estado));
+// para decidir a quién escribirle: estado, cierre, si dejó video y su WhatsApp. La lista ya llega
+// filtrada (ver lib/antiguos.js y ControlesAntiguos).
 
 const COLS = [
     { id: 'cand', label: 'Candidato', w: 'minmax(220px,1.6fr)', min: 200 },
@@ -84,7 +71,7 @@ const Fila = ({ p, onAbrir }) => {
     );
 };
 
-const AntiguosCloser = ({ closers, estado, q }) => {
+const AntiguosCloser = ({ closers, lista, filtrando, onLimpiar }) => {
     const { archivadas, cargarArchivadas } = closers;
     const [abierta, setAbierta] = useState(null);
     const [anchos, setAnchos] = useState(leerAnchos);
@@ -97,12 +84,8 @@ const AntiguosCloser = ({ closers, estado, q }) => {
         t.classList.add('entra');
         const id = setTimeout(() => t.classList.remove('entra'), 1100);
         return () => clearTimeout(id);
-    }, [estado]);
+    }, [lista.length]);
 
-    const lista = useMemo(() => {
-        const base = filtrarAntiguos(archivadas || [], estado);
-        return q ? base.filter((p) => coincideCloser(p, q)) : base;
-    }, [archivadas, estado, q]);
     const ids = useMemo(() => lista.map((p) => p.id), [lista]);
 
     const cambiarAncho = (id, px, persistir) => setAnchos((prev) => {
@@ -130,13 +113,16 @@ const AntiguosCloser = ({ closers, estado, q }) => {
                     {lista.length === 0 && (
                         <div className="tl-vacio">
                             <p className={archivadas === null ? 't-cap mut40' : 't-h3'}>
-                                {archivadas === null ? 'Cargando postulaciones…' : q ? `Ningún closer coincide con «${q}»` : 'Nadie en este estado'}
+                                {archivadas === null ? 'Cargando postulaciones…' : 'Nadie cumple el filtro'}
                             </p>
+                            {archivadas !== null && filtrando && (
+                                <button type="button" className="btn btn--linea btn--sm" onClick={onLimpiar}><X /> Quitar filtros</button>
+                            )}
                         </div>
                     )}
                     {lista.map((p) => <Fila key={p.id} p={p} onAbrir={setAbierta} />)}
                     <div className="tl-tpie">
-                        Mostrando <b>{lista.length}</b>
+                        Mostrando <b>{lista.length}</b> de {(archivadas || []).length}
                         <span className="sep" />
                         Búsquedas anteriores · las más recientes primero
                     </div>

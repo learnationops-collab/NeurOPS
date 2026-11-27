@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
     Inbox, CheckCircle2, Trophy, BarChart3, FileText, Search, X, Filter, ArrowLeft, AlertTriangle,
-    SlidersHorizontal, Archive,
+    SlidersHorizontal,
 } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
 import api from '../../../services/api';
@@ -23,9 +23,11 @@ import { IsotipoTalent } from './components/Piezas';
 import { Select } from '../../../components/standard';
 import AlDia from './components/AlDia';
 import InboxCloser, { PESTANAS_INBOX_CLOSER } from './components/closers/InboxCloser';
-import AntiguosCloser, { ESTADOS_ANTIGUOS, filtrarAntiguos } from './components/closers/AntiguosCloser';
+import AntiguosCloser from './components/closers/AntiguosCloser';
+import ControlesAntiguos from './components/closers/ControlesAntiguos';
 import MenuPuesto from './components/closers/MenuPuesto';
-import { PESTANAS_CLOSER_SECCION, guardarPuesto, leerPuesto, useClosers } from './lib/closers';
+import { PESTANAS_CLOSER_SECCION, coincideCloser, guardarPuesto, leerPuesto, useClosers } from './lib/closers';
+import { FILTRO_DEFAULT, cuantosActivos, guardarFiltro, leerFiltro, pasa, repostulados } from './lib/antiguos';
 import PostulacionesStatsTab from '../postulaciones/components/PostulacionesStatsTab';
 import {
     PERIODOS, PESTANAS, agrupar, colsVisibles, coincide, cuentas as contar, enPeriodo, enPestana, filtrosActivos, guardarVista, leerVista,
@@ -94,9 +96,10 @@ const HiringDashboardPage = () => {
     const [pestanas, setPestanas] = useState({ pend: 'online', anal: 'seleccionada', fin: 'testeo', closers: 'pendientes', pendCloser: 'revisar', analCloser: 'preseleccionada', finCloser: 'testeo' });
     // Analyze: «Actuales» (postularon este mes) o «Antiguas» (antes). Arranca siempre en Actuales.
     const [periodo, setPeriodo] = useState('actuales');
-    // Closers en Analyze y Winners: «Antiguos» muestra los de búsquedas anteriores, de cualquier estado.
+    // Closers en Analyze y Winners: «Antiguos» muestra los de búsquedas anteriores, con su filtro.
     const [antiguos, setAntiguos] = useState(false);
-    const [estadoAntiguos, setEstadoAntiguos] = useState('todos');
+    const [filtroAntiguos, setFiltroAntiguosEstado] = useState(leerFiltro);
+    const setFiltroAntiguos = (f) => { setFiltroAntiguosEstado(f); guardarFiltro(f); };
     const [statsTab, setStatsTab] = useState('panorama');
     const [statsSeg, setStatsSeg] = useState('gen');
     const [query, setQuery] = useState('');
@@ -229,6 +232,12 @@ const HiringDashboardPage = () => {
     useEffect(() => {
         if (verAntiguos && closers.archivadas === null) closers.cargarArchivadas();
     }, [verAntiguos, closers.archivadas, closers.cargarArchivadas]); // eslint-disable-line react-hooks/exhaustive-deps
+    const ctxAntiguos = useMemo(() => ({
+        repostulados: repostulados(closers.archivadas || [], [...closers.filas, ...closers.incompletas]),
+    }), [closers.archivadas, closers.filas, closers.incompletas]);
+    const listaAntiguos = useMemo(() => (closers.archivadas || [])
+        .filter((p) => pasa(p, filtroAntiguos, ctxAntiguos) && (!qCloser || coincideCloser(p, qCloser))),
+    [closers.archivadas, filtroAntiguos, ctxAntiguos, qCloser]);
     const filasCloserSeccion = useMemo(() => {
         if (!modoCloser || seccion === 'pend') return null;
         return closers.filas.filter((p) => p.veredicto === pestanaCloser);
@@ -299,22 +308,15 @@ const HiringDashboardPage = () => {
                 onElegir={(id) => setPestanas((prev) => ({ ...prev, pendCloser: id }))} />
         );
     } else if (modoCloser) {
-        // Antiguos (ADR-W193): los de búsquedas anteriores, para volver a contactarlos. Encendido, las
-        // pestañas pasan a filtrar esa lista por estado.
-        const archivadas = closers.archivadas || [];
+        // Antiguos (ADR-W193, W277): los de búsquedas anteriores, para volver a contactarlos. Es una
+        // sola pestaña que entra y sale; adentro, el filtro y el CSV.
         const botonAntiguos = closers.cuentaArchivadas > 0 && (
-            <button type="button" className="tl-antiguos" aria-pressed={antiguos}
-                title="Closers de búsquedas anteriores, de cualquier estado"
-                onClick={() => setAntiguos((v) => !v)}>
-                <Archive size={14} />Antiguos<span className="cuenta">{closers.cuentaArchivadas}</span>
-            </button>
+            <ControlesAntiguos activo={verAntiguos} onAlternar={() => setAntiguos((v) => !v)} cuenta={closers.cuentaArchivadas}
+                filas={closers.archivadas || []} lista={listaAntiguos} ctx={ctxAntiguos} filtro={filtroAntiguos} onFiltro={setFiltroAntiguos} />
         );
         controles = qCloser && !verAntiguos ? null : (
             <>
-                {verAntiguos ? (
-                    <Pestanas lista={ESTADOS_ANTIGUOS.filter((e) => e.id === 'todos' || e.id === estadoAntiguos || filtrarAntiguos(archivadas, e.id).length)}
-                        actual={estadoAntiguos} cuentaDe={(id) => filtrarAntiguos(archivadas, id).length} onElegir={setEstadoAntiguos} />
-                ) : (
+                {!verAntiguos && (
                     <Pestanas lista={PESTANAS_CLOSER_SECCION[seccion]} actual={pestanaCloser}
                         cuentaDe={(id) => closers.filas.filter((p) => p.veredicto === id).length}
                         onElegir={(id) => setPestanas((prev) => ({ ...prev, [`${seccion}Closer`]: id }))} />
@@ -480,11 +482,11 @@ const HiringDashboardPage = () => {
                     </header>
 
                     {!fuera && (
-                        <main className="tl-vista" key={`${seccion}|${modoCloser ? `closer|${verAntiguos ? `ant|${estadoAntiguos}` : pestanaCloser}` : ''}|${enBusqueda ? 'q' : ''}|${seccion === 'stats' ? statsTab : ''}`}>
+                        <main className="tl-vista" key={`${seccion}|${modoCloser ? `closer|${verAntiguos ? 'ant' : pestanaCloser}` : ''}|${enBusqueda ? 'q' : ''}|${seccion === 'stats' ? statsTab : ''}`}>
                             {errorCarga && <div className="tl-aviso-error"><AlertTriangle size={16} />{errorCarga}</div>}
                             {errorBorrado && <div className="tl-aviso-error"><AlertTriangle size={16} />{errorBorrado}</div>}
 
-                            {modoCloser && verAntiguos && <AntiguosCloser closers={closers} estado={estadoAntiguos} q={qCloser} />}
+                            {modoCloser && verAntiguos && <AntiguosCloser closers={closers} lista={listaAntiguos} filtrando={cuantosActivos(filtroAntiguos) > 0} onLimpiar={() => setFiltroAntiguos(FILTRO_DEFAULT)} />}
                             {modoCloser && !verAntiguos && <InboxCloser closers={closers} pestana={pestanaCloser} q={qCloser} filasSeccion={filasCloserSeccion} />}
 
                             {!modoCloser && !enBusqueda && seccion === 'pend' && !cargando && (
