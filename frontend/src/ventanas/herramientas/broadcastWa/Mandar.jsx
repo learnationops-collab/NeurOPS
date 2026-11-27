@@ -31,6 +31,12 @@ function Lista({ archivo, revision, onArchivo, sin, onAlternar }) {
                             <LinkButton onClick={() => onAlternar('sin_alumnos')}>{sin.sin_alumnos ? 'Incluirlos' : 'Sacarlos'}</LinkButton>
                         </span>
                     )}
+                    {revision.equipo > 0 && (
+                        <span className="bw-aviso" data-tip="Del equipo|Tienen cuenta en Work. Incluilos solo para la prueba con el equipo">
+                            <b>{revision.equipo}</b> son del equipo ({sin.sin_equipo ? 'se saltean' : 'van'})
+                            <LinkButton onClick={() => onAlternar('sin_equipo')}>{sin.sin_equipo ? 'Incluirlos (prueba)' : 'Sacarlos'}</LinkButton>
+                        </span>
+                    )}
                     {revision.agendados > 0 && (
                         <span className="bw-aviso" data-tip="Agendaron o son clientes|Agendaron alguna vez, compraran o no: ya los contactó un closer">
                             <b>{revision.agendados}</b> agendaron o son clientes ({sin.sin_agendados ? 'se saltean' : 'van'})
@@ -101,7 +107,7 @@ export default function Mandar({ datos }) {
     const [enviando, setEnviando] = useState(false);
     // Por defecto se saltean los alumnos vigentes y los que agendaron o son clientes (ADR-W279): un broadcast de
     // captación no le llega a quien ya compró ni a quien ya habló con un closer. El de no cerrados los incluye a mano.
-    const [sin, setSin] = useState({ sin_alumnos: true, sin_agendados: true });
+    const [sin, setSin] = useState({ sin_alumnos: true, sin_agendados: true, sin_equipo: true });
 
     const hoy = historial?.hoy || { usados: 0, tope: 100 };
     const libres = Math.max(0, hoy.tope - hoy.usados);

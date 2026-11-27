@@ -66,6 +66,11 @@ def _plantillas(pedidas):
     return salida
 
 
+def _sin(datos):
+    """(sin_alumnos, sin_agendados, sin_equipo): los tres sí, salvo que el pedido diga false."""
+    return tuple(datos.get(k, True) is not False for k in ('sin_alumnos', 'sin_agendados', 'sin_equipo'))
+
+
 def _hoy():
     ahora = datetime.utcnow()
     return {'usados': envios.usados_hoy(ahora), 'tope': envios.TOPE_DIARIO}
@@ -76,8 +81,7 @@ def _hoy():
 @admin_required
 def revisar():
     datos = request.get_json(silent=True) or {}
-    r = envios.revisar(_filas(datos), datos.get('sin_alumnos', True) is not False,
-                       datos.get('sin_agendados', True) is not False)
+    r = envios.revisar(_filas(datos), *_sin(datos))
     return jsonify({**r, 'para_mandar': len(r['para_mandar']), 'hoy': _hoy()})
 
 
@@ -90,7 +94,7 @@ def enviar():
         cantidad = int(datos.get('cantidad') or 0)
         plantillas = _plantillas([p for p in datos.get('plantillas') or [] if isinstance(p, dict)])
         lote, n = envios.crear_lote(_filas(datos), plantillas, cantidad, current_user.id, datetime.utcnow(),
-                                    datos.get('sin_alumnos', True) is not False, datos.get('sin_agendados', True) is not False)
+                                    *_sin(datos))
     except (TypeError, ValueError) as error:
         return jsonify({'message': str(error) if isinstance(error, envios.EnvioInvalido) else 'Cantidad inválida'}), 400
     return jsonify({'lote': lote, 'cantidad': n, 'hoy': _hoy()}), 201

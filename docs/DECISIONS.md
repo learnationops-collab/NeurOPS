@@ -2563,3 +2563,9 @@
 - **Decisión:** se vuelve a poder programar hasta los 7 días (WhatsApp, solo dentro de las 24 h). Si a la hora elegida no pasaron 24 h desde el último mensaje del lead, sale solo como antes. Si pasaron, no sale: queda como aviso (`estado = aviso`, sin `cadencia`, con su `ciclo`), entra en el filtro «Toca seguimiento» y en la caja aparece con su texto y «Mandar». «Mandar» (`POST /inbox/seguimientos/<id>/mandar`) lo manda la persona en ese momento, con `HUMAN_AGENT` si está aprobada, y lo marca como seguimiento. Sin la aprobación, en vez de «Mandar» va el link al chat de Instagram. El aviso se va si el lead responde o si alguien del equipo le escribe.
 - **Qué se pierde:** pasadas las 24 h hay que tocar «Mandar»; no sale de noche ni sin nadie en la bandeja.
 - **Consecuencias:** `seguimientos.avisos` devuelve el porqué de cada aviso (la cadencia o quién lo programó), y la fila lo muestra en el tooltip.
+## ADR-W284 · Broadcast de WhatsApp a mano: los números del equipo se saltean
+- **Estado:** aceptada · 27/11/2026
+- **Contexto:** Jean Carlo (closer) recibió la plantilla reactivación C del broadcast a la lista de los grupos viejos del taller: el equipo también estaba en esos grupos. Fue un solo mensaje, no doble, pero no le tenía que llegar.
+- **Decisión:** el CSV saltea por defecto los números de las cuentas de Work (`users.two_chat_number`, por los últimos 8 dígitos). «Incluirlos (prueba)» los suma, para la prueba con el equipo que se hace antes de cada broadcast. `sin_equipo` en `/envios/revisar` y `/envios`.
+- **Qué se pierde:** la prueba con el equipo necesita un toque más.
+- **Consecuencias:** solo cubre a quien cargó su WhatsApp en Work (12 cuentas); un número personal distinto del cargado no se reconoce.
