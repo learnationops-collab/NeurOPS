@@ -1390,3 +1390,6 @@
 - Cuando Meta apruebe Human Agent: `IG_HUMAN_AGENT=1` en Railway y vuelven los 7 días.
 ### 27/11/2026 · Clarity de Closer: las preguntas apagadas no cuentan
 - Mario apagó en Forms 4 preguntas del formulario de Closer (reporte, obstáculo, objetivos y por qué Learnation): la página ya no las pregunta. Para quien contesta con ese formulario, los criterios de Clarity sin ninguna pregunta prendida (hoy obstáculo y objetivos) no entran en el score ni en el desglose de la ficha, así no pierde puntos por algo que no se le preguntó ([clarity.py](../../app/services/clarity.py) `criterios_apagados`).
+
+### 27/11/2026 · Inbox: los seguimientos programados, solo dentro de las 24 h (ADR-W282)
+- Un seguimiento programado sale solo, y Meta permite responder fuera de las 24 h únicamente a una persona en el momento: ya no se programan para después del cierre ni salen con la etiqueta de agente humano ([seguimientos.py](../../app/automatizaciones/seguimientos.py), [Seguimientos.jsx](../../frontend/src/pages/inbox/conversaciones/Seguimientos.jsx)).
