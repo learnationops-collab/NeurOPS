@@ -52,7 +52,7 @@ export default function MisStats() {
                 <Dato icono={Zap} color="var(--success)" valor={s.activo?.mediana} unidad="min" rotulo="Resp. activo" tip={`Respondiendo activo|${resp(s.activo)}`} />
                 <Dato icono={Moon} color="var(--warning)" valor={s.inactivo?.mediana} unidad="min" rotulo="Resp. inactivo" tip={`Respondiendo inactivo|${resp(s.inactivo)}`} />
                 <Dato icono={CalendarPlus} color="var(--brand-secondary)" valor={s.agendas_hoy} rotulo="Agendas hoy" tip="Agendas hoy|Las que cargaste hoy como setter" />
-                <Dato icono={TrendingUp} color="var(--info)" valor={s.agendas_promedio} decimales={1} rotulo="Prom. diario"
+                <Dato icono={TrendingUp} color="var(--info)" valor={s.agendas_promedio} decimales={1} rotulo="Agendas por día"
                     tip={`Promedio diario|Agendas por día en los últimos ${s.dias} días`} />
                 {/* Tus seguimientos (Mario, 27/11/2026): los de hoy y el promedio por día; el promedio por lead, al pasar el mouse. */}
                 {s.seguimientos && (

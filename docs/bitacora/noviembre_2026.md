@@ -1287,3 +1287,7 @@
 - Estadísticas: seguimientos de hoy y por día, con el promedio por lead al pasar el mouse ([seguimientos_hechos.py](../../app/automatizaciones/seguimientos_hechos.py)).
 - Arreglo: el menú de la etapa quedaba tapado por Estadísticas. La tarjeta del lead ahora va por encima de los paneles de abajo ([sidebar.css](../../frontend/src/pages/inbox/conversaciones/sidebar.css)).
 - El recordatorio del recorrido dice «Novedades sin revisar» y qué se aprende.
+
+### 27/11/2026 · Seguimientos del lead en un solo bloque
+- La tarjeta repetía el dato: «Σ», «Seguimiento N» y los puntitos sueltos. Ahora es un solo bloque. Un anillo tiene un segmento por seguimiento (violeta los viejos, magenta los que van desde su última respuesta) que se dibuja al entrar, con el total en el centro. Al lado van cuánto lleva sin contestar y cuánto queda para escribirle, y «Falta el primero» si no hay seguimiento ([RachaLead.jsx](../../frontend/src/pages/inbox/conversaciones/RachaLead.jsx)).
+- Estadísticas en pares: «Agendas hoy» con «Agendas por día» y «Seguim. hoy» con «Seguim. por día».

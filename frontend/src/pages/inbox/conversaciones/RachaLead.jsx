@@ -3,14 +3,13 @@
 // seguimientos le hiciste en toda la conversación. Cada setter ve solo lo suyo: sus mensajes y los sin autor (Kommo, la
 // app de Instagram), como el reporte y la lista (`seguimientos_hechos.resumen`); quien no es setter ve todo el equipo.
 // Misma regla de seguimiento que el servidor: la marca a mano manda; sin marca, más de 12 h después del anterior.
-import { Hourglass, Repeat2, Send, Sigma } from 'lucide-react';
+import { Hourglass, Send } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
 import { cierreMin, esWhatsapp, haceDias } from './colas';
 
 // «45 min», «3 h», «2 d».
 const duracion = (min) => (min < 60 ? `${Math.max(1, Math.round(min))} min` : min < 1440 ? `${Math.floor(min / 60)} h` : `${Math.floor(min / 1440)} d`);
 
-const ORDINAL = ['', 'Primer', 'Segundo', 'Tercer', 'Cuarto', 'Quinto'];
 const DOCE_H = 12 * 3600000;
 
 export function rachaDe(mensajes, setterId = null) {
@@ -39,40 +38,47 @@ export default function RachaLead({ mensajes, fase, contacto }) {
     const racha = ['confirmacion', 'nolead', 'inabrible'].includes(fase) ? null : calculo.racha;
     if (!racha && !total) return null;
     const n = racha?.n ?? 0;
-    const puntos = Math.max(3, n);
+    // Un segmento por seguimiento (al menos 3, hasta 8 a la vista): los viejos en violeta, los que van desde su
+    // última respuesta en magenta. Se dibujan de a uno al entrar.
+    const segmentos = Math.min(8, Math.max(3, total));
+    const largo = 100 / segmentos;
+    const viejos = total - n;
+    const queda = racha && contacto ? cierreMin(contacto, new Date()) : null;
+    const red = contacto && esWhatsapp(contacto) ? 'WhatsApp' : 'Instagram';
     return (
         <div className="cv-racha">
-            {racha && (
-                <>
-                    {/* Cuánto lleva sin contestar y cuánto queda para escribirle (Mario, 27/11/2026). */}
-                    <span className="cv-racha-cuando" data-tip={`Sin contestar|Tu último mensaje fue ${haceDias(racha.ultimo)}`}>
-                        <Send size={12} aria-hidden="true" />{duracion((Date.now() - Date.parse(racha.ultimo)) / 60000)}
-                    </span>
-                    {contacto && (() => {
-                        const queda = cierreMin(contacto, new Date());
-                        const red = esWhatsapp(contacto) ? 'WhatsApp' : 'Instagram';
-                        return (
-                            <span className={`cv-racha-queda${queda == null ? ' cv-racha-queda--cerrada' : ''}`}
-                                data-tip={queda == null ? `Ventana cerrada|${red} ya no deja escribirle hasta que vuelva a escribir` : `Tiempo para escribirle|Después se cierra la ventana de ${red}`}>
-                                <Hourglass size={12} aria-hidden="true" />{queda == null ? 'cerrada' : `quedan ${duracion(queda)}`}
-                            </span>
-                        );
-                    })()}
-                    <span className={`cv-racha-n${n ? '' : ' cv-racha-n--cero'}`}
-                        data-tip={n ? 'Seguimientos desde su última respuesta|Cuentan los que marcaste y los de más de 12 h' : 'Sin seguimiento|Le escribiste y todavía no le volviste a escribir'}>
-                        <Repeat2 size={12} aria-hidden="true" />
-                        {n ? `${ORDINAL[n] || `${n}.º`} seguimiento` : 'Sin seguimiento'}
-                        <span className="cv-racha-puntos" aria-hidden="true">
-                            {Array.from({ length: puntos }, (_, k) => <i key={k} className={k < n ? 'is-on' : ''} style={{ '--k': k }} />)}
-                        </span>
-                    </span>
-                </>
-            )}
-            {total > 0 && (
-                <span className="cv-racha-total" data-tip={`En total|${total} ${total === 1 ? 'seguimiento' : 'seguimientos'} en toda la conversación`}>
-                    <Sigma size={11} aria-hidden="true" />{total}
+            <span className="cv-racha-anillo"
+                data-tip={`${total} ${total === 1 ? 'seguimiento' : 'seguimientos'} en total|${racha ? `${n} desde su última respuesta (en magenta)` : 'Contestó tu último mensaje'}`}>
+                <svg viewBox="0 0 40 40" aria-hidden="true">
+                    {Array.from({ length: segmentos }, (_, k) => (
+                        <circle key={k} cx="20" cy="20" r="16" pathLength="100"
+                            className={k < viejos ? 'is-viejo' : k < total ? 'is-nuevo' : ''}
+                            style={{ '--seg': Math.max(1, largo - 9), '--k': k, strokeDashoffset: -(k * largo + 4.5) }} />
+                    ))}
+                </svg>
+                <b key={total}>{total}</b>
+            </span>
+            <div className="cv-racha-info">
+                <span className="cv-racha-tit">
+                    Seguimientos
+                    {racha && !n && <em className="cv-racha-cero" data-tip="Sin seguimiento|Le escribiste y todavía no le volviste a escribir">Falta el primero</em>}
                 </span>
-            )}
+                <span className="cv-racha-chips">
+                    {racha ? (
+                        <>
+                            <span data-tip={`Sin contestar|Tu último mensaje fue ${haceDias(racha.ultimo)}`}>
+                                <Send size={11} aria-hidden="true" />{duracion((Date.now() - Date.parse(racha.ultimo)) / 60000)}
+                            </span>
+                            {contacto && (
+                                <span className={queda == null ? 'cv-racha-cerrada' : 'cv-racha-queda'}
+                                    data-tip={queda == null ? `Ventana cerrada|${red} no deja escribirle hasta que vuelva a escribir` : `Tiempo para escribirle|Después se cierra la ventana de ${red}`}>
+                                    <Hourglass size={11} aria-hidden="true" />{queda == null ? 'cerrada' : duracion(queda)}
+                                </span>
+                            )}
+                        </>
+                    ) : <span className="cv-racha-ok">Contestó</span>}
+                </span>
+            </div>
         </div>
     );
 }
