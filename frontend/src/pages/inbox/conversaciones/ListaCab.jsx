@@ -16,9 +16,10 @@ export default function ListaCab({ visibles, orden, ahora }) {
     return (
         <div className="cv-lc">
             <span className="cv-lc-n" key={n}>{n}</span>
+            {/* El orden ya no va escrito (Mario, 27/11/2026: menos texto): una flechita que lo dice al pasar el mouse. */}
             <span className="cv-lc-t">
                 <b>{n === 1 ? 'conversación' : 'conversaciones'}</b>
-                <small><ArrowUpDown size={10} aria-hidden="true" />{orden.corto}</small>
+                <small className="cv-lc-orden" data-tip={`Orden|${orden.corto}`} aria-label={`Orden: ${orden.corto}`}><ArrowUpDown size={11} aria-hidden="true" /></small>
             </span>
             {esperas.length > 0 && (
                 <span className="cv-lc-barra" data-tip={`Esperan respuesta · ${esperas.length}|${tramos.map(([, k, t]) => `${k} ${t}`).join(' · ')}`}>

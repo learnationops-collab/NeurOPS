@@ -165,7 +165,7 @@
 .thalamus.inbox .cv-buscar.ui-entry{flex:0 1 260px;height:36px}
 .thalamus.inbox .cv-lista-buscar{padding:2px 2px 8px}
 .thalamus.inbox .cv-lista-buscar .cv-buscar.ui-entry{width:100%}
-.thalamus.inbox .cv{display:grid;grid-template-columns:360px minmax(0,1fr) 290px;gap:var(--s3);height:var(--inbox-alto);min-height:520px}
+.thalamus.inbox .cv{display:grid;grid-template-columns:var(--cv-izq,360px) minmax(0,1fr) var(--cv-der,290px);gap:var(--s3);height:var(--inbox-alto);min-height:520px}
 .thalamus.inbox .cv > *{min-height:0}
 .thalamus.inbox .cv-detalle--vacio{grid-column:span 2}
 .thalamus.inbox .cv-cuenta{opacity:.6;font-variant-numeric:tabular-nums;margin-left:4px}
@@ -335,10 +335,10 @@
    comía toda la altura y el chat quedaba en 0. Ahora: tres columnas más angostas hasta 1050 px; debajo, la columna
    derecha va bajo el chat con un tope de alto y su propio scroll, y el chat siempre conserva lo suyo. */
 @media (max-width: 1300px){
-  .thalamus.inbox .cv{grid-template-columns:290px minmax(0,1fr) 280px}
+  .thalamus.inbox .cv{grid-template-columns:clamp(250px,var(--cv-izq,290px),330px) minmax(0,1fr) clamp(250px,var(--cv-der,280px),320px)}
 }
 @media (max-width: 1050px){
-  .thalamus.inbox .cv{grid-template-columns:270px minmax(0,1fr);grid-template-rows:minmax(320px,1fr) auto}
+  .thalamus.inbox .cv{grid-template-columns:clamp(240px,var(--cv-izq,270px),300px) minmax(0,1fr);grid-template-rows:minmax(320px,1fr) auto}
   .thalamus.inbox .cv .cv-lista{grid-row:span 2}
   .thalamus.inbox .cv-detalle--vacio{grid-column:auto;grid-row:span 2}
   .thalamus.inbox .cv-derecha{max-height:36dvh;overflow-y:auto;overscroll-behavior:contain}

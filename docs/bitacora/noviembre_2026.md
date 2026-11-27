@@ -1256,3 +1256,8 @@
 - Textos del recorrido de seguimientos más claros ([TourSeguimientos.jsx](../../frontend/src/pages/inbox/tour/TourSeguimientos.jsx)).
 - Arreglo: con la ventana más chica (menos de 1300 px) no se veía el chat. La columna del lead bajaba debajo del chat y se comía toda la altura. Ahora hay tres columnas más angostas hasta 1050 px. Por debajo, la columna del lead va abajo con tope de alto y su propio scroll. Tareas, Avisos y Stats quedan solo con su ícono para que la barra no se pise ([inbox.css](../../frontend/src/pages/inbox/inbox.css)).
 - Caja de escribir: en Chat · Nota · Tarea solo el elegido lleva su nombre. «Seguimiento» es más chico y tiene una flechita con «Marcar como seguimiento» y «Cómo hacer un seguimiento» (el recorrido), que reemplaza al «?» suelto ([MarcaSeguimiento.jsx](../../frontend/src/pages/inbox/conversaciones/MarcaSeguimiento.jsx)).
+
+### 27/11/2026 · Inbox: costados movibles, con aura y más motion (ADR-W264)
+- La lista y la columna del lead se mueven con una manija en el borde que da al chat. Doble clic vuelve al ancho de siempre ([Tirador.jsx](../../frontend/src/pages/inbox/conversaciones/Tirador.jsx)).
+- Aura magenta y violeta en los paneles. El chat elegido tiene una barrita con brillo, los paneles del lead entran de a uno y las cifras de Estadísticas se levantan al pasar el mouse ([sidebar.css](../../frontend/src/pages/inbox/conversaciones/sidebar.css)).
+- El orden de la lista y los atajos de teclado pasan a íconos con su explicación al pasar el mouse.

@@ -2380,3 +2380,19 @@
   - Los textos del recorrido de seguimientos se reescribieron: qué es un seguimiento, qué hacer y dónde. Quien ya lo había terminado con los textos de antes no lo vuelve a ver (`anterior`).
 - **Qué se pierde:** el plazo de 3 días vuelve a contar para quien lo tenía a medias, porque los textos cambiaron. El recordatorio no aparece en pantallas que no reservan su lugar.
 - **Consecuencias:** sin cambios de API. El código del recorrido no entra en la huella (ADR-W255), así que estos cambios no le vuelven a abrir las novedades a nadie.
+
+## ADR-W264: los costados del Inbox se mueven con una manija y tienen aura
+
+- **Fecha:** 27/11/2026 · **Subsistema:** Inbox, vista Conversaciones (`Conversaciones.jsx`, `conversaciones/Tirador.jsx`, `Detalle.jsx`, `ListaCab.jsx`, `sidebar.css`, `inbox.css`) · **Estado:** implementada
+- **Contexto:** a Mario le gusta el orden de la lista y de la columna del lead (tarjeta, Estadísticas, Seguimiento), pero quiere un diseño mejor: más motion, un poco menos de texto y más aura. Además, quiere poder mover un poco cada costado a la izquierda o a la derecha.
+- **Decisión:**
+  - **Manijas:** una en el borde de la lista que da al chat y otra en el de la columna del lead. Aparecen al pasar el mouse por la bandeja; al arrastrarlas crecen y brillan. La lista va de 260 a 440 px (360 de base); la columna del lead, de 260 a 380 (290 de base). Doble clic o Inicio vuelve al ancho de base; las flechas mueven de a 16 px. El ancho se guarda en este navegador (`cv_ancho_izq` y `cv_ancho_der`) y la grilla lo lee de `--cv-izq` y `--cv-der`. En pantallas medianas ese ancho tiene tope (ADR-W263 y su arreglo responsive).
+  - **Aura:** humo magenta y violeta que se mueve lento adentro de la lista y de cada panel de la columna del lead, cada uno con su ritmo.
+  - **Motion:**
+    - El chat elegido tiene una barrita con brillo que crece.
+    - Las filas de la lista se corren un poco al pasar el mouse.
+    - Los paneles de la columna del lead entran de a uno.
+    - Las cifras de Estadísticas se levantan con su color.
+  - **Menos texto:** el orden de la lista («por último mensaje») y los atajos de teclado pasan a íconos que lo dicen al pasar el mouse.
+- **Qué se pierde:** el orden ya no se lee sin pasar el mouse. El ancho no viaja con la cuenta: en otra compu arranca en el de base.
+- **Consecuencias:** sin cambios de API. Con movimiento reducido no hay aura animada ni entradas.

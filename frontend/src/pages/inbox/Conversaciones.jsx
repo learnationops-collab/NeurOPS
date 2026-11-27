@@ -5,7 +5,7 @@
 // se vuelven a pedir solos cada 20 s. Con el teclado: ↑↓ cambian de conversación y Esc la cierra. Las sin leer
 // van al título de la pestaña y, con permiso, como aviso del escritorio (`useAvisos`).
 import { useCallback, useEffect, useState } from 'react';
-import { BarChart3, Bell, Kanban, ListChecks, MessageSquare, Search, Tag } from 'lucide-react';
+import { BarChart3, Bell, Kanban, Keyboard, ListChecks, MessageSquare, Search, Tag } from 'lucide-react';
 import { Button, EmptyState, HeaderActions, InputGroup, Panel, Segmented } from '../../components/standard';
 import { useAuth } from '../../contexts/AuthContext';
 import { inboxApi } from './api';
@@ -32,6 +32,8 @@ import './conversaciones/crono.css';
 import './conversaciones/tarjeta.css';
 import './conversaciones/barra.css';
 import './conversaciones/composer.css';
+import './conversaciones/sidebar.css';
+import Tirador, { anchosGuardados } from './conversaciones/Tirador';
 import TourSeguimientos from './tour/TourSeguimientos';
 import TourFiltros from './tour/TourFiltros';
 
@@ -99,6 +101,8 @@ export default function Conversaciones() {
     const [buscar, setBuscar] = useState('');
     // La bandeja termina arriba del dock, nunca debajo (`useAltoLibre`).
     const [bandeja, alto] = useAltoLibre();
+    // Los anchos que la persona dejó con las manijas (se leen una vez; la manija los cambia directo en `.cv`).
+    const [anchos] = useState(anchosGuardados);
     // El setter arranca en lo suyo sin respuesta; el resto, en todo lo que espera.
     const [filtro, setFiltro] = useState(() => ({ ...VACIO, cola: 'esperan', asignado: ['setter', 'triage'].includes(user?.role) ? yo : null }));
     const [vista, setVista] = useState('chats');
@@ -162,7 +166,12 @@ export default function Conversaciones() {
                         <b>{marcadas.length ? `${marcadas.length} ${marcadas.length === 1 ? 'elegida' : 'elegidas'}` : 'Tocá las que querés etiquetar'}</b>
                         <Button size="sm" variant="primary" icon={<Tag />} disabled={!marcadas.length} onClick={() => setEtiquetando(true)}>Etiquetar</Button>
                     </div>
-                ) : <p className="cv-lista-pie t-cap mut40"><kbd>↑</kbd> <kbd>↓</kbd> cambiar de chat · <kbd>Esc</kbd> cerrar · <kbd>Enter</kbd> envía</p>}
+                ) : (
+                    <p className="cv-lista-pie">
+                        <span className="cv-atajos" tabIndex={0} aria-label="Atajos: flechas para cambiar de chat, Esc cierra, Enter envía"
+                            data-tip="Atajos|↑ ↓ cambiar de chat · Esc cerrar · Enter envía"><Keyboard size={14} aria-hidden="true" /></span>
+                    </p>
+                )}
             </>
         );
     }
@@ -203,8 +212,9 @@ export default function Conversaciones() {
                 </div>
             </HeaderActions>
             {vista === 'embudo' ? <Embudo lista={filtrar(lista, { ...filtro, ahora, conCerradas: true })} ahora={ahora} onAbrir={abrir} onMovida={recargar} /> : (
-                <div className={`cv${elegida ? ' cv--abierta' : ''}`} ref={bandeja} style={alto ? { height: alto, minHeight: 0 } : undefined}>
+                <div className={`cv${elegida ? ' cv--abierta' : ''}`} ref={bandeja} style={{ ...anchos, ...(alto ? { height: alto, minHeight: 0 } : null) }}>
                     <Panel as="section" size="sm" className="cv-lista" aria-label="Conversaciones">
+                        <Tirador lado="izq" />
                         <div className="cv-lista-buscar">{buscador}</div>
                         <Canales lista={lista} filtro={filtro} onCambiar={setFiltro} />
                         {listado}
