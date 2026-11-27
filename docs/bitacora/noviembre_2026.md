@@ -1304,3 +1304,5 @@
 - La columna «Postuló» («Hace 3 días» · «24 nov») pasa a fija en la tabla de postulaciones: ya no se puede ocultar desde Columnas, así que aparece también en las vistas guardadas que la tenían apagada ([vista.js](../../frontend/src/pages/admin/hiring/lib/vista.js)).
 ### 27/11/2026 · Analyze: Actuales o Antiguas
 - A la izquierda de las pestañas de Analyze, un selector «Actuales · N / Antiguas · N»: Actuales son las que postularon en el mes en curso; Antiguas, las de antes. La tabla y las cuentas de Seleccionadas, Reserva y Descartadas siguen el período elegido. Arranca siempre en Actuales ([HiringDashboardPage.jsx](../../frontend/src/pages/admin/hiring/HiringDashboardPage.jsx), [vista.js](../../frontend/src/pages/admin/hiring/lib/vista.js)).
+### 27/11/2026 · Revisión de closers: solo revisores activos
+- El estado de la revisión por revisor deja afuera las cuentas dadas de baja (la de admin vieja de Marlon), así figuran solo Mario y Marlon con sus cuentas actuales ([job_applications.py](../../app/api/job_applications.py)).
