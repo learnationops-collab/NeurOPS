@@ -1349,3 +1349,5 @@
 ### 27/11/2026 · Inbox: cerrar varias conversaciones juntas (ADR-W274)
 - Con «Elegir» arriba de la lista: «Todas» elige las que deja el filtro, «Leídas» las marca leídas y «No requieren» las saca de «Esperan respuesta» (y las deja leídas) hasta que el lead vuelva a escribir. Etiquetar sigue al lado ([AccionesVarias.jsx](../../frontend/src/pages/inbox/conversaciones/AccionesVarias.jsx), [api_trabajo.py](../../app/automatizaciones/api_trabajo.py) `cerrar_varias`).
 - Revisado en producción el pedido «un audio mandado desde Instagram figura como pendiente»: los 478 ecos de audio desde el 16/10 están guardados como mensaje del equipo y ninguna conversación queda esperando por eso. Lo que se veía era la fila con «…», arreglado el 25/11 («🎤 Audio»).
+### 27/11/2026 · Talent sin la sección Closers
+- Se saca «Closers» del dock de Talent: los closers se ven con el desplegable Asistentes / Closers de Inbox, Analyze, Winners y Stats. `/admin/postulaciones` y `?s=closers` entran al Inbox en Closers ([HiringDashboardPage.jsx](../../frontend/src/pages/admin/hiring/HiringDashboardPage.jsx)).

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
-    Inbox, CheckCircle2, Trophy, BarChart3, FileText, Briefcase, Search, X, Filter, ArrowLeft, AlertTriangle,
+    Inbox, CheckCircle2, Trophy, BarChart3, FileText, Search, X, Filter, ArrowLeft, AlertTriangle,
     SlidersHorizontal, Archive,
 } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -26,7 +26,6 @@ import InboxCloser, { PESTANAS_INBOX_CLOSER } from './components/closers/InboxCl
 import MenuPuesto from './components/closers/MenuPuesto';
 import { PESTANAS_CLOSER_SECCION, guardarPuesto, leerPuesto, useClosers } from './lib/closers';
 import PostulacionesStatsTab from '../postulaciones/components/PostulacionesStatsTab';
-import PostulacionesCloser, { PESTANAS_CLOSER } from '../postulaciones/PostulacionesCloser';
 import {
     PERIODOS, PESTANAS, agrupar, colsVisibles, coincide, cuentas as contar, enPeriodo, enPestana, esDelMes, filtrosActivos, guardarVista, leerVista,
     normalizar, ordenar, pasaFiltros, vistaDefault,
@@ -37,18 +36,16 @@ import './talentMovil.css';
 
 // Learnation Talent: el panel del rol `hiring` (postulaciones al puesto de
 // Asistente Administrativa y Personal). Corre sin MainLayout (ver App.jsx): es
-// su propia sub-app, con su dock propio — Inbox, Analyze, Winners, Stats,
-// Forms y Closers— y el orbe de Configuración (Clarity y la búsqueda) al final,
+// su propia sub-app, con su dock propio — Inbox, Analyze, Winners, Stats y
+// Forms— y el orbe de Configuración (Clarity y la búsqueda) al final,
 // junto a la sesión.
 //
 // El listado se pide entero una vez y todo lo demás —pestañas, búsqueda, filtros,
 // orden, grupos— se resuelve en el navegador (ver `lib/vista.js`).
 //
-// Closers (10/10/2026): la búsqueda de Closer de ventas (antes Postulaciones, una
-// pantalla del admin en /admin/postulaciones) vive acá desde que se retiró la vista
-// «Administración». Es una sección más del dock y sus pestañas van en la cabecera,
-// como las de Inbox o Stats; el contenido es el de Postulaciones tal cual (ver
-// PostulacionesCloser) y va fuera del `.dc-shell` (ver `hospeda` más abajo).
+// Closers: la búsqueda de Closer de ventas se elige con el desplegable Asistentes / Closers de
+// Inbox, Analyze, Winners y Stats. La sección «Closers» del dock (Postulaciones tal cual, desde el
+// 10/10/2026) se sacó el 27/11/2026: lo mismo ya se ve en esas cuatro secciones.
 
 const SECCIONES = [
     { id: 'pend', label: 'Inbox', Icono: Inbox },
@@ -56,7 +53,6 @@ const SECCIONES = [
     { id: 'fin', label: 'Winners', Icono: Trophy },
     { id: 'stats', label: 'Stats', Icono: BarChart3 },
     { id: 'forms', label: 'Forms', Icono: FileText },
-    { id: 'closers', label: 'Closers', Icono: Briefcase },
 ];
 
 const ES_TABLA = new Set(['pend', 'anal', 'fin']);
@@ -70,7 +66,7 @@ const SECCIONES_PUESTO = new Set(['pend', 'anal', 'fin', 'stats']);
 // no toca los ajustes de Talent ni elimina postulaciones: eso lo arma Mario.
 const SECCIONES_REVISOR = new Set(['pend', 'anal', 'fin', 'stats']);
 
-// `?s=closers` (el redirect de /admin/postulaciones) elige la sección con la que se entra.
+// `?s=` elige la sección con la que se entra; `?s=closers` (el redirect de /admin/postulaciones) entra al Inbox en Closers.
 const seccionDeEntrada = (s, esRevisor) => (
     SECCIONES.some((x) => x.id === s && (!esRevisor || SECCIONES_REVISOR.has(x.id))) ? s : 'pend'
 );
@@ -113,7 +109,7 @@ const HiringDashboardPage = () => {
     const [abierta, setAbierta] = useState(null);
     const [entradas, setEntradas] = useState(0);
     // Qué búsqueda mira el Inbox: Asistentes o Closers (ADR-W192). Se recuerda por navegador.
-    const [puestoElegido, setPuesto] = useState(leerPuesto);
+    const [puestoElegido, setPuesto] = useState(() => (params.get('s') === 'closers' ? 'closer' : leerPuesto()));
     const puesto = puestoElegido;
     const closers = useClosers();
     const buscador = useRef(null);
@@ -204,19 +200,13 @@ const HiringDashboardPage = () => {
     });
 
     // --- Lo que se ve ---
-    // Closers hospeda Postulaciones (Tailwind, paleta `dash-v6`): ese contenido va FUERA del
-    // `.dc-shell`, cuyo reset de botones e inputs y su exención del `!important` tipográfico global
-    // le cambiarían el look. El buscador de la cabecera tampoco va: busca entre las candidatas a
-    // Asistente, no entre los closers.
-    const hospeda = seccion === 'closers';
-    const visitoClosers = useRef(false);
-    if (hospeda) visitoClosers.current = true;
     const modoCloser = puesto === 'closer' && ES_TABLA.has(seccion);
     const statsCloser = puesto === 'closer' && seccion === 'stats';
-    // Closers y las Stats de closers son de Postulaciones (Tailwind): van fuera del `.dc-shell`.
-    const fuera = hospeda || statsCloser;
+    // Las Stats de closers son de Postulaciones (Tailwind, paleta `dash-v6`): van fuera del `.dc-shell`,
+    // cuyo reset de botones e inputs les cambiaría el look.
+    const fuera = statsCloser;
     const pestanaCloser = seccion === 'pend' ? pestanas.pendCloser : pestanas[`${seccion}Closer`];
-    const q = hospeda || modoCloser ? '' : query.trim();
+    const q = modoCloser ? '' : query.trim();
     const qCloser = modoCloser ? query.trim() : '';
     const enBusqueda = q.length > 0;
     const esTabla = !modoCloser && (enBusqueda || ES_TABLA.has(seccion));
@@ -344,9 +334,6 @@ const HiringDashboardPage = () => {
                 </div>
             </>
         );
-    } else if (hospeda) {
-        // Las pestañas que Postulaciones tenía en su menú inferior.
-        controles = <Pestanas lista={PESTANAS_CLOSER} actual={pestana} onElegir={(id) => setPestanas((prev) => ({ ...prev, closers: id }))} />;
     }
     const nf = filtrosActivos(cfg);
 
@@ -444,7 +431,6 @@ const HiringDashboardPage = () => {
                                 {!enBusqueda && seccion === 'forms' && formActivoNombre && (
                                     <p className="tl-sub">Búsqueda: <b>{formActivoNombre}</b></p>
                                 )}
-                                {hospeda && <p className="tl-sub">Búsqueda: <b>Closer de ventas</b></p>}
                             </div>
                         </div>
                         <div className="tl-tope-der">
@@ -586,17 +572,9 @@ const HiringDashboardPage = () => {
                 />
             </div>
 
-            {/* Closers, una vez abierta, queda montada y escondida al pasar a otra sección o pestaña:
-                volver no recarga (PostulacionesCloser conserva cada pestaña con PanelesConservados). */}
             {statsCloser && (
                 <main className="tl-hospedado dash-v6 text-base">
                     <PostulacionesStatsTab />
-                </main>
-            )}
-
-            {visitoClosers.current && (
-                <main className="tl-hospedado dash-v6 text-base" hidden={!hospeda} style={hospeda ? undefined : { display: 'none' }}>
-                    <PostulacionesCloser pestana={pestanas.closers} />
                 </main>
             )}
 
