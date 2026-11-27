@@ -153,7 +153,7 @@ const OperadorEspacioPage = () => {
     });
 
     return (
-        <div className="operador-espacio">
+        <div className={`operador-espacio${seccion === 'marketing' ? ' operador-espacio--marketing' : ''}`}>
             <div className="operador-espacio-wrap">
                 {seccion !== 'marketing' && <div className="dc-shell dc-shell--embebido">
                     <header className="tope">

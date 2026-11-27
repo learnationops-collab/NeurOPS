@@ -48,3 +48,9 @@
 @media (max-width:440px){
   .operador-espacio .dc-shell .tab{padding:0 10px;font-size:13px}
 }
+
+/* Learnation Marketing (ADR-W278): un solo dock. Se va la isla del centro (la que solo decía «Marketing») y
+   las de los costados quedan a la altura del dock del artifact; PanelMarketing mide el corrimiento (--mk-dy). */
+.operador-espacio--marketing{padding-bottom:0}
+.operador-espacio--marketing .dc-shell .dock-barra > .dock--centro{display:none}
+.operador-espacio--marketing .dc-shell .dock-barra{transform:translateY(var(--mk-dy,0px));transition:transform .3s cubic-bezier(.32,.72,0,1)}
