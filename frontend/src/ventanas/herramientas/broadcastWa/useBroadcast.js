@@ -67,11 +67,12 @@ export function useBroadcast() {
     const crearPlantilla = (datos) => api.post('/whatsapp/plantillas', datos).then((r) => { pedirPlantillas(); return r.data; });
     const borrarPlantilla = (nombre) => api.delete(`/whatsapp/plantillas/${encodeURIComponent(nombre)}`).then(() => pedirPlantillas());
     const respuestas = (nombre) => api.get(`/whatsapp/plantillas/${encodeURIComponent(nombre)}/respuestas`).then((r) => r.data);
+    const guardarConfig = (nombre, datos) => api.put(`/whatsapp/plantillas/${encodeURIComponent(nombre)}/config`, datos).then((r) => r.data);
     const guardarRespuesta = (nombre, boton, datos) => api
         .put(`/whatsapp/plantillas/${encodeURIComponent(nombre)}/respuestas/${encodeURIComponent(boton)}`, datos).then((r) => r.data);
 
     return {
         plantillas, todas, historial, error, mandando, revisar, enviar, frenar, numeros, recargar: pedirHistorial, mensaje,
-        recargarPlantillas: pedirPlantillas, crearPlantilla, borrarPlantilla, respuestas, guardarRespuesta,
+        recargarPlantillas: pedirPlantillas, crearPlantilla, borrarPlantilla, respuestas, guardarRespuesta, guardarConfig,
     };
 }

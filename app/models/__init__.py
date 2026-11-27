@@ -41,7 +41,7 @@ from .playbook import (
     PlaybookLessonProgress, PlaybookCompletion, QUESTION_TYPES
 )
 from .instagram import InstagramWebhookEvento
-from .whatsapp import WhatsappWebhookEvento, WaEnvio, WaRespuestaBoton, WaRespuestaPendiente
+from .whatsapp import WhatsappWebhookEvento, WaEnvio, WaPlantillaConfig, WaRespuestaBoton, WaRespuestaPendiente
 from .whatsapp_taller import WaPlanTaller, WaPasoTaller
 from .ai_usage import AiUsage
 from .intento_limitado import IntentoLimitado

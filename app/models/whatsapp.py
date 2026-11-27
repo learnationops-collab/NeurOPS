@@ -88,6 +88,19 @@ class WaRespuestaBoton(db.Model):
     __table_args__ = (db.UniqueConstraint('plantilla', 'boton', name='uq_wa_respuestas_boton'),)
 
 
+class WaPlantillaConfig(db.Model):
+    """Lo que vale para todos los botones de una plantilla (ADR-W260). Con `opcion_unica`, después de elegir un botón
+    de un mensaje (la plantilla de un envío o una de sus respuestas), tocar otro de ese mismo mensaje no sigue: sale
+    `texto_repetida` ({opcion} = lo que eligió)."""
+    __tablename__ = 'wa_plantillas_config'
+
+    id = db.Column(db.Integer, primary_key=True)
+    plantilla = db.Column(db.String(120), nullable=False, unique=True)
+    opcion_unica = db.Column(db.Boolean, nullable=False, default=False, server_default=db.false())
+    texto_repetida = db.Column(db.Text, nullable=True)
+    actualizado_en = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 class WaRespuestaPendiente(db.Model):
     """La respuesta a un botón que espera su demora (`WaRespuestaBoton.demora_segundos`). La manda el reloj del
     motor cuando llega `enviar_en` y se borra. Una por contacto: un toque nuevo reemplaza la que esperaba."""

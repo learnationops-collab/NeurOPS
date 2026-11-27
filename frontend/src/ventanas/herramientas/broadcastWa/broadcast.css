@@ -68,3 +68,8 @@
 .bw-campo{display:grid;gap:6px;font-size:12.5px;font-weight:600;color:var(--ln-text-in)}
 .bw-campo .bw-fila>.ui-input,.bw-fila>.ui-input{flex:1;min-width:120px}
 .bw-cuenta{width:40px;text-align:right;font-variant-numeric:tabular-nums}
+/* Opción única y botón con link en las respuestas (ADR-W260). */
+.bw-unica{padding:10px 12px;border:1px solid var(--ln-border-subtle);border-radius:12px}
+.bw-unica .bw-fila>span{flex:1;min-width:0}
+.bw-boton{gap:6px}
+.bw-fila>.ui-input[type="number"]{flex:0 0 72px;min-width:0}

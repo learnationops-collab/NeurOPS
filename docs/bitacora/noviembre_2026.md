@@ -1249,3 +1249,8 @@
 ### 27/11/2026 · El reloj del motor arranca solo después de un deploy
 - Arrancaba recién con el primer webhook de Instagram o WhatsApp: el paso de prueba del broadcast del 26/11 quedó esperando a las 03:00. Ahora el scheduler lo arranca (y lo despierta) cada 5 minutos desde el proceso líder ([reminder_scheduler.py](../../app/services/reminder_scheduler.py)).
 - Primer broadcast de prueba de un taller desde producción: `hello_world` a un número del equipo, entregado.
+
+### 27/11/2026 · Respuestas por botón de WhatsApp: botón con link, opción única y espera en segundos (ADR-W260)
+- Un botón de la respuesta puede abrir un link (por ejemplo, el Drive de un recurso): «Al tocarlo › Abre un link» ([Respuestas.jsx](../../frontend/src/ventanas/herramientas/broadcastWa/Respuestas.jsx), [respuestas.py](../../app/whatsapp/respuestas.py)).
+- «Opción única» por plantilla: si ya eligió un botón de un mensaje, los otros contestan «Ya elegiste…» (texto editable).
+- La espera de la respuesta va en segundos o minutos; las cortas salen a su hora sin esperar el reloj. Migración `e6a8c0d2f4b5`.
