@@ -60,13 +60,14 @@ const SECCIONES = [
 
 const ES_TABLA = new Set(['pend', 'anal', 'fin']);
 
-// El rol `hiring_closers` (ADR-W193) ve Talent solo con la búsqueda de Closer: el Inbox (fijo en
-// Closers) y la sección Closers. Nada de Asistentes: ni sus secciones, ni sus pedidos, ni los ajustes.
-const SECCIONES_SOLO_CLOSERS = new Set(['pend', 'closers']);
+// El rol `hiring_closers` (Marlon, dirección comercial; ADR-W193, ampliado el 27/11/2026) revisa y decide
+// como Mario en Inbox (Asistentes y Closers), Analyze, Winners y Stats. No ve Forms ni la sección Closers,
+// no toca los ajustes de Talent ni elimina postulaciones: eso lo arma Mario.
+const SECCIONES_REVISOR = new Set(['pend', 'anal', 'fin', 'stats']);
 
 // `?s=closers` (el redirect de /admin/postulaciones) elige la sección con la que se entra.
-const seccionDeEntrada = (s, soloClosers) => (
-    SECCIONES.some((x) => x.id === s && (!soloClosers || SECCIONES_SOLO_CLOSERS.has(x.id))) ? s : 'pend'
+const seccionDeEntrada = (s, esRevisor) => (
+    SECCIONES.some((x) => x.id === s && (!esRevisor || SECCIONES_REVISOR.has(x.id))) ? s : 'pend'
 );
 
 const Pestanas = ({ lista, actual, onElegir, cuentaDe }) => (
@@ -85,9 +86,9 @@ const HiringDashboardPage = () => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
     const [params, setParams] = useSearchParams();
-    const soloClosers = user?.role === 'hiring_closers';
+    const esRevisor = user?.role === 'hiring_closers';
 
-    const [seccion, setSeccion] = useState(() => seccionDeEntrada(params.get('s'), soloClosers));
+    const [seccion, setSeccion] = useState(() => seccionDeEntrada(params.get('s'), esRevisor));
     const [pestanas, setPestanas] = useState({ pend: 'online', anal: 'seleccionada', fin: 'testeo', closers: 'pendientes', pendCloser: 'revisar' });
     // Analyze: «Actuales» (postularon este mes) o «Antiguas» (antes). Arranca siempre en Actuales.
     const [periodo, setPeriodo] = useState('actuales');
@@ -108,7 +109,7 @@ const HiringDashboardPage = () => {
     const [entradas, setEntradas] = useState(0);
     // Qué búsqueda mira el Inbox: Asistentes o Closers (ADR-W192). Se recuerda por navegador.
     const [puestoElegido, setPuesto] = useState(leerPuesto);
-    const puesto = soloClosers ? 'closer' : puestoElegido;
+    const puesto = puestoElegido;
     const closers = useClosers();
     const buscador = useRef(null);
     const botonVista = useRef(null);
@@ -147,12 +148,10 @@ const HiringDashboardPage = () => {
     }, []);
 
     useEffect(() => {
-        // Sin acceso a Asistentes no se piden: el servidor las negaría (403).
-        if (soloClosers) { setCargando(false); return; }
         cargar();
         cargarPesos();
         api.get('/hiring/config').then((res) => setBusquedaCfg(res.data)).catch(() => setBusquedaCfg(null));
-    }, [cargar, cargarPesos, soloClosers]);
+    }, [cargar, cargarPesos]);
 
     // La `s` solo dice dónde se entra: ya leída, se saca de la URL (con `replace`, sin sumar un paso
     // al historial). La sección no vive en la URL, y si quedaba, recargar después de pasar a Inbox
@@ -193,7 +192,7 @@ const HiringDashboardPage = () => {
     // ajustes de la herramienta (Clarity y búsqueda), que también abre el orbe del dock.
     const gruposDeSesion = armarMenuSesion({
         user, navigate, logout,
-        acciones: soloClosers ? [] : [{ id: 'talent', label: 'Ajustes de Talent', Icono: SlidersHorizontal, onClick: () => setConfig('clarity') }],
+        acciones: esRevisor ? [] : [{ id: 'talent', label: 'Ajustes de Talent', Icono: SlidersHorizontal, onClick: () => setConfig('clarity') }],
         configuracion: { onClick: () => abrirConfiguracion() },
         // El admin aterriza en Operaciones desde que se retiró su panel (/admin/ventas, 10/10/2026).
         ir: user?.role === 'admin' ? [{ id: 'operaciones', label: 'Volver a Operaciones', Icono: ArrowLeft, onClick: () => navigate('/ops/dashboard') }] : [],
@@ -341,7 +340,7 @@ const HiringDashboardPage = () => {
         fin: c.fin ? [{ tipo: 'cuenta', texto: String(c.fin), titulo: `${c.fin} finalistas` }] : [],
     };
     const secciones = SECCIONES
-        .filter((s) => !soloClosers || SECCIONES_SOLO_CLOSERS.has(s.id))
+        .filter((s) => !esRevisor || SECCIONES_REVISOR.has(s.id))
         .map((s) => ({ ...s, marcas: marcas[s.id] || [] }));
 
     const vacio = (() => {
@@ -402,7 +401,7 @@ const HiringDashboardPage = () => {
                             <IsotipoTalent />
                             <div className="tl-tit">
                                 <h1 className="t-h1">{titulo}</h1>
-                                {seccion === 'pend' && !enBusqueda && !soloClosers && (
+                                {seccion === 'pend' && !enBusqueda && (
                                     <MenuPuesto valor={puesto} cuentas={{ asistente: c.pend, closer: closers.porRevisar.length }}
                                         onCambiar={(v) => { setPuesto(v); guardarPuesto(v); setQuery(''); }} />
                                 )}
@@ -506,7 +505,7 @@ const HiringDashboardPage = () => {
                                         return nueva;
                                     })}
                                     onAbrir={abrir}
-                                    onEliminar={eliminar}
+                                    onEliminar={esRevisor ? undefined : eliminar}
                                     onLimpiarFiltros={() => cambiarVista({ ...cfg, filtros: vistaDefault().filtros })}
                                     vacio={vacio}
                                 />
@@ -527,7 +526,7 @@ const HiringDashboardPage = () => {
                     ariaLabel="Secciones de Learnation Talent"
                     despues={(
                         <>
-                            {soloClosers ? (
+                            {esRevisor ? (
                                 <span className="tl-orb" aria-hidden="true"><IsotipoTalent tam={50} id="tlGDock" className="" etiqueta="" /></span>
                             ) : (
                                 <button
@@ -543,7 +542,7 @@ const HiringDashboardPage = () => {
                             )}
                             <MenuSesion
                                 nombre={user?.name || user?.username || ''}
-                                rol={rotuloDeSesion(user, soloClosers ? 'Hiring · Closers' : 'Hiring')}
+                                rol={rotuloDeSesion(user, esRevisor ? 'Hiring · Revisión' : 'Hiring')}
                                 grupos={gruposDeSesion}
                             />
                         </>
@@ -570,7 +569,7 @@ const HiringDashboardPage = () => {
                 />
             )}
 
-            {config && !soloClosers && (
+            {config && !esRevisor && (
                 <ConfigTalent
                     tab={config}
                     onTab={setConfig}

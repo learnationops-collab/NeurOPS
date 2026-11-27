@@ -29,7 +29,7 @@ export const ROLES = [
     { id: 'setter', label: 'Setter', plural: 'Setters', desc: 'Calificación de leads' },
     { id: 'triage', label: 'Triage', plural: 'Triage', desc: 'Confirma y cualifica las llamadas' },
     { id: 'hiring', label: 'Hiring', plural: 'Hiring', desc: 'Asistente de contratación' },
-    { id: 'hiring_closers', label: 'Hiring · Closers', plural: 'Hiring · Closers', desc: 'Revisa solo las postulaciones de closer' },
+    { id: 'hiring_closers', label: 'Hiring · Closers', plural: 'Hiring · Closers', desc: 'Revisa y decide en Inbox, Analyze, Winners y Stats, sin Forms ni ajustes' },
 ];
 const rotulo = (id) => ROLES.find(r => r.id === id)?.label || id;
 const rolesDe = (u) => (u.roles && u.roles.length ? u.roles : [u.role]);

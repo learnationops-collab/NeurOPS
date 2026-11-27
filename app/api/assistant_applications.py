@@ -15,7 +15,7 @@ from flask import Blueprint, request, jsonify
 from flask_login import login_required
 
 from app import db
-from app.decorators import hiring_required
+from app.decorators import hiring_closers_required, hiring_required
 from app.models import AssistantApplication, AssistantClarityWeight
 from app.models.assistant_application import (
     BLOQUES, CAMPOS_FORMULARIO, ESTADOS, ETIQUETAS_PREGUNTA, OPCIONALES, VERIFICADO_OK, pais_limpio,
@@ -101,7 +101,7 @@ def _preguntas_filtro():
 
 @bp.route('/assistant-applications', methods=['GET'])
 @login_required
-@hiring_required
+@hiring_closers_required
 def listar_assistant_applications():
     filtro = request.args.get('filtro', 'sin_analizar')
     if filtro not in FILTROS_VALIDOS:
@@ -161,7 +161,7 @@ def listar_assistant_applications():
 
 @bp.route('/assistant-applications/<int:app_id>', methods=['GET'])
 @login_required
-@hiring_required
+@hiring_closers_required
 def ver_assistant_application(app_id):
     app_row = AssistantApplication.query.get_or_404(app_id)
     weights = _weights_map()
@@ -203,7 +203,7 @@ def eliminar_assistant_application(app_id):
 
 @bp.route('/assistant-applications/<int:app_id>/estado', methods=['POST'])
 @login_required
-@hiring_required
+@hiring_closers_required
 def decidir_assistant_application(app_id):
     """Veredicto del revisor: seleccionada / en_reserva / testeo / descartado /
     baja. `valor: null` lo deshace y la postulación vuelve a Pendientes."""
@@ -235,7 +235,7 @@ def decidir_assistant_application(app_id):
 
 @bp.route('/assistant-applications/clarity-weights', methods=['GET'])
 @login_required
-@hiring_required
+@hiring_closers_required
 def ver_clarity_weights():
     # Siempre los criterios de la rúbrica vigente, en su orden, con el rótulo y la
     # explicación del código; del guardado sale solo el peso.
@@ -337,7 +337,7 @@ def _tramo(valor, tramos):
 
 @bp.route('/assistant-applications/stats', methods=['GET'])
 @login_required
-@hiring_required
+@hiring_closers_required
 def stats_assistant_applications():
     """Panorama del embudo + comparación entre países (los candidatos vienen de
     Argentina, Venezuela y Brasil y son perfiles y pretensiones distintas).

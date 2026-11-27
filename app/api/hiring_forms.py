@@ -17,7 +17,7 @@ from flask import Blueprint, jsonify, request
 from flask_login import current_user, login_required
 
 from app import db
-from app.decorators import hiring_required
+from app.decorators import hiring_closers_required, hiring_required
 from app.models import AssistantApplication, HiringConfig, HiringForm
 from app.services import hiring_forms as hf
 
@@ -230,7 +230,7 @@ def borrar_form(form_id):
 
 @bp.route('/hiring/config', methods=['GET'])
 @login_required
-@hiring_required
+@hiring_closers_required
 def ver_config():
     return jsonify(HiringConfig.vigente().to_dict()), 200
 
