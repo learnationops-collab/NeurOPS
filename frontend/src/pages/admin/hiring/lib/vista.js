@@ -98,6 +98,25 @@ export const haceTxt = (h) => {
     return `Hace ${Math.floor(h / 24)} días`;
 };
 
+// --- Período de Analyze: «Actuales» postularon este mes; «Antiguas», antes ---
+
+export const PERIODOS = [
+    { id: 'actuales', label: 'Actuales', c: 'var(--success)' },
+    { id: 'antiguas', label: 'Antiguas', c: 'var(--idle)' },
+];
+
+/** ¿Postuló en el mes calendario en curso (hora local)? Sin fecha cuenta como antigua. */
+export const esDelMes = (p, ahora = hoy()) => {
+    const iso = p.created_at;
+    if (!iso) return false;
+    const t = Date.parse(iso.endsWith('Z') || /[+-]\d\d:\d\d$/.test(iso) ? iso : `${iso}Z`);
+    if (Number.isNaN(t)) return false;
+    const d = new Date(ahora);
+    return t >= new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+};
+
+export const enPeriodo = (p, periodo, ahora = hoy()) => (periodo === 'antiguas' ? !esDelMes(p, ahora) : esDelMes(p, ahora));
+
 export const fechaCorta = (iso) => {
     if (!iso) return '';
     const d = new Date(iso.endsWith('Z') ? iso : `${iso}Z`);

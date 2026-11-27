@@ -20,13 +20,14 @@ import ConfigTalent from './components/ConfigTalent';
 import HiringForms from './components/forms/HiringForms';
 import PanelesConservados from '../../../components/ui/PanelesConservados';
 import { IsotipoTalent } from './components/Piezas';
+import { Select } from '../../../components/standard';
 import AlDia from './components/AlDia';
 import InboxCloser, { PESTANAS_INBOX_CLOSER } from './components/closers/InboxCloser';
 import MenuPuesto from './components/closers/MenuPuesto';
 import { guardarPuesto, leerPuesto, useClosers } from './lib/closers';
 import PostulacionesCloser, { PESTANAS_CLOSER } from '../postulaciones/PostulacionesCloser';
 import {
-    PESTANAS, agrupar, colsVisibles, coincide, cuentas as contar, enPestana, filtrosActivos, guardarVista, leerVista,
+    PERIODOS, PESTANAS, agrupar, colsVisibles, coincide, cuentas as contar, enPeriodo, enPestana, filtrosActivos, guardarVista, leerVista,
     normalizar, ordenar, pasaFiltros, vistaDefault,
 } from './lib/vista';
 import '../../comercial/comercial.css';
@@ -88,6 +89,8 @@ const HiringDashboardPage = () => {
 
     const [seccion, setSeccion] = useState(() => seccionDeEntrada(params.get('s'), soloClosers));
     const [pestanas, setPestanas] = useState({ pend: 'online', anal: 'seleccionada', fin: 'testeo', closers: 'pendientes', pendCloser: 'revisar' });
+    // Analyze: «Actuales» (postularon este mes) o «Antiguas» (antes). Arranca siempre en Actuales.
+    const [periodo, setPeriodo] = useState('actuales');
     const [statsTab, setStatsTab] = useState('panorama');
     const [statsSeg, setStatsSeg] = useState('gen');
     const [query, setQuery] = useState('');
@@ -215,8 +218,11 @@ const HiringDashboardPage = () => {
     const base = useMemo(() => {
         if (enBusqueda) return todas.filter((p) => coincide(p, q));
         if (!ES_TABLA.has(seccion)) return [];
-        return todas.filter((p) => enPestana(p, seccion, pestana));
-    }, [todas, enBusqueda, q, seccion, pestana]);
+        return todas.filter((p) => enPestana(p, seccion, pestana) && (seccion !== 'anal' || enPeriodo(p, periodo)));
+    }, [todas, enBusqueda, q, seccion, pestana, periodo]);
+
+    // Las cuentas de las pestañas de Analyze son las del período elegido.
+    const cPeriodo = useMemo(() => contar(todas.filter((p) => enPeriodo(p, periodo))), [todas, periodo]);
 
     const filas = useMemo(() => ordenar(base.filter((p) => pasaFiltros(p, cfg.filtros)), cfg.orden), [base, cfg.filtros, cfg.orden]);
     const grupos = useMemo(() => agrupar(filas, cfg.agrupar), [filas, cfg.agrupar]);
@@ -234,7 +240,7 @@ const HiringDashboardPage = () => {
     const modoDescarte = !enBusqueda && ((seccion === 'anal' && pestana === 'descartado') || (seccion === 'fin' && pestana === 'baja'));
 
     // Al cambiar de sección o de pestaña las barritas de la tabla vuelven a crecer.
-    useEffect(() => { setEntradas((n) => n + 1); }, [seccion, pestana, enBusqueda]);
+    useEffect(() => { setEntradas((n) => n + 1); }, [seccion, pestana, enBusqueda, periodo]);
     useEffect(() => { if (!esTabla) setMenuAbierto(false); }, [esTabla]);
 
     const elegirSeccion = (id) => {
@@ -294,7 +300,20 @@ const HiringDashboardPage = () => {
     } else if (!enBusqueda && ES_TABLA.has(seccion)) {
         // Híbridos casi nunca tiene a nadie: la pestaña aparece solo si hay alguna (o si es la abierta).
         const lista = PESTANAS[seccion].filter((t) => t.id !== 'hibrido' || c.hibrido > 0 || pestana === 'hibrido');
-        controles = <Pestanas lista={lista} actual={pestana} onElegir={(id) => setPestanas((prev) => ({ ...prev, [seccion]: id }))} cuentaDe={(id) => c[id === 'incompletas' ? 'incompletas' : id]} />;
+        const cs = seccion === 'anal' ? cPeriodo : c;
+        const pestanasSec = <Pestanas lista={lista} actual={pestana} onElegir={(id) => setPestanas((prev) => ({ ...prev, [seccion]: id }))} cuentaDe={(id) => cs[id === 'incompletas' ? 'incompletas' : id]} />;
+        controles = seccion !== 'anal' ? pestanasSec : (
+            <>
+                <Select className="tl-periodo" size="sm" label="Período de postulación" value={periodo} onChange={setPeriodo}
+                    options={PERIODOS.map((o) => ({
+                        value: o.id,
+                        label: `${o.label} · ${todas.filter((p) => p.veredicto === pestana && enPeriodo(p, o.id)).length}`,
+                        icon: <i className="tl-periodo-punto" />,
+                        iconColor: o.c,
+                    }))} />
+                {pestanasSec}
+            </>
+        );
     } else if (!enBusqueda && seccion === 'stats') {
         controles = (
             <>

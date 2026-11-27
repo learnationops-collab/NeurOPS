@@ -624,3 +624,9 @@ body.tl-redim *{cursor:col-resize!important;user-select:none!important}
 .talent .tl-antiguos:hover{color:var(--text-muted)}
 .talent .tl-antiguos[aria-pressed="true"]{color:var(--text-on-surface);background:var(--mat-1)}
 .talent .tl-antiguos:focus-visible{outline:2px solid var(--brand-secondary);outline-offset:2px}
+
+/* Analyze: «Actuales / Antiguas» (postularon este mes o antes), a la izquierda de las pestañas. */
+.talent .tl-periodo.ui-select{height:46px;padding:0 14px 0 12px;border-radius:999px;font-weight:700;font-size:13.5px;
+  background:color-mix(in srgb,var(--bg-element) 80%,transparent);border:1px solid var(--border-main)}
+.talent .tl-periodo.ui-select:hover{border-color:var(--border-control,var(--border-main))}
+.tl-periodo-punto{display:block;width:8px;height:8px;border-radius:50%;background:currentColor;box-shadow:0 0 10px -1px currentColor}
