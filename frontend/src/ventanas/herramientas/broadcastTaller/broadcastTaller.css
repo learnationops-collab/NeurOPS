@@ -81,3 +81,41 @@
 .bt-tel{font-size:12px;font-variant-numeric:tabular-nums}
 .bt-link{font-weight:600;color:var(--ln-info,#3b7dd8)}
 .bt-rama .bt-s{font-size:11px}
+
+/* Lienzo del flujo, como ManyChat (ADR-W262): filas por paso, lo que sale de los botones crece a la derecha. */
+.lz-caja{position:relative;height:min(640px,calc(100vh - 300px));min-height:380px;overflow:auto;border:1px solid var(--ln-border-subtle);
+  border-radius:16px;cursor:grab;touch-action:none;
+  background:radial-gradient(circle,color-mix(in srgb,var(--ln-text-faint,#8a8ea0) 28%,transparent) 1px,transparent 1px) 0 0/18px 18px,var(--ln-inset-bg)}
+.lz-caja:active{cursor:grabbing}
+.lz-zoom{position:sticky;top:10px;left:10px;z-index:2;display:inline-flex;align-items:center;gap:2px;margin:10px;padding:3px;
+  border:1px solid var(--ln-border-subtle);border-radius:10px;background:var(--ln-popover-bg,var(--bg-flotante));cursor:default}
+.lz-zoom button{display:grid;place-items:center;width:26px;height:26px;border:0;border-radius:7px;background:transparent;color:var(--ln-text-in);cursor:pointer}
+.lz-zoom button:disabled{opacity:.35;cursor:default}
+.lz-zoom svg{width:14px;height:14px}
+.lz-zoom span{min-width:42px;text-align:center;font-size:11.5px;font-variant-numeric:tabular-nums;color:var(--ln-text-muted)}
+.lz-mundo{position:relative;display:grid;gap:34px;align-content:start;width:max-content;min-width:100%;padding:4px 40px 40px 24px}
+.lz-cables{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+.lz-fila{position:relative;display:grid;gap:8px;padding-top:10px;border-top:1px dashed color-mix(in srgb,var(--ln-text-faint,#8a8ea0) 30%,transparent)}
+.lz-cuando{font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#7D63E6}
+.lz-cols{display:flex;align-items:flex-start;gap:90px}
+.lz-col{display:grid;gap:18px;align-content:start}
+.lz-nodo{position:relative;display:grid;gap:6px;width:240px;padding:10px;border:1px solid var(--ln-border-subtle);border-radius:14px;
+  text-align:left;color:inherit;font:inherit;font-size:12px;background:var(--ln-popover-bg,var(--bg-flotante));cursor:pointer}
+.lz-nodo--on{border-color:var(--ln-brand,#ff3d9a);box-shadow:0 0 0 1px var(--ln-brand,#ff3d9a)}
+.lz-nodo--vacio{border-style:dashed;background:transparent}
+.lz-nodo b{font-size:12.5px;color:var(--ln-text-in)}
+.lz-tipo{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+.lz-tipo--paso{color:#7D63E6}.lz-tipo--resp{color:var(--ln-info,#3b7dd8)}.lz-tipo--link{color:#1f9d6b}
+.lz-burbuja{padding:7px 9px;border-radius:4px 10px 10px 10px;background:#dcf8c6;color:#1c2033;font-size:11.5px;line-height:1.4;white-space:pre-line}
+.lz-bts{display:grid;gap:4px}
+.lz-bt{position:relative;padding:5px 8px;border-radius:8px;text-align:center;font-size:11px;font-weight:700;color:#0a7cc1;background:#fff}
+.lz-bt--link{color:#1f9d6b}
+.lz-bt--ir{cursor:pointer}
+.lz-bt--ir:hover{box-shadow:0 0 0 2px color-mix(in srgb,var(--ln-info,#3b7dd8) 50%,transparent)}
+.lz-s{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--ln-text-muted)}
+.lz-s svg{width:12px;height:12px}
+.lz-mas{display:flex;align-items:center;gap:6px;justify-self:start;padding:12px 16px;border:1.5px dashed var(--ln-border-subtle);border-radius:14px;
+  font-size:12.5px;font-weight:600;color:var(--ln-text-muted);background:transparent;cursor:pointer}
+.lz-mas svg{width:14px;height:14px}
+.bt-cuerpo-panel{display:grid;gap:4px;justify-items:start}
+.bt-flujo>.bt-editor{max-height:min(640px,calc(100vh - 300px));overflow:auto}

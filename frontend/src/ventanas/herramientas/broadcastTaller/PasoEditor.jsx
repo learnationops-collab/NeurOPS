@@ -1,9 +1,9 @@
-// Un paso del flujo: cuándo sale, qué plantilla, qué va en cada variable, a quién y a quién no. Las ramas (qué pasa
-// al tocar cada botón) son las respuestas de la plantilla: se editan acá mismo con el editor de Plantillas.
+// Un paso del flujo: cuándo sale, qué plantilla, qué va en cada variable, a quién y a quién no. Lo que pasa al tocar
+// cada botón son nodos propios del lienzo (ADR-W262): acá solo se listan para abrirlos y va la opción única.
 import { Trash2 } from 'lucide-react';
 import { Button, Input, Segmented, Select, Stepper } from '../../../components/standard';
 import { partesDe } from '../broadcastWa/useBroadcast';
-import Respuestas from '../broadcastWa/Respuestas';
+import { OpcionUnica } from '../broadcastWa/Respuestas';
 import { A_QUIEN, VARIABLES, variablesDe } from './useBroadcastTaller';
 
 const MODOS = [
@@ -72,7 +72,7 @@ function Variables({ paso, plantilla, cambiar }) {
     );
 }
 
-export default function PasoEditor({ paso, plantillas, botonesDelFlujo, wa, cambiar, quitar, onReglas }) {
+export default function PasoEditor({ paso, plantillas, botonesDelFlujo, wa, config, cambiar, quitar, onBoton, onConfig }) {
     const bloqueado = paso.estado === 'lanzado' || paso.estado === 'vencido';
     const plantilla = plantillas.find((p) => p.name === paso.plantilla);
     const { botones } = partesDe(plantilla);
@@ -103,7 +103,7 @@ export default function PasoEditor({ paso, plantillas, botonesDelFlujo, wa, camb
                         const p = plantillas.find((x) => x.name === v);
                         cambiar({ plantilla: v, idioma: p?.language || 'es', parametros: [] });
                     }} />
-                <small className="bt-s">Un paso es un envío programado y va con plantilla. Lo que sale justo al tocar un botón o al abrir un link se arma en las ramas del paso anterior.</small>
+                <small className="bt-s">Un paso es un envío programado y va con plantilla. Lo que sale justo al tocar un botón o al abrir un link se arma en los nodos que salen de sus botones, en el lienzo.</small>
             </div>
             {plantilla && <Variables paso={paso} plantilla={plantilla} cambiar={cambiar} />}
             <div className="bt-campo">
@@ -127,10 +127,12 @@ export default function PasoEditor({ paso, plantillas, botonesDelFlujo, wa, camb
             </label>
             {plantilla && botones.length > 0 && (
                 <div className="bt-campo">
-                    <span>Ramas · qué pasa al tocar cada botón</span>
-                    <small className="bt-s">Vale para todos los envíos de {plantilla.name}. Poné una etiqueta para filtrar los pasos siguientes.</small>
-                    <Respuestas key={plantilla.name} nombre={plantilla.name} botones={botones} datos={wa}
-                        onCambio={(lista) => onReglas?.(plantilla.name, lista)} />
+                    <span>Botones de la plantilla</span>
+                    <div className="bt-fila">
+                        {botones.map((b) => <Button key={b} size="sm" onClick={() => onBoton(b)}>«{b}» →</Button>)}
+                    </div>
+                    <small className="bt-s">Tocá un botón (acá o en el lienzo) para armar qué pasa al tocarlo. Vale para todos los envíos de {plantilla.name}.</small>
+                    {config && <OpcionUnica key={plantilla.name} nombre={plantilla.name} inicial={config} datos={wa} onCambio={onConfig} />}
                 </div>
             )}
         </div>

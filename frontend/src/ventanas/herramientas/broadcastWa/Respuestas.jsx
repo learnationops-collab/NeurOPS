@@ -25,14 +25,14 @@ export function resumen(r, asignables = []) {
 }
 
 /** Opción única: después de elegir un botón de un mensaje, los otros contestan «ya elegiste». Vale para la plantilla. */
-function OpcionUnica({ nombre, inicial, datos }) {
+export function OpcionUnica({ nombre, inicial, datos, onCambio }) {
     const [c, setC] = useState(inicial);
     const [guardando, setGuardando] = useState(false);
     const guardar = (cambios) => {
         const nuevo = { ...c, ...cambios };
         setC(nuevo);
         setGuardando(true);
-        return datos.guardarConfig(nombre, nuevo).then(setC)
+        return datos.guardarConfig(nombre, nuevo).then((guardada) => { setC(guardada); onCambio?.(guardada); })
             .catch((e) => toast(datos.mensaje(e, 'No se pudo guardar'), 'error'))
             .finally(() => setGuardando(false));
     };
@@ -54,7 +54,12 @@ function OpcionUnica({ nombre, inicial, datos }) {
     );
 }
 
-function Editor({ nombre, boton, botones, inicial, asignables, datos, onGuardada }) {
+/**
+ * La regla de un botón. `parte`: 'todo' (la lista de Plantillas), 'respuesta' (el nodo de la respuesta en el lienzo
+ * del taller: sin «al abrir el link», que es su propio nodo y se abre con `onAbrirDespues`) o 'despues' (solo el
+ * mensaje que sale al abrir su link). Las tres guardan la regla entera.
+ */
+export function Editor({ nombre, boton, botones, inicial, asignables, datos, onGuardada, parte = 'todo', onAbrirDespues }) {
     const [r, setR] = useState({ ...VACIA, ...inicial, etiqueta: inicial?.etiqueta || '' });
     const [guardando, setGuardando] = useState(false);
     const cambiar = (campo, valor) => setR((x) => ({ ...x, [campo]: valor }));
@@ -78,6 +83,19 @@ function Editor({ nombre, boton, botones, inicial, asignables, datos, onGuardada
     const linkMal = r.botones.some((b) => esLink(b) && (!URL_VALIDA.test(b.url.trim())
         || (b.despues && b.despues.url && !URL_VALIDA.test(b.despues.url.trim()))
         || (b.despues && b.despues.url && !(b.despues.titulo || '').trim())));
+    const iLink = r.botones.findIndex(esLink);
+    if (parte === 'despues') {
+        return (
+            <div className="bw-cuerpo">
+                {iLink < 0
+                    ? <span className="bw-s">Este botón no tiene link: agregalo en su respuesta.</span>
+                    : <Despues valor={r.botones[iLink].despues} onChange={(d) => cambiarBoton(iLink, 'despues', d)} />}
+                <div className="bw-fila">
+                    <Button variant="primary" disabled={guardando || linkMal || iLink < 0} onClick={guardar}>Guardar</Button>
+                </div>
+            </div>
+        );
+    }
     return (
         <div className="bw-cuerpo">
             <label className="bw-campo">
@@ -100,7 +118,9 @@ function Editor({ nombre, boton, botones, inicial, asignables, datos, onGuardada
                             <>
                                 <Input value={b.url} placeholder="https://drive.google.com/…" aria-label="Link del botón" invalid={linkMal}
                                     onChange={(e) => cambiarBoton(i, 'url', e.target.value)} />
-                                <Despues valor={b.despues} onChange={(d) => cambiarBoton(i, 'despues', d)} />
+                                {parte === 'respuesta'
+                                    ? <LinkButton icon={<Plus />} onClick={onAbrirDespues}>{b.despues ? 'Ver el mensaje al abrir el link' : 'Mensaje al abrir el link'}</LinkButton>
+                                    : <Despues valor={b.despues} onChange={(d) => cambiarBoton(i, 'despues', d)} />}
                             </>
                         )}
                     </div>
