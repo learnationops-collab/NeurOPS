@@ -121,3 +121,5 @@
 .bt-flujo>.bt-editor{max-height:min(640px,calc(100vh - 300px));overflow:auto}
 .lz-tag{color:#1f9d6b;font-weight:600}
 .lz-tag--saca{color:var(--ln-error,#c8433a)}
+.bt-activo{padding:8px 10px;border-radius:12px;background:color-mix(in srgb,var(--ln-text-faint,#8a8ea0) 10%,transparent)}
+.bt-activo .bt-fila>span{display:inline}

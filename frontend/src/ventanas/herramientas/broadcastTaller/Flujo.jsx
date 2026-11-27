@@ -70,8 +70,9 @@ export default function Flujo({ datos, wa }) {
                     <Button icon={<Star />} disabled={ocupado || !pasos.length}
                         onClick={() => correr(datos.estandar, (r) => `Cada taller nuevo arranca con estos ${r.pasos} pasos`)}>Guardar como estándar</Button>
                     {sucio && <Button icon={<Save />} disabled={ocupado} onClick={() => correr(null, () => 'Flujo guardado')}>Guardar</Button>}
-                    {programados > 0 && !borradores && (
-                        <Button icon={<Pause />} disabled={ocupado} onClick={() => correr(datos.pausar, () => 'Pausado: los pasos volvieron a borrador')}>Pausar</Button>
+                    {programados > 0 && (
+                        <Button variant="danger" icon={<Pause />} disabled={ocupado}
+                            onClick={() => correr(datos.pausar, (r) => `Desactivado: ${r.pausados} pasos no van a salir`)}>Desactivar todo</Button>
                     )}
                     <Button variant="primary" icon={<CalendarClock />} disabled={ocupado || !borradores}
                         onClick={() => correr(datos.programar, (r) => `${r.programados} pasos programados`)}>
@@ -87,7 +88,10 @@ export default function Flujo({ datos, wa }) {
                 <div className="bt-flujo">
                     <Lienzo pasos={pasos} plantillas={plantillas} reglas={reglas} sel={sel} onSel={setSel} onSumarPaso={sumar} />
                     <PanelNodo sel={sel} pasos={pasos} plantillas={plantillas} reglas={reglas} wa={wa} botonesDelFlujo={botonesDelFlujo}
-                        cambiar={cambiar} quitar={quitar} onSel={setSel} onGuardada={guardada} onConfig={config} />
+                        cambiar={cambiar} quitar={quitar} onSel={setSel} onGuardada={guardada} onConfig={config}
+                        sucio={sucio} ocupado={ocupado}
+                        onEstado={(pasoId, activo) => correr(() => datos.estadoPaso(pasoId, activo),
+                            () => (activo ? 'Paso activado: sale a su hora' : 'Paso desactivado: no va a salir'))} />
                 </div>
             )}
         </div>

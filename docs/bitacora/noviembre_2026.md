@@ -1291,3 +1291,6 @@
 ### 27/11/2026 · Seguimientos del lead en un solo bloque
 - La tarjeta repetía el dato: «Σ», «Seguimiento N» y los puntitos sueltos. Ahora es un solo bloque. Un anillo tiene un segmento por seguimiento (violeta los viejos, magenta los que van desde su última respuesta) que se dibuja al entrar, con el total en el centro. Al lado van cuánto lleva sin contestar y cuánto queda para escribirle, y «Falta el primero» si no hay seguimiento ([RachaLead.jsx](../../frontend/src/pages/inbox/conversaciones/RachaLead.jsx)).
 - Estadísticas en pares: «Agendas hoy» con «Agendas por día» y «Seguim. hoy» con «Seguim. por día».
+
+### 27/11/2026 · Flujo del taller: desactivar todo o un paso (ADR-W270)
+- «Desactivar todo» siempre que haya pasos programados, y un interruptor «Activo / Desactivado» en cada paso ([PasoEditor.jsx](../../frontend/src/ventanas/herramientas/broadcastTaller/PasoEditor.jsx), [taller.py](../../app/whatsapp/taller.py)).

@@ -5,7 +5,8 @@
   · PUT  /talleres/<id>                 → {descartes?, etiqueta?, pasos?}: cambia lo que todavía no salió.
   · POST /talleres/<id>/audiencia       → {csv} | {no_cerraron: [taller ids]} | {etiqueta}: suma a la audiencia.
   · POST /talleres/<id>/programar       → los borradores pasan a programado; los manda el reloj del motor.
-  · POST /talleres/<id>/pausar          → los programados vuelven a borrador.
+  · POST /talleres/<id>/pausar          → los programados vuelven a borrador (desactivar todo).
+  · POST /talleres/<id>/pasos/<p>/estado → {activo}: activa o desactiva un paso solo (ADR-W270).
   · POST /talleres/<id>/estandar        → sus pasos pasan a ser el flujo con que arranca cada taller nuevo.
   · GET  /talleres/<id>/pasos/<paso>    → los números de ese paso, con lo que pasó con cada uno.
 """
@@ -122,6 +123,22 @@ def pausar_taller(evento_id):
         return error
     plan = taller.plan_de(evento)
     return _respuesta(plan, evento, pausados=taller.pausar(plan))
+
+
+@bp.route('/talleres/<int:evento_id>/pasos/<int:paso_id>/estado', methods=['POST'])
+@login_required
+@workshop_required
+def estado_del_paso(evento_id, paso_id):
+    """{activo: bool}: programa o desactiva ese paso solo (ADR-W270)."""
+    evento, error = _evento_o_404(evento_id)
+    if error:
+        return error
+    plan = taller.plan_de(evento)
+    try:
+        taller.activar_paso(plan, evento, paso_id, bool((request.get_json(silent=True) or {}).get('activo')))
+    except taller.PasoInvalido as e:
+        return jsonify({'message': str(e)}), 400
+    return _respuesta(plan, evento)
 
 
 @bp.route('/talleres/<int:evento_id>/estandar', methods=['POST'])

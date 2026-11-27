@@ -350,23 +350,45 @@ def programar(plan, evento):
         raise PasoInvalido('No hay pasos para programar')
     if not plan.etiqueta:
         raise PasoInvalido('La audiencia necesita una etiqueta')
-    cuerpos = None
+    cuerpos = {}
     for p in borradores:
-        nombre = p.nombre or p.orden + 1
-        if p.tipo == 'mensaje':
-            if not (p.mensaje or {}).get('texto'):
-                raise PasoInvalido(f'Al paso «{nombre}» le falta el mensaje')
-        elif not p.plantilla:
-            raise PasoInvalido(f'Al paso «{nombre}» le falta la plantilla')
-        else:
-            cuerpos = cuerpos if cuerpos is not None else _cuerpos_de_plantillas()
-            _completar_parametros(p, cuerpos.get(p.plantilla, ''), nombre)
-        if p.modo == 'relativo' and not evento.inicio_at:
-            raise PasoInvalido('El taller no tiene hora: cargala en Próximos talleres')
+        _listo_para_salir(p, evento, cuerpos)
     for p in borradores:
         p.estado = WaPasoTaller.PROGRAMADO
     db.session.commit()
     return len(borradores)
+
+
+def _listo_para_salir(p, evento, cuerpos):
+    """Lanza PasoInvalido si al paso le falta algo para programarse. `cuerpos` se llena la primera vez que hace falta."""
+    nombre = p.nombre or p.orden + 1
+    if p.tipo == 'mensaje':
+        if not (p.mensaje or {}).get('texto'):
+            raise PasoInvalido(f'Al paso «{nombre}» le falta el mensaje')
+    elif not p.plantilla:
+        raise PasoInvalido(f'Al paso «{nombre}» le falta la plantilla')
+    else:
+        if not cuerpos:
+            cuerpos.update(_cuerpos_de_plantillas())
+        _completar_parametros(p, cuerpos.get(p.plantilla, ''), nombre)
+    if p.modo == 'relativo' and not evento.inicio_at:
+        raise PasoInvalido('El taller no tiene hora: cargala en Próximos talleres')
+
+
+def activar_paso(plan, evento, paso_id, activo):
+    """Activa (programa) o desactiva un paso solo (ADR-W270). Uno que ya salió no cambia."""
+    paso = next((p for p in plan.pasos if p.id == paso_id), None)
+    if paso is None:
+        raise PasoInvalido('Ese paso no es de este taller')
+    if paso.estado in (WaPasoTaller.LANZADO, WaPasoTaller.VENCIDO):
+        raise PasoInvalido('Ese paso ya salió: no se puede activar ni desactivar')
+    if activo:
+        _listo_para_salir(paso, evento, {})
+        paso.estado = WaPasoTaller.PROGRAMADO
+    else:
+        paso.estado = WaPasoTaller.BORRADOR
+    db.session.commit()
+    return paso.estado
 
 
 def pausar(plan):

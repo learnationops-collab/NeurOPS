@@ -1,7 +1,7 @@
 // Un paso del flujo: cuándo sale, qué plantilla, qué va en cada variable, a quién y a quién no. Lo que pasa al tocar
 // cada botón son nodos propios del lienzo (ADR-W262): acá solo se listan para abrirlos y va la opción única.
 import { Trash2 } from 'lucide-react';
-import { Button, Input, Segmented, Select, Stepper, TextArea } from '../../../components/standard';
+import { Button, Input, Segmented, Select, Stepper, Switch, TextArea } from '../../../components/standard';
 import { partesDe } from '../broadcastWa/useBroadcast';
 import { OpcionUnica } from '../broadcastWa/Respuestas';
 import { A_QUIEN, VARIABLES, variablesDe } from './useBroadcastTaller';
@@ -98,7 +98,24 @@ function MensajeComun({ paso, cambiar }) {
     );
 }
 
-export default function PasoEditor({ paso, plantillas, botonesDelFlujo, wa, config, cambiar, quitar, onBoton, onConfig }) {
+/** Activar o desactivar este paso solo (ADR-W270): uno desactivado no sale aunque llegue su hora. */
+function Activo({ paso, sucio, ocupado, onEstado }) {
+    const activo = paso.estado === 'programado';
+    if (!paso.id || sucio) {
+        return <small className="bt-s">Guardá el flujo para poder activar o desactivar este paso.</small>;
+    }
+    return (
+        <div className="bt-fila bt-fila--entre bt-activo">
+            <span className="bt-fila">
+                <Switch checked={activo} label={activo ? 'Desactivar este paso' : 'Activar este paso'} disabled={ocupado}
+                    onChange={(v) => onEstado(v)} />
+                <span><b>{activo ? 'Activo' : 'Desactivado'}</b> <small className="bt-s">{activo ? 'sale a su hora' : 'no sale aunque llegue su hora'}</small></span>
+            </span>
+        </div>
+    );
+}
+
+export default function PasoEditor({ paso, plantillas, botonesDelFlujo, wa, config, cambiar, quitar, onBoton, onConfig, sucio, ocupado, onEstado }) {
     const bloqueado = paso.estado === 'lanzado' || paso.estado === 'vencido';
     const plantilla = plantillas.find((p) => p.name === paso.plantilla);
     const { botones } = partesDe(plantilla);
@@ -116,6 +133,7 @@ export default function PasoEditor({ paso, plantillas, botonesDelFlujo, wa, conf
                 <span className="bt-rotulo">Paso</span>
                 <Button variant="ghost" icon={<Trash2 />} onClick={quitar}>Quitar</Button>
             </div>
+            <Activo paso={paso} sucio={sucio} ocupado={ocupado} onEstado={onEstado} />
             <label className="bt-campo">
                 <span>Nombre</span>
                 <Input value={paso.nombre || ''} maxLength={60} placeholder="Recordatorio 2 h" onChange={(e) => cambiar({ nombre: e.target.value })} />

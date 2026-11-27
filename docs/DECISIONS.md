@@ -2460,3 +2460,11 @@
   - **Estadísticas:** «Seguim. hoy» y «Seguim. por día» (promedio de los 30 días anteriores; al pasar el mouse, cuántos por lead). Salen de las conversaciones asignadas al setter, con sus mensajes y los sin autor, la base del reporte. Se guardan 5 minutos por setter.
 - **Qué se pierde:** el promedio por día mira las conversaciones asignadas hoy: si un lead cambió de setter, sus seguimientos viejos cuentan para quien lo tiene ahora (solo los sin autor o los propios). La cifra de hoy puede tardar hasta 5 minutos en moverse.
 - **Consecuencias:** sin migración.
+
+## ADR-W270: el flujo del taller se desactiva entero o paso por paso
+
+- **Fecha:** 27/11/2026 · **Subsistema:** flujo del taller (`app/whatsapp/taller.py` `activar_paso`, `POST /api/whatsapp/talleres/<id>/pasos/<p>/estado`; `broadcastTaller/Flujo.jsx`, `PasoEditor.jsx`, `Nodos.jsx`) · **Estado:** implementada
+- **Contexto:** Mario quiere poder frenar el broadcast de un taller si decide no mandarlo. «Pausar» existía pero solo aparecía cuando todos los pasos estaban programados, y no había forma de frenar uno solo.
+- **Decisión:** «Desactivar todo» aparece siempre que haya algo programado y devuelve los programados a desactivado. Cada paso tiene su interruptor «Activo / Desactivado» en su panel: activarlo hace las mismas revisiones que «Programar» (plantilla o mensaje, variables, hora del taller). En el lienzo, un paso sin programar se ve «Desactivado» en lugar de «Borrador».
+- **Qué se pierde:** un paso con cambios sin guardar no se puede activar hasta guardar el flujo.
+- **Consecuencias:** sin migración.
