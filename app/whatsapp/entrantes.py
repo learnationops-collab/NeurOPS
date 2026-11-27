@@ -64,6 +64,9 @@ def _contacto(telefono, nombre, ahora):
     # El broadcast de un taller crea el contacto con el número del CSV (54…, 52…), que puede ser la otra forma
     # del que responde (549…, 521…): se busca por las dos (ADR-W259).
     contacto = audiencia.contacto_wa(telefono, nombre, ahora)
+    # El nombre de su perfil de WhatsApp es con el que se le escribe (ADR-W271): se guarda aparte y al día.
+    if nombre and (contacto.variables or {}).get('nombre_whatsapp') != nombre:
+        contacto.variables = {**(contacto.variables or {}), 'nombre_whatsapp': nombre}
     if contacto.setter_id is None:
         setter = _setter_con_menos_carga(ahora)
         if setter:

@@ -190,13 +190,13 @@ def lanzar(paso, evento, ahora, grupos=None):
         m['texto'] = con_variables(m.get('texto') or '', evento)
         for c in contactos:
             db.session.add(WaEnvio(lote=paso.lote, plantilla=WaEnvio.MENSAJE, idioma=paso.idioma or 'es', con_nombre=False,
-                                   telefono=telefono_de(c.igsid), nombre=c.nombre, contacto_id=c.id, creado_en=ahora,
+                                   telefono=telefono_de(c.igsid), nombre=audiencia.nombre_de(c), contacto_id=c.id, creado_en=ahora,
                                    paso_id=paso.id, mensaje=m, vence_en=hasta))
     else:
         parametros = parametros_de(paso, evento)
         for c in contactos:
             db.session.add(WaEnvio(lote=paso.lote, plantilla=paso.plantilla, idioma=paso.idioma or 'es',
-                                   con_nombre='{nombre}' in parametros, telefono=telefono_de(c.igsid), nombre=c.nombre,
+                                   con_nombre='{nombre}' in parametros, telefono=telefono_de(c.igsid), nombre=audiencia.nombre_de(c),
                                    contacto_id=c.id, creado_en=ahora, paso_id=paso.id, parametros=parametros, vence_en=hasta))
     paso.estado, paso.lanzado_en = WaPasoTaller.LANZADO, ahora
     db.session.commit()

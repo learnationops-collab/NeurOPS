@@ -31,6 +31,12 @@ def es_baja(texto):
     return _llano(texto) in BAJAS
 
 
+def nombre_de(contacto):
+    """Con qué nombre se le escribe (ADR-W271): el de su perfil de WhatsApp si ya escribió; si no, el que vino en la
+    carga (los CSV de los talleres no traen nombre). None si no hay ninguno."""
+    return (contacto.variables or {}).get('nombre_whatsapp') or contacto.nombre or None
+
+
 def contacto_wa(telefono, nombre, ahora):
     """El contacto de ese número (en cualquiera de sus formas) o uno nuevo, sin setter."""
     contacto = IgContacto.query.filter(IgContacto.igsid.in_([PREFIJO + v for v in variantes(telefono)])).first()
