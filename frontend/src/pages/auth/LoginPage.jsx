@@ -87,13 +87,14 @@ function Entrar({ onEntrar, errorInicial }) {
                     <label className="sr-only" htmlFor="lg-clave">Contraseña</label>
                     <input id="lg-clave" className="lg-input" type={ver ? 'text' : 'password'} autoComplete="current-password"
                         required placeholder="Contraseña" value={password} onChange={(e) => setPassword(e.target.value)} />
-                    <button type="button" className="lg-ojo" onClick={() => setVer(!ver)} aria-label={ver ? 'Ocultar contraseña' : 'Mostrar contraseña'}>
-                        {ver ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
-                    <button type="submit" className="lg-ir" disabled={!!cargando} aria-label="Iniciar sesión">
-                        {cargando === 'clave' ? <Loader2 size={18} className="lg-gira" /> : <ArrowRight size={18} />}
+                    <button type="button" className="lg-ojo lg-ojo--solo" onClick={() => setVer(!ver)}
+                        aria-label={ver ? 'Ocultar contraseña' : 'Mostrar contraseña'} title={ver ? 'Ocultar contraseña' : 'Mostrar contraseña'}>
+                        {ver ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
                 </div>
+                <button type="submit" className="lg-entrar" disabled={!!cargando}>
+                    {cargando === 'clave' ? <Loader2 size={18} className="lg-gira" /> : 'Iniciar sesión'}
+                </button>
             </form>
             {error && <p className="lg-error" role="alert">{error}</p>}
             <div className="lg-o"><span>o</span></div>

@@ -12,9 +12,7 @@ export default function Isotipo({ className }) {
                 </linearGradient>
             </defs>
             <rect width="100" height="100" rx="26" fill={`url(#${id})`} />
-            <g fill="#FFFFFF" stroke="#FFFFFF" strokeWidth="5" strokeLinejoin="round">
-                <path d="M49 18 L23 44 L23 83 L77 83 L77 61 L49 61 Z" /><path d="M23 18 L42 18 L23 37 Z" />
-            </g>
+            <path d="M31.35 28.91H42.58Q43.75 28.91 43.75 30.08C43.75 50.59 57.23 54.98 68.65 54.98Q69.82 54.98 69.82 56.15V69.83Q69.82 71 68.65 71H31.35Q30.18 71 30.18 69.83V30.08Q30.18 28.91 31.35 28.91Z" fill="#FFFFFF" />
         </svg>
     );
 }

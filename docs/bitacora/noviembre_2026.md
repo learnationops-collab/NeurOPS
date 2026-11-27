@@ -1242,4 +1242,6 @@
 - Migración `a8c0e2f4b6d7`.
 ### 27/11/2026 · El flujo del taller en un lienzo de nodos y cables (ADR-W262)
 - Pestaña Flujo del broadcast: cada paso es una fila y de cada botón sale un cable a su respuesta, y del link a lo que sale al abrirlo; el panel muestra solo el nodo tocado, sin estirarse hacia abajo ([Lienzo.jsx](../../frontend/src/ventanas/herramientas/broadcastTaller/Lienzo.jsx), [PanelNodo.jsx](../../frontend/src/ventanas/herramientas/broadcastTaller/PanelNodo.jsx)).
-- El lienzo se arrastra con el mouse y tiene zoom. Mockup en `docs/mockups/flujo-taller-lienzo/`.
+- El lienzo se arrastra con el mouse y tiene zoom. Mockup en `docs/mockups/flujo-taller-lienzo/`.### 27/11/2026 · Login: ojo de la contraseña, «Iniciar sesión» y el logo correcto
+- El ojo para ver la contraseña queda visible aunque el navegador autocomplete el campo (antes lo pintaba celeste y lo tapaba). La flecha pasa a un botón «Iniciar sesión» a todo el ancho ([LoginPage.jsx](../../frontend/src/pages/auth/LoginPage.jsx), [login.css](../../frontend/src/pages/auth/login.css)).
+- Isotipo de Learnation redibujado: la L con la curva cóncava, en todas sus copias (login y headers, reservas, favicon y reportes).
