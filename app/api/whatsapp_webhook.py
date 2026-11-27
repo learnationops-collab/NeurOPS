@@ -94,6 +94,22 @@ def recibir_evento():
     return 'EVENT_RECEIVED', 200, {'Content-Type': 'text/plain; charset=utf-8'}
 
 
+@bp.route('/l/<token>', methods=['GET'])
+def abrir_link(token):
+    """El botón con link de una respuesta que manda otro mensaje al abrirse (ADR-W261): anota y redirige."""
+    from flask import redirect
+    from app.whatsapp import links
+    try:
+        destino = links.abrir(token)
+    except Exception as error:  # el lead tiene que llegar al recurso aunque falle el registro
+        db.session.rollback()
+        current_app.logger.error(f'[WHATSAPP] Link de respuesta: {error}')
+        destino = None
+    if not destino:
+        return 'Este link ya no está disponible.', 404
+    return redirect(destino, code=302)
+
+
 @bp.route('/eventos', methods=['GET'])
 @login_required
 @admin_required

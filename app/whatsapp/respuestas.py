@@ -4,7 +4,8 @@
     ese número (`variables.plantilla`, la marca `entrantes._marcar_envio`).
   · El mensaje que sale puede llevar sus botones (interactivos, hasta 3 de 20 caracteres). Su `id` es
     `WAP|plantilla|botón de la plantilla que sigue|n|botón de origen`: tocarlo sigue la respuesta de ese botón
-    (vacío: queda para el setter). O un solo botón que abre un link (`url`, mensaje `cta_url`, ADR-W260).
+    (vacío: queda para el setter). O un solo botón que abre un link (`url`, mensaje `cta_url`, ADR-W260),
+    que al abrirse puede mandar otro mensaje (`despues`, ver `links.py`, ADR-W261).
   · Además de contestar, asigna la conversación y le pone la etiqueta (suelta, sin grupo).
   · El mensaje puede esperar `demora_segundos`: queda en `WaRespuestaPendiente`; una espera corta la manda un hilo
     a su hora (el reloj del motor corre una vez por minuto) y, si el proceso se reinicia, la manda el reloj.
@@ -70,17 +71,25 @@ def _nombre_de(contacto):
     return (envio.nombre if envio else None) or contacto.nombre
 
 
-def cuerpo_de(regla, texto=None):
-    """Lo que sale para esa regla, en el formato de la Cloud API (sin `to`)."""
+def _con_link(texto, titulo, url):
+    return {'type': 'interactive', 'interactive': {
+        'type': 'cta_url', 'body': {'text': texto[:LARGO_TEXTO]},
+        'action': {'name': 'cta_url', 'parameters': {'display_text': titulo[:LARGO_BOTON], 'url': url}}}}
+
+
+def cuerpo_de(regla, texto=None, contacto_id=None):
+    """Lo que sale para esa regla, en el formato de la Cloud API (sin `to`). Un link con «después» pasa por
+    nuestra ruta (`links.py`) para saber cuándo lo abren."""
     texto = texto or regla.texto
     botones = regla.botones or []
     if not botones:
         return {'type': 'text', 'text': {'body': texto, 'preview_url': True}}
     if botones[0].get('url'):
-        return {'type': 'interactive', 'interactive': {
-            'type': 'cta_url', 'body': {'text': texto[:LARGO_TEXTO]},
-            'action': {'name': 'cta_url', 'parameters': {'display_text': botones[0]['titulo'][:LARGO_BOTON],
-                                                         'url': botones[0]['url']}}}}
+        url = botones[0]['url']
+        if botones[0].get('despues') and contacto_id:
+            from app.whatsapp import links
+            url = links.url_de(contacto_id, regla.id)
+        return _con_link(texto, botones[0]['titulo'], url)
     opciones = [(b['titulo'], f"{PREFIJO_ID}{regla.plantilla}|{b.get('va_a') or ''}|{i}|{regla.boton}")
                 for i, b in enumerate(botones)]
     return _interactivo(texto, opciones)
@@ -94,7 +103,7 @@ def _guardar_saliente(contacto, mid, texto, cuerpo, ahora):
 
 def _mandar(contacto, regla, ahora):
     texto = con_nombre(regla.texto, _nombre_de(contacto))
-    cuerpo = cuerpo_de(regla, texto)
+    cuerpo = cuerpo_de(regla, texto, contacto.id)
     try:
         mid = ClienteWhatsapp().mandar(telefono_de(contacto.igsid), cuerpo)
     except ErrorDeEnvio as error:
@@ -102,6 +111,41 @@ def _mandar(contacto, regla, ahora):
         return 'boton_plantilla_fallo'
     _guardar_saliente(contacto, mid, texto, cuerpo, ahora)
     return 'boton_plantilla'
+
+
+def _despues_de(regla):
+    return (((regla.botones or [None])[0] or {}).get('despues')) if regla else None
+
+
+def _mandar_despues(contacto, regla, ahora):
+    """El mensaje que sale al abrir el link de la regla (ADR-W261), con su propio botón con link si lo tiene."""
+    d = _despues_de(regla)
+    if not d or not d.get('texto'):
+        return 'despues_vacio'
+    texto = con_nombre(d['texto'], _nombre_de(contacto))
+    cuerpo = (_con_link(texto, d['titulo'], d['url']) if d.get('url')
+              else {'type': 'text', 'text': {'body': texto, 'preview_url': True}})
+    try:
+        mid = ClienteWhatsapp().mandar(telefono_de(contacto.igsid), cuerpo)
+    except ErrorDeEnvio as error:
+        logger.error(f'[WHATSAPP] Mensaje al abrir el link de «{regla.boton}» ({regla.plantilla}): {error}')
+        return 'despues_fallo'
+    _guardar_saliente(contacto, mid, texto, cuerpo, ahora)
+    return 'despues'
+
+
+def programar_despues(contacto, regla, ahora):
+    """Al abrir el link: el mensaje de «después» sale ya o queda esperando su demora (como una respuesta)."""
+    d = _despues_de(regla) or {}
+    demora = int(d.get('demora_segundos') or 0)
+    WaRespuestaPendiente.query.filter_by(contacto_id=contacto.id).delete()
+    if not demora:
+        return _mandar_despues(contacto, regla, ahora)
+    db.session.add(WaRespuestaPendiente(contacto_id=contacto.id, regla_id=regla.id, cual='despues',
+                                        enviar_en=ahora + timedelta(seconds=demora)))
+    if demora <= DEMORA_CORTA:
+        _a_su_hora(demora)
+    return 'despues_en_espera'
 
 
 def _ya_eligio(contacto, tocado, ahora):
@@ -191,18 +235,43 @@ def mandar_pendientes(ahora):
     """Las respuestas cuya demora ya pasó (las llama el reloj del motor y el hilo de una espera corta). Cada una se
     borra antes de mandarla y solo la manda quien la borró: el hilo y el reloj no la mandan dos veces."""
     salieron = 0
-    for pendiente_id, contacto_id, regla_id in (db.session.query(WaRespuestaPendiente.id, WaRespuestaPendiente.contacto_id,
-                                                                 WaRespuestaPendiente.regla_id)
-                                                .filter(WaRespuestaPendiente.enviar_en <= ahora).all()):
+    for pendiente_id, contacto_id, regla_id, cual in (db.session.query(
+            WaRespuestaPendiente.id, WaRespuestaPendiente.contacto_id, WaRespuestaPendiente.regla_id,
+            WaRespuestaPendiente.cual).filter(WaRespuestaPendiente.enviar_en <= ahora).all()):
         borradas = WaRespuestaPendiente.query.filter_by(id=pendiente_id).delete()
         db.session.commit()
         if not borradas:
             continue
         contacto, regla = db.session.get(IgContacto, contacto_id), db.session.get(WaRespuestaBoton, regla_id)
-        if contacto and regla and regla.texto:
+        if contacto and regla and cual == 'despues':
+            salieron += _mandar_despues(contacto, regla, ahora) == 'despues'
+        elif contacto and regla and regla.texto:
             salieron += _mandar(contacto, regla, ahora) == 'boton_plantilla'
         db.session.commit()
     return salieron
+
+
+def _validar_despues(d):
+    """El mensaje que sale al abrir el link: {texto, titulo?, url?, demora_segundos}. None si no hay texto."""
+    if not isinstance(d, dict) or not (d.get('texto') or '').strip():
+        return None
+    texto = d['texto'].strip()
+    if len(texto) > LARGO_TEXTO:
+        raise ValueError(f'El mensaje de después pasa los {LARGO_TEXTO} caracteres')
+    titulo, url = (d.get('titulo') or '').strip(), (d.get('url') or '').strip()
+    if url and not URL.match(url):
+        raise ValueError('El link del mensaje de después tiene que empezar con https://')
+    if url and not titulo:
+        raise ValueError('El botón del mensaje de después necesita un texto')
+    if len(titulo) > LARGO_BOTON:
+        raise ValueError(f'«{titulo}» pasa los {LARGO_BOTON} caracteres de WhatsApp')
+    demora = d.get('demora_segundos') or 0
+    if not isinstance(demora, int) or not 0 <= demora <= MAX_DEMORA:
+        raise ValueError('La espera va de 0 segundos a 60 minutos')
+    salida = {'texto': texto, 'demora_segundos': demora}
+    if url:
+        salida.update(titulo=titulo, url=url)
+    return salida
 
 
 def validar(plantilla, boton, datos, botones_de_la_plantilla):
@@ -225,7 +294,14 @@ def validar(plantilla, boton, datos, botones_de_la_plantilla):
             raise ValueError(f'El link de «{titulo}» tiene que empezar con https://')
         if va_a and va_a not in botones_de_la_plantilla:
             raise ValueError(f'«{va_a}» no es un botón de {plantilla}')
-        botones.append({'titulo': titulo, 'url': url} if url else {'titulo': titulo, 'va_a': va_a})
+        if url:
+            boton_link = {'titulo': titulo, 'url': url}
+            despues = _validar_despues((b or {}).get('despues'))
+            if despues:
+                boton_link['despues'] = despues
+            botones.append(boton_link)
+        else:
+            botones.append({'titulo': titulo, 'va_a': va_a})
     if len(botones) > MAX_BOTONES:
         raise ValueError(f'Van hasta {MAX_BOTONES} botones')
     if any(b.get('url') for b in botones) and len(botones) > 1:

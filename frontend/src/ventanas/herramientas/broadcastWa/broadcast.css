@@ -73,3 +73,7 @@
 .bw-unica .bw-fila>span{flex:1;min-width:0}
 .bw-boton{gap:6px}
 .bw-fila>.ui-input[type="number"]{flex:0 0 72px;min-width:0}
+/* «Cuando abre el link» (ADR-W261). */
+.bw-despues{gap:8px;padding:10px 12px;border:1px dashed var(--ln-border-subtle);border-radius:12px}
+.bw-despues .bw-fila>span{flex:1;min-width:0}
+.bw-despues .bw-fila>.ui-input{flex:1;min-width:120px}
