@@ -1,4 +1,4 @@
-import { Compass, LayoutGrid, User, Users } from 'lucide-react';
+import { Clapperboard, Compass, LayoutGrid, User, Users } from 'lucide-react';
 import api from '../services/api';
 import { saveSession, isIsolatedTab } from './sessionStore';
 import { AREAS, areasDe } from './areas';
@@ -119,6 +119,16 @@ export function entrarAlIniciar(user, navegar) {
 
 /** Cortex en el Portal: un área común a todos los roles, que entra sin cambiar de rol. */
 export const TARJETA_CORTEX = { clave: 'cortex', titulo: CORTEX.label, Icono: CORTEX.Icono, ruta: CORTEX.ruta, comun: true };
+
+/**
+ * Learnation Marketing en el Portal (ADR-W278): el artifact de claude.ai dentro de /ops/dashboard, para las
+ * cuentas que tienen `marketing_app` (Mario, Marlon, Santi, Kerwin). Es otra cosa que el área «Marketing» de
+ * Dirección de Marketing: entra sin cambiar de rol.
+ */
+export const TARJETA_LEARNATION_MARKETING = {
+    clave: 'learnation-marketing', titulo: 'Learnation Marketing', Icono: Clapperboard,
+    ruta: '/ops/dashboard?step=marketing', comun: true,
+};
 
 /**
  * Leadership en el Portal: otra app, para todas las cuentas. El backend firma un pase de un solo uso
