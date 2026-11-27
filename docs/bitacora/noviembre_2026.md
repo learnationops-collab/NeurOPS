@@ -1242,13 +1242,14 @@
 - Migración `a8c0e2f4b6d7`.
 ### 27/11/2026 · El flujo del taller en un lienzo de nodos y cables (ADR-W262)
 - Pestaña Flujo del broadcast: cada paso es una fila y de cada botón sale un cable a su respuesta, y del link a lo que sale al abrirlo; el panel muestra solo el nodo tocado, sin estirarse hacia abajo ([Lienzo.jsx](../../frontend/src/ventanas/herramientas/broadcastTaller/Lienzo.jsx), [PanelNodo.jsx](../../frontend/src/ventanas/herramientas/broadcastTaller/PanelNodo.jsx)).
-- El lienzo se arrastra con el mouse y tiene zoom. Mockup en `docs/mockups/flujo-taller-lienzo/`.### 27/11/2026 · Login: ojo de la contraseña, «Iniciar sesión» y el logo correcto
+- El lienzo se arrastra con el mouse y tiene zoom. Mockup en `docs/mockups/flujo-taller-lienzo/`.
+### 27/11/2026 · Login: ojo de la contraseña, «Iniciar sesión» y el logo correcto
 - El ojo para ver la contraseña queda visible aunque el navegador autocomplete el campo (antes lo pintaba celeste y lo tapaba). La flecha pasa a un botón «Iniciar sesión» a todo el ancho ([LoginPage.jsx](../../frontend/src/pages/auth/LoginPage.jsx), [login.css](../../frontend/src/pages/auth/login.css)).
 - Isotipo de Learnation redibujado: la L con la curva cóncava, en todas sus copias (login y headers, reservas, favicon y reportes).
 ### 27/11/2026 · Login: «Recordarme» y la pestaña nueva entra directo
 - «Recordarme» (prendido por defecto): la sesión dura 30 días en vez de 24 h, en el token y en la cookie, y el usuario queda escrito para la próxima vez. Entrar con Google también dura 30 días ([LoginPage.jsx](../../frontend/src/pages/auth/LoginPage.jsx), [auth.py](../../app/api/auth.py)).
 - Con sesión abierta, una pestaña nueva de Work (o la raíz, que cae en /login) entra directo al área en vez de mostrar el login.
-- El lienzo se arrastra con el mouse y tiene zoom. Mockup en `docs/mockups/flujo-taller-lienzo/`.### 27/11/2026 · Recorridos: «Ver después», retomar y recordatorio; Inbox responsive; caja de escribir más compacta (ADR-W263)
+### 27/11/2026 · Recorridos: «Ver después», retomar y recordatorio; Inbox responsive; caja de escribir más compacta (ADR-W263)
 - La tarjeta del recorrido de seguimientos se veía rota en el Inbox: «Probalo» sin borde y pegado a «Siguiente», que perdía su color. El estilo general de la pantalla les ganaba a sus botones ([novedades.css](../../frontend/src/pages/closer/novedades/novedades.css)).
 - «Ver después» arriba de la tarjeta y en la portada. El recorrido se retoma desde el paso donde quedó.
 - Recordatorio fijo mientras no se termine: un botón chiquito con un aro que gira y un punto que respira, en la barra del Inbox y al lado del título del Workspace ([Recuerda.jsx](../../frontend/src/pages/closer/novedades/Recuerda.jsx)).
