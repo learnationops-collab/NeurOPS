@@ -11,6 +11,22 @@ export const PUESTOS = [
     { id: 'closer', n: 2, label: 'Closers', c: 'var(--info)' },
 ];
 
+// Con Closers elegido, Analyze y Winners muestran closers por veredicto (votos de los revisores y
+// resolución manual, ver JobApplication.veredicto): las mismas pestañas que Asistentes, más «A decidir»
+// cuando los revisores votaron distinto.
+export const PESTANAS_CLOSER_SECCION = {
+    anal: [
+        { id: 'preseleccionada', label: 'Seleccionadas', c: 'var(--success)' },
+        { id: 'en_reserva', label: 'Reserva', c: 'var(--info)' },
+        { id: 'decidir', label: 'A decidir', c: 'var(--warning)' },
+        { id: 'descartado', label: 'Descartadas', c: 'var(--idle)' },
+    ],
+    fin: [
+        { id: 'testeo', label: 'En prueba', c: 'var(--warning)' },
+        { id: 'baja', label: 'Baja', c: 'var(--error)' },
+    ],
+};
+
 const CLAVE_PUESTO = 'talent_inbox_puesto';
 
 export const leerPuesto = () => {
