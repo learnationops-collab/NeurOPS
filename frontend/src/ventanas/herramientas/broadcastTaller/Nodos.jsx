@@ -5,6 +5,7 @@ import { Plus } from 'lucide-react';
 import { Chip } from '../../../components/standard';
 import { embudo, partesDe } from '../broadcastWa/useBroadcast';
 import { espera } from '../broadcastWa/Espera';
+import { ponen } from '../broadcastWa/Respuestas';
 
 export const ESTADOS = {
     borrador: { label: 'Borrador', color: 'var(--ln-text-faint, #8a8ea0)' },
@@ -51,7 +52,8 @@ export function NodoPaso({ i, paso, plantilla, config, elegido, onElegir, onBoto
 
 export function NodoRespuesta({ i, boton, regla, elegido, onElegir, onBoton }) {
     const clave = claveResp(i, boton);
-    if (!regla || (!regla.texto && !regla.asignar_a && !regla.etiqueta)) {
+    const pone = ponen(regla), saca = regla?.quitar || [];
+    if (!regla || (!regla.texto && !regla.asignar_a && !pone.length && !saca.length)) {
         return (
             <button type="button" className={`lz-nodo lz-nodo--vacio${elegido ? ' lz-nodo--on' : ''}`} data-nodo={clave} onClick={onElegir}>
                 <span className="lz-tipo lz-tipo--resp">Si toca «{boton}»</span>
@@ -71,17 +73,26 @@ export function NodoRespuesta({ i, boton, regla, elegido, onElegir, onBoton }) {
                     ))}
                 </span>
             )}
-            {regla.etiqueta && <span className="lz-s">Etiqueta «{regla.etiqueta}»</span>}
+            {pone.length > 0 && <span className="lz-s lz-tag">+ {pone.join(', ')}</span>}
+            {saca.length > 0 && <span className="lz-s lz-tag lz-tag--saca">− {saca.join(', ')}</span>}
         </button>
     );
 }
 
-export function NodoDespues({ i, boton, despues, elegido, onElegir }) {
+export function NodoDespues({ i, boton, despues, elegido, onElegir, onBoton }) {
+    const clave = claveDespues(i, boton);
     return (
-        <button type="button" className={`lz-nodo${elegido ? ' lz-nodo--on' : ''}`} data-nodo={claveDespues(i, boton)} onClick={onElegir}>
+        <button type="button" className={`lz-nodo${elegido ? ' lz-nodo--on' : ''}`} data-nodo={clave} onClick={onElegir}>
             <span className="lz-tipo lz-tipo--link">Al abrir el link{espera(despues.demora_segundos)}</span>
             <span className="lz-burbuja">{corto(despues.texto)}</span>
-            {despues.url && <span className="lz-bts"><Boton link>{despues.titulo}</Boton></span>}
+            {(despues.url || (despues.botones || []).length > 0) && (
+                <span className="lz-bts">
+                    {despues.url && <Boton link>{despues.titulo}</Boton>}
+                    {(despues.botones || []).map((b, k) => (
+                        <Boton key={k} ancla={`${clave}:b${k}`} onTocar={b.va_a ? () => onBoton(b) : undefined}>{b.titulo}</Boton>
+                    ))}
+                </span>
+            )}
             <span className="lz-s">Sale una sola vez</span>
         </button>
     );

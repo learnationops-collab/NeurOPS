@@ -86,6 +86,15 @@ def sacar(target_type, target_id, tag_id):
         db.session.delete(tag)
 
 
+def sacar_por_nombre(target_type, target_id, nombre):
+    """Saca esa etiqueta (sin importar mayúsculas ni el grupo). Si no la tiene, no pasa nada. Devuelve cuántas sacó."""
+    nombre = (nombre or '').strip()
+    if not nombre:
+        return 0
+    return (Tag.query.filter(Tag.target_type == target_type, Tag.target_id == str(target_id),
+                             db.func.lower(Tag.name) == nombre.lower()).delete(synchronize_session=False))
+
+
 def editar_grupo(grupo, datos):
     if 'name' in datos:
         nombre = (datos.get('name') or '').strip()[:LARGO]

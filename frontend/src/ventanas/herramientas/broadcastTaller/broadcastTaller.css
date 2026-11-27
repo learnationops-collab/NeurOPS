@@ -119,3 +119,5 @@
 .lz-mas svg{width:14px;height:14px}
 .bt-cuerpo-panel{display:grid;gap:4px;justify-items:start}
 .bt-flujo>.bt-editor{max-height:min(640px,calc(100vh - 300px));overflow:auto}
+.lz-tag{color:#1f9d6b;font-weight:600}
+.lz-tag--saca{color:var(--ln-error,#c8433a)}

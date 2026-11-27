@@ -80,7 +80,10 @@ class WaRespuestaBoton(db.Model):
     texto = db.Column(db.Text, nullable=True)
     botones = db.Column(db.JSON, nullable=True)
     asignar_a = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
-    etiqueta = db.Column(db.String(60), nullable=True)
+    etiqueta = db.Column(db.String(60), nullable=True)  # la primera de `etiquetas` (lo que leía el código viejo)
+    # ADR-W265: las etiquetas que pone y las que saca al tocarlo (como ManyChat). Sacar una que no tiene no hace nada.
+    etiquetas = db.Column(db.JSON, nullable=True)
+    quitar = db.Column(db.JSON, nullable=True)
     # Cuántos segundos espera el mensaje antes de salir (0: al instante). Asignar y etiquetar no esperan.
     demora_segundos = db.Column(db.Integer, nullable=False, default=0, server_default="0")
     actualizado_en = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)

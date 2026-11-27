@@ -1,15 +1,21 @@
 // «Cuando abre el link»: el mensaje que sale después de que la persona abre el link de un botón (ADR-W261), con
 // su espera y, si se quiere, su propio botón con link. Como en ManyChat: WhatsApp no avisa, así que el link pasa
 // por Work para saberlo.
-import { Input, Switch, TextArea } from '../../../components/standard';
+import { Plus, X } from 'lucide-react';
+import { IconButton, Input, LinkButton, Select, Switch, TextArea } from '../../../components/standard';
 import Espera from './Espera';
 
 const LARGO_BOTON = 20;
+const MAX_RESPUESTAS = 3;
 export const URL_VALIDA = /^https?:\/\/\S+$/;
 
-export default function Despues({ valor, onChange }) {
+/** `botones`: los de la plantilla, para que los botones de respuesta de este mensaje sigan a uno (ADR-W265). */
+export default function Despues({ valor, onChange, botones = [] }) {
     const d = valor || null;
     const poner = (cambios) => onChange({ ...(d || { texto: '', demora_segundos: 0, titulo: '', url: '' }), ...cambios });
+    const respuestas = d?.botones || [];
+    const cambiarRespuesta = (i, cambios) => poner({ botones: respuestas.map((b, j) => (j === i ? { ...b, ...cambios } : b)) });
+    const destinos = [{ value: '', label: 'Queda para el setter' }, ...botones.map((b) => ({ value: b, label: `Sigue «${b}»` }))];
     return (
         <div className="bw-cuerpo bw-despues">
             <div className="bw-fila">
@@ -28,6 +34,18 @@ export default function Despues({ valor, onChange }) {
                             invalid={Boolean(d.url) && !URL_VALIDA.test(d.url.trim())} onChange={(e) => poner({ url: e.target.value })} />
                     </div>
                     <small className="bw-s">Con botón, el mensaje lleva un link (por ejemplo, agregar el evento a Google Calendar).</small>
+                    {respuestas.map((b, i) => (
+                        <div key={i} className="bw-fila">
+                            <Input value={b.titulo} maxLength={LARGO_BOTON} placeholder="Botón de respuesta" aria-label="Texto del botón"
+                                invalid={!b.titulo.trim()} onChange={(e) => cambiarRespuesta(i, { titulo: e.target.value })} />
+                            <Select size="sm" label="Al tocarlo" value={b.va_a || ''} options={destinos} onChange={(v) => cambiarRespuesta(i, { va_a: v || null })} />
+                            <IconButton size="sm" icon={<X />} label="Quitar botón" onClick={() => poner({ botones: respuestas.filter((_, j) => j !== i) })} />
+                        </div>
+                    ))}
+                    {respuestas.length < MAX_RESPUESTAS && (
+                        <LinkButton icon={<Plus />} onClick={() => poner({ botones: [...respuestas, { titulo: '', va_a: null }] })}>Botón de respuesta</LinkButton>
+                    )}
+                    {d.url && respuestas.length > 0 && <small className="bw-s">El link y los botones de respuesta salen en dos mensajes seguidos.</small>}
                 </>
             )}
         </div>

@@ -10,17 +10,23 @@ import Espera, { espera } from './Espera';
 const LARGO_BOTON = 20;
 const MAX_BOTONES = 3;
 const LINK = '__link__';
-const VACIA = { texto: '', botones: [], asignar_a: null, etiqueta: '', demora_segundos: 0 };
+const MAX_TOTAL = MAX_BOTONES + 1; // hasta 3 de respuesta y uno con link (ADR-W265)
+const VACIA = { texto: '', botones: [], asignar_a: null, demora_segundos: 0 };
 
 const esLink = (b) => b.url != null;
+/** Las etiquetas que pone (las reglas viejas solo traen `etiqueta`). */
+export const ponen = (r) => r?.etiquetas?.length ? r.etiquetas : (r?.etiqueta ? [r.etiqueta] : []);
+const aLista = (t) => t.split(',').map((x) => x.trim()).filter(Boolean);
 
 /** Qué pasa con ese botón, en una línea (también lo usan las ramas del flujo de un taller). */
 export function resumen(r, asignables = []) {
-    if (!r || (!r.texto && !r.asignar_a && !r.etiqueta)) return 'Queda para el setter';
+    const pone = ponen(r), saca = r?.quitar || [];
+    if (!r || (!r.texto && !r.asignar_a && !pone.length && !saca.length)) return 'Queda para el setter';
     const quien = asignables.find((a) => a.id === r.asignar_a)?.nombre;
     const link = (r.botones || []).find(esLink);
     return [r.texto ? `${link ? 'Manda el link' : 'Contesta solo'}${espera(r.demora_segundos)}` : null,
-        link?.despues && 'al abrirlo, otro mensaje', quien && `Asigna a ${quien}`, r.etiqueta && `Etiqueta «${r.etiqueta}»`]
+        link?.despues && 'al abrirlo, otro mensaje', quien && `Asigna a ${quien}`,
+        pone.length && `+ ${pone.join(', ')}`, saca.length && `− ${saca.join(', ')}`]
         .filter(Boolean).join(' · ');
 }
 
@@ -60,14 +66,15 @@ export function OpcionUnica({ nombre, inicial, datos, onCambio }) {
  * mensaje que sale al abrir su link). Las tres guardan la regla entera.
  */
 export function Editor({ nombre, boton, botones, inicial, asignables, datos, onGuardada, parte = 'todo', onAbrirDespues }) {
-    const [r, setR] = useState({ ...VACIA, ...inicial, etiqueta: inicial?.etiqueta || '' });
+    const [r, setR] = useState({ ...VACIA, ...inicial, pone: ponen(inicial).join(', '), saca: (inicial?.quitar || []).join(', ') });
     const [guardando, setGuardando] = useState(false);
     const cambiar = (campo, valor) => setR((x) => ({ ...x, [campo]: valor }));
     const cambiarBoton = (i, campo, valor) => cambiar('botones', r.botones.map((b, j) => (j === i ? { ...b, [campo]: valor } : b)));
     const guardar = async () => {
         setGuardando(true);
         try {
-            onGuardada(await datos.guardarRespuesta(nombre, boton, { ...r, etiqueta: r.etiqueta.trim() || null }));
+            const { pone, saca, etiqueta, ...resto } = r; // eslint-disable-line no-unused-vars
+            onGuardada(await datos.guardarRespuesta(nombre, boton, { ...resto, etiquetas: aLista(pone), quitar: aLista(saca) }));
             toast(`Guardado: «${boton}»`);
         } catch (e) {
             toast(datos.mensaje(e, 'No se pudo guardar'), 'error');
@@ -75,9 +82,11 @@ export function Editor({ nombre, boton, botones, inicial, asignables, datos, onG
             setGuardando(false);
         }
     };
-    const destinos = [{ value: '', label: 'Queda para el setter' }, ...botones.map((b) => ({ value: b, label: `Sigue «${b}»` })),
-        ...(r.botones.length === 1 ? [{ value: LINK, label: 'Abre un link' }] : [])];
     const conLink = r.botones.some(esLink);
+    const respuestas = r.botones.filter((b) => !esLink(b)).length;
+    // Un solo botón con link por mensaje: la opción aparece en el que ya lo es o si todavía no hay ninguno.
+    const destinosDe = (b) => [{ value: '', label: 'Queda para el setter' }, ...botones.map((x) => ({ value: x, label: `Sigue «${x}»` })),
+        ...(esLink(b) || !conLink ? [{ value: LINK, label: 'Abre un link' }] : [])];
     const elegirDestino = (i, v) => cambiar('botones', r.botones.map((b, j) => (j !== i ? b
         : v === LINK ? { titulo: b.titulo, url: b.url || '' } : { titulo: b.titulo, va_a: v || null })));
     const linkMal = r.botones.some((b) => esLink(b) && (!URL_VALIDA.test(b.url.trim())
@@ -89,7 +98,7 @@ export function Editor({ nombre, boton, botones, inicial, asignables, datos, onG
             <div className="bw-cuerpo">
                 {iLink < 0
                     ? <span className="bw-s">Este botón no tiene link: agregalo en su respuesta.</span>
-                    : <Despues valor={r.botones[iLink].despues} onChange={(d) => cambiarBoton(iLink, 'despues', d)} />}
+                    : <Despues valor={r.botones[iLink].despues} botones={botones} onChange={(d) => cambiarBoton(iLink, 'despues', d)} />}
                 <div className="bw-fila">
                     <Button variant="primary" disabled={guardando || linkMal || iLink < 0} onClick={guardar}>Guardar</Button>
                 </div>
@@ -104,14 +113,17 @@ export function Editor({ nombre, boton, botones, inicial, asignables, datos, onG
             </label>
             <Espera segundos={r.demora_segundos || 0} onChange={(s) => cambiar('demora_segundos', s)} />
             <div className="bw-campo">
-                <span>Botones del mensaje <small className="bw-s">(hasta {MAX_BOTONES}, de {LARGO_BOTON} caracteres; uno con link va solo)</small></span>
+                <span>Botones del mensaje <small className="bw-s">(hasta {MAX_BOTONES} de respuesta y uno con link, de {LARGO_BOTON} caracteres)</small></span>
+                {conLink && respuestas > 0 && (
+                    <small className="bw-s">WhatsApp no mezcla un link con botones de respuesta: sale tu mensaje con el link y, justo debajo, otro con los demás botones.</small>
+                )}
                 {r.botones.map((b, i) => (
                     <div key={i} className="bw-cuerpo bw-boton">
                         <div className="bw-fila">
                             <Input value={b.titulo} maxLength={LARGO_BOTON} aria-label="Texto del botón" invalid={!b.titulo.trim()}
                                 onChange={(e) => cambiarBoton(i, 'titulo', e.target.value)} />
                             <small className="bw-s bw-cuenta">{b.titulo.length}/{LARGO_BOTON}</small>
-                            <Select size="sm" label="Al tocarlo" value={esLink(b) ? LINK : b.va_a || ''} options={destinos} onChange={(v) => elegirDestino(i, v)} />
+                            <Select size="sm" label="Al tocarlo" value={esLink(b) ? LINK : b.va_a || ''} options={destinosDe(b)} onChange={(v) => elegirDestino(i, v)} />
                             <IconButton size="sm" icon={<X />} label="Quitar botón" onClick={() => cambiar('botones', r.botones.filter((_, j) => j !== i))} />
                         </div>
                         {esLink(b) && (
@@ -120,19 +132,25 @@ export function Editor({ nombre, boton, botones, inicial, asignables, datos, onG
                                     onChange={(e) => cambiarBoton(i, 'url', e.target.value)} />
                                 {parte === 'respuesta'
                                     ? <LinkButton icon={<Plus />} onClick={onAbrirDespues}>{b.despues ? 'Ver el mensaje al abrir el link' : 'Mensaje al abrir el link'}</LinkButton>
-                                    : <Despues valor={b.despues} onChange={(d) => cambiarBoton(i, 'despues', d)} />}
+                                    : <Despues valor={b.despues} botones={botones} onChange={(d) => cambiarBoton(i, 'despues', d)} />}
                             </>
                         )}
                     </div>
                 ))}
-                {r.botones.length < MAX_BOTONES && !conLink && (
-                    <LinkButton icon={<Plus />} onClick={() => cambiar('botones', [...r.botones, { titulo: '', va_a: null }])}>Botón</LinkButton>
+                {r.botones.length < MAX_TOTAL && (respuestas < MAX_BOTONES || !conLink) && (
+                    <LinkButton icon={<Plus />} onClick={() => cambiar('botones', [...r.botones, respuestas < MAX_BOTONES ? { titulo: '', va_a: null } : { titulo: '', url: '' }])}>Botón</LinkButton>
                 )}
+            </div>
+            <div className="bw-campo">
+                <span>Etiquetas <small className="bw-s">(separadas por coma; sacar una que no tiene no hace nada)</small></span>
+                <div className="bw-fila">
+                    <Input value={r.pone} onChange={(e) => cambiar('pone', e.target.value)} placeholder="Pone: confirmado" aria-label="Etiquetas que pone" />
+                    <Input value={r.saca} onChange={(e) => cambiar('saca', e.target.value)} placeholder="Saca: baja, no va" aria-label="Etiquetas que saca" />
+                </div>
             </div>
             <div className="bw-fila">
                 <Select size="sm" label="Asignar a" value={r.asignar_a ?? ''} onChange={(v) => cambiar('asignar_a', v === '' ? null : Number(v))}
                     options={[{ value: '', label: 'Sin cambiar la asignación' }, ...asignables.map((a) => ({ value: a.id, label: a.nombre }))]} />
-                <Input value={r.etiqueta} onChange={(e) => cambiar('etiqueta', e.target.value)} placeholder="Etiqueta (opcional)" aria-label="Etiqueta" maxLength={60} />
                 <Button variant="primary" disabled={guardando || linkMal} onClick={guardar}>Guardar</Button>
             </div>
         </div>
