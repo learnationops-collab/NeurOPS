@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { BellRing, Clock, CornerDownRight } from 'lucide-react';
+import { Clock, CornerDownRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Avatar, Button, Status } from '../../standard';
 import AudioPedido from './AudioPedido';
@@ -49,11 +49,9 @@ function Pedido({ p, onResponder }) {
     );
 }
 
-/** «Pedir actualización» (ADR-W275): el hilo de pedidos de esta sesión y el botón para pedir uno. */
-export default function PedidosActualizacion({ appointmentId }) {
+/** Los pedidos de esta sesión, refrescados cada 20 s con la ficha abierta (ADR-W275). */
+export function usePedidos(appointmentId) {
     const [datos, setDatos] = useState(null);
-    const [pidiendo, setPidiendo] = useState(false);
-
     const cargar = useCallback(() => {
         if (!appointmentId) return;
         listarPedidos(appointmentId).then(setDatos).catch(() => {});
@@ -65,11 +63,8 @@ export default function PedidosActualizacion({ appointmentId }) {
         return () => clearInterval(id);
     }, [cargar]);
 
-    if (!datos || (!datos.pedidos.length && !datos.puede_pedir)) return null;
-
     const pedir = async (m, a) => {
         await pedirActualizacion(appointmentId, m, a);
-        setPidiendo(false);
         toast.success('Pedido enviado. Te avisamos cuando responda.');
         cargar();
     };
@@ -78,29 +73,31 @@ export default function PedidosActualizacion({ appointmentId }) {
         toast.success('Respuesta enviada.');
         cargar();
     };
+    return { pedidos: datos?.pedidos || [], puedePedir: !!datos?.puede_pedir, pedir, responder };
+}
 
+/** El hilo: cada pedido con su respuesta, o «Responder» para quien lo recibió. */
+export function HiloPedidos({ pedidos, onResponder }) {
+    if (!pedidos.length) return null;
     return (
-        <section className="pa">
-            <div className="pa-cab">
-                {datos.pedidos.length > 0 && <small className="t-rotulo">Actualizaciones</small>}
-                {datos.puede_pedir && !pidiendo && (
-                    <Button icon={<BellRing size={14} />} onClick={() => setPidiendo(true)}>Pedir actualización</Button>
-                )}
-            </div>
-            <AnimatePresence initial={false}>
-                {pidiendo && (
-                    <motion.div key="caja" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}>
-                        <CajaMensaje placeholder="¿Qué querés saber? (opcional) · o grabá un audio"
-                            enviarLabel="Pedir actualización" onCancelar={() => setPidiendo(false)} onEnviar={pedir} />
-                    </motion.div>
-                )}
-            </AnimatePresence>
-            {datos.pedidos.length > 0 && (
-                <ul className="pa-lista">
-                    {datos.pedidos.map((p) => <Pedido key={p.id} p={p} onResponder={responder} />)}
-                </ul>
+        <ul className="pa-lista">
+            {pedidos.map((p) => <Pedido key={p.id} p={p} onResponder={onResponder} />)}
+        </ul>
+    );
+}
+
+/** La caja para pedir una actualización: texto opcional o audio dictado. */
+export function CajaPedido({ abierto, onPedir, onCerrar }) {
+    return (
+        <AnimatePresence initial={false}>
+            {abierto && (
+                <motion.div key="caja" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}>
+                    <CajaMensaje placeholder="¿Qué querés saber? (opcional) · o grabá un audio"
+                        enviarLabel="Pedir actualización" onCancelar={onCerrar}
+                        onEnviar={async (m, a) => { await onPedir(m, a); onCerrar(); }} />
+                </motion.div>
             )}
-        </section>
+        </AnimatePresence>
     );
 }

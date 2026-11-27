@@ -1,10 +1,10 @@
 // «Guardado en el servidor» de la ficha: cada cambio se escribe al instante y la ficha se vuelve a leer de la base,
-// pero nada lo decía. Esta franja muestra a qué hora se leyó por última vez y «Verificar guardado» la vuelve a leer
-// y lista lo que quedó, para que quien reporta compruebe que no quedó pendiente.
+// pero nada lo decía. «Verificar guardado» la vuelve a leer y dice lo que quedó, para que quien reporta compruebe
+// que no quedó pendiente. La hora de la última lectura va en el tooltip del botón.
 
 import { useState } from 'react';
-import { CheckCircle2, RefreshCw } from 'lucide-react';
-import { Button } from '../../standard';
+import { RefreshCw } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 const hora = (d) => d.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 const CALIFICACION = { calificado: 'Califica (+500 USD)', descalificado: 'No califica', seguimiento: 'Lo va a pensar' };
@@ -32,15 +32,20 @@ export function resumenDeLaFicha(ficha) {
   return filas;
 }
 
-export default function BarraGuardado({ leidaEn, onVerificar }) {
+/** «Verificar guardado» (27/11/2026, compacto): relee la ficha y dice en un aviso lo que quedó en la base. */
+export default function BarraGuardado({ leidaEn, onVerificar, className = 'fi-mini' }) {
   const [verificando, setVerificando] = useState(false);
-  const [resultado, setResultado] = useState(null);
 
   const verificar = async () => {
     setVerificando(true);
     try {
       const datos = await onVerificar();
-      setResultado(datos ? { hora: new Date(), filas: resumenDeLaFicha(datos) } : { falla: true });
+      if (!datos) {
+        toast.error('No se pudo leer el servidor. Revisá tu conexión y volvé a intentar.');
+        return;
+      }
+      const filas = resumenDeLaFicha(datos).map(([rotulo, valor]) => `${rotulo}: ${valor}`).join(' · ');
+      toast.success(`Guardado a las ${hora(new Date())}. ${filas}`, { duration: 6000 });
     } finally {
       setVerificando(false);
     }
@@ -48,26 +53,10 @@ export default function BarraGuardado({ leidaEn, onVerificar }) {
 
   if (!leidaEn) return null;
   return (
-    <div role="status" aria-label="Estado del guardado"
-      style={{ display: 'grid', gap: 6, padding: '8px 12px', borderRadius: 12, border: '1px solid var(--border-subtle)', fontSize: 12 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--text-muted)' }}>
-          <CheckCircle2 aria-hidden="true" size={14} style={{ color: 'var(--success)' }} />
-          Los cambios se guardan al instante. Última lectura del servidor: {hora(leidaEn)}
-        </span>
-        <Button size="sm" variant="secondary" onClick={verificar} disabled={verificando}>
-          <RefreshCw aria-hidden="true" size={13} /> {verificando ? 'Verificando…' : 'Verificar guardado'}
-        </Button>
-      </div>
-      {resultado?.falla && (
-        <span style={{ color: 'var(--error)' }}>No se pudo leer el servidor. Revisá tu conexión y volvé a intentar.</span>
-      )}
-      {resultado?.filas && (
-        <span style={{ color: 'var(--text-on-surface)' }}>
-          <b style={{ color: 'var(--success)' }}>Verificado a las {hora(resultado.hora)}.</b> Esto es lo que está guardado:{' '}
-          {resultado.filas.map(([rotulo, valor]) => `${rotulo}: ${valor}`).join(' · ')}
-        </span>
-      )}
-    </div>
+    <button type="button" className={className} onClick={verificar} disabled={verificando}
+      title={`Última lectura del servidor: ${hora(leidaEn)}`}>
+      <RefreshCw aria-hidden="true" size={13} className={verificando ? 'fi-girando' : undefined} />
+      {verificando ? 'Verificando…' : 'Verificar guardado'}
+    </button>
   );
 }

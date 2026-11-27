@@ -377,7 +377,9 @@ const FichaLeadModal = ({
     const [volver, setVolver] = useState(null);
     const volverArriba = useMemo(() => ({ registrar: (fn) => setVolver(() => fn) }), []);
 
-    const props = { ficha, onAccion, onConsultar, onRecargar, irA, puedeEditar: estado.puedeEditar, onEnfoque: setEnfoque };
+    const verificable = !enfoque && !soloLectura && estado.puedeEditar;
+    const props = { ficha, onAccion, onConsultar, onRecargar, irA, puedeEditar: estado.puedeEditar, onEnfoque: setEnfoque,
+        leidaEn, onVerificar: verificable ? onRecargar : null };
 
     const panel = () => {
         switch (pestana) {
@@ -432,7 +434,6 @@ const FichaLeadModal = ({
                     role={pestana ? 'tabpanel' : undefined}
                     aria-labelledby={pestana ? `fi-tab-${pestana}` : undefined}>
                     <div style={{ display: 'grid', gap: 'var(--s3)' }}>
-                        {ficha && !enfoque && !soloLectura && estado.puedeEditar && <BarraGuardado leidaEn={leidaEn} onVerificar={() => cargar()} />}
                         {aviso && (
                             <Aviso tono={aviso.tono} titulo={aviso.texto} onCerrar={() => setAviso(null)} />
                         )}
@@ -458,6 +459,10 @@ const FichaLeadModal = ({
                             <motion.div key={pestana || 'vacio'} {...mov.panel}>
                                 {panel()}
                             </motion.div>
+                        )}
+                        {/* «Verificar guardado» abajo y chico (27/11/2026); en Confirmación va con sus botones. */}
+                        {ficha && pestana !== 'conf' && verificable && (
+                            <div className="fi-pie-guardado"><BarraGuardado leidaEn={leidaEn} onVerificar={() => cargar()} /></div>
                         )}
                     </div>
                 </div>

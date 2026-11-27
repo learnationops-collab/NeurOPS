@@ -268,3 +268,14 @@
 .dc-shell .rp-detalle-sig{margin-left:auto;animation:rp-abre .3s cubic-bezier(.16,1,.3,1) .08s backwards}
 .dc-shell .rp-detalle-sig svg{transition:transform .25s cubic-bezier(.16,1,.3,1)}
 .dc-shell .rp-detalle-sig:hover svg{transform:translateX(3px)}
+
+/* Acciones chicas de Confirmación: pedir actualización, verificar guardado y eliminar (27/11/2026) */
+.dc-shell .cf-mini-acciones{display:flex;align-items:center;gap:var(--s4);flex-wrap:wrap;justify-content:flex-end}
+.dc-shell .cf-eliminar.cf-mini:hover:not(:disabled){color:var(--text-on-surface,var(--text))}
+.dc-shell .fi-mini{background:none;border:0;padding:var(--s1) 0;display:inline-flex;align-items:center;gap:var(--s1);
+  color:var(--text-muted);font-size:12px;cursor:pointer;transition:color .2s ease}
+.dc-shell .fi-mini:hover:not(:disabled){color:var(--text-on-surface,var(--text))}
+.dc-shell .fi-mini:disabled{opacity:.5;cursor:default}
+.dc-shell .fi-girando{animation:fi-girar .8s linear infinite}
+@keyframes fi-girar{to{transform:rotate(360deg)}}
+.dc-shell .fi-pie-guardado{display:flex;justify-content:flex-end}

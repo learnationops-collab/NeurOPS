@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, CalendarX, CheckCircle2, PhoneMissed, Trash2 } from 'lucide-react';
+import { BellRing, Calendar, CalendarX, CheckCircle2, PhoneMissed, Trash2 } from 'lucide-react';
 import { Aviso, StepperFicha, TarjetaAccion, useMovimiento } from '../piezas';
 import SubReprogramar from './confirmacion/SubReprogramar';
 import SubCancelo from './confirmacion/SubCancelo';
 import SubNoShow from './confirmacion/SubNoShow';
-import PedidosActualizacion from '../pedidos/PedidosActualizacion';
+import { CajaPedido, HiloPedidos, usePedidos } from '../pedidos/PedidosActualizacion';
+import BarraGuardado from '../piezas/BarraGuardado';
 import SubEliminar from './confirmacion/SubEliminar';
 import './confirmacion/reprogramar.css';
 
@@ -25,7 +26,10 @@ import './confirmacion/reprogramar.css';
  * `CloserWorkflowPage.jsx` y por eso el mazo y el libro de la dirección muestran
  * listas distintas del mismo campo.
  */
-const TabConfirmacion = ({ ficha, onAccion, irA, puedeEditar = true, onEnfoque }) => {
+const TabConfirmacion = ({ ficha, onAccion, irA, puedeEditar = true, onEnfoque, leidaEn = null, onVerificar = null }) => {
+    // Pedir actualización a quien confirma (ADR-W275): el hilo arriba, el botón con los demás.
+    const pedidos = usePedidos(ficha?.identidad?.appointment_id);
+    const [pidiendo, setPidiendo] = useState(false);
     const [modo, setModo] = useState('menu');
     useEffect(() => { onEnfoque?.(modo !== 'menu'); }, [modo, onEnfoque]);
     const mov = useMovimiento();
@@ -109,8 +113,7 @@ const TabConfirmacion = ({ ficha, onAccion, irA, puedeEditar = true, onEnfoque }
 
     return (
         <motion.div key="menu" style={{ display: 'grid', gap: 'var(--s5)' }} {...mov.subvista}>
-            {/* Pedir actualización a quien confirma, y su respuesta (ADR-W275). */}
-            <PedidosActualizacion appointmentId={ficha?.identidad?.appointment_id} />
+            <HiloPedidos pedidos={pedidos.pedidos} onResponder={pedidos.responder} />
 
             {cerrada && (
                 <Aviso tono="success" titulo="Lead 100% confirmado">
@@ -120,7 +123,6 @@ const TabConfirmacion = ({ ficha, onAccion, irA, puedeEditar = true, onEnfoque }
 
             <StepperFicha
                 rotulo="Etapa de confirmación"
-                ayuda={cerrada ? 'Confirmación completa · tocá otra etapa para volver' : 'Tocá la etapa a la que llegó · se guarda solo'}
                 pasos={pasos}
                 deshabilitado={bloqueado || guardando}
                 onPaso={bloqueado ? null : tocarEtapa} />
@@ -141,12 +143,21 @@ const TabConfirmacion = ({ ficha, onAccion, irA, puedeEditar = true, onEnfoque }
             <div className="cf-cambio">
                 <div className="cf-cambio-cab">
                     <small className="t-rotulo">¿Cambió algo con la llamada?</small>
-                    <button type="button" className="cf-eliminar"
-                        disabled={!puedeEditar || ficha?.permisos?.eliminar === false}
-                        onClick={() => setModo('elim')}>
-                        <Trash2 size={13} /> Eliminar lead
-                    </button>
+                    <div className="cf-mini-acciones">
+                        {pedidos.puedePedir && (
+                            <button type="button" className="cf-eliminar cf-mini" onClick={() => setPidiendo((v) => !v)}>
+                                <BellRing size={13} /> Pedir actualización
+                            </button>
+                        )}
+                        {onVerificar && <BarraGuardado leidaEn={leidaEn} onVerificar={onVerificar} className="cf-eliminar cf-mini" />}
+                        <button type="button" className="cf-eliminar"
+                            disabled={!puedeEditar || ficha?.permisos?.eliminar === false}
+                            onClick={() => setModo('elim')}>
+                            <Trash2 size={13} /> Eliminar lead
+                        </button>
+                    </div>
                 </div>
+                <CajaPedido abierto={pidiendo} onPedir={pedidos.pedir} onCerrar={() => setPidiendo(false)} />
                 <div className="cf-cambio-grid">
                     <TarjetaAccion tono="info" icono={Calendar} label="Reprogramar"
                         deshabilitado={bloqueado} onClick={() => setModo('repro')} />
