@@ -12,6 +12,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { entrarAlIniciar } from '../../utils/portal';
 import { LogoEntrada, MarcoEntrada } from './Eleccion';
 import DebugConsole from '../../components/modals/DebugConsole';
+import { Switch } from '../../components/standard';
 import './login.css';
 
 const MENSAJE_GOOGLE = {
@@ -41,20 +42,26 @@ function LogoGoogle() {
 
 function Entrar({ onEntrar, errorInicial }) {
     const { login, entrarConGoogle } = useAuth();
-    const [username, setUsername] = useState('');
+    // «Recordarme»: la sesión dura 30 días (si no, 24 h) y el usuario queda escrito para la próxima vez.
+    const [recordar, setRecordar] = useState(() => localStorage.getItem('lg_recordar') !== '0');
+    const [username, setUsername] = useState(() => localStorage.getItem('lg_usuario') || '');
     const [password, setPassword] = useState('');
     const [ver, setVer] = useState(false);
     const [cargando, setCargando] = useState(null); // null | 'clave' | 'google'
     const [error, setError] = useState(errorInicial);
     const ref = useRef(null);
-    useEffect(() => { ref.current?.focus(); }, []);
+    const refClave = useRef(null);
+    useEffect(() => { (username ? refClave : ref).current?.focus(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const conClave = async (e) => {
         e.preventDefault();
         setCargando('clave');
         setError(null);
         try {
-            onEntrar(await login(username, password));
+            localStorage.setItem('lg_recordar', recordar ? '1' : '0');
+            if (recordar) localStorage.setItem('lg_usuario', username.trim());
+            else localStorage.removeItem('lg_usuario');
+            onEntrar(await login(username, password, recordar));
         } catch (err) {
             setError(err.response?.data?.message === 'Invalid credentials' || !err.response?.data?.message
                 ? 'Usuario o contraseña incorrectos'
@@ -85,13 +92,17 @@ function Entrar({ onEntrar, errorInicial }) {
                     placeholder="Usuario o email" value={username} onChange={(e) => setUsername(e.target.value)} />
                 <div className="lg-clave">
                     <label className="sr-only" htmlFor="lg-clave">Contraseña</label>
-                    <input id="lg-clave" className="lg-input" type={ver ? 'text' : 'password'} autoComplete="current-password"
+                    <input id="lg-clave" ref={refClave} className="lg-input" type={ver ? 'text' : 'password'} autoComplete="current-password"
                         required placeholder="Contraseña" value={password} onChange={(e) => setPassword(e.target.value)} />
                     <button type="button" className="lg-ojo lg-ojo--solo" onClick={() => setVer(!ver)}
                         aria-label={ver ? 'Ocultar contraseña' : 'Mostrar contraseña'} title={ver ? 'Ocultar contraseña' : 'Mostrar contraseña'}>
                         {ver ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
                 </div>
+                <label className="lg-recordar">
+                    <Switch checked={recordar} onChange={setRecordar} label="Recordarme" />
+                    <span onClick={() => setRecordar(!recordar)}>Recordarme</span>
+                </label>
                 <button type="submit" className="lg-entrar" disabled={!!cargando}>
                     {cargando === 'clave' ? <Loader2 size={18} className="lg-gira" /> : 'Iniciar sesión'}
                 </button>
@@ -149,7 +160,7 @@ function PedirEmail({ user, onListo }) {
 
 export default function LoginPage() {
     const navigate = useNavigate();
-    const { completarLoginGoogle } = useAuth();
+    const { completarLoginGoogle, user: sesion } = useAuth();
     const [params, setParams] = useSearchParams();
     const [google] = useState(() => params.get('google'));
     const [entrandoGoogle, setEntrandoGoogle] = useState(google === 'ok');
@@ -161,6 +172,14 @@ export default function LoginPage() {
     const alEntrar = (u) => {
         if (!u.email) { setUser(u); setPaso('email'); } else seguir(u);
     };
+
+    // Ya hay sesión (otra pestaña de Work, o work.thelearnation.com que cae acá): entra directo, sin pedir la clave.
+    // Se mira solo al abrir: la sesión que deja el login de acá no debe tapar el paso del email.
+    const [yaAdentro] = useState(() => !!sesion && !google);
+    useEffect(() => {
+        if (yaAdentro) seguir(sesion);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     // Vuelta de «Entrar con Google»: se canjea la sesión por el token una sola vez.
     useEffect(() => {
@@ -174,7 +193,7 @@ export default function LoginPage() {
     }, []);
 
     return (
-        <MarcoEntrada clase="lg--login" marca={null}>
+        yaAdentro ? null : <MarcoEntrada clase="lg--login" marca={null}>
             <main className="lg-centro">
                     {paso === 'entrar' && (entrandoGoogle
                         ? <div className="lg-panel"><LogoEntrada idGrad="lnGradLogin" /><p className="lg-texto"><Loader2 size={16} className="lg-gira" /> Entrando con Google…</p></div>

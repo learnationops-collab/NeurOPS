@@ -29,6 +29,10 @@ def _usuario_json(u, **extra):
     }
 
 
+# Cuánto dura la sesión con «Recordarme» (y la de Google): lo mismo que la cookie remember (REMEMBER_COOKIE_DURATION).
+SESION_RECORDADA_S = 30 * 24 * 3600
+
+
 @bp.route('/auth/login', methods=['POST'])
 def login():
     """
@@ -73,7 +77,9 @@ def login():
     # 4. Login Session (Optional / Legacy support)
     from flask import session
     olvidar_simulacion(session)
-    login_user(user, remember=True)
+    # «Recordarme» (activado por defecto): la sesión dura 30 días en vez de 24 h, en el token y en la cookie.
+    recordar = data.get('recordar', True) is not False
+    login_user(user, remember=recordar)
     session.pop('active_role', None)  # se entra siempre con el rol principal
 
     # Sincronizar la timezone del usuario con la detectada por su navegador en cada login,
@@ -90,7 +96,7 @@ def login():
             pass
 
     # 5. Generate Token (Primary Auth Method)
-    token = user.get_auth_token()
+    token = user.get_auth_token(expires_in=SESION_RECORDADA_S if recordar else 86400)
 
     return jsonify({
         "message": "Login successful",
@@ -123,7 +129,7 @@ def sesion_de_google():
     usuario_id = session.pop('google_login', None)
     if not current_user.is_authenticated or usuario_id != current_user.id:
         return jsonify({"message": "No hay un inicio de sesión con Google pendiente"}), 401
-    return jsonify({"message": "Login successful", "token": current_user.get_auth_token(),
+    return jsonify({"message": "Login successful", "token": current_user.get_auth_token(expires_in=SESION_RECORDADA_S),
                     "user": _usuario_json(current_user)}), 200
 
 
