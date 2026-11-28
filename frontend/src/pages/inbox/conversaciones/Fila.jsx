@@ -2,7 +2,7 @@
 // califica, cuánto hace que espera, la tarea que vence y a quién está asignada. Se decide a quién atender
 // sin abrir el chat. Lo no leído va en negrita con su cuenta. También: el borrador sin mandar, el seguimiento
 // programado y cuánto falta para que Instagram no deje escribirle (últimas 24 h).
-import { AlarmClock, Bot, Check, Clock, PencilLine, Repeat2, User, X } from 'lucide-react';
+import { AlarmClock, Bot, Check, Clock, PencilLine, Repeat2, Search, User, X } from 'lucide-react';
 import { Avatar, Chip } from '../../../components/standard';
 import Funnel from './Funnel';
 import { avisoCierre, cierreMin, esperaMin, esperaSeguimiento, examenDe, haceDias, quien, seguimientosDe, vistaPrevia } from './colas';
@@ -89,7 +89,9 @@ export default function Fila({ c, elegida, ahora, yo, conAsignado, borrador, onE
                     </span>
                     <span className="cv-item-texto mut">
                         {c.ultimo_de === 'motor' ? <Bot size={12} aria-label="Bot" /> : c.ultimo_de === 'otro' ? <User size={12} aria-label="Equipo" /> : null}
-                        {borrador && !elegida
+                        {c.coincide
+                            ? <span className="cv-coincide" data-tip={`Lo que le escribió el equipo|${c.coincide.texto}`}><Search size={11} aria-hidden="true" />{c.coincide.texto}</span>
+                            : borrador && !elegida
                             ? <span className="cv-borrador"><PencilLine size={11} aria-hidden="true" />{borrador}</span>
                             : <span>{vistaPrevia(c)}</span>}
                         <span className="cv-item-der">

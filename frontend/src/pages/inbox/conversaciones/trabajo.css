@@ -194,3 +194,10 @@
 .thalamus.inbox .cv-sin-resp--toca svg,.thalamus.inbox .cv-sin-resp--rojo svg{animation:nvLatidoSuave 1.8s ease-in-out infinite}
 @keyframes nvLatidoSuave{0%,100%{transform:scale(1)}50%{transform:scale(1.2)}}
 @media (prefers-reduced-motion:reduce){.thalamus.inbox .cv-sin-resp,.thalamus.inbox .cv-sin-resp svg{animation:none}}
+/* Buscador «#texto» (ADR-W294): lo que coincide en la fila y el mensaje resaltado en el chat */
+.thalamus.inbox .cv-coincide{flex:1;min-width:0;display:inline-flex;align-items:center;gap:4px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:var(--text-primary)}
+.thalamus.inbox .cv-coincide svg{flex-shrink:0;color:var(--brand-primary)}
+.thalamus.inbox .cv-buscando{padding:2px var(--s3) var(--s2)}
+.thalamus.inbox .cv-burbuja--resaltada{outline:2px solid var(--warning);outline-offset:2px}
+.thalamus.inbox .cv-copiar{display:inline-flex;align-items:center;gap:3px;margin-left:6px;padding:0 6px;border-radius:99px;border:1px solid currentColor;background:transparent;color:inherit;font:inherit;cursor:pointer;opacity:.85}
+.thalamus.inbox .cv-copiar:hover{opacity:1}

@@ -125,7 +125,10 @@ export default function Conversaciones() {
     const lista = (datos?.conversaciones || []).map((c) => (
         c.sin_leer && leidas[c.id] && new Date(c.ultimo_en) <= leidas[c.id] ? { ...c, sin_leer: 0 } : c));
     const marcarLeida = useCallback((id) => setLeidas((l) => ({ ...l, [id]: new Date() })), []);
-    const visibles = useOrdenEstable(filtrar(lista, { ...filtro, ahora }), `${JSON.stringify(filtro)}|${buscar.trim()}`);
+    // Buscando, se ve todo lo que encontró: el filtro de la bandeja escondía los resultados (ADR-W294).
+    const buscando = Boolean(buscar.trim());
+    const visibles = useOrdenEstable(filtrar(lista, buscando ? { ...VACIO, conCerradas: true, ahora } : { ...filtro, ahora }),
+        `${JSON.stringify(filtro)}|${buscar.trim()}`);
     const orden = ordenDe(filtro);
     const marcar = useCallback((id) => setMarcadas((m) => (m.includes(id) ? m.filter((x) => x !== id) : [...m, id])), []);
     const dejarDeElegir = () => { setEligiendo(false); setMarcadas([]); };
@@ -168,7 +171,9 @@ export default function Conversaciones() {
     } else {
         listado = (
             <>
-                <ListaCab visibles={visibles} orden={orden} ahora={ahora} />
+                {buscando
+                    ? <p className="t-cap mut40 cv-buscando">{visibles.length} {visibles.length === 1 ? 'resultado' : 'resultados'}, sin los filtros de la bandeja{buscar.trim().startsWith('#') ? ' · en lo que le escribió el equipo' : ''}</p>
+                    : <ListaCab visibles={visibles} orden={orden} ahora={ahora} />}
                 <ul>{visibles.map((c) => <Fila key={c.id} c={c} ahora={ahora} yo={yo} conAsignado={conAsignado} elegida={elegida === c.id} borrador={borradores[c.id]} onElegir={setElegida}
                     eligiendo={eligiendo} marcada={marcadas.includes(c.id)} onMarcar={marcar} fases={filtro.fases} />)}</ul>
                 {lista.length >= limite && (
@@ -232,7 +237,7 @@ export default function Conversaciones() {
                         {listado}
                     </Panel>
                     {elegida
-                        ? <Detalle key={elegida} id={elegida} yo={yo} onCambio={recargar} />
+                        ? <Detalle key={elegida} id={elegida} yo={yo} onCambio={recargar} resaltar={lista.find((c) => c.id === elegida)?.coincide?.id} />
                         : <Panel size="sm" className="cv-detalle cv-detalle--vacio"><EmptyState icon={<MessageSquare size={22} />}>Elegí una conversación.</EmptyState></Panel>}
                 </div>
             )}

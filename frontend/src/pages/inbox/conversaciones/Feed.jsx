@@ -3,8 +3,8 @@
 // variable). Debajo de cada respuesta del lead, qué activó en el flujo. Al final, lo que el setter acaba de
 // mandar y todavía no confirmó Instagram (`useEnvio`): «enviando…» o «no salió» con Reintentar.
 import { Fragment, useEffect, useRef, useState } from 'react';
-import { Bot, CalendarCheck, Check, History, Hourglass, MessageCircle, RotateCcw, StickyNote, X, Zap } from 'lucide-react';
-import { Button, IconButton } from '../../../components/standard';
+import { Bot, CalendarCheck, Check, Copy, History, Hourglass, MessageCircle, RotateCcw, StickyNote, X, Zap } from 'lucide-react';
+import { Button, IconButton, toast } from '../../../components/standard';
 import { rotuloPaso } from '../estadoFlujo';
 import { ADJUNTOS } from './colas';
 import { Cita, Medio } from './Whatsapp';
@@ -80,9 +80,14 @@ function textoEfecto(e) {
     return null;
 }
 
-function Burbuja({ m, onCambio }) {
+function Copiar({ texto }) {
+    const copiar = () => navigator.clipboard.writeText(texto).then(() => toast('Copiado'), () => toast('No se pudo copiar', 'error'));
+    return <button type="button" className="cv-copiar" onClick={copiar}><Copy size={11} aria-hidden="true" />Copiar</button>;
+}
+
+function Burbuja({ m, onCambio, resaltado }) {
     return (
-        <li className={`cv-burbuja cv-burbuja--${m.direccion} cv-burbuja--${m.origen}${m.medio?.tipo === 'sticker' ? ' cv-burbuja--sticker' : ''}`}
+        <li className={`cv-burbuja cv-burbuja--${m.direccion} cv-burbuja--${m.origen}${m.medio?.tipo === 'sticker' ? ' cv-burbuja--sticker' : ''}${resaltado ? ' cv-burbuja--resaltada' : ''}`}
             data-mensaje={m.id} data-direccion={m.direccion}>
             {m.comentario && (
                 <span className="cv-comentario" data-tip="No es un DM|Comentó una publicación: si no abrió la conversación, puede que no se le pueda escribir">
@@ -106,17 +111,18 @@ function Burbuja({ m, onCambio }) {
                 {m.origen === 'otro' && (m.autor ? `${m.autor} · ` : 'Equipo · ')}
                 {momento(m.en)}
                 <MarcaEnMensaje m={m} onCambio={onCambio} />
+                {resaltado && m.texto && <Copiar texto={m.texto} />}
             </span>
         </li>
     );
 }
 
-function Item({ x, onCambio }) {
+function Item({ x, onCambio, resaltar }) {
     if (x.tipo === 'mensaje') {
         const efecto = x.m.efecto && textoEfecto(x.m.efecto);
         return (
             <>
-                <Burbuja m={x.m} onCambio={onCambio} />
+                <Burbuja m={x.m} onCambio={onCambio} resaltado={x.m.id === resaltar} />
                 {efecto && <li className="cv-efecto"><Zap size={11} aria-hidden="true" /><span>{efecto}</span></li>}
             </>
         );
@@ -158,7 +164,8 @@ function Pendiente({ p, onReintentar, onDescartar }) {
 }
 
 // `onSeleccion`: al soltar el mouse con texto seleccionado (Anotar resaltando, `Cita.jsx`).
-export default function Feed({ mensajes, notas, tareas, pendientes = [], onReintentar, onDescartar, onSeleccion, onCambio }) {
+// `resaltar`: el mensaje que encontró «#texto» (ADR-W294): el chat abre ahí en lugar de en lo último.
+export default function Feed({ mensajes, notas, tareas, pendientes = [], onReintentar, onDescartar, onSeleccion, onCambio, resaltar }) {
     const lista = useRef(null);
     const items = [
         ...mensajes.map((m) => ({ tipo: 'mensaje', en: m.en, key: `m${m.id}`, m })),
@@ -167,7 +174,13 @@ export default function Feed({ mensajes, notas, tareas, pendientes = [], onReint
     ].sort((a, b) => new Date(a.en) - new Date(b.en));
     const cantidad = items.length + pendientes.length;
     // Abre en lo último, como cualquier chat, y baja cuando llega algo nuevo.
-    useEffect(() => { if (lista.current) lista.current.scrollTop = lista.current.scrollHeight; }, [cantidad]);
+    const enResaltado = useRef(false);
+    useEffect(() => {
+        if (!lista.current) return;
+        const destino = resaltar && !enResaltado.current && lista.current.querySelector(`[data-mensaje="${resaltar}"]`);
+        if (destino) { enResaltado.current = true; destino.scrollIntoView({ block: 'center' }); return; }
+        if (!enResaltado.current) lista.current.scrollTop = lista.current.scrollHeight;
+    }, [cantidad, resaltar]);
     // Un separador cada vez que cambia el día, como en WhatsApp.
     let diaAnterior = null;
     return (
@@ -179,7 +192,7 @@ export default function Feed({ mensajes, notas, tareas, pendientes = [], onReint
                 return (
                     <Fragment key={x.key}>
                         {nuevo && <li className="cv-dia" aria-label={rotuloDia(x.en)}><span>{rotuloDia(x.en)}</span></li>}
-                        <Item x={x} onCambio={onCambio} />
+                        <Item x={x} onCambio={onCambio} resaltar={resaltar} />
                     </Fragment>
                 );
             })}

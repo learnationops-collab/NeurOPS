@@ -9,7 +9,7 @@ from flask import Blueprint, jsonify, request
 from flask_login import current_user, login_required
 
 from app import db
-from app.automatizaciones import bandeja, campanas, escribir, fases, metricas, progreso, servicio
+from app.automatizaciones import bandeja, busqueda, campanas, escribir, fases, metricas, progreso, servicio
 from app.automatizaciones.modelos import AutEjecucion, AutEmbudo, AutFlujo, IgContacto, IgMensaje
 from app.automatizaciones.nucleo import grafo as g
 from app.models.instagram import InstagramWebhookEvento
@@ -263,7 +263,6 @@ TOPE_BANDEJA = 2000
 
 @bp.route('/conversaciones', methods=['GET'])
 def listar_conversaciones():
-    buscar = (request.args.get('buscar') or '').strip().lower()
     limite = min(max(request.args.get('limite', 100, type=int) or 100, 1), TOPE_BANDEJA)
     ultimo = (db.session.query(IgMensaje.contacto_id, db.func.max(IgMensaje.enviado_en).label('ultimo'),
                                db.func.min(IgMensaje.enviado_en).label('primero'),
@@ -271,16 +270,8 @@ def listar_conversaciones():
               .group_by(IgMensaje.contacto_id).subquery())
     consulta = (db.session.query(IgContacto, ultimo.c.ultimo, ultimo.c.cantidad, ultimo.c.primero)
                 .join(ultimo, ultimo.c.contacto_id == IgContacto.id))
-    if buscar.startswith('#'):
-        # «#palabra»: lo que el equipo ya le escribió (buscar una devolución dada a otro lead).
-        patron = f'%{buscar[1:].strip()}%'
-        consulta = consulta.filter(IgContacto.id.in_(db.session.query(IgMensaje.contacto_id).filter(
-            IgMensaje.direccion == IgMensaje.SALIENTE, db.func.lower(IgMensaje.texto).like(patron))))
-    elif buscar:
-        patron = f'%{buscar}%'
-        consulta = consulta.filter(db.or_(db.func.lower(IgContacto.username).like(patron),
-                                          db.func.lower(IgContacto.nombre).like(patron),
-                                          IgContacto.igsid.like(patron)))
+    # «#palabra»: lo que el equipo ya le escribió (buscar una devolución dada a otro lead, ADR-W294).
+    consulta, patron = busqueda.filtrar(consulta, request.args.get('buscar'))
     filas = consulta.order_by(ultimo.c.ultimo.desc()).limit(limite).all()
     ahora = servicio.ahora()
     ids = [c.id for c, _, _, _ in filas]
@@ -303,6 +294,7 @@ def listar_conversaciones():
     from app.automatizaciones import cliente_del_contacto
     reales = cliente_del_contacto.nombres([c for c, _, _, _ in filas])
     de_funnel = bandeja.funnels(ids)
+    coinciden = busqueda.coincidencias(ids, patron)
     salida = []
     for contacto, momento, cantidad, _ in filas:
         variables = contacto.variables or {}
@@ -349,6 +341,8 @@ def listar_conversaciones():
             'etiquetas': etiquetas.get(str(contacto.id), []),
             # No lead / In-abrible sin mensajes nuevos del lead: sale de la bandeja (pedido de Mario, 25/11).
             'cerrada': contacto.id in cerradas,
+            # Con «#texto»: el mensaje del equipo que coincide, para verlo y copiarlo desde la fila.
+            'coincide': coinciden.get(contacto.id),
             **avance.get(contacto.id, {}),
         })
     return jsonify({'conversaciones': salida, 'mediana_respuesta': bandeja.mediana_respuesta(ahora),

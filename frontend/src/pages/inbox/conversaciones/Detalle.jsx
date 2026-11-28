@@ -20,7 +20,7 @@ import ReaccionRespuesta, { reaccionDe } from './ReaccionRespuesta';
 import { REFRESCO, resuelta } from './colas';
 import { completarGuia, pasosDe, siguienteId, useGuia, useLinkAgenda, visibles } from '../guia/useGuia';
 
-function Chat({ datos, yo, pausar, onCambio, pegar, selector, onSelector }) {
+function Chat({ datos, yo, pausar, onCambio, pegar, selector, onSelector, resaltar }) {
     const { contacto, avance } = datos;
     const envio = useEnvio(contacto.id, onCambio);
     const [seleccion, setSeleccion] = useState(null);
@@ -47,7 +47,7 @@ function Chat({ datos, yo, pausar, onCambio, pegar, selector, onSelector }) {
         <Panel as="section" size="sm" className="cv-detalle" aria-label="Conversación">
             <Feed mensajes={datos.mensajes} notas={datos.notas || []} tareas={datos.tareas || []}
                 pendientes={pendientes} onReintentar={envio.reintentar} onDescartar={envio.descartar}
-                onSeleccion={() => setSeleccion(seleccionDelLead())} onCambio={onCambio} />
+                onSeleccion={() => setSeleccion(seleccionDelLead())} onCambio={onCambio} resaltar={resaltar} />
             <Composer contacto={contacto} mensajes={datos.mensajes} pausar={pausar} fase={avance?.fase} ejecucion={datos.ejecucion} seguimientos={datos.seguimientos} yo={yo} onCambio={onCambio}
                 onEnviar={conReaccion(envio.enviar)} onEnviarVarios={conReaccion(envio.enviarVarios)} onLearnito={abrirLearnito} pegar={pegar} selector={selector} onSelector={onSelector} />
             <ReaccionRespuesta reaccion={reaccion} onCerrar={cerrarReaccion} />
@@ -56,7 +56,8 @@ function Chat({ datos, yo, pausar, onCambio, pegar, selector, onSelector }) {
     );
 }
 
-export default function Detalle({ id, yo, onCambio }) {
+// `resaltar`: el id del mensaje que encontró «#texto» en el buscador (ADR-W294): el chat abre ahí.
+export default function Detalle({ id, yo, onCambio, resaltar }) {
     const [datos, setDatos] = useState(() => recordado(`chat:${id}`));
     const [error, setError] = useState(null);
     // Al pasar de etapa: la etapa cuyos mensajes se eligen (`selector`) y el texto que se pega en la caja (`pegar`).
@@ -104,7 +105,7 @@ export default function Detalle({ id, yo, onCambio }) {
     const fase = datos.avance?.fase;
     return (
         <>
-            <Chat datos={datos} yo={yo} pausar={pausar} onCambio={cambio} pegar={pegar} selector={selector}
+            <Chat datos={datos} yo={yo} pausar={pausar} onCambio={cambio} pegar={pegar} selector={selector} resaltar={resaltar}
                 onSelector={(elegido) => { setSelector(null); if (elegido) setPegar({ ...elegido, n: Date.now() }); }} />
             <div className="cv-derecha">
                 <Tirador lado="der" />
