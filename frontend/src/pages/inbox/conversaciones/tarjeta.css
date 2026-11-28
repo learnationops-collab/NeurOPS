@@ -13,6 +13,17 @@
 .thalamus.inbox .cv-origen-clave:disabled{cursor:default;opacity:1}
 .thalamus.inbox .cv-origen-clave::before{content:"#";color:var(--brand-secondary);font-weight:900}
 .thalamus.inbox .cv-origen-clave svg{flex:none;color:var(--text-muted)}
+/* Lead Magnet o Direct Sale (ADR-W287): una pastilla con un punto de color; Direct Sale, cálido y con un brillo que respira. */
+.thalamus.inbox .cv-funnel{--c:var(--info);display:inline-flex;align-items:center;gap:5px;flex:none;height:24px;padding:0 9px;border-radius:6px;
+  font-size:10.5px;font-weight:600;letter-spacing:.03em;white-space:nowrap;color:color-mix(in srgb,var(--c) 85%,var(--text-main));
+  border:1px solid color-mix(in srgb,var(--c) 32%,transparent);background:color-mix(in srgb,var(--c) 10%,transparent);animation:cv-funnel-in .35s ease-out both}
+.thalamus.inbox .cv-funnel i{width:6px;height:6px;border-radius:50%;background:var(--c);box-shadow:0 0 6px var(--c)}
+.thalamus.inbox .cv-funnel--direct i{animation:cv-funnel-late 2.2s ease-in-out infinite}
+.thalamus.inbox .cv-funnel--mini{height:16px;padding:0 5px;gap:3px;border-radius:5px;font-size:9px;letter-spacing:.05em;animation:none}
+.thalamus.inbox .cv-funnel--mini i{width:4px;height:4px;box-shadow:none}
+@keyframes cv-funnel-in{from{opacity:0;transform:translateX(-4px)}to{opacity:1;transform:none}}
+@keyframes cv-funnel-late{0%,100%{box-shadow:0 0 3px var(--c)}50%{box-shadow:0 0 9px var(--c)}}
+@media (prefers-reduced-motion:reduce){.thalamus.inbox .cv-funnel,.thalamus.inbox .cv-funnel i{animation:none}}
 .thalamus.inbox .cv-origen-config{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 10px;border-radius:999px;cursor:pointer;
   border:1px dashed color-mix(in srgb,var(--warning) 55%,transparent);background:color-mix(in srgb,var(--warning) 8%,transparent);
   color:var(--warning);font:inherit;font-size:11.5px;font-weight:700;animation:ib-config 2.4s ease-in-out infinite}

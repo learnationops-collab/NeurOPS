@@ -4,6 +4,7 @@
 // programado y cuánto falta para que Instagram no deje escribirle (últimas 24 h).
 import { AlarmClock, Bot, Check, Clock, PencilLine, Repeat2, User, X } from 'lucide-react';
 import { Avatar, Chip } from '../../../components/standard';
+import Funnel from './Funnel';
 import { avisoCierre, cierreMin, esperaMin, esperaSeguimiento, examenDe, haceDias, quien, seguimientosDe, vistaPrevia } from './colas';
 import IconoCanal from './IconoCanal';
 import { colorDe, corto, faseDe } from './fasesSetting';
@@ -79,6 +80,7 @@ export default function Fila({ c, elegida, ahora, yo, conAsignado, borrador, onE
                     <span className="cv-item-cab">
                         <strong data-tip={c.nombre_real && c.nombre && c.nombre !== c.nombre_real ? `En el perfil|${c.nombre}` : undefined}>{nombre}</strong>
                         {examen && <span className="cv-item-examen">{examen}</span>}
+                        <Funnel funnel={c.funnel} mini />
                         <Califica valor={c.califica} mini />
                         <span className="cv-item-der">
                             {espera != null && <Cronometro desde={c.ultimo_en} />}

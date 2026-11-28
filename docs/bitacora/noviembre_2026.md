@@ -1407,3 +1407,6 @@
 - Lo visto del changelog y de los recorridos (closers, triage, setters) se guarda en la cuenta: quien lo terminó no lo vuelve a ver en otra compu, otro navegador ni porque se retocó un texto. Sigue obligatorio hasta el último paso. Simulando se ve como lo tiene la persona ([vistasCuenta.js](../../frontend/src/pages/closer/novedades/vistasCuenta.js), [Novedades.jsx](../../frontend/src/pages/closer/novedades/Novedades.jsx)).
 - `/auth/me` trae lo guardado en la cuenta (dock y novedades): antes llegaba solo con el login ([auth.py](../../app/api/auth.py), [AuthContext.jsx](../../frontend/src/contexts/AuthContext.jsx), [dockServidor.js](../../frontend/src/sesion/dockServidor.js)).
 - Una pestaña abierta desde antes de un deploy se recarga sola al volver a ella o tras 10 min quieta, nunca con algo escrito ([versionNueva.js](../../frontend/src/sesion/versionNueva.js)).
+
+### 28/11/2026 · Inbox: Lead Magnet o Direct Sale a la vista (ADR-W287)
+- Al lado de la palabra clave de la tarjeta y del examen en la lista se ve si el lead vino de un anuncio de Lead Magnet o de Direct Sale (el nombre de la campaña de Meta del anuncio con que entró) ([bandeja.py](../../app/automatizaciones/bandeja.py) `funnels`, [Funnel.jsx](../../frontend/src/pages/inbox/conversaciones/Funnel.jsx)).

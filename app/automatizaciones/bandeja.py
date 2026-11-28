@@ -176,9 +176,44 @@ def comentarios(mensajes):
 
 
 def entrada(contacto_id):
-    """{clave, campana, anuncio} de su recorrido más nuevo que entró por palabra clave, o None."""
+    """{clave, campana, anuncio, funnel} de su recorrido más nuevo que entró por palabra clave, o None. `funnel`: el
+    del anuncio de Meta del que vino (ADR-W287), aunque ese recorrido no haya traído el anuncio."""
     fila = (db.session.query(AutEjecucion.clave, AutCampana.nombre, AutEjecucion.meta_ad_id)
             .outerjoin(AutCampana, AutCampana.id == AutEjecucion.campana_id)
             .filter(AutEjecucion.contacto_id == contacto_id, AutEjecucion.clave.isnot(None))
             .order_by(AutEjecucion.id.desc()).first())
-    return {'clave': fila[0], 'campana': fila[1], 'anuncio': fila[2]} if fila else None
+    funnel = funnels([contacto_id]).get(contacto_id)
+    if not fila:
+        return {'clave': None, 'campana': None, 'anuncio': None, 'funnel': funnel} if funnel else None
+    return {'clave': fila[0], 'campana': fila[1], 'anuncio': fila[2], 'funnel': funnel}
+
+
+# El funnel de la campaña de Meta, por su nombre (ADR-W287): «Direct Sale | Gral» → venta directa (el lead más
+# calificado), «Lead Magnet | Gral» o «Lead Magnet | US» → lead magnet. Otro nombre (workshop, contratación): nada.
+def funnel_de_campana(nombre):
+    n = ' '.join((nombre or '').lower().replace('_', ' ').replace('-', ' ').split())
+    if 'direct sale' in n or 'venta directa' in n:
+        return 'direct'
+    if 'lead magnet' in n:
+        return 'lead_magnet'
+    return None
+
+
+def funnels(contacto_ids):
+    """{contacto_id: 'direct' | 'lead_magnet'} del anuncio de Meta de su entrada más nueva que vino de uno (el
+    `meta_ad_id` que guarda el motor y la campaña que trae la sincronización de anuncios). En una sola consulta."""
+    from app.models import MetaAnuncio
+    if not contacto_ids:
+        return {}
+    ultima = (db.session.query(db.func.max(AutEjecucion.id).label('id'))
+              .filter(AutEjecucion.contacto_id.in_(list(contacto_ids)), AutEjecucion.meta_ad_id.isnot(None))
+              .group_by(AutEjecucion.contacto_id).subquery())
+    filas = (db.session.query(AutEjecucion.contacto_id, MetaAnuncio.campana)
+             .join(ultima, ultima.c.id == AutEjecucion.id)
+             .join(MetaAnuncio, MetaAnuncio.meta_ad_id == AutEjecucion.meta_ad_id).all())
+    salida = {}
+    for cid, campana in filas:
+        f = funnel_de_campana(campana)
+        if f:
+            salida[cid] = f
+    return salida

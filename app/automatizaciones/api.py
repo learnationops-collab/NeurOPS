@@ -302,6 +302,7 @@ def listar_conversaciones():
     cerradas = fases.cerradas([c for c, _, _, _ in filas])
     from app.automatizaciones import cliente_del_contacto
     reales = cliente_del_contacto.nombres([c for c, _, _, _ in filas])
+    de_funnel = bandeja.funnels(ids)
     salida = []
     for contacto, momento, cantidad, _ in filas:
         variables = contacto.variables or {}
@@ -336,6 +337,8 @@ def listar_conversaciones():
             # El broadcast de WhatsApp al que respondió (ADR-W259): la etiqueta del taller o «Broadcast».
             'broadcast': variables.get('broadcast_nombre') or ('Broadcast' if variables.get('broadcast') else None),
             'examen': variables.get('examen'),
+            # De qué funnel es el anuncio del que vino (ADR-W287): 'direct' (venta directa) o 'lead_magnet'.
+            'funnel': de_funnel.get(contacto.id),
             'califica': variables.get('_califica'),
             'flujo': ejecucion.version.flujo.nombre if ejecucion else None,
             'paso': bandeja.paso(abierta),

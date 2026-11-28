@@ -1,12 +1,13 @@
 // Por dónde entró el lead, arriba del nombre (Mario, 26/11/2026): el ícono del canal (anuncio, inbound, bienvenida;
 // tocarlo lo cambia, lo usa el reporte) y la palabra clave con que escribió. Si no la tiene, el setter la carga
-// (queda en la variable `palabra_clave`).
+// (queda en la variable `palabra_clave`). Al lado, si vino de un anuncio, Lead Magnet o Direct Sale (ADR-W287).
 import { useState } from 'react';
 import { Check, Hand, Inbox, Megaphone, Pencil, Plus, Radio } from 'lucide-react';
 import useEnPantalla from '../../../components/ui/useEnPantalla';
 import { toast } from '../../../components/standard';
 import { inboxApi } from '../api';
 import useDesplegable from './useDesplegable';
+import Funnel from './Funnel';
 
 const CANALES = [
     ['anuncios', 'Anuncio', Megaphone, 'var(--brand-secondary)'],
@@ -98,6 +99,8 @@ export default function Origen({ contacto, entrada, canal, campana, onCambio, ch
         <div className="cv-origen">
             <Canal contacto={contacto} canal={canal} campana={entrada?.campana || campana} onCambio={onCambio} />
             <Clave contacto={contacto} entrada={entrada} onCambio={onCambio} />
+            {/* Lead Magnet o Direct Sale, del anuncio del que vino (ADR-W287). */}
+            <Funnel funnel={entrada?.funnel} />
             {children && <span className="cv-origen-der">{children}</span>}
         </div>
     );
