@@ -1421,3 +1421,7 @@
 
 ### 28/11/2026 · WhatsApp al equipo por la API propia (ADR-W289)
 - El 27/11 Whatchimp rechazó el aviso de la agenda #7294 («Bot owner account is disabled»): no les llegó a Mario ni a Dari. El aviso de agenda (closer, copia al triage, Academia, prueba de Configuración) y el recordatorio de seguimiento salen ahora primero por la Cloud API propia, con las plantillas de utilidad `aviso_agenda` y `recordatorio_seguimiento` (en revisión de Meta al subir); Whatchimp queda de respaldo ([avisos_equipo.py](../../app/whatsapp/avisos_equipo.py), [whatchimp_service.py](../../app/services/whatchimp_service.py)).
+
+### 28/11/2026 · Hiring › Closers: Inbox por revisor y «A decidir» lo decide Mario (ADR-W290)
+- Cada revisor ve en su Inbox las postulaciones que él no votó, aunque otro ya las haya votado: a Marlon le aparecen todas para analizar ([job_application.py](../../app/models/job_application.py) `veredicto`, [job_applications.py](../../app/api/job_applications.py)).
+- Votos iguales van a esa pestaña; votos distintos, a «A decidir». Ahí los botones de Mario resuelven en vez de votar (y tocar otra vez deshace); Marlon no puede resolver ([FichaCloser.jsx](../../frontend/src/pages/admin/hiring/components/closers/FichaCloser.jsx)).

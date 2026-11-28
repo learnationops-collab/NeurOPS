@@ -29,6 +29,7 @@ const ACCION = {
     res: { id: 'res', label: 'Reserva', icon: Clock, c: 'var(--info)', tecla: 'R' },
     des: { id: 'des', label: 'Descartar', icon: XCircle, c: 'var(--error)', tecla: 'D' },
 };
+const RESOLUCION_DE_VOTO = { pre: 'preseleccionada', res: 'en_reserva', des: 'descartado' };
 const colorDe = (ratio) => (ratio >= 0.8 ? 'var(--success)' : ratio >= 0.5 ? 'var(--info)' : 'var(--warning)');
 const primerNombre = (n) => String(n || '?').trim().split(/\s+/)[0];
 
@@ -148,12 +149,18 @@ const FichaCloser = ({ applicationId, ids, onClose, onNavigate, onDecidido }) =>
     const d = data || {};
     const miVoto = d.votos?.[String(user?.id)] || null;
     const enPrueba = d.resolucion === 'testeo';
+    // «A decidir» (votos distintos) lo decide Mario: sus botones resuelven en vez de votar, y tocar
+    // la resolución puesta la deshace. El rol `hiring_closers` sigue votando (28/11/2026).
+    const resuelto = Object.keys(RESOLUCION_DE_VOTO).find((v) => RESOLUCION_DE_VOTO[v] === d.resolucion) || null;
+    const decide = user?.role !== 'hiring_closers' && (d.veredicto === 'decidir' || resuelto !== null);
 
     const decidir = async (accion) => {
-        const esUndo = accion === 'testeo' ? enPrueba : miVoto === accion;
+        const esUndo = accion === 'testeo' ? enPrueba : (decide ? resuelto === accion : miVoto === accion);
         try {
             if (accion === 'testeo') {
                 await api.post(`/job-applications/${applicationId}/resolver`, { valor: enPrueba ? null : 'testeo' });
+            } else if (decide) {
+                await api.post(`/job-applications/${applicationId}/resolver`, { valor: esUndo ? null : RESOLUCION_DE_VOTO[accion] });
             } else {
                 await api.post(`/job-applications/${applicationId}/vote`, { valor: accion });
             }
@@ -188,12 +195,12 @@ const FichaCloser = ({ applicationId, ids, onClose, onNavigate, onDecidido }) =>
     const digitos = soloDigitos(d.whatsapp);
     const videoHref = href(d.video);
     const llamadaHref = href(d.llamada);
-    // Los votos de los demás revisores, por decisión (el mío ya se ve en la baldosa llena).
+    // Los votos de los demás revisores, por decisión (el mío ya se ve en la baldosa llena; al decidir, todos).
     const votosDe = (id) => (d.votos_detalle || [])
-        .filter((v) => v.vote === id && String(v.reviewer_id) !== String(user?.id))
+        .filter((v) => v.vote === id && (decide || String(v.reviewer_id) !== String(user?.id)))
         .map((v) => primerNombre(v.reviewer_name));
     const veredicto = VEREDICTO[d.veredicto] || VEREDICTO.sin_calificar;
-    const estado = enPrueba ? 'testeo' : miVoto;
+    const estado = enPrueba ? 'testeo' : (decide ? resuelto : miVoto);
     const cierre = cierreNum(d.cierre);
     const herramientas = enLista(d.herramientas) ? d.herramientas.join(', ') : d.herramientas;
     const datos = [
