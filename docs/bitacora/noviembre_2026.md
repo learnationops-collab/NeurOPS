@@ -1426,3 +1426,6 @@
 - Cada revisor ve en su Inbox las postulaciones que él no votó, aunque otro ya las haya votado: a Marlon le aparecen todas para analizar ([job_application.py](../../app/models/job_application.py) `veredicto`, [job_applications.py](../../app/api/job_applications.py)).
 - Votos iguales van a esa pestaña; votos distintos, a «A decidir». Ahí los botones de Mario resuelven en vez de votar (y tocar otra vez deshace); Marlon no puede resolver ([FichaCloser.jsx](../../frontend/src/pages/admin/hiring/components/closers/FichaCloser.jsx)).
 - Meta aprobó `aviso_agenda` como utilidad, pero `recordatorio_seguimiento` como marketing (más caro y con tope por persona). Se mandó `aviso_seguimiento`, con texto de aviso de sistema que dice que lo programó el closer y sin invitarlo a escribir; el recordatorio la usa apenas esté aprobada y, mientras tanto, la vieja ([avisos_equipo.py](../../app/whatsapp/avisos_equipo.py)).
+
+### 28/11/2026 · Inbox: la lista no salta al mandar un mensaje (ADR-W291)
+- Lo que ya estaba en la lista queda en su lugar cuando el equipo escribe o manda un seguimiento; solo se reacomoda lo nuevo y lo que tiene un mensaje nuevo del lead. Todo se reordena al cambiar el filtro, el orden o la búsqueda ([ordenEstable.js](../../frontend/src/pages/inbox/conversaciones/ordenEstable.js)).

@@ -25,6 +25,7 @@ import Stats from './conversaciones/Stats';
 import Actividad from './conversaciones/Actividad';
 import { VACIO } from './conversaciones/filtros';
 import { useBorradores } from './conversaciones/borradores';
+import useOrdenEstable from './conversaciones/ordenEstable';
 import useAvisos from './conversaciones/useAvisos';
 import { recordado, recordar } from './recuerdo';
 import './conversaciones/trabajo.css';
@@ -124,7 +125,7 @@ export default function Conversaciones() {
     const lista = (datos?.conversaciones || []).map((c) => (
         c.sin_leer && leidas[c.id] && new Date(c.ultimo_en) <= leidas[c.id] ? { ...c, sin_leer: 0 } : c));
     const marcarLeida = useCallback((id) => setLeidas((l) => ({ ...l, [id]: new Date() })), []);
-    const visibles = filtrar(lista, { ...filtro, ahora });
+    const visibles = useOrdenEstable(filtrar(lista, { ...filtro, ahora }), `${JSON.stringify(filtro)}|${buscar.trim()}`);
     const orden = ordenDe(filtro);
     const marcar = useCallback((id) => setMarcadas((m) => (m.includes(id) ? m.filter((x) => x !== id) : [...m, id])), []);
     const dejarDeElegir = () => { setEligiendo(false); setMarcadas([]); };

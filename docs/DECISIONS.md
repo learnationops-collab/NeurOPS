@@ -2613,3 +2613,10 @@
 - **Decisión:** el veredicto se calcula para quien mira. Lo que un revisor no votó está en SU Inbox, aunque otro ya lo haya votado. Con votos iguales va a esa pestaña; con cualquier diferencia (también preseleccionar contra reserva), a «A decidir». Ahí decide Mario: en su ficha los botones resuelven (`resolucion` `preseleccionada`, `en_reserva` o `descartado`) en vez de votar, se ven los votos de todos, y tocar la resolución puesta la deshace. El rol `hiring_closers` sigue votando, pero no puede poner ni sacar esas resoluciones (403). «En prueba» y «Baja» se ven igual para todos.
 - **Qué se pierde:** la preselección ya no gana sola contra una reserva.
 - **Consecuencias:** a Marlon le aparecen en el Inbox todas las que no votó. Lo que hoy está en Seleccionadas con un voto `pre` y otro `res` pasa a «A decidir». Las estadísticas y el resumen de revisores siguen con el veredicto de todos los votos.
+
+## ADR-W291 · Inbox: la lista no salta cuando escribe el equipo
+- **Fecha:** 2026-11-28 · **Subsistema:** Inbox › Conversaciones (`frontend/src/pages/inbox/conversaciones/ordenEstable.js`, `Conversaciones.jsx`) · **Estado:** implementado
+- **Contexto:** en la reunión con los setters del 27/11, Paula y Elías contaron que al mandar un seguimiento la conversación salta arriba de todo (el orden por último mensaje toma el mensaje propio). Recorriendo 20 seguimientos seguidos, se pierden.
+- **Decisión:** mientras no cambien el filtro, el orden o la búsqueda, lo que ya estaba en la lista mantiene su lugar. Solo se reacomoda lo que entra nuevo y lo que tiene un mensaje nuevo del lead, y va donde lo ubica el orden elegido. Lo que deja de cumplir el filtro sale igual que antes.
+- **Qué se pierde:** mientras no se toque el filtro, el orden en pantalla puede quedar desfasado del orden real (por ejemplo, por espera). Se reordena todo al cambiar el filtro, el orden o la búsqueda, o al recargar la página.
+- **Consecuencias:** ↑↓ y «Siguiente» recorren la lista en el orden que se ve.
