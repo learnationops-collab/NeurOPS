@@ -2593,3 +2593,9 @@
 - **Decisión:** el funnel sale del nombre de la campaña de Meta (`MetaAnuncio.campana`, de la sincronización) del anuncio de la entrada más nueva que trajo `meta_ad_id`: «direct sale» o «venta directa» → `direct`; «lead magnet» → `lead_magnet`; otro nombre, nada. Una consulta para toda la bandeja (`bandeja.funnels`) y el dato va en cada fila (`funnel`) y en `entrada.funnel` de la conversación. En la tarjeta, una pastilla «Direct Sale» (cálida, con un punto que respira) o «Lead Magnet» (fría) al lado de la palabra clave; en la lista, «DS» o «LM» en mini al lado del examen, con el nombre completo en el tooltip.
 - **Qué se pierde:** nada.
 - **Consecuencias:** sin anuncio (orgánico, inbound, WhatsApp, un DM sin la referencia del anuncio) no sale nada. Si una campaña nueva no dice «Lead Magnet» ni «Direct Sale» en el nombre, tampoco: el funnel depende de cómo se nombran las campañas.
+
+## ADR-W288 · Las novedades son obligatorias desde la primera vez
+- **Fecha:** 2026-11-28 · **Subsistema:** Novedades y recorridos (`frontend/src/pages/closer/novedades/Novedades.jsx`) · **Estado:** implementado. Reemplaza el plazo de 3 días de ADR-W225.
+- **Contexto:** a Eli (setter) no le salían los recorridos del Inbox aunque simulándolo sí aparecían. Con «Ver después» la tanda quedaba oculta hasta el día siguiente, durante 3 días; la simulación no guarda ese aplazo, por eso ahí salía. Mario: «que aparezca sí o sí».
+- **Decisión:** sin plazo. Una tanda sin terminar se abre al entrar y es obligatoria hasta el último paso: sin «Ver después», cruz ni Esc. Los aplazos que ya había se ignoran. Ya vista (ADR-W285) no vuelve, y desde Herramientas › Novedades se puede reabrir y cerrar.
+- **Qué se pierde:** posponerla para otro momento del día.

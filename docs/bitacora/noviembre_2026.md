@@ -1415,3 +1415,6 @@
 - Con la ventana cerrada, «Copiar y abrir Instagram» copia el texto y abre el chat del lead en la app; cuando sale, Work lo marca solo como seguimiento y a nombre de quien lo abrió. «Siguiente» pasa a la conversación de abajo ([PorInstagram.jsx](../../frontend/src/pages/inbox/conversaciones/PorInstagram.jsx), [seguimientos.py](../../app/automatizaciones/seguimientos.py)).
 - Programar un seguimiento ofrece «Antes del cierre» (por defecto): sale solo a las 23 h 30 min del último mensaje del lead ([Seguimientos.jsx](../../frontend/src/pages/inbox/conversaciones/Seguimientos.jsx)).
 - «Conectar Instagram» en la cabecera del Inbox y renovación automática del token cada 7 días: lo que faltaba para la App Review de Human Agent y para que el Inbox no se corte a los 60 días ([token_ig.py](../../app/automatizaciones/token_ig.py), [api_instagram.py](../../app/automatizaciones/api_instagram.py), [ConexionInstagram.jsx](../../frontend/src/pages/inbox/ConexionInstagram.jsx)).
+
+### 28/11/2026 · Novedades obligatorias desde la primera vez (ADR-W288)
+- Sin «Ver después»: quien no terminó una tanda la ve al entrar y no la puede cerrar hasta el último paso. A Eli no le salía porque la había aplazado ([Novedades.jsx](../../frontend/src/pages/closer/novedades/Novedades.jsx)).

@@ -16,8 +16,7 @@ import './novedades.css';
 // Las novedades del Workspace de closers y triage (ADR-W218). La primera vez que alguien entra
 // después de una tanda nueva (VERSION) ve la portada a pantalla completa; «Mostrame» arranca el
 // recorrido por los lugares reales de Work. Queda visto recién al terminar el último paso (si se
-// recarga a la mitad, vuelve a empezar). «Después» (ADR-W225) lo deja hasta el día siguiente, durante
-// 3 días desde que apareció; pasado ese plazo es obligatorio: sin cruz, «Después» ni Esc. Ya visto,
+// recarga a la mitad, retoma). Es obligatoria desde la primera vez (ADR-W288): sin cruz, «Después» ni Esc. Ya visto,
 // se puede volver a abrir (y cerrar) desde Herramientas › Novedades o con `?novedades=1`.
 
 const EVENTO = 'ln:novedades';
@@ -27,7 +26,9 @@ export const huella = (t) => { let h = 5381; for (let k = 0; k < t.length; k += 
 // lo incluía) la tiene vista, mientras el contenido siga siendo el mismo.
 const VISTA = `${VERSION}-${huella(fuenteContenido + fuenteMocks)}`;
 const VISTA_ANTERIOR = VISTA === '2026-11-25-2-1vquffi' ? '2026-11-25-2-2vuu09' : null;
-const PLAZO_DIAS = 3;
+// Sin plazo (Mario, 28/11/2026, ADR-W288): «que aparezca sí o sí». Desde la primera vez es obligatoria hasta el último
+// paso: sin «Ver después», cruz ni Esc. Antes se podía aplazar 3 días (ADR-W225) y a Eli no le salía por eso.
+const PLAZO_DIAS = 0;
 const DIA = 86400000;
 
 // Lo visto, los aplazos y el paso donde quedó se guardan en la cuenta (ADR-W285, `vistasCuenta.js`).
