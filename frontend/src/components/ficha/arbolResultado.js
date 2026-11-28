@@ -237,7 +237,8 @@ function siguientePaso(r, contexto) {
   const conFecha = (texto, fecha) => (fecha ? `${texto} · ${fechaCorta(fecha)}` : texto);
   const elegido = r.nocierre_next || r.nopres_next || r.noshow_next || r.cancel_next;
   if (r.nopres_next === 'segunda') return { sub: conFecha('2ª llamada', r.nueva_fecha_agenda) };
-  if (r.cancel_next === 'reagendar' || r.reag_dejo_fecha === true || r.contacto_result === 'agendo') {
+  if (r.cancel_next === 'reagendar' || r.noshow_next === 'reagendar' || r.reag_dejo_fecha === true
+    || r.contacto_result === 'agendo') {
     if (r.reag_dejo_fecha === false) return { sub: conFecha('Seguimiento', r.fecha_seguimiento) };
     return { sub: conFecha('Nueva llamada', r.nueva_fecha_agenda) };
   }
@@ -250,6 +251,7 @@ function siguientePaso(r, contexto) {
     return { sub: conFecha('Próximo cobro', r.fecha_seguimiento) };
   }
   if (elegido === 'no_lead') return { sub: 'No Lead', malo: true };
+  if (elegido === 'cortar') return { sub: 'Acceso cortado', malo: true };
   if (['perdido', 'descartar'].includes(elegido)) return { sub: 'Lead descartado', malo: true };
   return null;
 }

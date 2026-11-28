@@ -50,6 +50,36 @@ def cancelar_seguimiento(seguimiento_id):
     return jsonify(seguimientos.resumen(s))
 
 
+@bp.route('/seguimientos/<int:seguimiento_id>/mandar', methods=['POST'])
+def mandar_seguimiento(seguimiento_id):
+    """Manda ahora, como persona, el programado que pasó las 24 h y quedó como «Toca seguimiento» (ADR-W283)."""
+    s = db.session.get(AutSeguimiento, seguimiento_id)
+    if s is None:
+        return jsonify({'message': 'Not found'}), 404
+    try:
+        with servicio.con_motor() as motor:
+            mensaje = seguimientos.mandar_aviso(motor, s, current_user.id)
+            respuesta = {'id': mensaje.id, 'texto': mensaje.texto, 'en': mensaje.enviado_en.isoformat() + 'Z'}
+    except AccionInvalida as e:
+        return jsonify({'message': str(e)}), 400
+    except servicio.MotorApagado:
+        return jsonify({'message': 'El motor está apagado: no se puede escribir'}), 409
+    except servicio.MotorOcupado:
+        return jsonify({'message': 'El motor está ocupado, probá de nuevo en unos segundos'}), 409
+    return jsonify(respuesta), 201
+
+
+@bp.route('/conversaciones/<int:contacto_id>/por-instagram', methods=['POST'])
+def abrir_en_instagram(contacto_id):
+    """Se abrió el chat en la app de Instagram para mandar el seguimiento desde ahí (ADR-W286): `{texto}`."""
+    contacto = db.session.get(IgContacto, contacto_id)
+    if contacto is None:
+        return jsonify({'message': 'Not found'}), 404
+    seguimientos.abrir_en_instagram(contacto, current_user.id, servicio.ahora(), (request.get_json(silent=True) or {}).get('texto'))
+    db.session.commit()
+    return jsonify({'ok': True}), 201
+
+
 @bp.route('/mensajes/<int:mensaje_id>/seguimiento', methods=['POST'])
 def marcar_seguimiento(mensaje_id):
     """Marca o desmarca un mensaje del equipo como seguimiento (ADR-W255): `{marca: true|false}`."""

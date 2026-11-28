@@ -20,6 +20,7 @@ from app import db
 from app.decorators import hiring_closers_required, hiring_required
 from app.models import AssistantApplication, HiringConfig, HiringForm
 from app.services import hiring_forms as hf
+from app.services import hiring_forms_closer as hfc
 
 bp = Blueprint('hiring_forms', __name__)
 
@@ -96,6 +97,7 @@ def _guardar(respuesta_ok, contexto):
 @hiring_required
 def listar_forms():
     hf.asegurar_semilla()
+    hfc.asegurar_closer()
     return jsonify(_listado()), 200
 
 
@@ -116,6 +118,8 @@ def crear_form():
         origen = db.session.get(HiringForm, desde_id) if isinstance(desde_id, int) else None
         if origen is None:
             return jsonify({"message": "No existe el formulario del que querés copiar."}), 404
+        if origen.puesto == 'closer':
+            return jsonify({"message": "El de Closer es uno solo: los nuevos se copian de uno de Asistente."}), 400
     else:
         origen = hf.form_activo()
     preguntas = copy.deepcopy(origen.preguntas if origen else hf.PREGUNTAS_BASE)
@@ -148,6 +152,8 @@ def editar_form(form_id):
         if error:
             return jsonify({"message": error}), 400
         form.nombre = nombre
+    if 'slug' in data and form.puesto == 'closer':
+        return jsonify({"message": "El formulario de Closer vive en un link fijo (/vacante/): no se cambia."}), 400
     if 'slug' in data:
         try:
             form.slug = hf.validar_slug(data.get('slug'), form.id)
@@ -156,7 +162,7 @@ def editar_form(form_id):
             return jsonify({"message": str(e)}), 409
     if 'preguntas' in data:
         try:
-            hf.validar_preguntas(data['preguntas'])
+            hf.validar_preguntas(data['preguntas'], form.puesto)
         except hf.PreguntasInvalidas as e:
             db.session.rollback()
             return jsonify({"message": str(e)}), 400
@@ -185,7 +191,7 @@ def activar_form(form_id):
     if not isinstance(activo, bool):
         return jsonify({"message": "`activo` tiene que ser true o false."}), 400
 
-    if activo and not form.slug:
+    if activo and not form.slug and form.puesto != 'closer':
         form.slug = hf.slug_libre(form.nombre)
     form.activo = activo
     return _guardar(lambda: (jsonify(_listado()), 200), 'activar el formulario')
@@ -197,6 +203,8 @@ def activar_form(form_id):
 def duplicar_form(form_id):
     hf.asegurar_semilla()
     origen = HiringForm.query.get_or_404(form_id)
+    if origen.puesto == 'closer':
+        return jsonify({"message": "El formulario de Closer es uno solo: no se duplica."}), 400
     nombre = f'{origen.nombre} · copia'[:MAX_NOMBRE]
     copia = HiringForm(
         nombre=nombre, slug=hf.slug_libre(nombre), activo=False,
@@ -214,6 +222,8 @@ def borrar_form(form_id):
     uno que ya tiene postulaciones (perderían con qué preguntas se contestaron)."""
     hf.asegurar_semilla()
     form = HiringForm.query.get_or_404(form_id)
+    if form.puesto == 'closer':
+        return jsonify({"message": "El formulario de Closer no se borra: desactivalo si querés cerrar la búsqueda."}), 409
     if form.activo:
         return jsonify({"message": "No se puede borrar un formulario activo: desactivalo primero."}), 409
     con_postulaciones = AssistantApplication.query.filter_by(form_id=form.id).count()

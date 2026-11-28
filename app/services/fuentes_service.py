@@ -164,9 +164,44 @@ def _cobros_para_sumar(cobros, claves):
         filas.append({'monto': round(cash_neto(cobro), 2), 'es_venta': es_venta, 'es_cuota': tipo == 'cuota',
                       'es_upsell': tipo == 'upsell', 'cliente': cliente_de.get(cobro.id) or f'cobro-{cobro.id}',
                       'por_clave': bool(claves.get(cobro.id)), 'balde': baldes[cobro.id][0],
+                      # Cómo se cruza con las agendas (`compro_tras_asistir`): por su persona o por su cliente.
+                      'personas': {k for k in (('p', cobro.person_uuid), ('c', cobro.client_id)) if k[1]},
                       # El rótulo del detalle de su procedencia (el setter, En vivo, Grabación…): el «origen» de Segmentos.
                       'detalle': baldes[cobro.id][2]})
     return filas
+
+
+def asistentes_por_fuente(filas_agenda):
+    """{fuente: claves de las personas que asistieron} sobre las filas de `conteo_agendas_service.personas`: las
+    mismas del show up. En «alta» la clave es la persona; en «reunión», el lead (persona o, sin ella, cliente)."""
+    salida = {k: set() for k in conteo_agendas_service.FUENTES}
+    for p in filas_agenda:
+        if p['asistio']:
+            clave = p.get('lead') or (('p', p['person_uuid']) if p.get('person_uuid') else None)
+            if clave:
+                salida[p['fuente']].add(clave)
+    return salida
+
+
+def compro_tras_asistir(fila, asistentes):
+    """Un pago de venta nueva de alguien que está en el show up de su fuente (ADR-W293): el paso «Ventas» del embudo."""
+    return bool(fila['es_venta'] and fila['personas'] & asistentes)
+
+
+def ventas_de_asistentes(filas_cobro, asistentes):
+    """{fuente: {ventas_asistieron (personas), ventas_fuera (pagos)}}. Ventas del embudo = personas del show up que
+    compraron en el período, así nunca pasa del 100%; `ventas_fuera`, los pagos de venta del resto (llamada de otro
+    período o fuera de la cuenta de agendas), para que no se pierdan del total."""
+    salida = {f['key']: {'ventas_asistieron': set(), 'ventas_fuera': 0} for f in FUENTES}
+    for fila in filas_cobro:
+        destino = fuente_de_cobro(fila['por_clave'], fila['balde'])
+        if destino is None or not fila['es_venta']:
+            continue
+        if compro_tras_asistir(fila, asistentes[destino]):
+            salida[destino]['ventas_asistieron'].add(fila['cliente'])
+        else:
+            salida[destino]['ventas_fuera'] += 1
+    return {k: {**v, 'ventas_asistieron': len(v['ventas_asistieron'])} for k, v in salida.items()}
 
 
 def fuente_de_agenda(nombre, setters):
@@ -218,8 +253,11 @@ def resumen(desde, hasta, filas, cobros, claves, embudos, base=conteo_agendas_se
     clave (`anuncios_service.claves_de_cobros`) y `embudos` el gasto de Meta por embudo. `base`: por qué
     fecha se cuentan las agendas (`conteo_agendas_service`); los costos van siempre por fecha de alta."""
     base = conteo_agendas_service.base_de(base)
-    cobros_fuente, otras = sumar_cobros(_cobros_para_sumar(cobros, claves))
-    agendas = conteo_agendas_service.por_fuente(desde, hasta, base)
+    filas_cobro = _cobros_para_sumar(cobros, claves)
+    cobros_fuente, otras = sumar_cobros(filas_cobro)
+    filas_agenda = conteo_agendas_service.personas(desde, hasta, base)
+    agendas = conteo_agendas_service.por_fuente(desde, hasta, base, filas=filas_agenda)
+    compraron = ventas_de_asistentes(filas_cobro, asistentes_por_fuente(filas_agenda))
     agendas_alta = agendas if base == 'alta' else conteo_agendas_service.por_fuente(desde, hasta, 'alta')
     gasto_de = {e['embudo']: e for e in embudos}
     leads = {
@@ -231,7 +269,7 @@ def resumen(desde, hasta, filas, cobros, claves, embudos, base=conteo_agendas_se
         k = f['key']
         meta = gasto_de.get(k) or {'gasto': 0.0, 'anuncios': 0}
         salida.append(metricas_de_fuente({
-            **f, **cobros_fuente[k],
+            **f, **cobros_fuente[k], **compraron[k],
             'leads': leads[k], 'leads_meta': meta.get('leads', 0), 'gasto': meta['gasto'], 'anuncios': meta['anuncios'],
             'agendas': agendas[k]['agendas'], 'show_up': agendas[k]['show_up'],
             'reportadas': agendas[k]['reportadas'], 'agendas_alta': agendas_alta[k]['agendas'],

@@ -14,6 +14,7 @@ import {
 import Novedades, { abrirNovedades } from './novedades/Novedades';
 import TourTriage, { abrirTourTriage } from './tourTriage/TourTriage';
 import api from '../../services/api';
+import { isMomentum } from '../../utils/momentum';
 import { guardarCache, leerCache } from '../../services/cacheDeVistas';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePlaybook } from '../../contexts/PlaybookContext';
@@ -1819,7 +1820,8 @@ const CloserWorkflowPage = () => {
                         metrica = { lbl: 'Confirmación', sub: 'confirmado', hechas, total, pie: `${hechas} de ${total} confirmados`, pendientes: confirmacionesPendientes };
                     } else if (activeView === 'inbox' && activeStep === 'calls') {
                         const res = r => (r.closer_result || r.result || '').trim().toLowerCase();
-                        const concluidas = reportedTodayCalls.filter(r => !['reagendado', 'reagendada'].includes(res(r)));
+                        // Las Momentum se ven en su parte, no en el porcentaje (ADR-W276).
+                        const concluidas = reportedTodayCalls.filter(r => !isMomentum(r) && !['reagendado', 'reagendada'].includes(res(r)));
                         const conShow = concluidas.filter(r => !['no show', 'cancelado', 'cancelada'].includes(res(r)));
                         const asistieron = conShow.length;
                         metrica = { lbl: 'Asistencia', sub: 'de asistencia', hechas: asistieron, total: concluidas.length, pie: `${asistieron} de ${concluidas.length} asistieron`, pendientes: counts.calls };

@@ -25,6 +25,7 @@ def _usuario_json(u, **extra):
         "cuentas_vinculadas": cuentas_de(u),
         "mascota": u.mascota,
         "dock_prefs": u.dock_prefs or {},
+        "marketing_app": _tiene_marketing(u),
         **extra,
     }
 
@@ -111,6 +112,7 @@ def login():
             "cuentas_vinculadas": cuentas_de(user),
             "mascota": user.mascota,
             "dock_prefs": user.dock_prefs or {},
+            "marketing_app": _tiene_marketing(user),
         }
     }), 200
 
@@ -407,8 +409,22 @@ def get_me():
             "can_view_finance": getattr(current_user, 'can_view_finance', False),
             "cuentas_vinculadas": [] if is_impersonating else cuentas_de(current_user),
             "mascota": current_user.mascota,
+            # Lo guardado en la cuenta (dock y novedades vistas, ADR-W285): antes solo llegaba con el login y otra
+            # compu seguía con lo de ese momento.
+            "dock_prefs": current_user.dock_prefs or {},
+            "marketing_app": _tiene_marketing(),
         }
     }), 200
+
+
+def _tiene_marketing(user=None):
+    """¿Ve Learnation Marketing en /ops/dashboard? (ADR-W280)."""
+    from app.marketing_app.acceso import puede
+    try:
+        return puede(user)
+    except Exception as e:  # noqa: BLE001  (un error acá no puede dejar a nadie sin sesión)
+        current_app.logger.error(f"[MARKETING_APP] No se pudo ver el acceso: {e}")
+        return False
 
 def _quien_simula():
     """El usuario REAL detrás de la sesión: el original si ya está simulando, si no el logueado.
@@ -559,6 +575,8 @@ def impersonate():
             "original_user_role": original_role,
             "can_view_finance": getattr(target_user, 'can_view_finance', False),
             "mascota": target_user.mascota,
+            # Solo para leer (ADR-W285): simulando se ven las novedades como las tiene la persona. No se guarda nada.
+            "dock_prefs": target_user.dock_prefs or {},
         }
     }), 200
 

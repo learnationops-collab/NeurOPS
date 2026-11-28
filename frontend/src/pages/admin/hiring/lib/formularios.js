@@ -16,7 +16,18 @@ export const TIPOS = [
     { k: 'tel', n: 'Teléfono' },
     { k: 'link', n: 'Link' },
     { k: 'intro', n: 'Bienvenida' },
+    // Solo en el de Closer (ADR-W280): /formulario/ los dibuja con su buscador de países y su deslizador.
+    { k: 'pais', n: 'Lista de países', closer: true },
+    { k: 'porcentaje', n: 'Porcentaje (0 a 100)', closer: true },
 ];
+
+// Lo que sabe dibujar /formulario/ (el de Closer).
+const TIPOS_CLOSER = new Set(['radio', 'check', 'texto', 'email', 'parrafo', 'tel', 'link', 'pais', 'porcentaje']);
+/** Los tipos que se ofrecen en el editor según el puesto del formulario. */
+export const tiposDe = (puesto) => TIPOS.filter((t) => (puesto === 'closer' ? TIPOS_CLOSER.has(t.k) : !t.closer));
+
+export const URL_FORMULARIO_CLOSER = import.meta.env.VITE_TALENT_CLOSER_FORM_URL
+    || 'https://institute.thelearnation.com/formulario/';
 
 export const tipoDe = (k) => TIPOS.find((t) => t.k === k) || TIPOS[0];
 

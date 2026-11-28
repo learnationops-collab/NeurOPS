@@ -266,7 +266,8 @@ def acotar_fuentes(resumen, desde, hasta, segmento):
         fuentes.append({**fuentes_service.metricas_de_fuente({
             **base, **{k: t[k] for k in _PISADAS}, 'gasto': 0.0, 'agendas_alta': t['agendas'], 'agendas_dias': {},
             'clientes': 0, 'clientes_upsell': 0, 'cuotas': 0, 'cuotas_monto': 0.0, 'upsells': 0, 'upsells_monto': 0.0}),
-            'gasto': None})
+            # Sin partir por segmento: el embudo vuelve a «ventas ÷ asistieron» (ADR-W293).
+            'gasto': None, 'ventas_asistieron': None, 'ventas_fuera': None})
     otras = por_fuente['otras']
     hs, _clics = hechos(desde, hasta)
     cobros_de_otras = sum(1 for h in hs if h['fuente'] == 'otras' and PERTENECE['cash_total'](h) and h['seg'] in elegidos)

@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import {
-    X, ChevronLeft, ChevronRight, ChevronDown, CheckCircle2, XCircle, Clock, Target, Mail, PlayCircle, PhoneCall, Copy, Check,
+    X, ChevronLeft, ChevronRight, ChevronDown, ChevronsUpDown, CheckCircle2, XCircle, Clock, Target, Mail, PlayCircle, PhoneCall, Copy, Check,
 } from 'lucide-react';
 import api from '../../../../../services/api';
 import { useAuth } from '../../../../../contexts/AuthContext';
@@ -21,13 +22,16 @@ import './fichaCloser.css';
 // llamada van solo en la cabecera. Decidir es votar (Preseleccionar, Reserva, Descartar; tocar otra
 // vez lo deshace) y, con la preselección hecha, «Pasar a prueba» (la resolución `testeo`).
 
+// `tecla`: el atajo para decidir sin el mouse (P, R, D y T).
 const ACCION = {
-    pre: { id: 'pre', label: 'Preseleccionar', icon: CheckCircle2, c: 'var(--success)' },
-    testeo: { id: 'testeo', label: 'Pasar a prueba', icon: Target, c: 'var(--warning)' },
-    res: { id: 'res', label: 'Reserva', icon: Clock, c: 'var(--info)' },
-    des: { id: 'des', label: 'Descartar', icon: XCircle, c: 'var(--error)' },
+    pre: { id: 'pre', label: 'Preseleccionar', icon: CheckCircle2, c: 'var(--success)', tecla: 'P' },
+    testeo: { id: 'testeo', label: 'Pasar a prueba', icon: Target, c: 'var(--warning)', tecla: 'T' },
+    res: { id: 'res', label: 'Reserva', icon: Clock, c: 'var(--info)', tecla: 'R' },
+    des: { id: 'des', label: 'Descartar', icon: XCircle, c: 'var(--error)', tecla: 'D' },
 };
-const VOTO_TXT = { pre: 'preseleccionó', res: 'dejó en reserva', des: 'descartó' };
+const RESOLUCION_DE_VOTO = { pre: 'preseleccionada', res: 'en_reserva', des: 'descartado' };
+const colorDe = (ratio) => (ratio >= 0.8 ? 'var(--success)' : ratio >= 0.5 ? 'var(--info)' : 'var(--warning)');
+const primerNombre = (n) => String(n || '?').trim().split(/\s+/)[0];
 
 // Las preguntas abiertas, en el orden en que conviene leerlas.
 const ABIERTAS = [
@@ -44,30 +48,53 @@ const ABIERTAS = [
 const vacio = (v) => v == null || v === '' || (Array.isArray(v) && v.length === 0);
 const enLista = (v) => (Array.isArray(v) ? v : null);
 
-const Respuesta = ({ id, titulo, valor, pts, abierta, onToggle, onCopiar }) => {
+/** Una respuesta abierta: se pliega como un apartado de documento (flecha, título y una línea de adelanto). */
+const Respuesta = ({ id, titulo, valor, pts, abierta, orden, copiado, onToggle, onCopiar }) => {
     const lista = enLista(valor);
     const texto = lista ? lista.join(' · ') : String(valor);
+    const ratio = pts && pts.maximo ? pts.puntos / pts.maximo : 0;
     return (
-        <section className={`tl-fc-resp${abierta ? ' is-abierta' : ''}`}>
-            <button type="button" className="tl-fc-resp-cab" aria-expanded={abierta} onClick={() => onToggle(id)}>
-                <span className="tl-fc-resp-t">{titulo}</span>
-                {pts && <span className="tl-fc-pts" title="Puntos de Clarity">{+pts.puntos.toFixed(1)}<small>/{pts.maximo}</small></span>}
-                <ChevronDown size={18} className="tl-fc-resp-flecha" aria-hidden="true" />
-            </button>
-            {!abierta && <p className="tl-fc-resp-prev" onClick={() => onToggle(id)}>{texto}</p>}
+        <section className={`tl-fc-resp${abierta ? ' is-abierta' : ''}`} style={{ '--i': orden }}>
+            <div className="tl-fc-resp-cab">
+                <button type="button" className="tl-fc-resp-abrir" aria-expanded={abierta} onClick={() => onToggle(id)}>
+                    <ChevronDown size={16} className="tl-fc-resp-flecha" aria-hidden="true" />
+                    <span className="tl-fc-resp-t">{titulo}</span>
+                    {!abierta && <span className="tl-fc-resp-prev">{texto}</span>}
+                </button>
+                {pts && (
+                    <span className="tl-fc-medidor" style={{ '--p': `${Math.round(ratio * 100)}%`, '--c': colorDe(ratio) }} title={`${+pts.puntos.toFixed(1)} de ${pts.maximo} puntos de Clarity`}>
+                        <b>{+pts.puntos.toFixed(1)}</b><small>/{pts.maximo}</small><i aria-hidden="true" />
+                    </span>
+                )}
+                <button type="button" className={`tl-fc-copiar${copiado ? ' is-hecho' : ''}`} onClick={() => onCopiar(texto, titulo)}
+                    aria-label={`Copiar «${titulo}»`} title={copiado ? 'Copiado' : 'Copiar respuesta'}>
+                    {copiado ? <Check size={15} /> : <Copy size={15} />}
+                </button>
+            </div>
             <div className="tl-fc-resp-cuerpo" aria-hidden={!abierta}>
                 <div>
                     {lista ? (
                         <ul className="tl-fc-lista">{lista.map((x) => <li key={x}>{x}</li>)}</ul>
                     ) : <p className="tl-fc-resp-txt">{texto}</p>}
-                    <button type="button" className="tl-fc-copiar" onClick={() => onCopiar(texto, titulo)} tabIndex={abierta ? 0 : -1}>
-                        <Copy size={13} aria-hidden="true" /> Copiar
-                    </button>
                 </div>
             </div>
         </section>
     );
 };
+
+/** Una decisión: baldosa de color con su atajo y quiénes del equipo ya la eligieron. */
+const Baldosa = ({ a, activo, otros, onDecidir }) => (
+    <button type="button" className={`tl-fc-btn${activo ? ' is-activo' : ''}`} style={{ '--c': a.c }}
+        aria-pressed={activo} aria-keyshortcuts={a.tecla} title={activo ? 'Tu voto · tocar otra vez lo deshace' : `${a.label} (${a.tecla})`}
+        onClick={() => onDecidir(a.id)}>
+        <span className="tl-fc-btn-ico" aria-hidden="true">{activo ? <Check size={18} strokeWidth={3} /> : <a.icon size={18} />}</span>
+        <span className="tl-fc-btn-l">{a.label}</span>
+        <kbd className="tl-fc-btn-k" aria-hidden="true">{a.tecla}</kbd>
+        {otros.length > 0 && (
+            <span className="tl-fc-btn-votos">{otros.map((n) => <i key={n} title={`${n} eligió esto`}>{n}</i>)}</span>
+        )}
+    </button>
+);
 
 const FichaCloser = ({ applicationId, ids, onClose, onNavigate, onDecidido }) => {
     const { user } = useAuth();
@@ -111,6 +138,9 @@ const FichaCloser = ({ applicationId, ids, onClose, onNavigate, onDecidido }) =>
             if (e.key === 'Escape') onClose();
             if (e.key === 'ArrowLeft') anterior();
             if (e.key === 'ArrowRight') siguiente();
+            if (!data || e.metaKey || e.ctrlKey || e.altKey) return;
+            const accion = Object.values(ACCION).find((a) => a.tecla === e.key.toUpperCase());
+            if (accion && accionesCloser(data.veredicto).includes(accion.id)) { e.preventDefault(); decidir(accion.id); }
         };
         window.addEventListener('keydown', onKey);
         return () => window.removeEventListener('keydown', onKey);
@@ -119,12 +149,18 @@ const FichaCloser = ({ applicationId, ids, onClose, onNavigate, onDecidido }) =>
     const d = data || {};
     const miVoto = d.votos?.[String(user?.id)] || null;
     const enPrueba = d.resolucion === 'testeo';
+    // «A decidir» (votos distintos) lo decide Mario: sus botones resuelven en vez de votar, y tocar
+    // la resolución puesta la deshace. El rol `hiring_closers` sigue votando (28/11/2026).
+    const resuelto = Object.keys(RESOLUCION_DE_VOTO).find((v) => RESOLUCION_DE_VOTO[v] === d.resolucion) || null;
+    const decide = user?.role !== 'hiring_closers' && (d.veredicto === 'decidir' || resuelto !== null);
 
     const decidir = async (accion) => {
-        const esUndo = accion === 'testeo' ? enPrueba : miVoto === accion;
+        const esUndo = accion === 'testeo' ? enPrueba : (decide ? resuelto === accion : miVoto === accion);
         try {
             if (accion === 'testeo') {
                 await api.post(`/job-applications/${applicationId}/resolver`, { valor: enPrueba ? null : 'testeo' });
+            } else if (decide) {
+                await api.post(`/job-applications/${applicationId}/resolver`, { valor: esUndo ? null : RESOLUCION_DE_VOTO[accion] });
             } else {
                 await api.post(`/job-applications/${applicationId}/vote`, { valor: accion });
             }
@@ -151,14 +187,20 @@ const FichaCloser = ({ applicationId, ids, onClose, onNavigate, onDecidido }) =>
 
     const puntaje = puntajeCloser(d.criterios);
     const puntos = Object.fromEntries(puntaje.map((r) => [r.id, r]));
-    const abiertasDe = ABIERTAS.filter(([id]) => !vacio(d[id]));
+    // Más las preguntas sumadas en Talent › Forms (sin columna), al final y con su enunciado (ADR-W280).
+    const extras = (d.extras || []).filter((e) => !vacio(e.valor));
+    const valorDe = (id) => (id.startsWith('x:') ? extras.find((e) => `x:${e.id}` === id)?.valor : d[id]);
+    const abiertasDe = [...ABIERTAS.filter(([id]) => !vacio(d[id])), ...extras.map((e) => [`x:${e.id}`, e.t])];
     const todasAbiertas = abiertasDe.length > 0 && abiertasDe.every(([id]) => abiertas.has(id));
     const digitos = soloDigitos(d.whatsapp);
     const videoHref = href(d.video);
     const llamadaHref = href(d.llamada);
-    const votos = (d.votos_detalle || []).map((v) => `${v.reviewer_name} ${VOTO_TXT[v.vote] || v.vote}`);
+    // Los votos de los demás revisores, por decisión (el mío ya se ve en la baldosa llena; al decidir, todos).
+    const votosDe = (id) => (d.votos_detalle || [])
+        .filter((v) => v.vote === id && (decide || String(v.reviewer_id) !== String(user?.id)))
+        .map((v) => primerNombre(v.reviewer_name));
     const veredicto = VEREDICTO[d.veredicto] || VEREDICTO.sin_calificar;
-    const estado = enPrueba ? 'testeo' : miVoto;
+    const estado = enPrueba ? 'testeo' : (decide ? resuelto : miVoto);
     const cierre = cierreNum(d.cierre);
     const herramientas = enLista(d.herramientas) ? d.herramientas.join(', ') : d.herramientas;
     const datos = [
@@ -173,7 +215,10 @@ const FichaCloser = ({ applicationId, ids, onClose, onNavigate, onDecidido }) =>
     ].filter(([, v]) => !vacio(v));
     const botones = accionesCloser(d.veredicto).map((id) => ACCION[id]);
 
-    return (
+    // Va en un portal, fuera del `.dc-shell` de Talent: su reset de botones (`.dc-shell button`) les
+    // quitaba relleno, fondo y borde a los de la ficha.
+    return createPortal(
+        <div className="dash-v6 text-white">
         <motion.div
             className="fixed inset-0 z-[60] flex items-start justify-center bg-[#020617]/80 p-0 backdrop-blur-sm [@media(min-width:640px)_and_(min-height:681px)]:p-[2vh]"
             onClick={onClose}
@@ -238,15 +283,16 @@ const FichaCloser = ({ applicationId, ids, onClose, onNavigate, onDecidido }) =>
                         {data && (
                             <>
                                 <div className="tl-fc-lect-cab">
-                                    <span className="tl-fi-etq">Respuestas · {abiertasDe.length}</span>
+                                    <span>{abiertasDe.length} respuestas</span>
                                     <button type="button" className="tl-fc-todas"
                                         onClick={() => setAbiertas(todasAbiertas ? new Set() : new Set(abiertasDe.map(([id]) => id)))}>
-                                        {todasAbiertas ? 'Replegar todas' : 'Desplegar todas'}
+                                        <ChevronsUpDown size={14} aria-hidden="true" />
+                                        {todasAbiertas ? 'Plegar todas' : 'Desplegar todas'}
                                     </button>
                                 </div>
-                                {abiertasDe.map(([id, titulo]) => (
-                                    <Respuesta key={`${applicationId}-${id}`} id={id} titulo={titulo} valor={d[id]} pts={puntos[id]}
-                                        abierta={abiertas.has(id)} onToggle={toggle} onCopiar={copiar} />
+                                {abiertasDe.map(([id, titulo], k) => (
+                                    <Respuesta key={`${applicationId}-${id}`} id={id} titulo={titulo} valor={valorDe(id)} pts={puntos[id]} orden={k}
+                                        abierta={abiertas.has(id)} copiado={copiado === titulo} onToggle={toggle} onCopiar={copiar} />
                                 ))}
                             </>
                         )}
@@ -265,7 +311,7 @@ const FichaCloser = ({ applicationId, ids, onClose, onNavigate, onDecidido }) =>
                                     {puntaje.map((r, k) => {
                                         const ratio = r.maximo ? r.puntos / r.maximo : 0;
                                         return (
-                                            <div key={r.id} className="tl-fc-crit" style={{ '--i': k, '--c': ratio >= 0.8 ? 'var(--success)' : ratio >= 0.5 ? 'var(--info)' : 'var(--error)' }}>
+                                            <div key={r.id} className="tl-fc-crit" style={{ '--i': k, '--c': colorDe(ratio) }}>
                                                 <span>{r.bloque}</span>
                                                 <b>{+r.puntos.toFixed(1)}<small> / {r.maximo}</small></b>
                                                 <span className="tl-fi-barra"><i style={{ width: `${Math.round(ratio * 100)}%` }} /></span>
@@ -281,20 +327,10 @@ const FichaCloser = ({ applicationId, ids, onClose, onNavigate, onDecidido }) =>
                             </div>
 
                             <div className="tl-fc-decide">
-                                {(votos.length > 0 || copiado) && (
-                                    <span className="tl-fi-nota">{[...votos, copiado && `${copiado} copiado`].filter(Boolean).join(' · ')}</span>
-                                )}
                                 <div className={`tl-fc-botones${botones.length > 3 ? ' is-cuatro' : ''}`}>
-                                    {botones.map((a) => {
-                                        const activo = estado === a.id;
-                                        return (
-                                            <button key={a.id} type="button" className={`tl-fc-btn${activo ? ' is-activo' : ''}`} style={{ '--c': a.c }}
-                                                aria-pressed={activo} title={activo ? 'Tocar otra vez lo deshace' : a.label} onClick={() => decidir(a.id)}>
-                                                {activo ? <Check size={20} aria-hidden="true" /> : <a.icon size={20} aria-hidden="true" />}
-                                                <span>{a.label}</span>
-                                            </button>
-                                        );
-                                    })}
+                                    {botones.map((a) => (
+                                        <Baldosa key={a.id} a={a} activo={estado === a.id} otros={votosDe(a.id)} onDecidir={decidir} />
+                                    ))}
                                 </div>
                             </div>
                         </aside>
@@ -302,6 +338,8 @@ const FichaCloser = ({ applicationId, ids, onClose, onNavigate, onDecidido }) =>
                 </div>
             </motion.div>
         </motion.div>
+        </div>,
+        document.body,
     );
 };
 

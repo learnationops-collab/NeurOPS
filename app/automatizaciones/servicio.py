@@ -112,6 +112,12 @@ def tick(momento=None, transporte=None):
             resumen['recuperados'] = 0
         if resumen['recuperados']:
             resumen['procesados'] += procesar_pendientes(momento)['procesados']
+        try:  # el token dura 60 días: se renueva cada 7 (ADR-W286). Si falla, el reloj sigue igual.
+            from app.automatizaciones import token_ig
+            token_ig.renovar_si_toca(momento)
+        except Exception:
+            db.session.rollback()
+            logger.exception('[IG TOKEN] Falló la renovación')
     resumen['despertadas'] = despertar(momento, transporte)
     resumen['seguimientos'] = mandar_seguimientos(momento, transporte)
     if transporte is None:

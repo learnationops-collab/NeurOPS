@@ -624,7 +624,39 @@ body.tl-redim *{cursor:col-resize!important;user-select:none!important}
 .talent .tl-antiguos svg{opacity:.8}
 .talent .tl-antiguos .cuenta{font-variant-numeric:tabular-nums;opacity:.7}
 .talent .tl-antiguos:hover{color:var(--text-muted)}
-.talent .tl-antiguos[aria-pressed="true"]{color:var(--text-on-surface);background:var(--mat-1)}
+/* Adentro es la única pestaña: se ve como la pestaña elegida, con una × para salir (ADR-W277). */
+.talent .tl-antiguos[aria-pressed="true"]{height:38px;padding:0 12px 0 14px;color:var(--on-inverso);background:var(--text-on-surface);font-weight:700;
+  box-shadow:0 6px 22px -10px var(--text-on-surface);animation:tlAntIn .32s var(--spring) both}
+.talent .tl-antiguos[aria-pressed="true"]:hover{color:var(--on-inverso)}
+.talent .tl-antiguos .tl-antiguos-x{margin-left:2px;opacity:.55;transition:opacity .15s ease,transform .2s var(--spring)}
+.talent .tl-antiguos:hover .tl-antiguos-x{opacity:1;transform:rotate(90deg)}
+@keyframes tlAntIn{from{transform:scale(.92);opacity:.6}to{transform:none;opacity:1}}
+.talent .tl-csv{display:inline-flex;align-items:center;gap:7px;height:40px;padding:0 16px;border-radius:999px;
+  background:color-mix(in srgb,var(--success) 14%,transparent);border:1px solid color-mix(in srgb,var(--success) 40%,transparent);
+  color:var(--success);font-size:13px;font-weight:700;cursor:pointer;
+  transition:background-color .18s ease,transform .18s var(--spring),box-shadow .2s ease}
+.talent .tl-csv:hover{background:color-mix(in srgb,var(--success) 22%,transparent);box-shadow:0 8px 24px -12px var(--success);transform:translateY(-1px)}
+.talent .tl-csv:hover svg{animation:tlBaja .5s var(--spring)}
+.talent .tl-csv:active{transform:scale(.95)}
+.talent .tl-csv:disabled{opacity:.4;cursor:default;transform:none;box-shadow:none}
+.talent .tl-csv:focus-visible{outline:2px solid var(--success);outline-offset:2px}
+@keyframes tlBaja{0%{transform:none}45%{transform:translateY(3px)}100%{transform:none}}
+
+/* El menú del filtro de Antiguos. */
+.tl-capa .tl-menu--antiguos{width:min(680px,calc(100vw - 32px))}
+.tl-capa .tl-mcols{display:grid;grid-template-columns:1fr 1fr;gap:4px 14px}
+.tl-capa .tl-mcols > div + div{border-left:1px solid var(--border-subtle);padding-left:10px}
+@media (max-width:720px){.tl-capa .tl-mcols{grid-template-columns:1fr}.tl-capa .tl-mcols > div + div{border-left:0;padding-left:0}}
+.tl-capa .tl-menu--antiguos .punto{width:8px;height:8px;border-radius:50%;flex-shrink:0;background:var(--c);box-shadow:0 0 8px -1px var(--c)}
+.tl-capa .tl-menu--antiguos .lbl small{display:block;font-size:11.5px;font-weight:500;color:var(--text-muted-40);margin-top:1px}
+.tl-capa .tl-menu--antiguos .val{font-variant-numeric:tabular-nums}
+.tl-capa .tl-mcierre{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:6px 8px 8px}
+.tl-capa .tl-mcierre button{display:grid;gap:2px;justify-items:center;padding:8px 4px;border-radius:12px;border:1px solid var(--border-subtle);
+  font-size:13px;font-weight:700;color:var(--text-muted);transition:background-color .15s ease,color .15s ease,border-color .15s ease}
+.tl-capa .tl-mcierre button span{font-size:11px;font-weight:600;color:var(--text-muted-40);font-variant-numeric:tabular-nums}
+.tl-capa .tl-mcierre button:hover{background:var(--bg-element);color:var(--text-on-surface)}
+.tl-capa .tl-mcierre button[aria-pressed="true"]{background:color-mix(in srgb,var(--brand-secondary) 18%,transparent);
+  border-color:var(--brand-secondary);color:var(--text-on-surface)}
 .talent .tl-antiguos:focus-visible{outline:2px solid var(--brand-secondary);outline-offset:2px}
 
 /* Analyze: «Actuales / Antiguas» (postularon este mes o antes), al lado del desplegable de búsqueda. */

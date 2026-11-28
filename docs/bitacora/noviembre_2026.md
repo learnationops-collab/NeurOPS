@@ -1354,3 +1354,98 @@
 
 ### 27/11/2026 · Arreglo: «Al abrir el link» en pasos de mensaje guardados antes del cambio
 - Un paso de mensaje con link guardado antes de ADR-W272 decía «Este botón no tiene link» al abrir «Al abrir el link»: ahora se arma con el link del paso y queda al guardar ([PanelNodo.jsx](../../frontend/src/ventanas/herramientas/broadcastTaller/PanelNodo.jsx)).
+### 27/11/2026 · Ficha de Closer: segunda pasada de diseño
+- La ficha va en un portal, fuera del `.dc-shell`: su reset de botones dejaba los títulos pegados al borde y las decisiones sin color.
+- Respuestas como apartados de documento: flecha, título y una línea de adelanto; abiertas, el texto a 70 caracteres por renglón, alineado con el título. Sin el borde rosa. Los puntos de Clarity pasan a un medidor discreto (número y riel del color del resultado) y «Copiar» aparece al pasar el mouse.
+- Decisiones en baldosas de color con ícono en círculo, brillo al pasar, rebote al votar, atajos P / R / D / T y los nombres de quienes ya eligieron cada una. Barras de desplazamiento finas y con aire ([FichaCloser.jsx](../../frontend/src/pages/admin/hiring/components/closers/FichaCloser.jsx), [fichaCloser.css](../../frontend/src/pages/admin/hiring/components/closers/fichaCloser.css)).
+
+### 27/11/2026 · Inbox: cerrar varias conversaciones juntas (ADR-W274)
+- Con «Elegir» arriba de la lista: «Todas» elige las que deja el filtro, «Leídas» las marca leídas y «No requieren» las saca de «Esperan respuesta» (y las deja leídas) hasta que el lead vuelva a escribir. Etiquetar sigue al lado ([AccionesVarias.jsx](../../frontend/src/pages/inbox/conversaciones/AccionesVarias.jsx), [api_trabajo.py](../../app/automatizaciones/api_trabajo.py) `cerrar_varias`).
+- Revisado en producción el pedido «un audio mandado desde Instagram figura como pendiente»: los 478 ecos de audio desde el 16/10 están guardados como mensaje del equipo y ninguna conversación queda esperando por eso. Lo que se veía era la fila con «…», arreglado el 25/11 («🎤 Audio»).
+### 27/11/2026 · Talent sin la sección Closers
+- Se saca «Closers» del dock de Talent: los closers se ven con el desplegable Asistentes / Closers de Inbox, Analyze, Winners y Stats. `/admin/postulaciones` y `?s=closers` entran al Inbox en Closers ([HiringDashboardPage.jsx](../../frontend/src/pages/admin/hiring/HiringDashboardPage.jsx)).
+### 27/11/2026 · Closers: «Antiguos» pasa de Inbox a Analyze y Winners
+- Con Closers elegido, Analyze y Winners tienen el botón «Antiguos»: los closers de búsquedas anteriores en una lista, de cualquier estado (Seleccionados, Reserva, A decidir, En prueba, Baja, Descartados, Sin calificar), con nombre, estado, % de cierre, video y WhatsApp para volver a contactarlos. Las pestañas pasan a filtrar esa lista por estado ([AntiguosCloser.jsx](../../frontend/src/pages/admin/hiring/components/closers/AntiguosCloser.jsx)).
+- El Inbox de Closers ya no lo muestra. Con Closers, Analyze deja el selector Actuales / Antiguas (queda para Asistentes): muestra la búsqueda en curso ([HiringDashboardPage.jsx](../../frontend/src/pages/admin/hiring/HiringDashboardPage.jsx)).
+### 27/11/2026 · Ficha: «Pedir actualización» a Dari (ADR-W275)
+- En Confirmación, «Pedir actualización»: texto opcional o audio, que al grabarse también se escribe. A Dari le llega el aviso con un toast; responde con texto o audio desde la misma tarjeta, y la respuesta vuelve con aviso a quien pidió y queda en la ficha ([PedidosActualizacion.jsx](../../frontend/src/components/ficha/pedidos/PedidosActualizacion.jsx), [pedido_actualizacion_service.py](../../app/services/pedido_actualizacion_service.py)).
+### 27/11/2026 · Momentum: reporte de alumno y fuera del show up y el closing (ADR-W276)
+- Toda Momentum (también la del link `momentum-sessions`) muestra arriba el acceso del alumno y pregunta «¿Cómo quedó?» (Pagó, Plan de cuotas, Lo está pensando, No pagó), sin decisor. No pagó, No asistió y Canceló pueden cortar el acceso, con su motivo ([arbolResultado.preguntas.js](../../frontend/src/components/ficha/arbolResultado.preguntas.js), [momentum_reporte.py](../../app/services/momentum_reporte.py)).
+- Las Momentum ya no cuentan en el show up ni en el closing de Analizar, el close rate real, el simulador, el dashboard y el reporte diario del closer, Revisar ni Asistencia ([comercial_agendas.py](../../app/services/comercial_agendas.py)).
+### 27/11/2026 · Ficha: Confirmación entra en una pantalla
+- Sin la franja «Los cambios se guardan al instante…» ni el «Tocá la etapa…» del stepper. «Verificar guardado» es un botón chico: en Confirmación va con «Pedir actualización» y «Eliminar lead»; en las otras pestañas, abajo. Lo verificado sale en un aviso ([BarraGuardado.jsx](../../frontend/src/components/ficha/piezas/BarraGuardado.jsx), [TabConfirmacion.jsx](../../frontend/src/components/ficha/tabs/TabConfirmacion.jsx)).
+### 27/11/2026 · Closers: «Antiguos» con filtro y CSV (ADR-W277)
+- «Antiguos» es una sola pestaña que entra y sale (con una × para volver); adentro ya no están las pestañas por estado ([ControlesAntiguos.jsx](../../frontend/src/pages/admin/hiring/components/closers/ControlesAntiguos.jsx)).
+- Filtro: estados a marcar (Seleccionados, Reserva, A decidir, En prueba, Baja, Descartados, Sin calificar), sacar a los que se volvieron a postular (mismo email o WhatsApp en una postulación más nueva), a los que no terminaron el formulario, sin WhatsApp o sin video, y cierre mínimo. Cada opción muestra cuántos suma o saca; queda guardado en el navegador ([MenuAntiguos.jsx](../../frontend/src/pages/admin/hiring/components/closers/MenuAntiguos.jsx), [antiguos.js](../../frontend/src/pages/admin/hiring/lib/antiguos.js)).
+- «CSV» baja lo que se ve (filtro y búsqueda): nombre, estado, cierre, WhatsApp y su link, email, país, video, fecha y si terminó el formulario.
+### 27/11/2026 · Antiguos de Closers: «Que tengan»
+- El filtro suma requisitos que tienen que cumplir todos a la vez: midieron su % de cierre, experiencia como closer, video, llamada grabada, inglés intermedio o más. Sirve para rescatar, de los descartados o sin calificar, a los que valen un mensaje. «Sin video» pasa de «Sacar» a «Que tengan». El menú va en dos columnas y el CSV suma conocimiento, inglés y llamada ([antiguos.js](../../frontend/src/pages/admin/hiring/lib/antiguos.js), [MenuAntiguos.jsx](../../frontend/src/pages/admin/hiring/components/closers/MenuAntiguos.jsx)).
+### 27/11/2026 · Learnation Marketing dentro de Work (ADR-W278)
+- Nueva sección «Marketing» en el dock de /ops/dashboard: el artifact de claude.ai completo, con su diseño, su base (copiada el 27/11), Learnito, archivos y los conectores Meta Ads, Google Drive y Learnation Work atendidos por Work ([PanelMarketing.jsx](../../frontend/src/pages/operations/marketing/PanelMarketing.jsx), [app/marketing_app/](../../app/marketing_app/)).
+- Acceso para Mario, Marlon, Santi y Kerwin por su mail ([acceso.py](../../app/marketing_app/acceso.py)). Publicar en Meta crea en pausa y activa al publicar.
+### 27/11/2026 · Antiguos de Closers: WhatsApp con la invitación escrita
+- Tocar el WhatsApp de un antiguo abre el chat con el mensaje de Dari ya escrito (vacante con +6 leads cualificados por día y el link de postulación, institute.thelearnation.com/vacante/). El link del CSV es el mismo ([antiguos.js](../../frontend/src/pages/admin/hiring/lib/antiguos.js) `waReinvitar`).
+- Dari González suma el rol extra `hiring_closers` (Talent con Closers), como Marlon.
+
+### 27/11/2026 · Broadcast de WhatsApp: se saltean los que agendaron o son clientes (ADR-W279)
+- Al leer el CSV, además de los que ya recibieron uno y los alumnos activos, se saltean los que agendaron alguna vez o son clientes, compraran o no. «Incluirlos» los vuelve a sumar ([envios.py](../../app/whatsapp/envios.py), [Mandar.jsx](../../frontend/src/ventanas/herramientas/broadcastWa/Mandar.jsx)).
+- Lista de los grupos viejos del taller (3.153 números): quedan 2.484 sin contactar.
+### 27/11/2026 · Forms: el formulario de Closer, conectado (ADR-W280)
+- El formulario de Closer aparece en Talent › Forms como uno más: se editan sus preguntas, opciones, ayuda y condiciones, se prende o apaga cada una, se suman nuevas, se cambia el cierre y se prueba en la vista previa. Su link es fijo (/vacante/) y no se duplica ni se borra ([hiring_forms_closer.py](../../app/services/hiring_forms_closer.py), [HiringForms.jsx](../../frontend/src/pages/admin/hiring/components/forms/HiringForms.jsx)).
+- `GET /api/public/closer-form` da sus preguntas y su cierre a institute.thelearnation.com/formulario/; el alta guarda con qué formulario contestó y las respuestas a preguntas nuevas, que la ficha del closer muestra al final ([job_applications.py](../../app/api/public/job_applications.py), [FichaCloser.jsx](../../frontend/src/pages/admin/hiring/components/closers/FichaCloser.jsx)). Migración `d4f6a8c0e2b1`.
+- La vacante de Closer se reabrió hasta el lun 30/11 23:59 ART (institute-site).
+
+
+
+### 27/11/2026 · Inbox: ventana de Instagram de 24 h hasta que Meta apruebe Human Agent (ADR-W281)
+- Pasadas las 24 h desde el último mensaje del lead, Work ya no intenta mandar (Meta rechazaba `HUMAN_AGENT` porque la app no pasó la App Review): la caja avisa «Mandalo desde Instagram y marcalo como seguimiento» con el link al chat ([escribir.py](../../app/automatizaciones/escribir.py), [ventana.js](../../frontend/src/pages/inbox/conversaciones/ventana.js)).
+- El anillo, «Se cierra la ventana» (aviso a las 3 h) y el orden por cierre cuentan 24 h; no se programa un seguimiento para después del cierre ([seguimientos.py](../../app/automatizaciones/seguimientos.py)).
+- Cuando Meta apruebe Human Agent: `IG_HUMAN_AGENT=1` en Railway y vuelven los 7 días.
+### 27/11/2026 · Clarity de Closer: las preguntas apagadas no cuentan
+- Mario apagó en Forms 4 preguntas del formulario de Closer (reporte, obstáculo, objetivos y por qué Learnation): la página ya no las pregunta. Para quien contesta con ese formulario, los criterios de Clarity sin ninguna pregunta prendida (hoy obstáculo y objetivos) no entran en el score ni en el desglose de la ficha, así no pierde puntos por algo que no se le preguntó ([clarity.py](../../app/services/clarity.py) `criterios_apagados`).
+
+### 27/11/2026 · Inbox: los seguimientos programados, solo dentro de las 24 h (ADR-W282)
+- Un seguimiento programado sale solo, y Meta permite responder fuera de las 24 h únicamente a una persona en el momento: ya no se programan para después del cierre ni salen con la etiqueta de agente humano ([seguimientos.py](../../app/automatizaciones/seguimientos.py), [Seguimientos.jsx](../../frontend/src/pages/inbox/conversaciones/Seguimientos.jsx)).### 27/11/2026 · Portal: tarjeta «Learnation Marketing» (ADR-W278)
+- Para quien tiene Learnation Marketing, el Portal suma su tarjeta (aparte del «Marketing» de Dirección de Marketing) y entra a /ops/dashboard › Marketing sin cambiar de rol ([portal.js](../../frontend/src/utils/portal.js), [Portal.jsx](../../frontend/src/pages/auth/Portal.jsx)).
+
+### 27/11/2026 · Inbox: seguimiento programado a 2 o 3 días, mandado con un clic (ADR-W283)
+- Se puede volver a programar a 24 h, 2 o 3 días. Dentro de las 24 h del último mensaje del lead sale solo; después queda en «Toca seguimiento» con su texto y se manda con «Mandar» (Meta solo deja escribir fuera de las 24 h a una persona en el momento). Sin la aprobación de Human Agent, el aviso lleva al chat de Instagram ([seguimientos.py](../../app/automatizaciones/seguimientos.py), [Seguimientos.jsx](../../frontend/src/pages/inbox/conversaciones/Seguimientos.jsx)).### 27/11/2026 · Learnation Marketing: un solo dock (ADR-W278)
+- En Marketing se va la isla del centro del dock de Work (la que solo decía «Marketing») y los costados (avisos, conflictos, reportes, Playbook, Learnito, Portal · Herramientas y la sesión) quedan a la altura del dock del artifact, uno a cada lado ([PanelMarketing.jsx](../../frontend/src/pages/operations/marketing/PanelMarketing.jsx), [operadorEspacio.css](../../frontend/src/pages/operations/operadorEspacio.css)).
+
+### 27/11/2026 · Broadcast de WhatsApp: el equipo no recibe los de captación (ADR-W284)
+- Jean Carlo recibió la reactivación C del broadcast a la lista de los grupos viejos del taller (estaba en esos grupos). Una sola vez: no hubo envío doble. Ahora el CSV saltea los números de las cuentas de Work; «Incluirlos (prueba)» los suma para probar con el equipo ([envios.py](../../app/whatsapp/envios.py) `numeros_del_equipo`, [Mandar.jsx](../../frontend/src/ventanas/herramientas/broadcastWa/Mandar.jsx)).
+- Lote del 27/11 a esa lista: 199 armados, 179 llegaron, 20 los frenó Meta (131049, demasiado marketing para esa persona), 4 respondieron al rato.
+
+### 28/11/2026 · Novedades: se ven una vez, desde cualquier compu (ADR-W285)
+- Lo visto del changelog y de los recorridos (closers, triage, setters) se guarda en la cuenta: quien lo terminó no lo vuelve a ver en otra compu, otro navegador ni porque se retocó un texto. Sigue obligatorio hasta el último paso. Simulando se ve como lo tiene la persona ([vistasCuenta.js](../../frontend/src/pages/closer/novedades/vistasCuenta.js), [Novedades.jsx](../../frontend/src/pages/closer/novedades/Novedades.jsx)).
+- `/auth/me` trae lo guardado en la cuenta (dock y novedades): antes llegaba solo con el login ([auth.py](../../app/api/auth.py), [AuthContext.jsx](../../frontend/src/contexts/AuthContext.jsx), [dockServidor.js](../../frontend/src/sesion/dockServidor.js)).
+- Una pestaña abierta desde antes de un deploy se recarga sola al volver a ella o tras 10 min quieta, nunca con algo escrito ([versionNueva.js](../../frontend/src/sesion/versionNueva.js)).
+
+### 28/11/2026 · Inbox: Lead Magnet o Direct Sale a la vista (ADR-W287)
+- Al lado de la palabra clave de la tarjeta y del examen en la lista se ve si el lead vino de un anuncio de Lead Magnet o de Direct Sale (el nombre de la campaña de Meta del anuncio con que entró) ([bandeja.py](../../app/automatizaciones/bandeja.py) `funnels`, [Funnel.jsx](../../frontend/src/pages/inbox/conversaciones/Funnel.jsx)).
+
+### 28/11/2026 · Inbox: seguimientos de Instagram pasadas las 24 h (ADR-W286)
+- Con la ventana cerrada, «Copiar y abrir Instagram» copia el texto y abre el chat del lead en la app; cuando sale, Work lo marca solo como seguimiento y a nombre de quien lo abrió. «Siguiente» pasa a la conversación de abajo ([PorInstagram.jsx](../../frontend/src/pages/inbox/conversaciones/PorInstagram.jsx), [seguimientos.py](../../app/automatizaciones/seguimientos.py)).
+- Programar un seguimiento ofrece «Antes del cierre» (por defecto): sale solo a las 23 h 30 min del último mensaje del lead ([Seguimientos.jsx](../../frontend/src/pages/inbox/conversaciones/Seguimientos.jsx)).
+- «Conectar Instagram» en la cabecera del Inbox y renovación automática del token cada 7 días: lo que faltaba para la App Review de Human Agent y para que el Inbox no se corte a los 60 días ([token_ig.py](../../app/automatizaciones/token_ig.py), [api_instagram.py](../../app/automatizaciones/api_instagram.py), [ConexionInstagram.jsx](../../frontend/src/pages/inbox/ConexionInstagram.jsx)).
+
+### 28/11/2026 · Novedades obligatorias desde la primera vez (ADR-W288)
+- Sin «Ver después»: quien no terminó una tanda la ve al entrar y no la puede cerrar hasta el último paso. A Eli no le salía porque la había aplazado ([Novedades.jsx](../../frontend/src/pages/closer/novedades/Novedades.jsx)).
+
+### 28/11/2026 · WhatsApp al equipo por la API propia (ADR-W289)
+- El 27/11 Whatchimp rechazó el aviso de la agenda #7294 («Bot owner account is disabled»): no les llegó a Mario ni a Dari. El aviso de agenda (closer, copia al triage, Academia, prueba de Configuración) y el recordatorio de seguimiento salen ahora primero por la Cloud API propia, con las plantillas de utilidad `aviso_agenda` y `recordatorio_seguimiento` (en revisión de Meta al subir); Whatchimp queda de respaldo ([avisos_equipo.py](../../app/whatsapp/avisos_equipo.py), [whatchimp_service.py](../../app/services/whatchimp_service.py)).
+
+### 28/11/2026 · Hiring › Closers: Inbox por revisor y «A decidir» lo decide Mario (ADR-W290)
+- Cada revisor ve en su Inbox las postulaciones que él no votó, aunque otro ya las haya votado: a Marlon le aparecen todas para analizar ([job_application.py](../../app/models/job_application.py) `veredicto`, [job_applications.py](../../app/api/job_applications.py)).
+- Votos iguales van a esa pestaña; votos distintos, a «A decidir». Ahí los botones de Mario resuelven en vez de votar (y tocar otra vez deshace); Marlon no puede resolver ([FichaCloser.jsx](../../frontend/src/pages/admin/hiring/components/closers/FichaCloser.jsx)).
+- Meta aprobó `aviso_agenda` como utilidad, pero `recordatorio_seguimiento` como marketing (más caro y con tope por persona). Se mandó `aviso_seguimiento`, con texto de aviso de sistema que dice que lo programó el closer y sin invitarlo a escribir; el recordatorio la usa apenas esté aprobada y, mientras tanto, la vieja ([avisos_equipo.py](../../app/whatsapp/avisos_equipo.py)).
+
+### 28/11/2026 · Inbox: la lista no salta al mandar un mensaje (ADR-W291)
+- Lo que ya estaba en la lista queda en su lugar cuando el equipo escribe o manda un seguimiento; solo se reacomoda lo nuevo y lo que tiene un mensaje nuevo del lead. Todo se reordena al cambiar el filtro, el orden o la búsqueda ([ordenEstable.js](../../frontend/src/pages/inbox/conversaciones/ordenEstable.js)).
+
+### 28/11/2026 · Inbox: el pendiente queda hasta contestar (ADR-W292)
+- Abrir un chat ya no lo marca leído: el número de sin leer queda hasta que alguien del equipo o el bot le escribe, o hasta marcarlo «No requiere respuesta» (que ahora también lo marca leído) o «Marcar leídas» desde Elegir ([Detalle.jsx](../../frontend/src/pages/inbox/conversaciones/Detalle.jsx), [api_trabajo.py](../../app/automatizaciones/api_trabajo.py)).
+
+### 28/11/2026 · Marketing › Todos: el embudo ya no pasa del 100% en Ventas (ADR-W293)
+- El paso Ventas del embudo normalizado y la tarjeta Show → venta cuentan solo a las personas del show up de la fuente que compraron en el período (misma base, alta o reunión). Setting 22–28/11 daba 5 ventas de 4 asistencias (125%); ahora, por alta, 2 de 4 (50%) ([fuentes_service.py](../../app/services/fuentes_service.py) `ventas_de_asistentes`, [comparacion.js](../../frontend/src/pages/admin/marketing/todos/comparacion.js)).
+- Las demás ventas van debajo, «+N ventas fuera de este show up», y abren su lista; el total de Ventas, el New Cash, el costo por venta y el ROAS no cambian ([fuentes_registros_service.py](../../app/services/fuentes_registros_service.py)).

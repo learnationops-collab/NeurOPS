@@ -9,7 +9,7 @@ un renglón.
 Cada renglón: `key` (la cifra que sale), `num` y `den` (el cociente), `por` (100 para porcentajes), `dec`
 (decimales) y `con_gasto` (un costo o un ROAS sin gasto es None, nunca un 0 que parezca gratis). `den` es una
 lista: vale la primera cifra que traiga la base (las fuentes cuentan costos por agendas de fecha de alta).
-Un renglón cuyo `num` o `den` la base no trae se salta.
+`num` también puede ser una lista, con la misma regla. Un renglón cuyo `num` o `den` la base no trae se salta.
 
 Qué es cada cosa (cada pestaña lo dice con un ícono de base, `MarcaDeBase`):
   · lead = entrada de una persona por una palabra clave (Setting) o clic al grupo de WhatsApp (Workshop); Workshop
@@ -32,7 +32,8 @@ FORMULAS = (
     {'key': 'pct_upsell', 'num': 'clientes_upsell', 'den': ['clientes'], 'por': 100, 'dec': 1},
     # Los pasos del embudo (agendas ÷ leads, ventas ÷ asistieron).
     {'key': 'pct_lead_agenda', 'num': 'agendas', 'den': ['leads'], 'por': 100, 'dec': 1},
-    {'key': 'pct_show_venta', 'num': 'ventas', 'den': ['show_up'], 'por': 100, 'dec': 1},
+    # Ventas ÷ asistieron: en las fuentes, solo las personas del show up que compraron (ADR-W293), así no pasa del 100%.
+    {'key': 'pct_show_venta', 'num': ['ventas_asistieron', 'ventas'], 'den': ['show_up'], 'por': 100, 'dec': 1},
     # Costos: gasto ÷ lo que consiguió. Los de agenda van por las agendas de fecha de alta (lo que Meta gastó
     # genera agendas al darse de alta, Kerwin 28/10/2026).
     {'key': 'cpl', 'num': 'gasto', 'den': ['leads'], 'dec': 2, 'con_gasto': True},
@@ -61,10 +62,12 @@ def aplicar(base):
     salida = {}
     for f in FORMULAS:
         den_key = next((k for k in f['den'] if entrada.get(k) is not None), None)
-        if f['num'] not in entrada or den_key is None:
+        nums = f['num'] if isinstance(f['num'], list) else [f['num']]
+        num_key = next((k for k in nums if entrada.get(k) is not None), next((k for k in nums if k in entrada), None))
+        if num_key is None or den_key is None:
             continue
         if f.get('con_gasto') and gasto <= 0:
             salida[f['key']] = None
             continue
-        salida[f['key']] = dividir((entrada[f['num']] or 0) * f.get('por', 1), entrada[den_key], f['dec'])
+        salida[f['key']] = dividir((entrada[num_key] or 0) * f.get('por', 1), entrada[den_key], f['dec'])
     return salida

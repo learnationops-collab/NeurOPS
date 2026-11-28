@@ -90,7 +90,13 @@ const MENSAJES = {
     recordatorio_previo: 'Recordatorio guardado.',
     cerrar_confirmacion: 'Confirmación cerrada: el lead está 100% confirmado.',
     // «No va a pagar» da de baja, y la baja se le avisa a la Academia: se dice qué pasó.
-    reportar_resultado: (r) => conAccesoDeLaBaja('Resultado reportado.', r),
+    // Momentum · Cortar acceso (ADR-W276): si la Academia no lo dejó, el reporte quedó igual y se dice por qué.
+    reportar_resultado: (r) => {
+        if (r?.acceso_cortado === false) {
+            return { tono: 'warning', texto: `Resultado reportado, pero el acceso no se cortó: ${r.acceso_error}` };
+        }
+        return conAccesoDeLaBaja(r?.acceso_cortado ? 'Resultado reportado. Acceso cortado: vence hoy.' : 'Resultado reportado.', r);
+    },
     // La venta del árbol de «Resultado» también da el acceso a la Academia si se pidió: se dice
     // qué pasó con él, porque «se creó la cuenta» significa que al cliente le llegó un email.
     registrar_venta: (r) => {
@@ -371,7 +377,9 @@ const FichaLeadModal = ({
     const [volver, setVolver] = useState(null);
     const volverArriba = useMemo(() => ({ registrar: (fn) => setVolver(() => fn) }), []);
 
-    const props = { ficha, onAccion, onConsultar, onRecargar, irA, puedeEditar: estado.puedeEditar, onEnfoque: setEnfoque };
+    const verificable = !enfoque && !soloLectura && estado.puedeEditar;
+    const props = { ficha, onAccion, onConsultar, onRecargar, irA, puedeEditar: estado.puedeEditar, onEnfoque: setEnfoque,
+        leidaEn, onVerificar: verificable ? onRecargar : null };
 
     const panel = () => {
         switch (pestana) {
@@ -426,7 +434,6 @@ const FichaLeadModal = ({
                     role={pestana ? 'tabpanel' : undefined}
                     aria-labelledby={pestana ? `fi-tab-${pestana}` : undefined}>
                     <div style={{ display: 'grid', gap: 'var(--s3)' }}>
-                        {ficha && !enfoque && !soloLectura && estado.puedeEditar && <BarraGuardado leidaEn={leidaEn} onVerificar={() => cargar()} />}
                         {aviso && (
                             <Aviso tono={aviso.tono} titulo={aviso.texto} onCerrar={() => setAviso(null)} />
                         )}
@@ -452,6 +459,10 @@ const FichaLeadModal = ({
                             <motion.div key={pestana || 'vacio'} {...mov.panel}>
                                 {panel()}
                             </motion.div>
+                        )}
+                        {/* «Verificar guardado» abajo y chico (27/11/2026); en Confirmación va con sus botones. */}
+                        {ficha && pestana !== 'conf' && verificable && (
+                            <div className="fi-pie-guardado"><BarraGuardado leidaEn={leidaEn} onVerificar={() => cargar()} /></div>
                         )}
                     </div>
                 </div>

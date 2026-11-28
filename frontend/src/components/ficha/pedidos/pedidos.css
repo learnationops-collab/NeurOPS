@@ -1,0 +1,26 @@
+/* «Pedir actualización» (ADR-W275) */
+.pa { display: grid; gap: var(--s3); }
+.pa-cab { display: flex; align-items: center; justify-content: space-between; gap: var(--s2); }
+.pa-cab > :only-child { margin-left: auto; }
+.pa-lista { display: grid; gap: var(--s2); margin: 0; padding: 0; list-style: none; }
+.pa-pedido {
+    display: grid; gap: var(--s3); padding: var(--s3) var(--s4);
+    border: 1px solid var(--border, rgba(255, 255, 255, .08)); border-radius: 14px;
+    background: var(--bg-surface-2, rgba(255, 255, 255, .02));
+}
+.pa-msj { display: flex; gap: var(--s2); align-items: flex-start; }
+.pa-msj__cuerpo { display: grid; gap: 4px; min-width: 0; }
+.pa-msj__texto { margin: 0; font-size: 14px; line-height: 1.45; white-space: pre-wrap; }
+.pa-respuesta { display: flex; gap: var(--s2); padding-left: var(--s2); }
+.pa-audio { height: 36px; max-width: 100%; }
+.pa-caja { display: grid; gap: var(--s2); }
+.pa-campo { display: flex; gap: var(--s2); align-items: flex-start; }
+.pa-campo > :first-child { flex: 1; }
+.pa-mic--on { color: var(--error); animation: pa-latido 1.2s ease-in-out infinite; }
+.pa-grabando { display: inline-flex; align-items: center; gap: 6px; color: var(--error); }
+.pa-grabando i { width: 8px; height: 8px; border-radius: 50%; background: currentColor; animation: pa-latido 1.2s ease-in-out infinite; }
+.pa-previa { display: flex; align-items: center; gap: var(--s2); }
+.pa-previa audio { height: 36px; flex: 1; }
+.pa-pie { display: flex; justify-content: flex-end; gap: var(--s2); }
+@keyframes pa-latido { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .pa-mic--on, .pa-grabando i { animation: none; } }

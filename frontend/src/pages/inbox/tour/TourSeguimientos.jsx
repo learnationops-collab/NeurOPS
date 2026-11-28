@@ -1,7 +1,7 @@
 // El recorrido de seguimientos del Inbox (ADR-W255): la misma portada y el mismo recorrido que las Novedades del
 // Workspace (`closer/novedades/`), con su tanda. Se muestra a quien usa el Inbox hasta que lo termina (después de
 // 3 días es obligatorio, como allá). Para volver a verlo: el «?» al lado de la casilla Seguimiento o `?tour=1`.
-// Para una tanda nueva se cambia VERSION (o cualquier texto de PASOS: la huella cambia sola).
+// Para una tanda nueva se cambia VERSION: cambiar un texto ya no se lo vuelve a mostrar a quien lo terminó (ADR-W285).
 import { AlarmClock, BarChart3, CheckSquare, Repeat, SlidersHorizontal, BellRing } from 'lucide-react';
 import Novedades, { abrirNovedades, huella } from '../../closer/novedades/Novedades';
 import Escena from './Escenas';

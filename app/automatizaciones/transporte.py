@@ -1,7 +1,8 @@
 """Cómo salen los mensajes. El motor no sabe si manda de verdad o en simulación.
 
   · Simulado: no sale a la red; inventa un `mid` y deja registro de lo que habría mandado.
-  · Meta: la API de Instagram con el token de la cuenta (IG_ACCESS_TOKEN). IG_USER_ID es opcional:
+  · Meta: la API de Instagram con el token de la cuenta (`token_ig`: el conectado desde Work, o IG_ACCESS_TOKEN).
+    IG_USER_ID es opcional:
     sin él manda por /me, que es la cuenta dueña del token.
 
 Control de la conversación: con varias apps en la cuenta (ManyChat, Kommo...), Meta solo deja escribir
@@ -76,7 +77,10 @@ class TransporteMeta:
     VENTANA_CERRADA = {10, 551}
 
     def __init__(self, token=None, cuenta_id=None, sesion=None):
-        self.token = token or os.environ.get('IG_ACCESS_TOKEN')
+        if not token:
+            from app.automatizaciones.token_ig import token_actual  # el conectado, renovado solo (ADR-W286)
+            token = token_actual()
+        self.token = token
         self.cuenta_id = cuenta_id or (os.environ.get('IG_USER_ID') or '').strip() or 'me'
         self.sesion = sesion or requests
         self._cuenta_ig = None

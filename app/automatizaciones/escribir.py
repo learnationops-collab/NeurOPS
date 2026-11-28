@@ -1,13 +1,15 @@
 """Una persona del equipo le escribe al lead desde el Inbox (17/11/2026): lo que hacía en Kommo.
 
   · Ventana: dentro de las 24 h del último mensaje del lead sale normal; hasta los 7 días sale con la
-    etiqueta HUMAN_AGENT (Meta la permite solo a personas, no al bot); después ya no se puede.
+    etiqueta HUMAN_AGENT (Meta la permite solo a personas, no al bot, y solo si aprobó la función en la App
+    Review: `IG_HUMAN_AGENT`, ADR-W281); después ya no se puede.
   · Control del hilo: si la conversación es de otra app (Kommo, ManyChat), se toma, se manda y se
     devuelve en el acto. Así Kommo puede seguir escribiendo mientras conviven.
   · El bot se pausa como cuando escribe alguien desde Kommo: el eco de este mensaje llega con el mismo
     `mid` y el motor lo reconoce como propio (`_eco`), así que no se pausa dos veces ni se duplica.
   · El mensaje queda con origen OTRO (persona del equipo, el mismo que los ecos) y su `autor_id`.
 """
+import os
 from datetime import timedelta
 
 from app import db
@@ -22,15 +24,31 @@ LARGO_MAXIMO = 1000  # el tope de texto de un mensaje de Instagram
 YA_ENTREGADO = timedelta(minutes=2)
 
 
+SOLO_INSTAGRAM = ('Pasaron más de 24 h desde el último mensaje del lead: desde Work ya no sale. Mandalo desde '
+                  'Instagram y marcalo como seguimiento')
+# Un seguimiento programado sale solo: HUMAN_AGENT es para una persona que manda en el momento (ADR-W282).
+PROGRAMADO_FUERA = ('Un seguimiento programado sale solo y pasadas las 24 h desde su último mensaje solo puede '
+                    'escribirle una persona en el momento: elegí antes o escribile vos cuando toque')
+
+
+def human_agent_aprobado():
+    """Meta solo acepta HUMAN_AGENT si aprobó la función en la App Review (ADR-W281). Hasta entonces
+    IG_HUMAN_AGENT queda apagada y la ventana de Work es de 24 h."""
+    return (os.environ.get('IG_HUMAN_AGENT') or '').strip().lower() in ('1', 'true', 'si', 'sí')
+
+
 def ventana(contacto, ahora):
-    """'abierta' (24 h), 'humana' (hasta 7 días, con HUMAN_AGENT) o 'cerrada'."""
+    """'abierta' (24 h), 'humana' (hasta 7 días, con HUMAN_AGENT), 'instagram' (Work no puede, la app de
+    Instagram sí: falta la aprobación de HUMAN_AGENT) o 'cerrada'."""
     ultimo = contacto.ultimo_entrante_en
     if not ultimo:
         return 'cerrada'
     pasado = ahora - ultimo
     if pasado < VENTANA:
         return 'abierta'
-    return 'humana' if pasado < VENTANA_HUMANA else 'cerrada'
+    if pasado >= VENTANA_HUMANA:
+        return 'cerrada'
+    return 'humana' if human_agent_aprobado() else 'instagram'
 
 
 def cuerpo_de(texto=None, url_audio=None):
@@ -74,9 +92,11 @@ def _por_whatsapp(contacto, cuerpo, ahora):
         raise AccionInvalida(f'WhatsApp no lo aceptó: {error}')
 
 
-def enviar(motor, contacto, autor_id, texto=None, url_audio=None, nombre_audio=None, pausar=True, guia=None):
+def enviar(motor, contacto, autor_id, texto=None, url_audio=None, nombre_audio=None, pausar=True, guia=None,
+           a_mano=True):
     """Manda el mensaje del equipo y lo deja en la conversación. Devuelve el `IgMensaje`. `pausar=False`
-    deja al bot seguir (la casilla del chat). `guia`: el paso de la Guía que se mandó (ADR-W197)."""
+    deja al bot seguir (la casilla del chat). `guia`: el paso de la Guía que se mandó (ADR-W197).
+    `a_mano=False` (un seguimiento programado): nunca con HUMAN_AGENT."""
     from app.whatsapp.cliente import es_whatsapp
     if es_whatsapp(contacto.igsid):
         cuerpo = cuerpo_de(texto, url_audio)
@@ -88,6 +108,10 @@ def enviar(motor, contacto, autor_id, texto=None, url_audio=None, nombre_audio=N
     if estado == 'cerrada':
         raise AccionInvalida('Pasaron más de 7 días desde el último mensaje del lead: Instagram no deja escribirle '
                              'hasta que vuelva a escribir')
+    if estado != 'abierta' and not a_mano:
+        raise AccionInvalida(PROGRAMADO_FUERA)
+    if estado == 'instagram':
+        raise AccionInvalida(SOLO_INSTAGRAM)
     cuerpo = cuerpo_de(texto, url_audio)
     if pausar:
         motor.pausar(contacto, CORTADA_POR_ECO)
@@ -99,6 +123,8 @@ def enviar(motor, contacto, autor_id, texto=None, url_audio=None, nombre_audio=N
     try:
         mid = _mandar(motor, contacto, cuerpo, HUMAN_AGENT if estado == 'humana' else None)
     except ErrorDeEnvio as error:
+        if estado == 'humana' and 'tag' in str(error).lower():  # IG_HUMAN_AGENT prendida sin la aprobación de Meta
+            raise AccionInvalida(SOLO_INSTAGRAM)
         raise AccionInvalida(f'Instagram no lo aceptó: {error}')
     return _guardar(contacto, mid, cuerpo, autor_id, nombre_audio, guia, motor.ahora)
 

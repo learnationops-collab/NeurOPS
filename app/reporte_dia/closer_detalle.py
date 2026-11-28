@@ -8,6 +8,7 @@ from sqlalchemy import func, or_
 from app.models import Appointment, FinancialSale
 from app.reporte_dia.comun import hora_local
 from app.services.closer_service import CloserService, SALE_TIPO_TO_BUCKET
+from app.services.momentum_metricas import is_momentum_call
 
 SEGUNDA = {'2th call', '2da call', 'segunda llamada', 'segunda agenda'}
 ESTADO = {'attended': 'Asistió', 'no_show': 'No show', 'canceled': 'Canceló', 'rescheduled': 'Reprogramó'}
@@ -54,7 +55,8 @@ def _citas(user, dia):
     backlog = Appointment.query.filter(Appointment.closer_id == user.id, Appointment.start_time < ini,
                                        Appointment.closer_processed == True,  # noqa: E712
                                        Appointment.updated_at >= ini, Appointment.updated_at <= fin).all()
-    return sorted(hoy + backlog, key=lambda a: a.start_time or ini)
+    # Sin las Momentum, como compute_daily_report_fields (ADR-W276).
+    return sorted((a for a in hoy + backlog if not is_momentum_call(a)), key=lambda a: a.start_time or ini)
 
 
 def _clasificar(a):

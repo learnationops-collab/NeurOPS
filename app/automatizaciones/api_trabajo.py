@@ -71,13 +71,17 @@ def marcar_leido(contacto_id):
     contacto, error = _contacto_o_404(contacto_id)
     if error:
         return error
-    lectura = db.session.get(InboxRead, (current_user.id, contacto.id))
-    if lectura is None:
-        db.session.add(InboxRead(user_id=current_user.id, contact_id=contacto.id, read_at=servicio.ahora()))
-    else:
-        lectura.read_at = servicio.ahora()
+    _leer(contacto, servicio.ahora())
     db.session.commit()
     return '', 204
+
+
+def _leer(contacto, ahora):
+    lectura = db.session.get(InboxRead, (current_user.id, contacto.id))
+    if lectura is None:
+        db.session.add(InboxRead(user_id=current_user.id, contact_id=contacto.id, read_at=ahora))
+    else:
+        lectura.read_at = ahora
 
 
 @bp.route('/conversaciones/<int:contacto_id>/resuelta', methods=['POST', 'DELETE'])
@@ -89,9 +93,40 @@ def marcar_resuelta(contacto_id):
         return error
     marcar = request.method == 'POST'
     contacto.resuelta_en = servicio.ahora() if marcar else None
+    # Abrir el chat ya no lo marca leído (ADR-W292): «no requiere respuesta» sí.
+    if marcar:
+        _leer(contacto, contacto.resuelta_en)
     evento(contacto.id, 'Marcada como «no requiere respuesta»' if marcar else 'Volvió a esperar respuesta')
     db.session.commit()
     return jsonify({'resuelta_en': _iso(contacto.resuelta_en)})
+
+
+TOPE_MASIVO = 500
+
+
+@bp.route('/conversaciones/masivo', methods=['POST'])
+def cerrar_varias():
+    """Varias de una vez (ADR-W274): `leido` las marca leídas para quien pregunta; `resuelta`, además, las saca de
+    «Esperan respuesta» hasta que el lead vuelva a escribir (como `marcar_resuelta`)."""
+    datos = _cuerpo()
+    accion = datos.get('accion')
+    ids = [i for i in (datos.get('contactos') or []) if isinstance(i, int)][:TOPE_MASIVO]
+    if accion not in ('leido', 'resuelta') or not ids:
+        return jsonify({'message': 'Faltan las conversaciones o la acción'}), 400
+    ahora = servicio.ahora()
+    contactos = IgContacto.query.filter(IgContacto.id.in_(ids)).all()
+    lecturas = {r.contact_id: r for r in InboxRead.query.filter(InboxRead.user_id == current_user.id,
+                                                                 InboxRead.contact_id.in_(ids))}
+    for c in contactos:
+        if c.id in lecturas:
+            lecturas[c.id].read_at = ahora
+        else:
+            db.session.add(InboxRead(user_id=current_user.id, contact_id=c.id, read_at=ahora))
+        if accion == 'resuelta':
+            c.resuelta_en = ahora
+            evento(c.id, 'Marcada como «no requiere respuesta» (junto con otras)')
+    db.session.commit()
+    return jsonify({'hechas': len(contactos)})
 
 
 @bp.route('/conversaciones/<int:contacto_id>/asignar', methods=['POST'])

@@ -18,12 +18,15 @@ CLARITY_CRITERIA = [
 VOTE_VALUES = ('pre', 'res', 'des')
 
 # Decisión manual de un admin que pisa el veredicto calculado por votos:
-# 'preseleccionada' para destrabar un 'decidir' (revisores en desacuerdo) sin
-# esperar a que alguno cambie su voto; 'testeo' para un closer preseleccionado
-# que ya está en su etapa de prueba; y 'baja' para uno que se fue por
-# cualquier motivo (no es lo mismo que 'descartado', que es un rechazo
+# 'preseleccionada', 'en_reserva' o 'descartado' para destrabar un 'decidir'
+# (revisores en desacuerdo: decide Mario, 28/11/2026); 'testeo' para un closer
+# preseleccionado que ya está en su etapa de prueba; y 'baja' para uno que se
+# fue por cualquier motivo (no es lo mismo que 'descartado', que es un rechazo
 # durante la revisión, previo a la selección).
-RESOLUCION_VALUES = ('preseleccionada', 'testeo', 'baja')
+RESOLUCION_VALUES = ('preseleccionada', 'en_reserva', 'descartado', 'testeo', 'baja')
+# Etapas posteriores a la revisión: se ven igual para todos, haya votado o no.
+RESOLUCION_FINAL = ('testeo', 'baja')
+VEREDICTO_DE_VOTO = {'pre': 'preseleccionada', 'res': 'en_reserva', 'des': 'descartado'}
 
 # Las columnas que representan una respuesta del formulario ACTUAL (en el
 # mismo orden que las preguntas). Sirve para calcular cuántas contestó alguien
@@ -94,6 +97,11 @@ class JobApplication(db.Model):
     # vez de reabrir la vieja. None mientras está activa.
     archivada_at = db.Column(db.DateTime, nullable=True, index=True)
 
+    # Con qué formulario editable (HiringForm puesto 'closer') se contestó, y las respuestas a
+    # preguntas sin columna (las que se suman desde Talent › Forms). ADR-W280.
+    form_id = db.Column(db.Integer, db.ForeignKey('hiring_forms.id'), nullable=True)
+    respuestas_extra = db.Column(db.JSON, nullable=True)
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -109,35 +117,26 @@ class JobApplication(db.Model):
         """Las postulaciones que todavía no se archivaron: las únicas que ve el panel."""
         return cls.query.filter(cls.archivada_at.is_(None))
 
-    def veredicto(self):
-        # Una resolución manual pisa el cálculo por votos: así un admin puede
-        # destrabar un 'decidir' o marcar una baja sin depender de que los
-        # revisores cambien su voto.
+    def veredicto(self, viewer_id=None):
+        """Veredicto visto por `viewer_id` (28/11/2026): si ese revisor todavía no votó, la
+        postulación está en SU Inbox ('sin_calificar') aunque otro ya la haya votado. Con votos
+        iguales va a esa pestaña; con votos distintos, a 'decidir', y ahí decide un admin con una
+        resolución manual, que pisa el cálculo. Sin `viewer_id`, el veredicto de todos los votos."""
+        if self.resolucion in RESOLUCION_FINAL:
+            return self.resolucion
+        votos = {v.reviewer_id: v.vote for v in self.votes}
+        if viewer_id is not None and viewer_id not in votos:
+            return 'sin_calificar'
         if self.resolucion:
             return self.resolucion
-
-        votos = {v.reviewer_id: v.vote for v in self.votes}
-        valores = votos.values()
-        hay_pre = 'pre' in valores
-        hay_des = 'des' in valores
-        hay_res = 'res' in valores
-        # Preseleccionar pesa más que reservar: si un revisor preselecciona y
-        # otro deja en reserva, no hace falta decidir — gana la preselección.
-        # En cambio reserva vs. descarte sí son señales opuestas y quedan en
-        # "decidir", igual que preseleccionar vs. descartar.
-        if hay_pre and hay_des:
+        valores = set(votos.values())
+        if not valores:
+            return 'sin_calificar'
+        if len(valores) > 1:
             return 'decidir'
-        if hay_pre:
-            return 'preseleccionada'
-        if hay_res and hay_des:
-            return 'decidir'
-        if hay_res:
-            return 'en_reserva'
-        if hay_des:
-            return 'descartado'
-        return 'sin_calificar'
+        return VEREDICTO_DE_VOTO[valores.pop()]
 
-    def to_dict(self, weights=None, include_respuestas=True):
+    def to_dict(self, weights=None, include_respuestas=True, viewer_id=None):
         from app.services import clarity
 
         data = {
@@ -145,7 +144,7 @@ class JobApplication(db.Model):
             "dedupe_key": self.dedupe_key,
             "nombre": self.nombre,
             "email": self.email,
-            "veredicto": self.veredicto(),
+            "veredicto": self.veredicto(viewer_id),
             "votos": {v.reviewer_id: v.vote for v in self.votes},
             "resolucion": self.resolucion,
             "resuelto_por": self.resuelto_por.username if self.resuelto_por else None,
@@ -187,8 +186,22 @@ class JobApplication(db.Model):
                 "porque": self.porque,
                 "fuente": self.fuente,
                 "bolsa": self.bolsa,
+                "extras": self.extras(),
             })
         return data
+
+    def extras(self):
+        """Las respuestas a preguntas sin columna (sumadas en Talent › Forms), con su enunciado
+        y en el orden del formulario: [{id, t, valor}]."""
+        guardadas = self.respuestas_extra or {}
+        if not guardadas:
+            return []
+        from app.models.hiring_form import HiringForm
+        form = db.session.get(HiringForm, self.form_id) if self.form_id else None
+        titulos = {p.get('id'): p.get('t') for p in ((form.preguntas if form else None) or []) if isinstance(p, dict)}
+        orden = list(titulos) + [k for k in guardadas if k not in titulos]
+        return [{"id": k, "t": titulos.get(k) or k, "valor": guardadas[k]}
+                for k in orden if k in guardadas and not k.endswith('_pts')]
 
     def __repr__(self):
         return f'<JobApplication {self.nombre} · {self.email}>'

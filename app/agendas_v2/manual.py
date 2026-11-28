@@ -41,7 +41,8 @@ def tipo_de_llamada(appt):
     nacieron (`manual.via` '2da_call') o por el '2TH Call' que todavía no se pisó."""
     if appt is None:
         return 'primera'
-    if appt.origin == ORIGEN_MOMENTUM:
+    # Toda Momentum: la de la Academia, la del link `momentum-sessions` o una manual (ADR-W276).
+    if 'momentum' in (appt.origin or '').lower():
         return 'momentum'
     payload = appt.agenda_payload or {}
     if payload.get('llamada') == 'segunda' or (payload.get('manual') or {}).get('via') == '2da_call':

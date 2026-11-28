@@ -188,6 +188,10 @@ def create_app(config_class=Config):
     from app.api.google_aparte import bp as google_aparte_bp
     app.register_blueprint(google_aparte_bp)  # /google/<correo|meet>/conectar/<firma>: autorizaciones de un permiso
 
+    # Learnation Marketing (el artifact de claude.ai) en /ops/dashboard?step=marketing (ADR-W280).
+    from app import marketing_app
+    marketing_app.registrar(app)
+
 
     from app.api.instagram_webhook import bp as instagram_webhook_bp
     app.register_blueprint(instagram_webhook_bp, url_prefix='/api/webhooks/instagram')

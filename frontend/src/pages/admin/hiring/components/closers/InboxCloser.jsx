@@ -302,10 +302,8 @@ const InboxCloser = ({ closers, pestana, q, filasSeccion = null }) => {
                 </div>
             </div>
             {abierta && (
-                <div className="dash-v6 text-white">
-                    <FichaCloser applicationId={abierta} ids={listaFicha.includes(abierta) ? listaFicha : [abierta]}
-                        onClose={() => setAbierta(null)} onNavigate={setAbierta} onDecidido={() => cargar({ silencioso: true })} />
-                </div>
+                <FichaCloser applicationId={abierta} ids={listaFicha.includes(abierta) ? listaFicha : [abierta]}
+                    onClose={() => setAbierta(null)} onNavigate={setAbierta} onDecidido={() => cargar({ silencioso: true })} />
             )}
         </>
     );

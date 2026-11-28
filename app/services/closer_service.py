@@ -2,6 +2,7 @@ from app.models import User, Client, Appointment, PaymentMethod, CloserDailyStat
 from app.services.dashboard_service import DashboardService
 from app.services.sales_consistency_service import filtro_de_pagos
 from app.services.ticket_service import CUOTA, pago_de_venta, primeras_cuotas, ticket_promedio
+from app.services.momentum_metricas import is_momentum_call, not_momentum
 from sqlalchemy import and_, func, or_
 from datetime import datetime, time, timedelta, date
 import pytz
@@ -401,7 +402,8 @@ class CloserService:
 
         return {
             'kpis': {
-                'scheduled': agendas['total_agendas']['total'],
+                # Conteo simple: las Momentum suman acá, en el resto no (ADR-W276).
+                'scheduled': agendas['total_agendas']['total'] + agendas['momentum'],
                 'completed': first['completed'] + second['completed'],
                 'no_show': first['no_show'] + second['no_show'],
                 'canceled': first['canceled'] + second['canceled'],
@@ -1208,7 +1210,8 @@ class CloserService:
         if end_dt:
             appt_filters.append(Appointment.start_time < end_dt)
 
-        appts = Appointment.query.filter(*appt_filters).all()
+        # Las Momentum quedan fuera del embudo de closing (ADR-W276).
+        appts = Appointment.query.filter(*appt_filters, not_momentum()).all()
 
         buckets = {
             'fc': {'scheduled': 0, 'attended': 0, 'no_show': 0, 'rescheduled': 0, 'canceled': 0},
@@ -2523,6 +2526,9 @@ class CloserService:
         rescheduled_total = 0
 
         for a in appts:
+            # Las Momentum no cuentan en show up ni closing (ADR-W276).
+            if is_momentum_call(a):
+                continue
             bucket = buckets['sc'] if is_second_call(a) else buckets['fc']
             bucket['scheduled'] += 1
             cr = (a.closer_result or '').strip().lower()

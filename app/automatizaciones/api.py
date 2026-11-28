@@ -9,7 +9,7 @@ from flask import Blueprint, jsonify, request
 from flask_login import current_user, login_required
 
 from app import db
-from app.automatizaciones import bandeja, campanas, fases, metricas, progreso, servicio
+from app.automatizaciones import bandeja, campanas, escribir, fases, metricas, progreso, servicio
 from app.automatizaciones.modelos import AutEjecucion, AutEmbudo, AutFlujo, IgContacto, IgMensaje
 from app.automatizaciones.nucleo import grafo as g
 from app.models.instagram import InstagramWebhookEvento
@@ -33,12 +33,12 @@ ACCIONES_DEL_SETTER = {'inbox.mover_en_flujo', 'inbox.bot_de_conversacion', 'inb
                        'inbox.escribir_al_lead', 'inbox.proponer_cambios',
                        'inbox.programar_seguimiento', 'inbox.cancelar_seguimiento',
                        'inbox.poner_etiqueta', 'inbox.sacar_etiqueta', 'inbox.guardar_mensajes',
-                       'inbox.marcar_leido', 'inbox.marcar_resuelta', 'inbox.asignar_conversacion', 'inbox.mover_etapa', 'inbox.corregir_variable',
+                       'inbox.marcar_leido', 'inbox.marcar_resuelta', 'inbox.cerrar_varias','inbox.asignar_conversacion', 'inbox.mover_etapa', 'inbox.corregir_variable',
                        'inbox.crear_nota', 'inbox.crear_tarea', 'inbox.cambiar_tarea',
                        'inbox.crear_rapida', 'inbox.borrar_rapida', 'inbox.subir_audio', 'inbox.borrar_audio',
                        'inbox.mover_fase', 'inbox.marcar_canal', 'inbox.anotar_cita', 'inbox.etiquetar_varias',
                        'inbox.publicar_guia', 'inbox.proponer_guia', 'inbox.simular_embudo',
-                       'inbox.cambiar_actividad', 'inbox.marcar_seguimiento'}
+                       'inbox.cambiar_actividad', 'inbox.marcar_seguimiento', 'inbox.abrir_en_instagram'}
 MAX_BYTES_GRAFO = 300_000
 MAX_NODOS = 300
 MENSAJES_POR_CONVERSACION = 300
@@ -302,6 +302,7 @@ def listar_conversaciones():
     cerradas = fases.cerradas([c for c, _, _, _ in filas])
     from app.automatizaciones import cliente_del_contacto
     reales = cliente_del_contacto.nombres([c for c, _, _, _ in filas])
+    de_funnel = bandeja.funnels(ids)
     salida = []
     for contacto, momento, cantidad, _ in filas:
         variables = contacto.variables or {}
@@ -336,6 +337,8 @@ def listar_conversaciones():
             # El broadcast de WhatsApp al que respondió (ADR-W259): la etiqueta del taller o «Broadcast».
             'broadcast': variables.get('broadcast_nombre') or ('Broadcast' if variables.get('broadcast') else None),
             'examen': variables.get('examen'),
+            # De qué funnel es el anuncio del que vino (ADR-W287): 'direct' (venta directa) o 'lead_magnet'.
+            'funnel': de_funnel.get(contacto.id),
             'califica': variables.get('_califica'),
             'flujo': ejecucion.version.flujo.nombre if ejecucion else None,
             'paso': bandeja.paso(abierta),
@@ -349,7 +352,8 @@ def listar_conversaciones():
             **avance.get(contacto.id, {}),
         })
     return jsonify({'conversaciones': salida, 'mediana_respuesta': bandeja.mediana_respuesta(ahora),
-                    'medianas_setters': bandeja.medianas_por_setter(ahora)})
+                    'medianas_setters': bandeja.medianas_por_setter(ahora),
+                    'human_agent': escribir.human_agent_aprobado()})
 
 
 @bp.route('/conversaciones/<int:contacto_id>', methods=['GET'])

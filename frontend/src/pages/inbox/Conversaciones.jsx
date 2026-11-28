@@ -5,14 +5,15 @@
 // se vuelven a pedir solos cada 20 s. Con el teclado: ↑↓ cambian de conversación y Esc la cierra. Las sin leer
 // van al título de la pestaña y, con permiso, como aviso del escritorio (`useAvisos`).
 import { useCallback, useEffect, useState } from 'react';
-import { BarChart3, Bell, Kanban, Keyboard, ListChecks, MessageSquare, Search, Tag } from 'lucide-react';
-import { Button, EmptyState, HeaderActions, InputGroup, Panel, Segmented } from '../../components/standard';
+import { BarChart3, Bell, Kanban, Keyboard, ListChecks, MessageSquare, Search } from 'lucide-react';
+import { EmptyState, HeaderActions, InputGroup, Panel, Segmented } from '../../components/standard';
 import { useAuth } from '../../contexts/AuthContext';
 import { inboxApi } from './api';
 import useAltoLibre from './conversaciones/useAltoLibre';
 import { REFRESCO, filtrar, ordenDe } from './conversaciones/colas';
 import Canales from './conversaciones/Canales';
 import EtiquetarVarias from './conversaciones/EtiquetarVarias';
+import AccionesVarias from './conversaciones/AccionesVarias';
 import Ordenar from './conversaciones/Ordenar';
 import Detalle from './conversaciones/Detalle';
 import Embudo from './conversaciones/Embudo';
@@ -24,6 +25,7 @@ import Stats from './conversaciones/Stats';
 import Actividad from './conversaciones/Actividad';
 import { VACIO } from './conversaciones/filtros';
 import { useBorradores } from './conversaciones/borradores';
+import useOrdenEstable from './conversaciones/ordenEstable';
 import useAvisos from './conversaciones/useAvisos';
 import { recordado, recordar } from './recuerdo';
 import './conversaciones/trabajo.css';
@@ -123,12 +125,24 @@ export default function Conversaciones() {
     const lista = (datos?.conversaciones || []).map((c) => (
         c.sin_leer && leidas[c.id] && new Date(c.ultimo_en) <= leidas[c.id] ? { ...c, sin_leer: 0 } : c));
     const marcarLeida = useCallback((id) => setLeidas((l) => ({ ...l, [id]: new Date() })), []);
-    const visibles = filtrar(lista, { ...filtro, ahora });
+    const visibles = useOrdenEstable(filtrar(lista, { ...filtro, ahora }), `${JSON.stringify(filtro)}|${buscar.trim()}`);
     const orden = ordenDe(filtro);
     const marcar = useCallback((id) => setMarcadas((m) => (m.includes(id) ? m.filter((x) => x !== id) : [...m, id])), []);
     const dejarDeElegir = () => { setEligiendo(false); setMarcadas([]); };
     const abrir = useCallback((id) => { setVista('chats'); setElegida(id); }, []);
     useTeclado(vista === 'chats' && !eligiendo ? visibles : [], elegida, setElegida);
+    // «Siguiente» del seguimiento por Instagram (ADR-W286): la conversación de abajo en la lista.
+    useEffect(() => {
+        const siguiente = () => {
+            const i = visibles.findIndex((c) => c.id === elegida);
+            const s = visibles[i + 1];
+            if (!s) return;
+            setElegida(s.id);
+            document.querySelector(`.cv-lista [data-conversacion="${s.id}"]`)?.scrollIntoView({ block: 'nearest' });
+        };
+        window.addEventListener('cv:siguiente', siguiente);
+        return () => window.removeEventListener('cv:siguiente', siguiente);
+    }, [visibles, elegida]);
     const avisos = useAvisos(lista, { yo, soloMias: ['setter', 'triage'].includes(user?.role), elegida, onAbrir: abrir });
     // En lo propio no hace falta decir de quién es; en el resto, sí.
     const conAsignado = filtro.asignado !== yo;
@@ -162,10 +176,8 @@ export default function Conversaciones() {
                         onClick={() => setLimite((n) => n + LIMITE)}>Cargar {LIMITE} más</button>
                 )}
                 {eligiendo ? (
-                    <div className="cv-masiva">
-                        <b>{marcadas.length ? `${marcadas.length} ${marcadas.length === 1 ? 'elegida' : 'elegidas'}` : 'Tocá las que querés etiquetar'}</b>
-                        <Button size="sm" variant="primary" icon={<Tag />} disabled={!marcadas.length} onClick={() => setEtiquetando(true)}>Etiquetar</Button>
-                    </div>
+                    <AccionesVarias visibles={visibles} marcadas={marcadas} onMarcarTodas={setMarcadas} onEtiquetar={() => setEtiquetando(true)}
+                        onHecho={() => { marcadas.forEach(marcarLeida); dejarDeElegir(); recargar(); }} />
                 ) : (
                     <p className="cv-lista-pie">
                         <span className="cv-atajos" tabIndex={0} aria-label="Atajos: flechas para cambiar de chat, Esc cierra, Enter envía"
@@ -185,7 +197,7 @@ export default function Conversaciones() {
                         <Ordenar filtro={filtro} onCambiar={setFiltro} />
                         {vista === 'chats' && (
                             <button type="button" className={`cv-barra-btn cv-elegir${eligiendo ? ' cv-barra-btn--on' : ''}`} aria-pressed={eligiendo}
-                                data-tip={eligiendo ? 'Listo|Terminar de elegir' : 'Elegir|Marcar varias para etiquetarlas juntas'}
+                                data-tip={eligiendo ? 'Listo|Terminar de elegir' : 'Elegir|Marcar varias para cerrarlas o etiquetarlas juntas'}
                                 onClick={() => (eligiendo ? dejarDeElegir() : setEligiendo(true))}>
                                 <ListChecks size={15} aria-hidden="true" />{eligiendo ? 'Listo' : ''}
                             </button>
@@ -220,7 +232,7 @@ export default function Conversaciones() {
                         {listado}
                     </Panel>
                     {elegida
-                        ? <Detalle key={elegida} id={elegida} yo={yo} onLeido={marcarLeida} onCambio={recargar} />
+                        ? <Detalle key={elegida} id={elegida} yo={yo} onCambio={recargar} />
                         : <Panel size="sm" className="cv-detalle cv-detalle--vacio"><EmptyState icon={<MessageSquare size={22} />}>Elegí una conversación.</EmptyState></Panel>}
                 </div>
             )}

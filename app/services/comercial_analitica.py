@@ -430,14 +430,16 @@ def bloque_closers(start, end, closer_id=None, closer_nombre=None, con_reales=Tr
     tot_a = ComercialService.totales_agendas(agendas)
     tot_v = ComercialService.totales_ventas(ventas)
     estados = estados_de(agendas)
+    # Las Momentum son alumnos: no cuentan en show up ni en closing (ADR-W276). Sí en estados y agendas.
+    closing = [f for f in agendas if f.get('tipo_llamada') != 'momentum']
     reales = (cierres_reales(start, end, ventas, tot_a['asistieron'], closer_nombre=closer_nombre,
-                             asistieron_canal=partir_por_canal(f for f in agendas if f['asistio']))
+                             asistieron_canal=partir_por_canal(f for f in closing if f['asistio']))
               if con_reales else None)
 
     # Presentaciones: asistencias en las que se presentó la oferta. Una venta cuenta como
     # presentación aunque nadie haya tildado el campo — sin eso el embudo mostraría más ventas
     # que presentaciones, que es imposible.
-    presentaciones = sum(1 for f in agendas if f['asistio'] and f['presento'])
+    presentaciones = sum(1 for f in closing if f['asistio'] and f['presento'])
     descartadas = sum(1 for f in agendas if f['descartada'])
 
     por_tipo, programas = {}, {}
@@ -500,11 +502,11 @@ def bloque_closers(start, end, closer_id=None, closer_nombre=None, con_reales=Tr
         'cierres': matriz_de_cierres(completo=tot_a['ventas_completo'], split=tot_a['ventas_split'],
                                      senas=tot_a['senas'], asistieron=tot_a['asistieron'],
                                      presentaciones=presentaciones,
-                                     no_cerradas=sum(1 for f in agendas if f['no_cerrada']),
+                                     no_cerradas=sum(1 for f in closing if f['no_cerrada']),
                                      reales=reales),
         # Las mismas cuentas partidas en agendas directas y desde triage (09/11/2026): el panel Cierre
         # muestra el close rate de cada canal con la misma regla que el total.
-        'cierres_canal': _cierres_por_canal(agendas),
+        'cierres_canal': _cierres_por_canal(closing),
         'sin_resultado': sin_resultado(agendas),
         # El close rate real, por cobro (ver `cierres_reales`): lo que ve el tile de arriba. El de
         # por llamada (`close_rate`) queda en la matriz de abajo.

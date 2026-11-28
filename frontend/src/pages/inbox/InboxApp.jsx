@@ -19,6 +19,7 @@ import MenuSesion from '../comercial/components/MenuSesion';
 import Conversaciones from './Conversaciones';
 import Embudos from './embudos/Embudos';
 import Campanas from './Campanas';
+import ConexionInstagram from './ConexionInstagram';
 import { inboxApi } from './api';
 import { recordado, recordar } from './recuerdo';
 
@@ -94,6 +95,7 @@ export default function InboxApp() {
                                     </Chip>
                                 )}
                                 {modo && <Status color={modo.color} className="inbox-modo" data-tip={modo.tip}>{modo.label}</Status>}
+                                {!lectura && estado && <ConexionInstagram />}
                             </>
                         )} />
                     <main className="vista">

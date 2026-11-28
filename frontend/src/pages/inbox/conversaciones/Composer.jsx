@@ -22,6 +22,7 @@ import { faseDe } from './fasesSetting';
 import { LETRAS, completarGuia, faltaCompletar, notaDe, partes, pasosDe, siguienteId, useGuia, useLinkAgenda, visibles } from '../guia/useGuia';
 import { ventanaDe } from './ventana';
 import { esWhatsapp } from './colas';
+import PorInstagram from './PorInstagram';
 
 const MODOS = [
     { value: 'chat', label: 'Chat', icon: <MessageSquare size={13} /> },
@@ -218,7 +219,7 @@ export default function Composer({ contacto, mensajes, pausar = true, fase, ejec
 
     return (
         <div className={`cv-composer cv-composer--${modo}`} ref={caja}>
-            {verSeguimientos && <ListaSeguimientos items={seguimientos} onCambio={onCambio} />}
+            {verSeguimientos && <ListaSeguimientos items={seguimientos} contacto={contacto} onCambio={onCambio} />}
             {selector && modo === 'chat' && <Guion fase={selector} contacto={contacto} onElegir={onSelector} />}
             {menu && (
                 <MenuRayo contacto={contacto} fase={fase} filtro={barra ? texto.slice(1) : ''} onTexto={insertar}
@@ -244,7 +245,7 @@ export default function Composer({ contacto, mensajes, pausar = true, fase, ejec
                 {pendientes.length > 0 && (
                     <Chip as="button" type="button" subtle color="#7D63E6" icon={<AlarmClock />} aria-expanded={verSeguimientos}
                         data-tip="Seguimiento programado|Tocalo para verlo o cancelarlo" onClick={() => setVerSeguimientos((v) => !v)}>
-                        {pendientes.length > 1 ? `${pendientes.length} seguimientos` : pendientes[0].vigente ? pendientes[0].texto : pendientes[0].estado === 'error' ? 'No salió' : cuando(pendientes[0].enviar_en)}
+                        {pendientes.length > 1 ? `${pendientes.length} seguimientos` : pendientes[0].vigente ? (pendientes[0].cadencia ? pendientes[0].texto : 'Toca seguimiento · mandalo') :pendientes[0].estado === 'error' ? 'No salió' : cuando(pendientes[0].enviar_en)}
                         {verSeguimientos ? <ChevronDown size={11} /> : <ChevronUp size={11} />}
                     </Chip>
                 )}
@@ -264,7 +265,13 @@ export default function Composer({ contacto, mensajes, pausar = true, fase, ejec
                         placeholder={modo === 'nota' ? 'Nota para el equipo…' : 'Escribir…  / para atajos'} />
                 </div>
             )}
-            {modo === 'chat' && ventana.aviso && <p className="t-cap mut40 cv-bloqueado">{ventana.aviso}</p>}
+            {modo === 'chat' && ventana.aviso && (
+                <p className="t-cap mut40 cv-bloqueado">
+                    {ventana.aviso}
+                    {/* Lo escrito en la caja o, si está vacía, el «Toca seguimiento» programado (ADR-W286). */}
+                    {ventana.enInstagram && <> <PorInstagram contacto={contacto} texto={texto.trim() || pendientes.find((s) => s.vigente && !s.cadencia)?.texto} /></>}
+                </p>
+            )}
             {audios && <Audios onCerrar={() => setAudios(false)} onMandar={puedeEnviar ? (a) => { enviarAudio(a); setAudios(false); } : null} />}
             {programar && (
                 <ProgramarSeguimiento contacto={contacto} textoInicial={texto.startsWith('/') ? '' : texto} pausar={pausar}

@@ -67,18 +67,32 @@ def alumnos_activos():
     return {d[-8:] for d in digitos if d and len(d) >= 8}
 
 
-def revisar(filas, sin_alumnos=True):
-    """Qué pasa con el CSV: {total, para_mandar: [{telefono, nombre}], ya_recibieron, invalidos, repetidos, alumnos}.
-    `alumnos` cuenta a los que tienen una suscripción vigente; con `sin_alumnos` se saltean (un broadcast de
-    captación no le llega a quien ya compró)."""
+def numeros_del_equipo():
+    """Últimos 8 dígitos del WhatsApp de cada cuenta de Work (closers, setters, triage…): un broadcast de captación nunca
+    les llega, aunque estén en la lista (los grupos viejos del taller tenían al equipo; Jean Carlo, 27/11/2026)."""
+    from app.models import User
+    digitos = [normalizar(t) for (t,) in db.session.query(User.two_chat_number).filter(User.two_chat_number.isnot(None))]
+    return {d[-8:] for d in digitos if d and len(d) >= 8}
+
+
+def revisar(filas, sin_alumnos=True, sin_agendados=True, sin_equipo=True):
+    """Qué pasa con el CSV: {total, para_mandar: [{telefono, nombre}], ya_recibieron, invalidos, repetidos, alumnos,
+    agendados}. `alumnos` cuenta a los que tienen una suscripción vigente; con `sin_alumnos` se saltean (un broadcast
+    de captación no le llega a quien ya compró). `agendados` (ADR-W279): los que agendaron alguna vez o son clientes,
+    compraran o no; con `sin_agendados` se saltean (ya los contactó un closer). `equipo` (ADR-W284): los números de
+    las cuentas de Work; se saltean salvo para la prueba con el equipo (`sin_equipo=False`)."""
+    from app.whatsapp.audiencia import grupos_descartables
     # Un envío que falló (p. ej. Meta sin método de pago) no le llegó: ese número puede volver a recibir.
     # 54… y 549… (52… y 521…) son el mismo celular: cuentan como uno.
     # Los recordatorios de un taller (paso_id) no cuentan: esa persona puede recibir otro broadcast a mano.
     ya = {v for (t,) in db.session.query(WaEnvio.telefono).filter(WaEnvio.estado != WaEnvio.FALLO,
                                                                   WaEnvio.paso_id.is_(None)).distinct()
           for v in variantes(t)}
-    alumnos = alumnos_activos()
-    vistos, para, resumen = set(), [], {'ya_recibieron': 0, 'invalidos': 0, 'repetidos': 0, 'alumnos': 0}
+    grupos = grupos_descartables()
+    alumnos, agendados = grupos['alumnos'], grupos['agendados'] | grupos['clientes']
+    equipo = numeros_del_equipo()
+    vistos, para, resumen = set(), [], {'ya_recibieron': 0, 'invalidos': 0, 'repetidos': 0, 'alumnos': 0, 'agendados': 0,
+                                         'equipo': 0}
     for fila in filas:
         telefono = normalizar(fila.get('telefono'))
         es_alumno = bool(telefono) and telefono[-8:] in alumnos
@@ -86,18 +100,24 @@ def revisar(filas, sin_alumnos=True):
             resumen['invalidos'] += 1
         elif telefono in vistos:
             resumen['repetidos'] += 1
+        elif telefono[-8:] in equipo and sin_equipo:
+            resumen['equipo'] += 1
         elif telefono in ya:
             resumen['ya_recibieron'] += 1
         elif es_alumno and sin_alumnos:
             resumen['alumnos'] += 1
+        elif telefono[-8:] in agendados and sin_agendados:
+            resumen['agendados'] += 1
         else:
             resumen['alumnos'] += es_alumno
+            resumen['agendados'] += telefono[-8:] in agendados
+            resumen['equipo'] += telefono[-8:] in equipo
             vistos.update(variantes(telefono))
             para.append({'telefono': telefono, 'nombre': (fila.get('nombre') or '').strip()[:150] or None})
     return {'total': len(filas), 'para_mandar': para, **resumen}
 
 
-def crear_lote(filas, plantillas, cantidad, usuario_id, ahora, sin_alumnos=True):
+def crear_lote(filas, plantillas, cantidad, usuario_id, ahora, sin_alumnos=True, sin_agendados=True, sin_equipo=True):
     """Deja los próximos `cantidad` del CSV en pendiente. `plantillas`: [(nombre, idioma, con_nombre)]; con más
     de una, se reparten al azar en partes iguales. Devuelve el lote y cuántos van."""
     libres = TOPE_DIARIO - usados_hoy(ahora)
@@ -107,7 +127,7 @@ def crear_lote(filas, plantillas, cantidad, usuario_id, ahora, sin_alumnos=True)
         raise EnvioInvalido(f'Ya se usó el tope de hoy ({TOPE_DIARIO})')
     if cantidad > libres:
         raise EnvioInvalido(f'Quedan {libres} para hoy')
-    proximos = revisar(filas, sin_alumnos)['para_mandar'][:cantidad]
+    proximos = revisar(filas, sin_alumnos, sin_agendados, sin_equipo)['para_mandar'][:cantidad]
     if not proximos:
         raise EnvioInvalido('No queda nadie para mandar en esta lista')
     lote = str(uuid.uuid4())

@@ -60,7 +60,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import { Toaster } from 'react-hot-toast';
 import './index.css';
 
-const ProtectedRoute = ({ children, roles = [] }) => {
+const ProtectedRoute = ({ children, roles = [], permitir = null }) => {
   const { user, isAuthenticated, loading } = useAuth();
 
   if (loading) return null; // O un spinner de carga
@@ -69,7 +69,8 @@ const ProtectedRoute = ({ children, roles = [] }) => {
     return <Navigate to="/login" />;
   }
 
-  if (roles.length > 0 && !roles.includes(user.role)) {
+  // `permitir`: una puerta extra que no es un rol (Learnation Marketing, ADR-W280).
+  if (roles.length > 0 && !roles.includes(user.role) && !(permitir && permitir(user))) {
     // Redirigir a su dashboard correspondiente si intenta entrar a ruta ajena
     // (mapa único en utils/roleLanding.js, el mismo que usa el login).
     return <Navigate to={roleLandingPath(user.role)} />;
@@ -175,7 +176,7 @@ function App() {
             <Route
               path="/ops/dashboard"
               element={
-                <ProtectedRoute roles={['operator', 'admin']}>
+                <ProtectedRoute roles={['operator', 'admin']} permitir={(u) => !!u?.marketing_app}>
                   <OpsRuta />
                 </ProtectedRoute>
               }

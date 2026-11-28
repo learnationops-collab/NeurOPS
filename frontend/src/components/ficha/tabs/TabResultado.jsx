@@ -33,6 +33,7 @@ import ConfirmarDatos, { confirmables } from './ConfirmarDatos';
 import { useChequeoVenta } from './useChequeoVenta';
 import SugerenciaNota from './SugerenciaNota';
 import { valoresMomentum, camposDeLaNota } from '../arbolResultado.momentum';
+import AccesoMomentum from './AccesoMomentum';
 import './resultado.css';
 import {
   estadoInicial, responder, actualizar, volverA, preguntaActual, faltantes,
@@ -228,6 +229,8 @@ export default function TabResultado({
       programaCliente: ficha?.cobro?.programa_code || null,
       // Una Momentum de la Academia ('sena' | 'cierre'): pregunta si sigue (ADR-W129).
       momentum: ficha?.identidad?.momentum || null,
+      // Cualquier Momentum es un alumno: no se pregunta por el decisor (ADR-W276).
+      esMomentum: !!ficha?.identidad?.es_momentum,
     };
   }, [ficha, venta.estado, venta.cargando, seguimientoPedido, modoElegido]);
 
@@ -372,6 +375,7 @@ export default function TabResultado({
       )}
 
       {progreso && !hecho && <ProgresoVenta progreso={progreso} reducido={reducido} />}
+      {!hecho && contexto.esMomentum && ficha?.identidad?.acceso && <AccesoMomentum acceso={ficha.identidad.acceso} />}
       {/* La Momentum: lo que dice la nota de Gemini de la llamada, para precargar el reporte (ADR-W129). */}
       {!hecho && contexto.momentum && contexto.modo === 'llamada' && (
         <SugerenciaNota

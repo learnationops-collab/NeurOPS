@@ -4,6 +4,7 @@
 // programado y cuánto falta para que Instagram no deje escribirle (últimas 24 h).
 import { AlarmClock, Bot, Check, Clock, PencilLine, Repeat2, User, X } from 'lucide-react';
 import { Avatar, Chip } from '../../../components/standard';
+import Funnel from './Funnel';
 import { avisoCierre, cierreMin, esperaMin, esperaSeguimiento, examenDe, haceDias, quien, seguimientosDe, vistaPrevia } from './colas';
 import IconoCanal from './IconoCanal';
 import { colorDe, corto, faseDe } from './fasesSetting';
@@ -79,6 +80,7 @@ export default function Fila({ c, elegida, ahora, yo, conAsignado, borrador, onE
                     <span className="cv-item-cab">
                         <strong data-tip={c.nombre_real && c.nombre && c.nombre !== c.nombre_real ? `En el perfil|${c.nombre}` : undefined}>{nombre}</strong>
                         {examen && <span className="cv-item-examen">{examen}</span>}
+                        <Funnel funnel={c.funnel} mini />
                         <Califica valor={c.califica} mini />
                         <span className="cv-item-der">
                             {espera != null && <Cronometro desde={c.ultimo_en} />}
@@ -95,7 +97,7 @@ export default function Fila({ c, elegida, ahora, yo, conAsignado, borrador, onE
                             {cierre != null && cierre <= avisoCierre(c) && <Ventana contacto={c} queda={cierre} aviso={avisoCierre(c)} mini />}
                             <Vence tarea={c.tarea} ahora={ahora} />
                             {c.toca && (
-                                <span className="cv-item-ico cv-item-ico--toca" data-tip={`Toca seguimiento|${c.toca}: lo pide la cadencia de su fase`}><AlarmClock size={12} aria-hidden="true" /></span>
+                                <span className="cv-item-ico cv-item-ico--toca" data-tip={`Toca seguimiento|${c.toca}`}><AlarmClock size={12} aria-hidden="true" /></span>
                             )}
                             {/* Le escribiste y no contestó (Mario, 27/11/2026): cuántos seguimientos van desde su última respuesta y
                                 hace cuánto fue tu último mensaje. Sin seguimiento, en rojo. */}

@@ -52,7 +52,7 @@
 .thalamus.inbox .cv-item-check{width:18px;height:18px;margin-top:8px;border-radius:6px;border:1.5px solid var(--border-main);display:grid;place-items:center;flex:none}
 .thalamus.inbox .cv-item--marcada{background:color-mix(in srgb,var(--brand-secondary) 10%,transparent);border-color:color-mix(in srgb,var(--brand-secondary) 35%,transparent)}
 .thalamus.inbox .cv-item--marcada .cv-item-check{background:var(--brand-secondary);border-color:var(--brand-secondary);color:var(--on-brand)}
-.thalamus.inbox .cv-masiva{display:flex;align-items:center;gap:8px;margin-top:6px;padding:8px;border-radius:14px;background:var(--bg-flotante);border:1px solid var(--border-main)}
+.thalamus.inbox .cv-masiva{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:6px;padding:8px;border-radius:14px;background:var(--bg-flotante);border:1px solid var(--border-main)}
 .thalamus.inbox .cv-masiva b{flex:1;font-size:12px}
 .thalamus.inbox .cv-masivo{width:min(460px,100%);display:grid;gap:var(--s3)}
 .thalamus.inbox .cv-masivo-cuerpo{display:grid;gap:var(--s3);max-height:55vh;overflow:auto}

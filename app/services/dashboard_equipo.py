@@ -2,6 +2,7 @@
 `DashboardService` las sigue exponiendo con los mismos nombres."""
 from app import db
 from app.models import Appointment, Availability
+from app.services.momentum_metricas import is_momentum_call
 from datetime import datetime, date, time
 from sqlalchemy import func
 
@@ -42,7 +43,9 @@ class MetricasEquipo:
             'total_agendas': empty_bucket(),
             'first_agendas': empty_bucket(),
             'second_agendas': empty_bucket(),
-            'presentations': 0
+            'presentations': 0,
+            # Las Momentum solo se cuentan: no entran en show up ni closing (ADR-W276).
+            'momentum': 0
         }
         
         def update_bucket(bucket, status):
@@ -96,6 +99,9 @@ class MetricasEquipo:
             return 'scheduled'
 
         for appt in total_appts:
+            if is_momentum_call(appt):
+                stats['momentum'] += 1
+                continue
             status = get_mapped_status(appt)
             update_bucket(stats['total_agendas'], status)
             if status == 'completed':

@@ -21,7 +21,7 @@ from flask_login import login_required, current_user
 from app import db
 from app.decorators import ROLE_ADMIN, hiring_closers_required
 from app.models import JobApplication, JobApplicationVote, ClarityWeight, User
-from app.models.job_application import CLARITY_CRITERIA, VOTE_VALUES, RESOLUCION_VALUES
+from app.models.job_application import CLARITY_CRITERIA, VOTE_VALUES, RESOLUCION_VALUES, RESOLUCION_FINAL
 from app.models.user import ROLE_HIRING, ROLE_HIRING_CLOSERS
 from app.services import clarity
 
@@ -45,7 +45,8 @@ def _weights_map():
 
 
 def _aplica_filtro(app_row, filtro):
-    veredicto = app_row.veredicto()
+    # Cada revisor ve las pestañas con SU veredicto: lo que no votó está en su Inbox (28/11/2026).
+    veredicto = app_row.veredicto(current_user.id)
     if filtro == 'todas' or not filtro:
         return True
     if filtro == 'mis_pendientes':
@@ -78,8 +79,8 @@ def listar_job_applications():
         archivadas = (JobApplication.query.filter(JobApplication.archivada_at.isnot(None))
                       .order_by(JobApplication.created_at.desc()).all())
         return jsonify({
-            "postulaciones": [a.to_dict(weights=weights if a.completo else None, include_respuestas=False)
-                              for a in archivadas],
+            "postulaciones": [a.to_dict(weights=weights if a.completo else None, include_respuestas=False,
+                                        viewer_id=current_user.id) for a in archivadas],
             "total": len(archivadas),
         }), 200
 
@@ -100,7 +101,8 @@ def listar_job_applications():
     conteos['archivadas'] = JobApplication.query.filter(JobApplication.archivada_at.isnot(None)).count()
 
     return jsonify({
-        "postulaciones": [a.to_dict(weights=peso_para_score, include_respuestas=False) for a in filtradas],
+        "postulaciones": [a.to_dict(weights=peso_para_score, include_respuestas=False, viewer_id=current_user.id)
+                          for a in filtradas],
         "conteos": conteos,
         "total": len(todas),
     }), 200
@@ -112,13 +114,14 @@ def listar_job_applications():
 def ver_job_application(app_id):
     app_row = JobApplication.query.get_or_404(app_id)
     weights = _weights_map()
-    data = app_row.to_dict(weights=weights, include_respuestas=True)
+    data = app_row.to_dict(weights=weights, include_respuestas=True, viewer_id=current_user.id)
     data["votos_detalle"] = [v.to_dict() for v in app_row.votes]
     # Valor 0-1 y peso de cada criterio de Clarity: la ficha de Talent dibuja el desglose del score.
     valores = clarity.compute_criteria_values(app_row)
+    fuera = clarity.criterios_apagados(app_row)
     data["criterios"] = [
         {"criterion": c["criterion"], "valor": valores.get(c["criterion"], 0.0), "peso": weights.get(c["criterion"], 0)}
-        for c in CLARITY_CRITERIA
+        for c in CLARITY_CRITERIA if c["criterion"] not in fuera
     ]
     return jsonify(data), 200
 
@@ -156,7 +159,7 @@ def votar_job_application(app_id):
         return jsonify({
             "status": "success",
             "valor": nuevo_valor,
-            "veredicto": app_row.veredicto(),
+            "veredicto": app_row.veredicto(current_user.id),
         }), 200
     except Exception as e:
         db.session.rollback()
@@ -169,17 +172,19 @@ def votar_job_application(app_id):
 @hiring_closers_required
 def resolver_job_application(app_id):
     """Decisión manual de un revisor que pisa el veredicto calculado por votos:
-    'preseleccionada' para destrabar un 'decidir' sin esperar a que algún
-    revisor cambie su voto, 'testeo' para un closer preseleccionado que ya
+    'preseleccionada', 'en_reserva' o 'descartado' para destrabar un 'decidir'
+    (lo decide Mario: el rol `hiring_closers` no puede, 28/11/2026), 'testeo' para un closer preseleccionado que ya
     está en su etapa de prueba, o 'baja' para uno que se fue por cualquier
     motivo (a diferencia de 'descartado', que es un rechazo durante la
     revisión). `valor: null` deshace la resolución."""
     data = request.get_json(silent=True) or {}
     valor = data.get('valor')
     if valor is not None and valor not in RESOLUCION_VALUES:
-        return jsonify({"message": "valor debe ser 'preseleccionada', 'testeo', 'baja' o null"}), 400
+        return jsonify({"message": "valor debe ser 'preseleccionada', 'en_reserva', 'descartado', 'testeo', 'baja' o null"}), 400
 
     app_row = JobApplication.query.get_or_404(app_id)
+    if current_user.role == ROLE_HIRING_CLOSERS and (valor or app_row.resolucion) not in (None, *RESOLUCION_FINAL):
+        return jsonify({"message": "Los desacuerdos los decide Mario"}), 403
 
     try:
         app_row.resolucion = valor
@@ -190,7 +195,7 @@ def resolver_job_application(app_id):
         return jsonify({
             "status": "success",
             "resolucion": app_row.resolucion,
-            "veredicto": app_row.veredicto(),
+            "veredicto": app_row.veredicto(current_user.id),
         }), 200
     except Exception as e:
         db.session.rollback()

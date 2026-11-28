@@ -108,7 +108,9 @@ def _form_pedido(valor):
         valor = int(valor.strip())
     if not isinstance(valor, int):
         return None
-    return db.session.get(HiringForm, valor)
+    form = db.session.get(HiringForm, valor)
+    # El de Closer (ADR-W280) no contesta postulaciones de Asistente.
+    return form if form is not None and form.puesto != 'closer' else None
 
 
 def _puntaje(valor):
@@ -184,7 +186,7 @@ def ver_assistant_form():
         if form is None:
             return jsonify({"message": "No existe ese formulario"}), 404
     elif slug:
-        form = HiringForm.query.filter_by(slug=slug, activo=True).first()
+        form = HiringForm.query.filter_by(slug=slug, activo=True, puesto='asistente').first()
         if form is None:
             return jsonify({"activo": False, "config": config_publica}), 200
     else:

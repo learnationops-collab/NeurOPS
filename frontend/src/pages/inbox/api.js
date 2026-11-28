@@ -1,5 +1,6 @@
 // Llamadas del área Inbox a /api/inbox (app/automatizaciones/api.py).
 import api from '../../services/api';
+import { setHumanAgent } from './conversaciones/ventana';
 
 const datos = (r) => r.data;
 
@@ -16,8 +17,9 @@ export const inboxApi = {
     // Solo los textos de la versión publicada (app/automatizaciones/api_mensajes.py)
     mensajesFlujo: (id) => api.get(`/inbox/flujos/${id}/mensajes`).then(datos),
     guardarMensajes: (id, cambios) => api.put(`/inbox/flujos/${id}/mensajes`, { cambios }).then(datos),
-    // { conversaciones, mediana_respuesta, medianas_setters }
-    conversaciones: (buscar, limite) => api.get('/inbox/conversaciones', { params: { ...(buscar ? { buscar } : {}), ...(limite ? { limite } : {}) } }).then(datos),
+    // { conversaciones, mediana_respuesta, medianas_setters, human_agent }. `human_agent` fija la ventana de Instagram.
+    conversaciones: (buscar, limite) => api.get('/inbox/conversaciones', { params: { ...(buscar ? { buscar } : {}), ...(limite ? { limite } : {}) } })
+        .then((r) => { setHumanAgent(r.data.human_agent); return r.data; }),
     conversacion: (id) => api.get(`/inbox/conversaciones/${id}`).then(datos),
     // Acciones del setter (app/automatizaciones/api_acciones.py)
     pasos: (id) => api.get(`/inbox/conversaciones/${id}/pasos`).then(datos),
@@ -43,6 +45,8 @@ export const inboxApi = {
     marcarCanal: (id, canal) => api.put(`/inbox/conversaciones/${id}/canal`, { canal }).then(datos),
     anotarCita: (id, cita) => api.post(`/inbox/conversaciones/${id}/citas`, cita).then(datos),
     etiquetarVarias: (contactos, etiquetas) => api.post('/inbox/etiquetas/masivo', { contactos, etiquetas }).then(datos),
+    // `leido` o `resuelta` (no requiere respuesta) a varias de una vez (ADR-W274).
+    cerrarVarias: (contactos, accion) => api.post('/inbox/conversaciones/masivo', { contactos, accion }).then(datos),
     corregirVariable: (id, campo, valor) => api.put(`/inbox/conversaciones/${id}/variables`, { campo, valor }).then(datos),
     crearNota: (id, texto) => api.post(`/inbox/conversaciones/${id}/notas`, { texto }).then(datos),
     crearTarea: (id, tarea) => api.post(`/inbox/conversaciones/${id}/tareas`, tarea).then(datos),
@@ -64,6 +68,13 @@ export const inboxApi = {
     // Seguimiento condicional: `{ horas, texto | audio_id, pausar }`; sale si el lead no respondió.
     programarSeguimiento: (cid, cuerpo) => api.post(`/inbox/conversaciones/${cid}/seguimientos`, cuerpo).then(datos),
     cancelarSeguimiento: (sid) => api.delete(`/inbox/seguimientos/${sid}`).then(datos),
+    // El programado que pasó las 24 h: lo manda la persona, en el momento (ADR-W283).
+    mandarSeguimiento: (sid) => api.post(`/inbox/seguimientos/${sid}/mandar`).then(datos),
+    // Seguimiento por Instagram (ADR-W286): se abrió su chat en la app; el eco queda marcado como seguimiento.
+    abrirEnInstagram: (id, texto) => api.post(`/inbox/conversaciones/${id}/por-instagram`, { texto }).then(datos),
+    // «Conectar Instagram» (ADR-W286): estado del token y la URL del login con Instagram. Solo quien edita.
+    conexionInstagram: () => api.get('/inbox/instagram/conexion').then(datos),
+    conectarInstagram: () => api.get('/inbox/instagram/conectar').then(datos),
     // Marcar o desmarcar un mensaje del equipo como seguimiento (ADR-W255).
     marcarSeguimiento: (mid, marca) => api.post(`/inbox/mensajes/${mid}/seguimiento`, { marca }).then(datos),
     // Escribirle al lead: `{ texto }` o `{ audio_id }`, y `pausar` (el bot, por defecto sí).

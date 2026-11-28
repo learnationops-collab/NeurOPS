@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import {
     ArrowUp, ArrowDown, Copy, Trash2, Ban, BadgeCheck, GripVertical, X, Plus, Info,
-    CircleDot, ListChecks, Search, Type, Mail, AlignLeft, Hash, DollarSign, Phone, Link2, Hand,
+    CircleDot, ListChecks, Search, Type, Mail, AlignLeft, Hash, DollarSign, Phone, Link2, Hand, Globe, Percent,
 } from 'lucide-react';
 import { Aura, IconButton, Select, Switch, TextArea } from '../../../../../components/standard';
 import { Chip } from '../Piezas';
-import { FIJAS, TIPOS, conOpciones, notasDe, pesoDe, tipoDe, tipoVisible } from '../../lib/formularios';
+import { FIJAS, conOpciones, notasDe, pesoDe, tipoDe, tiposDe, tipoVisible } from '../../lib/formularios';
 import PuntajePregunta, { PtsOpcion } from './PuntajePregunta';
 
 // El panel de la derecha del editor: todo lo de la pregunta elegida (tipo,
@@ -13,10 +13,10 @@ import PuntajePregunta, { PtsOpcion } from './PuntajePregunta';
 
 const ICONO_TIPO = {
     radio: CircleDot, check: ListChecks, buscable: Search, texto: Type, email: Mail, parrafo: AlignLeft,
-    numero: Hash, dinero: DollarSign, tel: Phone, link: Link2, intro: Hand,
+    numero: Hash, dinero: DollarSign, tel: Phone, link: Link2, intro: Hand, pais: Globe, porcentaje: Percent,
 };
 
-const OPCIONES_TIPO = TIPOS.map((t) => {
+const opcionesTipo = (puesto) => tiposDe(puesto).map((t) => {
     const Ico = ICONO_TIPO[t.k];
     return { value: t.k, label: t.n, icon: <Ico size={15} /> };
 });
@@ -42,7 +42,7 @@ const ReglaNecesarias = ({ ops }) => {
     );
 };
 
-const Opciones = ({ q, onCambiar }) => {
+const Opciones = ({ q, onCambiar, closer }) => {
     // Las opciones sin marcas llegan como texto plano (así las escribe el formulario público);
     // al tocar una, todas pasan a objeto. El backend acepta las dos formas.
     const ops = (q.o || []).map((o) => (typeof o === 'string' ? { t: o } : o));
@@ -90,18 +90,20 @@ const Opciones = ({ q, onCambiar }) => {
                             <input className="tl-op-in" maxLength={240} value={o.t || ''} aria-label={`Opción ${letra}`}
                                 onChange={(e) => set(j, { t: e.target.value })} />
                             {extra}
-                            {q.tipo === 'check' ? (
+                            {q.tipo === 'check' && !closer ? (
                                 <button type="button" className="ibtn tl-op-nec" aria-pressed={Boolean(o.necesaria)} aria-label="Necesaria"
                                     title="Necesaria: si no la marca, va a la pantalla de descarte"
                                     onClick={() => set(j, { necesaria: !o.necesaria, ko: false })}>
                                     <BadgeCheck size={15} />
                                 </button>
                             ) : <span />}
-                            <button type="button" className="ibtn" aria-pressed={Boolean(o.ko)} aria-label="Excluyente"
-                                title="Excluyente: quien la elige va a la pantalla de descarte"
-                                onClick={() => set(j, { ko: !o.ko, necesaria: false })}>
-                                <Ban size={15} />
-                            </button>
+                            {closer ? <span /> : (
+                                <button type="button" className="ibtn" aria-pressed={Boolean(o.ko)} aria-label="Excluyente"
+                                    title="Excluyente: quien la elige va a la pantalla de descarte"
+                                    onClick={() => set(j, { ko: !o.ko, necesaria: false })}>
+                                    <Ban size={15} />
+                                </button>
+                            )}
                             <button type="button" className="ibtn ibtn--peligro" aria-label="Eliminar opción" disabled={ops.length <= 1}
                                 onClick={() => onCambiar({ o: ops.filter((_, k) => k !== j) })}>
                                 <X size={15} />
@@ -115,7 +117,7 @@ const Opciones = ({ q, onCambiar }) => {
                     <Plus size={14} /> Opción
                 </button>
             </div>
-            {q.tipo === 'check' && <ReglaNecesarias ops={ops} />}
+            {q.tipo === 'check' && !closer && <ReglaNecesarias ops={ops} />}
         </Campo>
     );
 };
@@ -152,7 +154,9 @@ const Limites = ({ q, onCambiar }) => {
     );
 };
 
-const PanelPregunta = ({ q, num, primera, ultima, depende, onCambiar, onTipo, onMover, onDuplicar, onBorrar }) => {
+const PanelPregunta = ({ q, num, primera, ultima, depende, puesto, onCambiar, onTipo, onMover, onDuplicar, onBorrar }) => {
+    // El de Closer no tiene excluyentes ni puntaje por pregunta: su score es Clarity (ADR-W280).
+    const closer = puesto === 'closer';
     const on = q.on !== false;
     const req = q.req !== false;
     const fija = FIJAS.has(q.id);
@@ -184,7 +188,7 @@ const PanelPregunta = ({ q, num, primera, ultima, depende, onCambiar, onTipo, on
 
             <div className="tl-ed-ajustes">
                 <div className="tl-ed-campo--tipo">
-                    <Select label="Tipo de respuesta" value={visible} options={OPCIONES_TIPO} disabled={fija}
+                    <Select label="Tipo de respuesta" value={visible} options={opcionesTipo(puesto)} disabled={fija}
                         title={fija ? 'El nombre es siempre texto corto' : 'Tipo de respuesta'}
                         onChange={(t) => t !== visible && onTipo(t)} />
                 </div>
@@ -226,8 +230,8 @@ const PanelPregunta = ({ q, num, primera, ultima, depende, onCambiar, onTipo, on
                         value={q.largo || 500} onChange={(e) => onCambiar({ largo: Number(e.target.value) || 500 })} />
                 </Campo>
             )}
-            {conOpciones(q.tipo) && <Opciones q={q} onCambiar={onCambiar} />}
-            {!fija && <PuntajePregunta q={q} onCambiar={onCambiar} />}
+            {conOpciones(q.tipo) && <Opciones q={q} onCambiar={onCambiar} closer={closer} />}
+            {!fija && !closer && <PuntajePregunta q={q} onCambiar={onCambiar} />}
             {(notasDe(q).length > 0 || depende.length > 0) && (
                 <ul className="tl-ed-notas">
                     {notasDe(q).map((t) => <li key={t}><Info size={14} aria-hidden="true" /><span>{t}</span></li>)}

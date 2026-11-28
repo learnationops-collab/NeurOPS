@@ -6,7 +6,9 @@ Después de «Asistió» la ficha no pregunta decisor ni oferta: pregunta si el 
 - `plan`: sigue con un plan de pago y hoy no paga → se arma el plan del saldo (`datos.momentum.plan`), solo si no
   tiene uno;
 - `pensando`: no decidió → objeción y seguimiento, como un «No cerró»;
-- `no`: no sigue (en la de cierre, no hace el upsell por ahora) → motivo.
+- `no`: no pagó → objeción y, después, seguimiento o cortar el acceso.
+Desde ADR-W276 vale para toda Momentum (también la del link `momentum-sessions`) y, en Asistió, No asistió y
+Canceló, se puede «Cortar acceso» con su motivo (`datos.cortar_acceso.motivo`): vence hoy (`ficha_academia.quitar`).
 
 `sugerencia` lee la nota de Gemini de la llamada (app/services/notas_meet/, la Momentum la organiza team@:
 ADR-W127/W128) y propone esas respuestas para precargar el reporte. Queda guardada en la agenda
@@ -21,10 +23,10 @@ logger = logging.getLogger(__name__)
 SIGUE = ('pago', 'plan', 'pensando', 'no')
 # Cómo se lee cada respuesta, según la Momentum: (seña, cierre).
 ETIQUETAS = {
-    'pago': ('Sigue: pagó', 'Hizo el upsell'),
-    'plan': ('Sigue con plan de pago', 'Upsell con plan de pago'),
+    'pago': ('Pagó', 'Pagó'),
+    'plan': ('Plan de cuotas', 'Plan de cuotas'),
     'pensando': ('Lo está pensando', 'Lo está pensando'),
-    'no': ('No sigue', 'No por ahora'),
+    'no': ('No pagó', 'No pagó'),
 }
 FEATURE = 'momentum_nota'
 CONTENIDO_MAX = 30000
@@ -60,19 +62,54 @@ def _plan_valido(appt, plan):
     return programa
 
 
+MINIMO_MOTIVO_CORTE = 10
+
+
+def motivo_de_corte(datos):
+    corte = (datos or {}).get('cortar_acceso')
+    return ((corte.get('motivo') or '').strip() or None) if isinstance(corte, dict) else None
+
+
 def resultado(appt, datos, usuario):
-    """El resultado de la llamada (ficha_acciones_service.resultado) y, si sigue con plan, el plan del saldo.
-    El plan se valida antes de guardar nada."""
+    """El resultado de la llamada (ficha_acciones_service.resultado), el plan del saldo si sigue con plan, y el
+    corte del acceso si se eligió. El plan y el motivo del corte se validan antes de guardar nada."""
     from app.services import ficha_acciones_service as acciones
+    from app.services.momentum_academia import es_sesion_momentum
 
     plan = ((datos.get('momentum') or {}) if isinstance(datos.get('momentum'), dict) else {}).get('plan')
     con_plan = sigue_de(datos) == 'plan'
     programa = _plan_valido(appt, plan) if con_plan else None
+    corte = datos.get('cortar_acceso')
+    motivo = motivo_de_corte(datos)
+    if corte:
+        if not es_sesion_momentum(appt):
+            raise acciones.ErrorDeAccion('Cortar el acceso desde el reporte es solo para una Momentum.')
+        if not motivo or len(motivo) < MINIMO_MOTIVO_CORTE:
+            raise acciones.ErrorDeAccion('Contá por qué se le corta el acceso.', 'motivo_corte')
     res = acciones.resultado(appt, datos, usuario)
     if con_plan:
         acciones.plan_cuotas(appt, {**plan, 'programa_code': programa}, usuario)
         db.session.commit()
+    if corte:
+        res = {**(res if isinstance(res, dict) else {}), **_cortar(appt, motivo, usuario)}
     return res
+
+
+def _cortar(appt, motivo, usuario):
+    """El reporte ya quedó guardado: si la Academia no deja cortar, se dice y el reporte no se pierde."""
+    from app.services import ficha_academia
+    from app.services.ficha_acciones_service import ErrorDeAccion
+
+    try:
+        ficha_academia.quitar(appt, {'confirmo': True, 'motivo': motivo}, usuario)
+    except ErrorDeAccion as e:
+        db.session.rollback()
+        return {'acceso_cortado': False, 'acceso_error': str(e)}
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f'Momentum {appt.id}: no se pudo cortar el acceso: {e}')
+        return {'acceso_cortado': False, 'acceso_error': 'No se pudo cortar el acceso: probá desde Fulfillment.'}
+    return {'acceso_cortado': True}
 
 
 # --- La nota de Gemini --------------------------------------------------------------------------

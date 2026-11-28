@@ -5,6 +5,7 @@ import { ThemeProvider } from './context/ThemeContext'
 import './index.css'
 import './efectos/efectos.css'
 import { iniciarEfectos } from './efectos/efectos'
+import { vigilarVersionNueva } from './sesion/versionNueva'
 
 // El humo baja solo en las compus que no dan (ver efectos/efectos.js): antes parpadeaba.
 iniciarEfectos();
@@ -20,6 +21,9 @@ window.addEventListener('vite:preloadError', (e) => {
     sessionStorage.setItem(clave, String(Date.now()));
     window.location.reload();
 });
+
+// Una pestaña de antes de un deploy se actualiza sola (ADR-W285): si no, no le llegan las novedades nuevas.
+vigilarVersionNueva();
 
 console.log('Frontend Version: 2024-02-04 JWT Patch v2');
 

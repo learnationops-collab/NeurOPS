@@ -29,6 +29,7 @@ from .ficha_opcion import FichaOpcion
 from .client_merge_log import ClientMergeLog
 from .system_log import SystemLog
 from .learnito_conversacion import LearnitoConversacion
+from .update_request import UpdateRequest
 from .person import Person, PersonIdentity, PersonEvent, Conversation, IDENTITY_KINDS, IDENTITY_USOS, PERSON_EVENT_KINDS
 from .academy_snapshot import AcademySnapshot
 from .embudo import EmbudoConfig, EmbudoRegistro
@@ -49,6 +50,7 @@ from .tag import Tag, TagGroup, TARGET_IG_CONTACT
 from .inbox_work import Note, Task, QuickReply, AudioClip, InboxRead
 from .conflicto import Conflicto, CONFLICTO_TIPOS, CONFLICTO_ESTADOS
 from .meeting_note import MeetingNote
+from .marketing_app import MarketingAppDoc, MarketingAppAsset
 
 # Export all for easy access via from app.models import ...
 __all__ = [
@@ -76,7 +78,7 @@ __all__ = [
     'AssistantApplication', 'AssistantClarityWeight', 'HiringForm', 'HiringConfig',
     'PlaybookRoadmap', 'PlaybookModule', 'PlaybookLesson', 'PlaybookQuestion', 'PlaybookOption',
     'PlaybookLessonProgress', 'PlaybookCompletion', 'QUESTION_TYPES',
-    'InstagramWebhookEvento', 'AiUsage', 'IntentoLimitado', 'LearnitoConversacion',
-    'EmbudoConfig', 'EmbudoRegistro',
+    'InstagramWebhookEvento', 'AiUsage', 'IntentoLimitado', 'LearnitoConversacion', 'UpdateRequest',
+    'MarketingAppDoc', 'MarketingAppAsset', 'EmbudoConfig', 'EmbudoRegistro',
 ]
 

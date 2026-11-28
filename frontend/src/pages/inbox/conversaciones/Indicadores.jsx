@@ -2,10 +2,11 @@
 //   · Etapa: una barrita con una rayita por fase del setting, llena hasta la actual, y su nombre corto. Si el bot
 //     falló o está en pausa, un bot rojo o ámbar al lado. Reemplaza los tres puntos y el chip «2 Conexión».
 //   · Espera: un reloj y cuánto hace que escribió el lead.
-//   · Ventana: un anillo que se vacía con lo que queda para poder responder (WhatsApp 24 h, Instagram 7 días).
+//   · Ventana: un anillo que se vacía con lo que queda para poder responder (24 h; Instagram 7 días con HUMAN_AGENT).
 // El detalle va en el tooltip.
 import { Bot, Clock } from 'lucide-react';
 import { colorEspera, esWhatsapp, textoEspera } from './colas';
+import { horasDeVentana } from './ventana';
 import { FASES, TRAMOS, colorDe, corto, faseDe, ordenDe } from './fasesSetting';
 
 const EMBUDO = FASES.filter((f) => f.tramo !== 'salida');
@@ -59,13 +60,15 @@ const VUELTA = 2 * Math.PI * R;
 // `queda`: minutos para poder responder (null = ya se cerró). `aviso`: desde cuándo se pone en rojo y late.
 export function Ventana({ contacto, queda, aviso, mini }) {
     const wa = esWhatsapp(contacto);
-    const total = (wa ? 24 : 7 * 24) * 60;
+    const horas = horasDeVentana(wa);
+    const total = horas * 60;
     const cerrada = queda == null;
     const parte = cerrada ? 0 : Math.min(1, queda / total);
     const urgente = cerrada || queda <= aviso;
+    const red = wa ? 'WhatsApp' : 'Work';
     const tip = cerrada
-        ? `Ventana cerrada|${wa ? 'WhatsApp solo deja escribirle con una plantilla' : 'Instagram no deja escribirle hasta que vuelva a escribir'}`
-        : `Para responder|Quedan ${textoEspera(queda)}. ${wa ? 'WhatsApp deja escribirle hasta 24 h después de su último mensaje' : 'Instagram deja escribirle hasta 7 días después de su último mensaje'}`;
+        ? `Ventana cerrada|${wa ? 'WhatsApp solo deja escribirle con una plantilla' : horas > 24 ? 'Instagram no deja escribirle hasta que vuelva a escribir' : 'Desde Work ya no sale: escribile desde Instagram'}`
+        : `Para responder|Quedan ${textoEspera(queda)}. ${red} deja escribirle hasta ${horas > 24 ? '7 días' : '24 h'} después de su último mensaje`;
     return (
         <span className={`cv-ind cv-ventana${urgente ? ' cv-ventana--urgente' : ''}${mini ? ' cv-ind--mini' : ''}`} style={{ '--c': urgente ? 'var(--error)' : 'var(--success)' }} data-tip={tip}>
             <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">

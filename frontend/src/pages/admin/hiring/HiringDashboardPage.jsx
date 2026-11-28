@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
-    Inbox, CheckCircle2, Trophy, BarChart3, FileText, Briefcase, Search, X, Filter, ArrowLeft, AlertTriangle,
-    SlidersHorizontal, Archive,
+    Inbox, CheckCircle2, Trophy, BarChart3, FileText, Search, X, Filter, ArrowLeft, AlertTriangle,
+    SlidersHorizontal,
 } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
 import api from '../../../services/api';
@@ -23,12 +23,14 @@ import { IsotipoTalent } from './components/Piezas';
 import { Select } from '../../../components/standard';
 import AlDia from './components/AlDia';
 import InboxCloser, { PESTANAS_INBOX_CLOSER } from './components/closers/InboxCloser';
+import AntiguosCloser from './components/closers/AntiguosCloser';
+import ControlesAntiguos from './components/closers/ControlesAntiguos';
 import MenuPuesto from './components/closers/MenuPuesto';
-import { PESTANAS_CLOSER_SECCION, guardarPuesto, leerPuesto, useClosers } from './lib/closers';
+import { PESTANAS_CLOSER_SECCION, coincideCloser, guardarPuesto, leerPuesto, useClosers } from './lib/closers';
+import { FILTRO_DEFAULT, cuantosActivos, guardarFiltro, leerFiltro, pasa, repostulados } from './lib/antiguos';
 import PostulacionesStatsTab from '../postulaciones/components/PostulacionesStatsTab';
-import PostulacionesCloser, { PESTANAS_CLOSER } from '../postulaciones/PostulacionesCloser';
 import {
-    PERIODOS, PESTANAS, agrupar, colsVisibles, coincide, cuentas as contar, enPeriodo, enPestana, esDelMes, filtrosActivos, guardarVista, leerVista,
+    PERIODOS, PESTANAS, agrupar, colsVisibles, coincide, cuentas as contar, enPeriodo, enPestana, filtrosActivos, guardarVista, leerVista,
     normalizar, ordenar, pasaFiltros, vistaDefault,
 } from './lib/vista';
 import '../../comercial/comercial.css';
@@ -37,18 +39,16 @@ import './talentMovil.css';
 
 // Learnation Talent: el panel del rol `hiring` (postulaciones al puesto de
 // Asistente Administrativa y Personal). Corre sin MainLayout (ver App.jsx): es
-// su propia sub-app, con su dock propio — Inbox, Analyze, Winners, Stats,
-// Forms y Closers— y el orbe de Configuración (Clarity y la búsqueda) al final,
+// su propia sub-app, con su dock propio — Inbox, Analyze, Winners, Stats y
+// Forms— y el orbe de Configuración (Clarity y la búsqueda) al final,
 // junto a la sesión.
 //
 // El listado se pide entero una vez y todo lo demás —pestañas, búsqueda, filtros,
 // orden, grupos— se resuelve en el navegador (ver `lib/vista.js`).
 //
-// Closers (10/10/2026): la búsqueda de Closer de ventas (antes Postulaciones, una
-// pantalla del admin en /admin/postulaciones) vive acá desde que se retiró la vista
-// «Administración». Es una sección más del dock y sus pestañas van en la cabecera,
-// como las de Inbox o Stats; el contenido es el de Postulaciones tal cual (ver
-// PostulacionesCloser) y va fuera del `.dc-shell` (ver `hospeda` más abajo).
+// Closers: la búsqueda de Closer de ventas se elige con el desplegable Asistentes / Closers de
+// Inbox, Analyze, Winners y Stats. La sección «Closers» del dock (Postulaciones tal cual, desde el
+// 10/10/2026) se sacó el 27/11/2026: lo mismo ya se ve en esas cuatro secciones.
 
 const SECCIONES = [
     { id: 'pend', label: 'Inbox', Icono: Inbox },
@@ -56,7 +56,6 @@ const SECCIONES = [
     { id: 'fin', label: 'Winners', Icono: Trophy },
     { id: 'stats', label: 'Stats', Icono: BarChart3 },
     { id: 'forms', label: 'Forms', Icono: FileText },
-    { id: 'closers', label: 'Closers', Icono: Briefcase },
 ];
 
 const ES_TABLA = new Set(['pend', 'anal', 'fin']);
@@ -70,7 +69,7 @@ const SECCIONES_PUESTO = new Set(['pend', 'anal', 'fin', 'stats']);
 // no toca los ajustes de Talent ni elimina postulaciones: eso lo arma Mario.
 const SECCIONES_REVISOR = new Set(['pend', 'anal', 'fin', 'stats']);
 
-// `?s=closers` (el redirect de /admin/postulaciones) elige la sección con la que se entra.
+// `?s=` elige la sección con la que se entra; `?s=closers` (el redirect de /admin/postulaciones) entra al Inbox en Closers.
 const seccionDeEntrada = (s, esRevisor) => (
     SECCIONES.some((x) => x.id === s && (!esRevisor || SECCIONES_REVISOR.has(x.id))) ? s : 'pend'
 );
@@ -97,6 +96,10 @@ const HiringDashboardPage = () => {
     const [pestanas, setPestanas] = useState({ pend: 'online', anal: 'seleccionada', fin: 'testeo', closers: 'pendientes', pendCloser: 'revisar', analCloser: 'preseleccionada', finCloser: 'testeo' });
     // Analyze: «Actuales» (postularon este mes) o «Antiguas» (antes). Arranca siempre en Actuales.
     const [periodo, setPeriodo] = useState('actuales');
+    // Closers en Analyze y Winners: «Antiguos» muestra los de búsquedas anteriores, con su filtro.
+    const [antiguos, setAntiguos] = useState(false);
+    const [filtroAntiguos, setFiltroAntiguosEstado] = useState(leerFiltro);
+    const setFiltroAntiguos = (f) => { setFiltroAntiguosEstado(f); guardarFiltro(f); };
     const [statsTab, setStatsTab] = useState('panorama');
     const [statsSeg, setStatsSeg] = useState('gen');
     const [query, setQuery] = useState('');
@@ -113,7 +116,7 @@ const HiringDashboardPage = () => {
     const [abierta, setAbierta] = useState(null);
     const [entradas, setEntradas] = useState(0);
     // Qué búsqueda mira el Inbox: Asistentes o Closers (ADR-W192). Se recuerda por navegador.
-    const [puestoElegido, setPuesto] = useState(leerPuesto);
+    const [puestoElegido, setPuesto] = useState(() => (params.get('s') === 'closers' ? 'closer' : leerPuesto()));
     const puesto = puestoElegido;
     const closers = useClosers();
     const buscador = useRef(null);
@@ -204,19 +207,13 @@ const HiringDashboardPage = () => {
     });
 
     // --- Lo que se ve ---
-    // Closers hospeda Postulaciones (Tailwind, paleta `dash-v6`): ese contenido va FUERA del
-    // `.dc-shell`, cuyo reset de botones e inputs y su exención del `!important` tipográfico global
-    // le cambiarían el look. El buscador de la cabecera tampoco va: busca entre las candidatas a
-    // Asistente, no entre los closers.
-    const hospeda = seccion === 'closers';
-    const visitoClosers = useRef(false);
-    if (hospeda) visitoClosers.current = true;
     const modoCloser = puesto === 'closer' && ES_TABLA.has(seccion);
     const statsCloser = puesto === 'closer' && seccion === 'stats';
-    // Closers y las Stats de closers son de Postulaciones (Tailwind): van fuera del `.dc-shell`.
-    const fuera = hospeda || statsCloser;
+    // Las Stats de closers son de Postulaciones (Tailwind, paleta `dash-v6`): van fuera del `.dc-shell`,
+    // cuyo reset de botones e inputs les cambiaría el look.
+    const fuera = statsCloser;
     const pestanaCloser = seccion === 'pend' ? pestanas.pendCloser : pestanas[`${seccion}Closer`];
-    const q = hospeda || modoCloser ? '' : query.trim();
+    const q = modoCloser ? '' : query.trim();
     const qCloser = modoCloser ? query.trim() : '';
     const enBusqueda = q.length > 0;
     const esTabla = !modoCloser && (enBusqueda || ES_TABLA.has(seccion));
@@ -229,19 +226,22 @@ const HiringDashboardPage = () => {
         return todas.filter((p) => enPestana(p, seccion, pestana) && (seccion !== 'anal' || enPeriodo(p, periodo)));
     }, [todas, enBusqueda, q, seccion, pestana, periodo]);
 
-    // Closers en Analyze: Actuales = postularon este mes; Antiguas = antes, más las de búsquedas archivadas.
+    // Closers en Analyze y Winners: las de la búsqueda en curso, por veredicto. Las de búsquedas
+    // anteriores (archivadas) van aparte, en «Antiguos».
+    const verAntiguos = antiguos && puesto === 'closer' && (seccion === 'anal' || seccion === 'fin');
     useEffect(() => {
-        if (puesto === 'closer' && seccion === 'anal' && closers.archivadas === null) closers.cargarArchivadas();
-    }, [puesto, seccion, closers.archivadas, closers.cargarArchivadas]); // eslint-disable-line react-hooks/exhaustive-deps
-    const closersDe = useCallback((per) => (per === 'actuales'
-        ? closers.filas.filter((p) => esDelMes(p))
-        : [...closers.filas.filter((p) => !esDelMes(p)), ...(closers.archivadas || [])]), [closers.filas, closers.archivadas]);
-    const closersPeriodo = useMemo(() => closersDe(periodo), [closersDe, periodo]);
+        if (verAntiguos && closers.archivadas === null) closers.cargarArchivadas();
+    }, [verAntiguos, closers.archivadas, closers.cargarArchivadas]); // eslint-disable-line react-hooks/exhaustive-deps
+    const ctxAntiguos = useMemo(() => ({
+        repostulados: repostulados(closers.archivadas || [], [...closers.filas, ...closers.incompletas]),
+    }), [closers.archivadas, closers.filas, closers.incompletas]);
+    const listaAntiguos = useMemo(() => (closers.archivadas || [])
+        .filter((p) => pasa(p, filtroAntiguos, ctxAntiguos) && (!qCloser || coincideCloser(p, qCloser))),
+    [closers.archivadas, filtroAntiguos, ctxAntiguos, qCloser]);
     const filasCloserSeccion = useMemo(() => {
         if (!modoCloser || seccion === 'pend') return null;
-        const fuente = seccion === 'anal' ? closersPeriodo : closers.filas;
-        return fuente.filter((p) => p.veredicto === pestanaCloser);
-    }, [modoCloser, seccion, closersPeriodo, closers.filas, pestanaCloser]);
+        return closers.filas.filter((p) => p.veredicto === pestanaCloser);
+    }, [modoCloser, seccion, closers.filas, pestanaCloser]);
 
     // Las cuentas de las pestañas de Analyze son las del período elegido.
     const cPeriodo = useMemo(() => contar(todas.filter((p) => enPeriodo(p, periodo))), [todas, periodo]);
@@ -303,28 +303,26 @@ const HiringDashboardPage = () => {
     let controles = null;
     if (modoCloser && seccion === 'pend') {
         const cuentaCloser = { revisar: closers.porRevisar.length, incompletas: closers.incompletas.length };
-        const enAntiguos = pestanas.pendCloser === 'antiguos';
         controles = qCloser ? null : (
-            <>
-                <Pestanas lista={PESTANAS_INBOX_CLOSER} actual={pestanas.pendCloser} cuentaDe={(id) => cuentaCloser[id]}
-                    onElegir={(id) => setPestanas((prev) => ({ ...prev, pendCloser: id }))} />
-                {/* Las postulaciones de búsquedas anteriores (archivadas, ADR-W193): un acceso discreto,
-                    no una pestaña más, para que el Inbox muestre solo a los que postulan ahora. */}
-                {closers.cuentaArchivadas > 0 && (
-                    <button type="button" className="tl-antiguos" aria-pressed={enAntiguos}
-                        title="Postulaciones de búsquedas anteriores"
-                        onClick={() => setPestanas((prev) => ({ ...prev, pendCloser: enAntiguos ? 'revisar' : 'antiguos' }))}>
-                        <Archive size={14} />Antiguos<span className="cuenta">{closers.cuentaArchivadas}</span>
-                    </button>
-                )}
-            </>
+            <Pestanas lista={PESTANAS_INBOX_CLOSER} actual={pestanas.pendCloser} cuentaDe={(id) => cuentaCloser[id]}
+                onElegir={(id) => setPestanas((prev) => ({ ...prev, pendCloser: id }))} />
         );
     } else if (modoCloser) {
-        const fuente = seccion === 'anal' ? closersPeriodo : closers.filas;
-        controles = qCloser ? null : (
-            <Pestanas lista={PESTANAS_CLOSER_SECCION[seccion]} actual={pestanaCloser}
-                cuentaDe={(id) => fuente.filter((p) => p.veredicto === id).length}
-                onElegir={(id) => setPestanas((prev) => ({ ...prev, [`${seccion}Closer`]: id }))} />
+        // Antiguos (ADR-W193, W277): los de búsquedas anteriores, para volver a contactarlos. Es una
+        // sola pestaña que entra y sale; adentro, el filtro y el CSV.
+        const botonAntiguos = closers.cuentaArchivadas > 0 && (
+            <ControlesAntiguos activo={verAntiguos} onAlternar={() => setAntiguos((v) => !v)} cuenta={closers.cuentaArchivadas}
+                filas={closers.archivadas || []} lista={listaAntiguos} ctx={ctxAntiguos} filtro={filtroAntiguos} onFiltro={setFiltroAntiguos} />
+        );
+        controles = qCloser && !verAntiguos ? null : (
+            <>
+                {!verAntiguos && (
+                    <Pestanas lista={PESTANAS_CLOSER_SECCION[seccion]} actual={pestanaCloser}
+                        cuentaDe={(id) => closers.filas.filter((p) => p.veredicto === id).length}
+                        onElegir={(id) => setPestanas((prev) => ({ ...prev, [`${seccion}Closer`]: id }))} />
+                )}
+                {botonAntiguos}
+            </>
         );
     } else if (!enBusqueda && ES_TABLA.has(seccion)) {
         // Híbridos casi nunca tiene a nadie: la pestaña aparece solo si hay alguna (o si es la abierta).
@@ -344,9 +342,6 @@ const HiringDashboardPage = () => {
                 </div>
             </>
         );
-    } else if (hospeda) {
-        // Las pestañas que Postulaciones tenía en su menú inferior.
-        controles = <Pestanas lista={PESTANAS_CLOSER} actual={pestana} onElegir={(id) => setPestanas((prev) => ({ ...prev, closers: id }))} />;
     }
     const nf = filtrosActivos(cfg);
 
@@ -430,13 +425,11 @@ const HiringDashboardPage = () => {
                                     <MenuPuesto valor={puesto} cuentas={{ asistente: c.pend, closer: closers.porRevisar.length }}
                                         onCambiar={(v) => { setPuesto(v); guardarPuesto(v); setQuery(''); }} />
                                 )}
-                                {seccion === 'anal' && !enBusqueda && !qCloser && (
+                                {seccion === 'anal' && puesto !== 'closer' && !enBusqueda && (
                                     <Select className="tl-periodo" size="sm" label="Período de postulación" value={periodo} onChange={setPeriodo}
                                         options={PERIODOS.map((o) => ({
                                             value: o.id,
-                                            label: `${o.label} · ${puesto === 'closer'
-                                                ? closersDe(o.id).filter((p) => p.veredicto === pestanaCloser).length
-                                                : todas.filter((p) => p.veredicto === pestana && enPeriodo(p, o.id)).length}`,
+                                            label: `${o.label} · ${todas.filter((p) => p.veredicto === pestana && enPeriodo(p, o.id)).length}`,
                                             icon: <i className="tl-periodo-punto" />,
                                             iconColor: o.c,
                                         }))} />
@@ -444,7 +437,6 @@ const HiringDashboardPage = () => {
                                 {!enBusqueda && seccion === 'forms' && formActivoNombre && (
                                     <p className="tl-sub">Búsqueda: <b>{formActivoNombre}</b></p>
                                 )}
-                                {hospeda && <p className="tl-sub">Búsqueda: <b>Closer de ventas</b></p>}
                             </div>
                         </div>
                         <div className="tl-tope-der">
@@ -490,11 +482,12 @@ const HiringDashboardPage = () => {
                     </header>
 
                     {!fuera && (
-                        <main className="tl-vista" key={`${seccion}|${modoCloser ? `closer|${pestanaCloser}` : ''}|${enBusqueda ? 'q' : ''}|${seccion === 'stats' ? statsTab : ''}`}>
+                        <main className="tl-vista" key={`${seccion}|${modoCloser ? `closer|${verAntiguos ? 'ant' : pestanaCloser}` : ''}|${enBusqueda ? 'q' : ''}|${seccion === 'stats' ? statsTab : ''}`}>
                             {errorCarga && <div className="tl-aviso-error"><AlertTriangle size={16} />{errorCarga}</div>}
                             {errorBorrado && <div className="tl-aviso-error"><AlertTriangle size={16} />{errorBorrado}</div>}
 
-                            {modoCloser && <InboxCloser closers={closers} pestana={pestanaCloser} q={qCloser} filasSeccion={filasCloserSeccion} />}
+                            {modoCloser && verAntiguos && <AntiguosCloser closers={closers} lista={listaAntiguos} filtrando={cuantosActivos(filtroAntiguos) > 0} onLimpiar={() => setFiltroAntiguos(FILTRO_DEFAULT)} />}
+                            {modoCloser && !verAntiguos && <InboxCloser closers={closers} pestana={pestanaCloser} q={qCloser} filasSeccion={filasCloserSeccion} />}
 
                             {!modoCloser && !enBusqueda && seccion === 'pend' && !cargando && (
                                 <ResumenInbox
@@ -586,17 +579,9 @@ const HiringDashboardPage = () => {
                 />
             </div>
 
-            {/* Closers, una vez abierta, queda montada y escondida al pasar a otra sección o pestaña:
-                volver no recarga (PostulacionesCloser conserva cada pestaña con PanelesConservados). */}
             {statsCloser && (
                 <main className="tl-hospedado dash-v6 text-base">
                     <PostulacionesStatsTab />
-                </main>
-            )}
-
-            {visitoClosers.current && (
-                <main className="tl-hospedado dash-v6 text-base" hidden={!hospeda} style={hospeda ? undefined : { display: 'none' }}>
-                    <PostulacionesCloser pestana={pestanas.closers} />
                 </main>
             )}
 

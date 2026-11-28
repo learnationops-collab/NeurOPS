@@ -25,6 +25,21 @@ DESCARTES = ('Lead Perdido', 'No Lead')
 SIGUE_A_ACADEMIA = {'pago': 'pago', 'plan': 'plan', 'pensando': 'pensando', 'no': 'no_sigue'}
 
 
+def es_sesion_momentum(appt):
+    """Toda Momentum, venga de la Academia, del link `momentum-sessions` o cargada a mano (ADR-W276): es un
+    alumno, otro funnel. No lleva decisor ni cuenta en show up ni closing."""
+    return bool(appt and 'momentum' in (appt.origin or '').lower())
+
+
+def condicion_no_momentum(modelo=None):
+    """Filtro SQL: las agendas que NO son Momentum (para show up y closing, ADR-W276)."""
+    import sqlalchemy as sa
+
+    if modelo is None:
+        from app.models import Appointment as modelo
+    return sa.func.lower(sa.func.coalesce(modelo.origin, '')).notlike('%momentum%')
+
+
 def es_momentum(appt):
     academia = ((appt.agenda_payload or {}).get('academia') or {}) if appt else {}
     return bool(appt and appt.origin == ORIGEN_MOMENTUM and academia.get('reserva_id'))
@@ -40,10 +55,17 @@ def traducir(accion, datos):
     from app.services.momentum_reporte import sigue_de
 
     # El reporte de la Momentum dice si sigue (ADR-W129): eso manda sobre la rama del árbol.
+    from app.services.momentum_reporte import motivo_de_corte
+
+    # Desde ADR-W276 «No pagó» sigue en seguimiento: solo cortar el acceso es «no sigue».
+    corta = bool(motivo_de_corte(datos))
     sigue = sigue_de(datos)
     if sigue and datos.get('resultado') == 'asistio':
-        return {'asistencia': 'asistio', 'resultado': SIGUE_A_ACADEMIA[sigue]}
+        resultado = 'no_sigue' if corta else 'pensando' if sigue == 'no' else SIGUE_A_ACADEMIA[sigue]
+        return {'asistencia': 'asistio', 'resultado': resultado}
     clave = datos.get('resultado')
+    if corta and clave in ('no_asistio', 'no_show', 'cancelo'):
+        return {'asistencia': 'cancelo' if clave == 'cancelo' else 'no_asistio', 'resultado': 'no_sigue'}
     deck = datos.get('deck') if isinstance(datos.get('deck'), dict) else {}
     proceso = datos.get('process') if isinstance(datos.get('process'), dict) else {}
     if proceso.get('status') in DESCARTES or clave in ('lead_perdido', 'no_lead'):
