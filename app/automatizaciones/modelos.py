@@ -281,6 +281,9 @@ class AutSeguimiento(db.Model):
     ERROR = 'error'
     # Un paso de setter de la cadencia de la fase: «toca seguimiento N» (ADR-W204).
     AVISO = 'aviso'
+    # Se abrió el chat en la app de Instagram para mandarlo desde ahí (ADR-W286): cuando llega el eco de ese
+    # mensaje, queda marcado como seguimiento y a nombre de quien lo abrió.
+    POR_INSTAGRAM = 'instagram'
 
     id = db.Column(db.Integer, primary_key=True)
     contacto_id = db.Column(db.Integer, db.ForeignKey('ig_contactos.id', ondelete='CASCADE'), nullable=False, index=True)

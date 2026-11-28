@@ -20,8 +20,9 @@ import { CasillaSeguimiento, useMarca, valorDeMarca } from './MarcaSeguimiento';
 import useEquipo from './useEquipo';
 import { faseDe } from './fasesSetting';
 import { LETRAS, completarGuia, faltaCompletar, notaDe, partes, pasosDe, siguienteId, useGuia, useLinkAgenda, visibles } from '../guia/useGuia';
-import { linkInstagram, ventanaDe } from './ventana';
+import { ventanaDe } from './ventana';
 import { esWhatsapp } from './colas';
+import PorInstagram from './PorInstagram';
 
 const MODOS = [
     { value: 'chat', label: 'Chat', icon: <MessageSquare size={13} /> },
@@ -267,9 +268,8 @@ export default function Composer({ contacto, mensajes, pausar = true, fase, ejec
             {modo === 'chat' && ventana.aviso && (
                 <p className="t-cap mut40 cv-bloqueado">
                     {ventana.aviso}
-                    {ventana.enInstagram && linkInstagram(contacto) && (
-                        <> <a href={linkInstagram(contacto)} target="_blank" rel="noopener noreferrer">Abrir el chat en Instagram</a></>
-                    )}
+                    {/* Lo escrito en la caja o, si está vacía, el «Toca seguimiento» programado (ADR-W286). */}
+                    {ventana.enInstagram && <> <PorInstagram contacto={contacto} texto={texto.trim() || pendientes.find((s) => s.vigente && !s.cadencia)?.texto} /></>}
                 </p>
             )}
             {audios && <Audios onCerrar={() => setAudios(false)} onMandar={puedeEnviar ? (a) => { enviarAudio(a); setAudios(false); } : null} />}

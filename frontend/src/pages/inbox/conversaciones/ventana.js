@@ -22,5 +22,5 @@ export function ventanaDe(ultimoEntrante, ahora = Date.now(), whatsapp = false) 
     if (whatsapp) return { estado: 'cerrada', aviso: 'Pasaron más de 24 h: WhatsApp solo deja escribirle con una plantilla aprobada' };
     if (pasado >= 7 * 24 * HORA) return { estado: 'cerrada', aviso: 'Pasaron más de 7 días: Instagram no deja escribirle hasta que vuelva a escribir' };
     if (humanAgent) return { estado: 'humana', aviso: 'Pasaron más de 24 h: sale como respuesta de una persona (vale hasta 7 días)' };
-    return { estado: 'cerrada', enInstagram: true, aviso: 'Pasaron más de 24 h desde su último mensaje: desde Work ya no sale. Mandalo desde Instagram y marcalo como seguimiento.' };
+    return { estado: 'cerrada', enInstagram: true, aviso: 'Pasaron más de 24 h desde su último mensaje: Instagram solo deja escribirle desde su app. Escribilo acá y mandalo con un toque.' };
 }

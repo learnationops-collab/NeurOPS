@@ -123,6 +123,41 @@ def mandar_aviso(motor, s, autor_id):
     return mensaje
 
 
+# El eco del mensaje mandado desde la app de Instagram llega en segundos; con margen por si tarda en mandarlo.
+ESPERA_ECO = timedelta(minutes=45)
+
+
+def abrir_en_instagram(contacto, autor_id, ahora, texto=None):
+    """La persona va a mandar el seguimiento desde la app de Instagram (Work no puede pasadas las 24 h sin la
+    aprobación de Human Agent, ADR-W286). Queda anotado para marcar el eco como suyo y como seguimiento."""
+    for viejo in AutSeguimiento.query.filter_by(contacto_id=contacto.id, estado=AutSeguimiento.POR_INSTAGRAM).all():
+        _cerrar(viejo, AutSeguimiento.CANCELADO, ahora, 'Se volvió a abrir en Instagram')
+    s = AutSeguimiento(contacto_id=contacto.id, autor_id=autor_id, texto=(texto or '').strip()[:1000] or None,
+                       estado=AutSeguimiento.POR_INSTAGRAM, enviar_en=ahora, creado_en=ahora)
+    db.session.add(s)
+    db.session.flush()
+    return s
+
+
+def eco_de_instagram(contacto, mensaje, momento):
+    """Llegó el eco de un mensaje del equipo mandado desde Instagram: si alguien lo abrió desde Work hace poco,
+    queda como seguimiento y a su nombre. True si lo reconoció."""
+    s = (AutSeguimiento.query.filter(AutSeguimiento.contacto_id == contacto.id,
+                                     AutSeguimiento.estado == AutSeguimiento.POR_INSTAGRAM,
+                                     AutSeguimiento.creado_en >= momento - ESPERA_ECO)
+         .order_by(AutSeguimiento.creado_en.desc()).first())
+    if s is None:
+        return False
+    mensaje.seguimiento = True
+    mensaje.autor_id = mensaje.autor_id or s.autor_id
+    _cerrar(s, AutSeguimiento.ENVIADO, momento, 'Salió desde Instagram')
+    # Si era un «Toca seguimiento» programado, ya está hecho.
+    for aviso in AutSeguimiento.query.filter_by(contacto_id=contacto.id, estado=AutSeguimiento.AVISO, cadencia=None).all():
+        if aviso.ciclo == contacto.ultimo_entrante_en:
+            _cerrar(aviso, AutSeguimiento.ENVIADO, momento, 'Salió desde Instagram')
+    return True
+
+
 def proximos(contacto_ids):
     """{contacto_id: el próximo programado (iso)}: la bandeja marca la fila de quien ya tiene uno."""
     if not contacto_ids:

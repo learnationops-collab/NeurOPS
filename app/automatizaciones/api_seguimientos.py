@@ -69,6 +69,17 @@ def mandar_seguimiento(seguimiento_id):
     return jsonify(respuesta), 201
 
 
+@bp.route('/conversaciones/<int:contacto_id>/por-instagram', methods=['POST'])
+def abrir_en_instagram(contacto_id):
+    """Se abrió el chat en la app de Instagram para mandar el seguimiento desde ahí (ADR-W286): `{texto}`."""
+    contacto = db.session.get(IgContacto, contacto_id)
+    if contacto is None:
+        return jsonify({'message': 'Not found'}), 404
+    seguimientos.abrir_en_instagram(contacto, current_user.id, servicio.ahora(), (request.get_json(silent=True) or {}).get('texto'))
+    db.session.commit()
+    return jsonify({'ok': True}), 201
+
+
 @bp.route('/mensajes/<int:mensaje_id>/seguimiento', methods=['POST'])
 def marcar_seguimiento(mensaje_id):
     """Marca o desmarca un mensaje del equipo como seguimiento (ADR-W255): `{marca: true|false}`."""

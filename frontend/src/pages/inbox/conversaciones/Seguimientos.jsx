@@ -6,7 +6,8 @@ import { AlarmClock, Send, X } from 'lucide-react';
 import { Button, IconButton, Modal, ModalHeader, Segmented, Select, TextArea, toast } from '../../../components/standard';
 import { inboxApi } from '../api';
 import { esWhatsapp } from './colas';
-import { linkInstagram, ventanaDe } from './ventana';
+import { ventanaDe } from './ventana';
+import PorInstagram from './PorInstagram';
 
 // Dentro de las 24 h del último mensaje del lead sale solo; después queda como «Toca seguimiento» y lo manda la
 // persona con un clic (ADR-W282, ADR-W283). Hasta los 7 días.
@@ -18,6 +19,10 @@ const desdeUltimoH = (c) => (c.ultimo_entrante_en ? (Date.now() - new Date(c.ult
 // Sale solo si cae antes de las 24 h (con un margen para no rozar el cierre).
 const saleSolo = (c, h) => desdeUltimoH(c) + h < 24 - 0.25;
 const ESTADO = { enviado: 'Salió', cancelado: 'Cancelado', error: 'No salió', aviso: 'Toca' };
+// «Antes del cierre» (ADR-W286): media hora antes de que se cumplan 24 h de su último mensaje, para que salga solo
+// mientras Instagram todavía deja. Solo si falta más de una hora.
+const ANTES_DEL_CIERRE = 'cierre';
+const horasAlCierre = (c) => 24 - 0.5 - desdeUltimoH(c);
 const hora = (iso) => new Date(iso).toLocaleString('es-AR', { weekday: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
 export function ProgramarSeguimiento({ contacto, textoInicial, pausar, onCerrar, onHecho }) {
@@ -28,9 +33,14 @@ export function ProgramarSeguimiento({ contacto, textoInicial, pausar, onCerrar,
     const [pasadas] = useState(() => desdeUltimoH(contacto));
     const wa = esWhatsapp(contacto);
     // WhatsApp no tiene la respuesta de una persona: solo lo que sale dentro de las 24 h. Instagram, hasta 7 días.
-    const opciones = CUANDO.filter((o) => (wa ? saleSolo(contacto, Number(o.value)) : pasadas + Number(o.value) < 7 * 24));
-    const [horas, setHoras] = useState(opciones.find((o) => o.value === '24')?.value || opciones.at(-1)?.value || '');
-    const aviso = horas && !saleSolo(contacto, Number(horas));
+    const alCierre = horasAlCierre(contacto);
+    const conCierre = alCierre > 1;
+    const fijas = CUANDO.filter((o) => (wa ? saleSolo(contacto, Number(o.value)) : pasadas + Number(o.value) < 7 * 24));
+    const opciones = conCierre ? [{ value: ANTES_DEL_CIERRE, label: `Antes del cierre · ${new Date(Date.now() + alCierre * 3600000).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}` }, ...fijas] : fijas;
+    // Por defecto, el último momento en que todavía sale solo.
+    const [horas, setHoras] = useState(conCierre ? ANTES_DEL_CIERRE : (fijas.find((o) => o.value === '24')?.value || fijas.at(-1)?.value || ''));
+    const enHoras = horas === ANTES_DEL_CIERRE ? Math.max(0.25, horasAlCierre(contacto)) : Number(horas);
+    const aviso = horas && !saleSolo(contacto, enHoras);
     const [enviando, setEnviando] = useState(false);
     useEffect(() => { inboxApi.audios().then(setAudios).catch(() => setAudios([])); }, []);
 
@@ -39,7 +49,7 @@ export function ProgramarSeguimiento({ contacto, textoInicial, pausar, onCerrar,
         setEnviando(true);
         try {
             const cuerpo = que === 'texto' ? { texto } : { audio_id: Number(audio) };
-            const s = await inboxApi.programarSeguimiento(contacto.id, { ...cuerpo, horas: Number(horas), pausar });
+            const s = await inboxApi.programarSeguimiento(contacto.id, { ...cuerpo, horas: enHoras, pausar });
             toast(aviso ? `Te avisa ${hora(s.enviar_en)} si no responde, para que lo mandes vos` : `Programado para ${hora(s.enviar_en)} si no responde`);
             onHecho();
         } catch (e) {
@@ -64,8 +74,8 @@ export function ProgramarSeguimiento({ contacto, textoInicial, pausar, onCerrar,
                 {horas && (
                     <p className="t-cap mut40">
                         {aviso
-                            ? 'A esa hora ya pasaron 24 h desde su último mensaje: no sale solo. Te queda en «Toca seguimiento» con este texto y lo mandás con un clic.'
-                            : 'Sale solo a esa hora.'}
+                            ? 'A esa hora ya pasaron 24 h desde su último mensaje: no sale solo. Te queda en «Toca seguimiento» con este texto y lo mandás con un toque desde Instagram.'
+                            : horas === ANTES_DEL_CIERRE ? 'Sale solo justo antes de que Instagram cierre la ventana de 24 h.' : 'Sale solo a esa hora.'}
                     </p>
                 )}
             </div>
@@ -84,10 +94,7 @@ export function ProgramarSeguimiento({ contacto, textoInicial, pausar, onCerrar,
 function MandarAviso({ s, contacto, onCambio }) {
     const [enviando, setEnviando] = useState(false);
     const ventana = ventanaDe(contacto.ultimo_entrante_en, undefined, esWhatsapp(contacto));
-    if (ventana.enInstagram) {
-        const link = linkInstagram(contacto);
-        return link ? <a className="t-cap" href={link} target="_blank" rel="noopener noreferrer">Abrir en Instagram</a> : null;
-    }
+    if (ventana.enInstagram) return <PorInstagram contacto={contacto} texto={s.texto} compacto />;
     if (ventana.estado === 'cerrada') return null;
     const mandar = async () => {
         setEnviando(true);

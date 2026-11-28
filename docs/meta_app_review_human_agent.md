@@ -20,7 +20,8 @@ App: **Learnation Inbox-IG** (IG app id `1792503462024517`), portfolio verificad
 - [x] Instrucciones de eliminación de datos: `https://<dominio>/eliminacion-de-datos`
 - [x] Términos: `https://<dominio>/terms-of-service`
 - [x] Verificación del negocio (portfolio verificado)
-- [ ] **Botón «Conectar Instagram»** en Work (login con Instagram). Meta revisa que el botón exista y se vea; hoy el token está cargado a mano en `IG_ACCESS_TOKEN`. Falta construirlo.
+- [x] **Botón «Conectar Instagram»** en la cabecera del Inbox (ADR-W286; lo ven admin, operador y dirección comercial).
+- [ ] **URL de vuelta cargada en Meta:** app «Learnation Inbox-IG» › Instagram › Configuración de la API con login con Instagram › Login empresarial › URI de redireccionamiento OAuth válidos: `https://work.thelearnation.com/api/inbox-publico/instagram/vuelta`. Después, tocar «Conectar Instagram» una vez con la cuenta de la empresa.
 - [ ] **Usuario de prueba para el revisor**: un usuario de Work con rol setter y solo el Inbox, con su contraseña en las notas para el revisor.
 - [ ] **Conversación de prueba**: una cuenta de Instagram nuestra (no un lead) que le escriba a la cuenta y después **no escriba más por al menos 24 h**, para mostrar la respuesta fuera de las 24 h.
 - [ ] Para la grabación: `IG_HUMAN_AGENT=1` en el servidor de prueba, para que Work intente mandar con la etiqueta. Con acceso estándar, Meta deja usar los permisos con cuentas que tienen rol en la app (admin o tester), así que la cuenta de prueba tiene que tener rol. No está confirmado que la etiqueta Human Agent también ande así antes de la aprobación: si Meta la rechaza en la prueba, se graba igual el intento y se muestra en el subtítulo cómo se usaría.
@@ -55,7 +56,7 @@ Lo que más rechaza Meta en Human Agent: videos donde parece que manda un bot. Q
 
 ## Riesgos (investigado el 27/11/2026)
 
-1. **El token de Instagram vence a los 60 días y Work no lo renueva.** `IG_ACCESS_TOKEN` está cargado a mano y no hay código que llame a `refresh_access_token`. Si se cargó a mediados de octubre, vence a mediados de diciembre: se corta todo el Inbox, el motor y los flujos, no solo Human Agent. Se renueva si tiene más de 24 h y no venció.
+1. ~~**El token de Instagram vence a los 60 días y Work no lo renueva.**~~ Resuelto (ADR-W286): el reloj del motor lo renueva cada 7 días. `IG_ACCESS_TOKEN` está cargado a mano y no hay código que llame a `refresh_access_token`. Si se cargó a mediados de octubre, vence a mediados de diciembre: se corta todo el Inbox, el motor y los flujos, no solo Human Agent. Se renueva si tiene más de 24 h y no venció.
 2. **Usar la etiqueta para vender.** Las reglas de las etiquetas prohíben contenido promocional (ofertas, descuentos, cupones). Un seguimiento de conversación («¿pudiste ver el link?») entra; un mensaje con oferta o descuento pasadas las 24 h, no. Si Meta lo detecta, puede limitar lo que manda la cuenta.
 3. **Que parezca automatizado.** Un mensaje que sale solo nunca lleva la etiqueta: un seguimiento programado sale solo dentro de las 24 h; después avisa y lo manda la persona con un clic (ADR-W282, ADR-W283) y las cadencias del motor no la usan.
 4. **Durante la revisión:** que no se rompa el usuario del revisor ni cambie la pantalla del Inbox mientras Meta mira (es motivo de rechazo). Si se hacen cambios grandes, que no toquen la caja de escribir.

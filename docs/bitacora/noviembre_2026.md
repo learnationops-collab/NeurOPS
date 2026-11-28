@@ -1410,3 +1410,8 @@
 
 ### 28/11/2026 · Inbox: Lead Magnet o Direct Sale a la vista (ADR-W287)
 - Al lado de la palabra clave de la tarjeta y del examen en la lista se ve si el lead vino de un anuncio de Lead Magnet o de Direct Sale (el nombre de la campaña de Meta del anuncio con que entró) ([bandeja.py](../../app/automatizaciones/bandeja.py) `funnels`, [Funnel.jsx](../../frontend/src/pages/inbox/conversaciones/Funnel.jsx)).
+
+### 28/11/2026 · Inbox: seguimientos de Instagram pasadas las 24 h (ADR-W286)
+- Con la ventana cerrada, «Copiar y abrir Instagram» copia el texto y abre el chat del lead en la app; cuando sale, Work lo marca solo como seguimiento y a nombre de quien lo abrió. «Siguiente» pasa a la conversación de abajo ([PorInstagram.jsx](../../frontend/src/pages/inbox/conversaciones/PorInstagram.jsx), [seguimientos.py](../../app/automatizaciones/seguimientos.py)).
+- Programar un seguimiento ofrece «Antes del cierre» (por defecto): sale solo a las 23 h 30 min del último mensaje del lead ([Seguimientos.jsx](../../frontend/src/pages/inbox/conversaciones/Seguimientos.jsx)).
+- «Conectar Instagram» en la cabecera del Inbox y renovación automática del token cada 7 días: lo que faltaba para la App Review de Human Agent y para que el Inbox no se corte a los 60 días ([token_ig.py](../../app/automatizaciones/token_ig.py), [api_instagram.py](../../app/automatizaciones/api_instagram.py), [ConexionInstagram.jsx](../../frontend/src/pages/inbox/ConexionInstagram.jsx)).

@@ -195,10 +195,14 @@ class Motor:
     def _eco(self, contacto, evento):
         if evento.mid and IgMensaje.query.filter_by(mid=evento.mid).first():
             return 'eco_propio'
-        db.session.add(IgMensaje(contacto_id=contacto.id, mid=evento.mid, direccion=IgMensaje.SALIENTE,
-                                 origen=IgMensaje.OTRO, texto=evento.texto,
-                                 contenido={'adjuntos': evento.adjuntos} if evento.adjuntos else None,
-                                 enviado_en=evento.momento))
+        mensaje = IgMensaje(contacto_id=contacto.id, mid=evento.mid, direccion=IgMensaje.SALIENTE,
+                            origen=IgMensaje.OTRO, texto=evento.texto,
+                            contenido={'adjuntos': evento.adjuntos} if evento.adjuntos else None,
+                            enviado_en=evento.momento)
+        db.session.add(mensaje)
+        # Mandado desde la app de Instagram después de abrirlo en Work: seguimiento, a nombre de quien lo abrió (ADR-W286).
+        from app.automatizaciones import seguimientos
+        seguimientos.eco_de_instagram(contacto, mensaje, evento.momento)
         if self.pausar_ante_ecos:
             self.pausar(contacto, CORTADA_POR_ECO)
         db.session.flush()

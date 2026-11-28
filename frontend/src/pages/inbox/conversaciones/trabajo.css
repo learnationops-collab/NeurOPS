@@ -67,6 +67,10 @@
 .thalamus.inbox .cv-comp-tarea .ui-input.ui-input:first-child{flex:1 1 220px}
 .thalamus.inbox .cv-comp-tarea .ui-select{min-width:140px}
 .thalamus.inbox .cv-bloqueado{margin:0}
+/* Seguimiento por Instagram con un toque (ADR-W286): el botón va en la misma línea del aviso. */
+.thalamus.inbox .cv-bloqueado{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px}
+.thalamus.inbox .cv-porig{display:inline-flex;align-items:center;gap:6px}
+.thalamus.inbox .cv-porig--compacto{margin-left:auto}
 .thalamus.inbox .cv-rayo{position:absolute;left:0;right:0;bottom:calc(100% + 6px);z-index:30;max-height:360px;overflow:auto;padding:6px;display:grid;gap:2px;
   border-radius:14px;background:var(--bg-flotante);border:1px solid var(--border-main);box-shadow:var(--shadow-main)}
 .thalamus.inbox .cv-rayo .t-rotulo{padding:6px 10px 2px}

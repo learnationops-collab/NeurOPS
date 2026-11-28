@@ -130,6 +130,18 @@ export default function Conversaciones() {
     const dejarDeElegir = () => { setEligiendo(false); setMarcadas([]); };
     const abrir = useCallback((id) => { setVista('chats'); setElegida(id); }, []);
     useTeclado(vista === 'chats' && !eligiendo ? visibles : [], elegida, setElegida);
+    // «Siguiente» del seguimiento por Instagram (ADR-W286): la conversación de abajo en la lista.
+    useEffect(() => {
+        const siguiente = () => {
+            const i = visibles.findIndex((c) => c.id === elegida);
+            const s = visibles[i + 1];
+            if (!s) return;
+            setElegida(s.id);
+            document.querySelector(`.cv-lista [data-conversacion="${s.id}"]`)?.scrollIntoView({ block: 'nearest' });
+        };
+        window.addEventListener('cv:siguiente', siguiente);
+        return () => window.removeEventListener('cv:siguiente', siguiente);
+    }, [visibles, elegida]);
     const avisos = useAvisos(lista, { yo, soloMias: ['setter', 'triage'].includes(user?.role), elegida, onAbrir: abrir });
     // En lo propio no hace falta decir de quién es; en el resto, sí.
     const conAsignado = filtro.asignado !== yo;
