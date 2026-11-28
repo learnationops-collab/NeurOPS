@@ -2599,3 +2599,10 @@
 - **Contexto:** a Eli (setter) no le salían los recorridos del Inbox aunque simulándolo sí aparecían. Con «Ver después» la tanda quedaba oculta hasta el día siguiente, durante 3 días; la simulación no guarda ese aplazo, por eso ahí salía. Mario: «que aparezca sí o sí».
 - **Decisión:** sin plazo. Una tanda sin terminar se abre al entrar y es obligatoria hasta el último paso: sin «Ver después», cruz ni Esc. Los aplazos que ya había se ignoran. Ya vista (ADR-W285) no vuelve, y desde Herramientas › Novedades se puede reabrir y cerrar.
 - **Qué se pierde:** posponerla para otro momento del día.
+
+## ADR-W289 · Los WhatsApp internos al equipo salen por la API propia; Whatchimp queda de respaldo
+- **Estado:** aceptada · 28/11/2026
+- **Contexto:** el 27/11 Whatchimp rechazó el aviso de la agenda #7294 («Bot owner account is disabled»): no le llegó a Mario ni a Dari (triage), y con eso caen todos los avisos de agenda y los recordatorios de seguimiento.
+- **Decisión:** el aviso de agenda (closer, copia al triage, Academia y la prueba de Configuración) y el recordatorio de seguimiento salen primero por la Cloud API propia, con dos plantillas de utilidad: `aviso_agenda` (las mismas 8 variables que la 414407 de Whatchimp) y `recordatorio_seguimiento` (4). Si la API propia falla, se prueba Whatchimp; si fallan los dos, el error lleva los dos motivos. Código: `app/whatsapp/avisos_equipo.py`, llamado desde `whatchimp_service`.
+- **Qué se pierde:** los avisos salen del mismo número que el broadcast (+54 9 387 547-2662): si Meta le baja la calidad o lo bloquea por el broadcast, también caen los avisos.
+- **Consecuencias:** hasta que Meta apruebe las dos plantillas, la API propia falla y se usa Whatchimp (hoy caído). Cuando haya un segundo número en la API propia, los avisos internos pasan a ese.

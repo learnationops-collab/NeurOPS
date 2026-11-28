@@ -5,6 +5,14 @@ import requests
 logger = logging.getLogger(__name__)
 
 
+def _con_respaldo(error_propia, enviar):
+    """Whatchimp como respaldo de la API propia; si también falla, el error lleva los dos motivos."""
+    try:
+        return enviar()
+    except Exception as e:  # noqa: BLE001
+        raise Exception(f"API propia: {error_propia} · Whatchimp: {e}") from e
+
+
 class WhatchimpService:
     """Envía recordatorios de seguimiento a los closers por WhatsApp vía Whatchimp (plantilla
     ya aprobada, id 421566). El número de negocio (phone_number_id) y la plantilla son fijos
@@ -30,9 +38,22 @@ class WhatchimpService:
 
     @staticmethod
     def send_followup_reminder(closer_name, tipo_key, lead_name, lead_phone, closer_phone):
-        """Envía UN recordatorio de seguimiento pendiente al WhatsApp del closer. Lanza excepción
-        si falta la API key, el closer no tiene número configurado, o Whatchimp responde error —
-        el caller decide cómo tratar cada fallo individual sin frenar al resto del lote."""
+        """Envía UN recordatorio de seguimiento pendiente al WhatsApp del closer: primero por la API propia
+        (ADR-W289) y, si falla, por Whatchimp. Lanza excepción si fallan los dos —el caller decide cómo
+        tratar cada fallo individual sin frenar al resto del lote."""
+        from app.whatsapp import avisos_equipo
+        tipo = WhatchimpService.TIPO_SEGUIMIENTO_LABELS.get(tipo_key, tipo_key or "")
+        try:
+            return avisos_equipo.recordatorio_seguimiento(
+                closer_phone, closer_name or "Closer", tipo, lead_name or "Sin Nombre",
+                WhatchimpService.normalize_phone(lead_phone))
+        except Exception as e:  # noqa: BLE001  (se prueba Whatchimp)
+            logger.warning(f"[WHATSAPP] Recordatorio por la API propia falló, va por Whatchimp: {e}")
+            propia = e
+        return _con_respaldo(propia, lambda: WhatchimpService._followup_whatchimp(closer_name, tipo_key, lead_name, lead_phone, closer_phone))
+
+    @staticmethod
+    def _followup_whatchimp(closer_name, tipo_key, lead_name, lead_phone, closer_phone):
         api_key = os.environ.get('WHATCHIMP_API_KEY')
         if not api_key:
             raise Exception("WHATCHIMP_API_KEY no está configurada en las variables de entorno")
@@ -70,7 +91,18 @@ class AvisoDeAgenda:
 
     @staticmethod
     def enviar(numero, closer, lead, telefono, instagram, dia, hora, grupo, fuente):
-        """Lanza excepción si falta la API key o el número, o si Whatchimp responde error."""
+        """Primero por la API propia (plantilla «aviso_agenda», ADR-W289) y, si falla, por Whatchimp.
+        Lanza excepción si fallan los dos."""
+        from app.whatsapp import avisos_equipo
+        try:
+            return avisos_equipo.aviso_agenda(numero, closer, lead, telefono, instagram, dia, hora, grupo, fuente)
+        except Exception as e:  # noqa: BLE001  (se prueba Whatchimp)
+            logger.warning(f"[WHATSAPP] Aviso de agenda por la API propia falló, va por Whatchimp: {e}")
+            propia = e
+        return _con_respaldo(propia, lambda: AvisoDeAgenda._whatchimp(numero, closer, lead, telefono, instagram, dia, hora, grupo, fuente))
+
+    @staticmethod
+    def _whatchimp(numero, closer, lead, telefono, instagram, dia, hora, grupo, fuente):
         api_key = os.environ.get('WHATCHIMP_API_KEY')
         if not api_key:
             raise Exception("WHATCHIMP_API_KEY no está configurada en las variables de entorno")

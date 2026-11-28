@@ -1418,3 +1418,6 @@
 
 ### 28/11/2026 · Novedades obligatorias desde la primera vez (ADR-W288)
 - Sin «Ver después»: quien no terminó una tanda la ve al entrar y no la puede cerrar hasta el último paso. A Eli no le salía porque la había aplazado ([Novedades.jsx](../../frontend/src/pages/closer/novedades/Novedades.jsx)).
+
+### 28/11/2026 · WhatsApp al equipo por la API propia (ADR-W289)
+- El 27/11 Whatchimp rechazó el aviso de la agenda #7294 («Bot owner account is disabled»): no les llegó a Mario ni a Dari. El aviso de agenda (closer, copia al triage, Academia, prueba de Configuración) y el recordatorio de seguimiento salen ahora primero por la Cloud API propia, con las plantillas de utilidad `aviso_agenda` y `recordatorio_seguimiento` (en revisión de Meta al subir); Whatchimp queda de respaldo ([avisos_equipo.py](../../app/whatsapp/avisos_equipo.py), [whatchimp_service.py](../../app/services/whatchimp_service.py)).
