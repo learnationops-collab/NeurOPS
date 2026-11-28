@@ -232,7 +232,7 @@ export default function Conversaciones() {
                         {listado}
                     </Panel>
                     {elegida
-                        ? <Detalle key={elegida} id={elegida} yo={yo} onLeido={marcarLeida} onCambio={recargar} />
+                        ? <Detalle key={elegida} id={elegida} yo={yo} onCambio={recargar} />
                         : <Panel size="sm" className="cv-detalle cv-detalle--vacio"><EmptyState icon={<MessageSquare size={22} />}>Elegí una conversación.</EmptyState></Panel>}
                 </div>
             )}

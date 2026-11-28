@@ -56,7 +56,7 @@ function Chat({ datos, yo, pausar, onCambio, pegar, selector, onSelector }) {
     );
 }
 
-export default function Detalle({ id, yo, onLeido, onCambio }) {
+export default function Detalle({ id, yo, onCambio }) {
     const [datos, setDatos] = useState(() => recordado(`chat:${id}`));
     const [error, setError] = useState(null);
     // Al pasar de etapa: la etapa cuyos mensajes se eligen (`selector`) y el texto que se pega en la caja (`pegar`).
@@ -76,13 +76,8 @@ export default function Detalle({ id, yo, onLeido, onCambio }) {
         const cada = setInterval(pedir, REFRESCO);
         return () => clearInterval(cada);
     }, [pedir]);
-    // Leída al abrirla y cada vez que entra un mensaje mientras está abierta.
-    const cantidad = datos?.mensajes?.length;
-    useEffect(() => {
-        if (cantidad == null) return;
-        inboxApi.leido(id).then(() => onLeido?.(id))
-            .catch(() => { /* sin marca: se reintenta con el próximo mensaje */ });
-    }, [id, cantidad, onLeido]);
+    // Abrirla no la marca leída (Elías, 27/11/2026, ADR-W292): el pendiente queda hasta que alguien le contesta, o
+    // con «No requiere respuesta» o «Marcar leídas» de Elegir.
 
     const cambio = useCallback(() => { pedir(); onCambio?.(); }, [pedir, onCambio]);
     // Mover de etapa: con varios mensajes se elige cuál pegar; con uno, se pega directo. Nada sale solo.

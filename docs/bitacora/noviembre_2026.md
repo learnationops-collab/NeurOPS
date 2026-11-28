@@ -1429,3 +1429,6 @@
 
 ### 28/11/2026 · Inbox: la lista no salta al mandar un mensaje (ADR-W291)
 - Lo que ya estaba en la lista queda en su lugar cuando el equipo escribe o manda un seguimiento; solo se reacomoda lo nuevo y lo que tiene un mensaje nuevo del lead. Todo se reordena al cambiar el filtro, el orden o la búsqueda ([ordenEstable.js](../../frontend/src/pages/inbox/conversaciones/ordenEstable.js)).
+
+### 28/11/2026 · Inbox: el pendiente queda hasta contestar (ADR-W292)
+- Abrir un chat ya no lo marca leído: el número de sin leer queda hasta que alguien del equipo o el bot le escribe, o hasta marcarlo «No requiere respuesta» (que ahora también lo marca leído) o «Marcar leídas» desde Elegir ([Detalle.jsx](../../frontend/src/pages/inbox/conversaciones/Detalle.jsx), [api_trabajo.py](../../app/automatizaciones/api_trabajo.py)).

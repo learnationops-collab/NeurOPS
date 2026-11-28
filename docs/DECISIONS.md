@@ -2620,3 +2620,10 @@
 - **Decisión:** mientras no cambien el filtro, el orden o la búsqueda, lo que ya estaba en la lista mantiene su lugar. Solo se reacomoda lo que entra nuevo y lo que tiene un mensaje nuevo del lead, y va donde lo ubica el orden elegido. Lo que deja de cumplir el filtro sale igual que antes.
 - **Qué se pierde:** mientras no se toque el filtro, el orden en pantalla puede quedar desfasado del orden real (por ejemplo, por espera). Se reordena todo al cambiar el filtro, el orden o la búsqueda, o al recargar la página.
 - **Consecuencias:** ↑↓ y «Siguiente» recorren la lista en el orden que se ve.
+
+## ADR-W292 · Inbox: abrir el chat no lo marca leído; el pendiente queda hasta que alguien contesta
+- **Fecha:** 2026-11-28 · **Subsistema:** Inbox › Conversaciones (`frontend/src/pages/inbox/conversaciones/Detalle.jsx`, `app/automatizaciones/api_trabajo.py`) · **Estado:** implementado
+- **Contexto:** en la reunión con los setters del 27/11, Elías contó que, al abrir un chat para mirarlo, el pendiente (el número de sin leer) desaparece aunque nadie haya contestado, y después se le pierde. Lo que importa es si se le contestó, no si se leyó.
+- **Decisión:** abrir la conversación ya no la marca como leída. El número se va cuando le escribe alguien del equipo o el bot (eso ya lo calculaba `progreso._sin_leer`), con «No requiere respuesta» (ahora también la marca leída) o con «Marcar leídas» de Elegir.
+- **Qué se pierde:** «Sin leer» ya no separa lo que nadie miró de lo que se miró y quedó sin contestar. El título de la pestaña y el filtro «Sin leer» cuentan las dos cosas.
+- **Consecuencias:** el endpoint `POST /conversaciones/<id>/leido` queda en la API, pero la pantalla ya no lo llama.

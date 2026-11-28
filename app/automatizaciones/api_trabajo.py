@@ -71,13 +71,17 @@ def marcar_leido(contacto_id):
     contacto, error = _contacto_o_404(contacto_id)
     if error:
         return error
-    lectura = db.session.get(InboxRead, (current_user.id, contacto.id))
-    if lectura is None:
-        db.session.add(InboxRead(user_id=current_user.id, contact_id=contacto.id, read_at=servicio.ahora()))
-    else:
-        lectura.read_at = servicio.ahora()
+    _leer(contacto, servicio.ahora())
     db.session.commit()
     return '', 204
+
+
+def _leer(contacto, ahora):
+    lectura = db.session.get(InboxRead, (current_user.id, contacto.id))
+    if lectura is None:
+        db.session.add(InboxRead(user_id=current_user.id, contact_id=contacto.id, read_at=ahora))
+    else:
+        lectura.read_at = ahora
 
 
 @bp.route('/conversaciones/<int:contacto_id>/resuelta', methods=['POST', 'DELETE'])
@@ -89,6 +93,9 @@ def marcar_resuelta(contacto_id):
         return error
     marcar = request.method == 'POST'
     contacto.resuelta_en = servicio.ahora() if marcar else None
+    # Abrir el chat ya no lo marca leído (ADR-W292): «no requiere respuesta» sí.
+    if marcar:
+        _leer(contacto, contacto.resuelta_en)
     evento(contacto.id, 'Marcada como «no requiere respuesta»' if marcar else 'Volvió a esperar respuesta')
     db.session.commit()
     return jsonify({'resuelta_en': _iso(contacto.resuelta_en)})
