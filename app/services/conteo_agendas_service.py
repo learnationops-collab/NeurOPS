@@ -125,14 +125,15 @@ def origen_de_agenda(fuente, nombre):
     return 'Workshop' if fuente == 'workshop' else categoria_de_origen(nombre)
 
 
-def por_fuente(desde, hasta, base=BASE_POR_DEFECTO):
+def por_fuente(desde, hasta, base=BASE_POR_DEFECTO, filas=None):
     """{fuente: {agendas, show_up, reportadas, dias: {fecha: agendas}, origenes}} para setting, workshop y otras.
 
     `show_up`: asistieron; `reportadas`: con resultado (asistieron + no show), la base del % de show up. En
     reunión esas dos cuentan leads (`por_lead`): una persona que fue a la 1ª y faltó a la 2ª se presentó.
-    `origenes`: lo mismo partido por `categoria_de_origen` (la suma de los grupos es la cifra de la fuente)."""
+    `origenes`: lo mismo partido por `categoria_de_origen` (la suma de los grupos es la cifra de la fuente).
+    `filas`: las de `personas` ya pedidas, para no buscarlas dos veces."""
     base = base_de(base)
-    filas = personas(desde, hasta, base)
+    filas = personas(desde, hasta, base) if filas is None else filas
     salida = {k: {'agendas': 0, 'show_up': 0, 'reportadas': 0, 'dias': {}, 'origenes': {}} for k in FUENTES}
 
     def del_origen(p):

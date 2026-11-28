@@ -17,6 +17,7 @@ const num = (v) => formatear(v, 'num');
 /** El título de cada lista que se puede abrir (`fuentes_registros_service.METRICAS`). */
 export const TITULO_DE = {
     agendas: 'Agendas', agendas_alta: 'Agendas por fecha de alta', reportadas: 'Citas con resultado', show_up: 'Show up', ventas: 'Ventas', new_cash: 'New Cash',
+    ventas_asistieron: 'Ventas de quienes asistieron', ventas_fuera: 'Ventas fuera de este show up',
     cash_total: 'Cash total', cash_anterior: 'Cobrado de ventas anteriores', leads: 'Leads entrantes', gasto: 'Importe gastado',
 };
 
@@ -25,12 +26,16 @@ export const TITULO_DE = {
  * denominador, cada uno `{ t: texto, m: lista que lo suma }`. Se muestra en un tooltip y cada parte abre su lista.
  */
 export const parte = (t, m, unidad) => ({ t: unidad ? `${t} ${unidad}` : String(t), m, titulo: TITULO_DE[m] });
+// Las ventas que se dividen por los que asistieron: solo las de esas personas (ADR-W293). Con un segmento elegido el
+// backend no las parte (null) y vuelve a «ventas».
+const tieneAsistieron = (f) => f.ventas_asistieron !== null && f.ventas_asistieron !== undefined;
+const compraron = (f) => (tieneAsistieron(f) ? parte(num(f.ventas_asistieron), 'ventas_asistieron', 'compraron') : parte(num(f.ventas), 'ventas'));
 export const cuentaDe = (id, f, d) => {
     const reportadas = f.reportadas ?? f.agendas;
     switch (id) {
         case 'lead_agenda': return { a: parte(num(f.agendas), 'agendas'), b: parte(num(f.leads), 'leads', 'leads') };
         case 'agenda_show': return { a: parte(num(f.show_up), 'show_up'), b: parte(num(reportadas), 'reportadas', 'con resultado') };
-        case 'show_venta': return { a: parte(num(f.ventas), 'ventas'), b: parte(num(f.show_up), 'show_up', 'que asistieron') };
+        case 'show_venta': return { a: compraron(f), b: parte(num(f.show_up), 'show_up', 'que asistieron') };
         case 'roas_new_cash': return { a: parte(d(f.new_cash), 'new_cash'), b: parte(d(f.gasto), 'gasto', 'gastados') };
         case 'roas_total': return { a: parte(d(f.cash_total), 'cash_total'), b: parte(d(f.gasto), 'gasto', 'gastados') };
         case 'costo_venta': return { a: parte(d(f.gasto), 'gasto', 'gastados'), b: parte(num(f.ventas), 'ventas', 'pagos de venta') };
@@ -56,7 +61,7 @@ export const formatos = (moneda) => ({
 /** Qué lista abre cada fila (`fuentes_registros_service.METRICAS`); las que no están no tienen lista todavía. */
 const METRICA_DE = {
     lead_agenda: 'agendas', agendas: 'agendas', agenda_show: 'reportadas', show_up: 'show_up', ventas: 'ventas',
-    show_venta: 'ventas', cuotas: 'cash_total', upsells: 'cash_total', new_cash: 'new_cash', cash_total: 'cash_total',
+    show_venta: 'ventas_asistieron', cuotas: 'cash_total', upsells: 'cash_total', new_cash: 'new_cash', cash_total: 'cash_total',
     ingreso_venta: 'ventas', cac: 'ventas', roas_new_cash: 'new_cash', roas_total: 'cash_total', costo_show: 'show_up', costo_venta: 'ventas',
     leads: 'leads', gasto: 'gasto', cpl: 'leads', costo_agenda: 'agendas_alta',
 };
@@ -169,21 +174,31 @@ const PASOS = [
         metricaK: 'agendas', metricaPrevio: 'leads' },
     { label: 'Show up', paso: 'asistieron ÷ agendas', k: 'show_up', previo: 'agendas', unidad: 'agendas', conResultado: true,
         metrica: 'show_up', metricaK: 'show_up', metricaPrevio: 'agendas' },
-    { label: 'Ventas', paso: 'ventas ÷ asistieron', k: 'ventas', previo: 'show_up', unidad: 'que asistieron', metrica: 'ventas',
-        metricaK: 'ventas', metricaPrevio: 'show_up' },
+    // Solo las personas del show up que compraron (ADR-W293): antes eran todos los pagos de venta del período y daba
+    // 125%, porque entraban ventas de llamadas creadas antes. Esas van aparte, en `fuera`.
+    { label: 'Ventas', paso: 'compraron ÷ asistieron', k: 'ventas_asistieron', alt: 'ventas', previo: 'show_up', unidad: 'que asistieron',
+        metrica: 'ventas_asistieron', metricaK: 'ventas_asistieron', metricaPrevio: 'show_up', fuera: true },
 ];
 
 export const embudoNormalizado = (s, w) => {
-    const por = (fuente, k) => (fuente.leads ? (fuente[k] / fuente.leads) * 1000 : 0);
+    const valor = (f, k) => (k === 'ventas_asistieron' && !tieneAsistieron(f) ? f.ventas : f[k]);
+    const por = (fuente, k) => (fuente.leads ? (valor(fuente, k) / fuente.leads) * 1000 : 0);
     const mayor = Math.max(por(s, 'agendas'), por(w, 'agendas')) || 1;
     // Con decimal, pero dicho: «5,3 por 1.000 leads» es una tasa, no 5,3 ventas (Kerwin, 28/10/2026).
     const texto = (v) => v.toFixed(v < 10 ? 1 : 0);
     const exacto = (v) => `${v.toFixed(1)} de cada 1.000 leads`;
     const pct = (a, b) => (b ? `${((a / b) * 100).toFixed(1)}%` : '—');
     const delPaso = (f, p) => (f[p.previo]
-        ? { pct: pct(f[p.k], f[p.previo]), cuenta: { a: parte(num(f[p.k]), p.metricaK), b: parte(num(f[p.previo]), p.metricaPrevio, p.unidad) } }
+        ? { pct: pct(valor(f, p.k), f[p.previo]),
+            cuenta: { a: p.k === 'ventas_asistieron' ? compraron(f) : parte(num(f[p.k]), p.metricaK), b: parte(num(f[p.previo]), p.metricaPrevio, p.unidad) } }
         : { pct: '—', cuenta: null });
     const conResultado = (f, p) => {
+        if (p.fuera) {
+            return tieneAsistieron(f) && f.ventas_fuera
+                ? { pct: `+${num(f.ventas_fuera)}`, rotulo: f.ventas_fuera === 1 ? 'venta fuera de este show up' : 'ventas fuera de este show up',
+                    metrica: 'ventas_fuera', cuenta: null }
+                : null;
+        }
         if (!p.conResultado) return null;
         const base = f.reportadas ?? f.agendas;
         return { pct: pct(f[p.k], base), rotulo: 'con resultado',

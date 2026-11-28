@@ -2627,3 +2627,11 @@
 - **Decisión:** abrir la conversación ya no la marca como leída. El número se va cuando le escribe alguien del equipo o el bot (eso ya lo calculaba `progreso._sin_leer`), con «No requiere respuesta» (ahora también la marca leída) o con «Marcar leídas» de Elegir.
 - **Qué se pierde:** «Sin leer» ya no separa lo que nadie miró de lo que se miró y quedó sin contestar. El título de la pestaña y el filtro «Sin leer» cuentan las dos cosas.
 - **Consecuencias:** el endpoint `POST /conversaciones/<id>/leido` queda en la API, pero la pantalla ya no lo llama.
+
+## ADR-W293: en el embudo de Marketing, «Ventas» son las personas del show up que compraron
+
+- **Fecha:** 2026-11-28 · **Subsistema:** Marketing › Todos (embudo normalizado, tarjeta Show → venta), `fuentes_service.ventas_de_asistentes`, `marketing_formulas` (`pct_show_venta`), `fuentes_registros_service` (listas `ventas_asistieron` y `ventas_fuera`) · **Estado:** implementado.
+- **Contexto:** Setting, 22–28/11 por fecha de alta, mostraba 5 ventas de 4 asistencias (125%). Las ventas eran todos los pagos de venta nueva del período, por fecha de pago, y el show up, las agendas creadas en el período. Fernanda Nova, Ale Lagla y Tania Chavarro pagaron esa semana, pero habían agendado el 19, 20 y 21/11: sus ventas entraban y su asistencia no.
+- **Decisión:** el paso Ventas del embudo y el «Show → venta» dividen las personas del show up de la fuente (misma base, alta o reunión) que tienen un pago de venta nueva en el período por los que asistieron. Se cruzan por persona y, en reunión, también por cliente. El resto de las ventas va debajo, como «+N ventas fuera de este show up», con su lista. Para eso `num` de `FORMULAS` acepta una lista, como `den`. Con un segmento elegido no se parte y vuelve a la cuenta anterior.
+- **Qué se pierde:** el porcentaje ya no cuenta las ventas de llamadas de otros períodos, ni las de alguien cuya llamada fue de otra fuente. Esas siguen en el total de Ventas, el New Cash, el costo por venta y el ROAS, que no cambian.
+- **Consecuencias:** sin migración. Producción, Setting 22–28/11: por alta, 2 de 4 (50%) y +3 fuera; por reunión, 4 de 10 (40%) y +1 fuera (Tania: su llamada es de Workshop). Noviembre, Setting 4 de 40 (10%) y +3; Workshop 2 de 17 (11,8%).

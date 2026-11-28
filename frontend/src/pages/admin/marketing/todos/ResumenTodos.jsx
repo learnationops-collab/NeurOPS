@@ -19,7 +19,8 @@ const Barra = ({ color, ancho }) => (
     <div className="td-barra-embudo" style={{ width: ancho, background: color }} />
 );
 
-// Las tasas de un paso del embudo, cada una con su cuenta en el tooltip: «6,6%» y, en el show up, también «61,9% con resultado».
+// Las tasas de un paso del embudo, cada una con su cuenta en el tooltip: «6,6%» y, en el show up, también «61,9% con resultado»;
+// en ventas, debajo, las que quedan fuera del show up («+3 ventas fuera de este show up»), que abren su lista.
 const Tasas = ({ paso, lado, fuente, onVer }) => {
     const principal = paso[`${lado}r`];
     const segunda = paso[`${lado}r2`];
@@ -28,7 +29,7 @@ const Tasas = ({ paso, lado, fuente, onVer }) => {
             <CifraConCuenta color={fuente.color} rotulo={fuente.label} cuenta={principal.cuenta} metrica={paso.metrica} titulo={TITULO_DE[paso.metrica]} onVer={onVer}>{principal.pct}</CifraConCuenta>
             {segunda && (
                 <span className="td-tasa2">
-                    <CifraConCuenta color={fuente.color} rotulo={fuente.label} cuenta={segunda.cuenta} onVer={onVer}>{segunda.pct}</CifraConCuenta> {segunda.rotulo}
+                    <CifraConCuenta color={fuente.color} rotulo={fuente.label} cuenta={segunda.cuenta} metrica={segunda.metrica} titulo={TITULO_DE[segunda.metrica]} onVer={onVer}>{segunda.pct}</CifraConCuenta> {segunda.rotulo}
                 </span>
             )}
         </span>

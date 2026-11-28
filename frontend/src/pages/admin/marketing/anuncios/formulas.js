@@ -19,9 +19,12 @@ export const aplicarFormulas = (base) => {
     const salida = {};
     FORMULAS.forEach((f) => {
         const denKey = f.den.find((k) => entrada[k] !== null && entrada[k] !== undefined);
-        if (!(f.num in entrada) || denKey === undefined) return;
+        // `num` puede ser una lista, como `den`: vale la primera que traiga dato y, si ninguna, la primera presente.
+        const nums = Array.isArray(f.num) ? f.num : [f.num];
+        const numKey = nums.find((k) => entrada[k] !== null && entrada[k] !== undefined) ?? nums.find((k) => k in entrada);
+        if (numKey === undefined || denKey === undefined) return;
         if (f.con_gasto && gasto <= 0) { salida[f.key] = null; return; }
-        salida[f.key] = dividir((Number(entrada[f.num]) || 0) * (f.por || 1), Number(entrada[denKey]), f.dec);
+        salida[f.key] = dividir((Number(entrada[numKey]) || 0) * (f.por || 1), Number(entrada[denKey]), f.dec);
     });
     return salida;
 };

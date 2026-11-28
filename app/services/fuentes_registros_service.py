@@ -12,6 +12,8 @@ comisión usada van en sus propias columnas.
   · reportadas las que tienen resultado: la base del % de show up.
   · show_up   las que asistieron.
   · ventas / new_cash   los pagos de venta nueva del período (su suma es el New Cash).
+  · ventas_asistieron   los de quienes están en el show up de la fuente: el paso «Ventas» del embudo (ADR-W293).
+  · ventas_fuera   los demás pagos de venta nueva: lo que el embudo muestra aparte («+N fuera de este show up»).
   · cash_total   todos los cobros de la fuente, y de cuáles son de una venta anterior.
   · cash_anterior   solo esos cobros de ventas anteriores: lo que separa el ROAS Total del New Cash.
   · leads   Setting: las personas que entraron por una palabra clave (con su calificación); Workshop: los clics al
@@ -27,7 +29,7 @@ from app.services.comercial_service import ComercialService
 from app.services.comision_plataforma_service import etiqueta_de
 from app.services.commission_service import cash_neto
 
-METRICAS = ('agendas', 'agendas_alta', 'reportadas', 'show_up', 'ventas', 'new_cash', 'cash_total', 'cash_anterior',
+METRICAS = ('agendas', 'agendas_alta', 'reportadas', 'show_up', 'ventas', 'ventas_asistieron', 'ventas_fuera', 'new_cash', 'cash_total', 'cash_anterior',
             'leads', 'gasto')
 
 TIPOS = {'cuota': 'Cuota', 'sena': 'Seña', 'seña': 'Seña', 'renovacion': 'Renovación', 'upsell': 'Upsell'}
@@ -130,7 +132,10 @@ def _agendas(fuente, metrica, desde, hasta, base, origen=None):
     return columnas, filas, resumen
 
 
-def _cobros(fuente, metrica, desde, hasta):
+_DEL_SHOW_UP = ('ventas_asistieron', 'ventas_fuera')
+
+
+def _cobros(fuente, metrica, desde, hasta, base=None):
     desde_dt, hasta_dt = anuncios_service._limites(desde, hasta)
     _por_clave, _sin, cobros, _sin_clave, claves = anuncios_service._ventas(
         desde_dt, hasta_dt, anuncios_service._clave_de_cada_anuncio())
@@ -141,10 +146,14 @@ def _cobros(fuente, metrica, desde, hasta):
     # Las cuotas y upsells de quien compró algo nuevo son «de esta venta»; las otras, de ventas de antes (lo que
     # separa el ROAS Total del ROAS New Cash). La misma regla que `cash_anterior` de la tarjeta.
     nuevos = fuentes_service.clientes_nuevos(f for _, f in pares)
+    asistentes = fuentes_service.asistentes_por_fuente(
+        conteo_agendas_service.personas(desde, hasta, base))[fuente] if metrica in _DEL_SHOW_UP else None
     filas, suma = [], 0.0
     con_cliente = ficha_de_fila.personas_con_cliente(c.person_uuid for c, _ in pares)
     for cobro, f in pares:
-        if metrica in ('ventas', 'new_cash') and not f['es_venta']:
+        if metrica in ('ventas', 'new_cash') + _DEL_SHOW_UP and not f['es_venta']:
+            continue
+        if asistentes is not None and fuentes_service.compro_tras_asistir(f, asistentes) != (metrica == 'ventas_asistieron'):
             continue
         _programa, tipo, es_venta = ComercialService.clasificar_venta(cobro)
         if es_venta:
@@ -171,6 +180,10 @@ def _cobros(fuente, metrica, desde, hasta):
     resumen = f"{len(filas)} cobros · ${suma:,.2f}"
     if metrica == 'cash_total' and anteriores:
         resumen += f" · ${anteriores:,.2f} de ventas anteriores"
+    if metrica == 'ventas_asistieron':
+        por = conteo_agendas_service.ETIQUETA_BASE[conteo_agendas_service.base_de(base)]
+        personas = len({r['cliente'] for r in filas})
+        resumen = f"{personas} personas del show up (por {por}) compraron · {resumen}"
     return _COLUMNAS_COBROS, filas, resumen
 
 
@@ -243,5 +256,5 @@ def registros(fuente, metrica, desde, hasta, base=None, origen=None):
         columnas, filas, resumen = _agendas(fuente, metrica, desde, hasta, base, origen)
     else:
         hacer = _leads if metrica == 'leads' else _gasto if metrica == 'gasto' else _cobros
-        columnas, filas, resumen = hacer(fuente, metrica, desde, hasta)
+        columnas, filas, resumen = _cobros(fuente, metrica, desde, hasta, base) if hacer is _cobros             else hacer(fuente, metrica, desde, hasta)
     return {'fuente': fuente, 'metrica': metrica, 'columnas': columnas, 'filas': filas, 'resumen': resumen}
