@@ -5,8 +5,10 @@ import Recorrido from './Recorrido';
 import Recuerda from './Recuerda';
 import { useCuenta } from './Mocks';
 import { useTelefono } from '../confirmar/useTelefono';
-// La huella del recorrido (ADR-W222): cambia sola con cualquier cambio de contenido, escenas o recorrido, así
-// el changelog nuevo le vuelve a aparecer a todos (también a quien ya lo terminó) sin tocar VERSION a mano.
+import { hidratarDock } from '../../../sesion/dockServidor';
+import { guardarAplazo, guardarPaso, leerAplazo, leerPaso, marcarVista, tandaVistaEnCuenta } from './vistasCuenta';
+// La huella del recorrido (ADR-W222). Desde ADR-W285 ya no lo vuelve a abrir: quien terminó una tanda no la ve de
+// nuevo aunque cambie un texto. Para mostrar algo nuevo a todos se cambia VERSION en `contenido.js`.
 import fuenteContenido from './contenido.js?raw';
 import fuenteMocks from './Mocks.jsx?raw';
 import './novedades.css';
@@ -28,31 +30,13 @@ const VISTA_ANTERIOR = VISTA === '2026-11-25-2-1vquffi' ? '2026-11-25-2-2vuu09' 
 const PLAZO_DIAS = 3;
 const DIA = 86400000;
 
-// Aplazos de esta tanda: `desde` es la primera vez que apareció y `hasta`, hasta cuándo se aplazó.
-const leerAplazo = (t, user) => {
-    let a = null;
-    try { a = JSON.parse(localStorage.getItem(`${t.clave(user)}_aplazo`)); } catch { a = null; }
-    if (a?.vista === t.vista) return a;
-    a = { vista: t.vista, desde: Date.now(), hasta: 0 };
-    localStorage.setItem(`${t.clave(user)}_aplazo`, JSON.stringify(a));
-    return a;
-};
+// Lo visto, los aplazos y el paso donde quedó se guardan en la cuenta (ADR-W285, `vistasCuenta.js`).
 const diasQueQuedan = (a) => Math.max(0, Math.ceil((a.desde + PLAZO_DIAS * DIA - Date.now()) / DIA));
 const aplazar = (t, user) => {
     const a = leerAplazo(t, user);
     const manana = new Date(); manana.setHours(24, 0, 0, 0);
-    a.hasta = Math.min(manana.getTime(), a.desde + PLAZO_DIAS * DIA);
-    localStorage.setItem(`${t.clave(user)}_aplazo`, JSON.stringify(a));
+    guardarAplazo(t, user, Math.min(manana.getTime(), a.desde + PLAZO_DIAS * DIA));
 };
-
-// El paso donde quedó (ADR-W263): «Ver después» a mitad del recorrido y el recordatorio retoma desde ahí.
-const leerPaso = (t, user) => {
-    try {
-        const p = JSON.parse(localStorage.getItem(`${t.clave(user)}_paso`));
-        return p?.vista === t.vista ? p.i : 0;
-    } catch { return 0; }
-};
-const guardarPaso = (t, user, i) => localStorage.setItem(`${t.clave(user)}_paso`, JSON.stringify({ vista: t.vista, i }));
 // Avisa a las otras tandas de la pantalla que una se terminó (la que esperaba puede mostrar su recordatorio).
 const CAMBIO = 'ln:novedades-cambio';
 
@@ -70,8 +54,11 @@ const CLOSER = {
     titulo: ['Hay novedades', 'en Work.'], cuenta: 'cambios para tu día', etiqueta: 'Novedades de Work',
 };
 
-// Si la persona ya terminó esa tanda (la del Workspace sin `tanda`).
+// Si la persona ya terminó esa tanda (ADR-W285: en su cuenta, desde cualquier compu; vale la VERSION, no la huella).
+// Lo del navegador de antes también cuenta, salvo simulando (ahí manda lo de la cuenta de la persona).
 export const tandaVista = (t, user) => {
+    if (tandaVistaEnCuenta(t, user)) return true;
+    if (user?.is_impersonating) return false;
     const guardada = localStorage.getItem(t.clave(user));
     return guardada === t.vista || Boolean(t.anterior && guardada === t.anterior);
 };
@@ -149,11 +136,16 @@ const Novedades = ({ user, ctx, tanda = CLOSER }) => {
     };
     const despues = () => { if (quedan) aplazar(t, user); setFase(null); };
     const completar = () => {
-        localStorage.setItem(t.clave(user), t.vista);
-        localStorage.removeItem(`${t.clave(user)}_paso`);
+        marcarVista(t, user);
         setFase(null);
         window.dispatchEvent(new Event(CAMBIO));
     };
+
+    // Sin esto, en una pantalla sin dock (el Inbox) lo visto no llegaba a la cuenta. Sin `dock_prefs` no se toca.
+    useEffect(() => { if (user?.dock_prefs && typeof user.dock_prefs === 'object') hidratarDock(user); }, [user]);
+    // Lo de la cuenta llega un momento después de entrar (/auth/me): si ahí dice que ya la terminó en otra compu,
+    // la portada que se acaba de abrir se cierra sola.
+    useEffect(() => { if (fase === 'portada' && vista()) setFase(null); }, [user?.dock_prefs]); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => {
         if (!user) return;
@@ -171,9 +163,19 @@ const Novedades = ({ user, ctx, tanda = CLOSER }) => {
     useEffect(() => {
         const desdeAfuera = () => abrir();
         const otra = () => setRevision((n) => n + 1);
+        // Con la pestaña abierta todo el día, al volver a ella sale la que toca (terminó el aplazo o la de antes).
+        const alVolver = () => {
+            if (document.visibilityState !== 'visible' || fase || !user || vista() || t.espera?.(user)) return;
+            const a = leerAplazo(t, user);
+            if (Date.now() >= a.hasta || diasQueQuedan(a) === 0) abrir();
+        };
         window.addEventListener(t.evento, desdeAfuera);
         window.addEventListener(CAMBIO, otra);
-        return () => { window.removeEventListener(t.evento, desdeAfuera); window.removeEventListener(CAMBIO, otra); };
+        document.addEventListener('visibilitychange', alVolver);
+        return () => {
+            window.removeEventListener(t.evento, desdeAfuera); window.removeEventListener(CAMBIO, otra);
+            document.removeEventListener('visibilitychange', alVolver);
+        };
     }); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Sin terminar y cerrado: el recordatorio queda a la vista hasta que lo termine (no si otra tanda va primero).

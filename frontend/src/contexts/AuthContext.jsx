@@ -25,10 +25,12 @@ export const AuthProvider = ({ children }) => {
                     const roles = me.roles || [];
                     // Learnation Marketing (ADR-W280): quién la ve se decide en el servidor y puede cambiar sin login.
                     const marketing = !!me.marketing_app;
-                    if (JSON.stringify([cuentas, roles, marketing]) === JSON.stringify([savedUser.cuentas_vinculadas || [], savedUser.roles || [], !!savedUser.marketing_app])) return;
-                    const actualizado = { ...savedUser, cuentas_vinculadas: cuentas, roles, marketing_app: marketing };
+                    // Lo de la cuenta (dock y novedades vistas, ADR-W285): lo guardado al entrar puede ser de hace días.
+                    const dock = me.dock_prefs && typeof me.dock_prefs === 'object' ? me.dock_prefs : savedUser.dock_prefs;
+                    if (JSON.stringify([cuentas, roles, marketing, dock]) === JSON.stringify([savedUser.cuentas_vinculadas || [], savedUser.roles || [], !!savedUser.marketing_app, savedUser.dock_prefs])) return;
+                    const actualizado = { ...savedUser, cuentas_vinculadas: cuentas, roles, marketing_app: marketing, dock_prefs: dock };
                     saveSession(actualizado);
-                    setUser((u) => (u && u.id === actualizado.id ? { ...u, cuentas_vinculadas: cuentas, roles, marketing_app: marketing } : u));
+                    setUser((u) => (u && u.id === actualizado.id ? { ...u, cuentas_vinculadas: cuentas, roles, marketing_app: marketing, dock_prefs: dock } : u));
                 }).catch(() => { /* sin cuentas que mostrar: el menú queda como estaba */ });
             }
         }

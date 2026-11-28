@@ -409,6 +409,9 @@ def get_me():
             "can_view_finance": getattr(current_user, 'can_view_finance', False),
             "cuentas_vinculadas": [] if is_impersonating else cuentas_de(current_user),
             "mascota": current_user.mascota,
+            # Lo guardado en la cuenta (dock y novedades vistas, ADR-W285): antes solo llegaba con el login y otra
+            # compu seguía con lo de ese momento.
+            "dock_prefs": current_user.dock_prefs or {},
             "marketing_app": _tiene_marketing(),
         }
     }), 200
@@ -572,6 +575,8 @@ def impersonate():
             "original_user_role": original_role,
             "can_view_finance": getattr(target_user, 'can_view_finance', False),
             "mascota": target_user.mascota,
+            # Solo para leer (ADR-W285): simulando se ven las novedades como las tiene la persona. No se guarda nada.
+            "dock_prefs": target_user.dock_prefs or {},
         }
     }), 200
 

@@ -1402,3 +1402,8 @@
 ### 27/11/2026 · Broadcast de WhatsApp: el equipo no recibe los de captación (ADR-W284)
 - Jean Carlo recibió la reactivación C del broadcast a la lista de los grupos viejos del taller (estaba en esos grupos). Una sola vez: no hubo envío doble. Ahora el CSV saltea los números de las cuentas de Work; «Incluirlos (prueba)» los suma para probar con el equipo ([envios.py](../../app/whatsapp/envios.py) `numeros_del_equipo`, [Mandar.jsx](../../frontend/src/ventanas/herramientas/broadcastWa/Mandar.jsx)).
 - Lote del 27/11 a esa lista: 199 armados, 179 llegaron, 20 los frenó Meta (131049, demasiado marketing para esa persona), 4 respondieron al rato.
+
+### 28/11/2026 · Novedades: se ven una vez, desde cualquier compu (ADR-W285)
+- Lo visto del changelog y de los recorridos (closers, triage, setters) se guarda en la cuenta: quien lo terminó no lo vuelve a ver en otra compu, otro navegador ni porque se retocó un texto. Sigue obligatorio hasta el último paso. Simulando se ve como lo tiene la persona ([vistasCuenta.js](../../frontend/src/pages/closer/novedades/vistasCuenta.js), [Novedades.jsx](../../frontend/src/pages/closer/novedades/Novedades.jsx)).
+- `/auth/me` trae lo guardado en la cuenta (dock y novedades): antes llegaba solo con el login ([auth.py](../../app/api/auth.py), [AuthContext.jsx](../../frontend/src/contexts/AuthContext.jsx), [dockServidor.js](../../frontend/src/sesion/dockServidor.js)).
+- Una pestaña abierta desde antes de un deploy se recarga sola al volver a ella o tras 10 min quieta, nunca con algo escrito ([versionNueva.js](../../frontend/src/sesion/versionNueva.js)).
