@@ -4,7 +4,9 @@ from app.automatizaciones.transporte import ErrorDeEnvio
 from app.whatsapp.cliente import ClienteWhatsapp, configurado, normalizar
 
 AGENDA = 'aviso_agenda'
-SEGUIMIENTO = 'recordatorio_seguimiento'
+# La vieja la aprobó Meta como marketing; la nueva (texto de sistema) va como utilidad. Se usa la vieja hasta que
+# la nueva esté aprobada.
+SEGUIMIENTO = ('aviso_seguimiento', 'recordatorio_seguimiento')
 IDIOMA = 'es'
 
 
@@ -28,4 +30,8 @@ def aviso_agenda(numero, closer, lead, telefono, instagram, dia, hora, grupo, fu
 
 
 def recordatorio_seguimiento(numero, closer, tipo, lead, telefono):
-    return _mandar(numero, SEGUIMIENTO, [closer, tipo, lead, telefono])
+    nueva, vieja = SEGUIMIENTO
+    try:
+        return _mandar(numero, nueva, [closer, tipo, lead, telefono])
+    except ErrorDeEnvio:
+        return _mandar(numero, vieja, [closer, tipo, lead, telefono])
