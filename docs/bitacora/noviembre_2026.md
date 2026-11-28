@@ -1432,3 +1432,7 @@
 
 ### 28/11/2026 · Inbox: el pendiente queda hasta contestar (ADR-W292)
 - Abrir un chat ya no lo marca leído: el número de sin leer queda hasta que alguien del equipo o el bot le escribe, o hasta marcarlo «No requiere respuesta» (que ahora también lo marca leído) o «Marcar leídas» desde Elegir ([Detalle.jsx](../../frontend/src/pages/inbox/conversaciones/Detalle.jsx), [api_trabajo.py](../../app/automatizaciones/api_trabajo.py)).
+
+### 28/11/2026 · Marketing › Todos: el embudo ya no pasa del 100% en Ventas (ADR-W293)
+- El paso Ventas del embudo normalizado y la tarjeta Show → venta cuentan solo a las personas del show up de la fuente que compraron en el período (misma base, alta o reunión). Setting 22–28/11 daba 5 ventas de 4 asistencias (125%); ahora, por alta, 2 de 4 (50%) ([fuentes_service.py](../../app/services/fuentes_service.py) `ventas_de_asistentes`, [comparacion.js](../../frontend/src/pages/admin/marketing/todos/comparacion.js)).
+- Las demás ventas van debajo, «+N ventas fuera de este show up», y abren su lista; el total de Ventas, el New Cash, el costo por venta y el ROAS no cambian ([fuentes_registros_service.py](../../app/services/fuentes_registros_service.py)).
